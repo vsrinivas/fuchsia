@@ -122,11 +122,11 @@ void MemoryWatchdog::OnOom() {
       // It is important that we don't hang during this process so set a deadline for the debuglog
       // to shutdown.
       //
-      // TODO(55673): How long should we wait?  Shutting down the debuglog includes flushing any
-      // buffered messages to the serial port (if present).  Writing to a serial port can be slow.
-      // Assuming we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take
-      // roughly 11.4 seconds to drain the buffer.  The timeout should be long enough to allow a
-      // full DLOG buffer to be drained.
+      // TODO(fxbug.dev/55673): How long should we wait?  Shutting down the debuglog includes
+      // flushing any buffered messages to the serial port (if present).  Writing to a serial port
+      // can be slow. Assuming we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1,
+      // it will take roughly 11.4 seconds to drain the buffer.  The timeout should be long enough
+      // to allow a full DLOG buffer to be drained.
       zx_time_t deadline = current_time() + ZX_SEC(20);
       status = dlog_shutdown(deadline);
       ASSERT_MSG(status == ZX_OK, "dlog_shutdown failed: %d\n", status);

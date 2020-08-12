@@ -148,7 +148,7 @@ class ExceptionHandlerIterator final {
 //   ZX_OK if the thread has been resumed.
 //   ZX_ERR_NEXT if we ran out of handlers before the thread resumed.
 //   ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
-//   ZX_ERR_NO_MEMORY on allocation failure (TODO(33566): remove this case)
+//   ZX_ERR_NO_MEMORY on allocation failure (TODO(fxbug.dev/33566): remove this case)
 static zx_status_t exception_handler_worker(uint exception_type,
                                             const arch_exception_context_t* context,
                                             ThreadDispatcher* thread, bool* out_processed) {

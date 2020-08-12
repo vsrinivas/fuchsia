@@ -14,7 +14,7 @@
 namespace media::audio {
 namespace {
 
-// TODO(35491): Remove when transitioned to xunion; xunions generate these functions.
+// TODO(fxbug.dev/35491): Remove when transitioned to xunion; xunions generate these functions.
 fuchsia::media::Usage Usage(fuchsia::media::AudioRenderUsage u) {
   fuchsia::media::Usage usage;
   usage.set_render_usage(u);

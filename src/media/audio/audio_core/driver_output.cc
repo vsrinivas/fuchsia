@@ -461,8 +461,8 @@ void DriverOutput::OnDriverConfigComplete() {
 
   // Start the ring buffer running
   //
-  // TODO(13292) : Don't actually start things up here. We should start only when we have clients
-  // with work to do, and we should stop when we have no work to do.
+  // TODO(fxbug.dev/13292) : Don't actually start things up here. We should start only when we have
+  // clients with work to do, and we should stop when we have no work to do.
   zx_status_t res = driver()->Start();
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to start ring buffer";
@@ -490,8 +490,9 @@ void DriverOutput::OnDriverStartComplete() {
 
   // Set up the mix task in the AudioOutput.
   //
-  // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
-  // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
+  // TODO(fxbug.dev/39886): The intermediate buffer probably does not need to be as large as the
+  // entire ring buffer.  Consider limiting this to be something only slightly larger than a nominal
+  // mix job.
   auto format = driver()->GetFormat();
   FX_DCHECK(format);
   FX_DCHECK(pipeline_config_);

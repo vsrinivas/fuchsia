@@ -61,7 +61,7 @@ class FakeAudioObject : public AudioObject {
   uint32_t total_links_formed_ = 0;
 };
 
-// TODO(39532): Remove; use a real output class with fake hardware.
+// TODO(fxbug.dev/39532): Remove; use a real output class with fake hardware.
 class FakeAudioOutput : public AudioOutput {
  public:
   static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,

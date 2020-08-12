@@ -95,7 +95,7 @@ VK_TEST_F(HostImageTest, DupVmoGPUTest) {
 
   // Create an VkImage and allocate exportable memory for that image.
   //
-  // TODO(54153): Currently, on some platforms (like Fuchsia Emulator), only
+  // TODO(fxbug.dev/54153): Currently, on some platforms (like Fuchsia Emulator), only
   // VkDeviceMemory dedicated to VkImages can be exportable.
   //
   // In order to make exportable VMO allocation possible for all platforms

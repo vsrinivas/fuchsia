@@ -18,7 +18,7 @@
 #include "pts_manager.h"
 #include "util.h"
 
-// TODO(35200):
+// TODO(fxbug.dev/35200):
 //
 // Change these to InternalBuffer:
 //
@@ -339,8 +339,8 @@ zx_status_t H264Decoder::Initialize() {
   PscaleCtrl::Get().FromValue(0).WriteTo(owner_->dosbus());
   AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
-  // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
-  // and rounding up here.
+  // TODO(fxbug.dev/34192): After sysmem has min_base_phys_address_divisor, use that to avoid
+  // over-allocating and rounding up here.
   const uint32_t kCodecDataSize = 0x1ee000 + kBufferAlign;
   auto codec_data_create_result = InternalBuffer::Create(
       "H264CodecData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kCodecDataSize, is_secure_,
@@ -378,8 +378,8 @@ zx_status_t H264Decoder::Initialize() {
       .set_disable_fast_poc(0)
       .WriteTo(owner_->dosbus());
 
-  // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
-  // and rounding up here.
+  // TODO(fxbug.dev/34192): After sysmem has min_base_phys_address_divisor, use that to avoid
+  // over-allocating and rounding up here.
   constexpr uint32_t kSeiBufferSize = 8 * 1024 + kBufferAlign;
   // Sei data buffer must be readable from CPU (though we don't actually use it
   // yet).

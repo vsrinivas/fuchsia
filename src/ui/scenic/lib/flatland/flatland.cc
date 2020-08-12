@@ -46,22 +46,22 @@ Flatland::Flatland(scheduling::SessionId session_id,
 }
 
 Flatland::~Flatland() {
-  // TODO(53330): remove this function call when FrameScheduler is integrated.
+  // TODO(fxbug.dev/53330): remove this function call when FrameScheduler is integrated.
   SignalBufferReleaseFence();
   uber_struct_system_->ClearUberStruct(session_id_);
 
-  // TODO(55374): consider if Link tokens should be returned or not.
+  // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
 void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback callback) {
   auto root_handle = GetRoot();
 
-  // TODO(40818): Decide on a proper limit on compute time for topological sorting.
+  // TODO(fxbug.dev/40818): Decide on a proper limit on compute time for topological sorting.
   auto data = transform_graph_.ComputeAndCleanup(root_handle, std::numeric_limits<uint64_t>::max());
   FX_DCHECK(data.iterations != std::numeric_limits<uint64_t>::max());
 
-  // TODO(36166): Once the 2D scene graph is externalized, don't commit changes if a cycle is
-  // detected. Instead, kill the channel and remove the sub-graph from the global graph.
+  // TODO(fxbug.dev/36166): Once the 2D scene graph is externalized, don't commit changes if a cycle
+  // is detected. Instead, kill the channel and remove the sub-graph from the global graph.
   failure_since_previous_present_ |= !data.cyclical_edges.empty();
 
   if (!failure_since_previous_present_) {
@@ -153,12 +153,12 @@ void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback ca
         },
         std::move(acquire_fences));
 
-    // TODO(36161): Once present operations can be pipelined, this variable will change state based
-    // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
-    // always return 1 as the number of remaining presents.
+    // TODO(fxbug.dev/36161): Once present operations can be pipelined, this variable will change
+    // state based on the number of outstanding Present calls. Until then, this call is synchronous,
+    // and we can always return 1 as the number of remaining presents.
     callback(fit::ok(num_presents_remaining_));
   } else {
-    // TODO(56869): determine if pending link operations should still be run here.
+    // TODO(fxbug.dev/56869): determine if pending link operations should still be run here.
     callback(fit::error(Error::BAD_OPERATION));
   }
 

@@ -37,7 +37,7 @@ static const sysmem_metadata_t sysmem_metadata = {
     // each), for a total of 100 MiB.
     // Also include enough space for 0.5 seconds of camera streaming at 2720*2176*1.5 bytes @ 30Hz,
     // for a total of 127 MiB.
-    // TODO(39523): revisit contiguous memory requirements for camera
+    // TODO(fxbug.dev/39523): revisit contiguous memory requirements for camera
     .contiguous_memory_size = (100 + 127) * 1024 * 1024,
 };
 

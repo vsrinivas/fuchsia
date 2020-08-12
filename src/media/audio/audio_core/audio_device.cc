@@ -107,8 +107,8 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
         if (muted) {
           FX_LOGS(WARNING) << "Destination device is muted";
         } else {
-          // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
-          // method for gain observation
+          // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
+          // real-time method for gain observation
           FX_LOGS(INFO) << "Destination device gain=" << limited.gain_db;
         }
         link.mixer->bookkeeping().gain.SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
@@ -125,8 +125,8 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
         if (muted) {
           FX_LOGS(WARNING) << "Source device is muted";
         } else {
-          // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
-          // method for gain observation
+          // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
+          // real-time method for gain observation
           FX_LOGS(INFO) << "Source device gain=" << limited.gain_db;
         }
         link.mixer->bookkeeping().gain.SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB

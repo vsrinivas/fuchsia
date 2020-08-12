@@ -737,7 +737,7 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
       layer_node.layer->ApplyChanges(display_config.current_.mode);
     }
 
-    // TODO(54374): Controller needs to keep track of client switching and their applied
+    // TODO(fxbug.dev/54374): Controller needs to keep track of client switching and their applied
     // gamma table
     if (display_config.pending_gamma_table_ != nullptr &&
         (display_config.pending_gamma_table_ == display_config.current_gamma_table_)) {

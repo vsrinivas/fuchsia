@@ -522,7 +522,7 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
   }
 }
 
-// TODO(40161): This is fragile but we don't want this to regress if we can help it before
+// TODO(fxbug.dev/40161): This is fragile but we don't want this to regress if we can help it before
 // officially dropping support.
 //
 // This scene includes two rectangles: the one on the left is on the near plane of the view bound,

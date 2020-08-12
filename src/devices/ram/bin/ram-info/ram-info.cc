@@ -14,7 +14,7 @@ namespace ram_metrics = ::llcpp::fuchsia::hardware::ram::metrics;
 
 namespace {
 
-// TODO(48254): Get default channel information through the FIDL API.
+// TODO(fxbug.dev/48254): Get default channel information through the FIDL API.
 
 constexpr ram_info::RamDeviceInfo kDevices[] = {
     {

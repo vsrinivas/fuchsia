@@ -158,11 +158,11 @@ void AudioClock::TuneRateForError(Fixed frac_src_error, int64_t dest_frame) {
   auto adjustment = rate_adjuster_.Read();
 
   if (source_ == Source::Device) {
-    // TODO(46648): adjust hardware clock rate by rate_adjustment
+    // TODO(fxbug.dev/46648): adjust hardware clock rate by rate_adjustment
     // Return value from rate_adjuster_.Read is a double rate ratio centered on 1.0
     // Convert this to a (truncated) PPM value, set_rate_adjust and update the device clock
   } else if (type_ == Type::Adjustable) {
-    // TODO(46651): adjust clock by rate_adjustment
+    // TODO(fxbug.dev/46651): adjust clock by rate_adjustment
     // Return value from rate_adjuster_.Read is a double rate ratio centered on 1.0
     // Convert this to a (truncated) PPM value, set_rate_adjust and update the client clock
   } else {

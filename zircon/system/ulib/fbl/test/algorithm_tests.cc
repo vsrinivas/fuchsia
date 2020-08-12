@@ -100,7 +100,8 @@ void IsPowerOfTwo() {
     EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val + 5u)));
   }
 }
-// TODO(38140) : Get rid of this macro when there is a better way to expand templated tests.
+// TODO(fxbug.dev/38140) : Get rid of this macro when there is a better way to expand templated
+// tests.
 #define IS_POW2_TEST(_type) \
   TEST(AlgorithmTest, IsPow2_##_type) { ASSERT_NO_FAILURES(IsPowerOfTwo<_type>()); }
 

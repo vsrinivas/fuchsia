@@ -43,7 +43,7 @@ StreamImpl::~StreamImpl() {
   Unbind(legacy_stream_);
   async::PostTask(loop_.dispatcher(), [this] {
     for (auto& it : frame_waiters_) {
-      // TODO(50018): async::Wait destructor ordering edge case
+      // TODO(fxbug.dev/50018): async::Wait destructor ordering edge case
       it.second->Cancel();
       it.second = nullptr;
     }
@@ -311,8 +311,8 @@ void StreamImpl::PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::R
             y_max = y_min + region->height;
           }
           legacy_stream_->SetRegionOfInterest(x_min, y_min, x_max, y_max, [](zx_status_t status) {
-            // TODO(50908): Make this an error once RegionOfInterest support is known at init time.
-            // FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
+            // TODO(fxbug.dev/50908): Make this an error once RegionOfInterest support is known at
+            // init time. FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
           });
         }
         current_crop_region_ = std::move(region);

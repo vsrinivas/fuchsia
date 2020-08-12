@@ -365,7 +365,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
 //  9/16 of the area should be (0.75, 0.25, 1, 1);
 //  7/16 of the area should be (1, 0, 1, 1);
 //
-// TODO(47918): Enable this after premultiplied alpha is supported.
+// TODO(fxbug.dev/47918): Enable this after premultiplied alpha is supported.
 //
 VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
   const glm::vec4 kFuchsia(1, 0, 1, 1);

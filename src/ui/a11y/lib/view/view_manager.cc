@@ -47,9 +47,9 @@ void ViewManager::RegisterViewForSemantics(
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
   // Clients should register every view that gets created irrespective of the
   // state(enabled/disabled) of screen reader.
-  // TODO(36199): Check if ViewRef is Valid.
-  // TODO(36199): When ViewRef is no longer valid, then all the holders of ViewRef will get a
-  // signal, and Semantics Manager should then delete the binding for that ViewRef.
+  // TODO(fxbug.dev/36199): Check if ViewRef is Valid.
+  // TODO(fxbug.dev/36199): When ViewRef is no longer valid, then all the holders of ViewRef will
+  // get a signal, and Semantics Manager should then delete the binding for that ViewRef.
 
   zx_koid_t koid = GetKoid(view_ref);
 

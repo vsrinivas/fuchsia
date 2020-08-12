@@ -86,7 +86,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
     }
   }
 
-  // TODO(39761): Clean this up.
+  // TODO(fxbug.dev/39761): Clean this up.
   const char* parent = dirname(name_buffer.data());
   constexpr char kDevRoot[] = "/dev/";
   constexpr size_t kDevRootLen = sizeof(kDevRoot) - 1;

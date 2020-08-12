@@ -12,7 +12,7 @@
 namespace media::audio {
 namespace {
 
-// TODO(55132): Remove this workaround.
+// TODO(fxbug.dev/55132): Remove this workaround.
 static constexpr uint32_t kMinUltrasoundRate = 96000;
 
 bool DeviceConfigurationSupportsUsage(AudioDevice* device, StreamUsage usage) {

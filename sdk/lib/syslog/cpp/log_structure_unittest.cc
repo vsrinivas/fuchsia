@@ -13,7 +13,7 @@ namespace syslog {
 TEST(StructuredLogging, Log) {
   FX_SLOG(WARNING)("test_log", {"foo"_k = "bar"});
 
-  // TODO(57482): Figure out how to verify this appropriately.
+  // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
 }
 
 TEST(StructuredLogging, BackendDirect) {
@@ -21,7 +21,7 @@ TEST(StructuredLogging, BackendDirect) {
                            "Log message");
   syslog_backend::WriteLogValue(syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition",
                                 {"foo"_k = 42});
-  // TODO(57482): Figure out how to verify this appropriately.
+  // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
 }
 
 }  // namespace syslog

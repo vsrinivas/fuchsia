@@ -157,7 +157,7 @@ void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr
   CopyBuffer(src, dst, region);
 }
 
-// TODO(41296): Move this function out to a separated utility function, rather
+// TODO(fxbug.dev/41296): Move this function out to a separated utility function, rather
 // than part of impl::CommandBuffer.
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {

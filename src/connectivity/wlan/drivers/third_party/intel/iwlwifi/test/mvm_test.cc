@@ -84,7 +84,8 @@ class MvmTest : public SingleApTest {
   // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
   // save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this function.
   void MockRecv(wlan_rx_info_t* rx_info) {
-    // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
+    // TODO(fxbug.dev/43218): replace rxq->napi with interface instance so that we can map to
+    // mvmvif.
     mvmvif_->ifc.ctx = rx_info;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
                                  // with 'wlan_rx_info_t*'.
     mvmvif_->ifc.ops->recv = [](void* ctx, uint32_t flags, const void* data_buffer,
@@ -565,7 +566,7 @@ TEST_F(TxqTest, TestAllocData) {
   }
 
   // Request once more. Since there is no queue for data packet, expect failure.
-  // TODO(49530): this should be re-written once shared queue is supported.
+  // TODO(fxbug.dev/49530): this should be re-written once shared queue is supported.
   ASSERT_EQ(ZX_ERR_NO_RESOURCES, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, 0));
 }
 

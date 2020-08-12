@@ -129,8 +129,8 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
   ForEachSource(TaskType::Mix, dest_ref_time);
 
   // Transfer output_buffer ownership to the read lock via this destructor.
-  // TODO(50669): If this buffer is not fully consumed, we should save this buffer and reuse it for
-  // the next call to ReadLock, rather than mixing new data.
+  // TODO(fxbug.dev/50669): If this buffer is not fully consumed, we should save this buffer and
+  // reuse it for the next call to ReadLock, rather than mixing new data.
   return std::make_optional<ReadableStream::Buffer>(
       output_buffer->start(), output_buffer->length(), output_buffer->payload(), true,
       cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db,

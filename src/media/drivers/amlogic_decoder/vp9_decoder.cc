@@ -1150,8 +1150,8 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   // same PTS if they're part of a superframe, but only one of the frames should
   // have show_frame set, so only that frame will be output with that PTS.
   //
-  // TODO(49102): PtsManager needs to be able to help extend stream_offset from < 64 bits to 64
-  // bits.
+  // TODO(fxbug.dev/49102): PtsManager needs to be able to help extend stream_offset from < 64 bits
+  // to 64 bits.
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   // PtsManager does bit-extension to 64 bit stream offset.

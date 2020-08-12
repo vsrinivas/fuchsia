@@ -20,7 +20,7 @@ namespace media::audio {
 // This MONOTONIC-based duration is the maximum interval between trim operations.
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
-// TODO(49345): We should not need driver to be set for all Audio Devices.
+// TODO(fxbug.dev/49345): We should not need driver to be set for all Audio Devices.
 AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                          LinkMatrix* link_matrix)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix,

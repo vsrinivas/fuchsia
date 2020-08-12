@@ -23,7 +23,7 @@ namespace camera {
 
 // NOTE: these must be a superset of the formats defined in
 // //src/camera/bin/device/test/take_controller.cc
-// TODO(49137): improve legacy test fakes
+// TODO(fxbug.dev/49137): improve legacy test fakes
 static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 3> kFakeImageFormats{{
     {
         .pixel_format =

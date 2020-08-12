@@ -153,7 +153,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 // then setting the second image on the layer which has a wait event. When the wait event is
 // signaled, this will cause the second layer image to go up, which in turn will cause the first
 // layer image's event to be signaled.
-// TODO(55167): Check to see if there is a more appropriate place to test display controller
+// TODO(fxbug.dev/55167): Check to see if there is a more appropriate place to test display controller
 // events and/or if there already exist adequate tests that cover all of the use cases being
 // covered by this test.
 VK_TEST_F(DisplayTest, SetDisplayImageTest) {

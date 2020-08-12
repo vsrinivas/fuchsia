@@ -569,7 +569,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
   }
 
   // Don't allow any operations on the vDSO code mapping.
-  // TODO(39860): Factor this out into a common helper.
+  // TODO(fxbug.dev/39860): Factor this out into a common helper.
   if (aspace_->vdso_code_mapping_ && Intersects(aspace_->vdso_code_mapping_->base(),
                                                 aspace_->vdso_code_mapping_->size(), base, size)) {
     return ZX_ERR_ACCESS_DENIED;
@@ -585,7 +585,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
   vaddr_t op_end_byte = 0;
 
   for (auto curr = begin; curr != end; curr++) {
-    // TODO(39861): Allow the |op| range to include child VMARs.
+    // TODO(fxbug.dev/39861): Allow the |op| range to include child VMARs.
     if (!curr->is_mapping()) {
       return ZX_ERR_BAD_STATE;
     }
@@ -625,7 +625,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
         LTRACEF_LEVEL(2, "MapRange: op_offset=0x%zx op_size=0x%zx\n", op_offset, op_size);
         const auto result = mapping->MapRangeLocked(op_offset, op_size, false);
         if (result != ZX_OK) {
-          // TODO(46881): ZX_ERR_INTERNAL is not meaningful to userspace.
+          // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
           // For now, translate to ZX_ERR_NOT_FOUND.
           return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
         }

@@ -348,7 +348,8 @@ void DeviceImpl::OnStreamRequested(
     uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
     fit::function<void(uint32_t)> max_camping_buffers_callback, uint32_t format_index) {
-  // TODO(53305): sysmem should help transition between collections that cannot exist concurrently
+  // TODO(fxbug.dev/53305): sysmem should help transition between collections that cannot exist
+  // concurrently
   std::unique_lock sysmem_lock(sysmem_mutex_, std::try_to_lock);
   if (!sysmem_lock.owns_lock()) {
     async::PostTask(loop_.dispatcher(),
@@ -361,7 +362,7 @@ void DeviceImpl::OnStreamRequested(
     return;
   }
   // Negotiate buffers for this stream.
-  // TODO(44770): Watch for buffer collection events.
+  // TODO(fxbug.dev/44770): Watch for buffer collection events.
   fuchsia::sysmem::BufferCollectionPtr collection;
   allocator_->BindSharedCollection(std::move(token), collection.NewRequest(loop_.dispatcher()));
   if (!WaitForFreeSpace(allocator_,

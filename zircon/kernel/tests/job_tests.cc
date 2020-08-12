@@ -210,7 +210,7 @@ bool oom_job_kill_ordering() {
 
 UNITTEST_START_TESTCASE(job_tests)
 UNITTEST("test trivial oom kill", oom_job_kill_trivial)
-// TODO(45616): Test disabled because it was broken by the change to
+// TODO(fxbug.dev/45616): Test disabled because it was broken by the change to
 // a stable sort.  The test expectations need to be fixed.
 // UNITTEST("test ordering of oom kill", oom_job_kill_ordering)
 UNITTEST_END_TESTCASE(job_tests, "job", "Tests for jobs")

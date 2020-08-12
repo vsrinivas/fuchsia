@@ -33,10 +33,10 @@ int main(int argc, const char** argv) {
   scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
                        [&loop] { loop.Quit(); });
 
-  // TODO(40858): Migrate to the role-based scheduler API when available,
+  // TODO(fxbug.dev/40858): Migrate to the role-based scheduler API when available,
   // instead of hard coding parameters.
   {
-    // TODO(44209): Centralize default frame period.
+    // TODO(fxbug.dev/44209): Centralize default frame period.
     const zx::duration capacity = zx::msec(16);
     const zx::duration deadline = zx::msec(16);
     const zx::duration period = deadline;

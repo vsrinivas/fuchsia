@@ -565,7 +565,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 // ----------------
 // ----------------
-// TODO(52632): Transparency is currently hardcoded in the renderer to be on. This test will
+// TODO(fxbug.dev/52632): Transparency is currently hardcoded in the renderer to be on. This test will
 // break if that is changed to be hardcoded to false before we expose it in the API.
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);

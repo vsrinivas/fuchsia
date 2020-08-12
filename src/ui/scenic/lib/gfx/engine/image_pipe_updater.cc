@@ -35,11 +35,11 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
   scheduling::PresentId present_id = scheduling::kInvalidPresentId;
 
   // This gets reset to the same value on every frame. Should probably only be set once (per pipe).
-  // TODO(45362): Optimize this for either one or several image pipes.
+  // TODO(fxbug.dev/45362): Optimize this for either one or several image pipes.
   image_pipes_[scheduling_id_] = std::move(image_pipe);
 
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(47308): Delete callback argument from signature entirely.
+    // TODO(fxbug.dev/47308): Delete callback argument from signature entirely.
     present_id = scheduler->RegisterPresent(
         scheduling_id_, /*callback*/ [](auto...) {}, std::move(release_fences));
     scheduling::SchedulingIdPair id_pair{scheduling_id_, present_id};

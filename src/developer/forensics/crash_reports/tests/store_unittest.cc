@@ -20,7 +20,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/test_clock.h"
-// TODO(57392): Move it back to //third_party once unification completes.
+// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {

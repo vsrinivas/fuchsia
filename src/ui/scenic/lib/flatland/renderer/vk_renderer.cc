@@ -71,7 +71,7 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
   // Create a duped vulkan token.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
   {
-    // TODO(51213): See if this can become asynchronous.
+    // TODO(fxbug.dev/51213): See if this can become asynchronous.
     fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
     zx_status_t status =
         sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
@@ -107,7 +107,7 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
 
   // Multiple threads may be attempting to read/write from |collection_map_| so we
   // lock this function here.
-  // TODO(44335): Convert this to a lock-free structure.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
   collection_map_[identifier] = std::move(result.value());
   vk_collection_map_[identifier] = std::move(vk_collection);
@@ -117,7 +117,7 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
 void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
-  // TODO(44335): Convert this to a lock-free structure.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
 
   auto collection_itr = collection_map_.find(collection_id);
@@ -147,8 +147,8 @@ void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
 
 std::optional<BufferCollectionMetadata> VkRenderer::Validate(
     GlobalBufferCollectionId collection_id) {
-  // TODO(44335): Convert this to a lock-free structure. This is trickier than in the other
-  // cases for this class since we are mutating the buffer collection in this call. So we can
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is trickier than in the
+  // other cases for this class since we are mutating the buffer collection in this call. So we can
   // only convert this to a lock free structure if the elements in the map are changed to be values
   // only, or if we can guarantee that mutations on the elements only occur in a single thread.
   std::unique_lock<std::mutex> lock(lock_);
@@ -210,7 +210,7 @@ escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
 
   GpuImageInfo gpu_info;
   {
-    // TODO(44335): Convert this to a lock-free structure.
+    // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);
     auto collection_itr = collection_map_.find(metadata.collection_id);
     FX_DCHECK(collection_itr != collection_map_.end());
@@ -233,8 +233,9 @@ escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
   FX_DCHECK(image_ptr);
 
   // Transition the image to the provided layout.
-  // TODO(52196): The way we are transitioning image layouts here and in the rest of scenic is
-  // incorrect for "external" images. It just happens to be working by luck on our current hardware.
+  // TODO(fxbug.dev/52196): The way we are transitioning image layouts here and in the rest of
+  // scenic is incorrect for "external" images. It just happens to be working by luck on our current
+  // hardware.
   command_buffer->impl()->TransitionImageLayout(image_ptr, vk::ImageLayout::eUndefined, layout);
 
   return image_ptr;
@@ -255,7 +256,7 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     // Pass the texture into the above vector to keep it alive outside of this loop.
     textures.emplace_back(ExtractTexture(command_buffer, image));
 
-    // TODO(52632): We are hardcoding the multiply color and transparency flag for now.
+    // TODO(fxbug.dev/52632): We are hardcoding the multiply color and transparency flag for now.
     // Eventually these will be exposed in the API.
     color_data.emplace_back(escher::RectangleCompositor::ColorData(glm::vec4(1.f), true));
   }

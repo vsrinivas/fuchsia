@@ -27,8 +27,8 @@ TEST_F(SystemMonitorDockyardHostTest, ProcessRequests) {
   EXPECT_TRUE(GetPathsHandler());
   dockyard_host.StartCollectingFrom("apple.banana.carrot.dog");
   dockyard_host.Dockyard().ProcessRequests();
-  // TODO(57): Add checks to see that requests were processed.
-  // TODO(56): Add test for getting total system memory.
+  // TODO(fxbug.dev/57): Add checks to see that requests were processed.
+  // TODO(fxbug.dev/56): Add test for getting total system memory.
 }
 
 }  // namespace

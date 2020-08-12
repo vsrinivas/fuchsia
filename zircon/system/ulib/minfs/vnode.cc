@@ -725,7 +725,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     if (decommit_length > 0) {
       status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0);
       if (status != ZX_OK) {
-        // TODO(35948): This is a known issue; the additional logging here is to help
+        // TODO(fxbug.dev/35948): This is a known issue; the additional logging here is to help
         // diagnose.
         FS_TRACE_ERROR("TruncateInternal: Modifying node length from %zu to %zu\n", inode_size,
                        len);

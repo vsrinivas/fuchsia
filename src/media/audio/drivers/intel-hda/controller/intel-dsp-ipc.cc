@@ -82,7 +82,7 @@ class HardwareDspChannel : public DspChannel {
   class Mailbox {
    public:
     void Initialize(MMIO_PTR void* base, size_t size) {
-      // TODO(56253): avoid casting away the MMIO_PTR annotation.
+      // TODO(fxbug.dev/56253): avoid casting away the MMIO_PTR annotation.
       base_ = (void*)base;
       size_ = size;
     }

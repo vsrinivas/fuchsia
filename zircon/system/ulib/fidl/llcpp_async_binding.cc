@@ -79,7 +79,7 @@ void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindI
 
   // Delete the calling reference. Wait for any transient references to be released.
   binding = nullptr;
-  // TODO(45407): Currently, this could wait for a synchronous call from a fidl::Client<> to
+  // TODO(fxbug.dev/45407): Currently, this could wait for a synchronous call from a fidl::Client<> to
   // complete. Once it is possible to interrupt ongoing calls, do so to avoid potentially unbounded
   // blocking here.
   ZX_ASSERT(sync_completion_wait(&on_delete, ZX_TIME_INFINITE) == ZX_OK);

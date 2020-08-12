@@ -79,7 +79,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   CacheInfo cache_info;
   cache_info.id = buffer->uid();
   cache_info.allocation_time = std::chrono::steady_clock::now();
-  // TODO(40736): Now buffer->size() is the size of VkBuffer, so it can only
+  // TODO(fxbug.dev/40736): Now buffer->size() is the size of VkBuffer, so it can only
   // reclaim buffers of size greater than or equal to the requested size. For
   // buffers with size less than the requested size, but with memory enough to
   // hold the requested buffer, it doesn't work.

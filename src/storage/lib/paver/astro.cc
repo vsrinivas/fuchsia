@@ -140,15 +140,15 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
     return status.take_error();
   }
 
-  // TODO(47505): Removed this condition and always enabled buffered client when http://fxb/40952
-  // is fixed.
+  // TODO(fxbug.dev/47505): Removed this condition and always enabled buffered client when
+  // http://fxb/40952 is fixed.
   bool enabled_buffered_client =
       boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.buffered-client", false);
 
   if (enabled_buffered_client) {
     // Enable abr wear-leveling only when we see an explicitly defined boot argument
     // "astro.sysconfig.abr-wear-leveling".
-    // TODO(47505): Find a proper place to document the parameter.
+    // TODO(fxbug.dev/47505): Find a proper place to document the parameter.
     AbrWearLevelingOption option =
         boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
             ? AbrWearLevelingOption::ON
@@ -277,7 +277,7 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
         }
         ZX_ASSERT(false);
       }();
-      // TODO(47505): Remove the following check and always use buffered client when
+      // TODO(fxbug.dev/47505): Remove the following check and always use buffered client when
       // http://fxb/40952 is fixed.
       if (context_) {
         return zx::ok(new AstroSysconfigPartitionClientBuffered(context_, type));

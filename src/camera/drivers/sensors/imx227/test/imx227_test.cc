@@ -177,7 +177,7 @@ static uint32_t GetCoarseMaxIntegrationTime(const frame_rate_info_t* lut, uint32
 
 TEST_F(Imx227DeviceTest, Sanity) { ASSERT_OK(dut().CameraSensor2Init()); }
 
-// TODO(50737): The expected I2C operations don't match up with those made by
+// TODO(fxbug.dev/50737): The expected I2C operations don't match up with those made by
 // CameraSensor2GetSensorId.
 TEST_F(Imx227DeviceTest, DISABLED_GetSensorId) {
   dut().ExpectGetSensorId();

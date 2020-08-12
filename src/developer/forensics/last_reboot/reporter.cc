@@ -49,7 +49,7 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
   const zx::duration uptime = (reboot_log.HasUptime()) ? reboot_log.Uptime() : zx::usec(0);
   cobalt_->LogDuration(ToCobaltLastRebootReason(reboot_log.RebootReason()), uptime);
 
-  // TODO(53131): Remove this once the new metric has been adopted.
+  // TODO(fxbug.dev/53131): Remove this once the new metric has been adopted.
   cobalt_->LogOccurrence(ToCobaltLegacyRebootReason(reboot_log.RebootReason()));
 
   if (!IsCrash(reboot_log.RebootReason())) {

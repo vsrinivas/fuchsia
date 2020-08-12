@@ -130,7 +130,8 @@ escher::ray4 CreateWorldSpaceRay(const InternalPointerEvent& event,
 
 // Takes an InternalPointerEvent and returns a point in (Vulkan) Normalized Device Coordinates,
 // in relation to the viewport. Intended for magnification
-// TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
+// TODO(fxbug.dev/50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y
+// code.
 glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& internal_event) {
   const float width = internal_event.viewport.extents.max.x - internal_event.viewport.extents.min.x;
   const float height =
@@ -262,7 +263,7 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
     return;
   }
 
-  // TODO(50348): Add a callback to kill the channel immediately if connectivity breaks.
+  // TODO(fxbug.dev/50348): Add a callback to kill the channel immediately if connectivity breaks.
 
   const InjectorId id = ++last_injector_id_;
   InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
@@ -454,7 +455,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
 
   // The a11y listener is only enabled if the root view is the context. This will later be handled
   // implicitly by scene graph structure when gesture disambiguation is implemented.
-  // TODO(52134): Remove when gesture disambiguation makes it obsolete.
+  // TODO(fxbug.dev/52134): Remove when gesture disambiguation makes it obsolete.
   const bool a11y_enabled =
       IsA11yListenerEnabled() && IsOwnedByRootSession(view_tree, event.context);
 
@@ -563,7 +564,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
          .parallel_event_receivers = std::move(deferred_event_receivers)},
         std::move(packet));
   } else {
-    // TODO(48150): Delete when we delete the PointerCapture functionality.
+    // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
     ReportPointerEventToPointerCaptureListener(event, view_tree);
   }
 
@@ -679,7 +680,7 @@ void InputSystem::DispatchDeferredPointerEvent(
                              fuchsia::ui::input::PointerEventType::TOUCH, view_tree);
   }
 
-  {  // TODO(48150): Delete when we delete the PointerCapture functionality.
+  {  // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
     ReportPointerEventToPointerCaptureListener(views_and_event.event, view_tree);
   }
 }
@@ -739,7 +740,7 @@ bool InputSystem::IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t
          view_tree.SessionIdOf(koid) == view_tree.SessionIdOf(root_koid);
 }
 
-// TODO(48150): Delete when we delete the PointerCapture functionality.
+// TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
 void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event,
                                                              const gfx::ViewTree& view_tree) const {
   if (!pointer_capture_listener_)
@@ -756,7 +757,7 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPoint
       event, view_from_context_transform.value(), fuchsia::ui::input::PointerEventType::TOUCH,
       /*trace_id*/ 0);
 
-  // TODO(42145): Implement flow control.
+  // TODO(fxbug.dev/42145): Implement flow control.
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
 

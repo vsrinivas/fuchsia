@@ -41,8 +41,8 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
   ProcessAllEveryHour();
   ProcessAllOnNetworkReachable();
 
-  // TODO(56448): Initialize queue with the reports in the store. We need to be able to distinguish
-  // archived reports from reports that have not been uploaded yet.
+  // TODO(fxbug.dev/56448): Initialize queue with the reports in the store. We need to be able to
+  // distinguish archived reports from reports that have not been uploaded yet.
 }
 
 bool Queue::Contains(const Store::Uid& uuid) const {
@@ -51,8 +51,8 @@ bool Queue::Contains(const Store::Uid& uuid) const {
 }
 
 bool Queue::Add(Report report) {
-  // TODO(57293): Attempt up upload the report before putting it in the store. InspectManager will
-  // need to be altered to support recording metrics on reports without an id.
+  // TODO(fxbug.dev/57293): Attempt up upload the report before putting it in the store.
+  // InspectManager will need to be altered to support recording metrics on reports without an id.
 
   std::vector<Store::Uid> garbage_collected_reports;
   std::optional<Store::Uid> local_report_id =

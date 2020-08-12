@@ -915,7 +915,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   ASSERT_TRUE(device.svc_queue.empty());
 }
 
-// TODO(43456): Enable this test again once MLME stats is implemented in Rust.
+// TODO(fxbug.dev/43456): Enable this test again once MLME stats is implemented in Rust.
 TEST_F(ClientTest, DISABLED_ProcessZeroRssiFrame) {
   auto no_rssi_pkt = CreateDataFrame(kTestPayload);
   auto rx_info = const_cast<wlan_rx_info_t*>(no_rssi_pkt->ctrl_data<wlan_rx_info_t>());

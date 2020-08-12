@@ -747,7 +747,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // XXX This function relies on very subtle orderings and assumptions about the state of the
   // filesystem. Proceed with caution whenever making changes to Blobfs::Reset(), and consult the
   // blame history for the graveyard of bugs past.
-  // TODO(56464): simplify the teardown path.
+  // TODO(fxbug.dev/56464): simplify the teardown path.
   if (!block_device_) {
     return nullptr;
   }

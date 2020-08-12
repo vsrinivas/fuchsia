@@ -153,7 +153,7 @@ void PipelineManager::ConfigureStreamPipeline(
 
       // If the next node is an output node, it is currently not supported.
       // Currently the expectation is that the clients will request streams in a fixed order.
-      // TODO(42241): Remove this check when 42241 is fixed.
+      // TODO(fxbug.dev/42241): Remove this check when 42241 is fixed.
       const auto* next_node_internal =
           GetNextNodeInPipeline(info.stream_type(), result.value().first);
       if (!next_node_internal) {

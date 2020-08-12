@@ -98,8 +98,8 @@ void Inspect::AppendNextInspectBatch() {
 
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Failed to retrieve next Inspect batch: " << result.err();
-      // TODO(51658): don't complete the flow on an error. The API says we should continue making
-      // calls instead.
+      // TODO(fxbug.dev/51658): don't complete the flow on an error. The API says we should continue
+      // making calls instead.
       archive_.CompleteError(Error::kBadValue);
       return;
     }

@@ -94,7 +94,7 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     }
   }
 
-  // TODO(38569): Keep at least one buffer collection around to know about
+  // TODO(fxbug.dev/38569): Keep at least one buffer collection around to know about
   // any failures sysmem wants to notify by closing the channel.
   return ZX_OK;
 }

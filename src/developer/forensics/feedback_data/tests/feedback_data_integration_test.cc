@@ -32,7 +32,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
-// TODO(57392): Move it back to //third_party once unification completes.
+// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/schema.h"
 

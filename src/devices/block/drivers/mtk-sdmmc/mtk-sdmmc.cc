@@ -124,7 +124,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   sdmmc_host_info_t info = {
-      // TODO(34596): Re-enable SDR104 once it works without causing CRC errors.
+      // TODO(fxbug.dev/34596): Re-enable SDR104 once it works without causing CRC errors.
       .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_DMA |
               /*SDMMC_HOST_CAP_SDR104 |*/ SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50,
       // Assuming 512 is smallest block size we are likely to see.

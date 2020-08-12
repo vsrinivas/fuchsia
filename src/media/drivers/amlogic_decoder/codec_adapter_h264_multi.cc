@@ -72,7 +72,7 @@ bool CodecAdapterH264Multi::IsCoreCodecMappedBufferUseful(CodecPort port) {
     // they're possible.  However if is_secure true, we won't get a mapping and we don't really need
     // a mapping, other than for avcC.  If avcC shows up on input, we'll fail then.
     //
-    // TODO(35200): Add the failure when avcC shows up when is_secure, as described above.
+    // TODO(fxbug.dev/35200): Add the failure when avcC shows up when is_secure, as described above.
     return true;
   } else {
     ZX_DEBUG_ASSERT(port == kOutputPort);
@@ -95,11 +95,11 @@ void CodecAdapterH264Multi::CoreCodecInit(
 
 void CodecAdapterH264Multi::CoreCodecSetSecureMemoryMode(
     CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
-  // TODO(40198): Ideally a codec list from the main CodecFactory would avoid reporting support for
-  // secure output or input when !is_tee_available(), which likely will mean reporting that in list
-  // from driver's local codec factory up to main factory.  The main CodecFactory could also avoid
-  // handing out a codec that can't do secure output / input when the TEE isn't available, so we
-  // wouldn't end up here.
+  // TODO(fxbug.dev/40198): Ideally a codec list from the main CodecFactory would avoid reporting
+  // support for secure output or input when !is_tee_available(), which likely will mean reporting
+  // that in list from driver's local codec factory up to main factory.  The main CodecFactory could
+  // also avoid handing out a codec that can't do secure output / input when the TEE isn't
+  // available, so we wouldn't end up here.
   if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF &&
       !video_->is_tee_available()) {
     events_->onCoreCodecFailCodec(

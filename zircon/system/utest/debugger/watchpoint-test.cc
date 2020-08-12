@@ -175,7 +175,7 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
 bool WatchpointTest() {
   BEGIN_TEST;
 
-  // TODO(35295): This test flakes.
+  // TODO(fxbug.dev/35295): This test flakes.
   END_TEST;
 
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;

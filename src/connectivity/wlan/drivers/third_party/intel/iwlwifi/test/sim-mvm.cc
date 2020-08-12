@@ -48,8 +48,8 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         //      TIME_EVENT_CMD command.
         //   2. In iwl_mvm_protect_session(), it waits for the TIME_EVENT_NOTIFICATION.
         //
-        // However, the current sim-mvm code can only unblock the first wait. So added TODO(51671)
-        // to track this.
+        // However, the current sim-mvm code can only unblock the first wait. So added
+        // TODO(fxbug.dev/51671) to track this.
         case TIME_EVENT_CMD:
           // passthru
 

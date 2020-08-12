@@ -91,8 +91,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
-      // TODO(40997): subsystems requiring graceful shutdown *on a loop* should register themselves.
-      // It is preferable to cleanly shutdown using destructors only, if possible.
+      // TODO(fxbug.dev/40997): subsystems requiring graceful shutdown *on a loop* should register
+      // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
           ShutdownManager::New(async_get_default_dispatcher(), std::move(quit_callback))),
       scenic_(std::make_shared<Scenic>(app_context_.get(), std::move(inspect_node),
@@ -133,7 +133,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
   executor_.schedule_task(std::move(p));
 
-  // TODO(48596): Scenic sometimes gets stuck for consecutive 60 seconds.
+  // TODO(fxbug.dev/48596): Scenic sometimes gets stuck for consecutive 60 seconds.
   // Here we set up a Watchdog polling Scenic status every 15 seconds.
   constexpr uint32_t kWatchdogWarningIntervalMs = 15000u;
 
@@ -179,7 +179,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
     pipeline_builder->set_log_pipeline_creation_callback(
         [cobalt_logger](const vk::GraphicsPipelineCreateInfo* graphics_info,
                         const vk::ComputePipelineCreateInfo* compute_info) {
-          // TODO(49972): pre-warm compute pipelines in addition to graphics pipelines.
+          // TODO(fxbug.dev/49972): pre-warm compute pipelines in addition to graphics pipelines.
           if (compute_info) {
             FX_LOGS(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
             return;

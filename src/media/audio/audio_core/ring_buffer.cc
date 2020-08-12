@@ -31,8 +31,8 @@ struct BufferTraits<ReadableRingBuffer> {
 
 template <>
 struct BufferTraits<WritableRingBuffer> {
-  // TODO(50442): Technically the destructor should flush cache for the memory range that was locked
-  // when is_hardware_buffer == true.
+  // TODO(fxbug.dev/50442): Technically the destructor should flush cache for the memory range that
+  // was locked when is_hardware_buffer == true.
   static std::optional<WritableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
                                                           void* payload) {
     return std::make_optional<WritableStream::Buffer>(start, length, payload);
@@ -126,7 +126,7 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint3
   }
 
   // Map the VMO into our address space.
-  // TODO(35022): How do I specify the cache policy for this mapping?
+  // TODO(fxbug.dev/35022): How do I specify the cache policy for this mapping?
   zx_vm_option_t flags = ZX_VM_PERM_READ | (writable ? ZX_VM_PERM_WRITE : 0);
   auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
   status = vmo_mapper->Map(vmo, 0u, size, flags);

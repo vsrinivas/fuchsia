@@ -52,7 +52,7 @@ bool VerifyRamdiskAndFvmExist(Fixture* fixture) {
   END_TEST;
 }
 
-// TODO(38168): flaky tests
+// TODO(fxbug.dev/38168): flaky tests
 // bool VerifyRamdiskAndFvmExist2(Fixture* fixture) { return VerifyRamdiskAndFvmExist(fixture); }
 
 BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm)
@@ -65,7 +65,7 @@ BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
 // TODO(gevalentino): FLK-48 flaky.
 // RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
-// TODO(38168): flaky tests
+// TODO(fxbug.dev/38168): flaky tests
 // RUN_FS_TEST_F(VerifyRamdiskAndFvmExist2)
 END_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 

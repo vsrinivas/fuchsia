@@ -62,7 +62,7 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, vk::Format swapcha
   // Determine the allowable MSAA sample counts to cycle through with "M" key.
   {
     auto filtered =
-        // TODO(44326): 8x MSAA causes a segfault on NVIDIA/Linux.
+        // TODO(fxbug.dev/44326): 8x MSAA causes a segfault on NVIDIA/Linux.
         // device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U, 8});
         device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U});
     FX_CHECK(!filtered.empty());

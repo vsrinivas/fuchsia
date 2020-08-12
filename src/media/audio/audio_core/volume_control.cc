@@ -42,7 +42,7 @@ void VolumeControl::SetVolume(float volume) {
     return;
   }
 
-  // TODO(35581): Generate event async after update from callback.
+  // TODO(fxbug.dev/35581): Generate event async after update from callback.
   current_volume_ = volume;
   if (!muted_) {
     volume_setting_->SetVolume(current_volume_);

@@ -356,7 +356,7 @@ void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
     return;
 
   // Allocate protected memory buffers lazily and once only.
-  // TODO(35785): Free this memory chunk when we no longer expect protected memory.
+  // TODO(fxbug.dev/35785): Free this memory chunk when we no longer expect protected memory.
   if (use_protected_memory && protected_swapchain_buffers_.empty()) {
     InitializeFramebuffers(escher_->resource_recycler(), use_protected_memory);
   }
@@ -387,7 +387,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   auto& record = frames_[frame_index];
 
   uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
-  // TODO(57725) Replace with more robust solution.
+  // TODO(fxbug.dev/57725) Replace with more robust solution.
   uint64_t frame_trace_id = (record->use_protected_memory * 3) + frame_index + 1;
 
   TRACE_DURATION("gfx", "DisplaySwapchain::OnFrameRendered", "frame count", frame_number,

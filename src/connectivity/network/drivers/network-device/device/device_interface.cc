@@ -174,8 +174,8 @@ void DeviceInterface::NetworkDeviceIfcCompleteTx(const tx_result_t* tx_list, siz
 }
 
 void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t rx_count) {
-  // TODO(43028): Implement real version. Current implementation acts as if no LISTEN is ever in
-  // place.
+  // TODO(fxbug.dev/43028): Implement real version. Current implementation acts as if no LISTEN is
+  // ever in place.
 }
 
 void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
@@ -186,7 +186,7 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
   info.descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
   info.rx_depth = rx_fifo_depth();
   info.tx_depth = tx_fifo_depth();
-  // TODO(44604): We're missing a way to negotiate the buffer alignment with the device
+  // TODO(fxbug.dev/44604): We're missing a way to negotiate the buffer alignment with the device
   // implementation. We're using a sufficiently large alignment for now for typical requirements we
   // see in drivers, but this needs to be fixed.
   info.buffer_alignment = ZX_PAGE_SIZE / 2;

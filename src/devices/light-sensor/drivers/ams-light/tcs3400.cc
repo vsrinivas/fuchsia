@@ -33,7 +33,7 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 
 #define GET_BYTE(val, shift) static_cast<uint8_t>((val >> shift) & 0xFF)
 
-// TODO(37765): -Waddress-of-packed-member warns on pointers to members of
+// TODO(fxbug.dev/37765): -Waddress-of-packed-member warns on pointers to members of
 // packed structs because those pointers could be misaligned. The warning
 // however can appear on areas where we just copy the value of the pointer
 // instead of access it. These macros silence it by casting to a void* and back.

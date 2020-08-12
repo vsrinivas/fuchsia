@@ -40,7 +40,7 @@
 #include "vdec1.h"
 #include "video_firmware_session.h"
 
-// TODO(35200):
+// TODO(fxbug.dev/35200):
 //
 // AllocateIoBuffer() - only used by VP9 - switch to InternalBuffer when we do zero copy on input
 // for VP9.
@@ -778,10 +778,10 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
       DECODE_ERROR("Could not get TEE protocol, despite is_tee_available_");
       return status;
     }
-    // TODO(39808): remove log spam once we're loading firmware via video_firmware TA
+    // TODO(fxbug.dev/39808): remove log spam once we're loading firmware via video_firmware TA
     LOG(INFO, "Got ZX_PROTOCOL_TEE");
   } else {
-    // TODO(39808): remove log spam once we're loading firmware via video_firmware TA
+    // TODO(fxbug.dev/39808): remove log spam once we're loading firmware via video_firmware TA
     LOG(INFO, "Skipped ZX_PROTOCOL_TEE");
   }
 

@@ -454,7 +454,7 @@ TEST_F(RealmCrashIntrospectTest, InvalidProcessId) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
 }
 
-// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// TODO(fxbug.dev/57032): re-enable once we can intercept the exception after appmgr, but before the
 // platform's exception handling.
 TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewCrashingProcess) {
   const char* command_argv[] = {"/pkg/bin/crashing_process", nullptr};
@@ -488,7 +488,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewCrashingProcess) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
 }
 
-// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// TODO(fxbug.dev/57032): re-enable once we can intercept the exception after appmgr, but before the
 // platform's exception handling.
 TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInCurrentEnv) {
   zx::channel request;
@@ -532,7 +532,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInCurrentEn
   EXPECT_EQ(response.instance_id(), process_koid);
 }
 
-// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// TODO(fxbug.dev/57032): re-enable once we can intercept the exception after appmgr, but before the
 // platform's exception handling.
 TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInEnclosingEnv) {
   auto env_services = CreateServices();

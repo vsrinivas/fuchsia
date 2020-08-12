@@ -391,7 +391,7 @@ TEST(EthernetTest, SendTest) {
   ASSERT_OK(tx.write(sizeof(entry), &entry, 1, nullptr));
   // wait for packet to be returned
   ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-  // TODO(21334): remove debug logs after flake fix is confirmed
+  // TODO(fxbug.dev/21334): remove debug logs after flake fix is confirmed
   printf("SendTest: Transmit wait completed\n");
   ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
   // check mock ethmac if packet was received
@@ -419,7 +419,7 @@ TEST(EthernetTest, ReceiveTest) {
 
   // check if packet is received
   ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-  // TODO(21334): remove debug logs after flake fix is confirmed
+  // TODO(fxbug.dev/21334): remove debug logs after flake fix is confirmed
   printf("ReceiveTest: Receive wait completed\n");
   ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
 }
@@ -451,7 +451,7 @@ TEST(EthernetTest, ListenStartTest) {
 
   // wait for the send to complete
   ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-  // TODO(21334): remove debug logs after flake fix is confirmed
+  // TODO(fxbug.dev/21334): remove debug logs after flake fix is confirmed
   printf("ListenStartTest: Transmit wait completed\n");
   ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
   // check mock ethmac if packet was received
@@ -459,7 +459,7 @@ TEST(EthernetTest, ListenStartTest) {
 
   // check if it was echoed
   ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-  // TODO(21334): remove debug logs after flake fix is confirmed
+  // TODO(fxbug.dev/21334): remove debug logs after flake fix is confirmed
   printf("ListenStartTest: Receive wait completed\n");
   ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
 }

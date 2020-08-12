@@ -44,7 +44,7 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
   fuchsia::media::audio::GainControlPtr gain_control_;
 };
 
-// TODO(43507): Remove this test.
+// TODO(fxbug.dev/43507): Remove this test.
 TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
   zx::time start_pts;
   size_t count = 0;
@@ -83,7 +83,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
   ASSERT_GT(count, 2 * kNumPackets);
 }
 
-// TODO(43507): This will become the default behavior.
+// TODO(fxbug.dev/43507): This will become the default behavior.
 class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
  protected:
   static void SetUpTestSuite() {

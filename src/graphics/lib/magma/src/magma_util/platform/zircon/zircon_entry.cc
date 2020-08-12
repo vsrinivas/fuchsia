@@ -109,7 +109,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
   void Connect(uint64_t client_id, ConnectCompleter::Sync _completer) override {
     DLOG("gpu_device::Connect");
 
-    // TODO(40858): Migrate to the role-based API when available, instead of hard
+    // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
     // coding parameters.
     std::unique_ptr<magma::PlatformHandle> thread_profile;
 

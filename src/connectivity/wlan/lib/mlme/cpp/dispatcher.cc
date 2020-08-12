@@ -125,7 +125,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
   uint64_t ordinal = hdr->ordinal;
   debughdr("service packet txid=%u ordinal=%lu\n", hdr->txid, ordinal);
 
-  // TODO(44480): Rust MLME message handler does not support transaction ID.
+  // TODO(fxbug.dev/44480): Rust MLME message handler does not support transaction ID.
   switch (ordinal) {
     case fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal:
       return HandleQueryDeviceInfo(hdr->txid);
@@ -133,7 +133,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
       return HandleMinstrelPeerList(ordinal, hdr->txid);
     case fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal:
       return HandleMinstrelTxStats(span, ordinal, hdr->txid);
-    // TODO(44485): Rust MLME does not support Mesh.
+    // TODO(fxbug.dev/44485): Rust MLME does not support Mesh.
     case fuchsia::wlan::mlme::internal::kMLME_SendMpOpenAction_Ordinal:
       return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, ordinal);
     case fuchsia::wlan::mlme::internal::kMLME_SendMpConfirmAction_Ordinal:
@@ -242,7 +242,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
     resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
   }
-  // TODO(41640): Remove this flag once FullMAC drivers no longer needs SME.
+  // TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers no longer needs SME.
   // This flag tells SME that SoftMAC drivers need SME to derive association capabilities.
   resp.driver_features.push_back(wlan_common::DriverFeature::TEMP_SOFTMAC);
 

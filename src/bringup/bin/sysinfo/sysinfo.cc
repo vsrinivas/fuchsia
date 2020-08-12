@@ -50,7 +50,7 @@ void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sy
   completer.Reply(status, fidl::unowned_ptr(&info));
 }
 
-// TODO(43777): Separate out GetHypervisorResource from sysinfo
+// TODO(fxbug.dev/43777): Separate out GetHypervisorResource from sysinfo
 zx_status_t SysInfo::GetHypervisorResource(zx::resource *hypervisor) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);

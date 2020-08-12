@@ -85,8 +85,8 @@ namespace FakeMsi {
 // and the header msi_dispatcher.h which cannot be included due to being kernel-side. The
 // intent is to mock the bare minimum functionality of an MSI capability so that the dispatcher
 // behavior can be controlled and observed.
-// TODO(32978): The maximum size for this capability can vary based on PVM and bit count, so
-// add tests to validate the 4 possible sizes against the VMO.
+// TODO(fxbug.dev/32978): The maximum size for this capability can vary based on PVM and bit count,
+// so add tests to validate the 4 possible sizes against the VMO.
 struct Capability {
   uint8_t id;
   uint8_t next;

@@ -140,7 +140,7 @@ VK_TEST_F(FramebufferAllocatorTest, Basic) {
   EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
   EXPECT_NE(framebuffers_2colors_D32[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
 
-  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  // TODO(fxbug.dev/36827) Now Vulkan validation layer has a performance warning:
   //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
   //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
   SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
@@ -177,7 +177,7 @@ VK_TEST_F(FramebufferAllocatorTest, BasicNoDepth) {
   EXPECT_EQ(framebuffers_1color[0]->render_pass(), framebuffers_1color[1]->render_pass());
   EXPECT_NE(framebuffers_2colors[0]->render_pass(), framebuffers_1color[0]->render_pass());
 
-  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  // TODO(fxbug.dev/36827) Now Vulkan validation layer has a performance warning:
   //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
   //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
   SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
@@ -258,7 +258,7 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
   }
   EXPECT_NE(framebuffer, ObtainFramebuffers(&allocator, textures));
 
-  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  // TODO(fxbug.dev/36827) Now Vulkan validation layer has a performance warning:
   //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
   //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
   SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
@@ -337,7 +337,7 @@ VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
   EXPECT_NE(fb_rgba0->render_pass(), fb_bgra0->render_pass());
   EXPECT_NE(fb_rgba0->render_pass(), fb_bgra1->render_pass());
 
-  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  // TODO(fxbug.dev/36827) Now Vulkan validation layer has a performance warning:
   //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
   //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
   SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();

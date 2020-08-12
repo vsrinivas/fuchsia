@@ -217,7 +217,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
 // In general, if a device driver tries to disable an interrupt mode while
 // holding handles to individual interrupts then it's considered a bad state.
-// TODO(32978): Are there cases where the bus driver would want to hard disable
+// TODO(fxbug.dev/32978): Are there cases where the bus driver would want to hard disable
 // IRQs even though the driver holds outstanding handles? In the event of a driver
 // crash the handles will be released, but in a hard disable path they would still
 // exist.

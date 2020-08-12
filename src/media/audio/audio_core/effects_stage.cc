@@ -265,7 +265,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
     effects_processor_->Process(ringout_.buffer_frames, ringout_.buffer.data(), &buf_out);
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
-    // TODO(50669): Should we clamp length to |frame_count|?
+    // TODO(fxbug.dev/50669): Should we clamp length to |frame_count|?
     current_block_ = ReadableStream::Buffer(aligned_first_frame, ringout_.buffer_frames, buf_out,
                                             is_continuous, StreamUsageMask(), 0.0);
     ringout_frames_sent_ += ringout_.buffer_frames;

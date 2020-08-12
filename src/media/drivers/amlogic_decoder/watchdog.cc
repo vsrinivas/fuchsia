@@ -26,12 +26,13 @@ void Watchdog::Start() {
   // decoding, so the stream with bad data can get out of the way faster when HW is stuck decoding
   // the bad stream.
   //
-  // TODO(49526): Have the watchdog wake up sooner and more often, and have it check on the stream
-  // buffer read pointer progress.  If that progress stops for even a fairly short time, we can fire
-  // the watchdog fairly quickly.  And/or work toward changing the FW for the VP9 HW decoder to
-  // generate an interrupt on bad input data instead of getting wedged.  And/or when watchdog fires
-  // read HevcAssistMbox0IrqReg to see if an interrupt is already pending that HandleInterrupt
-  // doesn't know about yet (TBD whether reading that register works and is meaningful).
+  // TODO(fxbug.dev/49526): Have the watchdog wake up sooner and more often, and have it check on
+  // the stream buffer read pointer progress.  If that progress stops for even a fairly short time,
+  // we can fire the watchdog fairly quickly.  And/or work toward changing the FW for the VP9 HW
+  // decoder to generate an interrupt on bad input data instead of getting wedged.  And/or when
+  // watchdog fires read HevcAssistMbox0IrqReg to see if an interrupt is already pending that
+  // HandleInterrupt doesn't know about yet (TBD whether reading that register works and is
+  // meaningful).
   constexpr uint32_t kWatchdogTimeoutMs = 4000;
   timeout_time_ = zx::deadline_after(zx::msec(kWatchdogTimeoutMs));
 

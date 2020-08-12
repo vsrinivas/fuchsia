@@ -138,7 +138,7 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
 bool HWBreakpointTest() {
   BEGIN_TEST;
 
-  // TODO(35295): This test flakes.
+  // TODO(fxbug.dev/35295): This test flakes.
   END_TEST;
 
 #if defined(__x86_64__)

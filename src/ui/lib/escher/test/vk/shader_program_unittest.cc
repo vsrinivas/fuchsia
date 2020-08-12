@@ -528,7 +528,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   // Test that we can create pipelines using a VkPipelineCache, and that creating the "same"
   // pipeline twice does not result in a second invocation of the StorePipelineCacheDataCallback.
 
-  // TODO(49692): SwiftShader ICD doesn't store cached pipeline to disk correctly.
+  // TODO(fxbug.dev/49692): SwiftShader ICD doesn't store cached pipeline to disk correctly.
   // So we disabled all the EXPECT checks on SwiftShader. We need to remove this
   // after the bug is solved.
   {
@@ -651,7 +651,7 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
         RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalDepthStencilLayoutOp;
   }
 
-  // TODO(44566): simplify this test to not need images/command-buffers.
+  // TODO(fxbug.dev/44566): simplify this test to not need images/command-buffers.
   RenderPassInfo::InitRenderPassAttachmentInfosFromImages(&render_pass_info);
   EXPECT_TRUE(render_pass_info.Validate());
 

@@ -2370,13 +2370,13 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
   // BufferCollection VMOs until the driver has re-started and un-quarantined pinned pages (via
   // its BTI), after ensuring the HW is no longer doing DMA from/to the pages.
   //
-  // TODO(38650): All CodecAdapter(s) that start memory access that can continue beyond VMO
-  // handle closure during process death/termination should have a BTI.  Resolving this TODO will
-  // require updating at least the amlogic-video VP9 decoder to provide a BTI.
+  // TODO(fxbug.dev/38650): All CodecAdapter(s) that start memory access that can continue beyond
+  // VMO handle closure during process death/termination should have a BTI.  Resolving this TODO
+  // will require updating at least the amlogic-video VP9 decoder to provide a BTI.
   //
-  // TODO(38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical addresses
-  // are not guaranteed to be fully over/done before VMO handles are auto-closed by OEMCrypto
-  // assuming OEMCryto's process dies/terminates.
+  // TODO(fxbug.dev/38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical
+  // addresses are not guaranteed to be fully over/done before VMO handles are auto-closed by
+  // OEMCrypto assuming OEMCryto's process dies/terminates.
   if (IsCoreCodecHwBased(port) && *core_codec_bti_) {
     zx_status_t status = local_buffer->Pin();
     if (status != ZX_OK) {
@@ -3952,9 +3952,9 @@ CodecImpl::PortSettings::~PortSettings() {
   // Close() to avoid causing the LogicalBufferCollection to fail.  Since we're not a crashing
   // process, this is a clean close by definition.
   //
-  // TODO(37257): Consider _not_ sending Close() for unexpected failures initiated by the server.
-  // Consider whether to have a Close() on StreamProcessor to disambiguate clean vs. unexpected
-  // StreamProcessor channel close.
+  // TODO(fxbug.dev/37257): Consider _not_ sending Close() for unexpected failures initiated by the
+  // server. Consider whether to have a Close() on StreamProcessor to disambiguate clean vs.
+  // unexpected StreamProcessor channel close.
   if (thrd_current() != parent_->fidl_thread()) {
     parent_->PostToSharedFidl([buffer_collection = std::move(buffer_collection_)] {
       // Sysmem will notice the Close() before the PEER_CLOSED.

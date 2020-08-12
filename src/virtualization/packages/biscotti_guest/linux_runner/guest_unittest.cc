@@ -147,7 +147,7 @@ TEST_F(LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
   ASSERT_EQ(st.st_size, kStatefulImageSizeForTest);
 }
 
-// TODO(40751): With ShadowCallStack enabled and SafeStack disabled, we can
+// TODO(fxbug.dev/40751): With ShadowCallStack enabled and SafeStack disabled, we can
 // trigger a segfault in `ReuseExistingStatefulParition` all the way in
 // pthread_mutex_lock. We believe the underlying cause of this is some race
 // condition internal to gRPC. The segfault seems nondeterministic in that there

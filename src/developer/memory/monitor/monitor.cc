@@ -47,7 +47,7 @@ const char kTraceNameHighPrecisionBandwidth[] = "memory_monitor:high_precision_b
 constexpr uint64_t kMaxPendingBandwidthMeasurements = 4;
 constexpr uint64_t kMemCyclesToMeasure = 792000000 / 20;                 // 50 ms on sherlock
 constexpr uint64_t kMemCyclesToMeasureHighPrecision = 792000000 / 1000;  // 1 ms
-// TODO(48254): Get default channel information through the FIDL API.
+// TODO(fxbug.dev/48254): Get default channel information through the FIDL API.
 const struct {
   const char* name;
   uint64_t mask;

@@ -217,7 +217,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
     inbound_message_callback_(std::move(message), reply_address);
   } else {
     inbound_buffer_.resize(result);
-    // TODO(54285): Remove this message for end-users.
+    // TODO(fxbug.dev/54285): Remove this message for end-users.
     FX_LOGS(WARNING) << "Couldn't parse message from " << reply_address << ", " << result
                      << " bytes: " << fostr::HexDump(inbound_buffer_);
     inbound_buffer_.resize(kMaxPacketSize);

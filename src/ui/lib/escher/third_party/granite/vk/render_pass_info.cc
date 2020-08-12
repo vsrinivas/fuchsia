@@ -354,7 +354,8 @@ bool RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_ar
 
   InitRenderPassInfoHelper(rp, color_info, depth_stencil_info, msaa_texture ? &msaa_info : nullptr);
 
-  // TODO(43279): Can we get away sharing image views across multiple RenderPassInfo structs?
+  // TODO(fxbug.dev/43279): Can we get away sharing image views across multiple RenderPassInfo
+  // structs?
   ImageViewPtr output_image_view =
       allocator ? allocator->ObtainImageView(output_image) : ImageView::New(output_image);
 

@@ -251,7 +251,7 @@ void NdmData::ParseNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
   const RunningBadBlock* running_ptr = reinterpret_cast<const RunningBadBlock*>(data);
   data += sizeof(*running_ptr);
 
-  for (int i = 0; ;i++, running_ptr++) {
+  for (int i = 0; ; i++, running_ptr++) {
     RunningBadBlock running;
     memcpy(&running, running_ptr, sizeof(running));
     if (running.bad_block == -1) {
@@ -309,7 +309,7 @@ void NdmData::DumpPartitions(const NdmHeader& header, const char* data, int num_
       memcpy(&partition_data, data, sizeof(partition_data));
       data += sizeof(partition_data);
 
-      // TODO(40208): Dump the partition parameters.
+      // TODO(fxbug.dev/40208): Dump the partition parameters.
       data += partition_data.data_size;
     }
   }

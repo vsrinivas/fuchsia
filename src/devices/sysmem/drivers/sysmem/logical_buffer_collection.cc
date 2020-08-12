@@ -689,8 +689,8 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       // channels, and it helps get the VMO handles closed ASAP to avoid letting those continue to
       // use space of a MemoryAllocator's pool of pre-reserved space (for example).
       //
-      // TODO(45878): Provide a way to distinguish between BufferCollection clean/unclean close so
-      // that we print an error if participant closes before initiator
+      // TODO(fxbug.dev/45878): Provide a way to distinguish between BufferCollection clean/unclean
+      // close so that we print an error if participant closes before initiator
       Fail(nullptr);
       return;
     }
@@ -839,8 +839,8 @@ static bool IsHeapPermitted(
 
 static bool IsSecurePermitted(
     const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints) {
-  // TODO(37452): Generalize this by finding if there's a heap that maps to secure MemoryAllocator
-  // in the permitted heaps.
+  // TODO(fxbug.dev/37452): Generalize this by finding if there's a heap that maps to secure
+  // MemoryAllocator in the permitted heaps.
   return constraints.inaccessible_domain_supported() &&
          (IsHeapPermitted(constraints, llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE) ||
           IsHeapPermitted(constraints, llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE_VDEC));
@@ -1499,7 +1499,7 @@ bool LogicalBufferCollection::IsColorSpaceEqual(
 static fit::result<llcpp::fuchsia::sysmem2::HeapType, zx_status_t> GetHeap(
     const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints, Device* device) {
   if (constraints.secure_required()) {
-    // TODO(37452): Generalize this.
+    // TODO(fxbug.dev/37452): Generalize this.
     //
     // checked previously
     ZX_DEBUG_ASSERT(!constraints.secure_required() || IsSecurePermitted(constraints));
@@ -1944,7 +1944,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // deallocations to be done before failing an new allocation.
   //
   // TODO(ZX-4817): Zero secure/protected VMOs.
-  // TODO(57182): Add a flag to skip the clear process if Heap does the clearing itself.
+  // TODO(fxbug.dev/57182): Add a flag to skip the clear process if Heap does the clearing itself.
   const auto& heap_properties = allocator->heap_properties();
   ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
   if (heap_properties.coherency_domain_support().cpu_supported() ||

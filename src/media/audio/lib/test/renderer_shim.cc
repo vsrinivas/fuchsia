@@ -79,7 +79,7 @@ zx::time RendererShimImpl::PlaySynchronized(
   const auto tolerance = zx::msec(5);
   auto min_start_time = zx::clock::get_monotonic() + zx::nsec(min_lead_time_) + tolerance;
   auto mono_time = output_device->NextSynchronizedTimestamp(min_start_time);
-  // TODO(46650): Translate mono_time to the renderer's reference time.
+  // TODO(fxbug.dev/46650): Translate mono_time to the renderer's reference time.
   Play(fixture, mono_time, media_time);
   return mono_time;
 }

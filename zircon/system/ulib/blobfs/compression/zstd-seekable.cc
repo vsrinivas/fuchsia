@@ -24,7 +24,7 @@ namespace blobfs {
 
 constexpr int kDefaultCompressionLevel = 5;
 
-// TODO(49551): Consider disabling checksums if cryptographic verification suffices.
+// TODO(fxbug.dev/49551): Consider disabling checksums if cryptographic verification suffices.
 constexpr int kSeekableChecksumFlag = 1;
 
 ZSTDSeekableCompressor::ZSTDSeekableCompressor(ZSTD_seekable_CStream* stream,

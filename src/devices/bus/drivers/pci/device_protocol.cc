@@ -182,7 +182,7 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
 
   // If this device supports MSIX then we need to deny access to the BARs it
   // uses.
-  // TODO(32978): It is technically possible for a device to place the pba/mask
+  // TODO(fxbug.dev/32978): It is technically possible for a device to place the pba/mask
   // tables in the same bar as other data. In that case, we would need to ensure
   // that the bar size reflected the non-table portions, and only allow mapping
   // of that other space.

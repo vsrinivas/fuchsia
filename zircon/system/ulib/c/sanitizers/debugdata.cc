@@ -31,7 +31,7 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
   }
   FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_io_DirectoryOpenRequest) + fuchsia_io_MAX_PATH] = {};
   fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*)wr_bytes;
-  // TODO(38643) use fidl_init_txn_header once it is inline
+  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   request->hdr.ordinal = fuchsia_io_DirectoryOpenOrdinal;
@@ -61,7 +61,7 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t channel, const char* data_sink_d
       wr_bytes[sizeof(fuchsia_debugdata_DebugDataPublishRequest) + fuchsia_debugdata_MAX_NAME] = {};
   fuchsia_debugdata_DebugDataPublishRequest* request =
       (fuchsia_debugdata_DebugDataPublishRequest*)wr_bytes;
-  // TODO(38643) use fidl_init_txn_header once it is inline
+  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   request->hdr.ordinal = fuchsia_debugdata_DebugDataPublishOrdinal;
@@ -88,7 +88,7 @@ _fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_n
                                fuchsia_debugdata_MAX_NAME] = {};
   fuchsia_debugdata_DebugDataLoadConfigRequest* request =
       (fuchsia_debugdata_DebugDataLoadConfigRequest*)wr_bytes;
-  // TODO(38643) use fidl_init_txn_header once it is inline
+  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   request->hdr.ordinal = fuchsia_debugdata_DebugDataLoadConfigOrdinal;

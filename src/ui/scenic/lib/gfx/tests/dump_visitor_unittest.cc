@@ -21,8 +21,8 @@ namespace test {
 
 class DumpVisitorTest : public SessionTest {
  public:
-  // TODO(24711): Once Images can be created without interacting with the underlying renderer,
-  // replace this with HostImage::New.
+  // TODO(fxbug.dev/24711): Once Images can be created without interacting with the underlying
+  // renderer, replace this with HostImage::New.
   ImagePtr CreateImage(ResourceId id) {
     fuchsia::images::ImageInfo image_info;
     return fxl::AdoptRef(new HostImage(session(), id, /* memory */ nullptr,

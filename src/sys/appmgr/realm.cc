@@ -144,7 +144,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
     PushHandle(PA_DIRECTORY_REQUEST, directory_request.release(), &actions);
   }
 
-  // TODO(49824): Appmgr used to receive a fully-privileged debuglog handle as
+  // TODO(fxbug.dev/49824): Appmgr used to receive a fully-privileged debuglog handle as
   // its stdin, which it would copy to give as a stdin to spawned processes.
   // This handle is mostly useless as a stdin handle, except for the fact that
   // some v1 components assert on being able to clone stdin when creating new

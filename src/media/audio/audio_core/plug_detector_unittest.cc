@@ -140,14 +140,14 @@ class PlugDetectorTest : public gtest::RealLoopFixture,
   // We need to run the vfs on its own loop because the plug detector has some blocking open()
   // calls that don't yield back to the main loop so that we can populate the device.
   //
-  // TODO(35145): Migrate to an async open so that we can share the same dispatcher in this test
-  // and also remove more blocking logic from audio_core.
+  // TODO(fxbug.dev/35145): Migrate to an async open so that we can share the same dispatcher in
+  // this test and also remove more blocking logic from audio_core.
   async::Loop vfs_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   fs::SynchronousVfs vfs_{vfs_loop_.dispatcher()};
   // Note these _must_ be RefPtrs since the vfs_ will attempt to AdoptRef on a raw pointer passed
   // to it.
   //
-  // TODO(35505): Migrate to //sdk/lib/vfs/cpp once that supports watching on PseudoDir.
+  // TODO(fxbug.dev/35505): Migrate to //sdk/lib/vfs/cpp once that supports watching on PseudoDir.
   fbl::RefPtr<fs::PseudoDir> input_dir_{fbl::MakeRefCounted<fs::PseudoDir>()};
   fbl::RefPtr<fs::PseudoDir> output_dir_{fbl::MakeRefCounted<fs::PseudoDir>()};
 };

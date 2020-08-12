@@ -867,7 +867,7 @@ zx_status_t AmlogicDisplay::Bind() {
   }
 
   // Set profile for vsync thread.
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   {
     const zx_duration_t capacity = ZX_USEC(500);

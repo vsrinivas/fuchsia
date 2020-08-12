@@ -355,7 +355,7 @@ void BaseCapturer::ReleasePacket(fuchsia::media::StreamPacket packet) {
                      << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
-  // TODO(43507): Remove this flag.
+  // TODO(fxbug.dev/43507): Remove this flag.
   if (!must_release_packets_) {
     return;
   }
@@ -597,9 +597,9 @@ zx_status_t BaseCapturer::Process() {
     }
 
     if (last_frame_ref_time > ref_now) {
-      // TODO(40183): We should not assume anything about fence times for our sources. Instead, we
-      // should heed the actual reported fence times (FIFO depth), and the arrivals and departures
-      // of sources, and update this number dynamically.
+      // TODO(fxbug.dev/40183): We should not assume anything about fence times for our sources.
+      // Instead, we should heed the actual reported fence times (FIFO depth), and the arrivals and
+      // departures of sources, and update this number dynamically.
       //
       // Additionally, we must be mindful that if a newly-arriving source causes our "fence time" to
       // increase, we will wake up early. At wakeup time, we need to be able to detect this case and
@@ -837,7 +837,7 @@ void BaseCapturer::FinishBuffers() {
 
       binding_.events().OnPacketProduced(pkt);
 
-      // TODO(43507): Remove this old behavior.
+      // TODO(fxbug.dev/43507): Remove this old behavior.
       if (!must_release_packets_) {
         pq->Recycle(pkt);
       }
@@ -869,7 +869,7 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   // Allocate our MixStage for mixing.
   //
-  // TODO(39886): Limit this to something smaller than one second of frames.
+  // TODO(fxbug.dev/39886): Limit this to something smaller than one second of frames.
   uint32_t max_mix_frames = format_.frames_per_second();
   mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames,
                                           ref_clock_to_fractional_dest_frames_, reference_clock());

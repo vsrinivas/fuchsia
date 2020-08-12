@@ -2018,7 +2018,7 @@ done:
   return ret;
 }
 
-// TODO(42151): Remove once bug resolved
+// TODO(fxbug.dev/42151): Remove once bug resolved
 static uint32_t brcmf_sdio_txq_full_errors = 0;
 static bool brcmf_sdio_txq_full_debug_log = false;
 
@@ -2036,7 +2036,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
 
   tx_prec_map = ~bus->flowcontrol;
 
-  // TODO(42151): Remove once bug resolved
+  // TODO(fxbug.dev/42151): Remove once bug resolved
   if (unlikely(brcmf_sdio_txq_full_debug_log)) {
     int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
     BRCMF_INFO("%s called, maxframes = %u, available in queue = %d", __func__, maxframes,
@@ -2090,7 +2090,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     brcmf_proto_bcdc_txflowblock(bus->sdiodev->drvr, false);
   }
 
-  // TODO(42151): Remove once bug resolved
+  // TODO(fxbug.dev/42151): Remove once bug resolved
   if (unlikely(brcmf_sdio_txq_full_debug_log)) {
     int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
     BRCMF_INFO("%s finished, maxframes = %u, transmitted = %u, available in queue = %d", __func__,
@@ -2389,7 +2389,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     framecnt = bus->rxpending ? std::min(txlimit, bus->txminmax) : txlimit;
     brcmf_sdio_sendfromq(bus, framecnt);
   } else if (unlikely(brcmf_sdio_txq_full_debug_log)) {
-    // TODO(42151): Remove once bug resolved
+    // TODO(fxbug.dev/42151): Remove once bug resolved
     int len = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
     if (len > 0) {
       BRCMF_INFO(
@@ -2447,7 +2447,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
   } else if (pktq_full(q)) {
     p = brcmu_pktq_peek_tail(q, &eprec);
     if (eprec > prec) {
-      // TODO(42151): Remove once bug resolved
+      // TODO(fxbug.dev/42151): Remove once bug resolved
       BRCMF_ERR("Eviction precedence (%d) greater than enqueue precedence (%d)", eprec, prec);
       return false;
     }
@@ -2457,7 +2457,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
   if (eprec >= 0) {
     /* Detect queueing to unconfigured precedence */
     if (eprec == prec) {
-      // TODO(42151): Remove once bug resolved
+      // TODO(fxbug.dev/42151): Remove once bug resolved
       BRCMF_ERR("Expected to evict from and queue to same queue %d", prec);
       return false; /* refuse newer (incoming) packet */
     }
@@ -2510,7 +2510,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
     BRCMF_ERR("out of bus->txq !!!");
     ret = ZX_ERR_NO_RESOURCES;
 
-    // TODO(42151): Remove once bug resolved
+    // TODO(fxbug.dev/42151): Remove once bug resolved
     ++brcmf_sdio_txq_full_errors;
     if (brcmf_sdio_txq_full_errors >= 30 && !brcmf_sdio_txq_full_debug_log) {
       // We've seen a large number of these errors in a row, start providing
@@ -2521,7 +2521,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   } else {
     ret = ZX_OK;
 
-    // TODO(42151): Remove once bug resolved
+    // TODO(fxbug.dev/42151): Remove once bug resolved
     // Reset the counter here in case there was just a spurious queue issue.
     // Also stop the debug logging so we don't spam the logs unnecessarily.
     brcmf_sdio_txq_full_errors = 0;

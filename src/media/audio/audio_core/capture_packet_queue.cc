@@ -40,7 +40,8 @@ CapturePacketQueue::CreatePreallocated(const fzl::VmoMapper& payload_buffer, con
   // Sanity check the number of frames per packet the user is asking for.
   //
   // Currently our minimum frames-per-packet is 1, which is absurdly low.
-  // TODO(13344): Decide on a proper minimum packet size, document it, and enforce the limit here.
+  // TODO(fxbug.dev/13344): Decide on a proper minimum packet size, document it, and enforce the
+  // limit here.
   if (frames_per_packet == 0) {
     return fit::error("frames per packet may not be zero");
   }

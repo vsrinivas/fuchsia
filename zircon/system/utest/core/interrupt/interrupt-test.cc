@@ -288,7 +288,7 @@ TEST_F(InterruptTest, MAYBE_UnableToBindToVcpuAfterPort) {
 
 // Tests support for null output timestamp
 // NOTE: Absent the changes to interrupt.h also submitted in this CL, this test invokes undefined
-//       behavior not detectable at runtime. See also TODO(36668): support ubsan checks
+//       behavior not detectable at runtime. See also TODO(fxbug.dev/36668): support ubsan checks
 TEST_F(InterruptTest, NullOutputTimestamp) {
   zx::interrupt interrupt;
 

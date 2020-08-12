@@ -5,7 +5,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-// TODO(40804): delete once log output is properly interleaved.e
+// TODO(fxbug.dev/40804): delete once log output is properly interleaved.e
 #include <lib/syslog/cpp/macros.h>
 
 #include <chrono>

@@ -26,7 +26,7 @@ namespace {
 
 #if __has_feature(address_sanitizer)
 
-// TODO(52653): These tests are flaky as they rely on the OS not decommitting
+// TODO(fxbug.dev/52653): These tests are flaky as they rely on the OS not decommitting
 //              memory automatically.
 #if 0
 

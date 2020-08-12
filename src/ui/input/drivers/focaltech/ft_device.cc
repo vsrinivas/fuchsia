@@ -172,7 +172,7 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
   ZX_DEBUG_ASSERT(ret == thrd_success);
 
   // Set profile for device thread.
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   {
     const zx::duration capacity = zx::usec(200);

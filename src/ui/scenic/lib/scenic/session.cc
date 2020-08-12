@@ -88,9 +88,9 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
 
-  // TODO(56290): Handle the missing frame scheduler case.
+  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(47308): Delete |present_information| argument from signature entirely.
+    // TODO(fxbug.dev/47308): Delete |present_information| argument from signature entirely.
     const scheduling::PresentId present_id = scheduler->RegisterPresent(
         id_, /*present_information*/ [](auto...) {}, std::move(release_fences));
     std::get<scheduling::Present1Helper>(present_helper_)
@@ -149,9 +149,9 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
 
-  // TODO(56290): Handle the missing frame scheduler case.
+  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(47308): Delete |present_information| argument from signature entirely.
+    // TODO(fxbug.dev/47308): Delete |present_information| argument from signature entirely.
     const scheduling::PresentId present_id = scheduler->RegisterPresent(
         id_, /*present_information*/ [](auto...) {}, std::move(*args.mutable_release_fences()));
     std::get<scheduling::Present2Helper>(present_helper_)
@@ -187,7 +187,7 @@ void Session::SchedulePresentRequest(scheduling::PresentId present_id,
 
           scheduler->ScheduleUpdateForSession(requested_presentation_time, {id_, present_id});
         } else {
-          // TODO(56290): Handle the missing frame scheduler case.
+          // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
           FX_LOGS(WARNING) << "FrameScheduler is missing.";
         }
       },
@@ -206,7 +206,7 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
                                                     RequestPresentationTimesCallback callback) {
   if (!callback)
     return;
-  // TODO(56290): Handle the missing frame scheduler case.
+  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto locked_frame_scheduler = frame_scheduler_.lock()) {
     locked_frame_scheduler->GetFuturePresentationInfos(
         zx::duration(requested_prediction_span),

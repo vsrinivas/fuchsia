@@ -209,7 +209,7 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
     case S_IFIFO:
       return ZXIO_NODE_PROTOCOL_PIPE;
       // fuchsia::io has mode type service which breaks stat.
-      // TODO(52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
+      // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
     case llcpp::fuchsia::io::MODE_TYPE_SERVICE:
       return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFLNK:

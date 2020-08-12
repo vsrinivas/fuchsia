@@ -19,7 +19,7 @@
 namespace {
 
 // Filters out platforms where there's very little upside in running this test.
-// TODO(39752): This should be controlled with build options.
+// TODO(fxbug.dev/39752): This should be controlled with build options.
 bool RunInThisPlatform() {
   fbl::unique_fd sysinfo(open("/svc/fuchsia.sysinfo.SysInfo", O_RDONLY));
   fdio_cpp::FdioCaller caller(std::move(sysinfo));

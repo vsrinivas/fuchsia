@@ -176,7 +176,7 @@ class TestShaderModuleListener : public ShaderModuleListener {
   int32_t update_count_ = 0;
 };
 
-// TODO(44315): We should have this unit test run using Escher with
+// TODO(fxbug.dev/44315): We should have this unit test run using Escher with
 // precompiled shaders and Escher with runtime GLSL.
 VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
   ShaderVariantArgs args({{"ATTR_POSITION_OFFSET", "1"}});

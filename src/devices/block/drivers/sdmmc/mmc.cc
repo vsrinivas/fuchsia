@@ -380,7 +380,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
 
   // The discard command was added in eMMC 4.5.
   if (raw_ext_csd_[MMC_EXT_CSD_EXT_CSD_REV] >= MMC_EXT_CSD_EXT_CSD_REV_1_6) {
-    // TODO(49028): Determine which devices should have trim enabled.
+    // TODO(fxbug.dev/49028): Determine which devices should have trim enabled.
     // block_info_.flags |= BLOCK_FLAG_TRIM_SUPPORT;
   }
   return ZX_OK;

@@ -46,7 +46,7 @@ zx_status_t I2cBus::Start() {
   thrd_create_with_name(&thread_, thunk, this, name);
 
   // Set profile for bus transaction thread.
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   {
     const zx::duration capacity = zx::usec(100);
@@ -142,12 +142,12 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
                       i2c_transact_callback callback, void* cookie) {
   TRACE_DURATION("i2c", "I2cBus Queue Transact");
 
-  // TODO(52177): This is a hack to apply a deadline profile to the dispatch
+  // TODO(fxbug.dev/52177): This is a hack to apply a deadline profile to the dispatch
   // thread for this devhost. Replace this with a proper solution.
   static std::once_flag profile_flag;
   std::call_once(profile_flag, [device = parent_] {
     // Set profile for bus transaction thread.
-    // TODO(40858): Migrate to the role-based API when available, instead of hard
+    // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
     // coding parameters.
     const zx::duration capacity = zx::usec(150);
     const zx::duration deadline = zx::msec(1);

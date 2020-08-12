@@ -36,7 +36,7 @@ GlobalBufferCollectionId NullRenderer::RegisterCollection(
 
   // Multiple threads may be attempting to read/write from |collection_map_| so we
   // lock this function here.
-  // TODO(44335): Convert this to a lock-free structure.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
   collection_map_[identifier] = std::move(result.value());
   return identifier;
@@ -45,7 +45,7 @@ GlobalBufferCollectionId NullRenderer::RegisterCollection(
 void NullRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
-  // TODO(44335): Convert this to a lock-free structure.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
 
   auto collection_itr = collection_map_.find(collection_id);
@@ -65,10 +65,11 @@ void NullRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) 
 
 std::optional<BufferCollectionMetadata> NullRenderer::Validate(
     GlobalBufferCollectionId collection_id) {
-  // TODO(44335): Convert this to a lock-free structure. This is trickier than in the other two
-  // cases for this class since we are mutating the buffer collection in this call. So we can
-  // only convert this to a lock free structure if the elements in the map are changed to be values
-  // only, or if we can guarantee that mutations on the elements only occur in a single thread.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is trickier than in the
+  // other two cases for this class since we are mutating the buffer collection in this call. So we
+  // can only convert this to a lock free structure if the elements in the map are changed to be
+  // values only, or if we can guarantee that mutations on the elements only occur in a single
+  // thread.
   std::unique_lock<std::mutex> lock(lock_);
   auto collection_itr = collection_map_.find(collection_id);
 
@@ -110,7 +111,7 @@ void NullRenderer::Render(const ImageMetadata& render_target,
     auto collection_id = image.collection_id;
     FX_DCHECK(collection_id != kInvalidId);
 
-    // TODO(44335): Convert this to a lock-free structure.
+    // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);
     auto metadata_itr = collection_metadata_map_.find(collection_id);
     FX_DCHECK(metadata_itr != collection_metadata_map_.end());

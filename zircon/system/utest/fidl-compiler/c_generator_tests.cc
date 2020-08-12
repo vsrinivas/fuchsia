@@ -9,7 +9,7 @@
 
 namespace {
 
-// TODO(56727): Eventually, fidl will have a first-class definition of
+// TODO(fxbug.dev/56727): Eventually, fidl will have a first-class definition of
 // the channel transport, and static_asserting the equality of these
 // two constants will not be fidl's job.
 TEST(CGeneratorTests, ChannelMaxHandles) {

@@ -204,7 +204,7 @@ void EmitFileComment(std::ostream* file) {
 }
 
 void EmitHeaderGuard(std::ostream* file) {
-  // TODO(704) Generate an appropriate header guard name.
+  // TODO(fxbug.dev/704) Generate an appropriate header guard name.
   *file << "#pragma once\n";
 }
 

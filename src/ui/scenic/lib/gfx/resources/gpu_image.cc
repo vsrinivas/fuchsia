@@ -66,7 +66,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  // TODO(47918): Support non-premultiplied alpha format and remove this.
+  // TODO(fxbug.dev/47918): Support non-premultiplied alpha format and remove this.
   if (image_info.alpha_format == fuchsia::images::AlphaFormat::NON_PREMULTIPLIED) {
     error_reporter->ERROR() << "GpuImage::New(): Non-premultiplied alpha format "
                             << "is not supported yet.";
@@ -179,8 +179,8 @@ void GpuImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
                                  escher::ImageLayoutUpdater* layout_updater) {
   FX_DCHECK(layout_updater) << "Layout updater doesn't exist!";
   if (!image_->is_layout_initialized()) {
-    // TODO(36106): Currently we only convert the layout to |eShaderReadOnlyOptimal| -- this needs
-    // to be synchronized with topaz/runtime/flutter_runner.
+    // TODO(fxbug.dev/36106): Currently we only convert the layout to |eShaderReadOnlyOptimal| --
+    // this needs to be synchronized with topaz/runtime/flutter_runner.
     layout_updater->ScheduleSetImageInitialLayout(image_, vk::ImageLayout::eShaderReadOnlyOptimal);
   }
   dirty_ = UpdatePixels(gpu_uploader);

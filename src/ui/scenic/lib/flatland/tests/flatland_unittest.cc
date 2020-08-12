@@ -129,8 +129,8 @@ struct PresentArgs {
 
 namespace {
 
-// TODO(56879): consolidate the following 3 helper functions when splitting escher into multiple
-// libraries.
+// TODO(fxbug.dev/56879): consolidate the following 3 helper functions when splitting escher into
+// multiple libraries.
 
 zx::event CreateEvent() {
   zx::event event;

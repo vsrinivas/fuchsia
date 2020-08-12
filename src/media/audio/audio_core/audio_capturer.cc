@@ -200,8 +200,8 @@ void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
             GainDbFsValue{volume_command.gain_db_adjustment},
             GainDbFsValue{stream_gain_db_.load()},
         });
-        // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
-        // method for gain observation
+        // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
+        // real-time method for gain observation
         if (gain_db != 0.0) {
           FX_LOGS(INFO) << this << " " << StreamUsage::WithCaptureUsage(usage_).ToString()
                         << " Gain(" << gain_db << "db) = "

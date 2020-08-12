@@ -19,7 +19,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/scene/object.h"
-// TODO(44894): try to avoid including an "impl" file.
+// TODO(fxbug.dev/44894): try to avoid including an "impl" file.
 #include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/string_utils.h"
@@ -821,7 +821,7 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
 
   // Obtain and set the render pass; this is the only render pass that is used, so we just need to
   // set it once.
-  // TODO(44894): try to avoid using this "impl" type directly.
+  // TODO(fxbug.dev/44894): try to avoid using this "impl" type directly.
   impl::RenderPassPtr render_pass = WarmRenderPassCache(escher->render_pass_cache(), config,
                                                         output_format, output_swapchain_layout);
 
@@ -838,8 +838,8 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
   // NOTE: different mesh specs are used depending on whether stencil shadows
   // are enabled.  But it doesn't matter, because CommandBuffer will only use whichever attributes
   // are required for the specified shader.
-  // TODO(44898): once kShadowVolumeMeshSpec and kStandardMeshSpec are constexpr, we should be able
-  // to use static_assert() here.
+  // TODO(fxbug.dev/44898): once kShadowVolumeMeshSpec and kStandardMeshSpec are constexpr, we
+  // should be able to use static_assert() here.
   FX_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[0] ==
             PaperShapeCache::kStandardMeshSpec().attributes[0]);
   FX_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[1] ==

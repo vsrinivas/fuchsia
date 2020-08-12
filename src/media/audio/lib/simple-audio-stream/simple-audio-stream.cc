@@ -57,7 +57,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     }
   }
 
-  // TODO(37372): Add profile configuration.
+  // TODO(fxbug.dev/37372): Add profile configuration.
   // This single threaded dispatcher serializes the FIDL server implementation by this class.
   loop_.StartThread("simple-audio-stream-loop");
 

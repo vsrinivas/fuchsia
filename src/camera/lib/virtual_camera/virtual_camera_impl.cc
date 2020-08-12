@@ -194,7 +194,7 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
 void VirtualCameraImpl::OnDestruction() {
   loop_.Quit();
   for (auto& it : frame_waiters_) {
-    // TODO(50018): async::Wait destructor ordering edge case
+    // TODO(fxbug.dev/50018): async::Wait destructor ordering edge case
     it.second->Cancel();
     it.second = nullptr;
   }

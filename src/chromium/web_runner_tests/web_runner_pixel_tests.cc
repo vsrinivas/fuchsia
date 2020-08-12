@@ -94,7 +94,7 @@ class PixelTest : public gtest::RealLoopFixture {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
-    // TODO(40933)
+    // TODO(fxbug.dev/40933)
     //
     // These tests can flake when a screenshot captures a frame from the previous test, which can
     // advance the test logic early. This is a temporary solution that waits for a blank on setup.
@@ -144,7 +144,7 @@ class PixelTest : public gtest::RealLoopFixture {
   }
 
   // Blank can manifest as invalid screenshots or blackness.
-  // TODO(40933): remove
+  // TODO(fxbug.dev/40933): remove
   bool WaitForBlank() {
     return ScreenshotUntil([](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
       return !status || Histogram(screenshot)[kBlankColor] > 0u;

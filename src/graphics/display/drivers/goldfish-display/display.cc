@@ -488,7 +488,7 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
 
       if (display_configs[i]->cc_flags != 0) {
         // Color Correction is not supported, but we will pretend we do.
-        // TODO(36184): Returning error will cause blank screen if scenic requests
+        // TODO(fxbug.dev/36184): Returning error will cause blank screen if scenic requests
         // color correction. For now, lets pretend we support it, until a proper
         // fix is done (either from scenic or from core display)
         zxlogf(WARNING, "%s: Color Correction not support. No error reported", __func__);
@@ -516,7 +516,7 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
             .height = layer->image.height,
         };
         if (memcmp(&layer->dest_frame, &dest_frame, sizeof(frame_t)) != 0) {
-          // TODO(36222): Need to provide proper flag to indicate driver only
+          // TODO(fxbug.dev/36222): Need to provide proper flag to indicate driver only
           // accepts full screen dest frame.
           layer_cfg_results[i][0] |= CLIENT_FRAME_SCALE;
         }

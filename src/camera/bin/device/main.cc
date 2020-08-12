@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   }
   auto device = result.take_value();
 
-  // TODO(44628): publish discoverable service name once supported
+  // TODO(fxbug.dev/44628): publish discoverable service name once supported
   status = context->outgoing()->AddPublicService(device->GetHandler(), outgoing_service_name);
   if (status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "Failed to publish service.";

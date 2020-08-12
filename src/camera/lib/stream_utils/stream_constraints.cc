@@ -134,7 +134,7 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
     constraints.usage.video = fuchsia::sysmem::videoUsageCapture;
   }
   // Just make one constraint that has the biggest width/height for each format type:
-  // TODO(41321): Map these out. Right now we just use NV12 for everything.
+  // TODO(fxbug.dev/41321): Map these out. Right now we just use NV12 for everything.
   uint32_t max_width = 0, max_height = 0;
   for (auto& format : formats_) {
     max_width = std::max(max_width, format.coded_width);

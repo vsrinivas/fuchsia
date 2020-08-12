@@ -81,7 +81,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
                             << "created using host memory.";
     return nullptr;
   }
-  // TODO(47918): Support non-premultiplied alpha format and remove this.
+  // TODO(fxbug.dev/47918): Support non-premultiplied alpha format and remove this.
   if (image_info.alpha_format == fuchsia::images::AlphaFormat::NON_PREMULTIPLIED) {
     error_reporter->ERROR() << "Image::CreateFromMemory(): Non-premultiplied alpha format "
                             << "is not supported yet.";
@@ -100,7 +100,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  // TODO(43039): Directly mapped images actually work as GpuImage, and they
+  // TODO(fxbug.dev/43039): Directly mapped images actually work as GpuImage, and they
   // should be created as GpuImage as well.
   if (image_info.pixel_format == fuchsia::images::PixelFormat::NV12 &&
       image_info.stride % kYuvStrideRequirement == 0) {

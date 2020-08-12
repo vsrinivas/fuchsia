@@ -290,7 +290,7 @@ zx_status_t set_minimum_rgb(uint8_t min_rgb) {
 }
 
 zx_status_t capture_setup() {
-  // TODO(41413): Pull common image setup code into a library
+  // TODO(fxbug.dev/41413): Pull common image setup code into a library
 
   // First make sure capture is supported on this platform
   auto support_resp = dc->IsCaptureSupported();

@@ -106,7 +106,7 @@ TEST_F(BlockDeviceTest, QueueOne) {
   memset(&txn, 0, sizeof(txn));
   txn.op.rw.command = BLOCK_OP_READ;
   txn.op.rw.length = 0;
-  // TODO(43065): This should not return ZX_OK when length == 0.
+  // TODO(fxbug.dev/43065): This should not return ZX_OK when length == 0.
   device_->BlockImplQueue(reinterpret_cast<block_op_t*>(&txn), &BlockDeviceTest::CompletionCb,
                           this);
   ASSERT_TRUE(Wait());

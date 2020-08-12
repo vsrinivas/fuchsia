@@ -56,7 +56,7 @@ void print_error_shadow(uintptr_t address, size_t bytes, void* caller, uintptr_t
           "\nKASAN detected an error: ptr={{{data:%#lx}}}, size=%#zx, caller: {{{pc:%p}}}\n",
           address, bytes, caller);
 
-  // TODO(30033): Decode the shadow value into 'use-after-free'/redzone/page free/etc.
+  // TODO(fxbug.dev/30033): Decode the shadow value into 'use-after-free'/redzone/page free/etc.
   printf("Shadow memory state around the buggy address %#lx:\n", shadow);
   // Print at least 16 bytes of the shadow map before and after the invalid access.
   uintptr_t start_addr = (shadow & ~0x07) - 0x10;
@@ -164,7 +164,7 @@ uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size) {
 }
 
 void asan_check(uintptr_t address, size_t bytes, void* caller) {
-  // TODO(30033): Inline the fast path for constant-size checks.
+  // TODO(fxbug.dev/30033): Inline the fast path for constant-size checks.
   const uintptr_t poisoned_addr = asan_region_is_poisoned(address, bytes);
   if (!poisoned_addr) {
     return;

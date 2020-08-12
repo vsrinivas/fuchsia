@@ -268,7 +268,7 @@ int MsdArmDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   //
   // These parameters permit 500us at 1kHz, 250us at 2kHz, ... 50us at 10kHz.
@@ -344,7 +344,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("Gpu InterruptThread");
   DLOG("GPU Interrupt thread started");
 
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   //
   // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...
@@ -456,7 +456,7 @@ int MsdArmDevice::JobInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("Job InterruptThread");
   DLOG("Job Interrupt thread started");
 
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   //
   // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...
@@ -636,7 +636,7 @@ int MsdArmDevice::MmuInterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("MMU InterruptThread");
   DLOG("MMU Interrupt thread started");
 
-  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
   // coding parameters.
   //
   // These parameters permit 60us at 8kHz worst case, 30us at 16kHz, etc...

@@ -208,7 +208,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   // continuously with the last set of packets. Now we use FLAG_DISCONTINUITY which means they
   // will not be continuous with the previous packets.
   //
-  // TODO(57377): Use a fake clock for unittests.
+  // TODO(fxbug.dev/57377): Use a fake clock for unittests.
   zx::nanosleep(zx::deadline_after(stream->GetMinLeadTime() + zx::msec(30)));
   packet.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));

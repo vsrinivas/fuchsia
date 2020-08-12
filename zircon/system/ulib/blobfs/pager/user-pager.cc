@@ -292,7 +292,7 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   return PagerErrorStatus::kOK;
 }
 
-// TODO(55540): Remove this code path, since it is not in use and metrics are not
+// TODO(fxbug.dev/55540): Remove this code path, since it is not in use and metrics are not
 // being recorded for it.
 PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
                                                            uint64_t requested_length,

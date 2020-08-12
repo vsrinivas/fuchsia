@@ -86,7 +86,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(54525): The Inspect API has not been connected for MinFS yet.
+  // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
   zx::channel diagnostics_dir;
 
   zx_status_t status = MountFilesystem(PATH_DATA, "/boot/bin/minfs", options,
@@ -105,7 +105,7 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(54525): The Inspect API has not been connected for MinFS yet.
+  // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
   zx::channel diagnostics_dir;
 
   zx_status_t status = MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options,

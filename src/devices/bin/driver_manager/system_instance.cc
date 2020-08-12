@@ -684,8 +684,8 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   const char* args[] = {"/boot/bin/miscsvc", nullptr};
 
   {
-    // TODO(34633): miscsvc needs access to /boot/lib/asan when devcoordinator runs in isolated
-    // devmgr mode.
+    // TODO(fxbug.dev/34633): miscsvc needs access to /boot/lib/asan when devcoordinator runs in
+    // isolated devmgr mode.
     zx::channel ldsvc;
     zx_status_t status = clone_fshost_ldsvc(&ldsvc);
     if (status != ZX_OK) {

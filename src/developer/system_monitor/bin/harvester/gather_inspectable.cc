@@ -13,7 +13,7 @@ namespace harvester {
 
 // Gather a list of inspectable components.
 void GatherInspectable::Gather() {
-  // TODO(53154): Implement this functionality.
+  // TODO(fxbug.dev/53154): Implement this functionality.
 }
 
 }  // namespace harvester

@@ -236,7 +236,7 @@ zx_status_t sys_vmar_op_range(zx_handle_t handle, uint32_t op, zx_vaddr_t addr, 
                               user_inout_ptr<void> _buffer, size_t buffer_size) {
   auto* up = ProcessDispatcher::GetCurrent();
 
-  // TODO(39956): Pass |handle| rights to RangeOp(), so it can enforce e.g. that
+  // TODO(fxbug.dev/39956): Pass |handle| rights to RangeOp(), so it can enforce e.g. that
   // certain operations only be available through writable handles.
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
   zx_status_t status = up->GetDispatcher(handle, &vmar);

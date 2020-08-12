@@ -24,9 +24,9 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray, float* out_distance) 
   // Compute the distance to the plane in multiples of the ray's direction
   // vector and the point of intersection.
   //
-  // TODO(40161): Right now, this must be "* (1 / delta_z)" instead of "/ delta_z" for floating
-  // point behavior consistent with bounding box tests. We can change this to be the more direct "/
-  // delta_z" if we drop best-effort support for hit tests coplanar with view bounds.
+  // TODO(fxbug.dev/40161): Right now, this must be "* (1 / delta_z)" instead of "/ delta_z" for
+  // floating point behavior consistent with bounding box tests. We can change this to be the more
+  // direct "/ delta_z" if we drop best-effort support for hit tests coplanar with view bounds.
   float distance = -ray.origin.z * (1 / delta_z);
   escher::vec2 point =
       (escher::vec2(ray.origin) + distance * escher::vec2(ray.direction)) / ray.origin.w;

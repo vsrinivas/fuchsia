@@ -135,8 +135,8 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.min_tx_buffer_tail, impl_.info().tx_tail_length);
   EXPECT_EQ(info.min_tx_buffer_head, impl_.info().tx_head_length);
   EXPECT_EQ(info.descriptor_version, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-  // TODO(44604): Buffer alignment is currently hard-coded in DeviceInterface, it must be properly
-  // negotiated.
+  // TODO(fxbug.dev/44604): Buffer alignment is currently hard-coded in DeviceInterface, it must be
+  // properly negotiated.
   EXPECT_EQ(info.buffer_alignment, ZX_PAGE_SIZE / 2);
   static_assert(sizeof(buffer_descriptor_t) % 8 == 0);
   EXPECT_EQ(info.min_descriptor_length, sizeof(buffer_descriptor_t) / sizeof(uint64_t));

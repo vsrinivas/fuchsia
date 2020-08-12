@@ -521,7 +521,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
   EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 2);
 }
 
-// TODO(49028): Enable these tests once trim is enabled.
+// TODO(fxbug.dev/49028): Enable these tests once trim is enabled.
 TEST_F(SdmmcBlockDeviceTest, DISABLED_Trim) {
   AddDevice();
 

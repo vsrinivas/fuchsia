@@ -815,7 +815,7 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
 }
 
 // Test for lazy connectivity detection.
-// TODO(50348): Remove when instant connectivity breakage detection is added.
+// TODO(fxbug.dev/50348): Remove when instant connectivity breakage detection is added.
 TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
   // Test loop to be able to control dispatch without having to create an entire test class
   // subclassing TestLoopFixture.

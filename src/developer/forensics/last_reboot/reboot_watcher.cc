@@ -37,7 +37,7 @@ ImminentGracefulRebootWatcher::ImminentGracefulRebootWatcher(
     std::shared_ptr<sys::ServiceDirectory> services, const std::string& path,
     cobalt::Logger* cobalt)
     : services_(services), path_(path), cobalt_(cobalt), connection_(this) {
-  // TODO(52187): Reconnect if the error handler runs.
+  // TODO(fxbug.dev/52187): Reconnect if the error handler runs.
   connection_.set_error_handler([](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to client of "
                                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcher";

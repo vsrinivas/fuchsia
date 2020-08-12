@@ -83,7 +83,7 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
   for (auto& event : events) {
     if (event.is_added()) {
       // Connect to device.
-      // TODO(48506) Properly detect expected device id.
+      // TODO(fxbug.dev/48506) Properly detect expected device id.
       watcher_->ConnectToDevice(event.added(), device_.NewRequest(loop_.dispatcher()));
 
       // Watch for mute changes.
@@ -137,12 +137,12 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 
 void StreamCycler::ConnectToAllStreams() {
   // Connect all streams.
-  // TODO(42241) - In order to work around fxb/42241, all camera3 clients must connect to their
-  // respective streams in sequence and without possibility of overlap. Since the camera connection
-  // sequence requires a series of asynchronous steps, we must daisy-chain from one complete stream
-  // connection to the next. This is why the original simple loop does not work reliably at this
-  // time. This means that the following single ConnectToStream() will kick off all the connections
-  // for all streams.
+  // TODO(fxbug.dev/42241) - In order to work around fxb/42241, all camera3 clients must connect to
+  // their respective streams in sequence and without possibility of overlap. Since the camera
+  // connection sequence requires a series of asynchronous steps, we must daisy-chain from one
+  // complete stream connection to the next. This is why the original simple loop does not work
+  // reliably at this time. This means that the following single ConnectToStream() will kick off all
+  // the connections for all streams.
   uint32_t stream_index = 0;
   ConnectToStream(current_config_index_, stream_index);
 }

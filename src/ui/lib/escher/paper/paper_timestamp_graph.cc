@@ -50,7 +50,7 @@ void PaperTimestampGraph::DrawGraphContentOn(PaperRenderer* r, vk::Rect2D bounds
     int16_t presentation_time = ts.actual_present - ts.target_present;
 
     if (static_cast<int16_t>(x_start + (i * w_interval)) <= x_axis) {
-      // TODO(43208): these are blitting over each other (they all start at y_axis).
+      // TODO(fxbug.dev/43208): these are blitting over each other (they all start at y_axis).
       if (render_time != 0) {
         r->DrawVLine(escher::DebugRects::kRed, x_start + (i * w_interval), y_axis,
                      y_axis - (h_interval * render_time), w_interval);

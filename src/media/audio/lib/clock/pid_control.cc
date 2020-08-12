@@ -21,8 +21,9 @@ double PidControl::Read() { return total_pid_contribution_; }
 void PidControl::TuneForError(zx_time_t time, double error) {
   FX_DCHECK(time >= tune_time_) << "Time for result-tuning is earlier than previous result ("
                                 << time << " < " << tune_time_ << ")";
-  // TODO(47778): normalize to 10ns units rather than 1ns, if accum_error_ becomes so large that
-  // lost precision impacts accuracy (as a double, accum_error_ has 54 bits of precision).
+  // TODO(fxbug.dev/47778): normalize to 10ns units rather than 1ns, if accum_error_ becomes so
+  // large that lost precision impacts accuracy (as a double, accum_error_ has 54 bits of
+  // precision).
   auto duration = time - tune_time_;
   tune_time_ = time;
 

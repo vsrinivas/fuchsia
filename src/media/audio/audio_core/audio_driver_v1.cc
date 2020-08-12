@@ -34,7 +34,7 @@ static constexpr uint16_t kPositionNotificationSpewInterval = 1;
 static constexpr uint16_t kPositionNotificationTraceInterval = 60;
 static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
 
-// TODO(39092): Log a cobalt metric for this.
+// TODO(fxbug.dev/39092): Log a cobalt metric for this.
 void LogMissedCommandDeadline(zx::duration delay) {
   FX_LOGS(WARNING) << "Driver command missed deadline by " << delay.to_nsecs() << "ns";
 }

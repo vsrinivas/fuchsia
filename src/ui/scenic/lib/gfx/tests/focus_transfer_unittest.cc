@@ -412,7 +412,8 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
         test->RequestToPresent(session);
       });
 
-  // TODO(42737): Remove when session update logic guarantees view tree updates in every session.
+  // TODO(fxbug.dev/42737): Remove when session update logic guarantees view tree updates in every
+  // session.
   child_client.RunNow([test = this](scenic::Session* session, scenic::EntityNode* session_anchor) {
     test->RequestToPresent(session);
   });

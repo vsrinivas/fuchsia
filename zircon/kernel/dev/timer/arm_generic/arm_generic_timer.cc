@@ -152,7 +152,7 @@ static uint64_t read_cntpct_a73(void) {
   // Fix will be applied to all cores, as two consecutive reads should be
   // faster than checking if core is A73 and branching before every read.
   const uint64_t old_read = __arm_rsr64(TIMER_REG_CNTPCT);
-  // TODO(44780): Prevent buggy compiler from CSE'ing the two samples!
+  // TODO(fxbug.dev/44780): Prevent buggy compiler from CSE'ing the two samples!
   // Remove this when the compiler is fixed.
   __asm__ volatile("");
   const uint64_t new_read = __arm_rsr64(TIMER_REG_CNTPCT);
@@ -165,7 +165,7 @@ static uint64_t read_cntvct_a73(void) {
   // Fix will be applied to all cores, as two consecutive reads should be
   // faster than checking if core is A73 and branching before every read.
   const uint64_t old_read = __arm_rsr64(TIMER_REG_CNTVCT);
-  // TODO(44780): Prevent buggy compiler from CSE'ing the two samples!
+  // TODO(fxbug.dev/44780): Prevent buggy compiler from CSE'ing the two samples!
   // Remove this when the compiler is fixed.
   __asm__ volatile("");
   const uint64_t new_read = __arm_rsr64(TIMER_REG_CNTVCT);

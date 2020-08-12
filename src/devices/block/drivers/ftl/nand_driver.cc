@@ -83,7 +83,7 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
   ftl::VolumeOptions options = {
       .num_blocks = info_.num_blocks,
       // This should be 2%, but that is of the whole device, not just this partition.
-      // TODO(39372): This value should be provided by the stack. For now, use 2% for
+      // TODO(fxbug.dev/39372): This value should be provided by the stack. For now, use 2% for
       // small disks (likely tests).
       .max_bad_blocks = info_.num_blocks > 1000 ? 41 : info_.num_blocks / 50,
       .block_size = info_.page_size * info_.pages_per_block,

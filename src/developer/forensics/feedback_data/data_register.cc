@@ -12,7 +12,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
-// TODO(57392): Move it back to //third_party once unification completes.
+// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/error/en.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"

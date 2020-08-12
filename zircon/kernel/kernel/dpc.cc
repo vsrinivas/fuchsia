@@ -186,7 +186,7 @@ void DpcQueue::InitForCurrentCpu() {
   // The Dpc thread may use up to 150us out of every 300us (i.e. 50% of the CPU)
   // in the worst case. DPCs usually take only a small fraction of this and have
   // a much lower frequency than 3.333KHz.
-  // TODO(38571): Make this runtime tunable. It may be necessary to change the
+  // TODO(fxbug.dev/38571): Make this runtime tunable. It may be necessary to change the
   // Dpc deadline params later in boot, after configuration is loaded somehow.
   thread_->SetDeadline({ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
 

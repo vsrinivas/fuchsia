@@ -186,7 +186,7 @@ zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
   }
   std::unique_ptr<PartitionClient> partition = std::move(status.value());
 
-  // TODO(39753): Configuration values should come from the build or environment.
+  // TODO(fxbug.dev/39753): Configuration values should come from the build or environment.
   fvm::sparse_image_t header = {};
   header.slice_size = 1 << 20;
 
@@ -593,7 +593,7 @@ zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
 }
 
 // Deprecated in favor of WriteFirmware().
-// TODO(45606): move clients off this function and delete it.
+// TODO(fxbug.dev/45606): move clients off this function and delete it.
 zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
   PartitionSpec spec(Partition::kBootloader);
 

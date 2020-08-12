@@ -727,7 +727,7 @@ TEST_F(ImagePipe2Test, SupportsMultiplePixelFormats) {
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
-// TODO(23406): More tests.
+// TODO(fxbug.dev/23406): More tests.
 // - Test that you can't add the same image twice.
 // - Test that you can't present an image that doesn't exist.
 // - Test what happens when an acquire fence is closed on the client end.

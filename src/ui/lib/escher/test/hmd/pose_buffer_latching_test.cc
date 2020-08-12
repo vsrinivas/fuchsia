@@ -57,7 +57,7 @@ glm::mat4 MatrixFromPose(const hmd::Pose& pose) {
 
 using PoseBufferTest = escher::test::TestWithVkValidationLayer;
 
-// TODO(36692): This test now causes Vulkan validation errors on AEMU.
+// TODO(fxbug.dev/36692): This test now causes Vulkan validation errors on AEMU.
 VK_TEST_F(PoseBufferTest, ComputeShaderLatching) {
   auto escher = escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
   escher->shader_program_factory()->filesystem()->InitializeWithRealFiles(

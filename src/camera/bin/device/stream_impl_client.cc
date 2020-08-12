@@ -66,9 +66,9 @@ void StreamImpl::Client::PostReceiveResolution(fuchsia::math::Size coded_size) {
 void StreamImpl::Client::PostReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
   zx_status_t status =
       async::PostTask(loop_.dispatcher(), [this, region = std::move(region)]() mutable {
-        // TODO(51176): Because unique_ptr is non-copyable, the hanging get helper assumes all
-        // values are never the same as previous values. In this case, however, back-to-back null
-        // regions or identical regions should not be sent twice.
+        // TODO(fxbug.dev/51176): Because unique_ptr is non-copyable, the hanging get helper assumes
+        // all values are never the same as previous values. In this case, however, back-to-back
+        // null regions or identical regions should not be sent twice.
         crop_region_.Set(std::move(region));
       });
   ZX_DEBUG_ASSERT(status == ZX_OK);

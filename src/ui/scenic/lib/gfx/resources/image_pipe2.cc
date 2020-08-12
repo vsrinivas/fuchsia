@@ -71,7 +71,7 @@ ImagePipe2::ImagePipe2(Session* session, ResourceId id,
   FX_CHECK(image_pipe_updater_);
   FX_CHECK(error_reporter_);
 
-  // TODO(35547): Use a common SysmemAllocator instance for all ImagePipes.
+  // TODO(fxbug.dev/35547): Use a common SysmemAllocator instance for all ImagePipes.
   // Connect to Sysmem in preparation for the future AddBufferCollection() calls.
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator_.NewRequest().TakeChannel().release());

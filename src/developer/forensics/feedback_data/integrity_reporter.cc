@@ -6,7 +6,7 @@
 
 #include "src/developer/forensics/feedback_data/errors.h"
 #include "src/developer/forensics/utils/errors.h"
-// TODO(57392): Move it back to //third_party once unification completes.
+// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"

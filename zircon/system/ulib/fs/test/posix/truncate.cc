@@ -211,7 +211,7 @@ void TestTruncateMultiBlockFile(FilesystemTest* ops, size_t buf_size, size_t ite
 }
 
 void TestTruncatePartialBlockSparse(FilesystemTest* ops, CloseUnlinkOrder order) {
-  // TODO(44323): Acquire these constants directly from MinFS's header
+  // TODO(fxbug.dev/44323): Acquire these constants directly from MinFS's header
   constexpr size_t kBlockSize = 8192;
   constexpr size_t kDirectBlocks = 16;
   constexpr size_t kIndirectBlocks = 31;

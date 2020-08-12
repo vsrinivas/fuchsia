@@ -7,8 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-// TODO(49807): This test should automatically fail if underflows are detected. That functionality
-// should be ported from HermeticAudioTest to here.
+// TODO(fxbug.dev/49807): This test should automatically fail if underflows are detected. That
+// functionality should be ported from HermeticAudioTest to here.
 
 namespace media::audio::test {
 

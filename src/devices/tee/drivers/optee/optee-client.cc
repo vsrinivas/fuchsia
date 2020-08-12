@@ -340,8 +340,8 @@ void OpteeClient::OpenSession(
 void OpteeClient::OpenSession2(
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::OpenSession2Completer::Sync completer) {
-  // TODO(44664): This check won't be necessary once transition is complete and UUID is no longer
-  // optional.
+  // TODO(fxbug.dev/44664): This check won't be necessary once transition is complete and UUID is no
+  // longer optional.
   ZX_DEBUG_ASSERT(application_uuid_.has_value());
 
   auto [session_id, op_result] =

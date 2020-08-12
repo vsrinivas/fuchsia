@@ -81,7 +81,7 @@ class TestMounter : public FilesystemMounter {
         EXPECT_EQ(fs_flags, FS_SVC | FS_SVC_BLOBFS);
         EXPECT_EQ(len, 3);
 
-        // TODO(54521): This check is over-constraining.
+        // TODO(fxbug.dev/54521): This check is over-constraining.
         // BlobFS does not *require* this handle to be
         // passed in. However, filesystem-mounter will
         // always pass this handle in. Remove this check

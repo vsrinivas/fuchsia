@@ -96,9 +96,9 @@ class PlugDetectorImpl : public PlugDetector {
 
     // Open the device node.
     //
-    // TODO(35145): Remove blocking 'openat' from the main thread. fdio_open_at is probably what we
-    // want, but we'll need a version of DeviceWatcher that operates on fuchsia::io::Directory
-    // handles instead of file descriptors.
+    // TODO(fxbug.dev/35145): Remove blocking 'openat' from the main thread. fdio_open_at is
+    // probably what we want, but we'll need a version of DeviceWatcher that operates on
+    // fuchsia::io::Directory handles instead of file descriptors.
     fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
     if (!dev_node.is_valid()) {
       REPORT(FailedToOpenDevice(name, is_input, errno));

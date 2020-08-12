@@ -90,8 +90,8 @@ escher::ImagePtr Snapshotter::CreateReplacementImage(uint32_t width, uint32_t he
   }
 
   // Fuchsia colors
-  // TODO(41024): data for a single pixel is provided, but there should be data for width * height
-  // pixels.
+  // TODO(fxbug.dev/41024): data for a single pixel is provided, but there should be data for width
+  // * height pixels.
   uint8_t channels[4];
   channels[1] = 119;
   channels[0] = channels[2] = channels[3] = 255;

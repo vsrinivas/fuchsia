@@ -4,7 +4,7 @@
 
 #include "codec.h"
 
-// TODO(44249): Abstract Audio drivers controllers-codecs communications
+// TODO(fxbug.dev/44249): Abstract Audio drivers controllers-codecs communications
 
 namespace {
 static bool IsFormatSupported(sample_format_t sample_format, justify_format_t justify_format,

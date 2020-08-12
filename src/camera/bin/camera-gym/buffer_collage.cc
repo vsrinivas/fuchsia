@@ -545,7 +545,7 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
 }
 
 void BufferCollage::UpdateLayout() {
-  // TODO(49070): resolve constraints even if node is not visible
+  // TODO(fxbug.dev/49070): resolve constraints even if node is not visible
   // There is no intrinsic need to present the views prior to extents being known.
   if (!view_extents_) {
     constexpr fuchsia::ui::gfx::BoundingBox kDefaultBoundingBox{
@@ -679,7 +679,7 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
   for (const auto& event : events) {
     if (event.is_gfx() && event.gfx().is_view_properties_changed()) {
       auto aabb = event.gfx().view_properties_changed().properties.bounding_box;
-      // TODO(49069): bounding box should never be empty
+      // TODO(fxbug.dev/49069): bounding box should never be empty
       if (aabb.max.x == aabb.min.x || aabb.max.y == aabb.min.y || aabb.max.z == aabb.min.z) {
         view_extents_.reset();
       } else {

@@ -74,7 +74,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
   AudioClock device_clock_;
 };
 
-// TODO(50004): Add tests to verify we can read from other mix stages with unaligned frames.
+// TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
+// frames.
 
 AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                               testing::PacketFactory& factory) {
