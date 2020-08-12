@@ -23,23 +23,30 @@ func Parse(stdout []byte) []TestCaseResult {
 		rustTestPreamblePattern,
 		zirconUtestPreamblePattern,
 	}
-	remaining_lines, match := firstMatch(lines, res)
+	remainingLines, match := firstMatch(lines, res)
+
+	var cases []TestCaseResult
 	switch match {
 	case dartSystemTestPreamblePattern:
-		return parseDartSystemTest(remaining_lines)
+		cases = parseDartSystemTest(remainingLines)
 	case ftfTestPreamblePattern:
-		return parseFtfTest(lines)
+		cases = parseFtfTest(lines)
 	case googleTestPreamblePattern:
-		return parseGoogleTest(remaining_lines)
+		cases = parseGoogleTest(remainingLines)
 	case goTestPreamblePattern:
-		return parseGoTest(remaining_lines)
+		cases = parseGoTest(remainingLines)
 	case rustTestPreamblePattern:
-		return parseRustTest(remaining_lines)
+		cases = parseRustTest(remainingLines)
 	case zirconUtestPreamblePattern:
-		return parseZirconUtest(remaining_lines)
-	default:
-		return []TestCaseResult{}
+		cases = parseZirconUtest(remainingLines)
 	}
+
+	// Ensure that an empty set of cases is serialized to JSON as an empty
+	// array, not as null.
+	if cases == nil {
+		cases = []TestCaseResult{}
+	}
+	return cases
 }
 
 func firstMatch(lines [][]byte, res []*regexp.Regexp) ([][]byte, *regexp.Regexp) {

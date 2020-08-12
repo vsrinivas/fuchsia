@@ -14,6 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 type alwaysTrueCheck struct{}
@@ -93,7 +94,7 @@ func TestRunChecks(t *testing.T) {
 	if err != nil {
 		t.Error("RunChecks() failed with:", err)
 	}
-	if diff := cmp.Diff(want, got); diff != "" {
+	if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("RunChecks() returned unexpected tests (-want +got):\n%s", diff)
 	}
 	for _, td := range want {

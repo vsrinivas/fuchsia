@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 const checkTestNamePrefix = "testing_failure_mode"
@@ -39,6 +40,9 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 		testDetails := runtests.TestDetails{
 			Name:                 path.Join(checkTestNamePrefix, check.Name()),
 			IsTestingFailureMode: true,
+			// Specify an empty slice so it gets serialized to an empty JSON
+			// array instead of null.
+			Cases: []testparser.TestCaseResult{},
 		}
 		if anyFailed {
 			testDetails.Result = runtests.TestSuccess

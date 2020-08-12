@@ -987,3 +987,9 @@ func TestParseDartSystemTest(t *testing.T) {
 `
 	testCase(t, stdout, want)
 }
+
+// If no test cases can be parsed, the output should be an empty slice, not a
+// nil slice, so it gets serialized as an empty JSON array instead of as null.
+func TestParseNoTestCases(t *testing.T) {
+	testCase(t, "non-test output", "[]")
+}
