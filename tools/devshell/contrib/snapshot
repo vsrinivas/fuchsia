@@ -86,8 +86,7 @@ fi
 
 error_bringing_snapshot=
 tempfile="/tmp/__snapshot_temp"
-# TODO(50926): use "snapshot.zip" after announcement.
-output_file="${output_dir}/bugreport.zip"
+output_file="${output_dir}/snapshot.zip"
 # Obtain the snapshot and store it in a temporary location.
 # TODO(50926): switch to "snapshot" when shell binary is renamed.
 fx-command-run shell bugreport "${@}" > "${output_file}"
