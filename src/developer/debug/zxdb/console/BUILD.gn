@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 static_library("console") {
   sources = [
     "actions.cc",
@@ -167,6 +169,8 @@ static_library("console") {
     "format_table.h",
     "format_target.cc",
     "format_target.h",
+    "google_analytics_client.cc",
+    "google_analytics_client.h",
     "input_location_parser.cc",
     "input_location_parser.h",
     "nouns.cc",
@@ -189,6 +193,7 @@ static_library("console") {
   public_deps = [
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/expr",
+    "//src/lib/analytics/cpp/google_analytics",
     "//src/lib/fxl",
     "//src/lib/line_input",
     "//zircon/public/lib/cmdline",
@@ -279,4 +284,12 @@ source_set("e2e_tests") {
     "//src/developer/debug/zxdb/common:test_support",
     "//third_party/googletest:gtest",
   ]
+}
+
+test("zxdb_google_analytics_client_manualtest") {
+  sources = [
+    "google_analytics_client_manualtest.cc",
+    "google_analytics_client_manualtest.h",
+  ]
+  deps = [ ":console" ]
 }

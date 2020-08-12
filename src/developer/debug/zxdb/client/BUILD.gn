@@ -18,6 +18,7 @@ static_library("client") {
     "breakpoint_settings.h",
     "client_eval_context_impl.h",
     "client_object.h",
+    "curl.h",
     "disassembler.h",
     "execution_scope.h",
     "filter.h",

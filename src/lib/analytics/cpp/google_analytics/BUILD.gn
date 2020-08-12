@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("google_analytics") {
+  # This library only provides an abstract class for Google Analytics client, which leaves the
+  # actual HTTP communications as implementation details. Currently we only provide an
+  # implementation specific to zxdb and fidlcat. Please feel free to contact the owners if you
+  # would like to add support to other C++ programs.
+  visibility = [
+    "//src/developer/debug/zxdb/console:*",
+    "//tools/fidlcat/lib:*",
+  ]
+
+  sources = [
+    "client.cc",
+    "client.h",
+    "event.cc",
+    "event.h",
+  ]
+
+  public_deps = [ "//zircon/public/lib/fit" ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
