@@ -447,6 +447,7 @@ config("default_warnings") {
     "-Wnewline-eof",
     "-Wno-unused-parameter",
     "-Wno-unknown-warning-option",
+    "-Wno-sign-conversion",
 
     # TODO(35965): Temporarily disable C99 designator warnings introduced in
     # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
