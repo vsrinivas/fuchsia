@@ -17,13 +17,20 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
 
 #include "core.h"
+#include "fwil_types.h"
 #include "netbuf.h"
 
+// The bcme_status_t was introduced to typecheck handling of firmware error codes.
+// Because the firmware uses brcmf_proto_bcdc_dcmd directly, we must ensure
+// the size of bcme_status_t is the same as int32_t which was the original type
+// of the brcmf_proto_bcdc_dcmd status field.
+static_assert(sizeof(int32_t) == sizeof(bcme_status_t),
+              "bcme_status_t is not the same size as int32_t");
 struct brcmf_proto_bcdc_dcmd {
-  uint32_t cmd;   /* dongle command value */
-  uint32_t len;   /* input/output buflen (excludes header) */
-  uint32_t flags; /* flag defns given below */
-  int32_t status; /* status code returned from the device */
+  uint32_t cmd;         /* dongle command value */
+  uint32_t len;         /* input/output buflen (excludes header) */
+  uint32_t flags;       /* flag defns given below */
+  bcme_status_t status; /* status code returned from the device */
 };
 
 /**

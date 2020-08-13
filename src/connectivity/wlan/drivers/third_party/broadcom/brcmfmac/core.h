@@ -292,7 +292,7 @@ void brcmf_bus_change_state(brcmf_bus* bus, enum brcmf_bus_state state);
 
 zx_status_t brcmf_bus_started(brcmf_pub* drvr);
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
-                                 int32_t* fwerr_ptr);
+                                 bcme_status_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);
 zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr);
 

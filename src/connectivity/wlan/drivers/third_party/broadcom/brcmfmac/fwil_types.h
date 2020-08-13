@@ -173,6 +173,77 @@
 
 #define DL_TYPE_CLM 2
 
+// The BCME_STATUS_LIST macro expands to a list of X macros led
+// by an F macro. Before expanding the BCME_STATUS_LIST macro,
+// both the F and X macros must be defined. The F and X macros
+// should be undefined after expansion of BCME_STATUS_LIST is
+// complete
+#define BCME_LOWEST_STATUS_NUM -52
+#define BCME_STATUS_LIST      \
+  F(BCME_IE_NOTFOUND)         \
+  X(BCME_REPLAY)              \
+  X(BCME_MICERR)              \
+  X(BCME_ENCERR)              \
+  X(BCME_DECERR)              \
+  X(BCME_DISABLED)            \
+  X(BCME_SERIAL_PORT_ERR)     \
+  X(BCME_IOCTL_ERROR)         \
+  X(BCME_USAGE_ERROR)         \
+  X(BCME_SCANREJECT)          \
+  X(BCME_NONRESIDENT)         \
+  X(BCME_NMODE_DISABLED)      \
+  X(BCME_NODEVICE)            \
+  X(BCME_RXFAIL)              \
+  X(BCME_TXFAIL)              \
+  X(BCME_VERSION)             \
+  X(BCME_DONGLE_DOWN)         \
+  X(BCME_SDIO_ERROR)          \
+  X(BCME_NOT_WME_ASSOCIATION) \
+  X(BCME_ACM_NOTSUPPORTED)    \
+  X(BCME_TSPEC_NOTFOUND)      \
+  X(BCME_WME_NOT_ENABLED)     \
+  X(BCME_NOTFOUND)            \
+  X(BCME_RANGE)               \
+  X(BCME_ASSOCIATED)          \
+  X(BCME_NOMEM)               \
+  X(BCME_EPERM)               \
+  X(BCME_NOTREADY)            \
+  X(BCME_BADLEN)              \
+  X(BCME_UNSUPPORTED)         \
+  X(BCME_NORESOURCE)          \
+  X(BCME_BADADDR)             \
+  X(BCME_BADCHAN)             \
+  X(BCME_OUTOFRANGECHAN)      \
+  X(BCME_BADSSIDLEN)          \
+  X(BCME_NOTASSOCIATED)       \
+  X(BCME_BUSY)                \
+  X(BCME_BUFTOOLONG)          \
+  X(BCME_BUFTOOSHORT)         \
+  X(BCME_BADBAND)             \
+  X(BCME_BADRATESET)          \
+  X(BCME_NOCLK)               \
+  X(BCME_NOTBANDLOCKED)       \
+  X(BCME_RADIOOFF)            \
+  X(BCME_BADKEYIDX)           \
+  X(BCME_NOTSTA)              \
+  X(BCME_NOTAP)               \
+  X(BCME_NOTDOWN)             \
+  X(BCME_NOTUP)               \
+  X(BCME_BADOPTION)           \
+  X(BCME_BADARG)              \
+  X(BCME_ERROR)               \
+  X(BCME_OK)
+
+#define F(BCME_STATUS) BCME_STATUS = BCME_LOWEST_STATUS_NUM,
+#define X(BCME_STATUS) BCME_STATUS,
+enum bcme_status_t : int32_t { BCME_STATUS_LIST };
+#undef X
+#undef F
+
+static_assert(BCME_OK == 0);
+
+typedef int16_t bcme_short_status_t;
+
 /* join preference types for join_pref iovar */
 enum brcmf_join_pref_types {
   BRCMF_JOIN_PREF_RSSI = 1,

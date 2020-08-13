@@ -18,6 +18,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_ring.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 
@@ -58,7 +59,7 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   // request, whereas the firmware may still report an error in processing the request.
   zx_status_t Ioctl(uint8_t interface_index, uint32_t command, DmaPool::Buffer tx_data,
                     size_t tx_data_size, DmaPool::Buffer* rx_data, size_t* rx_data_size,
-                    int32_t* firmware_error, zx::duration timeout = zx::duration::infinite());
+                    bcme_status_t* firmware_error, zx::duration timeout = zx::duration::infinite());
 
   // InterruptHandler implementation.
   uint32_t HandleInterrupt(uint32_t mailboxint) override;

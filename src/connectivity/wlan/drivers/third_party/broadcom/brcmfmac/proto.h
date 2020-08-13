@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 
 enum proto_addr_mode { ADDR_INDIRECT = 0, ADDR_DIRECT };
@@ -33,9 +34,9 @@ struct brcmf_proto {
   void (*reset_iface)(struct brcmf_pub* drvr, int ifidx);
   void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
   zx_status_t (*query_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
-                            int32_t* fwerr);
+                            bcme_status_t* fwerr);
   zx_status_t (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
-                          int32_t* fwerr);
+                          bcme_status_t* fwerr);
   zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx,
                                std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
   void* pd;
@@ -70,11 +71,11 @@ static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
   return drvr->proto->hdrpull(drvr, do_fws, netbuf, ifp);
 }
 static inline zx_status_t brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                                 void* buf, uint len, int32_t* fwerr) {
+                                                 void* buf, uint len, bcme_status_t* fwerr) {
   return drvr->proto->query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                               void* buf, uint len, int32_t* fwerr) {
+                                               void* buf, uint len, bcme_status_t* fwerr) {
   return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 

@@ -36,10 +36,11 @@ std::unique_ptr<brcmf_proto> CreateProto(MsgbufProto* msgbuf) {
     return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->HdrPull(do_fws, netbuf, ifp);
   };
   proto->query_dcmd = [](brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
-                         int32_t* fwerr) {
+                         bcme_status_t* fwerr) {
     return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->QueryDcmd(ifidx, cmd, buf, len, fwerr);
   };
-  proto->set_dcmd = [](brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len, int32_t* fwerr) {
+  proto->set_dcmd = [](brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
+                       bcme_status_t* fwerr) {
     return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->SetDcmd(ifidx, cmd, buf, len, fwerr);
   };
   proto->tx_queue_data = [](brcmf_pub* drvr, int ifidx, std::unique_ptr<Netbuf> netbuf) {
@@ -181,7 +182,7 @@ zx_status_t MsgbufProto::HdrPull(bool do_fws, brcmf_netbuf* netbuf, brcmf_if** i
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MsgbufProto::QueryDcmd(int ifidx, uint cmd, void* buf, uint len, int32_t* fwerr) {
+zx_status_t MsgbufProto::QueryDcmd(int ifidx, uint cmd, void* buf, uint len, bcme_status_t* fwerr) {
   zx_status_t status = ZX_OK;
 
   DmaPool::Buffer tx_buffer;
@@ -197,7 +198,7 @@ zx_status_t MsgbufProto::QueryDcmd(int ifidx, uint cmd, void* buf, uint len, int
 
   DmaPool::Buffer rx_buffer;
   size_t rx_data_size = 0;
-  int32_t firmware_error = 0;
+  bcme_status_t firmware_error = BCME_OK;
   status = ring_handler_->Ioctl(ifidx, cmd, std::move(tx_buffer), len, &rx_buffer, &rx_data_size,
                                 &firmware_error);
   if (status != ZX_OK) {
@@ -217,7 +218,7 @@ zx_status_t MsgbufProto::QueryDcmd(int ifidx, uint cmd, void* buf, uint len, int
   return ZX_OK;
 }
 
-zx_status_t MsgbufProto::SetDcmd(int ifidx, uint cmd, void* buf, uint len, int32_t* fwerr) {
+zx_status_t MsgbufProto::SetDcmd(int ifidx, uint cmd, void* buf, uint len, bcme_status_t* fwerr) {
   return QueryDcmd(ifidx, cmd, buf, len, fwerr);
 }
 

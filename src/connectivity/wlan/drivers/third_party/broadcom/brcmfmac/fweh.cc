@@ -389,7 +389,7 @@ void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code co
 zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
   int i;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
   int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
 
   memset(eventmask, 0, sizeof(eventmask));

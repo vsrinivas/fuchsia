@@ -59,7 +59,7 @@ static int brcmf_ignore_probe_fail;
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
   struct brcmf_join_pref_params join_pref_params[2];
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   /* Setup join_pref to select target by RSSI (boost on 5GHz) */
   join_pref_params[0].type = BRCMF_JOIN_PREF_RSSI_DELTA;
@@ -99,7 +99,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
       dload_data->flag |= DL_END;
     }
 
-    int32_t fw_err = 0;
+    bcme_status_t fw_err = BCME_OK;
     std::memcpy(dload_data->data, clm_binary.data() + offset, chunk_len);
     dload_data->len = chunk_len;
     if ((status = brcmf_fil_iovar_data_set(ifp, "clmload", dload_data,
@@ -113,7 +113,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
   }
 
   uint32_t clm_status = 0;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
   if ((status = brcmf_fil_iovar_int_get(ifp, "clmload_status", &clm_status, &fw_err)) != ZX_OK) {
     BRCMF_ERR("get clmload_status failed: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
@@ -147,7 +147,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
   // Use static MAC address defined in the firmware.
   // eg. "macaddr" field of brcmfmac43455-sdio.txt
   uint8_t mac_addr[ETH_ALEN];
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
@@ -162,7 +162,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
 
 static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
   uint8_t mac_addr[ETH_ALEN];
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
   zx_status_t err = brcmf_bus_get_bootloader_macaddr(ifp->drvr->bus_if, mac_addr);
   if (err != ZX_OK) {
     // If desired, fall back to firmware mac address
@@ -217,7 +217,7 @@ zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country)
   wifi_config_t config;
   struct brcmf_fil_country_le ccreq;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
   const unsigned char* code = country->alpha2;
   int i;
 
@@ -266,7 +266,7 @@ zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country) {
   struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
   struct brcmf_fil_country_le ccreq;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   // Get country info from firmware
   memset(&ccreq, 0, sizeof(ccreq));
@@ -305,7 +305,7 @@ zx_status_t brcmf_clear_country(brcmf_pub* drvr) {
 // This function applies configured platform specific iovars to the firmware
 static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
   int i;
-  int32_t fw_err;
+  bcme_status_t fw_err;
   zx_status_t err;
   wifi_config_t config;
 
@@ -360,7 +360,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   char* clmver;
   char* ptr;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
   const wlanphy_country_t country = {{'U', 'S'}};
 
   err = brcmf_set_macaddr(ifp);

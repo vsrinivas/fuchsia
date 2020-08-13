@@ -59,7 +59,7 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
                                      const char* name) {
   uint32_t data;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   err = brcmf_fil_iovar_int_get(ifp, name, &data, &fw_err);
   if (err == ZX_OK) {
@@ -72,7 +72,7 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
 }
 
 static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id id, const char* name,
-                                      const void* data, size_t len, int32_t* fwerr_ptr) {
+                                      const void* data, size_t len, bcme_status_t* fwerr_ptr) {
   zx_status_t err;
 
   err = brcmf_fil_iovar_data_set(ifp, name, data, len, fwerr_ptr);
@@ -98,7 +98,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
   enum brcmf_feat_id id;
   int i;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
   if (err != ZX_OK) {

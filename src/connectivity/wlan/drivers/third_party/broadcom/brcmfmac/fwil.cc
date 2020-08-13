@@ -28,83 +28,28 @@
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
+#include "fwil_types.h"
 #include "linuxisms.h"
 #include "proto.h"
 
 #define MAX_HEX_DUMP_LEN 64
 
-static const char* const brcmf_fil_errstr[] = {
-    "BCME_OK",
-    "BCME_ERROR",
-    "BCME_BADARG",
-    "BCME_BADOPTION",
-    "BCME_NOTUP",
-    "BCME_NOTDOWN",
-    "BCME_NOTAP",
-    "BCME_NOTSTA",
-    "BCME_BADKEYIDX",
-    "BCME_RADIOOFF",
-    "BCME_NOTBANDLOCKED",
-    "BCME_NOCLK",
-    "BCME_BADRATESET",
-    "BCME_BADBAND",
-    "BCME_BUFTOOSHORT",
-    "BCME_BUFTOOLONG",
-    "BCME_BUSY",
-    "BCME_NOTASSOCIATED",
-    "BCME_BADSSIDLEN",
-    "BCME_OUTOFRANGECHAN",
-    "BCME_BADCHAN",
-    "BCME_BADADDR",
-    "BCME_NORESOURCE",
-    "BCME_UNSUPPORTED",
-    "BCME_BADLEN",
-    "BCME_NOTREADY",
-    "BCME_EPERM",
-    "BCME_NOMEM",
-    "BCME_ASSOCIATED",
-    "BCME_RANGE",
-    "BCME_NOTFOUND",
-    "BCME_WME_NOT_ENABLED",
-    "BCME_TSPEC_NOTFOUND",
-    "BCME_ACM_NOTSUPPORTED",
-    "BCME_NOT_WME_ASSOCIATION",
-    "BCME_SDIO_ERROR",
-    "BCME_DONGLE_DOWN",
-    "BCME_VERSION",
-    "BCME_TXFAIL",
-    "BCME_RXFAIL",
-    "BCME_NODEVICE",
-    "BCME_NMODE_DISABLED",
-    "BCME_NONRESIDENT",
-    "BCME_SCANREJECT",
-    "BCME_USAGE_ERROR",
-    "BCME_IOCTL_ERROR",
-    "BCME_SERIAL_PORT_ERR",
-    "BCME_DISABLED",
-    "BCME_DECERR",
-    "BCME_ENCERR",
-    "BCME_MICERR",
-    "BCME_REPLAY",
-    "BCME_IE_NOTFOUND",
-};
-
-#define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
-
-const char* brcmf_fil_get_errstr(int32_t err) {
-  uint32_t err_ndx = (uint32_t)-err;
-  if (err_ndx >= countof(brcmf_fil_errstr)) {
-    return "(unknown)";
-  }
-
-  return brcmf_fil_errstr[err_ndx];
+#define F(BCME_STATUS) X(BCME_STATUS)
+#define X(BCME_STATUS) \
+  case BCME_STATUS:    \
+    return "BCME_STATUS";
+const char* brcmf_fil_get_errstr(bcme_status_t err) {
+  switch (err) { BCME_STATUS_LIST };
+  return "(unknown)";
 }
+#undef X
+#undef F
 
 static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
-                                      bool set, int32_t* fwerr_ptr) {
+                                      bool set, bcme_status_t* fwerr_ptr) {
   struct brcmf_pub* drvr = ifp->drvr;
   zx_status_t err;
-  int32_t fwerr = 0;
+  bcme_status_t fwerr = BCME_OK;
 
   if (drvr->bus_if->state != BRCMF_BUS_UP) {
     BRCMF_ERR("bus is down. we have nothing to do.");
@@ -124,7 +69,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     BRCMF_DBG(FIL, "Failed: %s", zx_status_get_string(err));
   } else if (fwerr != 0) {
     BRCMF_DBG(FIL, "Firmware error: %s (%d)", brcmf_fil_get_errstr(fwerr), fwerr);
-    if (fwerr == BRCMF_ERR_FIRMWARE_UNSUPPORTED) {
+    if (fwerr == BCME_UNSUPPORTED) {
       err = ZX_ERR_NOT_SUPPORTED;
     } else {
       err = ZX_ERR_IO_REFUSED;
@@ -139,7 +84,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
 }
 
 zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const void* data,
-                                   uint32_t len, int32_t* fwerr_ptr) {
+                                   uint32_t len, bcme_status_t* fwerr_ptr) {
   zx_status_t err;
 
   ifp->drvr->proto_block.lock();
@@ -154,7 +99,7 @@ zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const voi
 }
 
 zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
-                                   int32_t* fwerr_ptr) {
+                                   bcme_status_t* fwerr_ptr) {
   zx_status_t err;
 
   ifp->drvr->proto_block.lock();
@@ -169,7 +114,7 @@ zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* dat
 }
 
 zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data,
-                                  int32_t* fwerr_ptr) {
+                                  bcme_status_t* fwerr_ptr) {
   zx_status_t err;
   uint32_t data_le = data;
 
@@ -182,7 +127,7 @@ zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t d
 }
 
 zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data,
-                                  int32_t* fwerr_ptr) {
+                                  bcme_status_t* fwerr_ptr) {
   zx_status_t err;
   uint32_t data_le = *data;
 
@@ -216,10 +161,10 @@ static uint32_t brcmf_create_iovar(const char* name, const void* data, uint32_t 
 }
 
 zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, const void* data,
-                                     uint32_t len, int32_t* fwerr_ptr) {
+                                     uint32_t len, bcme_status_t* fwerr_ptr) {
   struct brcmf_pub* drvr = ifp->drvr;
   zx_status_t err;
-  int32_t fwerr;
+  bcme_status_t fwerr;
   uint32_t buflen;
 
   drvr->proto_block.lock();
@@ -247,10 +192,10 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
 }
 
 zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, void* data,
-                                     uint32_t len, int32_t* fwerr_ptr) {
+                                     uint32_t len, bcme_status_t* fwerr_ptr) {
   struct brcmf_pub* drvr = ifp->drvr;
   zx_status_t err;
-  int32_t fwerr;
+  bcme_status_t fwerr;
   uint32_t buflen;
   drvr->proto_block.lock();
   buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
@@ -280,14 +225,14 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
 }
 
 zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, const char* name, uint32_t data,
-                                    int32_t* fwerr_ptr) {
+                                    bcme_status_t* fwerr_ptr) {
   uint32_t data_le = data;
 
   return brcmf_fil_iovar_data_set(ifp, name, &data_le, sizeof(data_le), fwerr_ptr);
 }
 
 zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data,
-                                    int32_t* fwerr_ptr) {
+                                    bcme_status_t* fwerr_ptr) {
   uint32_t data_le = *data;
   zx_status_t err;
 

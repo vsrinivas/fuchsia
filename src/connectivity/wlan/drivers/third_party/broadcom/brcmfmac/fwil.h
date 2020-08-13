@@ -20,26 +20,27 @@
 #include <wifi/wifi-config.h>
 
 #include "core.h"
+#include "fwil_types.h"
 
 #define BRCMF_FWIL_BSSCFG_PREFIX "bsscfg:"
 
 zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const void* data,
-                                   uint32_t len, int32_t* fwerr_ptr);
+                                   uint32_t len, bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
-                                   int32_t* fwerr_ptr);
+                                   bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data,
-                                  int32_t* fwerr_ptr);
+                                  bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data,
-                                  int32_t* fwerr_ptr);
+                                  bcme_status_t* fwerr_ptr);
 
 zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, const void* data,
-                                     uint32_t len, int32_t* fwerr_ptr);
+                                     uint32_t len, bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, void* data,
-                                     uint32_t len, int32_t* fwerr_ptr);
+                                     uint32_t len, bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, const char* name, uint32_t data,
-                                    int32_t* fwerr_ptr);
+                                    bcme_status_t* fwerr_ptr);
 zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data,
-                                    int32_t* fwerr_ptr);
+                                    bcme_status_t* fwerr_ptr);
 
 zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, const void* data,
                                       uint32_t len);
@@ -47,7 +48,7 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
                                       uint32_t len);
 zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, const char* name, uint32_t data);
 zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data);
-const char* brcmf_fil_get_errstr(int32_t err);
+const char* brcmf_fil_get_errstr(bcme_status_t err);
 zx_status_t brcmf_send_cmd_to_firmware(brcmf_pub* drvr, uint32_t ifidx, uint32_t cmd, void* data,
                                        uint32_t len, bool set);
 

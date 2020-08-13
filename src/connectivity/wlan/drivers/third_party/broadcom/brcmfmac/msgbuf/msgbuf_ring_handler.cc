@@ -11,6 +11,7 @@
 #include <zircon/time.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/regs.h"
 
 namespace wlan {
@@ -49,7 +50,7 @@ struct MsgbufRingHandler::IoctlState {
   DmaPool::Buffer response;
   size_t response_size = 0;
   uint16_t transaction_id = 0;
-  int32_t firmware_error = 0;
+  bcme_status_t firmware_error = BCME_OK;
   zx_status_t status = ZX_OK;
   sync_completion_t completion;
 };
@@ -196,7 +197,7 @@ zx_status_t MsgbufRingHandler::GetTxBuffer(DmaPool::Buffer* out_buffer) {
 zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
                                      DmaPool::Buffer tx_data, size_t tx_data_size,
                                      DmaPool::Buffer* rx_data, size_t* rx_data_size,
-                                     int32_t* firmware_error, zx::duration timeout) {
+                                     bcme_status_t* firmware_error, zx::duration timeout) {
   zx_status_t status = ZX_OK;
 
   // Device ioctls can only go up to the ethernet frame size.
@@ -355,7 +356,7 @@ void MsgbufRingHandler::HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioc
 
       ioctl_state->response = std::move(buffer);
       ioctl_state->response_size = resp_len;
-      ioctl_state->firmware_error = firmware_status;
+      ioctl_state->firmware_error = static_cast<bcme_status_t>(firmware_status);
       return ZX_OK;
     }();
 

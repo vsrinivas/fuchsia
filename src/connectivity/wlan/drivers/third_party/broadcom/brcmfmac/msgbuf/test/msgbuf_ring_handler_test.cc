@@ -168,7 +168,7 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
       ioctl_response.msg.request_id = buffer.index;
       ioctl_response.resp_len = write_size;
       ioctl_response.trans_id = ioctl_request->trans_id;
-      ioctl_response.compl_hdr.status = ZX_OK;
+      ioctl_response.compl_hdr.status = BCME_OK;
 
       EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
                                   fake_interfaces.get(), &ioctl_response, sizeof(ioctl_response)));
@@ -192,12 +192,12 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
     DmaPool::Buffer rx_buffer;
     const void* rx_buffer_data = nullptr;
     size_t rx_data_size = 0;
-    int32_t firmware_error = 0;
+    bcme_status_t firmware_error = BCME_OK;
     EXPECT_EQ(ZX_OK, ring_handler->Ioctl(datum.interface_index, datum.command, std::move(tx_buffer),
                                          datum.data.size(), &rx_buffer, &rx_data_size,
                                          &firmware_error, kTestTimeout));
     EXPECT_EQ(ZX_OK, rx_buffer.MapRead(rx_data_size, &rx_buffer_data));
-    EXPECT_EQ(0, firmware_error);
+    EXPECT_EQ(BCME_OK, firmware_error);
 
     // Confirm the response.
     EXPECT_EQ(datum.data.size(), rx_data_size);

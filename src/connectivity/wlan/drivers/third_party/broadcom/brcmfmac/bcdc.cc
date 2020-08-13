@@ -55,10 +55,10 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
   uint32_t flags;
   if (cmd == BRCMF_C_GET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, static_cast<char *>(buf));
+    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, static_cast<char*>(buf));
   } else if (cmd == BRCMF_C_SET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, static_cast<char *>(buf));
+    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, static_cast<char*>(buf));
   } else {
     BRCMF_DBG(BCDC, "Enter");
   }
@@ -111,7 +111,7 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
 }
 
 static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                               void* buf, uint len, int32_t* fwerr) {
+                                               void* buf, uint len, bcme_status_t* fwerr) {
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
   struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
   void* info;
@@ -122,7 +122,7 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
 
   BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
 
-  *fwerr = ZX_OK;
+  *fwerr = BCME_OK;
   ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %s", zx_status_get_string(ret));
@@ -171,7 +171,7 @@ done:
 }
 
 static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                             uint len, int32_t* fwerr) {
+                                             uint len, bcme_status_t* fwerr) {
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
   struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
   zx_status_t ret;
@@ -180,7 +180,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
 
   BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
 
-  *fwerr = ZX_OK;
+  *fwerr = BCME_OK;
   ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, true);
   if (ret != ZX_OK) {
     goto done;

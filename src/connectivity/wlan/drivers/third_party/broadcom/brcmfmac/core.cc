@@ -77,7 +77,7 @@ struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx) {
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
   zx_status_t err;
   uint32_t mode;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   if (enable) {
     mode = BRCMF_ARP_OL_AGENT | BRCMF_ARP_OL_PEER_AUTO_REPLY;
@@ -119,7 +119,7 @@ static void brcmf_set_multicast_list(struct brcmf_if* ifp) {
   char* bufp;
   uint32_t buflen;
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
@@ -199,7 +199,7 @@ static void brcmf_set_multicast_list_worker(WorkItem* work) {
 zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t err;
-  int32_t fw_err = 0;
+  bcme_status_t fw_err = BCME_OK;
 
   BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
@@ -692,7 +692,7 @@ void brcmf_detach(brcmf_pub* drvr) {
 }
 
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
-                                 int32_t* fwerr_ptr) {
+                                 bcme_status_t* fwerr_ptr) {
   struct brcmf_if* ifp = drvr->iflist[0];
 
   return brcmf_fil_iovar_data_set(ifp, name, data, len, fwerr_ptr);

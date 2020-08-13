@@ -4,6 +4,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_MSGBUF_MSGBUF_STRUCTS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_MSGBUF_MSGBUF_STRUCTS_H_
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+
 // This file contains structure definitions for interfacing with the hardware DMA queues used by the
 // Broadcom chip.
 
@@ -35,8 +37,13 @@ struct [[gnu::packed]] MsgbufCommonHeader {
   uint32_t request_id;
 };
 
+// The status field is an int16_t which can be safely cast to a bcme_status_t.
+// The type alias bcme_short_status is used as a reminder of this. Note that
+// we must ensure the size of bcme_short_status is the same as int16_t because
+// int16_t is the original type of the MsgbufCompletionHeader status field.
+static_assert(sizeof(bcme_short_status_t) == sizeof(int16_t));
 struct [[gnu::packed]] MsgbufCompletionHeader {
-  int16_t status;  // Note: signed integer.
+  bcme_short_status_t status;  // Note: signed integer.
   uint16_t flow_ring_id;
 };
 
