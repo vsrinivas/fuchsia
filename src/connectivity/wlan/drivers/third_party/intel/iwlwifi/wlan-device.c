@@ -575,16 +575,11 @@ static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
 
   // Only remove the device if it has been added and not removed yet.
   if (mvmvif->zxdev) {
-    ret = device_remove_deprecated(mvmvif->zxdev);
-    if (ret != ZX_OK) {
-      IWL_WARN(mvmvif, "cannot remove the zxdev of interface (%d): %s\n", id,
-               zx_status_get_string(ret));
-    }
+    device_async_remove(mvmvif->zxdev);
   }
 
-  // Unlink the 'mvmvif' from the 'mvm' and remove the zxdev. The memory of 'mvmvif' will be freed
-  // in mac_release().
-  mvmvif->zxdev = NULL;
+  // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
+  // and the memory of 'mvmvif' will be freed in mac_release().
   mvm->mvmvif[id] = NULL;
 
   // the last MAC interface. stop the MVM to save power. 'vif_count' had been decreased in
