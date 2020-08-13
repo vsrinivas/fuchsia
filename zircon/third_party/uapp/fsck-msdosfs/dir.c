@@ -645,8 +645,9 @@ readDosDirSection(int f, struct bootblock *boot, struct fatEntry *fat,
 			}
 			dirent.head = p[26] | (p[27] << 8);
 			if (boot->ClustMask == CLUST32_MASK)
-				dirent.head |= (p[20] << 16) | (p[21] << 24);
-			dirent.size = p[28] | (p[29] << 8) | (p[30] << 16) | (p[31] << 24);
+				dirent.head |= (p[20] << 16) | ((cl_t)p[21] << 24);
+			dirent.size = p[28] | (p[29] << 8) | (p[30] << 16)
+				| ((u_int32_t)p[31] << 24);
 			if (vallfn) {
 				strlcpy(dirent.lname, longName,
 				    sizeof(dirent.lname));

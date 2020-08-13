@@ -66,9 +66,9 @@ readboot(int dosfs, struct bootblock *boot)
 	boot->SecPerTrack = block[24] + (block[25] << 8);
 	boot->bpbHeads = block[26] + (block[27] << 8);
 	boot->bpbHiddenSecs = block[28] + (block[29] << 8) +
-	    (block[30] << 16) + (block[31] << 24);
+	    (block[30] << 16) + ((u_int32_t)block[31] << 24);
 	boot->bpbHugeSectors = block[32] + (block[33] << 8) +
-	    (block[34] << 16) + (block[35] << 24);
+	    (block[34] << 16) + ((u_int32_t)block[35] << 24);
 
 	boot->FATsecs = boot->bpbFATsmall;
 
@@ -76,7 +76,7 @@ readboot(int dosfs, struct bootblock *boot)
 		boot->flags |= FAT32;
 	if (boot->flags & FAT32) {
 		boot->FATsecs = block[36] + (block[37] << 8)
-				+ (block[38] << 16) + (block[39] << 24);
+				+ (block[38] << 16) + ((u_int32_t)block[39] << 24);
 		if (block[40] & 0x80)
 			boot->ValidFat = block[40] & 0x0f;
 
@@ -88,7 +88,7 @@ readboot(int dosfs, struct bootblock *boot)
 			return FSFATAL;
 		}
 		boot->bpbRootClust = block[44] + (block[45] << 8)
-			       + (block[46] << 16) + (block[47] << 24);
+			       + (block[46] << 16) + ((cl_t)block[47] << 24);
 		boot->bpbFSInfo = block[48] + (block[49] << 8);
 		boot->bpbBackup = block[50] + (block[51] << 8);
 
@@ -133,10 +133,10 @@ readboot(int dosfs, struct bootblock *boot)
 		if (boot->bpbFSInfo) {
 			boot->FSFree = fsinfo[0x1e8] + (fsinfo[0x1e9] << 8)
 				       + (fsinfo[0x1ea] << 16)
-				       + (fsinfo[0x1eb] << 24);
+				       + ((cl_t)fsinfo[0x1eb] << 24);
 			boot->FSNext = fsinfo[0x1ec] + (fsinfo[0x1ed] << 8)
 				       + (fsinfo[0x1ee] << 16)
-				       + (fsinfo[0x1ef] << 24);
+				       + ((cl_t)fsinfo[0x1ef] << 24);
 		}
 
 		if (lseek(dosfs, boot->bpbBackup * boot->bpbBytesPerSec,

@@ -274,7 +274,7 @@ readfat(int fs, struct bootblock *boot, u_int no, struct fatEntry **fp)
 		switch (boot->ClustMask) {
 		case CLUST32_MASK:
 			fat[cl].next = p[0] + (p[1] << 8)
-				       + (p[2] << 16) + (p[3] << 24);
+				       + (p[2] << 16) + ((cl_t)p[3] << 24);
 			fat[cl].next &= boot->ClustMask;
 			ret |= checkclnum(boot, no, cl, &fat[cl].next);
 			cl++;
