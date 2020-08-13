@@ -60,6 +60,11 @@ class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
   // hit.
   std::optional<uint32_t> HitTest(zx_koid_t view_ref_koid, fuchsia::math::PointF target);
 
+  // Perform an accessibility action against the target node and return whether or not the action
+  // was handled
+  bool PerformAccessibilityAction(zx_koid_t view_ref_koid, uint32_t node_id,
+                                  fuchsia::accessibility::semantics::Action action);
+
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
  private:

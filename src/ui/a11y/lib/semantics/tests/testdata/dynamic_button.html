@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dynamic test</title>
+  </head>
+  <body>
+    <script>
+      function incrementCounter() {
+        const counter = document.querySelector('#counter');
+        counter.textContent = Number.parseInt(counter.textContent, 10) + 1;
+      }
+    </script>
+    The button has been clicked <span id="counter">0</span> times.
+    <button type="button" onclick="incrementCounter()">Increment</button>
+  </body>
+</html>

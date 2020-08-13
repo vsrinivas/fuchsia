@@ -170,4 +170,19 @@ fuchsia::math::PointF SemanticsIntegrationTest::CalculateViewTargetPoint(
   return {view_local_target_point.x, view_local_target_point.y};
 }
 
+bool SemanticsIntegrationTest::PerformAccessibilityAction(
+    zx_koid_t view_ref_koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action) {
+  std::optional<bool> callback_handled;
+  auto callback = [&callback_handled](bool handled) { callback_handled = handled; };
+  view_manager()->PerformAccessibilityAction(view_ref_koid, node_id, action, callback);
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&callback_handled] { return callback_handled.has_value(); }, kTimeout));
+  if (!callback_handled.has_value()) {
+    // The EXPECT above will have failed, so this will show up as a test failure
+    return false;
+  }
+  return *callback_handled;
+}
+
 }  // namespace accessibility_test
