@@ -4,62 +4,60 @@ Fuchsia is using Clang as the official compiler.
 
 ## Prerequisites
 
-You need [CMake](https://cmake.org/download/) version 3.8.0 and newer to
-execute these commands. This was the first version to support Fuchsia.
+You need [CMake](https://cmake.org/download/) version 3.13.4 or newer to
+execute these commands. This is the [minimum required version](https://reviews.llvm.org/rGafa1afd4108)
+to build LLVM.
 
 While CMake supports different build systems, we recommend using
 [Ninja](https://github.com/ninja-build/ninja/releases) which installed
 to be present on your system.
 
-## Getting Source
+### Getting Source
 
 The example commands below use `${LLVM_SRCDIR}` to refer to the root of
-your LLVM source tree checkout and assume the [monorepo
-layout](https://llvm.org/docs/Proposals/GitHubMove.html#monorepo-variant).
-When using this layout, each sub-project has its own top-level
-directory.
-
-The
-[https://fuchsia.googlesource.com/third_party/llvm-project](https://fuchsia.googlesource.com/third_party/llvm-project)
-repository emulates this layout via Git submodules and is updated
-automatically by Gerrit. You can use the following command to download
-this repository including all the submodules after setting the
-`${LLVM_SRCDIR}` variable:
-
-```bash
-LLVM_SRCDIR=${HOME}/llvm-project
-git clone --recurse-submodules https://fuchsia.googlesource.com/third_party/llvm-project ${LLVM_SRCDIR}
-```
-
-To update the repository including all the submodules, you can use:
-
-```bash
-git pull --recurse-submodules
-```
-
-Alternatively, you can use the official monorepo
+your LLVM source tree checkout. You can use the official monorepo
 [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project)
-maintained by the LLVM community. This repository does not use
-submodules which means you can use the standard Git workflow:
+maintained by the LLVM community:
 
 ```bash
+LLVM_SRCDIR=${HOME}/llvm/llvm-project
 git clone https://github.com/llvm/llvm-project ${LLVM_SRCDIR}
 ```
 
-### Fuchsia IDK
-
-Before building the runtime libraries that are built along with the
-toolchain, you need a Fuchsia IDK. The IDK must be located in
-the directory pointed to by the `${IDK_DIR}` variable:
+*** note
+We recommend checking out to the revision we currently use for Fuchsia.
+The latest upstream revision may be broken or fail to build Fuchsia, whereas we
+always guarantee that the revision we ship can always build Fuchsia. This
+revision can be found in `//integration/prebuilts`. Search for the package
+`fuchsia/third_party/clang/${platform}`, and checkout the `git_revision`
+associated with it.
+***
 
 ```bash
-IDK_DIR=${HOME}/fuchsia-sdk
+cd ${LLVM_SRCDIR}
+git checkout ${REVISON_NUMBER}
+```
+
+### Fuchsia IDK/SDK
+
+Before building the runtime libraries that are built along with the
+toolchain, you need a Fuchsia [IDK](/docs/development/sdk)
+(formerly known as the SDK).
+The IDK must be located in the directory pointed to by the `${IDK_DIR}`
+variable:
+
+```bash
+IDK_DIR=${HOME}/fuchsia-idk
 ```
 
 To download the latest IDK, you can use the following:
 
 ```bash
+# For Linux
 cipd install fuchsia/sdk/core/linux-amd64 latest -root ${IDK_DIR}
+
+# For macOS
+cipd install fuchsia/sdk/core/mac-amd64 latest -root ${IDK_DIR}
 ```
 
 ### Sysroot for Linux
@@ -79,68 +77,217 @@ cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
 cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
 ```
 
-## Building Clang
+### [Googlers only] Goma
+
+Goma is a service for accelerating builds by distributing compilations across
+many machines. Googles should ensure Goma is installed on your machine for faster
+builds. If you have Goma installed in `${GOMA_DIR}` (which should be provided in
+`//prebuilt/third_party/goma/${platform}`),
+you can enable Goma by adding these extra CMake flags to your CMake invocation:
+
+```bash
+  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+```
+
+Then you can take advantage of Goma by allowing multiple `ninja` jobs to run in
+parallel:
+
+```bash
+ninja -j1000
+```
+
+Use `-j100` for Goma on macOS and `-j1000` for Goma on Linux. You may
+need to tune the job count to suit your particular machine and workload.
+
+*** aside
+The examples below assume you can use Goma. If you cannot use Goma, do not add
+the provided CMake flags or use an absurdly high number of jobs.
+***
+
+*** note
+In order to use Goma, you need a host compiler that is
+supported by Goma such as the Fuchsia Clang installation.
+To verify your compiler is available on Goma, you can set
+`GOMA_USE_LOCAL=0 GOMA_FALLBACK=0` environment variables. If the
+compiler is not available, you will see an error.
+***
+
+## Building a Clang Toolchain for Fuchsia
 
 The Clang CMake build system supports bootstrap (aka multi-stage)
-builds. We use two-stage bootstrap build for the Fuchsia Clang compiler.
+builds. We use [two-stage bootstrap build](#two-stage-build) for the
+Fuchsia Clang compiler.
 However, for toolchain related development it is recommended to use
 the [single-stage build](#single-stage-build).
 
+If your goal is to experiment with clang, the single-stage build is likely what you are looking for.
 The first stage compiler is a host-only compiler with some options set
 needed for the second stage. The second stage compiler is the fully
 optimized compiler intended to ship to users.
 
 Setting up these compilers requires a lot of options. To simplify the
 configuration the Fuchsia Clang build settings are contained in CMake
-cache files which are part of the Clang codebase.
+cache files which are part of the Clang codebase (`Fuchsia.cmake` and
+`Fuchsia-stage2.cmake`).
 
-You can build Clang toolchain for Fuchsia using the following commands.
-These must be run in a separate build directory, which you must create.
-This directory can be a subdirectory of `${LLVM_SRCDIR}` so that you
-use `LLVM_SRCDIR=..` or it can be elsewhere, with `LLVM_SRCDIR` set
-to an absolute or relative directory path from the build directory.
+In the following CMake invocations, `${CLANG_TOOLCHAIN_PREFIX}` refers to the directory
+of binaries from a previous Clang toolchain. Normally, this refers to the
+current toolchain shipped with Fuchsia, but any references to binaries
+from this directory could theoretically be replaced with one's own binaries.
+
+```bash
+# FUCHSIA_SRCDIR refers to the root directory of your Fuchsia source tree
+CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/bin/
+```
+
+*** note
+Clang must be built in a separate build directory. The directory itself
+can be a subdirectory or in a whole other path.
+***
+
+```bash
+mkdir llvm-build
+mkdir llvm-install  # For placing stripped binaries here
+INSTALL_DIR=${pwd}/llvm-install
+cd llvm-build
+```
+
+### Single Stage Build Fuchsia Configuration {#single-stage-build}
+
+When developing Clang for Fuchsia, you can use the cache file to
+test the Fuchsia configuration, but run only the second stage, with LTO
+disabled, which gives you a faster build time suitable even for
+incremental development, without having to manually specify all options:
+
+```bash
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
+  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
+  -DCMAKE_ASM_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
+  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DLLVM_ENABLE_LTO=OFF \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
+  -DFUCHSIA_SDK=${IDK_DIR} \
+  -DCMAKE_INSTALL_PREFIX= \
+  -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
+  ${LLVM_SRCDIR}/llvm
+ninja distribution  -j1000  # Build the distribution
+```
+
+`ninja distribution` should be enough for building all binaries, but the Fuchsia
+build assumes some libraries are stripped so `ninja
+install-distribution-stripped` is necessary.
+
+*** note
+Due to a [bug in Clang](https://bugs.llvm.org/show_bug.cgi?id=44097),
+builds with assertions enabled might crash while building Fuchsia. As a
+workaround, you can disable Clang assertions by setting
+`-DLLVM_ENABLE_ASSERTIONS=OFF` or using a release build
+(`-DCMAKE_BUILD_TYPE=Release`).
+***
+
+### Two-Stage Build Fuchsia Configuration {#two-stage-build}
+
+This is roughly equivalent to what is run on the prod builders and used to build
+a toolchain that we ship to users.
 
 ```bash
 cmake -GNinja \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
+  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang \
+  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang++ \
+  -DCMAKE_ASM_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang \
+  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_INSTALL_PREFIX= \
+  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
+  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-amd64 \
   -DSTAGE2_FUCHSIA_SDK=${IDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
   ${LLVM_SRCDIR}/llvm
-ninja stage2-distribution
+ninja stage2-distribution -j1000
+DESTDIR=${INSTALL_DIR} ninja stage2-install-distribution-stripped -j1000
 ```
-
-To include compiler runtimes and C++ library for Linux, you need to use
-`LINUX_<architecture>_SYSROOT` flag to point at the sysroot and specify
-the correct host triple. For example, to build the runtimes for
-`x86_64-unknown-linux-gnu` using the sysroot from your Fuchsia checkout, you
-would use:
-
-```bash
-  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
-  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
-```
-
-To install the compiler just built into `/usr/local`, you can use the
-following command:
-
-```bash
-ninja stage2-install-distribution
-```
-
-To use the compiler just built without installing it into a system-wide
-shared location, you can just refer to its build directory explicitly as
-`${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (where `LLVM_OBJDIR` is
-your LLVM build directory).
 
 Note: the second stage build uses LTO (Link Time Optimization) to
 achieve better runtime performance of the final compiler. LTO often
 requires a large amount of memory and is very slow. Therefore it may not
 be very practical for day-to-day development.
 
-Note: If the Fuchsia build fails due to missing `runtime.json`,
-`aarch64-fuchsia.manifest`, or `x86_64-fuchsia.manifest` files, you can copy
+### runtime.json
+
+If the Fuchsia build fails due to a missing `runtime.json` file, you can copy
 them over from the prebuilt toolchain.
+
+```
+cp ${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${INSTALL_DIR}/lib/
+```
+
+This file contains relative paths used by the Fuchsia build to know where
+various libraries from the toolchain are located.
+
+### Putting it All Together
+
+Copy-paste code for building a single-stage toolchain. This code can be run
+from inside your LLVM build directory and assumes a linux environment.
+
+```
+cd ${LLVM_BUILD_DIR}  # The directory your toolchain will be installed in
+
+# Environment setup
+FUCHSIA_SRCDIR=${HOME}/fuchsia/  # Replace with wherever Fuchsia lives
+LLVM_SRCDIR=${HOME}/llvm/llvm-project  # Replace with wherever llvm-project lives
+IDK_DIR=${HOME}/fuchsia-idk/
+SYSROOT_DIR=${HOME}/fuchsia-sysroot/
+CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/bin/
+GOMA_DIR=${FUCHSIA_SRCDIR}/prebuilt/third_party/goma/linux-x64/
+
+# Download necessary dependencies
+cipd install fuchsia/sdk/core/linux-amd64 latest -root ${IDK_DIR}
+cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
+cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
+
+# CMake invocation
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
+  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
+  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DLLVM_ENABLE_LTO=OFF \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
+  -DFUCHSIA_SDK=${IDK_DIR} \
+  -DCMAKE_INSTALL_PREFIX= \
+  -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
+  ${LLVM_SRCDIR}/llvm
+
+# Build and strip binaries and place them in the install directory
+ninja distribution -j1000
+DESTDIR=${INSTALL_DIR} ninja install-distribution-stripped -j1000
+
+# Get runtimes.json
+cp ${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${INSTALL_DIR}/lib/
+```
+
+### Building Fuchsia with a Custom Clang
+
+To specify a custom clang toolchain for building Fuchsia, pass
+`--args clang_prefix=\"${LLVM_BUILD_DIR}/bin\" --no-goma`
+to `fx set` command and run `fx build`.
+
+```bash
+fx set core.x64 --args=clang_prefix=\"${LLVM_BUILD_DIR}/bin\" --no-goma
+fx build
+```
+
+Note: If you make another change to Clang after building Fuchsia with a previous
+version of Clang, re-running `fx build` may not always guarantee that all necessary
+targets will be built with the new Clang. For this case, should instead run `fx
+clean-build` which will rebuild everything but definitely use the new Clang.
 
 ## Developing Clang
 
@@ -173,6 +320,10 @@ than the host compiler:
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
 ```
 
+Both `LLVM_ENABLE_PROJECTS` and `LLVM_ENABLE_RUNTIMES` are already set in the
+CMake cache files, so you normally don't need to set these unless you would
+like to explicitly add more projects or runtimes.
+
 Clang is a large project and compiler performance is absolutely critical. To
 reduce the build time, we recommend using Clang as a host compiler, and if
 possible, LLD as a host linker. These should be ideally built using LTO and
@@ -197,9 +348,9 @@ CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/prebuilt/third_party/clang/linux-x64/bin/
 ```
 
 Note: To build Fuchsia, you need a stripped version of the toolchain runtime
-binaries. Use `DESTDIR=/path/to/install/dir ninja install-distribution-stripped`
+binaries. Use `DESTDIR=${INSTALL_DIR} ninja install-distribution-stripped`
 to get a stripped install and then point your build configuration to
-`/path/to/install/dir/bin` as your toolchain.
+`${INSTALL_DIR}/bin` as your toolchain.
 
 ### Sanitizers
 
@@ -257,96 +408,11 @@ ninja libcxx libcxxabi
 ninja
 ```
 
-### [Googlers only] Goma
-
-Ensure Goma is installed on your machine for faster builds; Goma
-accelerates builds by distributing compilation across many machines. If
-you have Goma installed in `${GOMA_DIR}` (by default `${HOME}/goma`),
-you can enable Goma use with the following extra flags:
-
-```bash
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS}
-```
-
-The number of link jobs is dependent on RAM size, for LTO build you will
-need at least 10GB for each job.
-
-To build Clang with Goma, use:
-
-```bash
-ninja -j${JOBS}
-```
-
-Use `-j100` for Goma on macOS and `-j1000` for Goma on Linux. You may
-need to tune the job count to suit your particular machine and workload.
-
-Note: that in order to use Goma, you need a host compiler that is
-supported by Goma such as the Fuchsia Clang installation. See above on
-how to configure your LLVM buile to use a different host compiler.
-
-To verify your compiler is available on Goma, you can set
-`GOMA_USE_LOCAL=0 GOMA_FALLBACK=0` environment variables. If the
-compiler is not available, you will see an error.
-
-### Fuchsia configuration {#single-stage-build}
-
-When developing Clang for Fuchsia, you can also use the cache file to
-test the Fuchsia configuration, but run only the second stage, with LTO
-disabled, which gives you a faster build time suitable even for
-incremental development, without having to manually specify all options:
-
-```bash
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
-  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
-  -DLLVM_ENABLE_LTO=OFF \
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
-  -DFUCHSIA_SDK=${SDK_DIR} \
-  -DCMAKE_INSTALL_PREFIX='' \
-  -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
-  ${LLVM_SRCDIR}/llvm
-ninja distribution
-```
-
-Note: Due to a [bug in Clang](https://bugs.llvm.org/show_bug.cgi?id=44097),
-builds with assertions enabled might crash while building Fuchsia. As a
-workaround, you can disable Clang assertions by setting
-`-DLLVM_ENABLE_ASSERTIONS=OFF`.
-
-
-With Goma for even faster turnaround time:
-
-```bash
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
-  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_EXE_LINKER_FLAGS="-ldl -lpthread" \
-  -DCMAKE_SHARED_LINKER_FLAGS="-ldl -lpthread" \
-  -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS} \
-  -DLLVM_ENABLE_LTO=OFF \
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
-  -DFUCHSIA_SDK=${SDK_DIR} \
-  -DCMAKE_INSTALL_PREFIX='' \
-  -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
-  ${LLVM_SRCDIR}/llvm
-ninja distribution -j${JOBS}
-```
-
 ## Testing Clang
 
 To run Clang tests, you can use the `check-<component>` target:
 
-```
+```bash
 ninja check-llvm check-clang
 ```
 
@@ -354,36 +420,18 @@ You can all use `check-all` to run all tests, but keep in mind that this
 can take significant amount of time depending on the number of projects
 you have enabled in your build.
 
-### Building Fuchsia with custom Clang locally
-
-You can start building test binaries right away by using the Clang in
-`${LLVM_OBJDIR}/bin/`, or in
-`${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (depending on whether you
-did the two-stage build or the single-stage build, the binaries will be
-in a different location).
-
-If you want to use your Clang to build Fuchsia, you will need to do a few more things:
-
-First you will need to install the stripped version of Clang in the directory
-pointed by the `${CLANG_DIR}` variable:
+To test only one specific test, you can use the environment variable
+`LIT_FILTER`. If the path to the test is `clang/test/subpath/testname.cpp`, you
+can use:
 
 ```bash
-env DESTDIR=${CLANG_DIR} ninja install-distribution-stripped
+LIT_FILTER=testname.cpp ninja check-clang
 ```
 
-After that, copy some required files from the Fuchsia prebuilt into the Clang
-install directory:
+The same trick can be applied for running tests in other sub-projects by
+specifying different a different `check-<component>`.
 
-```bash
-cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${CLANG_DIR}/lib
-cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/aarch64-fuchsia.manifest ${CLANG_DIR}/lib
-cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/x86_64-fuchsia.manifest ${CLANG_DIR}/lib
-```
-
-Finally, pass `--args clang_prefix=\"${CLANG_DIR}/bin\" --no-goma`
-to `fx set` command and run `fx build`.
-
-### Building Fuchsia with custom Clang on bots (Googlers only)
+## Building Fuchsia with custom Clang on bots (Googlers only)
 
 Fuchsia's infrastructure has support for using a non-default version of Clang
 to build. Only Clang instances that have been uploaded to CIPD or Isolate are
@@ -417,6 +465,18 @@ It will provide you with a link to the BuildBucket page to track your build.
 
 You will need to run `led auth-login` prior to triggering any builds, and may need to
 file an infra ticket to request access to run led jobs.
+
+## Useful CMake Flags
+
+There are many other [CMake flags](https://llvm.org/docs/CMake.html#id11) that
+are useful for building, but these are some that may be useful for toolchain
+building.
+
+### `-DLLVM_PARALLEL_LINK_JOBS`
+
+Increase the number of link jobs that can be run in parallel (locally). The number of
+link jobs is dependent on RAM size. For LTO build you will
+need at least 10GB for each job.
 
 ## Additional Resources
 
