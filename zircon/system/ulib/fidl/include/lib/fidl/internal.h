@@ -235,7 +235,6 @@ struct FidlCodedStructPointer;
 struct FidlCodedTable;
 struct FidlCodedXUnion;
 struct FidlCodedArray;
-struct FidlCodedArrayNew;
 struct FidlCodedHandle;
 struct FidlCodedString;
 struct FidlCodedVector;
@@ -255,7 +254,6 @@ struct fidl_type {
   constexpr const FidlCodedTable& coded_table() const;
   constexpr const FidlCodedXUnion& coded_xunion() const;
   constexpr const FidlCodedArray& coded_array() const;
-  constexpr const FidlCodedArrayNew& coded_array_new() const;
   constexpr const FidlCodedHandle& coded_handle() const;
   constexpr const FidlCodedString& coded_string() const;
   constexpr const FidlCodedVector& coded_vector() const;
@@ -364,18 +362,6 @@ struct FidlCodedArray FIDL_INTERNAL_INHERIT_TYPE_T {
   FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedArray)
 };
 
-// TODO(fxb/39388): Switch to using this more ergonomic coding table for arrays.
-struct FidlCodedArrayNew FIDL_INTERNAL_INHERIT_TYPE_T {
-  const FidlTypeTag tag;
-  // This way `tag` and `element_padding` together takes 4 bytes.
-  const uint32_t element_padding : 24;
-  const uint32_t element_size;
-  const fidl_type_t* const element;
-  const uint64_t element_count;
-
-  FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedArrayNew)
-};
-
 struct FidlCodedHandle FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlNullability nullable;
@@ -452,10 +438,6 @@ constexpr const FidlCodedArray& fidl_type::coded_array() const {
   return *static_cast<const FidlCodedArray*>(this);
 }
 
-constexpr const FidlCodedArrayNew& fidl_type::coded_array_new() const {
-  return *static_cast<const FidlCodedArrayNew*>(this);
-}
-
 constexpr const FidlCodedHandle& fidl_type::coded_handle() const {
   return *static_cast<const FidlCodedHandle*>(this);
 }
@@ -493,7 +475,6 @@ static_assert(std::is_standard_layout<FidlCodedStruct>::value, "");
 static_assert(std::is_standard_layout<FidlCodedStructPointer>::value, "");
 static_assert(std::is_standard_layout<FidlCodedXUnion>::value, "");
 static_assert(std::is_standard_layout<FidlCodedArray>::value, "");
-static_assert(std::is_standard_layout<FidlCodedArrayNew>::value, "");
 static_assert(std::is_standard_layout<FidlCodedVector>::value, "");
 static_assert(std::is_standard_layout<FidlCodedString>::value, "");
 static_assert(std::is_standard_layout<FidlCodedHandle>::value, "");
@@ -504,7 +485,6 @@ static_assert(offsetof(struct FidlCodedStruct, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedStructPointer, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedXUnion, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedArray, tag) == 0, "");
-static_assert(offsetof(struct FidlCodedArrayNew, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedVector, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedString, tag) == 0, "");
 static_assert(offsetof(struct FidlCodedHandle, tag) == 0, "");
@@ -520,7 +500,6 @@ static_assert(sizeof(struct FidlCodedStruct) == 24, "");
 static_assert(sizeof(struct FidlCodedStructPointer) == 16, "");
 static_assert(sizeof(struct FidlCodedXUnion) == 24, "");
 static_assert(sizeof(struct FidlCodedArray) == 16, "");
-static_assert(sizeof(struct FidlCodedArrayNew) == 24, "");
 static_assert(sizeof(struct FidlCodedVector) == 24, "");
 static_assert(sizeof(struct FidlCodedString) == 8, "");
 static_assert(sizeof(struct FidlCodedHandle) == 12, "");
