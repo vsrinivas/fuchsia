@@ -51,8 +51,6 @@ allowed_deps = [
     '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
     '//topaz/bin/fidlgen_dart:fidlgen_dart(//build/toolchain:host_x64)',
     '//zircon/public/tool',
-    # Will move to //tools (CF-895):
-    '//src/sys/cmc:cmc(//build/toolchain:host_x64)',
 
     # This is currently implicitly generated as a dependency on any C++
     # generation of a FIDL target.

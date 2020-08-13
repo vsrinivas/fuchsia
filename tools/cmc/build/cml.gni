@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/cmc/build/cmc.gni")
+import("//tools/cmc/build/cmc.gni")
 
 # Compiles a cml file into a cm file.
 # If is_debug is true, pretty-prints the generated cm file.

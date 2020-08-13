@@ -4,7 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//src/sys/cmc/build/cmx.gni")
+import("//tools/cmc/build/cmx.gni")
 
 template("_audio_core_package") {
   forward_variables_from(invoker, [ "extra_cmx" ])

@@ -201,7 +201,7 @@ sdk_molecule("core_tools") {
   cross_compiled = [
     "tools:symbolize_sdk",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
-    "//src/sys/cmc:cmc_sdk",
+    "//tools/cmc:cmc_sdk",
     "//src/sys/pkg/bin/far:bin_sdk",
     "//src/sys/pkg/bin/pm:pm_bin_sdk",
     "//tools/bootserver_old:bootserver_sdk",

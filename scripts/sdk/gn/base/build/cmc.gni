@@ -139,7 +139,7 @@ template("cmc_compile") {
 # Validates a component manifest file
 #
 # The cmc_validate template will ensure that a given cmx file is conformant to
-# the cmx schema, as defined by //src/sys/cmc/schema.json. A stamp file is
+# the cmx schema, as defined by //tools/cmc/schema.json. A stamp file is
 # generated to mark that a given cmx file has passed.
 #
 # Parameters:

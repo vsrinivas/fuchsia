@@ -267,7 +267,7 @@ tools such as [cmc], and IDK libraries such as [libsys] and [libsvc].
 See also: [Components v2](#components-v2)
 
 [fuchsia.sys]: /sdk/fidl/fuchsia.sys/
-[cmc]: /src/sys/cmc
+[cmc]: /tools/cmc
 [libsys]: /sdk/lib/sys
 [libsvc]: /sdk/lib/svc
 
@@ -281,7 +281,7 @@ implementation. Includes a runtime as implemented by
 See also: [Components v1](#components-v1)
 
 [fuchsia.sys2]: /sdk/fidl/fuchsia.sys2/
-[cmc]: /src/sys/cmc
+[cmc]: /tools/cmc
 
 ### **Concurrent Device Driver** {#concurrent-device-driver}
 

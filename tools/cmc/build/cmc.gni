@@ -18,7 +18,7 @@ template("cmc") {
                              "visibility",
                            ])
 
-    tool = "//src/sys/cmc"
+    tool = "//tools/cmc"
     tool_output_name = "cmc"
   }
 }

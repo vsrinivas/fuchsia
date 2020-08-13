@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 
 import("//src/modular/build/fuchsia_module_facet.gni")
-import("//src/sys/cmc/build/cmc.gni")
+import("//tools/cmc/build/cmc.gni")
 
 # Validates a cmx file
 #
 # The cmx_validate template will ensure that a given cmx file is conformant to
-# the cmx schema, as defined by //src/sys/cmc/schema.json. A stamp file is
+# the cmx schema, as defined by //tools/cmc/schema.json. A stamp file is
 # generated to mark that a given cmx file has passed.
 #
 # Parameters

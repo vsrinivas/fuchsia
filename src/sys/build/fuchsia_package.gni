@@ -5,8 +5,8 @@
 import("//build/images/args.gni")
 import("//build/unification/future/data/fini_manifest.gni")
 import("//build/unification/zbi/generated_resource.gni")
-import("//src/sys/cmc/build/validate_component_manifest_references.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
+import("//tools/cmc/build/validate_component_manifest_references.gni")
 
 # Defines a Fuchsia package.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build

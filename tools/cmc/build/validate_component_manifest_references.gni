@@ -45,7 +45,7 @@ template("validate_component_manifest_references") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//src/sys/cmc/build/validate_component_manifest_references.py"
+    script = "//tools/cmc/build/validate_component_manifest_references.py"
     inputs = [ invoker.package_manifest ]
     outputs = [ stamp_file ]
     args = [

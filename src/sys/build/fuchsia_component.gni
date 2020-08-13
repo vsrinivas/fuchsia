@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/unification/zbi/resource.gni")
-import("//src/sys/cmc/build/cml.gni")
-import("//src/sys/cmc/build/cmx.gni")
+import("//tools/cmc/build/cml.gni")
+import("//tools/cmc/build/cmx.gni")
 
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build

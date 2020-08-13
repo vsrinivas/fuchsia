@@ -577,7 +577,7 @@ group("deprecated_package_underscore") {
     "//src/sys/appmgr/integration_tests:appmgr_integration_tests",
     "//src/sys/appmgr:appmgr_unittests",
     "//src/sys/appmgr:system_data_file",
-    "//src/sys/cmc:cmc_integration_test",
+    "//tools/cmc:cmc_integration_test",
     "//src/sys/component_index:component_index",
     "//src/sys/component_index:component_index_tests",
     "//src/sys/component_manager/src/elf_runner/tests:elf_runner_lifecycle_test",
