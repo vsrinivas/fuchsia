@@ -28,7 +28,7 @@ of the former and is the input to `complete.py`.
 ### BASH
 
 Make sure that `scripts/fx-env.sh` is sourced in your shell. See
-[fx_workflow](/docs/development/workflows/fx.md).
+[fx_workflow](/docs/development/build/fx.md).
 
 The default completion configuration for BASH treats `:` characters as word
 breaks, which breaks completion for GN targets (`foo/bar:test`).

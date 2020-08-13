@@ -119,7 +119,7 @@ function main {
       echo
       echo "## Main subcommands"
       echo
-      echo "Subcommands that are part of the [fx workflow](/docs/development/workflows/fx.md)."
+      echo "Subcommands that are part of the [fx workflow](/docs/development/build/fx.md)."
       echo
       _md_main_table_header
     } >> "${base_out}/index.md"

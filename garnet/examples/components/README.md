@@ -14,7 +14,7 @@ fx set core.x64 --with //garnet/examples:examples
 After that do a full build.
 
 (Disclaimer: if these build rules become out of date please check the
-[Build documentation](/docs/development/workflows/fx.md)
+[Build documentation](/docs/development/build/fx.md)
 and update this readme!)
 
 ## Running

@@ -66,7 +66,7 @@ available command line tools for testing/debugging.
 ### Running Tests
 
 Your build configuration may or may not include Bluetooth tests. Ensure
-Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](docs/development/workflows/fx.md#configure-a-build):
+Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](docs/development/build/fx.md#configure-a-build):
 
   ```
   $ fx set workstation.x64 --with-base="//bundles:tools,//src/connectivity/bluetooth"

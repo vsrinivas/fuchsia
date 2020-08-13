@@ -3,7 +3,7 @@
 Subcommands of `fx` are defined in several directories:
 
 `//tools/devshell` contains core scripts that are part of
-[fx workflow](/docs/development/workflows/fx.md).
+[fx workflow](/docs/development/build/fx.md).
 
 `//tools/devshell/contrib` contains scripts that have been contributed by
 project members that have other levels of support, ownership, or both. The
