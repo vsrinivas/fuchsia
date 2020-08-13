@@ -109,7 +109,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // to close.
   void DetachView(std::string story_id, fit::function<void()> done);
 
-  // Called by StoryControllerImpl. Sends request to
+  // Called by StoryShellContextImpl. Sends request to
   // fuchsia::modular::SessionShell through PresentationProvider.
   void GetPresentation(std::string story_id,
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);

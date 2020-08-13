@@ -17,15 +17,8 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
-#include "src/modular/bin/sessionmgr/component_context_impl.h"
-#include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/puppet_master/make_production_impl.h"
-#include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
-#include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
-#include "src/modular/bin/sessionmgr/session_ctl.h"
-#include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
-#include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
@@ -80,30 +73,23 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
 
 }  // namespace
 
-class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
- public:
-  PresentationProviderImpl(SessionmgrImpl* const impl) : impl_(impl) {}
-  ~PresentationProviderImpl() override = default;
+SessionmgrImpl::PresentationProviderImpl::PresentationProviderImpl(SessionmgrImpl* impl)
+    : impl_(impl) {}
 
- private:
-  // |PresentationProvider|
-  void GetPresentation(fidl::StringPtr story_id,
-                       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override {
-    fuchsia::modular::SessionShellPresentationProviderPtr provider;
-    impl_->ConnectToSessionShellService(provider.NewRequest());
-    provider->GetPresentation(story_id.value_or(""), std::move(request));
-  }
+void SessionmgrImpl::PresentationProviderImpl::GetPresentation(
+    fidl::StringPtr story_id, fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+  fuchsia::modular::SessionShellPresentationProviderPtr provider;
+  impl_->ConnectToSessionShellService(provider.NewRequest());
+  provider->GetPresentation(story_id.value_or(""), std::move(request));
+}
 
-  void WatchVisualState(
-      fidl::StringPtr story_id,
-      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) override {
-    fuchsia::modular::SessionShellPresentationProviderPtr provider;
-    impl_->ConnectToSessionShellService(provider.NewRequest());
-    provider->WatchVisualState(story_id.value_or(""), std::move(watcher));
-  }
-
-  SessionmgrImpl* const impl_;
-};
+void SessionmgrImpl::PresentationProviderImpl::WatchVisualState(
+    fidl::StringPtr story_id,
+    fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher) {
+  fuchsia::modular::SessionShellPresentationProviderPtr provider;
+  impl_->ConnectToSessionShellService(provider.NewRequest());
+  provider->WatchVisualState(story_id.value_or(""), std::move(watcher));
+}
 
 SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
                                fuchsia::modular::session::SessionmgrConfig config,
