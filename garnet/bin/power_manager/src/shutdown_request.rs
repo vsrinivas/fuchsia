@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_device_manager as fdevicemgr;
 use fidl_fuchsia_hardware_power_statecontrol as fpower;
 
 /// Type alias for the reboot reasons defined in fuchsia.hardware.power.statecontrol.RebootReason.
@@ -18,18 +17,14 @@ pub enum ShutdownRequest {
     RebootRecovery,
 }
 
-/// Converts a ShutdownRequest into a fuchsia.device.manager.SystemPowerState value.
-impl Into<fdevicemgr::SystemPowerState> for ShutdownRequest {
-    fn into(self) -> fdevicemgr::SystemPowerState {
+/// Converts a ShutdownRequest into a fuchsia.hardare.power.statecontrol.SystemPowerState value.
+impl Into<fpower::SystemPowerState> for ShutdownRequest {
+    fn into(self) -> fpower::SystemPowerState {
         match self {
-            ShutdownRequest::PowerOff => fdevicemgr::SystemPowerState::SystemPowerStatePoweroff,
-            ShutdownRequest::Reboot(_) => fdevicemgr::SystemPowerState::SystemPowerStateReboot,
-            ShutdownRequest::RebootBootloader => {
-                fdevicemgr::SystemPowerState::SystemPowerStateRebootBootloader
-            }
-            ShutdownRequest::RebootRecovery => {
-                fdevicemgr::SystemPowerState::SystemPowerStateRebootRecovery
-            }
+            ShutdownRequest::PowerOff => fpower::SystemPowerState::Poweroff,
+            ShutdownRequest::Reboot(_) => fpower::SystemPowerState::Reboot,
+            ShutdownRequest::RebootBootloader => fpower::SystemPowerState::RebootBootloader,
+            ShutdownRequest::RebootRecovery => fpower::SystemPowerState::RebootRecovery,
         }
     }
 }

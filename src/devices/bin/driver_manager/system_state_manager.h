@@ -11,6 +11,7 @@
 #include "coordinator.h"
 
 namespace device_manager_fidl = llcpp::fuchsia::device::manager;
+namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 class SystemStateManager : public device_manager_fidl::SystemStateTransition::Interface {
  public:
@@ -21,7 +22,7 @@ class SystemStateManager : public device_manager_fidl::SystemStateTransition::In
                             std::unique_ptr<SystemStateManager>* out);
 
   // SystemStateTransition interface
-  void SetTerminationSystemState(device_manager_fidl::SystemPowerState state,
+  void SetTerminationSystemState(power_fidl::statecontrol::SystemPowerState state,
                                  device_manager_fidl::SystemStateTransition::Interface::
                                      SetTerminationSystemStateCompleter::Sync completer) override;
 

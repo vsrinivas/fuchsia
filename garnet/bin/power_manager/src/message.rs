@@ -49,7 +49,7 @@ pub enum Message {
 
     /// Specify the termination system state, intended to be used in the DriverManagerHandler node.
     /// Arg: the SystemPowerState value indicating the termination state
-    SetTerminationSystemState(fidl_fuchsia_device_manager::SystemPowerState),
+    SetTerminationSystemState(fidl_fuchsia_hardware_power_statecontrol::SystemPowerState),
 }
 
 /// Defines the return values for each of the Message types from above

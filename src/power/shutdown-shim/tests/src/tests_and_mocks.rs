@@ -34,7 +34,7 @@ enum Admin {
 #[derive(Debug, PartialEq)]
 enum Signal {
     Statecontrol(Admin),
-    DeviceManager(fdevicemanager::SystemPowerState),
+    DeviceManager(fstatecontrol::SystemPowerState),
     Sys2Shutdown,
 }
 
@@ -213,7 +213,7 @@ async fn run_power_manager_missing_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStatePoweroff),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff),
                 Signal::Sys2Shutdown
             ]
         );
@@ -232,7 +232,7 @@ async fn run_power_manager_missing_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateReboot),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot),
                 Signal::Sys2Shutdown,
             ]
         );
@@ -251,7 +251,7 @@ async fn run_power_manager_missing_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateMexec),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec),
                 Signal::Sys2Shutdown,
             ]
         );
@@ -287,7 +287,7 @@ async fn run_power_manager_not_present_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStatePoweroff),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Poweroff),
                 Signal::Sys2Shutdown
             ]
         );
@@ -306,7 +306,7 @@ async fn run_power_manager_not_present_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateReboot),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Reboot),
                 Signal::Sys2Shutdown,
             ]
         );
@@ -325,7 +325,7 @@ async fn run_power_manager_not_present_test(
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
-                Signal::DeviceManager(fdevicemanager::SystemPowerState::SystemPowerStateMexec),
+                Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec),
                 Signal::Sys2Shutdown,
             ]
         );

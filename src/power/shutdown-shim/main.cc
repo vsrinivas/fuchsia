@@ -187,7 +187,7 @@ zx_status_t connect_to_protocol_with_timeout(const char* name, zx::channel* loca
 
 // Connect to fuchsia.device.manager.SystemStateTransition and set the
 // termination state.
-zx_status_t set_system_state_transition_behavior(device_manager_fidl::SystemPowerState state) {
+zx_status_t set_system_state_transition_behavior(power_fidl::statecontrol::SystemPowerState state) {
   zx::channel local;
   zx_status_t status =
       connect_to_protocol(&device_manager_fidl::SystemStateTransition::Name[0], &local);
@@ -239,7 +239,7 @@ void shutdown_timer() {
 // behavior and then instructing component_manager to perform an orderly
 // shutdown of components. If the orderly shutdown takes too long the shim will
 // exit with a non-zero exit code, killing the root job.
-void drive_shutdown_manually(device_manager_fidl::SystemPowerState state) {
+void drive_shutdown_manually(power_fidl::statecontrol::SystemPowerState state) {
   printf("[shutdown-shim]: driving shutdown manually\n");
 
   // Start a new thread that makes us exit uncleanly after a timeout. This will
@@ -272,10 +272,10 @@ void drive_shutdown_manually(device_manager_fidl::SystemPowerState state) {
 }
 
 zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontrol_client,
-                         device_manager_fidl::SystemPowerState fallback_state,
+                         power_fidl::statecontrol::SystemPowerState fallback_state,
                          power_fidl::statecontrol::RebootReason* reboot_reason) {
   switch (fallback_state) {
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT: {
+    case power_fidl::statecontrol::SystemPowerState::REBOOT: {
       if (reboot_reason == nullptr) {
         fprintf(stderr, "[shutdown-shim]: internal error, bad pointer to reason for reboot\n");
         return ZX_ERR_INTERNAL;
@@ -289,7 +289,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
         return ZX_OK;
       }
     } break;
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT_BOOTLOADER: {
+    case power_fidl::statecontrol::SystemPowerState::REBOOT_BOOTLOADER: {
       auto resp = statecontrol_client.RebootToBootloader();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
@@ -299,7 +299,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
         return ZX_OK;
       }
     } break;
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT_RECOVERY: {
+    case power_fidl::statecontrol::SystemPowerState::REBOOT_RECOVERY: {
       auto resp = statecontrol_client.RebootToRecovery();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
@@ -309,7 +309,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
         return ZX_OK;
       }
     } break;
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_POWEROFF: {
+    case power_fidl::statecontrol::SystemPowerState::POWEROFF: {
       auto resp = statecontrol_client.Poweroff();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
@@ -319,7 +319,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
         return ZX_OK;
       }
     } break;
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_MEXEC: {
+    case power_fidl::statecontrol::SystemPowerState::MEXEC: {
       auto resp = statecontrol_client.Mexec();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
@@ -329,7 +329,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
         return ZX_OK;
       }
     } break;
-    case device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_SUSPEND_RAM: {
+    case power_fidl::statecontrol::SystemPowerState::SUSPEND_RAM: {
       auto resp = statecontrol_client.SuspendToRam();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
@@ -348,7 +348,7 @@ zx_status_t send_command(power_fidl::statecontrol::Admin::SyncClient statecontro
 // function is expected to return an error if there was a transport-related
 // issue talking to power_manager, in which case this program will talk to
 // driver_manager and component_manager to drive shutdown manually.
-zx_status_t forward_command(device_manager_fidl::SystemPowerState fallback_state,
+zx_status_t forward_command(power_fidl::statecontrol::SystemPowerState fallback_state,
                             power_fidl::statecontrol::RebootReason* reboot_reason) {
   printf("[shutdown-shim]: checking power_manager liveness\n");
   zx::channel local;
@@ -374,7 +374,7 @@ zx_status_t forward_command(device_manager_fidl::SystemPowerState fallback_state
   exit(1);
 }
 
-zx_status_t forward_command(device_manager_fidl::SystemPowerState fallback_state) {
+zx_status_t forward_command(power_fidl::statecontrol::SystemPowerState fallback_state) {
   return forward_command(fallback_state, nullptr);
 }
 
@@ -386,8 +386,8 @@ void StateControlAdminServer::PowerFullyOn(
 void StateControlAdminServer::Reboot(
     power_fidl::statecontrol::RebootReason reboot_reason,
     power_fidl::statecontrol::Admin::Interface::RebootCompleter::Sync completer) {
-  zx_status_t status = forward_command(
-      device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT, &reboot_reason);
+  zx_status_t status =
+      forward_command(power_fidl::statecontrol::SystemPowerState::REBOOT, &reboot_reason);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -398,7 +398,7 @@ void StateControlAdminServer::Reboot(
 void StateControlAdminServer::RebootToBootloader(
     power_fidl::statecontrol::Admin::Interface::RebootToBootloaderCompleter::Sync completer) {
   zx_status_t status =
-      forward_command(device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT_BOOTLOADER);
+      forward_command(power_fidl::statecontrol::SystemPowerState::REBOOT_BOOTLOADER);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -408,8 +408,7 @@ void StateControlAdminServer::RebootToBootloader(
 
 void StateControlAdminServer::RebootToRecovery(
     power_fidl::statecontrol::Admin::Interface::RebootToRecoveryCompleter::Sync completer) {
-  zx_status_t status =
-      forward_command(device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_REBOOT_RECOVERY);
+  zx_status_t status = forward_command(power_fidl::statecontrol::SystemPowerState::REBOOT_RECOVERY);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -419,8 +418,7 @@ void StateControlAdminServer::RebootToRecovery(
 
 void StateControlAdminServer::Poweroff(
     power_fidl::statecontrol::Admin::Interface::PoweroffCompleter::Sync completer) {
-  zx_status_t status =
-      forward_command(device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_POWEROFF);
+  zx_status_t status = forward_command(power_fidl::statecontrol::SystemPowerState::POWEROFF);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -435,7 +433,7 @@ void StateControlAdminServer::Mexec(
       connect_to_protocol_with_timeout(&power_fidl::statecontrol::Admin::Name[0], &local);
   if (status == ZX_OK) {
     status = send_command(power_fidl::statecontrol::Admin::SyncClient(std::move(local)),
-                          device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_MEXEC, nullptr);
+                          power_fidl::statecontrol::SystemPowerState::MEXEC, nullptr);
     if (status == ZX_OK) {
       completer.ReplySuccess();
       return;
@@ -473,7 +471,7 @@ void StateControlAdminServer::Mexec(
 
   lifecycle_loop_.StartThread("lifecycle");
 
-  drive_shutdown_manually(device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_MEXEC);
+  drive_shutdown_manually(power_fidl::statecontrol::SystemPowerState::MEXEC);
 
   // We should block on fuchsia.sys.SystemController forever on this thread, if
   // it returns something has gone wrong.
@@ -483,8 +481,7 @@ void StateControlAdminServer::Mexec(
 
 void StateControlAdminServer::SuspendToRam(
     power_fidl::statecontrol::Admin::Interface::SuspendToRamCompleter::Sync completer) {
-  zx_status_t status =
-      forward_command(device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_SUSPEND_RAM);
+  zx_status_t status = forward_command(power_fidl::statecontrol::SystemPowerState::SUSPEND_RAM);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
