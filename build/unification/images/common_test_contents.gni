@@ -73,6 +73,7 @@ common_test_contents = [
   "//zircon/system/ulib/fs/metrics/test:metrics-composite-latency-event",
   "//zircon/system/ulib/fs/metrics/test:metrics-inspect",
   "//zircon/system/ulib/fs/test_support/test:fs_test_support",
+  "//zircon/system/ulib/fs/watchdog/test:watchdog-unit",
   "//zircon/system/ulib/ftl/test:ftl_test",
   "//zircon/system/ulib/inspect/test:inspect",
   "//zircon/system/ulib/io-scheduler/test:io-scheduler-test",
