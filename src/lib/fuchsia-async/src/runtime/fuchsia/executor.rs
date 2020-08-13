@@ -356,7 +356,7 @@ impl Executor {
     }
 
     fn singlethreaded_main_task_wake(&self) -> Waker {
-        futures::task::waker(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())))
+        futures::task::waker(Arc::new(SingleThreadedMainTaskWake(Arc::downgrade(&self.inner))))
     }
 
     /// Run a single future to completion on a single thread.
@@ -743,10 +743,12 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
 
 // Since there are no other threads running, we don't have to use the EMPTY_WAKEUP_ID,
 // so instead we save it for use as the main task wakeup id.
-struct SingleThreadedMainTaskWake(Arc<Inner>);
+struct SingleThreadedMainTaskWake(Weak<Inner>);
 impl ArcWake for SingleThreadedMainTaskWake {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        arc_self.0.notify_empty();
+        if let Some(executor) = Weak::upgrade(&arc_self.0) {
+            executor.notify_empty();
+        }
     }
 }
 
