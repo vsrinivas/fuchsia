@@ -89,7 +89,7 @@ static int iwl_send_tx_ant_cfg(struct iwl_mvm* mvm, uint8_t valid_tx_ant) {
   return iwl_mvm_send_cmd_pdu(mvm, TX_ANT_CONFIGURATION_CMD, 0, sizeof(tx_ant_cmd), &tx_ant_cmd);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static int iwl_send_rss_cfg_cmd(struct iwl_mvm* mvm) {
     int i;
     struct iwl_rss_config_cmd cmd = {
@@ -157,7 +157,7 @@ static zx_status_t iwl_mvm_send_dqa_cmd(struct iwl_mvm* mvm) {
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 void iwl_mvm_mfu_assert_dump_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_mfu_assert_dump_notif* mfu_dump_notif = (void*)pkt->data;
@@ -347,7 +347,7 @@ static zx_status_t iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm,
   return ZX_OK;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static int iwl_run_unified_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     struct iwl_notification_wait init_wait;
     struct iwl_nvm_access_complete_cmd nvm_complete = {};
@@ -427,7 +427,7 @@ error:
 #endif  // NEEDS_PORTING
 
 static zx_status_t iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
-  struct iwl_phy_cfg_cmd phy_cfg_cmd;
+  struct iwl_phy_cfg_cmd phy_cfg_cmd = {};
   enum iwl_ucode_type ucode_type = mvm->fwrt.cur_fw_img;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   uint32_t override_mask, flow_override, flow_src;
@@ -510,7 +510,7 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
   int ret = ZX_OK;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   // The chip we use (7265D) doesn't have unified ucode.
   if (iwl_mvm_has_unified_ucode(mvm)) {
     return iwl_run_unified_mvm_ucode(mvm, true);
@@ -552,7 +552,7 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     }
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   /* In case we read the NVM from external file, load it to the NIC */
   if (mvm->nvm_file_name) {
     iwl_mvm_load_nvm_to_nic(mvm);
@@ -610,7 +610,7 @@ remove_notif:
 out:
   mvm->calibrating = false;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   if (iwlmvm_mod_params.init_dbg && !mvm->nvm_data) {
     /* we want to debug INIT and we have no NVM - fake */
     mvm->nvm_data = kzalloc(sizeof(struct iwl_nvm_data) + sizeof(struct ieee80211_channel) +
@@ -913,7 +913,7 @@ static int iwl_mvm_sar_geo_init(struct iwl_mvm* mvm) {
     return iwl_mvm_send_cmd_pdu(mvm, cmd_wide_id, 0, sizeof(cmd), &cmd);
 }
 
-#else  /* CONFIG_ACPI */
+#else /* CONFIG_ACPI */
 static int iwl_mvm_sar_get_wrds_table(struct iwl_mvm* mvm) {
     return -ENOENT;
 }
@@ -979,7 +979,7 @@ static int iwl_mvm_sar_init(struct iwl_mvm* mvm) {
 static zx_status_t iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
   zx_status_t ret;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   // The chip we use (7265D) doesn't have unified ucode.
   if (iwl_mvm_has_unified_ucode(mvm)) {
     return iwl_run_unified_mvm_ucode(mvm, false);
@@ -1007,7 +1007,7 @@ static zx_status_t iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
     return ret;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_EARLY);
 #endif  // NEEDS_PORTING
 
@@ -1016,7 +1016,7 @@ static zx_status_t iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
     return ret;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_AFTER_ALIVE);
 #endif  // NEEDS_PORTING
 
@@ -1030,13 +1030,14 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 
   ret = iwl_trans_start_hw(mvm->trans);
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "start hw failed: %s\n", zx_status_get_string(ret));
     return ret;
   }
 
   ret = iwl_mvm_load_rt_fw(mvm);
   if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to start RT ucode: %d\n", ret);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     iwl_fw_assert_error_dump(&mvm->fwrt);
 #endif  // NEEDS_PORTING
 
@@ -1045,7 +1046,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 
   iwl_get_shared_mem_conf(&mvm->fwrt);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     // Smart FIFO is used to aggregate the DMA transactions to optimize power usage.
     ret = iwl_mvm_sf_update(mvm, NULL, false);
     if (ret != ZX_OK) { IWL_ERR(mvm, "Failed to initialize Smart Fifo\n"); }
@@ -1055,7 +1056,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   iwl_dnt_start(mvm->trans);
 #endif
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (!mvm->trans->ini_valid) {
         mvm->fwrt.dump.conf = FW_DBG_INVALID;
         /* if we have a destination, assume EARLY START */
@@ -1100,6 +1101,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 
   ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "send Tx antenna config failed: %s\n", zx_status_get_string(ret));
     goto error;
   }
 
@@ -1107,28 +1109,32 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     /* Send phy db control command and then phy db calibration */
     ret = iwl_send_phy_db_data(mvm->phy_db);
     if (ret != ZX_OK) {
+      IWL_ERR(mvm, "send PHY db data failed: %s\n", zx_status_get_string(ret));
       goto error;
     }
 
     ret = iwl_send_phy_cfg_cmd(mvm);
     if (ret != ZX_OK) {
+      IWL_ERR(mvm, "send PHY config command failed: %s\n", zx_status_get_string(ret));
       goto error;
     }
   }
 
   ret = iwl_mvm_send_bt_init_conf(mvm);
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "send BT initial config failed: %s\n", zx_status_get_string(ret));
     goto error;
   }
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
     ret = iwl_set_soc_latency(mvm);
     if (ret != ZX_OK) {
+      IWL_ERR(mvm, "send soc latency failed: %s\n", zx_status_get_string(ret));
       goto error;
     }
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* Init RSS configuration */
     if (mvm->trans->cfg->device_family >= IWL_DEVICE_FAMILY_22000) {
         ret = iwl_configure_rxq(mvm);
@@ -1160,10 +1166,11 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 
   ret = iwl_mvm_send_dqa_cmd(mvm);
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "send DQA command failed: %s\n", zx_status_get_string(ret));
     goto error;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     // TODO(WLAN-1204): port iwl_mvm_add_aux_sta later.
     /* Add auxiliary station for scanning */
     ret = iwl_mvm_add_aux_sta(mvm);
@@ -1183,6 +1190,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
      */
     ret = iwl_mvm_phy_ctxt_add(mvm, &mvm->phy_ctxts[i], &chandef, 1, 1);
     if (ret != ZX_OK) {
+      IWL_ERR(mvm, "add PHY context failed: %s\n", zx_status_get_string(ret));
       goto error;
     }
   }
@@ -1216,14 +1224,18 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   iwl_mvm_tt_tx_backoff(mvm, 0);
 #endif
 
-  WARN_ON(iwl_mvm_config_ltr(mvm) != ZX_OK);
+  ret = iwl_mvm_config_ltr(mvm);
+  if (ret != ZX_OK) {
+    IWL_WARN(mvm, "configuring LTR failed: %s\n", zx_status_get_string(ret));
+  }
 
   ret = iwl_mvm_power_update_device(mvm);
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "updating device power: %s\n", zx_status_get_string(ret));
     goto error;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /*
     * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
     * anyway, so don't init MCC.
@@ -1278,7 +1290,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   iwl_mvm_fm_notify_current_dcdc();
 #endif
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     // TODO(42216): port this function.
     ret = iwl_mvm_sar_init(mvm);
     if (ret == 0) {
@@ -1292,7 +1304,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     }
 #endif  // NEEDS_PORTING
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     iwl_mvm_leds_sync(mvm);
 #endif  // NEEDS_PORTING
 
