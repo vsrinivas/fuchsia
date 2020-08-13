@@ -4,12 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//src/camera/debug.gni")
 
 name = "camera-factory"
 
 executable("bin") {
   output_name = name
 
+  defines = [ camera_debug_define ]
   sources = [ "main.cc" ]
 
   deps = [
@@ -20,7 +22,12 @@ executable("bin") {
 }
 
 source_set("lib") {
-  sources = [ "factory_server.cc" ]
+  defines = [ camera_debug_define ]
+
+  sources = [
+    "factory_server.cc",
+    "streamer.cc",
+  ]
 
   deps = [
     "//sdk/lib/fdio",
@@ -31,6 +38,7 @@ source_set("lib") {
   public_deps = [
     ":fuchsia.factory.camera",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",

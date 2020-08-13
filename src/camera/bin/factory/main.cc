@@ -64,8 +64,36 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+
+  // Connect to required services.
+  fuchsia::sysmem::AllocatorHandle allocator;
+  zx_status_t status = context->svc()->Connect(allocator.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to request Allocator service.";
+    return EXIT_FAILURE;
+  }
+
+  fuchsia::camera3::DeviceWatcherHandle watcher;
+  status = context->svc()->Connect(watcher.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to request DeviceWatcher service.";
+    return EXIT_FAILURE;
+  }
+
+  // Create the streamer and pass it to the FactoryServer.
+  auto streamer_result =
+      camera::Streamer::Create(std::move(allocator), std::move(watcher), [&] { loop.Quit(); });
+  if (streamer_result.is_error()) {
+    FX_PLOGS(ERROR, streamer_result.error()) << "Failed to create StreamCycler.";
+    return EXIT_FAILURE;
+  }
+  auto streamer = streamer_result.take_value();
+
   // Create the factory server.
-  auto factory_server_result = camera::FactoryServer::Create();
+  auto factory_server_result =
+      camera::FactoryServer::Create(std::move(streamer), [&] { loop.Quit(); });
   if (factory_server_result.is_error()) {
     FX_PLOGS(ERROR, factory_server_result.error()) << "Failed to create FactoryServer.";
     return EXIT_FAILURE;
@@ -132,5 +160,6 @@ int main(int argc, char* argv[]) {
   factory_server = nullptr;
   FX_LOGS(INFO) << "FactoryServer ran with command " << command;
 
+  loop.Run();
   return EXIT_SUCCESS;
 }

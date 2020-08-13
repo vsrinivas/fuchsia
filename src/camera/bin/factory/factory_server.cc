@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factory_server.h"
+#include "src/camera/bin/factory/factory_server.h"
 
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -29,8 +29,11 @@ FactoryServer::~FactoryServer() {
   loop_.JoinThreads();
 }
 
-fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create() {
+fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
+    std::unique_ptr<Streamer> streamer, fit::closure stop_callback) {
   auto server = std::make_unique<FactoryServer>();
+
+  server->stop_callback_ = std::move(stop_callback);
 
   int result = open(kDevicePath, O_RDONLY);
   if (result < 0) {
@@ -48,6 +51,15 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create()
   }
 
   server->isp_.Bind(std::move(channel), server->loop_.dispatcher());
+
+  // Start a thread and begin processing messages.
+  status = server->loop_.StartThread("camera-factory Loop");
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fit::error(status);
+  }
+
+  server->streamer_ = std::move(streamer);
 
   return fit::ok(std::move(server));
 }

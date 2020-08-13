@@ -10,11 +10,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
+#include "src/camera/bin/factory/streamer.h"
+
 namespace camera {
 
-// The server-side implementation for the factory API. Also acts as a stream client and
-// serves as the middle layer between calls from the factory host and several layers in the camera
-// stack.
+// The server-side implementation for the factory API. It maintains connections to scenic,
+// camera3 and other services via other classes as needed.
+//
+// More specifically, it acts as a stream client and serves as the middle layer between calls
+// from the factory host and several layers in the camera stack.
 class FactoryServer : public fuchsia::factory::camera::Controller {
  public:
   FactoryServer();
@@ -25,7 +29,8 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   //
   // Returns:
   //  A FactoryServer object which provides an interface to the factory API.
-  static fit::result<std::unique_ptr<FactoryServer>, zx_status_t> Create();
+  static fit::result<std::unique_ptr<FactoryServer>, zx_status_t> Create(
+      std::unique_ptr<Streamer> streamer, fit::closure stop_callback = nullptr);
 
   // Getters
   bool streaming() const { return streaming_; }
@@ -51,7 +56,9 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   void BindIspChannel(fidl::InterfaceRequest<fuchsia::factory::camera::Isp> isp_req) override {}
 
   async::Loop loop_;
+  fit::closure stop_callback_;
   fuchsia::factory::camera::IspPtr isp_;
+  std::unique_ptr<Streamer> streamer_;
   bool streaming_ = false;
 };
 

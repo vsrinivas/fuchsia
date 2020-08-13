@@ -17,7 +17,9 @@ namespace {
 class FactoryServerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
-    auto result = FactoryServer::Create();
+    // TODO(fxbug.dev/58025): This is a hack for testing this dummy.
+    auto streamer = std::make_unique<Streamer>();
+    auto result = FactoryServer::Create(std::move(streamer), [] {});
     ASSERT_TRUE(result.is_ok());
     factory_server_ = std::move(result.value());
   }
