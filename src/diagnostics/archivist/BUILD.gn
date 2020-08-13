@@ -1,14 +1,14 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "archivist_lib"
@@ -138,53 +138,46 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("archivist") {
+fuchsia_component("archivist-v1") {
+  component_name = "archivist"
+  manifest = "meta/archivist.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "archivist"
-    },
-  ]
+fuchsia_component("archivist-v2") {
+  component_name = "archivist"
+  manifest = "meta/archivist.cml"
+  deps = [ ":bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/archivist.cmx")
-      dest = "archivist.cmx"
-    },
-    {
-      path = rebase_path("meta/archivist.cml")
-      dest = "archivist.cm"
-    },
-    {
-      path = rebase_path("meta/observer.cmx")
-      dest = "observer.cmx"
-    },
+fuchsia_component("observer-v1") {
+  component_name = "observer"
+  manifest = "meta/observer.cmx"
+  deps = [
+    ":bin",
+    ":observer-config-file",
   ]
 }
 
-package("observer") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "archivist"
-    },
+fuchsia_component("observer-v2") {
+  component_name = "observer"
+  manifest = "meta/observer.cml"
+  deps = [
+    ":bin",
+    ":observer-config-file",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/observer.cml")
-      dest = "observer.cm"
-    },
+fuchsia_package("archivist") {
+  deps = [
+    ":archivist-v1",
+    ":archivist-v2",
+    ":observer-v1",
   ]
+}
 
-  resources = [
-    {
-      path = rebase_path("configs/observer_config.json")
-      dest = "observer_config.json"
-    },
-  ]
+fuchsia_package("observer") {
+  deps = [ ":observer-v2" ]
 }
 
 config_data("archivist_config") {
@@ -194,11 +187,9 @@ config_data("archivist_config") {
   sources = [ "configs/archivist_config.json" ]
 }
 
-config_data("observer_config") {
-  for_pkg = "archivist"
-  outputs = [ "observer_config.json" ]
-
+resource("observer-config-file") {
   sources = [ "configs/observer_config.json" ]
+  outputs = "data/{{source_file_part}}"
 }
 
 group("with_default_config") {
@@ -206,7 +197,6 @@ group("with_default_config") {
     ":archivist",
     ":archivist_config",
     ":observer",
-    ":observer_config",
   ]
 }
 
