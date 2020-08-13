@@ -24,6 +24,19 @@ impl DataController for BootfsPathsController {
     }
 }
 
+#[derive(Default)]
+pub struct ZbiCmdlineController {}
+
+impl DataController for ZbiCmdlineController {
+    fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
+        if let Some(zbi) = &*model.zbi().read().unwrap() {
+            Ok(serde_json::to_value(zbi.cmdline.clone())?)
+        } else {
+            Ok(serde_json::to_value("")?)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -36,7 +49,7 @@ mod tests {
         let store_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
-        let mut zbi = Zbi { sections: vec![], bootfs: HashMap::new() };
+        let mut zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "".to_string() };
         zbi.bootfs.insert("foo".to_string(), vec![]);
         *model.zbi().write().unwrap() = Some(zbi);
         let controller = BootfsPathsController::default();
@@ -45,4 +58,17 @@ mod tests {
         assert_eq!(bootfs.len(), 1);
         assert_eq!(bootfs[0], "foo".to_string());
     }
+
+    #[test]
+    fn zbi_cmdline() {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "foo".to_string() };
+        *model.zbi().write().unwrap() = Some(zbi);
+        let controller = ZbiCmdlineController::default();
+        let cmdline: String = serde_json::from_value(controller.query(model, json!("")).unwrap()).unwrap();
+        assert_eq!(cmdline, "foo".to_string());
+    }
+
 }

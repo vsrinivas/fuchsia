@@ -331,6 +331,7 @@ pub struct Zbi {
     // TODO(benwright) - Work out how to optimize this for speed.
     #[serde(skip)]
     pub bootfs: HashMap<String, Vec<u8>>,
+    pub cmdline: String,
 }
 
 #[cfg(test)]

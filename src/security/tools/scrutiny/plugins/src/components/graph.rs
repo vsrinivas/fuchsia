@@ -60,6 +60,7 @@ plugin!(
             "/routes" => RoutesGraphController::default(),
             "/bootfs" => BootfsPathsController::default(),
             "/blob" => BlobController::new(),
+            "/zbi/cmdline" => ZbiCmdlineController::default(),
         }
     ),
     vec![]
@@ -212,6 +213,7 @@ impl PackageDataCollector {
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
                 let mut bootfs = HashMap::new();
+                let mut cmdline = String::new();
                 info!("Extracted {} sections from the ZBI", sections.len());
                 for section in sections.iter() {
                     info!("Extracted sections {:?}", section.section_type);
@@ -224,9 +226,15 @@ impl PackageDataCollector {
                             bootfs = bootfs_result.unwrap();
                             info!("Bootfs found {} files", bootfs.len());
                         }
+                    } else if section.section_type == ZbiType::Cmdline {
+                        let mut cmd_str = std::str::from_utf8(&section.buffer)?;
+                        if let Some(stripped) = cmd_str.strip_suffix("\u{0000}") {
+                            cmd_str = stripped;
+                        }
+                        cmdline.push_str(&cmd_str);
                     }
                 }
-                return Ok(Zbi { sections, bootfs });
+                return Ok(Zbi { sections, bootfs, cmdline });
             }
         }
         return Err(anyhow!("Unable to find a zbi file in the package."));
