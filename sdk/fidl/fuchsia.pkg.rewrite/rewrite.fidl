@@ -168,6 +168,6 @@ protocol RuleIterator {
     /// Advances the iterator and returns the next batch of rules.
     ///
     /// - response `rules` a vector of [`Rule`] rules. Will return an empty
-    ///    vector when there are no more rules.
+    ///    vector and then close the channel when there are no more rules.
     Next() -> (vector<Rule> rules);
 };

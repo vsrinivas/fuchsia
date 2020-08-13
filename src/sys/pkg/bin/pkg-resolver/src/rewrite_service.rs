@@ -152,11 +152,19 @@ impl RewriteService {
 
         fasync::Task::spawn(
             async move {
-                let mut iter = rules.iter_mut();
+                let mut iter = rules.iter_mut().peekable();
                 while let Some(request) = stream.try_next().await? {
                     let RuleIteratorRequest::Next { responder } = request;
 
-                    responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
+                    match iter.peek() {
+                        Some(_) => {
+                            responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
+                        }
+                        None => {
+                            responder.send(&mut vec![].into_iter())?;
+                            return Ok(());
+                        }
+                    }
                 }
                 Ok(())
             }
@@ -214,7 +222,6 @@ mod tests {
             }
             res.extend(more.into_iter().map(|item| item.try_into().unwrap()));
         }
-        assert!(next().await.unwrap().is_empty());
         res
     }
 
