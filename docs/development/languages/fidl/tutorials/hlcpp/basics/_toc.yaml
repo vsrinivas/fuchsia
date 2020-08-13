@@ -2,11 +2,11 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "1. Compiling HLCPP"
+- title: "Compiling HLCPP"
   path: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
-- title: "2. Server "
+- title: "Server"
   path: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
-- title: "3a. Async client"
+- title: "Async client"
   path: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
-- title: "3b. Sync client"
+- title: "Sync client"
   path: /docs/development/languages/fidl/tutorials/hlcpp/basics/sync_client.md

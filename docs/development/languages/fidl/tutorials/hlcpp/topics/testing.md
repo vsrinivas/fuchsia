@@ -7,21 +7,23 @@ This tutorial builds on the [HLCPP getting started tutorials][overview].
 ## Overview
 
 This tutorial walks through the process of writing a test for the
-`Echo.EchoString` method. This tutorial demonstrates the usage of two
-utilities available for testing FIDL protocols implemented in HLCPP:
+`Echo.EchoString` method. This tutorial shows you how to use the two utilities
+available for testing FIDL protocols implemented in HLCPP:
 
-* The `gtest` test loop fixture
-* `sys::testing::ComponentContextProvider`
+* The `gtest` test loop fixture `sys::testing::ComponentContextProvider`.
 * The `fidl_test_base.h` file provided by the HLCPP bindings
 
-If you would like to write the code as you follow along, feel free to
-delete the existing example code:
+If you want to write the code yourself, delete the following directories:
 
-    rm -r examples/fidl/hlcpp/testing/*
+```
+rm -r examples/fidl/hlcpp/testing/*
+```
 
 The test will be written in `examples/fidl/hlcpp/testing/main.cc`.
 
 ## Set up dependencies
+
+To set up dependencies:
 
 1. Include the libraries that are needed for the test:
 
@@ -37,30 +39,32 @@ The test will be written in `examples/fidl/hlcpp/testing/main.cc`.
 
 ## Create a server implementation
 
-Add an implementation for the `Echo` protocol that is tested:
+To create a server implementation:
 
-  ```cpp
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="impl" %}
-  ```
+1. Add an implementation for the `Echo` protocol that is tested:
 
-Rather than inheriting from `fuchsia::examples::Echo`, this implementation
-inherits from the [corresponding test base class][test-base]. This means that
-the implementation only needs to override the methods are being tested
-(in this case, `EchoString`), as well as the `NotImplemented_` method, which
-is called if any of the request handler methods that are not overriden gets
-called.
+   ```cpp
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="impl" %}
+   ```
 
-Create a test class that wraps the logic of publishing the echo protocol:
+   Rather than inheriting from `fuchsia::examples::Echo`, this implementation
+   inherits from the [corresponding test base class][test-base]. This means that
+   the implementation only needs to override the methods that are being tested
+   (in this case, `EchoString`), as well as the `NotImplemented_` method, which
+  is called if any of the request handler methods that are not overriden get
+  called.
 
-```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="wrapper" %}
-```
+1. Create a test class that wraps the logic of publishing the echo protocol:
 
-This is similar to the code that is explained in the
-[server tutorial][server-tut], but the `fidl::Binding` is owned by the class
-so that the binding's destructor gets called when the class is destroyed. This enables the code to
-publish the echo protocol on each test case given a new instance
-of the test component context.
+   ```cpp
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="wrapper" %}
+   ```
+
+   This is similar to the code that is explained in the
+   [server tutorial][server-tut], but the `fidl::Binding` is owned by the class.
+   This makes the binding's destructor get called when the class is destroyed.
+   This enables the code to publish the echo protocol on each test case given
+   a new instance of the test component context.
 
 ## Implement the text fixture class
 
@@ -78,21 +82,27 @@ The test fixture does the following:
 
 ## Add tests
 
-Here is an example test that can be written using the text fixture:
+This is an example test that can you can write with the text fixture:
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="test" %}
 ```
 
-## Run the test:
+## Run the test
 
-1. Configure your gn build to include the test:
+To run the test:
 
-    `fx set core.x64 --with //examples/fidl/hlcpp/testing`
+1. Configure your GN build to include the test:
 
-2. Run the test:
+   ```
+   fx set core.x64 --with //examples/fidl/hlcpp/testing`
 
-    `fx test -vo example-hlcpp-protocol-test`
+   ```
+1. Run the test:
+
+   ```
+   fx test -vo example-hlcpp-protocol-test`
+   ```
 
 You should see the test output indicating a success.
 

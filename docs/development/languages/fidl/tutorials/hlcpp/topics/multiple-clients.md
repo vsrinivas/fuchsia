@@ -12,8 +12,8 @@ tutorials to make multiple connections to the server, and update the
 multiple instances of a server (or multiple FIDL protocols), see the
 tutorial on [services][services-tut].
 
-The full example code for this tutorial is located at:
-[//examples/fidl/hlcpp/multiple_clients][src]
+The full example code for this tutorial is located at
+[//examples/fidl/hlcpp/multiple_clients][src].
 
 ## Implement the server
 
@@ -33,8 +33,8 @@ first client. To support multiple clients, keep track of multiple
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/multiple_clients/server/main.cc" region_tag="main" highlight="5,7" %}
 ```
 
-Using a binding set also simplifies the code, since it no longer
-need to create a custom handler. The binding set has a `GetHandler` method which
+A binding set also simplifies the code since it no longer
+needs to create a custom handler. The binding set has a `GetHandler` method which
 returns a handler that creates a new `Binding` and stores it in a vector.
 
 To use `fidl::BindingSet`, include `lib/fidl/cpp/binding_set.h`.
@@ -62,18 +62,26 @@ To use `fidl::InterfacePtrSet`, include `lib/fidl/cpp/interface_ptr_set.h`.
 
 ## Run the example
 
+To run the example:
+
 1. Configure the GN build as follows:
 
-    `fx set core.x64 --with //examples/fidl/hlcpp/multiple_clients/client --with //examples/fidl/hlcpp/multiple_clients/server --with //examples/fidl/test:echo-launcher`
+   ```
+   fx set core.x64 --with //examples/fidl/hlcpp/multiple_clients/client --with //examples/fidl/hlcpp/multiple_clients/server --with //examples/fidl/test:echo-launcher
+   ```
 
-2. Build
+1. Build the Fuchsia image:
 
-    `fx build`
+   ```
+   fx build
+   ```
 
-3. Run launcher by passing it the client URL, the server URL, and the protocol that
+1. Run the launcher by passing it the client URL, the server URL, and the protocol that
    the server provides to the client:
 
-    `fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-client#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-server#meta/echo-server.cmx fuchsia.examples.Echo`
+   ```
+   fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-client#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-multi-server#meta/echo-server.cmx fuchsia.examples.Echo
+   ```
 
 <!-- xrefs -->
 [client-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md

@@ -2,66 +2,67 @@
 
 ## Prerequisites
 
-This tutorial builds on the [Compiling FIDL][fidl-intro] tutorial. For the
-full set of FIDL tutorials, refer to the [overview][overview]
+This tutorial builds on the [Compiling FIDL][fidl-intro] tutorial.
+For more information on other FIDL tutorials, see the [Overview][overview].
 
 ## Overview
 
-This tutorial covers how to include the HLCPP FIDL bindings into
-code you write by creating a unit test that will serve as a "playground" for
-exploring the the HLCPP bindings.
+This tutorial details how to include the HLCPP FIDL bindings into
+your code by creating a unit test that you can use  as a "playground" for
+exploring the HLCPP bindings.
 
 This document covers how to complete the following tasks:
 
-* Write a C++ host test.
-* Add the HLCPP bindings of a FIDL library as a build dependency.
-* Include the HLCPP bindings into your C++ code.
-* Inspect and using the generated bindings code
+* [Write a C++ host test](#write-a-cpp-test).
+* [Add the HLCPP bindings of a FIDL library as a build
+  dependency](#add-dependency).
+* [Include the HLCPP bindings into your C++ code](#include-hlcpp-bindings).
+* [Inspect and use the generated bindings
+  code](#inspect-user-generated-bindings).
 
-If you'd like to follow along and write the code yourself, feel free to delete
-the example code:
+The example code is located in your Fuchsia checkout in
+`//examples/fidl/hlcpp/unittests/`. If you want to write all the code
+as you follow this tutorial, you can remove the example code:
 
-    rm -r examples/fidl/hlcpp/unittests/*
-
-## Write a host test
-
-Add a gtest stub to `examples/fidl/hlcpp/unittests/main.cc`:
-
-```c++
-#include <gtest/gtest.h>
-
-namespace {
-
-} // namespace
+```
+rm -r examples/fidl/hlcpp/unittests/*
 ```
 
-## Define a build target for the host test
+## Write a C++ host test {#write-a-cpp-test}
 
-Next, create a target that will make it possible to run the test on host, by
-defining a `test` for it, then depending on it through the `$host_toolchain`.
+1. Add a gtest stub to `examples/fidl/hlcpp/unittests/main.cc`:
 
-This is done by adding the following to `examples/fidl/hlcpp/unittests/BUILD.gn`.
+   ```c++
+   #include <gtest/gtest.h>
 
-```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/BUILD.gn" region_tag="first" %}
+   namespace {
 
-test("example-cpp-host-test") {
-  sources = [ "main.cc" ]
-  deps = [ "//third_party/googletest:gtest_main" ]
-}
-```
+   } // namespace
+   ```
 
-## Run the host test
+1. Define a `test` and then create a depencency on the test through the `$host_toolchain`.
+   To do this, add the following to `examples/fidl/hlcpp/unittests/BUILD.gn`:
 
-You can now run the empty test suite:
+   ```gn
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/BUILD.gn" region_tag="first" %}
 
-    fx set core.x64 --with //examples/fidl/hlcpp/unittests
-    fx test -vo example-cpp-host-test
+   test("example-cpp-host-test") {
+     sources = [ "main.cc" ]
+     deps = [ "//third_party/googletest:gtest_main" ]
+   }
+   ```
 
-You should see test output indicating that zero tests have run, since no tests
-have been added yet.
+1. Run the empty test suite:
 
-## Add the HLCPP FIDL bindings as a dependency.
+   ```
+   fx set core.x64 --with //examples/fidl/hlcpp/unittests
+   fx test -vo example-cpp-host-test
+   ```
+
+   You should see test output indicating that zero tests have run,
+   since no tests have been added yet.
+
+## Add the HLCPP FIDL bindings as a dependency {#add-dependency}
 
 Add a dependency on the HLCPP bindings by referencing the FIDL target
 directly. The new `test` target should look like:
@@ -76,22 +77,26 @@ directly. The new `test` target should look like:
 2. Change to the generated files directory:
    `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia/examples`.
    You may need to change `out/default` if you have set a different build output
-   directory. You can check your build output directory by running `cat .fx-build-dir`.
+   directory. You can check your build output directory with `cat .fx-build-dir`.
 
 For more information on how to find generated bindings code, see
-[Viewing Generated Bindings Code][generated-code].
+[Viewing generated bindings code][generated-code].
 
-Include the bindings, by adding the following include statement to the top of
+## Include the HLCPP bindings in your C++ code {#include-hlcpp-bindings}
+
+To include the bindings, add the following include statement to the top of
 `examples/fidl/hlcpp/unittests/main.cc`
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="include" %}
 ```
 
-Now, feel free to write some tests and play around with the bindings by
-referring to the generated code or the [HLCPP Bindings Reference][bindings-ref].
+## Inspect and use the generated bindings code {#inspect-user-generated-bindings}
 
-Here's some example code to get started. You can add this inside the
+You can now write some tests by referring to the generated code. For more
+information on the bindings, see [HLCPP Bindings Reference][bindings-ref].
+
+To get started, you can also use some example code. You can add this inside the
 anonymous namespace in `main.cc`:
 
 ```cpp
@@ -106,10 +111,11 @@ anonymous namespace in `main.cc`:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="tables" %}
 ```
 
-Rebuild and rerun the tests by running:
+To rebuild and rerun the tests, run:
 
-    fx test -vo example-cpp-host-test
-
+```
+fx test -vo example-cpp-host-test
+```
 
 <!-- xrefs -->
 [generated-code]: /docs/development/languages/fidl/guides/generated-code.md#c-family
