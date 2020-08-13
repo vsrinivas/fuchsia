@@ -65,91 +65,6 @@ In addition, the following settings may provide a smoother experience:
 }
 ```
 
-### RLS (**deprecated** setup with Cargo)
-
-**Do not use these instructions, we will stop distributing RLS soon.**
-
-[install rustup](https://rustup.rs/). Next, install [this VS Code plugin].
-You need to configure `rustup` to use the Fuchsia Rust toolchain.
-Run this command from your Fuchsia source code root directory.
-
-```sh
-rustup toolchain link fuchsia $(scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
-rustup default fuchsia
-```
-
-Follow [the steps above][cargo-toml-gen] to generate a `Cargo.toml` file
-for use by VS Code.
-
-Open VS Code and ensure that the directory where the generated `Cargo.toml` file
-resides is added as a directory in your workspace (even though you probably have
-its ancestor `fuchsia` directory already in your workspace). For example:
-
-```sh
-you@computer:/path/to/fuchsia $ fx build src/rusty/component:bin
-you@computer:/path/to/fuchsia $ fx gen-cargo src/rusty/component:bin
-```
-
-In a new VS Code workspace, in this example, add both `/path/to/fuchsia` and
-`/path/to/fuchsia/src/rusty/component` to the workspace. Saving the
-workspace would yield something like:
-
-`fuchsia_rusty_component.code-workspace`
-```javascript
-{
-  "folders": [
-    {
-      "path": "/path/to/fuchsia"
-    },
-    {
-      "path": "/path/to/fuchsia/src/rusty/component"
-    }
-  ]
-}
-```
-
-Next, take note of the paths output by the following:
-
-```sh
-you@computer:/path/to/fuchsia $ ./scripts/youcompleteme/paths.py FUCHSIA_ROOT
-you@computer:/path/to/fuchsia $ ./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
-```
-
-Open VS Code settings
-
-  * MacOS X: Code>Preferences>Settings
-  * Linux: File>Preferences>Settings
-
-Note there are different settings defined for each environment (for example, user vs remote development server).
-In the upper right corner, click an icon whose mouse-over balloon tip says "Open Settings (JSON)".
-Add the following settings:
-
-```javascript
-{
-  // General rust and RLS configuration.
-  "rust.target": "x86_64-fuchsia",
-  "rust.target_dir": "<FUCHSIA_ROOT>/out/cargo_target",
-  "rust.unstable_features": true,
-  "rust-client.rlsPath": "<VS_CODE_TOOLCHAIN>/bin/rls",
-  "rust-client.disableRustup": true,
-  "rust.mode": "rls",
-
-  // Read `Cargo.toml` from innermost root workspace directory.
-  "rust-client.nestedMultiRootConfigInOutermost": false,
-
-  // Optional extras:
-
-  // Log RLS info/warning/error messages to a VSCode Output Panel.
-  "rust-client.revealOutputChannelOn": "info",
-
-  // Create `rls[numeric-id].log` in your project directory. Errors from RLS
-  // will be logged there.
-  "rust-client.logToFile": true,
-}
-```
-
-[this VS Code plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
-
 ## Vim
 
 For basic support, instructions on [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim).
@@ -249,9 +164,6 @@ hasn't been thoroughly tested.
 First, install the [LSP package](https://github.com/sublimelsp/LSP) for Sublime. Then,
 follow  the [rust-analyzer setup instructions](https://rust-analyzer.github.io/manual.html#sublime-text-3)
 for Sublime.
-
-For RLS (**deprecated**): Enable `rls` in the `LSP: Enable Language Server` options from
-the Sublime command palette.
 
 #### Usage
 

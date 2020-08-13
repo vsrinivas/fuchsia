@@ -66,7 +66,7 @@ really well for doing remote work from your laptop.
   history and manage multiple sessions in the shell.
 * The Fuchsia documentation has instructions for setting up language servers:
   * [clangd](/docs/development/languages/c-cpp/editors.md) for c++
-  * [rls](/docs/development/languages/rust/editors.md) for rust
+  * [rust-analyzer](/docs/development/languages/rust/editors.md) for rust
 * The [rewrap extension](https://marketplace.visualstudio.com/items?itemName=stkb.rewrap) is useful
   for automatically reflowing lines to a certain length (e.g. when editing markdown files).
 * To get automatic syntax highlighting for the bindings golden files, update the
