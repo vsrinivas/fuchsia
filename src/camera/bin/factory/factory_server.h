@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 
 #include "src/camera/bin/factory/streamer.h"
+#include "src/camera/bin/factory/web_ui.h"
 
 namespace camera {
 
@@ -19,7 +20,7 @@ namespace camera {
 //
 // More specifically, it acts as a stream client and serves as the middle layer between calls
 // from the factory host and several layers in the camera stack.
-class FactoryServer : public fuchsia::factory::camera::Controller {
+class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl {
  public:
   FactoryServer();
   ~FactoryServer();
@@ -55,10 +56,14 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
   void BindIspChannel(fidl::InterfaceRequest<fuchsia::factory::camera::Isp> isp_req) override {}
 
+  // |WebUIControl|
+  void RequestCaptureData(uint32_t stream_index, CaptureResponse callback) override;
+
   async::Loop loop_;
   fit::closure stop_callback_;
   fuchsia::factory::camera::IspPtr isp_;
   std::unique_ptr<Streamer> streamer_;
+  std::unique_ptr<WebUI> webui_;
   bool streaming_ = false;
 };
 

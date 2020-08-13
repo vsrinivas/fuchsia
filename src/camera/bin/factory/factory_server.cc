@@ -61,6 +61,16 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
 
   server->streamer_ = std::move(streamer);
 
+  // Create the WebUI
+  auto webui_result = WebUI::Create(server.get());
+  if (webui_result.is_error()) {
+    FX_PLOGS(ERROR, webui_result.error()) << "Failed to create WebUI.";
+    return fit::error(status);
+  }
+  server->webui_ = webui_result.take_value();
+  constexpr uint32_t kPortNumber = 52224;
+  server->webui_->PostListen(kPortNumber);
+
   return fit::ok(std::move(server));
 }
 
@@ -104,6 +114,14 @@ void FactoryServer::SetSensorMode(uint32_t mode) {
 
 void FactoryServer::SetTestPatternMode(uint16_t mode) {
   isp_->SetTestPatternMode(mode, []() { return; });
+}
+
+void FactoryServer::RequestCaptureData(uint32_t stream, CaptureResponse callback) {
+  streamer_->RequestCapture(stream, "", true,
+                            [callback = callback.share()](zx_status_t status,
+                               std::unique_ptr<camera::Capture> frame) {
+    callback(status, std::move(frame));
+  });
 }
 
 }  // namespace camera

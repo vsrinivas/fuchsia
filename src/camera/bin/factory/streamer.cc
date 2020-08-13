@@ -178,10 +178,24 @@ void Streamer::WaitForBuffersAllocatedCallback(uint32_t stream_index, zx_status_
 
 void Streamer::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {
   frame_count_++;
+  auto& stream_info = stream_infos_[stream_index];
 
+  if (capture_ && capture_->stream_ == stream_index) {
+    // capture a frame to memory
+    capture_->properties_ = configurations_[connected_config_index_].streams[stream_index];
+    if (capture_->want_image_) {
+      auto size = stream_info.collection_info.settings.buffer_settings.size_bytes;
+      auto& vmo = stream_info.collection_info.buffers[frame_info.buffer_index].vmo;
+      ZX_ASSERT(vmo.is_valid());
+      capture_->image_->resize(size);
+      vmo.read(capture_->image_->data(), 0, size);
+    }
+    capture_->callback_(ZX_OK, std::move(capture_));
+    capture_ = nullptr;  // needed?
+  }
   frame_info.release_fence.reset();
 
-  auto& stream = stream_infos_[stream_index].stream;
+  auto& stream = stream_info.stream;
   stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
     OnNextFrame(stream_index, std::move(frame_info));
   });
@@ -192,6 +206,27 @@ void Streamer::DisconnectStream(uint32_t stream_index) { stream_infos_.erase(str
 void Streamer::RequestConfig(uint32_t config) {
   async::PostTask(loop_.dispatcher(),
                   [this, config]() { device_->SetCurrentConfiguration(config); });
+}
+
+void Streamer::RequestCapture(uint32_t stream, const std::string& path, bool wantImage,
+                              CaptureResponse callback) {
+  async::PostTask(loop_.dispatcher(), [this, stream, path, wantImage,
+      callback = callback.share()]() mutable {
+    if (stream >= NumConnectedStreams()) {
+      callback(ZX_ERR_OUT_OF_RANGE, nullptr);
+      return;
+    }
+    if (capture_ != nullptr) {
+      callback(ZX_ERR_UNAVAILABLE, nullptr);            // another capture in progress
+      return;
+    }
+    auto capture_result = Capture::Create(stream, path, wantImage, callback.share());
+    if (capture_result.is_error()) {
+      callback(capture_result.error(), nullptr);
+      return;
+    }
+    capture_ = capture_result.take_value();
+  });
 }
 
 uint32_t Streamer::NumConfigs() { return config_count_; };

@@ -12,6 +12,8 @@
 
 #include <map>
 
+#include "src/camera/bin/factory/capture.h"
+
 namespace camera {
 
 // A class that manages a video stream from a camera
@@ -34,11 +36,12 @@ class Streamer {
   // if connected to a config, return the number of currently connected streams (all are attempted)
   uint32_t NumConnectedStreams();
 
-  // request a switch to anthter config index
+  // request a switch to another config index
   void RequestConfig(uint32_t config);
 
   // request a frame capture; the next available frame will be written to flash
-  void RequestFrameCapture(uint32_t stream);
+  void RequestCapture(uint32_t stream, const std::string& path, bool wantImage,
+                      CaptureResponse response);
 
  private:
   // Start the event loop
@@ -75,9 +78,10 @@ class Streamer {
     fuchsia::sysmem::BufferCollectionInfo_2 collection_info;
     fuchsia::camera3::StreamPtr stream;
   };
-
   // stream_infos_ uses the same index as the corresponding stream index in configurations_.
   std::map<uint32_t, StreamInfo> stream_infos_;
+
+  std::unique_ptr<Capture> capture_;
 };
 
 }  // namespace camera

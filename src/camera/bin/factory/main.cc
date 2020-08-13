@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
   auto streamer_result =
       camera::Streamer::Create(std::move(allocator), std::move(watcher), [&] { loop.Quit(); });
   if (streamer_result.is_error()) {
-    FX_PLOGS(ERROR, streamer_result.error()) << "Failed to create StreamCycler.";
+    FX_PLOGS(ERROR, streamer_result.error()) << "Failed to create Streamer.";
     return EXIT_FAILURE;
   }
   auto streamer = streamer_result.take_value();
@@ -149,17 +149,20 @@ int main(int argc, char* argv[]) {
       factory_server->SetTestPatternMode(std::stoi(value));
       break;
     case START_STREAM:
-    case STOP_STREAM:
+      // just run the loop so streamers can start, and webui can be used
+      break;
     case CAPTURE_FRAMES:
+    case STOP_STREAM:
     case DISPLAY_TO_SCREEN:
     default:
       FX_PLOGS(ERROR, ZX_ERR_NOT_SUPPORTED) << "Command not implemented yet";
       return EXIT_FAILURE;
   }
 
+  loop.Run();
+
   factory_server = nullptr;
   FX_LOGS(INFO) << "FactoryServer ran with command " << command;
 
-  loop.Run();
   return EXIT_SUCCESS;
 }

@@ -25,8 +25,10 @@ source_set("lib") {
   defines = [ camera_debug_define ]
 
   sources = [
+    "capture.cc",
     "factory_server.cc",
     "streamer.cc",
+    "web_ui.cc",
   ]
 
   deps = [
@@ -44,6 +46,8 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+    "//third_party/libpng",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
