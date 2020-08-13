@@ -5,6 +5,7 @@
 use {
     super::{BufferSlice, MutableBufferSlice, RemoteBlockDevice, VmoId},
     anyhow::{ensure, Error},
+    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::executor::block_on,
     linked_hash_map::LinkedHashMap,
@@ -191,7 +192,9 @@ impl Cache {
 
 impl Drop for Cache {
     fn drop(&mut self) {
-        let _ = self.flush();
+        if let Err(e) = self.flush() {
+            fx_log_err!("Flush failed: {}", e);
+        }
         self.vmo_id.take().into_id(); // Ok to leak because fifo will be closed.
     }
 }

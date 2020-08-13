@@ -20,6 +20,7 @@ use {
         cell::UnsafeCell,
         fmt::Debug,
         io::{Read, Seek, Write},
+        pin::Pin,
         sync::{Arc, RwLock},
     },
     vfs::{
@@ -70,7 +71,7 @@ struct FatFileData {
 /// Represents a single file on the disk.
 pub struct FatFile {
     file: UnsafeCell<FatfsFileRef>,
-    filesystem: Arc<FatFilesystem>,
+    filesystem: Pin<Arc<FatFilesystem>>,
     data: RwLock<FatFileData>,
 }
 
@@ -85,7 +86,7 @@ impl FatFile {
     pub(crate) fn new(
         file: FatfsFileRef,
         parent: Arc<FatDirectory>,
-        filesystem: Arc<FatFilesystem>,
+        filesystem: Pin<Arc<FatFilesystem>>,
         name: String,
     ) -> Arc<Self> {
         Arc::new(FatFile {

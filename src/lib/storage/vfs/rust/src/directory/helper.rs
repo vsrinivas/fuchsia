@@ -109,7 +109,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     fn rename_within(&self, src: String, dst: String) -> Result<(), Status>;
 
     /// Get the filesystem this directory belongs to.
-    fn get_filesystem(&self) -> Arc<dyn Filesystem>;
+    fn get_filesystem(&self) -> &dyn Filesystem;
 
     /// Turn this DirectlyMutable into an Any.
     fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync>;
@@ -132,7 +132,7 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         Err(Status::NOT_SUPPORTED)
     }
 
-    fn get_filesystem(&self) -> Arc<dyn Filesystem> {
+    fn get_filesystem(&self) -> &dyn Filesystem {
         (self as &dyn DirectlyMutable).get_filesystem()
     }
 

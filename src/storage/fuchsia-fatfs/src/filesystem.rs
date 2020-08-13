@@ -37,8 +37,8 @@ impl FatFilesystemInner {
         self.filesystem.root_dir()
     }
 
-    pub fn shut_down(self) -> Result<(), Status> {
-        self.filesystem.unmount().map_err(fatfs_error_to_status)
+    pub fn shut_down(&mut self) -> Result<(), Status> {
+        self.filesystem.flush().map_err(fatfs_error_to_status)
         // TODO(55291): send flush to the underlying block device.
     }
 
@@ -48,7 +48,7 @@ impl FatFilesystemInner {
 }
 
 pub struct FatFilesystem {
-    inner: Pin<Arc<Mutex<FatFilesystemInner>>>,
+    inner: Mutex<FatFilesystemInner>,
 }
 
 impl FatFilesystem {
@@ -56,19 +56,19 @@ impl FatFilesystem {
     pub fn new(
         disk: Box<dyn ReadWriteSeek + Send>,
         options: FsOptions<DefaultTimeProvider, LossyOemCpConverter>,
-    ) -> Result<(Arc<Self>, Arc<FatDirectory>), Error> {
-        let inner = Arc::pin(Mutex::new(FatFilesystemInner {
+    ) -> Result<(Pin<Arc<Self>>, Arc<FatDirectory>), Error> {
+        let inner = Mutex::new(FatFilesystemInner {
             filesystem: fatfs::FileSystem::new(disk, options)?,
             _pinned: PhantomPinned,
-        }));
-        let result = Arc::new(FatFilesystem { inner });
+        });
+        let result = Arc::pin(FatFilesystem { inner });
         Ok((result.clone(), result.root_dir()))
     }
 
     #[cfg(test)]
-    pub fn from_filesystem(filesystem: FileSystem) -> (Arc<Self>, Arc<FatDirectory>) {
-        let inner = Arc::pin(Mutex::new(FatFilesystemInner { filesystem, _pinned: PhantomPinned }));
-        let result = Arc::new(FatFilesystem { inner });
+    pub fn from_filesystem(filesystem: FileSystem) -> (Pin<Arc<Self>>, Arc<FatDirectory>) {
+        let inner = Mutex::new(FatFilesystemInner { filesystem, _pinned: PhantomPinned });
+        let result = Arc::pin(FatFilesystem { inner });
         (result.clone(), result.root_dir())
     }
 
@@ -76,7 +76,7 @@ impl FatFilesystem {
     /// Note this should only be called once per filesystem, otherwise multiple conflicting
     /// FatDirectories will exist.
     /// We only call it from new() and from_filesystem().
-    fn root_dir(self: Arc<Self>) -> Arc<FatDirectory> {
+    fn root_dir(self: Pin<Arc<Self>>) -> Arc<FatDirectory> {
         // We start with an empty FatfsDirRef and an open_count of zero.
         let dir = FatfsDirRef::empty();
         FatDirectory::new(dir, None, self, "/".to_owned())
@@ -85,16 +85,6 @@ impl FatFilesystem {
     /// Try and lock the underlying filesystem. Returns a LockResult, see `Mutex::lock`.
     pub fn lock(&self) -> LockResult<MutexGuard<'_, FatFilesystemInner>> {
         self.inner.lock()
-    }
-
-    /// Cleanly shut down the filesystem.
-    pub fn shut_down(self) -> Result<(), Status> {
-        // This is safe because we hold the only reference to `inner`, so there are no stray
-        // references to fatfs Dir or Files.
-        let arc = unsafe { Pin::into_inner_unchecked(self.inner) };
-        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::UNAVAILABLE)?;
-        let inner = mutex.into_inner().map_err(|_| Status::UNAVAILABLE)?;
-        inner.shut_down()
     }
 
     /// Do a simple rename of the file, without unlinking dst.

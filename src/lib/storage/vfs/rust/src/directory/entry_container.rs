@@ -99,7 +99,7 @@ pub trait MutableDirectory: Directory {
     fn unlink(&self, name: Path) -> Result<(), Status>;
 
     /// Gets the filesystem this directory belongs to.
-    fn get_filesystem(&self) -> Arc<dyn Filesystem>;
+    fn get_filesystem(&self) -> &dyn Filesystem;
 
     /// Gets this directory as an Any.
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;

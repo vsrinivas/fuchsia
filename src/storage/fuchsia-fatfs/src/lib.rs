@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     fatfs::{FsOptions, ReadWriteSeek},
     fuchsia_zircon::Status,
+    std::pin::Pin,
     std::sync::Arc,
     vfs::directory::entry::DirectoryEntry,
 };
@@ -20,7 +21,7 @@ mod util;
 
 pub struct FatFs {
     #[allow(dead_code)] // TODO(53796): implement unmount() and remove this allow.
-    inner: Arc<FatFilesystem>,
+    inner: Pin<Arc<FatFilesystem>>,
     root: Arc<FatDirectory>,
 }
 
@@ -32,7 +33,7 @@ impl FatFs {
     }
 
     #[cfg(test)]
-    pub fn from_filesystem(inner: Arc<FatFilesystem>, root: Arc<FatDirectory>) -> Self {
+    pub fn from_filesystem(inner: Pin<Arc<FatFilesystem>>, root: Arc<FatDirectory>) -> Self {
         FatFs { inner, root }
     }
 
@@ -51,21 +52,11 @@ impl FatFs {
         self.root.clone()
     }
 
-    /// Shutdown the filesystem.
-    /// Will fail if there are still references to any files or directories in the filesystem.
-    pub fn shut_down(self) -> Result<(), Status> {
-        // `self.root` should be the only reference to the root FatDirectory left.
-        // We should be able to unwrap and drop it.
-        // If there are any open nodes in the filesystem, this will fail, as they will
-        // also have a reference to `self.root` (via their parents), so as long as this succeeds
-        // we can safely shut down the filesystem.
-        self.root.shut_down(&self.inner.lock().unwrap())?;
-        std::mem::drop(Arc::try_unwrap(self.root).map_err(|_| Status::UNAVAILABLE)?);
-        // Now, unwrap the FatFilesystem. All references to it should've been dropped when
-        // we dropped `self.root`.
-        let inner = Arc::try_unwrap(self.inner).map_err(|_| Status::UNAVAILABLE)?;
-        // Shut down the filesystem, consuming it.
-        inner.shut_down()
+    /// Shut down the filesystem.
+    pub fn shut_down(&self) -> Result<(), Status> {
+        let mut fs = self.inner.lock().unwrap();
+        self.root.shut_down(&fs)?;
+        fs.shut_down()
     }
 }
 

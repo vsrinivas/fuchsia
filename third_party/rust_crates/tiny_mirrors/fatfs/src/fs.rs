@@ -505,12 +505,14 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
     ///
     /// Updates FSInfo sector if needed.
     pub fn unmount(self) -> io::Result<()> {
-        self.unmount_internal()
+        self.flush()
     }
 
-    fn unmount_internal(&self) -> io::Result<()> {
+    /// Flushes the filesystem and marks it clean.
+    pub fn flush(&self) -> io::Result<()> {
         self.flush_fs_info()?;
         self.set_dirty_flag(false)?;
+        self.disk.borrow_mut().flush()?;
         Ok(())
     }
 
@@ -635,7 +637,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> FileSystem<IO, TP
 /// `Drop` implementation tries to unmount the filesystem when dropping.
 impl<IO: ReadWriteSeek, TP, OCC> Drop for FileSystem<IO, TP, OCC> {
     fn drop(&mut self) {
-        if let Err(err) = self.unmount_internal() {
+        if let Err(err) = self.flush() {
             error!("unmount failed {}", err);
         }
     }

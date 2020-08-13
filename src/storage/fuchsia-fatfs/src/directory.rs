@@ -27,6 +27,7 @@ use {
         collections::HashMap,
         fmt::Debug,
         hash::{Hash, Hasher},
+        pin::Pin,
         sync::{Arc, RwLock},
     },
     vfs::{
@@ -146,7 +147,7 @@ pub struct FatDirectory {
     /// We synchronise all accesses to directory on filesystem's lock().
     /// We always acquire the filesystem lock before the data lock, if the data lock is also going
     /// to be acquired.
-    filesystem: Arc<FatFilesystem>,
+    filesystem: Pin<Arc<FatFilesystem>>,
     /// Other information about this FatDirectory that shares a lock.
     /// This should always be acquired after the filesystem lock if the filesystem lock is also
     /// going to be acquired.
@@ -164,7 +165,7 @@ impl FatDirectory {
     pub(crate) fn new(
         dir: FatfsDirRef,
         parent: Option<Arc<FatDirectory>>,
-        filesystem: Arc<FatFilesystem>,
+        filesystem: Pin<Arc<FatFilesystem>>,
         name: String,
     ) -> Arc<Self> {
         Arc::new(FatDirectory {
@@ -538,8 +539,8 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    fn get_filesystem(&self) -> Arc<dyn Filesystem> {
-        self.filesystem.clone()
+    fn get_filesystem(&self) -> &dyn Filesystem {
+        &*self.filesystem
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {

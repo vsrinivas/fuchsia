@@ -16,6 +16,7 @@ rustc_library("remote-block-device") {
     "//src/lib/fuchsia-async",
     "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
     "//src/lib/storage/ramdevice_client",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

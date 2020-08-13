@@ -84,6 +84,8 @@ where
     mutable: bool,
 
     _connection: PhantomData<Connection>,
+
+    fs: SimpleFilesystem<Self>,
 }
 
 struct Inner {
@@ -101,6 +103,7 @@ where
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
             mutable,
             _connection: PhantomData,
+            fs: SimpleFilesystem::new(),
         })
     }
 
@@ -448,8 +451,8 @@ where
         Ok(())
     }
 
-    fn get_filesystem(&self) -> Arc<dyn Filesystem> {
-        Arc::new(SimpleFilesystem::<Self>::new())
+    fn get_filesystem(&self) -> &dyn Filesystem {
+        &self.fs
     }
 
     fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {

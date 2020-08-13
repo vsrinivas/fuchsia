@@ -349,12 +349,12 @@ mod tests {
     #[derive(Debug)]
     struct MockDirectory {
         id: u32,
-        env: Arc<TestEnv>,
+        fs: Arc<MockFilesystem>,
     }
 
     impl MockDirectory {
-        pub fn new(id: u32, env: Arc<TestEnv>) -> Arc<Self> {
-            Arc::new(MockDirectory { id, env })
+        pub fn new(id: u32, fs: Arc<MockFilesystem>) -> Arc<Self> {
+            Arc::new(MockDirectory { id, fs })
         }
     }
 
@@ -419,25 +419,25 @@ mod tests {
         }
 
         fn close(&self) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::Close)
+            self.fs.handle_event(MutableDirectoryAction::Close)
         }
     }
 
     impl MutableDirectory for MockDirectory {
         fn link(&self, path: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::Link { id: self.id, path })
+            self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
         fn unlink(&self, path: Path) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
+            self.fs.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
         }
 
         fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
+            self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
-        fn get_filesystem(&self) -> Arc<dyn Filesystem> {
-            Arc::new(MockFilesystem { env: self.env.clone() })
+        fn get_filesystem(&self) -> &dyn Filesystem {
+            &*self.fs
         }
 
         fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
@@ -445,54 +445,23 @@ mod tests {
         }
 
         fn sync(&self) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::Sync)
+            self.fs.handle_event(MutableDirectoryAction::Sync)
         }
     }
 
     struct MockFilesystem {
-        env: Arc<TestEnv>,
-    }
-
-    impl FilesystemRename for MockFilesystem {
-        fn rename(
-            &self,
-            src_dir: Arc<Any + Sync + Send + 'static>,
-            src_name: Path,
-            dst_dir: Arc<Any + Sync + Send + 'static>,
-            dst_name: Path,
-        ) -> Result<(), Status> {
-            let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
-            let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
-            self.env.handle_event(MutableDirectoryAction::Rename {
-                id: src_dir.id,
-                src_name: src_name.into_string(),
-                dst_dir,
-                dst_name: dst_name.into_string(),
-            })
-        }
-    }
-
-    impl Filesystem for MockFilesystem {}
-
-    struct TestEnv {
         cur_id: Mutex<u32>,
         scope: ExecutionScope,
         events: Mutex<Vec<MutableDirectoryAction>>,
     }
 
-    impl std::fmt::Debug for TestEnv {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("TestEnv").field("cur_id", &self.cur_id).finish()
-        }
-    }
-
-    impl TestEnv {
-        pub fn new() -> Arc<Self> {
+    impl MockFilesystem {
+        pub fn new() -> Self {
             let token_registry = token_registry::Simple::new();
             let scope = ExecutionScope::build(Box::new(fasync::EHandle::local()))
                 .token_registry(token_registry)
                 .new();
-            Arc::new(TestEnv { cur_id: Mutex::new(0), scope, events: Mutex::new(vec![]) })
+            MockFilesystem { cur_id: Mutex::new(0), scope, events: Mutex::new(vec![]) }
         }
 
         pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
@@ -501,7 +470,7 @@ mod tests {
         }
 
         pub fn make_connection(
-            self: Arc<Self>,
+            self: &Arc<Self>,
             flags: u32,
         ) -> (Arc<MockDirectory>, DirectoryProxy) {
             let mut cur_id = self.cur_id.lock().unwrap();
@@ -519,12 +488,39 @@ mod tests {
         }
     }
 
+    impl FilesystemRename for MockFilesystem {
+        fn rename(
+            &self,
+            src_dir: Arc<Any + Sync + Send + 'static>,
+            src_name: Path,
+            dst_dir: Arc<Any + Sync + Send + 'static>,
+            dst_name: Path,
+        ) -> Result<(), Status> {
+            let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
+            let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
+            self.handle_event(MutableDirectoryAction::Rename {
+                id: src_dir.id,
+                src_name: src_name.into_string(),
+                dst_dir,
+                dst_name: dst_name.into_string(),
+            })
+        }
+    }
+
+    impl Filesystem for MockFilesystem {}
+
+    impl std::fmt::Debug for MockFilesystem {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("MockFilesystem").field("cur_id", &self.cur_id).finish()
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_rename() {
-        let env = TestEnv::new();
+        let fs = Arc::new(MockFilesystem::new());
 
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let (dir2, proxy2) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
@@ -532,7 +528,7 @@ mod tests {
         let status = proxy.rename("src", token.unwrap(), "dest").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::Rename {
@@ -546,8 +542,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_setattr() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let mut attrs = NodeAttributes {
             mode: 0,
             id: 0,
@@ -566,7 +562,7 @@ mod tests {
             .unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::SetAttr {
@@ -579,27 +575,26 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_link() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let (_dir2, proxy2) =
-            env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let (_dir2, proxy2) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
         let status = proxy.link("src", token.unwrap(), "dest").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Link { id: 1, path: "dest".to_owned() },]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.unlink("test").await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(
             *events,
             vec![MutableDirectoryAction::Unlink {
@@ -611,33 +606,33 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sync() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.sync().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_close() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let status = proxy.close().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_implicit_close() {
-        let env = TestEnv::new();
-        let (_dir, _proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let fs = Arc::new(MockFilesystem::new());
+        let (_dir, _proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
 
-        env.scope.shutdown();
-        env.scope.wait().await;
+        fs.scope.shutdown();
+        fs.scope.wait().await;
 
-        let events = env.events.lock().unwrap();
+        let events = fs.events.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 }

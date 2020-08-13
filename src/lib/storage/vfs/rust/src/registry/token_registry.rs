@@ -364,7 +364,7 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            fn get_filesystem(&self) -> Arc<dyn Filesystem> {
+            fn get_filesystem(&self) -> &dyn Filesystem {
                 panic!("Not implemented!")
             }
 
