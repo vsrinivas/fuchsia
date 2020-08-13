@@ -5,7 +5,7 @@
 library fuchsia.device;
 
 using zx;
-using fuchsia.device.manager;
+using fuchsia.hardware.power.statecontrol;
 
 /// Maxmium length for a device name
 const uint64 MAX_DEVICE_NAME_LEN = 32;
@@ -186,11 +186,11 @@ protocol Controller {
 
     /// Updates the mapping between system power states to device power states. Used by the system
     /// wide power manager to manage power for this device
-    UpdatePowerStateMapping(array<SystemPowerStateInfo>:fuchsia.device.manager.MAX_SYSTEM_POWER_STATES mapping) -> () error zx.status;
+    UpdatePowerStateMapping(array<SystemPowerStateInfo>:fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES mapping) -> () error zx.status;
 
     /// Get the mapping between system power states to device power states. Used by the system
     /// wide power manager to manage power for this device.
-    GetPowerStateMapping() -> (array<SystemPowerStateInfo>:fuchsia.device.manager.MAX_SYSTEM_POWER_STATES mapping) error zx.status;
+    GetPowerStateMapping() -> (array<SystemPowerStateInfo>:fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES mapping) error zx.status;
 
     /// Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     /// state.

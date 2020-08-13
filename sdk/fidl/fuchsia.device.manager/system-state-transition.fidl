@@ -7,21 +7,6 @@ library fuchsia.device.manager;
 using zx;
 using fuchsia.hardware.power.statecontrol;
 
-// This enum should be same as the one in
-// sdk/fidl/fuchsia-hardware-power-statecontrol/admin.fidl.
-// At the moment, we cannot import that library because the
-// fuchsia-device-manager library uses zx_build.
-enum SystemPowerState : uint8 {
-    SYSTEM_POWER_STATE_FULLY_ON = 1;
-    SYSTEM_POWER_STATE_REBOOT = 2;
-    SYSTEM_POWER_STATE_REBOOT_BOOTLOADER = 3;
-    SYSTEM_POWER_STATE_REBOOT_RECOVERY = 4;
-    SYSTEM_POWER_STATE_POWEROFF = 5;
-    SYSTEM_POWER_STATE_MEXEC = 6;
-    SYSTEM_POWER_STATE_SUSPEND_RAM = 7;
-};
-const uint32 MAX_SYSTEM_POWER_STATES = 7;
-
 /// Provides protocol for managing driver manager and all the devices during a
 /// system state transition.
 [Discoverable]
@@ -31,9 +16,7 @@ protocol SystemStateTransition {
     /// driver_manager's stop event is triggered, driver_manager suspends
     /// the system to "state".
     /// Returns ZX_ERR_INVALID_ARGS if the system power state is not a shutdown/reboot
-    /// state(SYSTEM_POWER_STATE_POWEROFF, SYSTEM_POWER_STATE_REBOOT,
-    /// SYSTEM_POWER_STATE_REBOOT_BOOTLOADER,
-    /// SYSTEM_POWER_STATE_REBOOT_RECOVERY, SYSTEM_POWER_STATE_MEXEC)
+    /// state(POWEROFF, REBOOT, REBOOT_BOOTLOADER, REBOOT_RECOVERY, MEXEC)
     /// Returns ZX_ERR_BAD_STATE if driver_manager is unable to save the state.
     /// Each time the api is called the termination state is updated and cached.
     SetTerminationSystemState(fuchsia.hardware.power.statecontrol.SystemPowerState state) -> () error zx.status;

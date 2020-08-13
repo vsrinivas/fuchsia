@@ -226,7 +226,7 @@ class DeviceInspect {
 
   using SystemPowerStateMapping =
       std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
-                 ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>;
+                 ::llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES>;
 
   void set_system_power_state_mapping(const SystemPowerStateMapping& mapping);
 
@@ -289,7 +289,7 @@ class DeviceInspect {
   inspect::UintProperty current_performance_state_;
 
   std::array<std::optional<DeviceSystemPowerStateMapping>,
-             ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
+             ::llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES>
       system_power_states_mapping_{};
   inspect::Node system_power_states_node_;
 };

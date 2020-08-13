@@ -9,7 +9,7 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 fidl("fuchsia.device.power.test") {
   sources = [ "test.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.device" ]
+  public_deps = [ "//sdk/fidl/fuchsia.device"  ]
 }
 
 driver_module("ddk-power-test") {
@@ -57,7 +57,7 @@ test("ddk-power") {
   deps = [
     ":fuchsia.device.power.test_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",

@@ -44,8 +44,8 @@
 #include "unbind_task.h"
 #include "vmo_writer.h"
 
-using llcpp::fuchsia::device::manager::SystemPowerState;
 namespace power_fidl = llcpp::fuchsia::hardware::power;
+using power_fidl::statecontrol::SystemPowerState;
 namespace device_manager_fidl = llcpp::fuchsia::device::manager;
 
 class DriverHostLoaderService;

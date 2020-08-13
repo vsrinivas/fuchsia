@@ -33,6 +33,7 @@
 #include "log.h"
 
 using llcpp::fuchsia::device::DevicePowerState;
+using llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState;
 
 namespace internal {
 
@@ -292,19 +293,19 @@ const char* removal_problem(uint32_t flags) {
   return "?";
 }
 
-uint8_t device_get_suspend_reason(fuchsia_device_manager_SystemPowerState power_state) {
+uint8_t device_get_suspend_reason(SystemPowerState power_state) {
   switch (power_state) {
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT:
+    case SystemPowerState::REBOOT:
       return DEVICE_SUSPEND_REASON_REBOOT;
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_RECOVERY:
+    case SystemPowerState::REBOOT_RECOVERY:
       return DEVICE_SUSPEND_REASON_REBOOT_RECOVERY;
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_BOOTLOADER:
+    case SystemPowerState::REBOOT_BOOTLOADER:
       return DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER;
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_MEXEC:
+    case SystemPowerState::MEXEC:
       return DEVICE_SUSPEND_REASON_MEXEC;
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_POWEROFF:
+    case SystemPowerState::POWEROFF:
       return DEVICE_SUSPEND_REASON_POWEROFF;
-    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_SUSPEND_RAM:
+    case SystemPowerState::SUSPEND_RAM:
       return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
     default:
       return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
@@ -319,28 +320,28 @@ zx_status_t device_get_dev_power_state_from_mapping(
   // Some suspend flags might be translated to system power states with
   // additional hints (ex: REBOOT/REBOOT_BOOTLOADER/REBOOT_RECOVERY/MEXEC).
   // For now, each of these flags are treated as an individual state.
-  fuchsia_device_manager_SystemPowerState sys_state;
+  SystemPowerState sys_state;
   switch (flags) {
     case DEVICE_SUSPEND_FLAG_REBOOT:
-      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT;
+      sys_state = SystemPowerState::REBOOT;
       break;
     case DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY:
-      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_RECOVERY;
+      sys_state = SystemPowerState::REBOOT_RECOVERY;
       break;
     case DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER:
-      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_BOOTLOADER;
+      sys_state = SystemPowerState::REBOOT_BOOTLOADER;
       break;
     case DEVICE_SUSPEND_FLAG_MEXEC:
-      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_MEXEC;
+      sys_state = SystemPowerState::MEXEC;
       break;
     case DEVICE_SUSPEND_FLAG_POWEROFF:
-      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_POWEROFF;
+      sys_state = SystemPowerState::POWEROFF;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
   auto& sys_power_states = dev->GetSystemPowerStateMapping();
-  *info = sys_power_states[sys_state];
+  *info = sys_power_states[static_cast<unsigned long>(sys_state)];
   *suspend_reason = internal::device_get_suspend_reason(sys_state);
   return ZX_OK;
 }

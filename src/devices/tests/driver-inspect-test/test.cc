@@ -4,8 +4,6 @@
 
 #include <fuchsia/device/inspect/test/llcpp/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/c/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>

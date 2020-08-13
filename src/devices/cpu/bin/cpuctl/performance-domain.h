@@ -6,7 +6,6 @@
 #define SRC_DEVICES_CPU_BIN_CPUCTL_PERFORMANCE_DOMAIN_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 
 #include <tuple>

@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>

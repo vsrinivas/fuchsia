@@ -5,7 +5,6 @@
 #include "performance-domain.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 

@@ -9,6 +9,8 @@
 
 #include "driver_host.h"
 
+namespace power_fidl = ::llcpp::fuchsia::hardware::power;
+
 zx_status_t DevfsVnode::Open(fs::Vnode::ValidatedOptions options,
                              fbl::RefPtr<Vnode>* out_redirect) {
   if (dev_->Unbound()) {
@@ -285,14 +287,14 @@ void DevfsVnode::ConfigureAutoSuspend(bool enable,
 
 void DevfsVnode::UpdatePowerStateMapping(
     ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo,
-                  ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
+                  power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
         mapping,
     UpdatePowerStateMappingCompleter::Sync completer) {
   std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
-             ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
+             power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
       states_mapping;
 
-  for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
+  for (size_t i = 0; i < power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES; i++) {
     states_mapping[i] = mapping[i];
   }
   zx_status_t status = dev_->SetSystemPowerStateMapping(states_mapping);
@@ -310,9 +312,9 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync comple
   ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response;
 
   auto& mapping = dev_->GetSystemPowerStateMapping();
-  ZX_DEBUG_ASSERT(mapping.size() == fuchsia_device_manager_MAX_SYSTEM_POWER_STATES);
+  ZX_DEBUG_ASSERT(mapping.size() == power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES);
 
-  for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
+  for (size_t i = 0; i < power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES; i++) {
     response.mapping[i] = mapping[i];
   }
   completer.Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(

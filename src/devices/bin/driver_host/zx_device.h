@@ -321,7 +321,7 @@ struct zx_device
                                        ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES>;
   using SystemPowerStateMapping =
       std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
-                 ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>;
+                 ::llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES>;
   using PerformanceStates = std::array<::llcpp::fuchsia::device::DevicePerformanceStateInfo,
                                        ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>;
 

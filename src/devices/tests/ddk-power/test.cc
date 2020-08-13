@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/device/power/test/llcpp/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -25,9 +24,9 @@ using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES;
 using llcpp::fuchsia::device::SystemPowerStateInfo;
 using llcpp::fuchsia::device::manager::Administrator;
-using llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES;
-using llcpp::fuchsia::device::manager::SystemPowerState;
 using llcpp::fuchsia::device::power::test::TestDevice;
+using llcpp::fuchsia::hardware::power::statecontrol::MAX_SYSTEM_POWER_STATES;
+using llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState;
 
 class PowerTestCase : public zxtest::Test {
  public:
@@ -907,11 +906,9 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(
-      states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)].dev_state,
-      DevicePowerState::DEVICE_POWER_STATE_D3COLD);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)]
-                   .wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
+            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
@@ -954,11 +951,9 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(
-      states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)].dev_state,
-      DevicePowerState::DEVICE_POWER_STATE_D3COLD);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)]
-                   .wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
+            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
@@ -1000,11 +995,9 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   ASSERT_STATUS(call_status, ZX_OK);
   states_mapping = &response2->result.response().mapping[0];
 
-  ASSERT_EQ(
-      states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)].dev_state,
-      DevicePowerState::DEVICE_POWER_STATE_D1);
-  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)]
-                   .wakeup_enable);
+  ASSERT_EQ(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].dev_state,
+            DevicePowerState::DEVICE_POWER_STATE_D1);
+  ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::REBOOT)].wakeup_enable);
 }
 
 TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
