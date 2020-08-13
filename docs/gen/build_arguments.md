@@ -585,7 +585,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -593,14 +593,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -828,7 +828,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -843,14 +843,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/3905f61aaaea4e6e38fa54b54402bb7359aa53ea/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -893,13 +893,6 @@ non-SDK buildroots.
 **Current value (from the default):** `""`
 
 From //build/fuchsia/sdk.gni:17
-
-### fuchsia_ta_uuids
-UUID of TAs to include in the Fuchsia build.
-
-**Current value (from the default):** `[]`
-
-From //build/images/ta.gni:13
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -1827,7 +1820,7 @@ UUID of TAs to include in the Recovery build.
 
 **Current value (from the default):** `[]`
 
-From //build/images/ta.gni:19
+From //build/images/ta.gni:13
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -2180,7 +2173,7 @@ The TA image file names are "$ta_uuid$ta_dest_suffix".
 
 **Current value (from the default):** `""`
 
-From //build/images/ta.gni:27
+From //build/images/ta.gni:21
 
 ### ta_path
 Source absolute path to the prebuilt TA images.
@@ -2195,7 +2188,7 @@ usually used. The TA image file names are "$ta_uuid$ta_src_suffix".
 
 **Current value (from the default):** `""`
 
-From //build/images/ta.gni:23
+From //build/images/ta.gni:17
 
 ### target_cpu
 
@@ -2607,13 +2600,6 @@ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 **Current value (from the default):** `[]`
 
 From //build/images/zedboot/zedboot_args.gni:18
-
-### zedboot_ta_uuids
-UUID of TAs to include in the Zedboot build.
-
-**Current value (from the default):** `[]`
-
-From //build/images/ta.gni:16
 
 ### zircon_a_partition
 arguments to fx flash script
