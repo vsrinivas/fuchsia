@@ -236,10 +236,10 @@ zx_status_t Tas27xx::Reinitialize() {
     return status;
   }
 
-  // bit[5:4] - RX_SCFG, 01b = Mono, Left channel
+  // bit[5:4] - RX_SCFG, 01b = Mono, Right channel
   // bit[3:2] - RX_WLEN, 00b = 16-bits word length
   // bit[0:1] - RX_SLEN, 10b = 32-bit slot length
-  status = WriteReg(TDM_CFG2, (0x01 << 4) | (0x00 << 2) | 0x02);
+  status = WriteReg(TDM_CFG2, (0x02 << 4) | (0x00 << 2) | 0x02);
   if (status != ZX_OK) {
     return status;
   }
@@ -336,7 +336,11 @@ std::vector<DaiSupportedFormats> Tas27xx::GetDaiFormats() {
   return formats;
 }
 
-zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) { return SetRate(format.frame_rate); }
+zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) {
+  ZX_ASSERT(format.channels_to_use.size() == 1);  // Mono codec.
+  ZX_ASSERT(format.channels_to_use[0] == 0);      // Use right channel.
+  return SetRate(format.frame_rate);
+}
 
 PlugState Tas27xx::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 

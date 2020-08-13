@@ -248,7 +248,7 @@ zx_status_t Astro::AudioInit() {
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::I2s;
     metadata.number_of_channels = 1;
-    metadata.lanes_enable_mask[0] = 2;
+    metadata.lanes_enable_mask[0] = 1;
     metadata.tdm.number_of_codecs = 1;
     metadata.tdm.codecs[0] = metadata::Codec::Tas27xx;
     // Report our external delay based on the chosen frame rate.  Note that these

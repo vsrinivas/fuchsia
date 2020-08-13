@@ -19,6 +19,7 @@ namespace {
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
+      .channels_to_use = std::vector<uint32_t>{0},  // Use one channel in this mono codec.
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
       .justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S,
       .frame_rate = 24'000,
@@ -39,7 +40,7 @@ class Tas27xxTest : public zxtest::Test {
         .ExpectWriteStop({0x02, 0x0d})  // PRW_CTL stopped.
         .ExpectWriteStop({0x3c, 0x10})  // CLOCK_CFG.
         .ExpectWriteStop({0x0a, 0x07})  // SetRate.
-        .ExpectWriteStop({0x0c, 0x12})  // TDM_CFG2.
+        .ExpectWriteStop({0x0c, 0x22})  // TDM_CFG2.
         .ExpectWriteStop({0x0e, 0x02})  // TDM_CFG4.
         .ExpectWriteStop({0x0f, 0x44})  // TDM_CFG5.
         .ExpectWriteStop({0x10, 0x40})  // TDM_CFG6.
@@ -137,7 +138,7 @@ TEST_F(Tas27xxTest, CodecReset) {
       .ExpectWriteStop({0x02, 0x0d})  // PRW_CTL stopped.
       .ExpectWriteStop({0x3c, 0x10})  // CLOCK_CFG.
       .ExpectWriteStop({0x0a, 0x07})  // SetRate.
-      .ExpectWriteStop({0x0c, 0x12})  // TDM_CFG2.
+      .ExpectWriteStop({0x0c, 0x22})  // TDM_CFG2.
       .ExpectWriteStop({0x0e, 0x02})  // TDM_CFG4.
       .ExpectWriteStop({0x0f, 0x44})  // TDM_CFG5.
       .ExpectWriteStop({0x10, 0x40})  // TDM_CFG6.
