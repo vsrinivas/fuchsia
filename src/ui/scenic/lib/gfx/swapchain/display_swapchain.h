@@ -82,24 +82,39 @@ class DisplaySwapchain : public Swapchain {
   friend class test::DisplaySwapchainMockTest;
 
   struct FrameRecord {
+    // clang-format off
     fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
-    size_t swapchain_index;
+    size_t                                 swapchain_index;
 
-    escher::SemaphorePtr render_finished_escher_semaphore;
-    uint64_t render_finished_event_id;
-    zx::event render_finished_event;
-    std::unique_ptr<async::Wait> render_finished_wait;
+    escher::SemaphorePtr                   render_finished_escher_semaphore;
+    zx::event                              render_finished_event;
+    uint64_t                               render_finished_event_id;
 
     // Event is signaled when the display is done using a frame.
-    zx::event retired_event;
-    uint64_t retired_event_id;
+    zx::event                              retired_event;
+    uint64_t                               retired_event_id;
 
-    bool presented = false;
-    BufferPool::Framebuffer* buffer = nullptr;
-    bool use_protected_memory = false;
+    std::unique_ptr<async::Wait>           render_finished_wait;
+
+    bool                                   presented            = false;
+    BufferPool::Framebuffer*               buffer               = nullptr;
+    bool                                   use_protected_memory = false;
+    // clang-format on
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
-                                              size_t swapchain_index);
+
+  // Creates a frame record and its reusable resources
+  std::unique_ptr<FrameRecord> NewFrameRecord();
+
+  // Creates all frame records
+  void InitializeFrameRecords();
+
+  // Resets next retired frame record
+  void ResetFrameRecord(std::unique_ptr<FrameRecord>& frame_record);
+
+  // Updates the previously retired frame record
+  void UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
+                         fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                         size_t swapchain_index);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                               bool use_protected_memory);
@@ -154,7 +169,7 @@ class DisplaySwapchain : public Swapchain {
   // Optionally generated on the fly.
   BufferPool protected_swapchain_buffers_;
 
-  std::vector<std::unique_ptr<FrameRecord>> frames_;
+  std::vector<std::unique_ptr<FrameRecord>> frame_records_;
 
   vk::Device device_;
   vk::Queue queue_;

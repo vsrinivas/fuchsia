@@ -75,7 +75,7 @@ DisplaySwapchain::DisplaySwapchain(
     device_ = escher_->vk_device();
     queue_ = escher_->device()->vk_main_queue();
     display_->Claim();
-    frames_.resize(kSwapchainImageCount);
+    frame_records_.resize(kSwapchainImageCount);
 
     if (!InitializeDisplayLayer()) {
       FX_LOGS(FATAL) << "Initializing display layer failed";
@@ -90,6 +90,8 @@ DisplaySwapchain::DisplaySwapchain(
     if ((*display_controller_)->EnableVsync(true) != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to enable vsync";
     }
+
+    InitializeFrameRecords();
 
   } else {
     device_ = vk::Device();
@@ -140,9 +142,9 @@ DisplaySwapchain::~DisplaySwapchain() {
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
-  for (size_t i = 0; i < frames_.size(); ++i) {
-    const size_t idx = (i + next_frame_index_) % frames_.size();
-    FrameRecord* record = frames_[idx].get();
+  for (size_t i = 0; i < frame_records_.size(); ++i) {
+    const size_t idx = (i + next_frame_index_) % frame_records_.size();
+    FrameRecord* record = frame_records_[idx].get();
     if (record && record->frame_timings && !record->frame_timings->finalized()) {
       if (record->render_finished_wait->is_pending()) {
         // There has not been an OnFrameRendered signal. The wait will be
@@ -170,56 +172,108 @@ DisplaySwapchain::~DisplaySwapchain() {
   protected_swapchain_buffers_.Clear(display_controller_);
 }
 
-std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
-    fxl::WeakPtr<scheduling::FrameTimings> frame_timings, size_t swapchain_index) {
-  FX_DCHECK(frame_timings);
-  FX_CHECK(escher_);
-  auto render_finished_escher_semaphore = escher::Semaphore::NewExportableSem(device_);
+std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord() {
+  auto frame_record = std::make_unique<FrameRecord>();
 
-  zx::event render_finished_event =
-      GetEventForSemaphore(escher_->device(), render_finished_escher_semaphore);
-  uint64_t render_finished_event_id =
-      scenic_impl::ImportEvent(*display_controller_.get(), render_finished_event);
+  //
+  // Create and import .render_finished_event
+  //
+  frame_record->render_finished_escher_semaphore = escher::Semaphore::NewExportableSem(device_);
+  frame_record->render_finished_event =
+      GetEventForSemaphore(escher_->device(), frame_record->render_finished_escher_semaphore);
+  frame_record->render_finished_event_id =
+      scenic_impl::ImportEvent(*display_controller_.get(), frame_record->render_finished_event);
 
-  if (!render_finished_escher_semaphore ||
-      render_finished_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
+  if (!frame_record->render_finished_escher_semaphore ||
+      (frame_record->render_finished_event_id == fuchsia::hardware::display::INVALID_DISP_ID)) {
     FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
   }
 
-  zx::event retired_event;
-  zx_status_t status = zx::event::create(0, &retired_event);
+  //
+  // Create and import .retired_event
+  //
+  zx_status_t const status = zx::event::create(0, &frame_record->retired_event);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create retired event";
     return std::unique_ptr<FrameRecord>();
   }
 
-  uint64_t retired_event_id = scenic_impl::ImportEvent(*display_controller_.get(), retired_event);
-  if (retired_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
+  // Set to signaled
+  frame_record->retired_event.signal(0, ZX_EVENT_SIGNALED);
+
+  // Import to display controller
+  frame_record->retired_event_id =
+      scenic_impl::ImportEvent(*display_controller_.get(), frame_record->retired_event);
+  if (frame_record->retired_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
     FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
   }
 
-  auto record = std::make_unique<FrameRecord>();
-  record->frame_timings = frame_timings;
-  record->swapchain_index = swapchain_index;
-  record->render_finished_escher_semaphore = std::move(render_finished_escher_semaphore);
-  record->render_finished_event_id = render_finished_event_id;
-  record->retired_event = std::move(retired_event);
-  record->retired_event_id = retired_event_id;
+  return frame_record;
+}
 
-  record->render_finished_event = std::move(render_finished_event);
-  record->render_finished_wait = std::make_unique<async::Wait>(
-      record->render_finished_event.get(), escher::kFenceSignalled, ZX_WAIT_ASYNC_TIMESTAMP,
+void DisplaySwapchain::InitializeFrameRecords() {
+  for (size_t idx = 0; idx < frame_records_.size(); idx++) {
+    frame_records_[idx] = NewFrameRecord();
+  }
+}
+
+void DisplaySwapchain::ResetFrameRecord(std::unique_ptr<FrameRecord>& frame_record) {
+  if (frame_record) {
+    // Were timings finalized?
+    if (auto timings = frame_record->frame_timings) {
+      FX_CHECK(timings->finalized());
+      frame_record->frame_timings.reset();
+    }
+
+    // We expect the retired event to already have been signaled.  Verify this without waiting.
+    if (frame_record->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
+      FX_LOGS(ERROR) << "DisplaySwapchain::DrawAndPresentFrame rendering into in-use backbuffer";
+    }
+
+    // Reset .render_finished_event and .retired_event
+    //
+    // As noted below in ::DrawAndPresentFrame(), there must not already exist a
+    // pending record.  If there is, it indicates an error in the FrameScheduler
+    // logic.
+    frame_record->render_finished_event.signal(ZX_EVENT_SIGNALED, 0);
+    frame_record->retired_event.signal(ZX_EVENT_SIGNALED, 0);
+
+    // Return buffer to the pool
+    if (frame_record->buffer) {
+      if (frame_record->use_protected_memory) {
+        protected_swapchain_buffers_.Put(frame_record->buffer);
+      } else {
+        swapchain_buffers_.Put(frame_record->buffer);
+      }
+      frame_record->buffer = nullptr;
+    }
+
+    // Reset presented flag
+    frame_record->presented = false;
+  }
+}
+
+void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
+                                         fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                                         size_t swapchain_index) {
+  FX_DCHECK(frame_timings);
+  FX_CHECK(escher_);
+
+  frame_record->frame_timings = frame_timings;
+
+  frame_record->swapchain_index = swapchain_index;
+
+  frame_record->render_finished_wait = std::make_unique<async::Wait>(
+      frame_record->render_finished_event.get(), escher::kFenceSignalled, ZX_WAIT_ASYNC_TIMESTAMP,
       [this, index = next_frame_index_](async_dispatcher_t* dispatcher, async::Wait* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
         OnFrameRendered(index, zx::time(signal->timestamp));
       });
 
   // TODO(SCN-244): What to do if rendering fails?
-  record->render_finished_wait->Begin(async_get_default_dispatcher());
-
-  return record;
+  frame_record->render_finished_wait->Begin(async_get_default_dispatcher());
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
@@ -229,39 +283,30 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   FX_DCHECK(hla.swapchain == this);
   FX_DCHECK(frame_timings);
 
-  // Create a record that can be used to notify |frame_timings| (and hence
+  // Get the next record that can be used to notify |frame_timings| (and hence
   // ultimately the FrameScheduler) that the frame has been presented.
   //
   // There must not already exist a pending record.  If there is, it indicates
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
-  auto& old_frame = frames_[next_frame_index_];
-  if (old_frame) {
-    if (auto timings = old_frame->frame_timings) {
-      FX_CHECK(timings->finalized());
-    }
-    if (old_frame->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
-      FX_LOGS(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
-                          "into in-use backbuffer";
-    }
-    if (old_frame->buffer) {
-      if (old_frame->use_protected_memory) {
-        protected_swapchain_buffers_.Put(old_frame->buffer);
-      } else {
-        swapchain_buffers_.Put(old_frame->buffer);
-      }
-      old_frame->buffer = nullptr;
-    }
-  }
+  auto& frame_record = frame_records_[next_frame_index_];
 
-  auto& frame_record = frames_[next_frame_index_] = NewFrameRecord(frame_timings, swapchain_index);
+  // Reset frame record.
+  ResetFrameRecord(frame_record);
+
+  // Update frame record.
+  UpdateFrameRecord(frame_record, frame_timings, swapchain_index);
+
   // Find the next framebuffer to render into, and other corresponding data.
   frame_record->buffer = use_protected_memory_ ? protected_swapchain_buffers_.GetUnused()
                                                : swapchain_buffers_.GetUnused();
   frame_record->use_protected_memory = use_protected_memory_;
   FX_CHECK(frame_record->buffer != nullptr);
 
+  // Bump the ring head.
   next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
+
+  // Running total.
   outstanding_frame_count_++;
 
   // Render the scene.
@@ -295,12 +340,6 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   Flip(display_->display_id(), frame_record->buffer->id, frame_record->render_finished_event_id,
        frame_record->retired_event_id);
 
-  if ((*display_controller_)->ReleaseEvent(frame_record->render_finished_event_id) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to release display controller event.";
-  }
-  if ((*display_controller_)->ReleaseEvent(frame_record->retired_event_id) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to release display controller event.";
-  }
   return true;
 }
 
@@ -386,7 +425,7 @@ bool DisplaySwapchain::InitializeDisplayLayer() {
 
 void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {
   FX_DCHECK(frame_index < kSwapchainImageCount);
-  auto& record = frames_[frame_index];
+  auto& record = frame_records_[frame_index];
 
   uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
   // TODO(fxbug.dev/57725) Replace with more robust solution.
@@ -426,7 +465,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
 
   bool match = false;
   while (outstanding_frame_count_ && !match) {
-    auto& record = frames_[presented_frame_idx_];
+    auto& record = frame_records_[presented_frame_idx_];
     match = record->buffer->id == image_id;
 
     // Don't double-report a frame as presented if a frame is shown twice
@@ -469,7 +508,9 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 
   auto before = zx::clock::get_monotonic();
+
   status = (*display_controller_)->ApplyConfig();
+
   // TODO(SCN-244): handle this more robustly.
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
