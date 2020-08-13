@@ -135,6 +135,9 @@ use crate::temperature::facade::TemperatureFacade;
 // Tiles related includes
 use crate::tiles::facade::TilesFacade;
 
+// Time related includes
+use crate::time::facade::TimeFacade;
+
 // Traceutil related includes
 use crate::traceutil::facade::TraceutilFacade;
 
@@ -238,6 +241,7 @@ impl Sl4f {
                 "sysinfo_facade" => SysInfoFacade::new(),
                 "temperature_facade" => TemperatureFacade::new(),
                 "tiles_facade" => TilesFacade::new(),
+                "time_facade" => TimeFacade::new(),
                 "traceutil_facade" => TraceutilFacade::new(),
                 "tracing_facade" => TracingFacade::new(),
                 "update_facade" => UpdateFacade::new(),

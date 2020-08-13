@@ -19,6 +19,7 @@ dart_test("sl4f_test") {
     "setui_test.dart",
     "storage_test.dart",
     "tcp_proxy_test.dart",
+    "time_test.dart",
   ]
 
   deps = [

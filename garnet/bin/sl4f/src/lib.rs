@@ -43,6 +43,7 @@ pub mod setui;
 pub mod sysinfo;
 pub mod temperature;
 pub mod tiles;
+pub mod time;
 pub mod traceutil;
 pub mod tracing;
 pub mod update;

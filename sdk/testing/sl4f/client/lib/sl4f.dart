@@ -26,6 +26,7 @@ export 'src/sl4f_client.dart';
 export 'src/ssh.dart';
 export 'src/storage.dart';
 export 'src/tiles.dart';
+export 'src/time.dart';
 export 'src/trace_processing/metrics_results.dart';
 export 'src/trace_processing/metrics_spec.dart';
 export 'src/update.dart';
