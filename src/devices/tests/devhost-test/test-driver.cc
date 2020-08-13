@@ -21,13 +21,15 @@
 using llcpp::fuchsia::device::devhost::test::TestDevice;
 
 class TestDevhostDriver;
-using DeviceType = ddk::Device<TestDevhostDriver, ddk::UnbindableNew, ddk::Messageable>;
+using DeviceType =
+    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::UnbindableNew, ddk::Messageable>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
                           public TestDevice::Interface {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   void AddChildDevice(AddChildDeviceCompleter::Sync completer) override;
@@ -40,6 +42,7 @@ class TestDevhostDriver : public DeviceType,
 
  private:
   struct devhost_test_metadata metadata_;
+  size_t metadata_size_;
 };
 
 zx_status_t TestDevhostDriver::Bind() {
@@ -54,16 +57,18 @@ zx_status_t TestDevhostDriver::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
-  status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata_, size, &size);
+  status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata_, size, &metadata_size_);
   if (status != ZX_OK) {
     printf("Unable to get the metadata. size is %lu\n", size);
     return status;
   }
 
-  DdkAdd("devhost-test-parent", DEVICE_ADD_INVISIBLE);
-  status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &metadata_, size);
-  DdkMakeVisible();
-  return ZX_OK;
+  return DdkAdd("devhost-test-parent");
+}
+
+void TestDevhostDriver::DdkInit(ddk::InitTxn txn) {
+  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &metadata_, metadata_size_);
+  txn.Reply(status);
 }
 
 void TestDevhostDriver::AddChildDevice(AddChildDeviceCompleter::Sync completer) {
