@@ -67,9 +67,6 @@ executable("ap_mlme_tests") {
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("client_mlme_tests") {
@@ -90,9 +87,6 @@ executable("client_mlme_tests") {
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("mac_tests") {
@@ -127,9 +121,6 @@ executable("mac_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(46770): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
@@ -153,9 +144,6 @@ executable("mesh_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(46752): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   configs += [
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -177,9 +165,6 @@ executable("service_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("timer_manager_tests") {
@@ -198,9 +183,6 @@ executable("timer_manager_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("buffer_utils_tests") {
@@ -218,9 +200,6 @@ executable("buffer_utils_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("common_tests") {
@@ -244,9 +223,6 @@ executable("common_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-
-  # TODO(46856): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 driver_package("wlanphy-testdev-driver") {
