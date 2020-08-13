@@ -10,9 +10,11 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#if defined(__Fuchsia__)
 #if !defined(_KERNEL)
 #include <zircon/status.h>
 #endif  // !defined(_KERNEL)
+#endif  // defined(__Fuchsia__)
 
 namespace zx {
 
@@ -75,10 +77,12 @@ class LIB_FITX_NODISCARD status<T> : public ::fitx::result<zx_status_t, T> {
     return this->is_error() ? base::error_value() : ZX_OK;
   }
 
+#if defined(__Fuchsia__)
 #if !defined(_KERNEL)
   // Returns the string representation of the status value.
   const char* status_string() const { return zx_status_get_string(status_value()); }
 #endif  // !defined(_KERNEL)
+#endif  // defined(__Fuchsia__)
 };
 
 // Specialization of status for empty value type.
@@ -105,10 +109,12 @@ class LIB_FITX_NODISCARD status<> : public ::fitx::result<zx_status_t> {
     return this->is_error() ? base::error_value() : ZX_OK;
   }
 
+#if defined(__Fuchsia__)
 #if !defined(_KERNEL)
   // Returns the string representation of the status value.
   const char* status_string() const { return zx_status_get_string(status_value()); }
 #endif  // !defined(_KERNEL)
+#endif  // defined(__Fuchsia__)
 };
 
 // Simplified alias of zx::error<zx_status_t>.
