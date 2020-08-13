@@ -22,8 +22,8 @@ void ReportEncodingError(const Message& message, const fidl_type_t* type, const 
   char type_name[1024];
   size_t type_name_length = fidl_format_type_name(type, type_name, sizeof(type_name));
   fprintf(stderr,
-          "fidl encoding error at %s:%d: %s, "
-          "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          "fidl encoding error at %s:%d: %s. "
+          "message: %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
           file, line, error_msg, static_cast<int>(type_name_length), type_name,
           message.bytes().actual(), message.handles().actual());
 }
@@ -33,8 +33,8 @@ void ReportDecodingError(const Message& message, const fidl_type_t* type, const 
   char type_name[1024];
   size_t type_name_length = fidl_format_type_name(type, type_name, sizeof(type_name));
   fprintf(stderr,
-          "fidl decoding error at %s:%d: %s, "
-          "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          "fidl decoding error at %s:%d: %s. "
+          "message: %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
           file, line, error_msg, static_cast<int>(type_name_length), type_name,
           message.bytes().actual(), message.handles().actual());
 }
@@ -47,16 +47,16 @@ void ReportChannelWritingError(const Message& message, const fidl_type_t* type, 
 #ifdef __Fuchsia__
 
   fprintf(stderr,
-          "fidl channel writing error at %s:%d: zx_status_t %d (%s), "
-          "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          "fidl channel writing error at %s:%d: zx_status_t %d (%s). "
+          "message: %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
           file, line, status, zx_status_get_string(status), static_cast<int>(type_name_length),
           type_name, message.bytes().actual(), message.handles().actual());
 
 #else
 
   fprintf(stderr,
-          "fidl channel writing error at %s:%d: zx_status_t %d, "
-          "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          "fidl channel writing error at %s:%d: zx_status_t %d. "
+          "message: %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
           file, line, status, static_cast<int>(type_name_length), type_name,
           message.bytes().actual(), message.handles().actual());
 
