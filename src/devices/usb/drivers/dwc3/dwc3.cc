@@ -400,7 +400,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     dwc3_stop(dwc);
   } else if (dwc->usb_mode == USB_MODE_HOST) {
     if (dwc->xhci_dev) {
-      device_remove_deprecated(dwc->xhci_dev);
+      device_async_remove(dwc->xhci_dev);
       dwc->xhci_dev = nullptr;
 
       if (mode == USB_MODE_PERIPHERAL) {
