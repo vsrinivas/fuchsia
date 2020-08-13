@@ -539,7 +539,7 @@ mod tests {
                 filepath: "[none]".to_string(),
                 mac: None,
                 mtu: 65536,
-                features: 4,
+                features: zx_eth::Features::Loopback,
                 administrative_status: AdministrativeStatus::Enabled,
                 physical_status: PhysicalStatus::Up,
                 addresses: vec![],

@@ -301,7 +301,8 @@ static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     // Return ZX_OK to keep watching for devices.
     return ZX_OK;
   }
-  if (!(info.features & fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH)) {
+  if ((info.features & fuchsia::hardware::ethernet::Features::SYNTHETIC) !=
+      fuchsia::hardware::ethernet::Features::SYNTHETIC) {
     // Not a match, keep looking.
     return ZX_OK;
   }

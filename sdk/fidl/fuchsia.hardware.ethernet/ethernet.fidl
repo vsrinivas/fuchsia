@@ -11,14 +11,34 @@ struct MacAddress {
     array<uint8>:6 octets;
 };
 
-// Info.features bits
+/// Features distinguishes between NICs with different features.
+bits Features : uint32 {
+    WLAN = 0x01;
+    SYNTHETIC = 0x02;
+    LOOPBACK = 0x04;
+};
+
+// TODO(https://crbug.com/1099393): Remove these aliases.
+//
+// N.B. these are not defined in terms of |Features| because that results in
+// non-compiling generated C++.
+//
+// fidling/gen/sdk/fidl/fuchsia.hardware.ethernet/fuchsia/hardware/ethernet/cpp/fidl.h:290:20: error: cannot initialize a variable of type 'const uint32_t' (aka 'const unsigned int') with an rvalue of type 'fuchsia::hardware::ethernet::Features'
+// constexpr uint32_t INFO_FEATURE_WLAN = Features::WLAN;
+//                    ^                   ~~~~~~~~~~~~~~
+// fidling/gen/sdk/fidl/fuchsia.hardware.ethernet/fuchsia/hardware/ethernet/cpp/fidl.h:292:20: error: cannot initialize a variable of type 'const uint32_t' (aka 'const unsigned int') with an rvalue of type 'fuchsia::hardware::ethernet::Features'
+// constexpr uint32_t INFO_FEATURE_SYNTH = Features::SYNTHETIC;
+//                    ^                    ~~~~~~~~~~~~~~~~~~~
+// fidling/gen/sdk/fidl/fuchsia.hardware.ethernet/fuchsia/hardware/ethernet/cpp/fidl.h:294:20: error: cannot initialize a variable of type 'const uint32_t' (aka 'const unsigned int') with an rvalue of type 'fuchsia::hardware::ethernet::Features'
+// constexpr uint32_t INFO_FEATURE_LOOPBACK = Features::LOOPBACK;
+//                    ^                       ~~~~~~~~~~~~~~~~~~
 const uint32 INFO_FEATURE_WLAN = 0x00000001;
 const uint32 INFO_FEATURE_SYNTH = 0x00000002;
 const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
 
 [ForDeprecatedCBindings]
 struct Info {
-    uint32 features;
+    Features features;
     uint32 mtu;
     MacAddress mac;
 };

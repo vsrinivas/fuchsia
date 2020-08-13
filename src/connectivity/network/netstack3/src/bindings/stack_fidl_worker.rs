@@ -242,7 +242,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
                     filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
                     mac: Some(Box::new(device.mac())),
                     mtu: device.mtu(),
-                    features: device.features().bits(),
+                    features: device.features(),
                     administrative_status: if device.admin_enabled() {
                         AdministrativeStatus::Enabled
                     } else {
@@ -283,7 +283,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
                 filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
                 mac: Some(Box::new(device.mac())),
                 mtu: device.mtu(),
-                features: device.features().bits(),
+                features: device.features(),
                 administrative_status: if device.admin_enabled() {
                     AdministrativeStatus::Enabled
                 } else {

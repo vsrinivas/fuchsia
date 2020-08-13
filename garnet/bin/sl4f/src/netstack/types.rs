@@ -77,7 +77,7 @@ impl CustomInterfaceInfo {
             filepath: info.properties.filepath.clone(),
             mac: mac,
             mtu: info.properties.mtu,
-            features: info.properties.features,
+            features: info.properties.features.bits(),
             is_administrative_status_enabled: is_administrative_status_enabled,
             is_physical_status_up: is_physical_status_up,
             ipv4_addresses: ipv4_addresses,

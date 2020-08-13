@@ -10,6 +10,7 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/lib/fidl/rust/fidl",

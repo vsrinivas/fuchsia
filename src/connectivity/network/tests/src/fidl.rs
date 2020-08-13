@@ -112,7 +112,13 @@ async fn add_ethernet_device() -> Result {
         .into_iter()
         .find(|interface| interface.id == id)
         .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
-    assert_eq!(interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK, 0);
+    let features = fidl_fuchsia_hardware_ethernet::Features::from_bits_truncate(interface.features);
+    assert!(
+        !features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+        "unexpected interface features: ({:b}).contains({:b})",
+        features,
+        fidl_fuchsia_hardware_ethernet::Features::Loopback
+    );
     assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
     Ok::<(), anyhow::Error>(())
 }
@@ -212,9 +218,11 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
         .into_iter()
         .find(|interface| interface.id == id)
         .ok_or(anyhow::format_err!("failed to find added ethernet interface"))?;
-    assert_eq!(
-        interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-        0
+    assert!(
+        !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+        "unexpected interface features: ({:b}).contains({:b})",
+        interface.properties.features,
+        fidl_fuchsia_hardware_ethernet::Features::Loopback
     );
     assert_eq!(interface.properties.physical_status, fidl_fuchsia_net_stack::PhysicalStatus::Down);
     Ok(())
@@ -233,8 +241,10 @@ async fn add_del_interface_address() -> Result {
     let loopback = interfaces
         .iter()
         .find(|interface| {
-            interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK
-                != 0
+            interface
+                .properties
+                .features
+                .contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
         })
         .ok_or(anyhow::format_err!("failed to find loopback"))?;
     let mut interface_address =
@@ -369,8 +379,10 @@ async fn disable_interface_loopback() -> Result {
     let localhost = interfaces
         .iter()
         .find(|interface| {
-            interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK
-                != 0
+            interface
+                .properties
+                .features
+                .contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
         })
         .ok_or(anyhow::format_err!("failed to find loopback interface"))?;
     assert_eq!(

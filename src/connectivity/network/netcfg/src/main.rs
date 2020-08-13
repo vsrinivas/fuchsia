@@ -25,6 +25,7 @@ use std::path;
 use std::pin::Pin;
 use std::str::FromStr;
 
+use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
@@ -268,11 +269,11 @@ impl From<String> for InterfaceType {
 
 fn should_enable_filter(
     filter_enabled_interface_types: &HashSet<InterfaceType>,
-    features: &feth_ext::EthernetFeatures,
+    features: &feth::Features,
 ) -> bool {
-    if features.contains(feth_ext::EthernetFeatures::LOOPBACK) {
+    if features.contains(feth::Features::Loopback) {
         false
-    } else if features.contains(feth_ext::EthernetFeatures::WLAN) {
+    } else if features.contains(feth::Features::Wlan) {
         filter_enabled_interface_types.contains(&InterfaceType::WLAN)
     } else {
         filter_enabled_interface_types.contains(&InterfaceType::ETHERNET)
@@ -1320,13 +1321,13 @@ impl<'a> NetCfg<'a> {
 }
 
 /// Return the metric and ethernet features.
-fn get_metric_and_features(wlan: bool) -> (u32, feth_ext::EthernetFeatures) {
+fn get_metric_and_features(wlan: bool) -> (u32, feth::Features) {
     // Hardcode the interface metric. Eventually this should
     // be part of the config file.
     if wlan {
-        (INTF_METRIC_WLAN, feth_ext::EthernetFeatures::WLAN)
+        (INTF_METRIC_WLAN, feth::Features::Wlan)
     } else {
-        (INTF_METRIC_ETH, feth_ext::EthernetFeatures::empty())
+        (INTF_METRIC_ETH, feth::Features::empty())
     }
 }
 
@@ -1880,10 +1881,10 @@ mod tests {
         let types_ethernet_wlan: HashSet<InterfaceType> =
             [InterfaceType::ETHERNET, InterfaceType::WLAN].iter().cloned().collect();
 
-        let features_wlan = feth_ext::EthernetFeatures::WLAN;
-        let features_loopback = feth_ext::EthernetFeatures::LOOPBACK;
-        let features_synthetic = feth_ext::EthernetFeatures::SYNTHETIC;
-        let features_empty = feth_ext::EthernetFeatures::empty();
+        let features_wlan = feth::Features::Wlan;
+        let features_loopback = feth::Features::Loopback;
+        let features_synthetic = feth::Features::Synthetic;
+        let features_empty = feth::Features::empty();
 
         assert_eq!(should_enable_filter(&types_empty, &features_empty), false);
         assert_eq!(should_enable_filter(&types_empty, &features_wlan), false);

@@ -75,9 +75,8 @@ struct InterfaceProperties {
     /// The maximum transmission unit for the interface in bytes.
     uint32 mtu;
 
-    /// The features present on the interface, as a bitfield. Valid flags are
-    /// fuchsia.hardware.ethernet.`INFO_FEATURE_*`.
-    uint32 features;
+    /// The features present on the interface.
+    fuchsia.hardware.ethernet.Features features;
 
     /// The administrative status of the interface.
     AdministrativeStatus administrative_status;

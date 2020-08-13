@@ -49,18 +49,17 @@ impl PortDevice {
                 device_information.mac,
                 device_information
                     .features
-                    .contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN),
+                    .contains(fidl_fuchsia_hardware_ethernet::Features::Wlan),
             )
             .unwrap();
         // Hardcode the interface metric. Eventually this should
         // be part of the config file.
-        let metric = if device_information
+        let metric = match device_information
             .features
-            .contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN)
+            .contains(fidl_fuchsia_hardware_ethernet::Features::Wlan)
         {
-            INTF_METRIC_WLAN
-        } else {
-            INTF_METRIC_ETH
+            true => INTF_METRIC_WLAN,
+            false => INTF_METRIC_ETH,
         };
         let port = PortDevice {
             name: name.to_string(),

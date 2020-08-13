@@ -63,11 +63,11 @@ pub(super) trait DeviceInfo {
 
 impl DeviceInfo for feth_ext::EthernetInfo {
     fn is_wlan(&self) -> bool {
-        self.features.is_wlan()
+        feth_ext::is_wlan(self.features)
     }
 
     fn is_physical(&self) -> bool {
-        self.features.is_physical()
+        feth_ext::is_physical(self.features)
     }
 }
 
@@ -122,7 +122,7 @@ pub(super) trait Device {
     fn eth_device_info(
         info: Self::DeviceInfo,
         mac: feth_ext::MacAddress,
-        features: feth_ext::EthernetFeatures,
+        features: feth::Features,
     ) -> feth_ext::EthernetInfo;
 
     /// Adds the device to the netstack.
@@ -167,7 +167,7 @@ impl Device for EthernetDevice {
     fn eth_device_info(
         info: feth_ext::EthernetInfo,
         _mac: feth_ext::MacAddress,
-        _features: feth_ext::EthernetFeatures,
+        _features: feth::Features,
     ) -> feth_ext::EthernetInfo {
         info
     }
@@ -274,7 +274,7 @@ impl Device for NetworkDevice {
     fn eth_device_info(
         _info: fhwnet::Info,
         mac: feth_ext::MacAddress,
-        features: feth_ext::EthernetFeatures,
+        features: feth::Features,
     ) -> feth_ext::EthernetInfo {
         feth_ext::EthernetInfo { features, mtu: 0, mac }
     }

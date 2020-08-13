@@ -17,7 +17,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -392,7 +391,7 @@ func (impl *ethInfoInspectImpl) ReadData() inspect.Object {
 		Properties: []inspect.Property{
 			{Key: "Topopath", Value: inspect.PropertyValueWithStr(impl.value.Topopath())},
 			{Key: "Filepath", Value: inspect.PropertyValueWithStr(impl.value.Filepath())},
-			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(impl.value.Info.Features))},
+			{Key: "Features", Value: inspect.PropertyValueWithStr(impl.value.Info.Features.String())},
 		},
 	}
 }
@@ -606,19 +605,4 @@ func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
 		}
 	}
 	return nil
-}
-
-func featuresString(v uint32) string {
-	switch v {
-	case 0:
-		return "[none]"
-	case ethernet.InfoFeatureWlan:
-		return "WLAN"
-	case ethernet.InfoFeatureSynth:
-		return "SYNTHETIC"
-	case ethernet.InfoFeatureLoopback:
-		return "LOOPBACK"
-	default:
-		return "[unknown]"
-	}
 }

@@ -13,7 +13,6 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",

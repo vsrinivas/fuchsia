@@ -601,10 +601,10 @@ zx_status_t EthDev::MsgGetInfoLocked(fidl_txn_t* txn) {
   fuchsia_hardware_ethernet_Info info = {};
   memcpy(info.mac.octets, edev0_->info_.mac, ETH_MAC_SIZE);
   if (edev0_->info_.features & ETHERNET_FEATURE_WLAN) {
-    info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_WLAN;
+    info.features |= fuchsia_hardware_ethernet_Features_WLAN;
   }
   if (edev0_->info_.features & ETHERNET_FEATURE_SYNTH) {
-    info.features |= fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH;
+    info.features |= fuchsia_hardware_ethernet_Features_SYNTHETIC;
   }
   info.mtu = edev0_->info_.mtu;
   return REPLY(GetInfo)(txn, &info);

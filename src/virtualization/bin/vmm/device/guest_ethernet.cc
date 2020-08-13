@@ -111,7 +111,7 @@ void GuestEthernet::Complete(const eth_fifo_entry_t& entry) {
 
 void GuestEthernet::GetInfo(GetInfoCallback callback) {
   fuchsia::hardware::ethernet::Info info;
-  info.features = fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH;
+  info.features = fuchsia::hardware::ethernet::Features::SYNTHETIC;
   info.mtu = kMtu;
   fuchsia::hardware::ethernet::MacAddress mac_address = device_->GetMacAddress();
   memcpy(&info.mac, mac_address.octets.data(), mac_address.octets.size());

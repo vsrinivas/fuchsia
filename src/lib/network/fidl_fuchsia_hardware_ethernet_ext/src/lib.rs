@@ -4,8 +4,6 @@
 
 use fidl_fuchsia_hardware_ethernet as fidl;
 
-use bitflags::bitflags;
-
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct MacAddress {
     pub octets: [u8; 6],
@@ -72,49 +70,19 @@ impl std::str::FromStr for MacAddress {
     }
 }
 
-bitflags! {
-    /// Features supported by an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetFeatures: u32 {
-        /// The Ethernet device is a wireless device.
-        const WLAN = fidl::INFO_FEATURE_WLAN;
-        /// The Ethernet device does not represent a hardware device.
-        const SYNTHETIC = fidl::INFO_FEATURE_SYNTH;
-        /// The Ethernet device is a loopback device.
-        ///
-        /// This bit should not be set outside of network stacks.
-        const LOOPBACK = fidl::INFO_FEATURE_LOOPBACK;
-    }
+pub fn is_wlan(features: fidl::Features) -> bool {
+    features.intersects(fidl::Features::Wlan)
 }
 
-impl EthernetFeatures {
-    pub fn is_physical(&self) -> bool {
-        !self.intersects(Self::SYNTHETIC | Self::LOOPBACK)
-    }
-
-    pub fn is_wlan(&self) -> bool {
-        self.intersects(Self::WLAN)
-    }
-}
-
-impl std::str::FromStr for EthernetFeatures {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.as_ref() {
-            "synthetic" => Ok(Self::SYNTHETIC),
-            "loopback" => Ok(Self::LOOPBACK),
-            "wireless" => Ok(Self::WLAN),
-            s => Err(anyhow::format_err!("unknown network interface feature \"{}\"", s)),
-        }
-    }
+pub fn is_physical(features: fidl::Features) -> bool {
+    !features.intersects(fidl::Features::Synthetic | fidl::Features::Loopback)
 }
 
 /// Information retrieved about an Ethernet device.
 #[derive(Debug)]
 pub struct EthernetInfo {
     /// The features supported by the device.
-    pub features: EthernetFeatures,
+    pub features: fidl::Features,
     /// The maximum transmission unit (MTU) of the device.
     pub mtu: u32,
     /// The MAC address of the device.
@@ -123,7 +91,6 @@ pub struct EthernetInfo {
 
 impl From<fidl::Info> for EthernetInfo {
     fn from(fidl::Info { features, mtu, mac }: fidl::Info) -> Self {
-        let features = EthernetFeatures::from_bits_truncate(features);
         let mac = mac.into();
         Self { features, mtu, mac }
     }

@@ -188,10 +188,14 @@ impl RemoteControlService {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_hardware_ethernet::MacAddress, fidl_fuchsia_io::NodeMarker,
+        super::*,
+        fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_hardware_ethernet::{Features, MacAddress},
+        fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_net as fnet, fuchsia_async as fasync, fuchsia_zircon as zx,
-        selectors::parse_selector, service_discovery::PathEntry, std::path::PathBuf,
+        selectors::parse_selector,
+        service_discovery::PathEntry,
+        std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -235,7 +239,7 @@ mod tests {
                                 administrative_status: fnetstack::AdministrativeStatus::Enabled,
                                 physical_status: fnetstack::PhysicalStatus::Up,
                                 mtu: 1,
-                                features: 0,
+                                features: Features::empty(),
                                 mac: Some(Box::new(MacAddress { octets: [1, 2, 3, 4, 5, 6] })),
                                 addresses: vec![
                                     fnet::Subnet {

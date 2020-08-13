@@ -319,7 +319,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 
 func TestEthInfoInspectImpl(t *testing.T) {
 	const topopath, filepath = "topopath", "filepath"
-	const features = ethernet.InfoFeatureWlan | ethernet.InfoFeatureSynth | ethernet.InfoFeatureLoopback
+	const features = ethernet.FeaturesWlan | ethernet.FeaturesSynthetic | ethernet.FeaturesLoopback
 
 	device := ethernetext.Device{
 		TB: t,
@@ -391,7 +391,7 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		Properties: []inspect.Property{
 			{Key: "Topopath", Value: inspect.PropertyValueWithStr(topopath)},
 			{Key: "Filepath", Value: inspect.PropertyValueWithStr(filepath)},
-			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(features))},
+			{Key: "Features", Value: inspect.PropertyValueWithStr(features.String())},
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)

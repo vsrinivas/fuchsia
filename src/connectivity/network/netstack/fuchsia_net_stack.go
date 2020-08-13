@@ -63,9 +63,9 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		})
 	}
 
-	var features uint32
+	var features ethernet.Features
 	if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
-		features |= ethernet.InfoFeatureLoopback
+		features |= ethernet.FeaturesLoopback
 	}
 
 	var topopath, filepath string

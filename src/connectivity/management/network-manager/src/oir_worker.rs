@@ -6,6 +6,7 @@
 
 use {
     anyhow::{format_err, Context as _},
+    fidl_fuchsia_hardware_ethernet_ext::is_physical,
     futures::stream::{Stream, StreamExt as _, TryStreamExt as _},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     network_manager_core::oir::OIRInfo,
@@ -56,7 +57,7 @@ async fn device_found(filename: &std::path::PathBuf) -> Result<Option<OIRInfo>, 
             .into_zx_channel();
 
         info!("Device found: topo_path {} info {:?}", topological_path, device_info);
-        if device_info.features.is_physical() {
+        if is_physical(device_info.features) {
             return Ok(Some(OIRInfo {
                 action: network_manager_core::oir::Action::ADD,
                 file_path: file_path.to_str().unwrap().to_string(),

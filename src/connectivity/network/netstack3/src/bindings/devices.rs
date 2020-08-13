@@ -5,8 +5,8 @@
 use std::collections::HashMap;
 
 use ethernet as eth;
+use fidl_fuchsia_hardware_ethernet::Features;
 use fidl_fuchsia_hardware_ethernet::MacAddress;
-use fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures;
 use netstack3_core::{DeviceId, IdMapCollection, IdMapCollectionKey};
 
 pub type BindingId = u64;
@@ -248,7 +248,7 @@ pub struct CommonInfo {
     client: eth::Client,
     mac: MacAddress,
     mtu: u32,
-    features: EthernetFeatures,
+    features: Features,
     admin_enabled: bool,
     phy_up: bool,
 }
@@ -259,7 +259,7 @@ impl CommonInfo {
         client: eth::Client,
         mac: MacAddress,
         mtu: u32,
-        features: EthernetFeatures,
+        features: Features,
         admin_enabled: bool,
         phy_up: bool,
     ) -> Self {
@@ -314,7 +314,7 @@ impl<C> DeviceInfo<C, CommonInfo> {
         self.info.mtu
     }
 
-    pub fn features(&self) -> EthernetFeatures {
+    pub fn features(&self) -> Features {
         self.info.features
     }
 

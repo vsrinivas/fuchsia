@@ -94,11 +94,11 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 		}
 
 		if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
-			netInterface.Features |= ethernet.InfoFeatureLoopback
+			netInterface.Features |= uint32(ethernet.FeaturesLoopback)
 		}
 
 		if client, ok := ifs.controller.(*eth.Client); ok {
-			netInterface.Features |= client.Info.Features
+			netInterface.Features |= uint32(client.Info.Features)
 		}
 
 		addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)

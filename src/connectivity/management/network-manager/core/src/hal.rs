@@ -1083,7 +1083,7 @@ mod tests {
                 filepath: "/some/file".to_string(),
                 mac: None,
                 mtu: 0,
-                features: 0,
+                features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                 physical_status: stack::PhysicalStatus::Up,
             },
         }
@@ -1454,7 +1454,7 @@ mod tests {
                     filepath: "/some/file".to_string(),
                     mac: None,
                     mtu: 1234,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     physical_status: stack::PhysicalStatus::Up,
                 },
             },
@@ -1694,7 +1694,7 @@ mod tests {
                             filepath: "".to_string(),
                             mac: None,
                             mtu: 0,
-                            features: 0,
+                            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                             administrative_status: stack::AdministrativeStatus::Enabled,
                             physical_status: stack::PhysicalStatus::Up,
                             addresses: vec![fnet::Subnet {

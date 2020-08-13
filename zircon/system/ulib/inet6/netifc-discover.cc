@@ -92,7 +92,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
   if (fuchsia_hardware_ethernet_DeviceGetInfo(netsvc, &info) != ZX_OK) {
     goto fail_close_svc;
   }
-  if (info.features & fuchsia_hardware_ethernet_INFO_FEATURE_WLAN) {
+  if (info.features & fuchsia_hardware_ethernet_Features_WLAN) {
     // Don't run netsvc for wireless network devices
     goto fail_close_svc;
   }

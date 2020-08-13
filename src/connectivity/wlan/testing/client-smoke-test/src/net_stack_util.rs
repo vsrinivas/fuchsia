@@ -135,7 +135,7 @@ mod tests {
                 filepath: String::new(),
                 mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress { octets })),
                 mtu: 0,
-                features: 0,
+                features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                 administrative_status: AdministrativeStatus::Enabled,
                 physical_status: PhysicalStatus::Up,
                 addresses,

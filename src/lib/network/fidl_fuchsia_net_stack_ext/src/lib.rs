@@ -106,7 +106,7 @@ pub struct InterfaceProperties {
     pub filepath: String,
     pub mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
     pub mtu: u32,
-    pub features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
+    pub features: fidl_fuchsia_hardware_ethernet::Features,
     pub administrative_status: AdministrativeStatus,
     pub physical_status: PhysicalStatus,
     pub addresses: Vec<fidl_fuchsia_net_ext::Subnet>,
@@ -127,8 +127,6 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
         }: fidl::InterfaceProperties,
     ) -> Self {
         let mac = mac.map(|mac| (*mac).into());
-        let features =
-            fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
         let administrative_status = AdministrativeStatus::from(administrative_status);
         let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
@@ -215,7 +213,7 @@ fn test_display_interfaceinfo() {
                         octets: [0, 1, 2, 255, 254, 253]
                     }),
                     mtu: 1500,
-                    features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::all(),
+                    features: fidl_fuchsia_hardware_ethernet::Features::all(),
                     administrative_status: AdministrativeStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
                     addresses: vec![
@@ -239,7 +237,7 @@ fn test_display_interfaceinfo() {
   filepath   : /dev/class/ethernet/123
   mac        : 00:01:02:ff:fe:fd
   mtu        : 1500
-  features   : WLAN | SYNTHETIC | LOOPBACK
+  features   : Wlan | Synthetic | Loopback
   status     : ENABLED | LINK_UP
   addr       : 255.255.255.0/4
   addr       : 255.255.255.1/4"#

@@ -673,10 +673,10 @@ func TestStaticIPConfiguration(t *testing.T) {
 	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
 	for _, test := range []struct {
 		name     string
-		features uint32
+		features ethernet.Features
 	}{
 		{name: "default"},
-		{name: "wlan", features: ethernet.InfoFeatureWlan},
+		{name: "wlan", features: ethernet.FeaturesWlan},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			d, _ := testutil.MakeEthernetDevice(t, ethernet.Info{

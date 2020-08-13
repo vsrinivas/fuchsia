@@ -66,7 +66,16 @@ pub enum InterfaceMatcher {
     All,
     TopoPath(String),
     MacAddress(fidl_fuchsia_hardware_ethernet_ext::MacAddress),
-    Feature(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures),
+    Feature(fidl_fuchsia_hardware_ethernet::Features),
+}
+
+fn parse_feature(s: &str) -> Result<fidl_fuchsia_hardware_ethernet::Features, anyhow::Error> {
+    match s.as_ref() {
+        "synthetic" => Ok(fidl_fuchsia_hardware_ethernet::Features::Synthetic),
+        "loopback" => Ok(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+        "wireless" => Ok(fidl_fuchsia_hardware_ethernet::Features::Wlan),
+        s => Err(anyhow::anyhow!("unknown network interface feature \"{}\"", s)),
+    }
 }
 
 impl InterfaceMatcher {
@@ -77,9 +86,7 @@ impl InterfaceMatcher {
             ("mac_address", address) => Ok(InterfaceMatcher::MacAddress(
                 address.parse::<fidl_fuchsia_hardware_ethernet_ext::MacAddress>()?,
             )),
-            ("feature", feature) => Ok(InterfaceMatcher::Feature(
-                feature.parse::<fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures>()?,
-            )),
+            ("feature", feature) => Ok(InterfaceMatcher::Feature(parse_feature(feature)?)),
             (unknown, _) => {
                 Err(anyhow::format_err!("invalid matcher option for interface: {}", unknown))
             }
@@ -165,9 +172,7 @@ mod tests {
                 .expect("parse matcher should succeed")
         );
         assert_eq!(
-            InterfaceMatcher::Feature(
-                fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::SYNTHETIC
-            ),
+            InterfaceMatcher::Feature(fidl_fuchsia_hardware_ethernet::Features::Synthetic),
             InterfaceMatcher::parse_as_tuple(("feature", "synthetic"))
                 .expect("parse matcher should succeed")
         );
@@ -197,7 +202,7 @@ mod tests {
     fn test_rule_overrides() {
         let got = config_for_device(
             &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo {
-                features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::empty(),
+                features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                 mac: fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: [0; 6] },
                 mtu: 0,
             },
