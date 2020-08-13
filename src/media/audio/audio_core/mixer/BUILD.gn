@@ -92,6 +92,7 @@ executable("unittest_bin") {
     "point_sampler_unittest.cc",
     "position_manager_unittest.cc",
     "sinc_sampler_unittest.cc",
+    "source_info_unittest.cc",
   ]
 
   deps = [

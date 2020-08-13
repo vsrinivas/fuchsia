@@ -471,8 +471,7 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
       std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
 
   // Connect packet queue to mix stage; we inspect running position & error via Mixer::Bookkeeping.
-  auto mixer = mix_stage_->AddInput(packet_queue);
-  auto bk = &(mixer->bookkeeping());
+  auto& info = mix_stage_->AddInput(packet_queue)->source_info();
 
   // Set the limits for worst-case source position error during this mix interval
   //
@@ -519,20 +518,20 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
   for (auto mix_count = 0; mix_count < kTotalMixCount; ++mix_count) {
     mix_stage_->ReadLock(time_until(kMixDuration * mix_count), dest_frames_per_mix * mix_count,
                          dest_frames_per_mix);
-    EXPECT_EQ(bk->next_dest_frame, dest_frames_per_mix * (mix_count + 1));
+    EXPECT_EQ(info.next_dest_frame, dest_frames_per_mix * (mix_count + 1));
 
     // Track the worst-case position error, and track worst-case in the last ten mixes separately.
-    if (bk->frac_source_error > max_frac_error) {
-      max_frac_error = bk->frac_source_error;
+    if (info.frac_source_error > max_frac_error) {
+      max_frac_error = info.frac_source_error;
       mix_count_of_max_error = mix_count;
     }
-    if (bk->frac_source_error < min_frac_error) {
-      min_frac_error = bk->frac_source_error;
+    if (info.frac_source_error < min_frac_error) {
+      min_frac_error = info.frac_source_error;
       mix_count_of_min_error = mix_count;
     }
     if (mix_count >= kTotalMixCount - 10) {
-      max_frac_error_last_ten = std::max(bk->frac_source_error, max_frac_error_last_ten);
-      min_frac_error_last_ten = std::min(bk->frac_source_error, min_frac_error_last_ten);
+      max_frac_error_last_ten = std::max(info.frac_source_error, max_frac_error_last_ten);
+      min_frac_error_last_ten = std::min(info.frac_source_error, min_frac_error_last_ten);
     }
   }
 
@@ -555,23 +554,23 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
   }
 }
 
-TEST_F(MixStageTest, Position) { TestMixPosition(ClockMode::SAME); }
-TEST_F(MixStageTest, Position_Offset) { TestMixPosition(ClockMode::WITH_OFFSET); }
+TEST_F(MixStageTest, MicroSrc_Basic) { TestMixPosition(ClockMode::SAME); }
+TEST_F(MixStageTest, MicroSrc_Offset) { TestMixPosition(ClockMode::WITH_OFFSET); }
 
-TEST_F(MixStageTest, Position_AdjustUp1) { TestMixPosition(ClockMode::RATE_ADJUST, 1); }
-TEST_F(MixStageTest, Position_AdjustDown1) { TestMixPosition(ClockMode::RATE_ADJUST, -1); }
+TEST_F(MixStageTest, MicroSrc_AdjustUp1) { TestMixPosition(ClockMode::RATE_ADJUST, 1); }
+TEST_F(MixStageTest, MicroSrc_AdjustDown1) { TestMixPosition(ClockMode::RATE_ADJUST, -1); }
 
-TEST_F(MixStageTest, Position_AdjustUp5) { TestMixPosition(ClockMode::RATE_ADJUST, 5); }
-TEST_F(MixStageTest, Position_AdjustDown5) { TestMixPosition(ClockMode::RATE_ADJUST, -5); }
+TEST_F(MixStageTest, MicroSrc_AdjustUp5) { TestMixPosition(ClockMode::RATE_ADJUST, 5); }
+TEST_F(MixStageTest, MicroSrc_AdjustDown5) { TestMixPosition(ClockMode::RATE_ADJUST, -5); }
 
-TEST_F(MixStageTest, Position_AdjustUp10) { TestMixPosition(ClockMode::RATE_ADJUST, 10); }
-TEST_F(MixStageTest, Position_AdjustDown10) { TestMixPosition(ClockMode::RATE_ADJUST, -10); }
+TEST_F(MixStageTest, MicroSrc_AdjustUp10) { TestMixPosition(ClockMode::RATE_ADJUST, 10); }
+TEST_F(MixStageTest, MicroSrc_AdjustDown10) { TestMixPosition(ClockMode::RATE_ADJUST, -10); }
 
-TEST_F(MixStageTest, Position_AdjustUp100) { TestMixPosition(ClockMode::RATE_ADJUST, 100); }
-TEST_F(MixStageTest, Position_AdjustDown100) { TestMixPosition(ClockMode::RATE_ADJUST, -100); }
+TEST_F(MixStageTest, MicroSrc_AdjustUp100) { TestMixPosition(ClockMode::RATE_ADJUST, 100); }
+TEST_F(MixStageTest, MicroSrc_AdjustDown100) { TestMixPosition(ClockMode::RATE_ADJUST, -100); }
 
-TEST_F(MixStageTest, Position_AdjustUp1000) { TestMixPosition(ClockMode::RATE_ADJUST, 1000); }
-TEST_F(MixStageTest, Position_AdjustDown1000) { TestMixPosition(ClockMode::RATE_ADJUST, -1000); }
+TEST_F(MixStageTest, MicroSrc_AdjustUp1000) { TestMixPosition(ClockMode::RATE_ADJUST, 1000); }
+TEST_F(MixStageTest, MicroSrc_AdjustDown1000) { TestMixPosition(ClockMode::RATE_ADJUST, -1000); }
 
 }  // namespace
 }  // namespace media::audio

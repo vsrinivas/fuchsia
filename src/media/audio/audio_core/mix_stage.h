@@ -53,9 +53,6 @@ class MixStage : public ReadableStream {
     bool accumulate;
     StreamUsageMask usages_mixed;
     float applied_gain_db;
-
-    // Per-stream job state, maintained for each renderer.
-    uint32_t frames_produced;
   };
 
   struct StreamHolder {
@@ -65,7 +62,8 @@ class MixStage : public ReadableStream {
 
   enum class TaskType { Mix, Trim };
   void ForEachSource(TaskType task_type, zx::time dest_ref_time);
-  void ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& stream);
+  void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+                                     ReadableStream& stream);
 
   void MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_ref_time);
   bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);
