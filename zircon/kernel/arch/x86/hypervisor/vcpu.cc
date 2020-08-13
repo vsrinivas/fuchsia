@@ -95,7 +95,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
 
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());
-  arch_disable_ints();
+  int_state_ = arch_interrupt_save();
   __UNUSED zx_status_t status = vmptrld(vmcs_address_);
   arch_set_blocking_disallowed(true);
   DEBUG_ASSERT(status == ZX_OK);
@@ -106,7 +106,7 @@ AutoVmcs::~AutoVmcs() {
   if (vmcs_address_) {
     arch_set_blocking_disallowed(false);
   }
-  arch_enable_ints();
+  arch_interrupt_restore(int_state_);
 }
 
 void AutoVmcs::Invalidate() {

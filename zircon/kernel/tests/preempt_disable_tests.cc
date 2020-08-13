@@ -129,12 +129,12 @@ static bool test_decrement_clears_preempt_pending() {
 
   // Test that preemption_state.ReschedReenable() clears preempt_pending.
   preemption_state.ReschedDisable();
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
   Thread::Current::Reschedule();
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to false.
   EXPECT_EQ(preemption_state.preempt_pending(), true);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
   preemption_state.ReschedReenable();
   EXPECT_EQ(preemption_state.preempt_pending(), false);
 
@@ -151,12 +151,12 @@ static bool test_blocking_clears_preempt_pending() {
   preemption_state.PreemptDisable();
   Thread::Current::Reschedule();
   EXPECT_EQ(preemption_state.preempt_pending(), true);
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
   Thread::Current::SleepRelative(ZX_MSEC(10));
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to true.
   EXPECT_EQ(preemption_state.preempt_pending(), false);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
   preemption_state.PreemptReenable();
 
   // It is OK to block while rescheduling is disabled.  In this case,
@@ -182,7 +182,7 @@ static bool test_interrupt_preserves_preempt_pending() {
   preemption_state.ReschedDisable();
   // Do this with interrupts disabled so that a real interrupt does not
   // clear preempt_pending.
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
   Thread::Current::Reschedule();
 
   // Simulate an interrupt handler invocation.
@@ -193,7 +193,7 @@ static bool test_interrupt_preserves_preempt_pending() {
 
   EXPECT_EQ(do_preempt, false);
   EXPECT_EQ(preemption_state.preempt_pending(), true);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
   preemption_state.ReschedReenable();
   EXPECT_EQ(preemption_state.preempt_pending(), false);
 

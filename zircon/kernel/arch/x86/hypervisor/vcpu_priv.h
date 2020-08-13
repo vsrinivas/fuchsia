@@ -238,6 +238,7 @@ class AutoVmcs : public hypervisor::StateInvalidator {
 
  private:
   paddr_t vmcs_address_;
+  interrupt_saved_state_t int_state_;
 };
 
 // Pins execution to a CPU within a given scope.

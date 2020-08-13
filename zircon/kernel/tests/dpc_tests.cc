@@ -55,10 +55,10 @@ static bool test_dpc_queue() {
   for (int i = 0; i < kNumDPCs; i++) {
     (*context)[i].dpc =
         Dpc{&event_signal_from_dpc_check_cpu, reinterpret_cast<void*>(&(*context)[i])};
-    arch_disable_ints();
+    interrupt_saved_state_t int_state = arch_interrupt_save();
     (*context)[i].expected_cpu = arch_curr_cpu_num();
     (*context)[i].dpc.Queue(/*reschedule=*/false);
-    arch_enable_ints();
+    arch_interrupt_restore(int_state);
   }
   for (int i = 0; i < kNumDPCs; i++) {
     if ((*context)[i].dpc_started) {

@@ -74,7 +74,7 @@ zx_status_t suspend_thread(void* raw_arg) {
 
   bootstrap_data->registers_ptr = reinterpret_cast<uintptr_t>(&regs);
 
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
 
   // Save system state.
   platform_suspend();
@@ -84,7 +84,7 @@ zx_status_t suspend_thread(void* raw_arg) {
   TRACEF("Entering x86_acpi_transition_s_state\n");
   acpi_status = x86_acpi_transition_s_state(&regs, target_s_state, sleep_type_a, sleep_type_b);
   if (acpi_status != AE_OK) {
-    arch_enable_ints();
+    arch_interrupt_restore(int_state);
     TRACEF("x86_acpi_transition_s_state failed: %x\n", acpi_status);
     return ZX_ERR_INTERNAL;
   }
@@ -98,7 +98,7 @@ zx_status_t suspend_thread(void* raw_arg) {
   percpu::Get(arch_curr_cpu_num()).timer_queue.ThawPercpu();
 
   DEBUG_ASSERT(arch_ints_disabled());
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
   return ZX_OK;
 }
 
@@ -232,11 +232,11 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
     struct x86_realmode_entry_data_registers regs;
 
     DEBUG_ASSERT(target_s_state == 5);
-    arch_disable_ints();
+    interrupt_saved_state_t int_state = arch_interrupt_save();
 
     ACPI_STATUS acpi_status =
         x86_acpi_transition_s_state(&regs, target_s_state, sleep_type_a, sleep_type_b);
-    arch_enable_ints();
+    arch_interrupt_restore(int_state);
     if (acpi_status != AE_OK) {
       return ZX_ERR_INTERNAL;
     }

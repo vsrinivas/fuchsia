@@ -216,13 +216,13 @@ static int timer_stress_worker(void* void_arg) {
 
     // Set a timer, then switch to a different CPU to ensure we race with it.
 
-    arch_disable_ints();
+    interrupt_saved_state_t int_state = arch_interrupt_save();
     cpu_num_t timer_cpu = arch_curr_cpu_num();
     const Deadline deadline = Deadline::no_slack(current_time() + timer_duration);
     t.Set(deadline, timer_stress_cb, void_arg);
     Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
     DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
-    arch_enable_ints();
+    arch_interrupt_restore(int_state);
 
     // We're now running on something other than timer_cpu.
 
@@ -399,7 +399,7 @@ static bool trylock_or_cancel_canceled() {
   arg.lock = &lock;
   arg.wait = 1;
 
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
 
   cpu_num_t timer_cpu = arch_curr_cpu_num();
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
@@ -410,7 +410,7 @@ static bool trylock_or_cancel_canceled() {
   Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
   DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
 
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
 
   {
     AutoSpinLock guard(&lock);
@@ -447,7 +447,7 @@ static bool trylock_or_cancel_get_lock() {
   arg.lock = &lock;
   arg.wait = 1;
 
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
 
   cpu_num_t timer_cpu = arch_curr_cpu_num();
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
@@ -458,7 +458,7 @@ static bool trylock_or_cancel_get_lock() {
   Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
   DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
 
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
 
   {
     AutoSpinLock guard(&lock);

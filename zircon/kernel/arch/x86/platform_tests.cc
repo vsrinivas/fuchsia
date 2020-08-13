@@ -43,14 +43,14 @@ static void rdtscp_aux(void* context) {
 static bool test_x64_msrs() {
   BEGIN_TEST;
 
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
   // Test read_msr for an MSR that is known to always exist on x64.
   uint64_t val = read_msr(X86_MSR_IA32_LSTAR);
   EXPECT_NE(val, 0ull);
 
   // Test write_msr to write that value back.
   write_msr(X86_MSR_IA32_LSTAR, val);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
 
   // Test read_msr_safe for an MSR that is known to not exist.
   // If read_msr_safe is busted, then this will #GP (panic).

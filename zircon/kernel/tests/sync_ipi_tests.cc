@@ -49,9 +49,9 @@ static int deadlock_test_thread(void* arg) {
   gate->Wait();
 
   int counter = 0;
-  arch_disable_ints();
+  interrupt_saved_state_t int_state = arch_interrupt_save();
   mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state);
   return 0;
 }
 

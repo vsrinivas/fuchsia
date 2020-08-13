@@ -96,6 +96,7 @@ class AutoGich {
 
  private:
   IchState* ich_state_;
+  interrupt_saved_state_t int_state_;
 };
 
 class Vcpu {

@@ -142,7 +142,7 @@ AutoGich::AutoGich(IchState* ich_state, bool pending) : ich_state_(ich_state) {
   }
 
   DEBUG_ASSERT(!arch_ints_disabled());
-  arch_disable_ints();
+  int_state_ = arch_interrupt_save();
   arch_set_blocking_disallowed(true);
   gic_write_gich_state(ich_state_, gich_hcr);
 }
@@ -151,7 +151,7 @@ AutoGich::~AutoGich() {
   DEBUG_ASSERT(arch_ints_disabled());
   gic_read_gich_state(ich_state_);
   arch_set_blocking_disallowed(false);
-  arch_enable_ints();
+  arch_interrupt_restore(int_state_);
 }
 
 // Returns the number of active priorities registers, based on the number of
