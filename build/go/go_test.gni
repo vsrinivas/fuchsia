@@ -15,6 +15,7 @@ import("//build/testing/test_spec.gni")
 #
 #   args
 #     Optional: additional arguments needed when invoking the test.
+#     Only applies to host tests.
 #     Type: list of strings.
 #
 #   disabled
@@ -23,16 +24,16 @@ import("//build/testing/test_spec.gni")
 #     Default: false
 #
 #   environments
-#     Optional: what environments this test should target. Only used here
-#     for linux and mac tests, with a default value of a general linux/mac
-#     environment (as a function of $current_os).
-#     See //build/testing/test_spec.gni for more details.
+#     Optional: what environments this test should target. Only applies to host
+#     host tests. See //build/testing/test_spec.gni for more details.
+#     Type: list of scopes.
 #
 #   timeout:
-#     Optional: override default timeout. Values must be valid Go durations,
-#     such as "300ms", "-1.5h" or "2h45m".
+#     Optional: override default timeout. Only applies to host tests.
+#     Values must be valid Go durations such as "300ms", "-1.5h" or "2h45m".
 #     See https://golang.org/cmd/go/#hdr-Testing_flags for details on timeout.
 #     See https://golang.org/pkg/time/#ParseDuration for duration format.
+#     Type: string.
 template("go_test") {
   # go_build() redirects out of the variant, so root_out_dir et al are not
   # what it actually uses.  Just redirect this target itself first, so the
@@ -57,9 +58,16 @@ template("go_test") {
 
     _is_disabled = defined(invoker.disabled) && invoker.disabled
 
+    _is_host = is_linux || is_mac
+
+    assert(
+        _is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
+                         !defined(invoker.timeout)),
+        "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
+
     # We only include test metadata for non-disabled, linux/mac tests; metadata
     # for fuchsia tests is aggregated in the package template.
-    _include_test_metadata = !_is_disabled && (is_linux || is_mac)
+    _include_test_metadata = !_is_disabled && _is_host
     if (_include_test_metadata) {
       test_spec(_test_spec_target_name) {
         target = ":$_main_target_name"

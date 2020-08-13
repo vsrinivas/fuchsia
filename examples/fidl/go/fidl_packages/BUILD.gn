@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_fuchsia_unittest_package.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_test("fidl-example-go-test") {
@@ -17,14 +17,9 @@ go_library("fidl-example-go") {
   deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples($go_toolchain)" ]
 }
 
-test_package("fidl-example-go-tests") {
+go_fuchsia_unittest_package("fidl-example-go-tests") {
+  executable_path = "test/fidl-example-go-test"
   deps = [ ":fidl-example-go-test" ]
-  tests = [
-    {
-      name = "fidl-example-go-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("fidl_packages") {

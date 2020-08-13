@@ -52,6 +52,12 @@ import("fuchsia_unittest_component.gni")
 #     This is used in generating the manifest.
 #     Type: string
 #
+#   executable_args (ignored if `manifest` is specified)
+#     Specify the args to be passed to test executable.
+#     Example: ["--foo", "bar"]
+#     This is used in generating the manifest.
+#     Type: list of string
+#
 #   test_specs (optional)
 #     Additional test specifications to apply to the test defined above.
 #     See `test_spec.gni`.
@@ -67,6 +73,7 @@ template("fuchsia_unittest_package") {
                              "deps",
                              "manifest",
                              "executable_path",
+                             "executable_args",
                            ])
     component_name = invoker.target_name
     visibility = [ ":*" ]
