@@ -15,7 +15,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
-#include <fbl/auto_call.h>
 #include <usb/dwc2/metadata.h>
 
 #include "sherlock.h"
@@ -47,7 +46,6 @@ constexpr pbus_bti_t dwc2_btis[] = {
 
 constexpr char kManufacturer[] = "Zircon";
 constexpr char kProduct[] = "CDC-Ethernet";
-constexpr char kProductRndis[] = "RNDIS-Ethernet";
 constexpr char kSerial[] = "0123456789ABCDEF";
 
 // Metadata for DWC2 driver.
@@ -126,28 +124,29 @@ constexpr pbus_irq_t xhci_irqs[] = {
     },
 };
 
-constexpr pbus_mmio_t usb_phy_mmios[] = {{
-                                             .base = T931_RESET_BASE,
-                                             .length = T931_RESET_LENGTH,
-                                         },
-                                         {
-                                             .base = T931_USBCTRL_BASE,
-                                             .length = T931_USBCTRL_LENGTH,
-                                         },
-                                         {
-                                             .base = T931_USBPHY20_BASE,
-                                             .length = T931_USBPHY20_LENGTH,
-                                         },
-                                         {
-                                             .base = T931_USBPHY21_BASE,
-                                             .length = T931_USBPHY21_LENGTH,
-                                         },
-#ifdef FACTORY_BUILD
-                                         {
-                                             .base = T931_USB_BASE,
-                                             .length = T931_USB_LENGTH,
-                                         }
-#endif  // FACTORY_BUILD
+constexpr pbus_mmio_t usb_phy_mmios[] = {
+    {
+        .base = T931_RESET_BASE,
+        .length = T931_RESET_LENGTH,
+    },
+    {
+        .base = T931_USBCTRL_BASE,
+        .length = T931_USBCTRL_LENGTH,
+    },
+    {
+        .base = T931_USBPHY20_BASE,
+        .length = T931_USBPHY20_LENGTH,
+    },
+    {
+        .base = T931_USBPHY21_BASE,
+        .length = T931_USBPHY21_LENGTH,
+    },
+    #ifdef FACTORY_BUILD
+    {
+        .base = T931_USB_BASE,
+        .length = T931_USB_LENGTH,
+    }
+    #endif
 };
 
 constexpr pbus_irq_t usb_phy_irqs[] = {
@@ -257,61 +256,33 @@ zx_status_t Sherlock::UsbInit() {
   constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
                                    ? alignof(UsbConfig)
                                    : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-
-  pdev_board_info_t info;
-  status = pbus_.GetBoardInfo(&info);
-  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
-    constexpr size_t config_size = sizeof(UsbConfig) + 1 * sizeof(FunctionDescriptor);
-    UsbConfig* config =
-        reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
-    if (!config) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    fbl::AutoCall call([=]() { free(config); });
-    config->vid = GOOGLE_USB_VID;
-    config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
-    strncpy(config->manufacturer, kManufacturer, sizeof(config->manufacturer));
-    strncpy(config->serial, kSerial, sizeof(config->serial));
-    strncpy(config->product, kProductRndis, sizeof(config->product));
-    config->functions[0].interface_class = USB_CLASS_MISC;
-    config->functions[0].interface_subclass = USB_SUBCLASS_MSC_RNDIS;
-    config->functions[0].interface_protocol = USB_PROTOCOL_MSC_RNDIS_ETHERNET;
-    usb_metadata[0].data_size = config_size;
-    usb_metadata[0].data_buffer = config;
-
-    status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
-      return status;
-    }
-  } else {
-    constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
-    UsbConfig* config =
-        reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
-    if (!config) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    config->vid = GOOGLE_USB_VID;
-    config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
-    strcpy(config->manufacturer, kManufacturer);
-    strcpy(config->serial, kSerial);
-    strcpy(config->product, kProduct);
-    config->functions[0].interface_class = USB_CLASS_COMM;
-    config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
-    config->functions[0].interface_protocol = 0;
-    config->functions[1].interface_class = USB_CLASS_VENDOR;
-    config->functions[1].interface_subclass = 0;
-    config->functions[1].interface_protocol = 0;
-    usb_metadata[0].data_size = config_size;
-    usb_metadata[0].data_buffer = config;
-
-    status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
-    free(config);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
-      return status;
-    }
+  constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
+  UsbConfig* config =
+      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
+  if (!config) {
+    return ZX_ERR_NO_MEMORY;
   }
+  config->vid = GOOGLE_USB_VID;
+  config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
+  strcpy(config->manufacturer, kManufacturer);
+  strcpy(config->serial, kSerial);
+  strcpy(config->product, kProduct);
+  config->functions[0].interface_class = USB_CLASS_COMM;
+  config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
+  config->functions[0].interface_protocol = 0;
+  config->functions[1].interface_class = USB_CLASS_VENDOR;
+  config->functions[1].interface_subclass = 0;
+  config->functions[1].interface_protocol = 0;
+  usb_metadata[0].data_size = config_size;
+  usb_metadata[0].data_buffer = config;
+
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
+  free(config);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+    return status;
+  }
+
   return ZX_OK;
 }
 
