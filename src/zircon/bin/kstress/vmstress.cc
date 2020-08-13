@@ -7,9 +7,11 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/exception.h>
+#include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
@@ -25,6 +27,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
@@ -33,7 +36,9 @@
 #include <atomic>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
+#include <thread>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -42,6 +47,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 
 #include "stress_test.h"
 
@@ -51,10 +57,14 @@ static inline IntType uniform_rand_range(IntType a, IntType b, StressTest::Rng& 
   return std::uniform_int_distribution<IntType>(a, b)(rng);
 }
 
-// Helper to generate the common [0, a) range.
+// Helper to generate the common [0, max(1,a)). That is, if a range of size 0 is returned, this is
+// considered valid and always generates the result 0.
 template <typename IntType = uint64_t>
 static inline IntType uniform_rand(IntType range, StressTest::Rng& rng) {
-  return uniform_rand_range(static_cast<IntType>(0), range - 1, rng);
+  if (range == static_cast<IntType>(0)) {
+    return range;
+  }
+  return uniform_rand_range<IntType>(static_cast<IntType>(0), range - 1, rng);
 }
 
 class VmStressTest;
@@ -83,6 +93,8 @@ class VmStressTest : public StressTest {
 
   virtual const char* name() const { return "VM Stress"; }
 
+  zx::unowned_resource RootResource() { return zx::unowned_resource{root_resource_}; }
+
  private:
   int test_thread();
 
@@ -98,6 +110,8 @@ class TestInstance {
 
   virtual zx_status_t Start() = 0;
   virtual zx_status_t Stop() = 0;
+
+  zx::unowned_resource RootResource() { return test_->RootResource(); }
 
  protected:
   // TODO: scale based on the number of cores in the system and/or command line arg
@@ -423,6 +437,8 @@ zx_status_t SingleVmoTestInstance::Stop() {
     // We need to handle potential crashes in the vmo threads when the pager is torn down. Since
     // not all threads will actually crash, we can't stop handling crashes until all threads
     // have terminated.
+    // TODO: Note that these crashes may produce visible output on the system logs and this
+    // shutdown should maybe be restructured to avoid this from happening.
     for (unsigned i = 0; i < kNumVmoThreads; i++) {
       zx_status_t status = thread_handles_[i].create_exception_channel(0, &channels[i]);
       ZX_ASSERT(status == ZX_OK);
@@ -857,9 +873,492 @@ int CowCloneTestInstance::op_thread() {
   return 0;
 }
 
+// This test instances runs multiple VMOs across multiple threads and is trying to trigger unusual
+// race conditions and kernel failures that come from mixing parallelism of all kinds of operations.
+// The trade off is that the test almost never knows what the outcome of an operation should be and
+// so this only catches bugs where we can ultimately trip a kernel assert or something similar.
+class MultiVmoTestInstance : public TestInstance {
+ public:
+  MultiVmoTestInstance(VmStressTest* test, uint64_t mem_limit)
+      : TestInstance(test),
+        memory_limit_pages_(mem_limit / ZX_PAGE_SIZE),
+        // Scale our maximum threads to ensure that if all threads allocate a full size vmo (via
+        // copy-on-write or otherwise) we wouldn't exceed our memory limit
+        max_threads_(memory_limit_pages_ / kMaxVmoPages) {}
+
+  zx_status_t Start() override {
+    // If max threads was calculated smaller than low threads then that means we really don't have
+    // much memory. Don't try and recover this case, just fail.
+    if (max_threads_ < low_threads_) {
+      PrintfAlways("Not enough free memory to run test instance\n");
+      return ZX_ERR_NO_MEMORY;
+    }
+    if (shutdown_) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    zx::unowned_resource root_resource = RootResource();
+    if (*root_resource) {
+      zx_iommu_desc_dummy_t desc;
+      zx_status_t result =
+          zx::iommu::create(*root_resource, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu_);
+      if (result != ZX_OK) {
+        return result;
+      }
+
+      result = zx::bti::create(iommu_, 0, 0xdeadbeef, &bti_);
+      if (result != ZX_OK) {
+        return ZX_OK;
+      }
+    }
+
+    auto rng = RngGen();
+
+    spawn_root_vmo(rng);
+    return ZX_OK;
+  }
+  zx_status_t Stop() override {
+    // Signal shutdown and wait for everyone. Its possible for living_threads_ to increase after
+    // shutdown_ is set if a living thread creates another thread. This is fine since it means
+    // living_threads goes from a non-zero value to a non-zero value, but it will never go from 0
+    // to non-zero.
+    shutdown_ = true;
+    while (living_threads_ > 0) {
+      zx::nanosleep(zx::deadline_after(zx::msec(500)));
+    }
+    return ZX_OK;
+  }
+
+ private:
+  void spawn_root_vmo(StressTest::Rng& rng) {
+    zx::vmo vmo;
+    bool reliable_mappings = true;
+    uint64_t vmo_size = uniform_rand(kMaxVmoPages, rng) * PAGE_SIZE;
+
+    // Skew heavily away from contiguous VMOs as they are very limited in what operations are
+    // supported and need less testing.
+    if (bti_ && uniform_rand(6, rng) == 0) {
+      zx_status_t result = zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmo);
+      if (result != ZX_OK) {
+        return;
+      }
+    } else {
+      uint32_t options = 0;
+      // Skew away from resizable VMOs as they are not common and many operations don't work.
+      if (uniform_rand(4, rng) == 0) {
+        options |= ZX_VMO_RESIZABLE;
+        reliable_mappings = false;
+      }
+
+      if (uniform_rand(2, rng) == 0) {
+        zx::pager pager;
+        zx::port port;
+        zx_status_t result = zx::pager::create(0, &pager);
+        ZX_ASSERT(result == ZX_OK);
+        result = zx::port::create(0, &port);
+        ZX_ASSERT(result == ZX_OK);
+
+        result = pager.create_vmo(options, port, 0, vmo_size, &vmo);
+        ZX_ASSERT(result == ZX_OK);
+        // Randomly discard reliable mappings even though not resizable to give the pager a chance
+        // to generate faults on non-resizable vmos.
+        if (reliable_mappings && uniform_rand(4, rng) == 0) {
+          reliable_mappings = false;
+        }
+        // Force spin up the pager thread as it's required to ensure the VMO threads do not block
+        // forever.
+        zx::vmo dup_vmo;
+        result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+        ZX_ASSERT(result == ZX_OK);
+        if (!make_thread([this, pager = std::move(pager), port = std::move(port),
+                          vmo = std::move(dup_vmo), reliable_mappings]() mutable {
+              pager_thread(std::move(pager), std::move(port), std::move(vmo), reliable_mappings);
+            })) {
+          // if the pager thread couldn't spin up bail right now and don't make the client thread as
+          // that client thread will either block or hard crash, either scenario will make that
+          // thread unrecoverable.
+          return;
+        }
+      } else {
+        zx_status_t result = zx::vmo::create(vmo_size, options, &vmo);
+        ZX_ASSERT(result == ZX_OK);
+      }
+    }
+
+    auto ops = make_ops(rng);
+
+    make_thread([this, vmo = std::move(vmo), ops = std::move(ops), reliable_mappings]() mutable {
+      op_thread(std::move(vmo), std::move(ops), reliable_mappings);
+    });
+  }
+
+  // TODO: pager_thread currently just fulfills any page faults correctly. This should be expanded
+  // to detach, error ranges, pre-supply pages etc.
+  void pager_thread(zx::pager pager, zx::port port, zx::vmo vmo, bool reliable_mappings) {
+    // To exit the pager thread we need to know once we have the only reference to the vmo. This
+    // requires two things, our vmo handle be the only handle to that vmo, and the vmo have no
+    // children. The first condition has no signal and so until we know we have the only handle we
+    // will used timed waits and poll. Once we are the solo_owner, tracked in this variable, we
+    // will be able to use the zero children signal.
+    bool solo_owner = false;
+    while (1) {
+      zx_port_packet_t packet;
+      zx_status_t result =
+          port.wait(solo_owner ? zx::time::infinite() : zx::deadline_after(zx::msec(100)), &packet);
+      if (result == ZX_ERR_TIMED_OUT) {
+        zx_info_handle_count_t info;
+        result = vmo.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
+        ZX_ASSERT(result == ZX_OK);
+        // Check if we have the only handle
+        if (info.handle_count == 1) {
+          // Start watching for the zero children signal.
+          result = vmo.wait_async(port, 1, ZX_VMO_ZERO_CHILDREN, 0);
+          ZX_ASSERT(result == ZX_OK);
+          solo_owner = true;
+        }
+        continue;
+      }
+      if (packet.key == 1) {
+        ZX_ASSERT(solo_owner);
+        // No children, and we have the only handle. Done.
+        break;
+      }
+      ZX_ASSERT(packet.key == 0);
+      ZX_ASSERT(packet.type == ZX_PKT_TYPE_PAGE_REQUEST);
+
+      if (packet.page_request.command == ZX_PAGER_VMO_COMPLETE) {
+        // VMO is finished, so we have nothing to do. Technically since we have a handle to the vmo
+        // this case will never happen.
+        break;
+      } else if (packet.page_request.command != ZX_PAGER_VMO_READ) {
+        PrintfAlways("Unknown page_request command %d\n", packet.page_request.command);
+        return;
+      }
+
+      // No matter what we decide to do we *MUST* ensure we also fullfill the page fault in some way
+      // otherwise we risk blocking the faulting thread (and also ourselves) forever. Above all we
+      // must guarantee that the op_thread can progress to the point of closing the VMO such that
+      // we end up with the only VMO handle.
+
+      zx::vmo aux_vmo;
+      if (zx::vmo::create(packet.page_request.length, 0, &aux_vmo) != ZX_OK) {
+        PrintfAlways("Failed to create VMO of length %" PRIu64 " to fulfill page fault\n",
+                     packet.page_request.length);
+        return;
+      }
+
+      result = pager.supply_pages(vmo, packet.page_request.offset, packet.page_request.length,
+                                  aux_vmo, 0);
+      // If the underlying VMO was resized then its possible the supply destination is now out of
+      // range. This is okay and we can just continue. In any other case something has gone
+      // horribly wrong.
+      if (result != ZX_OK && result != ZX_ERR_OUT_OF_RANGE) {
+        PrintfAlways("Failed to supply pages: %d\n", result);
+        return;
+      }
+    }
+  }
+
+  // This is the main function that performs continuous operations on a vmo. It may try to spawn
+  // additional threads for parallelism, but they all share the same op counter to prevent any
+  // particular vmo hierarchy living 'forever' by spawning new children all the time.
+  void op_thread(zx::vmo vmo, std::shared_ptr<std::atomic<uint64_t>> op_count,
+                 bool reliable_mappings) {
+    auto rng = RngGen();
+
+    zx::pmt pmt;
+    std::optional<fbl::Span<uint8_t>> mapping;
+    auto unmap_mapping = [&mapping]() {
+      if (auto span = mapping) {
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(span->data()), span->size_bytes());
+        mapping = std::nullopt;
+      }
+    };
+    auto cleanup = fbl::AutoCall([&unmap_mapping, &pmt]() {
+      unmap_mapping();
+      if (pmt) {
+        pmt.unpin();
+      }
+    });
+
+    // Query for the current size of the vmo. This could change due to other threads with handles to
+    // this vmo calling set-size, but should ensure a decent hit rate of random range operations.
+    uint64_t vmo_size;
+    if (vmo.get_size(&vmo_size) != ZX_OK) {
+      vmo_size = kMaxVmoPages * ZX_PAGE_SIZE;
+    }
+    while (!shutdown_ && op_count->fetch_add(1) < kMaxOps) {
+      // Produce a random offset and size up front since many ops will need it.
+      uint64_t op_off, op_size;
+      random_off_size(rng, vmo_size, &op_off, &op_size);
+      switch (uniform_rand(10, rng)) {
+        case 0:  // give up early
+          Printf("G");
+          return;
+          break;
+        case 1: {  // duplicate
+          Printf("D");
+          zx::vmo dup_vmo;
+          zx_status_t result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+          ZX_ASSERT(result == ZX_OK);
+          make_thread(
+              [this, dup = std::move(dup_vmo), ops = op_count, reliable_mappings]() mutable {
+                op_thread(std::move(dup), std::move(ops), reliable_mappings);
+              });
+          break;
+        }
+        case 2: {  // read
+          Printf("R");
+          std::vector<uint8_t> buffer;
+          bool use_map = false;
+          if (mapping.has_value() && uniform_rand(2, rng) == 0) {
+            op_off = uniform_rand(mapping.value().size_bytes(), rng);
+            op_size = uniform_rand(mapping.value().size_bytes() - op_off, rng);
+            use_map = true;
+          }
+          buffer.resize(op_size);
+          // pre-commit some portion of the buffer
+          const size_t end = uniform_rand(op_size, rng);
+          const size_t start = uniform_rand(op_size, rng);
+          memset(&buffer[start], 42, end - std::min(end, start));
+          if (use_map) {
+            memcpy(buffer.data(), &mapping.value()[op_off], op_size);
+          } else {
+            vmo.read(buffer.data(), op_off, op_size);
+          }
+          break;
+        }
+        case 3: {  // write
+          Printf("W");
+          std::vector<uint8_t> buffer;
+          bool use_map = false;
+          if (mapping.has_value() && uniform_rand(2, rng) == 0) {
+            op_off = uniform_rand(mapping.value().size_bytes(), rng);
+            op_size = uniform_rand(mapping.value().size_bytes() - op_off, rng);
+            use_map = true;
+          }
+          buffer.resize(op_size);
+          // write some portion of the buffer with 'random' data.
+          const size_t end = uniform_rand(op_size, rng);
+          const size_t start = uniform_rand(op_size, rng);
+          memset(&buffer[start], 42, end - std::min(end, start));
+          if (use_map) {
+            memcpy(&mapping.value()[op_off], buffer.data(), op_size);
+          } else {
+            vmo.write(buffer.data(), op_off, op_size);
+          }
+          break;
+        }
+        case 4:  // vmo_set_size
+          Printf("S");
+          vmo.set_size(uniform_rand(kMaxVmoPages * ZX_PAGE_SIZE, rng));
+          break;
+        case 5: {  // vmo_op_range
+          Printf("O");
+          static const uint32_t ops[] = {ZX_VMO_OP_COMMIT,
+                                         ZX_VMO_OP_DECOMMIT,
+                                         ZX_VMO_OP_ZERO,
+                                         ZX_VMO_OP_LOCK,
+                                         ZX_VMO_OP_UNLOCK,
+                                         ZX_VMO_OP_CACHE_SYNC,
+                                         ZX_VMO_OP_CACHE_INVALIDATE,
+                                         ZX_VMO_OP_CACHE_CLEAN,
+                                         ZX_VMO_OP_CACHE_CLEAN_INVALIDATE};
+          vmo.op_range(ops[uniform_rand(std::size(ops), rng)], op_off, op_size, nullptr, 0);
+          break;
+        }
+        case 6: {  // vmo_set_cache_policy
+          Printf("P");
+          static const uint32_t policies[] = {ZX_CACHE_POLICY_CACHED, ZX_CACHE_POLICY_UNCACHED,
+                                              ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                              ZX_CACHE_POLICY_WRITE_COMBINING};
+          vmo.set_cache_policy(policies[uniform_rand(std::size(policies), rng)]);
+          break;
+        }
+        case 7: {  // vmo_create_child
+          Printf("C");
+          static const uint32_t type[] = {
+              ZX_VMO_CHILD_SNAPSHOT, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, ZX_VMO_CHILD_SLICE};
+          uint32_t options = type[uniform_rand(std::size(type), rng)];
+          bool child_reliable_mappings = reliable_mappings;
+          if (uniform_rand(3, rng) == 0) {
+            options |= ZX_VMO_CHILD_RESIZABLE;
+            child_reliable_mappings = false;
+          }
+          if (uniform_rand(4, rng)) {
+            options |= ZX_VMO_CHILD_NO_WRITE;
+          }
+          zx::vmo child;
+          if (vmo.create_child(options, op_off, op_size, &child) == ZX_OK) {
+            make_thread([this, child = std::move(child), ops = op_count,
+                         child_reliable_mappings]() mutable {
+              op_thread(std::move(child), std::move(ops), child_reliable_mappings);
+            });
+          }
+          break;
+        }
+        case 8: {  // vmar_map/unmap
+          // If reliable mappings is true it means we know that no one else is going to mess with
+          // the VMO in a way that would cause access to a valid mapping to generate a fault.
+          // Generally this means that the VMO is not resizable.
+          Printf("V");
+          if (reliable_mappings) {
+            if (!mapping.has_value() || uniform_rand(2, rng) == 0) {
+              uint32_t options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+              if (uniform_rand(2, rng) == 0) {
+                options |= ZX_VM_MAP_RANGE;
+              }
+              zx_vaddr_t addr;
+              // Currently fault prevention isn't enforced in mappings and so we must be *very*
+              // careful to not map in outside the actual range of the vmo.
+              if (op_off + op_size <= vmo_size &&
+                  zx::vmar::root_self()->map(0, vmo, op_off, op_size, options, &addr) == ZX_OK) {
+                unmap_mapping();
+                mapping = fbl::Span<uint8_t>{reinterpret_cast<uint8_t*>(addr), op_size};
+              }
+            } else {
+              unmap_mapping();
+            }
+          }
+          break;
+        }
+        case 9: {  // bti_pin/bti_unpin
+          Printf("I");
+          if (bti_) {
+            if (pmt || uniform_rand(2, rng) == 0) {
+              zx::pmt new_pmt;
+              std::vector<zx_paddr_t> paddrs{op_size / PAGE_SIZE, 0};
+              if (bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo, op_off, op_size,
+                           paddrs.data(), paddrs.size(), &new_pmt) == ZX_OK) {
+                if (pmt) {
+                  pmt.unpin();
+                }
+                pmt = std::move(new_pmt);
+              }
+            } else {
+              if (pmt) {
+                pmt.unpin();
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    if (!shutdown_) {
+      // Achieved max ops.
+      Printf("M");
+    }
+  }
+
+  static void random_off_size(StressTest::Rng& rng, uint64_t vmo_size, uint64_t* off_out,
+                              uint64_t* size_out) {
+    // When calculating out of bounds values pick a limit that still gives chance to be in bounds
+    constexpr uint64_t kOobLimitPages = kMaxVmoPages * 2;
+    // We don't want a uniform distribution of offsets and sizes as a lot of interesting things
+    // happen with page alignment and entire vmo ranges.
+    switch (uniform_rand(5, rng)) {
+      case 0:  // Anchor offset at 0
+        *off_out = 0;
+        break;
+      case 1:  // Page aligned offset, in bounds
+        *off_out = uniform_rand(vmo_size / ZX_PAGE_SIZE, rng) * ZX_PAGE_SIZE;
+        break;
+      case 2:  // Page aligned offset, out of bounds
+        *off_out = uniform_rand(kOobLimitPages, rng) * ZX_PAGE_SIZE;
+        break;
+      case 3:  // In bounds
+        *off_out = uniform_rand(vmo_size, rng);
+        break;
+      case 4:  // Out of bounds
+        *off_out = uniform_rand(kOobLimitPages * ZX_PAGE_SIZE, rng);
+        break;
+    }
+    const uint64_t remaining = vmo_size - std::min(vmo_size, *off_out);
+    switch (uniform_rand(5, rng)) {
+      case 0:  // Maximum remaining vmo size
+        *size_out = remaining;
+        break;
+      case 1:  // In range page aligned size
+        *size_out = uniform_rand(remaining / ZX_PAGE_SIZE, rng) * ZX_PAGE_SIZE;
+        break;
+      case 2:  // Out of range page aligned size
+        *size_out = uniform_rand(kOobLimitPages, rng) * ZX_PAGE_SIZE;
+        break;
+      case 3:  // In range size
+        *size_out = uniform_rand(remaining, rng);
+        break;
+      case 4:  // Out of range size
+        *size_out = uniform_rand(kOobLimitPages * ZX_PAGE_SIZE, rng);
+        break;
+    }
+  }
+
+  // This wrapper spawns a new thread to run F and automatically updates the living_threads_ count
+  // and spawns any new root threads should we start running low.
+  template <typename F>
+  bool make_thread(F func) {
+    uint64_t prev_count = living_threads_.fetch_add(1);
+    if (prev_count >= max_threads_) {
+      living_threads_.fetch_sub(1);
+      return false;
+    }
+    std::thread t{[this, func = std::move(func)]() mutable {
+      func();
+      // Spawn threads *before* decrementing our count as the shutdown logic assumes once shutdown_
+      // then once living_threads_ becomes 0 it must never increment.
+      while (!shutdown_ && living_threads_ < low_threads_) {
+        auto rng = RngGen();
+        spawn_root_vmo(rng);
+      }
+      living_threads_.fetch_sub(1);
+    }};
+    t.detach();
+    return true;
+  }
+
+  std::shared_ptr<std::atomic<uint64_t>> make_ops(StressTest::Rng& rng) {
+    uint64_t start_ops = uniform_rand(kMaxOps, rng);
+    return std::make_shared<std::atomic<uint64_t>>(start_ops);
+  }
+
+  // To explore interesting scenarios, especially involving parallelism, we want to run every VMO
+  // tree for a decent number of ops, but not too long as at some point running longer is the same
+  // as just spawning a new tree. This number was chosen fairly arbitrarily, but given that all
+  // previous VM bugs had unit test reproductions in the <20 ops, this seems reasonable.
+  static constexpr uint64_t kMaxOps = 4096;
+
+  // 128 pages in a vmo should be all we need to create sufficiently interesting hierarchies, so
+  // cap our spending there. This allows us to spin up more threads and copy-on-write hierarchies
+  // without worrying that they all commit and blow the memory limit.
+  static constexpr uint64_t kMaxVmoPages = 128;
+
+  // This will be set to the total memory limit (in pages) that this test instance is constructed
+  // with. We should not spend more than that.
+  const uint64_t memory_limit_pages_;
+
+  // The maximum number of threads we can create that will not cause us to exceed our memory limit.
+  const uint64_t max_threads_;
+
+  // Generally we don't want too many threads, so set low_threads (which is the threshold at which
+  // we start spawning more root threads) to be fairly low. max_threads_ can be arbitrarily high,
+  // which allows our low amount of root threads to (potentially) spin up a lot of parallelism.
+  const uint64_t low_threads_ = 8;
+
+  // Set to true when we are trying to shutdown.
+  std::atomic<bool> shutdown_ = false;
+  // Number of alive threads. Used to coordinate shutdown.
+  std::atomic<uint64_t> living_threads_ = 0;
+
+  // Valid if we got the root resource.
+  zx::iommu iommu_;
+  zx::bti bti_;
+};
+
 // Test thread which initializes/tears down TestInstances
 int VmStressTest::test_thread() {
   constexpr uint64_t kMaxInstances = 8;
+  constexpr uint64_t kVariableInstances = kMaxInstances - 1;
   std::unique_ptr<TestInstance> test_instances[kMaxInstances] = {};
 
   const uint64_t free_bytes = kmem_stats_.free_bytes;
@@ -869,11 +1368,19 @@ int VmStressTest::test_thread() {
 
   PrintfAlways("VM stress test: using vmo of size %" PRIu64 "\n", vmo_test_size);
 
-  auto rng = RngGen();
+  // The MultiVmoTestInstance already does spin up / tear down of threads internally and there is
+  // no benefit in also spinning up and tearing down the whole thing. So we just run 1 of them
+  // explicitly as a static instance and randomize the others as variable instances. We give this
+  // instance a 'full slice' of free memory as it is incredibly unlikely that it even allocates
+  // anywhere near that.
+  test_instances[kVariableInstances] =
+      std::make_unique<MultiVmoTestInstance>(this, free_bytes / kMaxInstances);
+  test_instances[kVariableInstances]->Start();
 
   zx::time deadline = zx::clock::get_monotonic();
+  auto rng = RngGen();
   while (!shutdown_.load()) {
-    uint64_t r = uniform_rand(kMaxInstances, rng);
+    uint64_t r = uniform_rand(kVariableInstances, rng);
     if (test_instances[r]) {
       test_instances[r]->Stop();
       test_instances[r].reset();
@@ -890,7 +1397,9 @@ int VmStressTest::test_thread() {
           break;
       }
 
-      ZX_ASSERT(test_instances[r]->Start() == ZX_OK);
+      if (test_instances[r]) {
+        ZX_ASSERT(test_instances[r]->Start() == ZX_OK);
+      }
     }
 
     constexpr uint64_t kOpsPerSec = 25;

@@ -5,6 +5,7 @@
 #ifndef SRC_ZIRCON_BIN_KSTRESS_STRESS_TEST_H_
 #define SRC_ZIRCON_BIN_KSTRESS_STRESS_TEST_H_
 
+#include <lib/zx/resource.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/status.h>
@@ -35,12 +36,14 @@ class StressTest {
   // the test here.
   //
   // If overridden in a subclass, call through to this version first.
-  virtual zx_status_t Init(bool verbose, const zx_info_kmem_stats& stats) {
+  virtual zx_status_t Init(bool verbose, const zx_info_kmem_stats& stats,
+                           zx::unowned_resource root_resource) {
     verbose_ = verbose;
 
     // gather some info about the system
     kmem_stats_ = stats;
     num_cpus_ = zx_system_get_num_cpus();
+    root_resource_ = root_resource;
     return ZX_OK;
   }
 
@@ -83,7 +86,11 @@ class StressTest {
   using Rng = std::mt19937_64;
   Rng RngGen() {
     // Seed a new random generator from our initially seeded one.
-    return Rng(rand_gen_);
+    Rng rng;
+    std::seed_seq seed{rand_gen_(), rand_gen_(), rand_gen_(), rand_gen_(),
+                       rand_gen_(), rand_gen_(), rand_gen_(), rand_gen_()};
+    rng.seed(seed);
+    return rng;
   }
 
  protected:
@@ -94,6 +101,8 @@ class StressTest {
   bool verbose_{false};
   zx_info_kmem_stats_t kmem_stats_{};
   uint32_t num_cpus_{};
+  // Optional root resource.
+  zx::unowned_resource root_resource_;
 };
 
 // factories for local tests

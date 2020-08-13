@@ -56,11 +56,9 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
   return ZX_OK;
 }
 
-zx_status_t get_kmem_stats(zx_info_kmem_stats_t* kmem_stats) {
-  zx::resource root_resource;
-  zx_status_t ret = get_root_resource(&root_resource);
-  if (ret != ZX_OK) {
-    return ret;
+zx_status_t get_kmem_stats(zx::resource& root_resource, zx_info_kmem_stats_t* kmem_stats) {
+  if (!root_resource) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t err = zx_object_get_info(root_resource.get(), ZX_INFO_KMEM_STATS, kmem_stats,
@@ -115,9 +113,12 @@ int main(int argc, char** argv) {
     }
   }
 
+  zx::resource root_resource;
+  get_root_resource(&root_resource);
+
   // read some system stats for each test to use
   zx_info_kmem_stats_t kmem_stats;
-  status = get_kmem_stats(&kmem_stats);
+  status = get_kmem_stats(root_resource, &kmem_stats);
   if (status != ZX_OK) {
     fprintf(stderr, "error reading kmem stats\n");
     return 1;
@@ -132,7 +133,7 @@ int main(int argc, char** argv) {
   // initialize all the tests
   for (auto& test : StressTest::tests()) {
     printf("Initializing %s test\n", test->name());
-    status = test->Init(verbose, kmem_stats);
+    status = test->Init(verbose, kmem_stats, root_resource.borrow());
     if (status != ZX_OK) {
       fprintf(stderr, "error initializing test\n");
       return 1;
