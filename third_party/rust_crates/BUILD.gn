@@ -255,10 +255,11 @@ group("memchr") {
   deps = [ ":memchr-v2_3_3" ]
 }
 
-group("nix") {
-  deps = [ ":nix-v0_18_0" ]
+if (current_os == "fuchsia") {
+  group("nix") {
+    deps = [ ":nix-v0_18_0" ]
+  }
 }
-
 group("nom") {
   deps = [ ":nom-v5_0_0" ]
 }

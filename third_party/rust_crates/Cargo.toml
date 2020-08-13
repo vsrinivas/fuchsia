@@ -62,7 +62,6 @@ maplit = "1.0"
 matches = "0.1.8"
 maybe-owned = "0.3.2"
 memchr = "2.0"
-nix = "0.18"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 num-derive = "0.2.4"
@@ -147,6 +146,7 @@ hyper-rustls = { version = "0.20.0", default-features = false }
 id_tree = "1.5"
 itoa = "0.4"
 lipsum = "0.6.0"
+nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 num-bigint = { version = "0.2", features = ["rand"] }
 openat = "0.1.17"
 owning_ref = "0.4.0"
