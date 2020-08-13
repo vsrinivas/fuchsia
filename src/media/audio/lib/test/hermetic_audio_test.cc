@@ -185,7 +185,7 @@ AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
   renderers_.push_back(std::move(ptr));
 
   // Wait until the renderer is connected.
-  RunLoopUntil([this, out]() { return ErrorOccurred() || (out->GetMinLeadTime() > 0); });
+  RunLoopUntil([this, out]() { return ErrorOccurred() || out->created(); });
   return out;
 }
 

@@ -68,6 +68,16 @@ class VmoBackedBuffer {
     return out;
   }
 
+  // Take a snapshot of a slice of the buffer. The slice must not include a partial frame.
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  AudioBuffer<SampleFormat> SnapshotSlice(size_t offset, size_t size_bytes) {
+    auto bpf = format_.bytes_per_frame();
+    FX_CHECK(size_bytes % bpf == 0) << "size_bytes " << size_bytes << " bytes_per_frame " << bpf;
+    AudioBuffer<SampleFormat> out(format_, size_bytes / bpf);
+    memmove(&out.samples()[0], BufferStart() + offset, size_bytes);
+    return out;
+  }
+
   // Returns the offset (in frames) that will be written to by the next call to Append.
   size_t GetCurrentOffset() const { return append_offset_frames_; }
 

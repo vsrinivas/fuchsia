@@ -68,6 +68,9 @@ class AudioCapturerShim : public CapturerShimImpl {
 
   // Snapshot the current payload.
   AudioBuffer<SampleFormat> SnapshotPayload() { return payload_buffer_.Snapshot<SampleFormat>(); }
+  AudioBuffer<SampleFormat> SnapshotPacket(const fuchsia::media::StreamPacket& p) {
+    return payload_buffer_.SnapshotSlice<SampleFormat>(p.payload_offset, p.payload_size);
+  }
 
   // Don't call this directly. Use HermeticAudioTest::CreateAudioCapturer so the object is
   // appropriately bound into the test environment.
@@ -93,8 +96,9 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
   const zx::clock& reference_clock() const { return reference_clock_; }
 
   // Snapshot the current payload.
-  AudioBufferSlice<SampleFormat> SnapshotPayload() {
-    return payload_buffer_.Snapshot<SampleFormat>();
+  AudioBuffer<SampleFormat> SnapshotPayload() { return payload_buffer_.Snapshot<SampleFormat>(); }
+  AudioBuffer<SampleFormat> SnapshotPacket(const fuchsia::media::StreamPacket& p) {
+    return payload_buffer_.SnapshotSlice<SampleFormat>(p.payload_offset, p.payload_size);
   }
 
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundCapturer so the object is

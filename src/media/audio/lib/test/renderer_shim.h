@@ -50,7 +50,7 @@ class RendererShimImpl {
   size_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
   // Minimum lead time for the AudioRenderer.
-  int64_t GetMinLeadTime() const { return min_lead_time_; }
+  zx::duration GetMinLeadTime() const { return min_lead_time_.value(); }
 
   // Sets the units used by the presentation (media) timeline.
   // By default, we use format.frames_per_second / 1, which means 1 PTS tick = 1 frame.
@@ -114,8 +114,7 @@ class RendererShimImpl {
 
   VmoBackedBuffer payload_buffer_;
   fuchsia::media::AudioRendererPtr renderer_;
-  bool received_min_lead_time_ = false;
-  int64_t min_lead_time_ = -1;
+  std::optional<zx::duration> min_lead_time_;
   TimelineRate pts_ticks_per_second_;
   TimelineRate pts_ticks_per_frame_;
   PacketVector queued_packets_;
@@ -150,6 +149,8 @@ class AudioRendererShim : public RendererShimImpl {
     SetPtsUnits(format_.frames_per_second(), 1);
     renderer_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
   }
+
+  bool created() const { return min_lead_time_.has_value(); }
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -185,10 +186,11 @@ class UltrasoundRendererShim : public RendererShimImpl {
   }
 
   void WaitForDevice() {
-    fixture_->RunLoopUntil([this] { return created_ || fixture_->ErrorOccurred(); });
+    fixture_->RunLoopUntil(
+        [this] { return (created_ && min_lead_time_.has_value()) || fixture_->ErrorOccurred(); });
   }
 
-  bool created() const { return created_; }
+  bool created() const { return created_ && min_lead_time_; }
 
  private:
   bool created_ = false;

@@ -27,9 +27,8 @@ void RendererShimImpl::ResetEvents() {
 void RendererShimImpl::WatchEvents() {
   renderer_->EnableMinLeadTimeEvents(true);
   renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
-    received_min_lead_time_ = true;
     AUDIO_LOG(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
-    min_lead_time_ = min_lead_time_nsec;
+    min_lead_time_ = zx::nsec(min_lead_time_nsec);
   };
 }
 
@@ -72,12 +71,11 @@ void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64
 zx::time RendererShimImpl::PlaySynchronized(
     TestFixture* fixture, VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
     int64_t media_time) {
-  FX_CHECK(min_lead_time_ >= 0);
   // Synchronize at some point that is at least min_lead_time + tolerance in the future,
   // where tolerance estimates the maximum execution delay between the time we compute the
   // next synchronized time and the time we call Play.
   const auto tolerance = zx::msec(5);
-  auto min_start_time = zx::clock::get_monotonic() + zx::nsec(min_lead_time_) + tolerance;
+  auto min_start_time = zx::clock::get_monotonic() + min_lead_time_.value() + tolerance;
   auto mono_time = output_device->NextSynchronizedTimestamp(min_start_time);
   // TODO(fxbug.dev/46650): Translate mono_time to the renderer's reference time.
   Play(fixture, mono_time, media_time);

@@ -38,12 +38,12 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
     HermeticAudioTest::SetUp();
     // None of our tests should underflow.
     FailUponUnderflows();
-    // The output and renderer can both store exactly 1s of audio data.
+    // The output can store exactly 1s of audio data.
     output_ = CreateOutput({{0xff, 0x00}}, format_, 48000);
     renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
   }
 
-  // All pipline tests send batches of packets. This method returns the suggested size for
+  // All pipeline tests send batches of packets. This method returns the suggested size for
   // each batch. We want each batch to be large enough such that the output driver needs to
   // wake multiple times to mix the batch -- this ensures we're testing the timing paths in
   // the driver. We don't have direct access to the driver's timers, however, we know that
@@ -51,11 +51,11 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   // packets to exceed one MinLeadTime.
   size_t NumPacketsPerBatch() {
     auto min_lead_time = renderer_->GetMinLeadTime();
-    FX_CHECK(min_lead_time > 0);
+    FX_CHECK(min_lead_time.get() > 0);
     // In exceptional cases, min_lead_time might be smaller than one packet.
     // Ensure we have at least a handful of packets.
-    auto n = std::max(5lu, static_cast<size_t>(zx::duration(min_lead_time) /
-                                               zx::msec(RendererShimImpl::kPacketMs)));
+    auto n =
+        std::max(5lu, static_cast<size_t>(min_lead_time / zx::msec(RendererShimImpl::kPacketMs)));
     FX_CHECK(n < kNumPacketsInPayload);
     return n;
   }
@@ -91,11 +91,10 @@ TEST_F(AudioRendererPipelineTest, RenderWithPts) {
 // If we issue DiscardAllPackets during Playback, PTS should not change.
 TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
   const auto min_lead_time_in_packets =
-      (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
+      (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
 
   // This test writes to the ring buffer as follows:
   //
@@ -390,11 +389,10 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   // packets at least "min_lead_time" after the last audio frame previously written to the ring
   // buffer.
   auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
   const auto min_lead_time_in_packets =
-      (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
+      (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
   const int64_t restart_packet = 2 + min_lead_time_in_packets;
   const int64_t restart_pts = restart_packet * kPacketFrames;
 
@@ -430,8 +428,7 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
   ExpectCallback();
 
   auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
-  auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
+  auto num_packets = min_lead_time / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
@@ -470,13 +467,5 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
 // TODO(mpuryear): test packets with timestamps too late -- expect Renderer
 //     gap-then-truncated-signal at driver
 // TODO(mpuryear): test that no data is lost when Renderer Play-Pause-Play
-
-////// Need to add similar tests for the Capture pipeline
-// TODO(mpuryear): validate signal gets bit-for-bit from driver to capturer
-// TODO(mpuryear): test OnPacketProduced timing etc.
-// TODO(mpuryear): test OnEndOfStream
-// TODO(mpuryear): test ReleasePacket
-// TODO(mpuryear): test DiscardAllPackets timing etc.
-// TODO(mpuryear): test DiscardAllPacketsNoReply timing etc.
 
 }  // namespace media::audio::test

@@ -51,9 +51,3 @@ executable("audio_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
-
-group("tests") {
-  testonly = true
-
-  deps = [ "test" ]
-}
