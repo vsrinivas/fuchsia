@@ -58,7 +58,7 @@ void main() {
 			EncodeFailureCase.run(
 				{{ .EncoderName }},
 				{{ .Name }},
-				{{ .Value }},
+				() => {{ .Value }},
 				{{ .ValueType }},
 				{{ .ErrorCode }});
 			{{ end }}
