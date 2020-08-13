@@ -4,16 +4,14 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::encoding::Decodable,
-    fidl_fuchsia_bluetooth_bredr::{
-        Channel, ConnectionReceiverProxy, PeerObserverProxy, ProtocolDescriptor,
-        SearchResultsProxy, ServiceClassProfileIdentifier, ServiceDefinition,
-    },
+    fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::ComponentControllerEvent,
-    fuchsia_bluetooth::{detachable_map::DetachableMap, types::PeerId},
+    fuchsia_bluetooth::{
+        detachable_map::DetachableMap,
+        types::{Channel, PeerId},
+    },
     fuchsia_component::{client, client::App, server::NestedEnvironment},
     fuchsia_syslog::fx_log_info,
-    fuchsia_zircon as zx,
     futures::{
         stream::{StreamExt, TryStreamExt},
         Future, Stream,
@@ -21,6 +19,7 @@ use {
     parking_lot::RwLock,
     std::{
         collections::{HashMap, HashSet},
+        convert::TryInto,
         sync::Arc,
     },
 };
@@ -33,18 +32,14 @@ use self::service::{RegistrationHandle, ServiceSet};
 use crate::profile::{build_l2cap_descriptor, parse_service_definitions};
 use crate::types::{Psm, ServiceRecord};
 
+/// Default SDU size the peer is capable of accepting. This is chosen as the minimum
+/// size documented in [`fuchsia.bluetooth.bredr.Channel`].
+const DEFAULT_TX_SDU_SIZE: usize = 48;
+
 /// The unique identifier for a launched profile. This is used for internal bookkeeping
 /// and has no meaning outside of this context.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub struct ProfileHandle(u64);
-
-/// Creates Channel endpoints for communication.
-fn create_channel_endpoints() -> (Channel, Channel) {
-    let (remote, socket) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-    let local = Channel { socket: Some(socket), ..Channel::new_empty() };
-    let remote = Channel { socket: Some(remote), ..Channel::new_empty() };
-    (local, remote)
-}
 
 /// The status events corresponding to a launched component's lifetime.
 #[derive(Debug, Clone)]
@@ -70,7 +65,7 @@ pub struct MockPeer {
 
     /// The PeerObserver relay for this peer. This is used to send updates about this peer.
     /// If not set, no updates will be relayed.
-    observer: Option<PeerObserverProxy>,
+    observer: Option<bredr::PeerObserverProxy>,
 
     /// The next available ProfileHandle.
     next_profile_handle: ProfileHandle,
@@ -86,11 +81,15 @@ pub struct MockPeer {
     service_mgr: Arc<RwLock<ServiceSet>>,
 
     /// Outstanding advertised services and their connection receivers.
-    services: DetachableMap<RegistrationHandle, ConnectionReceiverProxy>,
+    services: DetachableMap<RegistrationHandle, bredr::ConnectionReceiverProxy>,
 }
 
 impl MockPeer {
-    pub fn new(id: PeerId, env: NestedEnvironment, observer: Option<PeerObserverProxy>) -> Self {
+    pub fn new(
+        id: PeerId,
+        env: NestedEnvironment,
+        observer: Option<bredr::PeerObserverProxy>,
+    ) -> Self {
         // TODO(55462): If provided, take event stream of `observer` and listen for close.
         Self {
             id,
@@ -113,15 +112,15 @@ impl MockPeer {
     }
 
     /// Returns the set of active searches, identified by their Service Class ID.
-    pub fn get_active_searches(&self) -> HashSet<ServiceClassProfileIdentifier> {
+    pub fn get_active_searches(&self) -> HashSet<bredr::ServiceClassProfileIdentifier> {
         self.search_mgr.read().get_active_searches()
     }
 
     /// Returns the advertised services of this peer that conform to the provided `ids`.
     pub fn get_advertised_services(
         &self,
-        ids: &HashSet<ServiceClassProfileIdentifier>,
-    ) -> HashMap<ServiceClassProfileIdentifier, Vec<ServiceRecord>> {
+        ids: &HashSet<bredr::ServiceClassProfileIdentifier>,
+    ) -> HashMap<bredr::ServiceClassProfileIdentifier, Vec<ServiceRecord>> {
         self.service_mgr.read().get_service_records(ids)
     }
 
@@ -184,12 +183,12 @@ impl MockPeer {
     }
 
     /// Notifies the `observer` with the ServiceFound update from the ServiceRecord.
-    fn relay_service_found(observer: &PeerObserverProxy, record: ServiceRecord) {
+    fn relay_service_found(observer: &bredr::PeerObserverProxy, record: ServiceRecord) {
         let mut response = record.to_service_found_response().unwrap();
         let mut protocol = response.protocol.as_mut().map(|v| v.iter_mut());
         let protocol = protocol
             .as_mut()
-            .map(|v| -> &mut dyn ExactSizeIterator<Item = &mut ProtocolDescriptor> { v });
+            .map(|v| -> &mut dyn ExactSizeIterator<Item = &mut bredr::ProtocolDescriptor> { v });
         let _ = observer.service_found(
             &mut response.id.into(),
             protocol,
@@ -198,12 +197,12 @@ impl MockPeer {
     }
 
     /// Notifies the `observer` with the URL of the terminated profile.
-    fn relay_terminated(observer: &PeerObserverProxy, profile_url: String) {
+    fn relay_terminated(observer: &bredr::PeerObserverProxy, profile_url: String) {
         let _ = observer.component_terminated(&profile_url);
     }
 
     /// Notifies the `observer` with the connection on `psm` established by peer `other`.
-    fn relay_connected(observer: &PeerObserverProxy, other: PeerId, psm: Psm) {
+    fn relay_connected(observer: &bredr::PeerObserverProxy, other: PeerId, psm: Psm) {
         let mut protocol = build_l2cap_descriptor(psm);
         let _ = observer.peer_connected(&mut other.into(), &mut protocol.iter_mut());
     }
@@ -214,7 +213,7 @@ impl MockPeer {
     /// If the ServiceFound response was successful, relays the data to the PeerObserver.
     pub fn notify_searches(
         &mut self,
-        id: &ServiceClassProfileIdentifier,
+        id: &bredr::ServiceClassProfileIdentifier,
         services: Vec<ServiceRecord>,
     ) {
         let proxy = self.observer.clone();
@@ -237,9 +236,10 @@ impl MockPeer {
     /// registration with the ServiceSet failed.
     pub fn new_advertisement(
         &mut self,
-        services: Vec<ServiceDefinition>,
-        proxy: ConnectionReceiverProxy,
-    ) -> Result<(HashSet<ServiceClassProfileIdentifier>, impl Future<Output = ()>), Error> {
+        services: Vec<bredr::ServiceDefinition>,
+        proxy: bredr::ConnectionReceiverProxy,
+    ) -> Result<(HashSet<bredr::ServiceClassProfileIdentifier>, impl Future<Output = ()>), Error>
+    {
         let service_records = parse_service_definitions(services)?;
         let registration_handle = self
             .service_mgr
@@ -279,7 +279,7 @@ impl MockPeer {
     /// `other` is the PeerID of remote peer that is requesting the connection.
     ///
     /// Returns the created Channel if the provided `psm` is valid.
-    pub fn new_connection(&self, other: PeerId, psm: Psm) -> Result<Channel, Error> {
+    pub fn new_connection(&self, other: PeerId, psm: Psm) -> Result<bredr::Channel, Error> {
         let reg_handle = self
             .service_mgr
             .read()
@@ -293,13 +293,13 @@ impl MockPeer {
 
         // Build the L2CAP descriptor and notify the ConnectionReceiver.
         let mut protocol = build_l2cap_descriptor(psm);
-        let (channel1, channel2) = create_channel_endpoints();
-        proxy.connected(&mut other.into(), channel2, &mut protocol.iter_mut())?;
+        let (channel1, channel2) = Channel::create_with_max_tx(DEFAULT_TX_SDU_SIZE);
+        proxy.connected(&mut other.into(), channel2.try_into()?, &mut protocol.iter_mut())?;
 
         // Potentially update the observer relay with the connection information.
         self.observer.as_ref().map(|o| Self::relay_connected(o, other, psm));
 
-        Ok(channel1)
+        channel1.try_into()
     }
 
     /// Registers a new search for the provided `service_uuid`.
@@ -307,9 +307,9 @@ impl MockPeer {
     /// when `proxy` is closed.
     pub fn new_search(
         &mut self,
-        service_uuid: ServiceClassProfileIdentifier,
+        service_uuid: bredr::ServiceClassProfileIdentifier,
         attr_ids: Vec<u16>,
-        proxy: SearchResultsProxy,
+        proxy: bredr::SearchResultsProxy,
     ) -> impl Future<Output = ()> {
         let search_stream = proxy.take_event_stream();
 
@@ -355,8 +355,8 @@ mod tests {
     /// `TestEnvironment` does not do anything except for store the proxies and provide
     /// a way to drop them (to simulate disconnection).
     struct TestEnvironment {
-        search: Vec<SearchResultsProxy>,
-        adv: Vec<ConnectionReceiverProxy>,
+        search: Vec<bredr::SearchResultsProxy>,
+        adv: Vec<bredr::ConnectionReceiverProxy>,
     }
 
     impl TestEnvironment {
@@ -364,7 +364,7 @@ mod tests {
             Self { search: vec![], adv: vec![] }
         }
 
-        pub fn add_search(&mut self, search: SearchResultsProxy) {
+        pub fn add_search(&mut self, search: bredr::SearchResultsProxy) {
             self.search.push(search);
         }
 
@@ -668,8 +668,14 @@ mod tests {
         // in `a2dp_def`. There should be a new connection request on the stream.
         assert!(mock_peer.new_connection(remote_peer, Psm(PSM_AVDTP)).is_ok());
         match exec.run_until_stalled(&mut stream.next()) {
-            Poll::Ready(Some(Ok(ConnectionReceiverRequest::Connected { peer_id, .. }))) => {
+            Poll::Ready(Some(Ok(ConnectionReceiverRequest::Connected {
+                peer_id,
+                channel,
+                ..
+            }))) => {
                 assert_eq!(remote_peer, peer_id.into());
+                assert_eq!(channel.channel_mode, Some(ChannelMode::Basic));
+                assert_eq!(channel.max_tx_sdu_size, Some(DEFAULT_TX_SDU_SIZE as u16));
             }
             x => panic!("Expected Ready but got: {:?}", x),
         }
