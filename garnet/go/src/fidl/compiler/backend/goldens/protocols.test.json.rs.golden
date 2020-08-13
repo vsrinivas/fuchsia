@@ -65,7 +65,7 @@ fidl_struct_copy! {
       offset_v1: 16,
     },
   ],
-
+  padding: [],
   size_v1: 24,
   align_v1: 8,
 }

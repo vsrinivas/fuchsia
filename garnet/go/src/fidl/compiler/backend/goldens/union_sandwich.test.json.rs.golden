@@ -95,8 +95,7 @@ fidl_struct! {
       ty: u64,
       offset: 32,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 40,
   align_v1: 8,
 }
@@ -135,8 +134,7 @@ fidl_struct! {
       ty: u64,
       offset: 32,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 40,
   align_v1: 8,
 }
@@ -162,7 +160,7 @@ fidl_struct_copy! {
       offset_v1: 8,
     },
   ],
-
+  padding: [],
   size_v1: 16,
   align_v1: 8,
 }
@@ -201,8 +199,7 @@ fidl_struct! {
       ty: u64,
       offset: 32,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 40,
   align_v1: 8,
 }
@@ -241,8 +238,7 @@ fidl_struct! {
       ty: u64,
       offset: 32,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 40,
   align_v1: 8,
 }

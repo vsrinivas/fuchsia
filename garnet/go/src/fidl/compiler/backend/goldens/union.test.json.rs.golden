@@ -349,8 +349,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 16,
   align_v1: 8,
 }
@@ -369,8 +368,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 16,
   align_v1: 8,
 }
@@ -389,8 +387,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 24,
   align_v1: 8,
 }
@@ -411,8 +408,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 24,
   align_v1: 8,
 }

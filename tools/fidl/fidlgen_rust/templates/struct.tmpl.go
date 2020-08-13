@@ -39,8 +39,16 @@ fidl_struct! {
     },
   {{- end }}
   ],
-  {{ if not .UseFidlStructCopy -}}
   padding: [
+  {{- if .UseFidlStructCopy -}}
+  {{- range .FlattenedPaddingMarkers }}
+  {
+      ty: {{ .Type }},
+      offset: {{ .Offset }},
+      mask: {{ .Mask }},
+  },
+  {{- end }}
+  {{- else -}}
   {{- range .PaddingMarkers }}
   {
       ty: {{ .Type }},
@@ -48,8 +56,8 @@ fidl_struct! {
       mask: {{ .Mask }},
   },
   {{- end }}
+  {{- end -}}
   ],
-  {{- end }}
   size_v1: {{ .Size }},
   align_v1: {{ .Alignment }},
 }

@@ -31,8 +31,7 @@ fidl_struct! {
       offset_v1: 0,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 4,
   align_v1: 4,
 }

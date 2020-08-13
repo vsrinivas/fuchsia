@@ -2056,6 +2056,13 @@ macro_rules! fidl_struct_copy {
                 offset_v1: $member_offset_v1:expr,
             },
         )*],
+        padding: [$(
+            {
+                ty: $padding_ty:ty,
+                offset: $padding_offset:expr,
+                mask: $padding_mask:expr,
+            },
+        )*],
         size_v1: $size_v1:expr,
         align_v1: $align_v1:expr,
     ) => {
@@ -2072,15 +2079,35 @@ macro_rules! fidl_struct_copy {
             }
 
             fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
-                Some(zerocopy::AsBytes::as_bytes_mut(slice))
+                #![allow(unreachable_code)]
+                $(
+                    $padding_offset; // Force this to be the padding repeat list.
+                    return None;
+                )*
+                // # Safety:
+                // - Data is valid for $size_v1 * slice.len() bytes.
+                // - The memory will exist for the duration of the slice (given input arg).
+                //
+                // zerocopy::AsBytes and zerocopy::FromBytes should be implemented in this
+                // case, but they can't be used because they aren't implemented in the
+                // case with padding (which exits with None above).
+                unsafe {
+                    let obj_ptr = std::mem::transmute::<*mut $name, *mut u8>(slice.get_unchecked_mut(0));
+                    Some(std::slice::from_raw_parts_mut(obj_ptr, $size_v1 * slice.len()))
+                }
             }
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
-                let bytes = zerocopy::AsBytes::as_bytes(self);
-                let len = bytes.len();
-                encoder.mut_buffer()[offset..offset+len].copy_from_slice(bytes);
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
+                let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
+                let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
+                std::ptr::copy_nonoverlapping(self as *mut $name, typed_buf_ptr, 1);
+
+                $(
+                    let ptr = buf_ptr.offset($padding_offset);
+                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr) &= !$padding_mask;
+                )*
                 Ok(())
             }
         }
@@ -2094,10 +2121,25 @@ macro_rules! fidl_struct_copy {
                 }
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                let bytes: &mut [u8] = zerocopy::AsBytes::as_bytes_mut(self);
-                let size = bytes.len();
-                bytes.copy_from_slice(&decoder.buffer()[offset..offset + size]);
+            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                let buf_ptr = decoder.buffer().as_ptr().offset(offset as isize);
+
+                // Apply masks to check if padded regions are zero.
+                $(
+                    let ptr = buf_ptr.offset($padding_offset);
+                    let padval = *std::mem::transmute::<*const u8, *const $padding_ty>(ptr);
+                    let maskedval = padval & $padding_mask;
+                    if (maskedval != 0) {
+                        return Err($crate::Error::NonZeroPadding {
+                            padding_start: offset + $padding_offset + (($padding_mask as u64).trailing_zeros() / 8) as usize,
+                            non_zero_pos: offset + $padding_offset + (maskedval.trailing_zeros() / 8) as usize
+                        });
+                    }
+                )*
+
+                let obj_ptr = std::mem::transmute::<*mut $name, *mut u8>(self);
+                std::ptr::copy_nonoverlapping(buf_ptr, obj_ptr, $size_v1);
+
                 Ok(())
             }
         }
@@ -4063,6 +4105,7 @@ mod test {
                 offset_v1: 14,
             },
         ],
+        padding: [],
         size_v1: 16,
         align_v1: 8,
     }

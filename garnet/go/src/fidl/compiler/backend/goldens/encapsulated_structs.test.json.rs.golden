@@ -18,13 +18,13 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Int8Int32 {
     pub a: i8,
     pub b: i32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Int8Int32,
   members: [
     a {
@@ -41,20 +41,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0x00000000ffffff00u64,
-  },
-  ],
+  },],
   size_v1: 8,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Int16Int8 {
     pub a: i16,
     pub b: i8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Int16Int8,
   members: [
     a {
@@ -71,19 +70,18 @@ fidl_struct! {
       ty: u32,
       offset: 0,
       mask: 0xff000000u32,
-  },
-  ],
+  },],
   size_v1: 4,
   align_v1: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct ArrayInt16Int8 {
     pub arr: [Int16Int8; 3],
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: ArrayInt16Int8,
   members: [
     arr {
@@ -92,20 +90,29 @@ fidl_struct! {
     },
   ],
   padding: [
-  ],
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xff000000ff000000u64,
+  },
+  {
+      ty: u32,
+      offset: 8,
+      mask: 0xff000000u32,
+  },],
   size_v1: 12,
   align_v1: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct StructPaddingTestStruct {
     pub trailing: Int16Int8,
     pub inner: Int8Int32,
     pub array: ArrayInt16Int8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: StructPaddingTestStruct,
   members: [
     trailing {
@@ -122,7 +129,21 @@ fidl_struct! {
     },
   ],
   padding: [
-  ],
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffff00ff000000u64,
+  },
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xff00000000000000u64,
+  },
+  {
+      ty: u64,
+      offset: 16,
+      mask: 0xff000000ff000000u64,
+  },],
   size_v1: 24,
   align_v1: 4,
 }
@@ -151,8 +172,7 @@ fidl_struct! {
       ty: u64,
       offset: 8,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
@@ -176,8 +196,7 @@ fidl_struct! {
       offset_v1: 24,
     },
   ],
-  padding: [
-  ],
+  padding: [],
   size_v1: 40,
   align_v1: 8,
 }

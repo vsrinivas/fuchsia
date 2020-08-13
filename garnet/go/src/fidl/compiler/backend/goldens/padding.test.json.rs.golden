@@ -18,13 +18,13 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding1ByteEnd {
     pub a: u16,
     pub b: u8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding1ByteEnd,
   members: [
     a {
@@ -41,20 +41,19 @@ fidl_struct! {
       ty: u32,
       offset: 0,
       mask: 0xff000000u32,
-  },
-  ],
+  },],
   size_v1: 4,
   align_v1: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding2ByteEnd {
     pub a: u32,
     pub b: u16,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding2ByteEnd,
   members: [
     a {
@@ -71,20 +70,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffff000000000000u64,
-  },
-  ],
+  },],
   size_v1: 8,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding3ByteEnd {
     pub a: u32,
     pub b: u8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding3ByteEnd,
   members: [
     a {
@@ -101,20 +99,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffff0000000000u64,
-  },
-  ],
+  },],
   size_v1: 8,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding4ByteEnd {
     pub a: u64,
     pub b: u32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding4ByteEnd,
   members: [
     a {
@@ -131,21 +128,20 @@ fidl_struct! {
       ty: u64,
       offset: 8,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding5ByteEnd {
     pub a: u64,
     pub b: u16,
     pub c: u8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding5ByteEnd,
   members: [
     a {
@@ -166,20 +162,19 @@ fidl_struct! {
       ty: u64,
       offset: 8,
       mask: 0xffffffffff000000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding6ByteEnd {
     pub a: u64,
     pub b: u16,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding6ByteEnd,
   members: [
     a {
@@ -196,20 +191,19 @@ fidl_struct! {
       ty: u64,
       offset: 8,
       mask: 0xffffffffffff0000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding7ByteEnd {
     pub a: u64,
     pub b: u8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding7ByteEnd,
   members: [
     a {
@@ -226,20 +220,19 @@ fidl_struct! {
       ty: u64,
       offset: 8,
       mask: 0xffffffffffffff00u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding1ByteMiddle {
     pub a: u8,
     pub b: u16,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding1ByteMiddle,
   members: [
     a {
@@ -256,20 +249,19 @@ fidl_struct! {
       ty: u32,
       offset: 0,
       mask: 0x0000ff00u32,
-  },
-  ],
+  },],
   size_v1: 4,
   align_v1: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding2ByteMiddle {
     pub a: u16,
     pub b: u32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding2ByteMiddle,
   members: [
     a {
@@ -286,20 +278,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0x00000000ffff0000u64,
-  },
-  ],
+  },],
   size_v1: 8,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding3ByteMiddle {
     pub a: u8,
     pub b: u32,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding3ByteMiddle,
   members: [
     a {
@@ -316,20 +307,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0x00000000ffffff00u64,
-  },
-  ],
+  },],
   size_v1: 8,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding4ByteMiddle {
     pub a: u32,
     pub b: u64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding4ByteMiddle,
   members: [
     a {
@@ -346,21 +336,20 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffffff00000000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding5ByteMiddle {
     pub a: u16,
     pub b: u8,
     pub c: u64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding5ByteMiddle,
   members: [
     a {
@@ -381,20 +370,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffffffff000000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding6ByteMiddle {
     pub a: u16,
     pub b: u64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding6ByteMiddle,
   members: [
     a {
@@ -411,20 +399,19 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffffffffff0000u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding7ByteMiddle {
     pub a: u8,
     pub b: u64,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding7ByteMiddle,
   members: [
     a {
@@ -441,14 +428,13 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffffffffffff00u64,
-  },
-  ],
+  },],
   size_v1: 16,
   align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding4ByteAlignmentLength12 {
     pub a: u32,
     pub b: u8,
@@ -456,7 +442,7 @@ pub struct Padding4ByteAlignmentLength12 {
     pub d: u16,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding4ByteAlignmentLength12,
   members: [
     a {
@@ -486,21 +472,20 @@ fidl_struct! {
       ty: u32,
       offset: 8,
       mask: 0xffff0000u32,
-  },
-  ],
+  },],
   size_v1: 12,
   align_v1: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
+#[repr(C)]
 pub struct Padding2ByteAlignmentLength6 {
     pub a: u8,
     pub b: u16,
     pub c: u8,
 }
 
-fidl_struct! {
+fidl_struct_copy! {
   name: Padding2ByteAlignmentLength6,
   members: [
     a {
@@ -526,8 +511,7 @@ fidl_struct! {
       ty: u16,
       offset: 4,
       mask: 0xff00u16,
-  },
-  ],
+  },],
   size_v1: 6,
   align_v1: 2,
 }

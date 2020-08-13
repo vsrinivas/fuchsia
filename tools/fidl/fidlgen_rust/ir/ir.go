@@ -89,11 +89,12 @@ type Result struct {
 
 type Struct struct {
 	types.Attributes
-	ECI            EncodedCompoundIdentifier
-	Derives        derives
-	Name           string
-	Members        []StructMember
-	PaddingMarkers []PaddingMarker
+	ECI                     EncodedCompoundIdentifier
+	Derives                 derives
+	Name                    string
+	Members                 []StructMember
+	PaddingMarkers          []PaddingMarker
+	FlattenedPaddingMarkers []PaddingMarker
 	// Store size and alignment for Old and V1 versions of the wire format. The
 	// numbers will be different if the struct contains a union within it. Only
 	// structs have this information because fidl::encoding only uses these
@@ -405,6 +406,7 @@ type compiler struct {
 	library                types.LibraryIdentifier
 	externCrates           map[string]struct{}
 	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
+	structs                map[types.EncodedCompoundIdentifier]types.Struct
 }
 
 func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -793,19 +795,52 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
-func buildPaddingMarkers(val types.Struct) []PaddingMarker {
+func (c *compiler) populateFullStructMaskForStruct(mask []byte, val types.Struct, flatten bool) {
+	paddingEnd := val.TypeShapeV1.InlineSize - 1
+	for i := len(val.Members) - 1; i >= 0; i-- {
+		member := val.Members[i]
+		if flatten {
+			c.populateFullStructMaskForType(mask[member.FieldShapeV1.Offset:paddingEnd+1], &member.Type, flatten)
+		}
+		for j := 0; j < member.FieldShapeV1.Padding; j++ {
+			mask[paddingEnd-j] = 0xff
+		}
+		paddingEnd = member.FieldShapeV1.Offset - 1
+	}
+}
+
+func (c *compiler) populateFullStructMaskForType(mask []byte, typ *types.Type, flatten bool) {
+	if typ.Nullable {
+		return
+	}
+	switch typ.Kind {
+	case types.ArrayType:
+		elemByteSize := len(mask) / *typ.ElementCount
+		for i := 0; i < *typ.ElementCount; i++ {
+			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten)
+		}
+	case types.IdentifierType:
+		if c.inExternalLibrary(types.ParseCompoundIdentifier(typ.Identifier)) {
+			// This behavior is matched by computeUseFullStructCopy.
+			return
+		}
+		declType := c.decls[typ.Identifier]
+		if declType == types.StructDeclType {
+			st, ok := c.structs[typ.Identifier]
+			if !ok {
+				log.Panic("struct not found: ", typ.Identifier)
+			}
+			c.populateFullStructMaskForStruct(mask, st, flatten)
+		}
+	}
+}
+
+func (c *compiler) buildPaddingMarkers(val types.Struct, flatten bool) []PaddingMarker {
 	var paddingMarkers []PaddingMarker
 
 	// Construct a mask across the whole struct with 0xff bytes where there is padding.
 	fullStructMask := make([]byte, val.TypeShapeV1.InlineSize)
-	paddingEnd := val.TypeShapeV1.InlineSize - 1
-	for i := len(val.Members) - 1; i >= 0; i-- {
-		member := val.Members[i]
-		for j := 0; j < member.FieldShapeV1.Padding; j++ {
-			fullStructMask[paddingEnd-j] = 0xff
-		}
-		paddingEnd = member.FieldShapeV1.Offset - 1
-	}
+	c.populateFullStructMaskForStruct(fullStructMask, val, flatten)
 
 	// Split up the mask into aligned integer mask segments that can be outputted in the
 	// fidl_struct! macro.
@@ -861,16 +896,78 @@ func buildPaddingMarkers(val types.Struct) []PaddingMarker {
 	return paddingMarkers
 }
 
+func (c *compiler) computeUseFidlStructCopyForStruct(st types.Struct) bool {
+	for _, member := range st.Members {
+		if !c.computeUseFidlStructCopy(&member.Type) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *compiler) computeUseFidlStructCopy(typ *types.Type) bool {
+	if typ.Nullable {
+		return false
+	}
+	switch typ.Kind {
+	case types.ArrayType:
+		return c.computeUseFidlStructCopy(typ.ElementType)
+	case types.VectorType:
+		return false
+	case types.StringType:
+		return false
+	case types.HandleType:
+		return false
+	case types.RequestType:
+		return false
+	case types.PrimitiveType:
+		switch typ.PrimitiveSubtype {
+		case types.Bool, types.Float32, types.Float64:
+			return false
+		}
+		return true
+	case types.IdentifierType:
+		if c.inExternalLibrary(types.ParseCompoundIdentifier(typ.Identifier)) {
+			return false
+		}
+		declType := c.decls[typ.Identifier]
+		switch declType {
+		case types.BitsDeclType:
+			return false
+		case types.EnumDeclType:
+			return false
+		case types.ProtocolDeclType:
+			return false
+		case types.StructDeclType:
+			st, ok := c.structs[typ.Identifier]
+			if !ok {
+				log.Panic("struct not found: ", typ.Identifier)
+			}
+			return c.computeUseFidlStructCopyForStruct(st)
+		case types.UnionDeclType:
+			return false
+		case types.TableDeclType:
+			return false
+		default:
+			log.Panic("Unknown declaration type ", declType)
+		}
+	default:
+		log.Panic("Unknown kind: ", typ.Kind)
+	}
+	panic("shouldn't reach")
+}
+
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes:     val.Attributes,
-		ECI:            val.Name,
-		Name:           name,
-		Members:        []StructMember{},
-		Size:           val.TypeShapeV1.InlineSize,
-		Alignment:      val.TypeShapeV1.Alignment,
-		PaddingMarkers: buildPaddingMarkers(val),
+		Attributes:              val.Attributes,
+		ECI:                     val.Name,
+		Name:                    name,
+		Members:                 []StructMember{},
+		Size:                    val.TypeShapeV1.InlineSize,
+		Alignment:               val.TypeShapeV1.Alignment,
+		PaddingMarkers:          c.buildPaddingMarkers(val, false),
+		FlattenedPaddingMarkers: c.buildPaddingMarkers(val, true),
 	}
 
 	for _, v := range val.Members {
@@ -878,6 +975,8 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		r.Members = append(r.Members, member)
 		r.HasPadding = r.HasPadding || (v.FieldShapeV1.Padding != 0)
 	}
+
+	r.UseFidlStructCopy = c.computeUseFidlStructCopyForStruct(val)
 
 	return r
 }
@@ -1194,7 +1293,6 @@ typeSwitch:
 			derivesOut = derivesOut.remove(derivesAsBytes, derivesFromBytes)
 		}
 		st.Derives = derivesOut
-		st.UseFidlStructCopy = st.Derives.contains(derivesAsBytes) && st.Derives.contains(derivesFromBytes)
 	case types.TableDeclType:
 		table := dc.root.findTable(eci)
 		if table == nil {
@@ -1345,6 +1443,11 @@ func Compile(r types.Root) Root {
 		thisLibParsed,
 		map[string]struct{}{},
 		map[types.EncodedCompoundIdentifier]types.Struct{},
+		map[types.EncodedCompoundIdentifier]types.Struct{},
+	}
+
+	for _, s := range r.Structs {
+		c.structs[s.Name] = s
 	}
 
 	for _, v := range r.Bits {

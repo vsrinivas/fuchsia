@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestBuildPaddingMarkers(t *testing.T) {
+func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 	type testCase struct {
 		name string
 		in   types.Struct
@@ -340,9 +340,128 @@ func TestBuildPaddingMarkers(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		out := buildPaddingMarkers(testCase.in)
+		c := compiler{}
+		out := c.buildPaddingMarkers(testCase.in, false)
 		if diff := cmp.Diff(testCase.out, out); diff != "" {
 			t.Errorf("%s:\nexpected != actual (-want +got)\n%s", testCase.name, diff)
 		}
+	}
+}
+
+func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
+	var innerStructIdentifier types.EncodedCompoundIdentifier = "abcd"
+	innerStruct := types.Struct{
+		TypeShapeV1: types.TypeShape{
+			InlineSize: 4,
+		},
+		Members: []types.StructMember{
+			{
+				FieldShapeV1: types.FieldShape{
+					Offset:  0,
+					Padding: 3,
+				},
+			},
+		},
+	}
+	input := types.Struct{
+		TypeShapeV1: types.TypeShape{
+			InlineSize: 8,
+		},
+		Members: []types.StructMember{
+			{
+				FieldShapeV1: types.FieldShape{
+					Offset:  0,
+					Padding: 4,
+				},
+				Type: types.Type{
+					Kind:       types.IdentifierType,
+					Identifier: innerStructIdentifier,
+				},
+			},
+		},
+	}
+	c := compiler{
+		decls: map[types.EncodedCompoundIdentifier]types.DeclType{
+			innerStructIdentifier: types.StructDeclType,
+		},
+		structs: map[types.EncodedCompoundIdentifier]types.Struct{
+			innerStructIdentifier: innerStruct,
+		},
+		library: types.LibraryIdentifier{""},
+	}
+	out := c.buildPaddingMarkers(input, true)
+	expected := []PaddingMarker{
+		{
+			Type:   "u64",
+			Offset: 0,
+			Mask:   "0xffffffffffffff00u64",
+		},
+	}
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Errorf("expected != actual (-want +got)\n%s", diff)
+	}
+}
+
+func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
+	var innerStructIdentifier types.EncodedCompoundIdentifier = "abcd"
+	innerStruct := types.Struct{
+		TypeShapeV1: types.TypeShape{
+			InlineSize: 4,
+		},
+		Members: []types.StructMember{
+			{
+				FieldShapeV1: types.FieldShape{
+					Offset:  0,
+					Padding: 3,
+				},
+			},
+		},
+	}
+	count := 3
+	input := types.Struct{
+		TypeShapeV1: types.TypeShape{
+			InlineSize: 12,
+		},
+		Members: []types.StructMember{
+			{
+				FieldShapeV1: types.FieldShape{
+					Offset:  0,
+					Padding: 0,
+				},
+				Type: types.Type{
+					Kind:         types.ArrayType,
+					ElementCount: &count,
+					ElementType: &types.Type{
+						Kind:       types.IdentifierType,
+						Identifier: innerStructIdentifier,
+					},
+				},
+			},
+		},
+	}
+	c := compiler{
+		decls: map[types.EncodedCompoundIdentifier]types.DeclType{
+			innerStructIdentifier: types.StructDeclType,
+		},
+		structs: map[types.EncodedCompoundIdentifier]types.Struct{
+			innerStructIdentifier: innerStruct,
+		},
+		library: types.LibraryIdentifier{""},
+	}
+	out := c.buildPaddingMarkers(input, true)
+	expected := []PaddingMarker{
+		{
+			Type:   "u64",
+			Offset: 0,
+			Mask:   "0xffffff00ffffff00u64",
+		},
+		{
+			Type:   "u32",
+			Offset: 8,
+			Mask:   "0xffffff00u32",
+		},
+	}
+	if diff := cmp.Diff(expected, out); diff != "" {
+		t.Errorf("expected != actual (-want +got)\n%s", diff)
 	}
 }

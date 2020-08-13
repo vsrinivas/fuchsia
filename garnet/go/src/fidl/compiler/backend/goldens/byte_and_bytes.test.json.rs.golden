@@ -51,8 +51,7 @@ fidl_struct! {
       ty: u64,
       offset: 0,
       mask: 0xffffffffffffff00u64,
-  },
-  ],
+  },],
   size_v1: 56,
   align_v1: 8,
 }
