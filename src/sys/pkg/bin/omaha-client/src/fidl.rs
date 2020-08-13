@@ -863,6 +863,20 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_check_now_with_closed_monitor() {
+        let fidl = FidlServerBuilder::new().build().await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
+        let (client_end, stream) = create_request_stream::<MonitorMarker>().unwrap();
+        drop(stream);
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: Some(true),
+        };
+        let result = proxy.check_now(options, Some(client_end)).await.unwrap();
+        assert_matches!(result, Ok(()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_monitor_progress() {
         let fidl = FidlServerBuilder::new()
             .state_machine_control(StubStateMachineController)
