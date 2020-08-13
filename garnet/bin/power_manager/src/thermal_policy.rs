@@ -146,6 +146,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 error_integral: Cell::new(0.0),
                 state_initialized: Cell::new(false),
                 thermal_load: Cell::new(ThermalLoad(0)),
+                throttling_state: Cell::new(ThrottlingState::ThrottlingInactive),
                 throttle_end_deadline: Cell::new(None),
             },
             inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string()),
@@ -258,9 +259,25 @@ struct ThermalState {
     /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
     thermal_load: Cell<ThermalLoad>,
 
+    /// Current throttling state.
+    throttling_state: Cell<ThrottlingState>,
+
     /// After we exit throttling, if `throttle_end_delay` is nonzero then this value will
     /// indicate the time that we may officially consider a throttle event complete.
     throttle_end_deadline: Cell<Option<Nanoseconds>>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum ThrottlingState {
+    /// Selected when thermal load is above zero.
+    ThrottlingActive,
+
+    /// Selected when thermal load is zero and the throttling cooldown timer is not active.
+    ThrottlingInactive,
+
+    /// Selected when throttling has ended (thermal load is zero) but the throttling cooldown timer
+    /// is active.
+    CooldownActive,
 }
 
 impl ThermalPolicy {
@@ -326,6 +343,7 @@ impl ThermalPolicy {
             self.config.policy_params.controller_params.e_integral_min,
             self.config.policy_params.controller_params.e_integral_max,
         );
+        let throttling_state = self.update_throttling_state(timestamp, thermal_load).await;
 
         self.log_thermal_iteration_metrics(
             timestamp,
@@ -334,6 +352,7 @@ impl ThermalPolicy {
             filtered_temperature,
             error_integral,
             thermal_load,
+            throttling_state,
         );
 
         // If the new temperature is above the critical threshold then shut down the system
@@ -347,11 +366,11 @@ impl ThermalPolicy {
         );
 
         // Update the ThermalLimiter node with the latest thermal load
-        let result = self.update_thermal_load(timestamp, thermal_load).await;
+        let result = self.process_thermal_load(timestamp, thermal_load).await;
         log_if_err!(result, "Error updating thermal load");
         fuchsia_trace::instant!(
             "power_manager",
-            "ThermalPolicy::update_thermal_load_result",
+            "ThermalPolicy::process_thermal_load_result",
             fuchsia_trace::Scope::Thread,
             "result" => format!("{:?}", result).as_str()
         );
@@ -429,12 +448,15 @@ impl ThermalPolicy {
         filtered_temperature: Celsius,
         temperature_error_integral: f64,
         thermal_load: ThermalLoad,
+        throttling_state: ThrottlingState,
     ) {
         self.thermal_metrics.borrow_mut().log_raw_temperature(raw_temperature);
         self.inspect.timestamp.set(timestamp.0);
         self.inspect.time_delta.set(time_delta.0);
         self.inspect.temperature_raw.set(raw_temperature.0);
         self.inspect.temperature_filtered.set(filtered_temperature.0);
+        self.inspect.thermal_load.set(thermal_load.0.into());
+        self.inspect.throttling_state.set(format!("{:?}", throttling_state).as_str());
         fuchsia_trace::instant!(
             "power_manager",
             "ThermalPolicy::thermal_control_iteration_data",
@@ -506,74 +528,136 @@ impl ThermalPolicy {
 
     /// Process a new thermal load value. If there is a change from the cached thermal_load, then
     /// the new value is sent out to the ThermalLimiter node.
-    async fn update_thermal_load(
+    async fn process_thermal_load(
         &self,
         timestamp: Nanoseconds,
-        thermal_load: ThermalLoad,
+        new_load: ThermalLoad,
     ) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
-            "ThermalPolicy::update_thermal_load",
+            "ThermalPolicy::process_thermal_load",
             "timestamp" => timestamp.0,
-            "thermal_load" => thermal_load.0
+            "new_load" => new_load.0
         );
 
-        let mut return_val = Ok(());
+        let old_load = self.state.thermal_load.get();
+        self.state.thermal_load.set(new_load);
+        self.inspect.throttle_history().record_thermal_load(new_load);
 
-        if thermal_load != self.state.thermal_load.get() {
+        if new_load != old_load {
             fuchsia_trace::instant!(
                 "power_manager",
                 "ThermalPolicy::thermal_load_changed",
                 fuchsia_trace::Scope::Thread,
-                "old_load" => self.state.thermal_load.get().0,
-                "new_load" => thermal_load.0
+                "old_load" => old_load.0,
+                "new_load" => new_load.0
             );
 
-            if self.state.thermal_load.get().0 == 0 {
-                // We've just entered thermal limiting
+            self.send_message(
+                &self.config.thermal_limiter_node,
+                &Message::UpdateThermalLoad(new_load),
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Updates the throttling state by considering the current throttling state, new thermal load,
+    /// and timestamp. When the throttling state is updated, there may be an associated Cobalt event
+    /// or crash report dispatched.
+    async fn update_throttling_state(
+        &self,
+        timestamp: Nanoseconds,
+        new_load: ThermalLoad,
+    ) -> ThrottlingState {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::update_throttling_state",
+            "new_load" => new_load.0,
+            "timestamp" => timestamp.0
+        );
+
+        let old_state = self.state.throttling_state.get();
+        let new_state = match old_state {
+            ThrottlingState::ThrottlingActive => {
+                // If throttling was previously active but the thermal load is now zero, throttling
+                // is over. Mark cooldown active if there is a cooldown timer configured.
+                if (new_load == ThermalLoad(0))
+                    && (self.config.policy_params.throttle_end_delay > Seconds(0.0))
+                {
+                    ThrottlingState::CooldownActive
+                // If no cooldown delay is configured, we can mark throttling inactive immediately
+                } else if new_load == ThermalLoad(0) {
+                    ThrottlingState::ThrottlingInactive
+                } else {
+                    old_state
+                }
+            }
+            ThrottlingState::ThrottlingInactive => {
+                // If throttling was previously inactive but the thermal load is now nonzero,
+                // throttling is now active.
+                if new_load > ThermalLoad(0) {
+                    ThrottlingState::ThrottlingActive
+                } else {
+                    old_state
+                }
+            }
+            ThrottlingState::CooldownActive => {
+                // If the cooldown timer is active but the thermal load is nonzero again, we can
+                // mark throttling active
+                if new_load > ThermalLoad(0) {
+                    ThrottlingState::ThrottlingActive
+                // If the cooldown timer is active and has now expired, we can mark throttling
+                // inactive
+                } else if timestamp >= self.state.throttle_end_deadline.get().unwrap() {
+                    ThrottlingState::ThrottlingInactive
+                } else {
+                    old_state
+                }
+            }
+        };
+
+        // Handle the new throttling state
+        match (old_state, new_state) {
+            // Begin a new throttling event
+            (ThrottlingState::ThrottlingInactive, ThrottlingState::ThrottlingActive) => {
                 info!("Begin thermal mitigation");
                 self.thermal_metrics.borrow_mut().log_throttle_start(timestamp);
                 self.inspect.throttle_history().mark_throttling_active(timestamp);
-                self.state.throttle_end_deadline.set(None);
-            } else if thermal_load.0 == 0 {
-                // We've just exited thermal limiting. Set the deadline time that we may consider
-                // the throttle event officially complete.
-                info!("End thermal mitigation");
-                let throttle_end_deadline = timestamp
-                    + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos());
-                self.state.throttle_end_deadline.set(Some(throttle_end_deadline));
             }
 
-            self.state.thermal_load.set(thermal_load);
+            // Cancel the cooldown timer and resume the existing throttling event
+            (ThrottlingState::CooldownActive, ThrottlingState::ThrottlingActive) => {
+                info!("Begin thermal mitigation");
+                self.state.throttle_end_deadline.set(None);
+            }
 
-            // Record any errors here, but don't return early from the function in case we have a
-            // pending throttle_end_deadline to deal with
-            return_val = match self
-                .send_message(
-                    &self.config.thermal_limiter_node,
-                    &Message::UpdateThermalLoad(thermal_load),
-                )
-                .await
-            {
-                Ok(_) => Ok(()),
-                Err(e) => Err(Error::from(e)),
-            };
+            // Begin the cooldown timer
+            (ThrottlingState::ThrottlingActive, ThrottlingState::CooldownActive) => {
+                info!("End thermal mitigation");
+                self.state.throttle_end_deadline.set(Some(
+                    timestamp
+                        + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos()),
+                ));
+            }
+
+            // End the current throttling event and file a crash report
+            (ThrottlingState::ThrottlingActive, ThrottlingState::ThrottlingInactive)
+            | (ThrottlingState::CooldownActive, ThrottlingState::ThrottlingInactive) => {
+                if let ThrottlingState::ThrottlingActive = old_state {
+                    info!("End thermal mitigation");
+                }
+                self.state.throttle_end_deadline.set(None);
+                self.thermal_metrics.borrow_mut().log_throttle_end_mitigated(timestamp);
+                self.inspect.throttle_history().mark_throttling_inactive(timestamp);
+                self.file_thermal_crash_report().await;
+            }
+            _ => {}
         }
 
-        // If a throttle end deadline time was set and the deadline has been passed, then declare
-        // the throttle event complete and clear the deadline
-        if self.state.throttle_end_deadline.get().is_some()
-            && timestamp >= self.state.throttle_end_deadline.get().unwrap()
-        {
-            self.state.throttle_end_deadline.set(None);
-            self.thermal_metrics.borrow_mut().log_throttle_end_mitigated(timestamp);
-            self.inspect.throttle_history().mark_throttling_inactive(timestamp);
-            self.file_thermal_crash_report().await;
-        }
-
-        self.inspect.throttle_history().record_thermal_load(thermal_load);
-
-        return_val
+        self.state.throttling_state.set(new_state);
+        new_state
     }
 
     /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
@@ -744,6 +828,8 @@ struct InspectData {
     temperature_filtered: inspect::DoubleProperty,
     error_integral: inspect::DoubleProperty,
     state_initialized: inspect::UintProperty,
+    thermal_load: inspect::UintProperty,
+    throttling_state: inspect::StringProperty,
     max_time_delta: inspect::DoubleProperty,
     throttle_history: RefCell<InspectThrottleHistory>,
 }
@@ -763,6 +849,11 @@ impl InspectData {
         let temperature_filtered = state_node.create_double("temperature_filtered (C)", 0.0);
         let error_integral = state_node.create_double("error_integral", 0.0);
         let state_initialized = state_node.create_uint("state_initialized", 0);
+        let thermal_load = state_node.create_uint("thermal_load", 0);
+        let throttling_state = state_node.create_string(
+            "throttling_state",
+            format!("{:?}", ThrottlingState::ThrottlingInactive),
+        );
         let max_time_delta = stats_node.create_double("max_time_delta (s)", 0.0);
         let throttle_history = RefCell::new(InspectThrottleHistory::new(
             root_node.create_child("throttle_history"),
@@ -782,6 +873,8 @@ impl InspectData {
             temperature_filtered,
             error_integral,
             state_initialized,
+            thermal_load,
+            throttling_state,
             throttle_history,
         }
     }
@@ -843,7 +936,10 @@ impl InspectThrottleHistory {
     /// Mark the start of throttling.
     fn mark_throttling_active(&mut self, timestamp: Nanoseconds) {
         // Must have ended previous throttling
-        assert_eq!(self.throttling_active, false);
+        debug_assert_eq!(self.throttling_active, false);
+        if self.throttling_active {
+            return;
+        }
 
         // Begin a new throttling entry
         self.new_entry();
@@ -998,10 +1094,13 @@ impl CobaltMetrics {
     /// Log the start of a thermal throttling duration. Must call `throttle_end` before calling this
     /// function a second time.
     fn log_throttle_start(&mut self, timestamp: Nanoseconds) {
-        assert!(
+        debug_assert!(
             self.throttle_start_time.is_none(),
             "throttle_start called before ending previous throttle"
         );
+        if self.throttle_start_time.is_some() {
+            return;
+        }
 
         self.throttle_start_time = Some(timestamp);
     }
@@ -1374,14 +1473,16 @@ pub mod tests {
             .unwrap();
 
         // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
-        let _ = node.update_thermal_load(throttle_start_time, thermal_load).await;
+        let _ = node.update_throttling_state(throttle_start_time, thermal_load).await;
+        let _ = node.process_thermal_load(throttle_start_time, thermal_load).await;
 
         // Causes Inspect to receive one reading into available_power_hist and one reading into both
         // entries of cpu_power_usage
         let _ = node.update_power_allocation(0.0, 0.0).await;
 
         // Causes Inspect to receive throttle_end_time
-        let _ = node.update_thermal_load(throttle_end_time, ThermalLoad(0)).await;
+        let _ = node.update_throttling_state(throttle_end_time, ThermalLoad(0)).await;
+        let _ = node.process_thermal_load(throttle_end_time, ThermalLoad(0)).await;
 
         let mut expected_thermal_load_hist = HistogramAssertion::linear(LinearHistogramParams {
             floor: 0u64,
@@ -1527,10 +1628,10 @@ pub mod tests {
             .unwrap();
 
         // Cause the thermal policy to begin thermal limiting
-        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
+        let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(50)).await;
 
         // Cause the thermal policy to end thermal limiting
-        let _ = node.update_thermal_load(throttle_duration, ThermalLoad(0)).await;
+        let _ = node.update_throttling_state(throttle_duration, ThermalLoad(0)).await;
 
         // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
         assert_eq!(
@@ -1680,6 +1781,7 @@ pub mod tests {
     /// causes a panic.
     #[test]
     #[should_panic(expected = "throttle_start called before ending previous throttle")]
+    #[cfg(debug_assertions)]
     fn test_cobalt_metrics_double_start_panic() {
         let (sender, _) = futures::channel::mpsc::channel(10);
         let mut cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
@@ -1694,9 +1796,7 @@ pub mod tests {
         let mut policy_params = default_policy_params();
         let throttle_end_delay = Seconds(60.0);
         policy_params.throttle_end_delay = throttle_end_delay;
-        let initial_throttle_duration = Nanoseconds(1e9 as i64); // 1s
-        let total_throttle_duration =
-            initial_throttle_duration + Nanoseconds(throttle_end_delay.into_nanos());
+        let mut elapsed_time = Nanoseconds(0);
 
         // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
@@ -1715,18 +1815,43 @@ pub mod tests {
             .build()
             .unwrap();
 
-        // Cause the thermal policy to begin thermal limiting
-        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
+        // Begin throttling
+        let _ = node.update_throttling_state(elapsed_time, ThermalLoad(50)).await;
+        assert_eq!(node.state.throttling_state.get(), ThrottlingState::ThrottlingActive);
+        assert_eq!(node.state.throttle_end_deadline.get(), None);
 
-        // Cause the thermal policy to end thermal limiting, but the deadline timer should still be
-        // active
-        let _ = node.update_thermal_load(initial_throttle_duration, ThermalLoad(0)).await;
+        // End throttling; cooldown timer begins
+        elapsed_time += Nanoseconds(100);
+        let _ = node.update_throttling_state(elapsed_time, ThermalLoad(0)).await;
+        assert_eq!(node.state.throttling_state.get(), ThrottlingState::CooldownActive);
+        assert_eq!(
+            node.state.throttle_end_deadline.get(),
+            Some(elapsed_time + Nanoseconds(throttle_end_delay.into_nanos()))
+        );
 
-        // Verify there were no dispatched Cobalt events because the deadline timer is still running
+        // Verify there were no dispatched Cobalt events because the cooldown timer is still running
         assert!(receiver.try_next().is_err());
 
-        // Cause the deadline timer to expire
-        let _ = node.update_thermal_load(total_throttle_duration, ThermalLoad(0)).await;
+        // Resume throttling before cooldown timer expires
+        elapsed_time += Nanoseconds(100);
+        let _ = node.update_throttling_state(elapsed_time, ThermalLoad(50)).await;
+        assert_eq!(node.state.throttling_state.get(), ThrottlingState::ThrottlingActive);
+        assert_eq!(node.state.throttle_end_deadline.get(), None);
+
+        // End throttling; cooldown timer begins
+        elapsed_time += Nanoseconds(100);
+        let _ = node.update_throttling_state(elapsed_time, ThermalLoad(0)).await;
+        assert_eq!(node.state.throttling_state.get(), ThrottlingState::CooldownActive);
+        assert_eq!(
+            node.state.throttle_end_deadline.get(),
+            Some(elapsed_time + Nanoseconds(throttle_end_delay.into_nanos()))
+        );
+
+        // Cooldown timer expires
+        elapsed_time += Nanoseconds(throttle_end_delay.into_nanos());
+        let _ = node.update_throttling_state(elapsed_time, ThermalLoad(0)).await;
+        assert_eq!(node.state.throttling_state.get(), ThrottlingState::ThrottlingInactive);
+        assert_eq!(node.state.throttle_end_deadline.get(), None);
 
         // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
         assert_eq!(
@@ -1735,7 +1860,7 @@ pub mod tests {
                 metric_id: power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
                 event_codes: vec![],
                 component: None,
-                payload: EventPayload::ElapsedMicros(total_throttle_duration.0 as i64)
+                payload: EventPayload::ElapsedMicros(elapsed_time.0 as i64)
             }
         );
 
@@ -1781,7 +1906,7 @@ pub mod tests {
 
         // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
         // it does not receive a FileCrashReport message.
-        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
-        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(0)).await;
+        let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(50)).await;
+        let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(0)).await;
     }
 }
