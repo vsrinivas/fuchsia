@@ -17,16 +17,24 @@ import (
 	"time"
 )
 
-// The maximum number of runs that testsharder will calculate for a multiplied
-// test if totalRuns is unset.
-// TODO(olivernewman): Apply a maximum to user-specified values too, but
-// probably not in testsharder since we'll want to get feedback to users ASAP if
-// validation fails.
-const multipliedTestMaxRuns = 2000
+const (
+	// The maximum number of runs that testsharder will calculate for a multiplied
+	// test if totalRuns is unset.
+	// TODO(olivernewman): Apply a maximum to user-specified values too, but
+	// probably not in testsharder since we'll want to get feedback to users ASAP if
+	// validation fails.
+	multipliedTestMaxRuns = 2000
 
-// The maximum number of tests that a multiplier can match. testsharder will
-// fail if this is exceeded.
-const maxMatchesPerMultiplier = 5
+	// The maximum number of tests that a multiplier can match. testsharder will
+	// fail if this is exceeded.
+	maxMatchesPerMultiplier = 5
+
+	// The prefix added to the names of shards that run affected tests.
+	affectedShardPrefix = "affected:"
+
+	// The prefix added to the names of shards that run multiplied tests.
+	multipliedShardPrefix = "multiplied:"
+)
 
 // MultiplyShards will return an error that unwraps to this if a multiplier's
 // "name" field does not compile to a valid regex.
@@ -176,8 +184,12 @@ func MultiplyShards(
 		}
 
 		for _, m := range matches {
+			// If a test is multiplied, it doesn't matter if it was originally
+			// in an affected shard or not and it's confusing for it to have
+			// two prefixes. So don't include the "affected" prefix.
+			shardName := strings.TrimPrefix(m.shard.Name, affectedShardPrefix)
 			shards = append(shards, &Shard{
-				Name:  "multiplied:" + m.shard.Name + "-" + normalizeTestName(m.test.Name),
+				Name:  multipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
 				Tests: []Test{m.test},
 				Env:   m.shard.Env,
 			})
@@ -225,7 +237,7 @@ func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
 		}
 		if len(affected) > 0 {
 			newShards = append(newShards, &Shard{
-				Name:  fmt.Sprintf("affected:%s", shard.Name),
+				Name:  affectedShardPrefix + shard.Name,
 				Tests: affected,
 				Env:   shard.Env,
 			})

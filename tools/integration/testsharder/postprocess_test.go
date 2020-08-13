@@ -47,6 +47,18 @@ func shardWithOS(env build.Environment, os string, ids ...int) *Shard {
 	}
 }
 
+func affectedShard(env build.Environment, os string, ids ...int) *Shard {
+	var tests []Test
+	for _, id := range ids {
+		tests = append(tests, makeTest(id, os))
+	}
+	return &Shard{
+		Name:  affectedShardPrefix + environmentName(env),
+		Tests: tests,
+		Env:   env,
+	}
+}
+
 func TestMultiplyShards(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
@@ -76,7 +88,7 @@ func TestMultiplyShards(t *testing.T) {
 		test.Runs = runs
 		test.RunAlgorithm = KeepGoing
 		return &Shard{
-			Name:  "multiplied:" + environmentName(env) + "-" + normalizeTestName(test.Name),
+			Name:  multipliedShardPrefix + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},
 			Env:   env,
 		}
@@ -228,6 +240,18 @@ func TestMultiplyShards(t *testing.T) {
 			},
 			err: errInvalidMultiplierRegex,
 		},
+		{
+			name: "doesn't include affected prefix in multiplied shard names",
+			shards: []*Shard{
+				affectedShard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				{Name: "fuchsia-pkg", TotalRuns: 5},
+			},
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 5),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -299,18 +323,6 @@ func TestShardAffected(t *testing.T) {
 			OS:          os,
 			Affected:    affected,
 			MaxAttempts: 1,
-		}
-	}
-
-	affectedShard := func(env build.Environment, os string, ids ...int) *Shard {
-		var tests []Test
-		for _, id := range ids {
-			tests = append(tests, makeTest(id, os))
-		}
-		return &Shard{
-			Name:  "affected:" + environmentName(env),
-			Tests: tests,
-			Env:   env,
 		}
 	}
 
