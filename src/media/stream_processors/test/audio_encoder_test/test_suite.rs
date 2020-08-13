@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use crate::pcm_audio::*;
 use crate::timestamp_validator::*;
 use fidl_fuchsia_media::*;

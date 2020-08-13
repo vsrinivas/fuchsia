@@ -1,6 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE
+// found in the LICENSE file.
 
 #ifndef SRC_DEVICES_PCI_LIB_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_DW_PCIE_H_
 #define SRC_DEVICES_PCI_LIB_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_DW_PCIE_H_

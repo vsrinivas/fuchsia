@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use crate::mac::{Aid, MAX_AID};
 
 const TIM_BITMAP_LEN: usize = (MAX_AID as usize + 1) / 8;
