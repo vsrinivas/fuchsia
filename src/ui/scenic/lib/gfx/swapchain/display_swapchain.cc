@@ -364,6 +364,8 @@ void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
   use_protected_memory_ = use_protected_memory;
 }
 
+vk::Format DisplaySwapchain::GetImageFormat() { return swapchain_buffers_.image_format(); }
+
 bool DisplaySwapchain::InitializeDisplayLayer() {
   zx_status_t create_layer_status;
   zx_status_t transport_status =

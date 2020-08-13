@@ -25,6 +25,15 @@
 
 namespace scenic_impl {
 namespace gfx {
+namespace {
+
+// Highest priority format first.
+const vk::Format kPreferredImageFormats[] = {
+    vk::Format::eB8G8R8A8Srgb,
+    vk::Format::eR8G8B8A8Srgb,
+};
+
+}  // namespace
 
 BufferPool::BufferPool(size_t count, Environment* environment, bool use_protected_memory) {
   FX_CHECK(CreateBuffers(count, environment, use_protected_memory));
@@ -75,10 +84,17 @@ static vk::ImageUsageFlags GetFramebufferImageUsage() {
          vk::ImageUsageFlagBits::eTransferDst;
 }
 
-static vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
-  // TODO(fxbug.dev/42571): replace this with information extracted from fuchsia.hardware.display
-  // APIs.
-  return vk::Format::eB8G8R8A8Srgb;
+static vk::Format GetDisplayImageFormat(zx_pixel_format_t pixel_format) {
+  switch (pixel_format) {
+    case ZX_PIXEL_FORMAT_RGB_x888:
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+      return vk::Format::eB8G8R8A8Srgb;
+    case ZX_PIXEL_FORMAT_BGR_888x:
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+      return vk::Format::eR8G8B8A8Srgb;
+  }
+  FX_CHECK(false) << "Unsupported pixel format: " << pixel_format;
+  return vk::Format::eUndefined;
 }
 
 // Create a number of synced tokens that can be imported into collections.
@@ -114,14 +130,22 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   buffers_.resize(count);
   used_.resize(count);
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
+  image_format_ = vk::Format::eUndefined;
 
   const uint32_t width_in_px = environment->display->width_in_px();
   const uint32_t height_in_px = environment->display->height_in_px();
+
   zx_pixel_format_t pixel_format = ZX_PIXEL_FORMAT_NONE;
-  for (zx_pixel_format_t format : environment->display->pixel_formats()) {
-    // The formats are in priority order, so pick the first usable one.
-    if (format == ZX_PIXEL_FORMAT_RGB_x888 || format == ZX_PIXEL_FORMAT_ARGB_8888) {
-      pixel_format = format;
+  for (auto preferred_format : kPreferredImageFormats) {
+    for (zx_pixel_format_t format : environment->display->pixel_formats()) {
+      vk::Format vk_format = GetDisplayImageFormat(format);
+      if (vk_format == preferred_format) {
+        pixel_format = format;
+        image_format_ = vk_format;
+        break;
+      }
+    }
+    if (pixel_format != ZX_PIXEL_FORMAT_NONE) {
       break;
     }
   }
@@ -177,10 +201,10 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
   // Set Vulkan buffer constraints.
   vk::ImageCreateInfo create_info;
-  vk::Format vk_format = GetDisplayImageFormat(environment->escher->device());
   create_info.flags =
       use_protected_memory ? vk::ImageCreateFlagBits::eProtected : vk::ImageCreateFlags();
-  create_info.imageType = vk::ImageType::e2D, create_info.format = vk_format;
+  create_info.imageType = vk::ImageType::e2D;
+  create_info.format = image_format_;
   create_info.extent = vk::Extent3D{width_in_px, height_in_px, 1};
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;
@@ -294,7 +318,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
     // Wrap the image and device memory in a escher::Image.
     escher::ImageInfo image_info;
-    image_info.format = vk_format;
+    image_info.format = image_format_;
     image_info.width = width_in_px;
     image_info.height = height_in_px;
     image_info.usage = image_usage;

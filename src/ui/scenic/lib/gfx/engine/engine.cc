@@ -52,10 +52,6 @@ Engine::Engine(sys::ComponentContext* app_context,
 
   InitializeInspectObjects();
   InitializeAnnotationManager();
-
-  // TODO(fxbug.dev/42571): replace this with information extracted from fuchsia.hardware.display
-  // APIs.
-  engine_renderer_->WarmPipelineCache({vk::Format::eB8G8R8A8Unorm});
 }
 
 Engine::Engine(sys::ComponentContext* app_context,

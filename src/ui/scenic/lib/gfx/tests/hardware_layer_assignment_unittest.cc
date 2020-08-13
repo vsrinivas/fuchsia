@@ -32,6 +32,7 @@ class FakeSwapchain : public Swapchain {
   void SetUseProtectedMemory(bool use_protected_memory) override {
     // Do nothing.
   }
+  vk::Format GetImageFormat() override { return vk::Format::eUndefined; }
 };
 
 TEST_F(HLATest, HasHardwareLayerAssignment) {

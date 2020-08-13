@@ -223,9 +223,14 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t frame_trace_id) {
   scheduling::SessionUpdater::UpdateResults update_results;
-  CommandContext command_context{.sysmem = sysmem_,
-                                 .display_manager = display_manager_,
-                                 .scene_graph = engine_->scene_graph()};
+  CommandContext command_context{
+      .sysmem = sysmem_,
+      .display_manager = display_manager_,
+      .warm_pipeline_cache_callback =
+          [renderer = engine_->renderer()](vk::Format framebuffer_format) {
+            renderer->WarmPipelineCache({framebuffer_format});
+          },
+      .scene_graph = engine_->scene_graph()};
 
   // Update scene graph and stage ViewTree updates of Annotation Views first.
   //

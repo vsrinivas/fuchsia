@@ -38,12 +38,16 @@ using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 class Session;
 class Sysmem;
 
+// Callback used for pipeline warmup.
+using WarmPipelineCacheCallback = fit::function<void(vk::Format framebuffer_format)>;
+
 // Graphical context for a set of session updates.
 // The CommandContext is only valid during a single processing batch, and should
 // not be accessed/stored outside of that.
 struct CommandContext {
   Sysmem* sysmem = nullptr;
   display::DisplayManager* display_manager = nullptr;
+  WarmPipelineCacheCallback warm_pipeline_cache_callback;
   fxl::WeakPtr<SceneGraph> scene_graph;
 };
 

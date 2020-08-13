@@ -1499,11 +1499,17 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     return nullptr;
   }
 
-  return fxl::AdoptRef(new DisplayCompositor(
-      session, session->id(), id, session->session_context().scene_graph, display,
-      SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem,
-                                               command_context->display_manager,
-                                               session->session_context().escher)));
+  auto swapchain = SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem,
+                                                            command_context->display_manager,
+                                                            session->session_context().escher);
+
+  // Warm pipeline cache for swapchain format. This is cheap when called
+  // a second time for the same format.
+  command_context->warm_pipeline_cache_callback(swapchain->GetImageFormat());
+
+  return fxl::AdoptRef(new DisplayCompositor(session, session->id(), id,
+                                             session->session_context().scene_graph, display,
+                                             std::move(swapchain)));
 }
 
 ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(

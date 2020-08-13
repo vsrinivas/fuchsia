@@ -73,6 +73,7 @@ class CompositorTest : public SessionTest {
   CommandContext CreateCommandContext() {
     return {.sysmem = sysmem_.get(),
             .display_manager = display_manager_.get(),
+            .warm_pipeline_cache_callback = [](vk::Format) {},
             .scene_graph = scene_graph_->GetWeakPtr()};
   }
 

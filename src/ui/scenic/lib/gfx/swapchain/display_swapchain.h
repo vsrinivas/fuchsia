@@ -75,6 +75,8 @@ class DisplaySwapchain : public Swapchain {
   // change to true, it reallocates |swapchain_buffers_| using protected memory.
   void SetUseProtectedMemory(bool use_protected_memory) override;
 
+  vk::Format GetImageFormat() override;
+
  private:
   friend class test::DisplaySwapchainTest;
   friend class test::DisplaySwapchainMockTest;

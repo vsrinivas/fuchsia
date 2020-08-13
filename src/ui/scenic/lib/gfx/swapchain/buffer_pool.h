@@ -61,6 +61,7 @@ class BufferPool {
   void Put(Framebuffer* f);
 
   const fuchsia::hardware::display::ImageConfig& image_config() { return image_config_; }
+  vk::Format image_format() { return image_format_; }
   bool empty() const { return buffers_.empty(); }
   size_t size() const { return buffers_.size(); }
 
@@ -69,6 +70,7 @@ class BufferPool {
   std::vector<Framebuffer> buffers_;
   std::vector<bool> used_;
   fuchsia::hardware::display::ImageConfig image_config_;
+  vk::Format image_format_ = vk::Format::eB8G8R8A8Unorm;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BufferPool);
 };

@@ -15,6 +15,8 @@
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace escher {
 class Image;
 class Semaphore;
@@ -59,6 +61,9 @@ class Swapchain {
   // Used to tell swapchain if protected memory should be used to allocate framebuffers. If there is
   // any state change, the caller expects swapchain to reallocate buffers immediately.
   virtual void SetUseProtectedMemory(bool use_protected_memory) = 0;
+
+  // Returns the image format used by swapchain.
+  virtual vk::Format GetImageFormat() = 0;
 
   virtual ~Swapchain() = default;
 };
