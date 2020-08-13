@@ -74,8 +74,7 @@ class FeatureSpec(object):
 class Project(object):
 
     def __init__(self, project_json):
-        self.targets = project_json["targets"]
-        self.build_settings = project_json["build_settings"]
+        self.targets = project_json
         self.patches = None
         self.third_party_features = {}
 
@@ -110,8 +109,8 @@ class Project(object):
             return meta["deps"]
 
 
-def write_toml_file(fout, metadata, project, target, lookup):
-    root_path = project.build_settings["root_path"]
+def write_toml_file(
+        fout, metadata, project, target, lookup, root_path, root_build_dir):
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
     edition = "2018" if "--edition=2018" in metadata["rustflags"] else "2015"
@@ -206,9 +205,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
         elif "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
             output_name = project.targets[dep]["crate_name"]
-            dep_dir = rebase_gn_path(
-                root_path, project.build_settings["build_dir"] + "cargo/" +
-                str(lookup[dep]))
+            dep_dir = os.path.join(root_build_dir, "cargo", str(lookup[dep]))
             fout.write(
                 CARGO_PACKAGE_DEP % {
                     "crate_path": dep_dir,
@@ -219,6 +216,8 @@ def write_toml_file(fout, metadata, project, target, lookup):
 def main():
     # TODO(tmandry): Remove all hardcoded paths and replace with args.
     parser = argparse.ArgumentParser()
+    parser.add_argument("--root_build_dir", required=True)
+    parser.add_argument("--fuchsia_dir", required=True)
     parser.add_argument("json_path")
     args = parser.parse_args()
     json_path = args.json_path
@@ -231,12 +230,12 @@ def main():
         print("Failed to generate Cargo.toml files")
         print("No project.json in the root of your out directory!")
         print("Run gn with the --ide=json flag set")
-        # returns 0 so that CQ doesn"t fail if this isn"t set properly
+        # returns 0 so that CQ doesn't fail if this isn't set properly
         return 0
 
     project = Project(project)
-    root_path = project.build_settings["root_path"]
-    build_dir = project.build_settings["build_dir"]
+    root_path = os.path.abspath(args.fuchsia_dir)
+    root_build_dir = os.path.abspath(args.root_build_dir)
 
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
@@ -267,31 +266,26 @@ def main():
         lookup[target] = hashlib.sha1(target[2:].encode("utf-8")).hexdigest()
 
     # remove the priorly generated rust crates
-    gn_cargo_dir = rebase_gn_path(
-        root_path, project.build_settings["build_dir"] + "cargo/")
+    gn_cargo_dir = os.path.join(root_build_dir, "cargo")
     shutil.rmtree(gn_cargo_dir, ignore_errors=True)
     os.makedirs(gn_cargo_dir)
     # Write a stamp file with a predictable name so the build system knows the
     # step ran successfully.
     with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp"), "w") as f:
         f.truncate()
-    # And a depfile so GN knows to run this script again when the json file
-    # changes. Dependencies on the third-party build are tracked within GN.
-    with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp.d"), "w") as f:
-        f.write("cargo/generate_cargo.stamp: %s\n" % json_path)
 
     for target in project.rust_targets():
-        cargo_toml_dir = rebase_gn_path(
-            root_path, project.build_settings["build_dir"] + "cargo/" +
-            str(lookup[target]))
+        cargo_toml_dir = os.path.join(gn_cargo_dir, str(lookup[target]))
         try:
             os.makedirs(cargo_toml_dir)
         except OSError:
             print("Failed to create directory for Cargo: %s" % cargo_toml_dir)
 
         metadata = project.targets[target]
-        with open(cargo_toml_dir + "/Cargo.toml", "w") as fout:
-            write_toml_file(fout, metadata, project, target, lookup)
+        with open(os.path.join(cargo_toml_dir, "Cargo.toml"), "w") as fout:
+            write_toml_file(
+                fout, metadata, project, target, lookup, root_path,
+                root_build_dir)
     return 0
 
 

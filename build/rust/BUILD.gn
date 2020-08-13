@@ -35,6 +35,29 @@ toolchain("rustlang") {
   }
 }
 
+cargo_toml_gen_desc_out = "$target_out_dir/cargo_toml_gen_desc.json"
+action("cargo_toml_gen_desc") {
+  visibility = [ ":cargo_toml_gen" ]
+  script = "//scripts/generate_cargo_desc.py"
+  sources = []
+  inputs = []
+  outputs = [ cargo_toml_gen_desc_out ]
+  depfile = "$cargo_toml_gen_desc_out.d"
+  args = [
+    "--root_build_dir",
+    ".",
+    "--fuchsia_dir",
+    rebase_path("//", root_build_dir),
+    "--gn_binary",
+    rebase_path("//prebuilt/third_party/gn/${host_platform}/gn",
+                root_build_dir),
+    "--output",
+    rebase_path(cargo_toml_gen_desc_out, root_build_dir),
+    "--depfile",
+    rebase_path("$cargo_toml_gen_desc_out.d", root_build_dir),
+  ]
+}
+
 # NOTE: This target is used by "fx set --cargo-toml-gen ..." which
 # will do the following:
 #
@@ -57,9 +80,16 @@ action("cargo_toml_gen") {
   ]
   script = "//scripts/generate_cargo.py"
   sources = []
-  inputs = []
+  inputs = [ cargo_toml_gen_desc_out ]
 
   outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
   depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
-  args = [ rebase_path("$root_build_dir/project.json", "") ]
+  args = [
+    rebase_path(cargo_toml_gen_desc_out, root_build_dir),
+    "--root_build_dir",
+    ".",
+    "--fuchsia_dir",
+    rebase_path("//", root_build_dir),
+  ]
+  deps = [ ":cargo_toml_gen_desc" ]
 }

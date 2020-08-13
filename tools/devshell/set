@@ -268,7 +268,6 @@ function main {
         ;;
       --cargo-toml-gen)
         cargo_toml_gen=1
-        gn_switches+=("--ide=json")
         ;;
       --netboot)
         gn_after_args+=" enable_netboot=true"
