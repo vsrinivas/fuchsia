@@ -994,20 +994,21 @@ impl Inner {
         }
     }
 
-    fn spawn(arc_self: &Arc<Self>, future: FutureObj<'static, ()>) {
-        let task = Arc::new(Task { future: AtomicFuture::new(future), executor: arc_self.clone() });
+    fn spawn(self: &Arc<Self>, future: FutureObj<'static, ()>) {
+        let task =
+            Arc::new(Task { future: AtomicFuture::new(future), executor: Arc::downgrade(self) });
 
-        arc_self.ready_tasks.push(task);
-        arc_self.notify_task_ready();
+        self.ready_tasks.push(task);
+        self.notify_task_ready();
     }
 
-    fn spawn_local(arc_self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
-        arc_self.threadiness.require_singlethreaded().expect(
+    fn spawn_local(self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
+        self.threadiness.require_singlethreaded().expect(
             "Error: called `spawn_local` after calling `run` on executor. \
              Use `spawn` or `run_singlethreaded` instead.",
         );
         Inner::spawn(
-            arc_self,
+            self,
             // Unsafety: we've confirmed that the boxed futures here will never be used
             // across multiple threads, so we can safely convert from a non-`Send`able
             // future to a `Send`able one.
@@ -1071,13 +1072,15 @@ impl Inner {
 
 struct Task {
     future: AtomicFuture,
-    executor: Arc<Inner>,
+    executor: Weak<Inner>,
 }
 
 impl ArcWake for Task {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        arc_self.executor.ready_tasks.push(arc_self.clone());
-        arc_self.executor.notify_task_ready();
+        if let Some(executor) = Weak::upgrade(&arc_self.executor) {
+            executor.ready_tasks.push(arc_self.clone());
+            executor.notify_task_ready();
+        }
     }
 }
 
