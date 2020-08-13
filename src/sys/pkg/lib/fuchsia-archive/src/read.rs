@@ -16,24 +16,24 @@ use {
 };
 
 /// A struct to open and read FAR-formatted archive.
-pub struct Reader<'a, T>
+pub struct Reader<T>
 where
     T: Read + Seek,
 {
-    source: &'a mut T,
+    source: T,
     directory_entries: BTreeMap<String, DirectoryEntry>,
 }
 
-impl<'a, T> Reader<'a, T>
+impl<T> Reader<T>
 where
     T: Read + Seek,
 {
     /// Create a new Reader for the provided source.
-    pub fn new(source: &'a mut T) -> Result<Reader<'a, T>, Error> {
-        let index = Self::read_index(source)?;
+    pub fn new(mut source: T) -> Result<Reader<T>, Error> {
+        let index = Self::read_index(&mut source)?;
 
         let (dir_index, dir_name_index) =
-            Reader::<T>::read_index_entries(source, index.length / INDEX_ENTRY_LEN, &index)?;
+            Reader::<T>::read_index_entries(&mut source, index.length / INDEX_ENTRY_LEN, &index)?;
 
         let dir_index = dir_index.ok_or(Error::MissingDirectoryChunkIndexEntry)?;
         let dir_name_index = dir_name_index.ok_or(Error::MissingDirectoryNamesChunkIndexEntry)?;
@@ -47,7 +47,7 @@ where
         let mut directory_entries = BTreeMap::new();
         for _ in 0..dir_entry_count {
             let entry: DirectoryEntry =
-                deserialize_from(&mut *source).map_err(Error::DeserializeDirectoryEntry)?;
+                deserialize_from(&mut source).map_err(Error::DeserializeDirectoryEntry)?;
             let name_start = entry.name_offset as usize;
             let after_name_end = name_start + entry.name_length as usize;
             let file_name = str::from_utf8(&path_data[name_start..after_name_end])
@@ -133,7 +133,7 @@ where
         Ok(EntryReader {
             offset: directory_entry.data_offset,
             length: directory_entry.data_length,
-            source: self.source,
+            source: &mut self.source,
         })
     }
 
