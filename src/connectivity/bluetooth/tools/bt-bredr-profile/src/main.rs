@@ -110,6 +110,7 @@ async fn advertise(
     let params = ChannelParameters {
         channel_mode: Some(channel_mode),
         max_rx_sdu_size: Some(max_rx_sdu_size),
+        security_requirements: None,
     };
 
     let audio_sink_uuid = Uuid::new16(0x110B); // Audio Sink
@@ -126,12 +127,7 @@ async fn advertise(
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
-    profile_svc.advertise(
-        &mut svc_defs.into_iter(),
-        SecurityRequirements::new_empty(),
-        params,
-        connect_client,
-    )?;
+    profile_svc.advertise(&mut svc_defs.into_iter(), params, connect_client)?;
 
     let (end_ad_sender, end_ad_receiver) = oneshot::channel::<()>();
     let service_id = state.write().services.insert(SdpService {
@@ -139,6 +135,7 @@ async fn advertise(
         params: ChannelParameters {
             channel_mode: Some(channel_mode),
             max_rx_sdu_size: Some(max_rx_sdu_size),
+            security_requirements: None,
         },
     });
 
@@ -195,6 +192,7 @@ async fn connect(
     let params = ChannelParameters {
         channel_mode: Some(channel_mode),
         max_rx_sdu_size: Some(max_rx_sdu_size),
+        security_requirements: None,
     };
 
     let channel = match profile_svc

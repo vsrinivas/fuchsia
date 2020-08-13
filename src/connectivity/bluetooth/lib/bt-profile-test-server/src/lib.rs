@@ -10,7 +10,7 @@ use {
         ChannelParameters, ConnectionReceiverRequestStream, MockPeerMarker, MockPeerProxy,
         PeerObserverMarker, PeerObserverRequest, PeerObserverRequestStream, ProfileMarker,
         ProfileProxy, ProfileTestMarker, ProfileTestProxy, SearchResultsRequestStream,
-        SecurityRequirements, ServiceClassProfileIdentifier, ServiceDefinition,
+        ServiceClassProfileIdentifier, ServiceDefinition,
     },
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::PeerId,
@@ -186,7 +186,6 @@ impl MockPeer {
             create_request_stream().context("ConnectionReceiver creation")?;
         self.profile_svc.advertise(
             &mut service_defs.into_iter(),
-            SecurityRequirements::new_empty(),
             ChannelParameters::new_empty(),
             connect_client,
         )?;

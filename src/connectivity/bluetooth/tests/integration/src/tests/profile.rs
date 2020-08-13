@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         ChannelParameters, ConnectParameters, ConnectionReceiverRequestStream, DataElement,
         L2capParameters, ProtocolDescriptor, ProtocolIdentifier, SearchResultsRequestStream,
-        SecurityRequirements, ServiceClassProfileIdentifier, ServiceDefinition, PSM_AVDTP,
+        ServiceClassProfileIdentifier, ServiceDefinition, PSM_AVDTP,
     },
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{BredrPeerParameters, HciEmulatorProxy, PeerProxy},
@@ -51,7 +51,6 @@ fn add_service(profile: &ProfileHarness) -> Result<ConnectionReceiverRequestStre
 
     let _ = profile.aux().proxy().advertise(
         &mut service_defs.into_iter(),
-        SecurityRequirements::new_empty(),
         ChannelParameters::new_empty(),
         connect_client,
     )?;

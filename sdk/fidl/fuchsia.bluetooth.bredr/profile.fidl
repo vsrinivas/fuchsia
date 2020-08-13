@@ -64,6 +64,11 @@ table ChannelParameters {
     /// provided, the size will be determined by the Bluetooth system.  No guarantees are given
     /// regarding the size selected.
     2: uint16 max_rx_sdu_size;
+    /// Minimum security requirements a link must have before this channel can be created.
+    /// The requirements provided here will be attempted with the peer before the channel is
+    /// established. If a peer cannot provide the requirements, the channel is closed.
+    /// Optional. If not provided, then the only security property guaranteed is encryption.
+    3: SecurityRequirements security_requirements;
 };
 
 /// A channel opened to a peer.
@@ -140,14 +145,10 @@ const uint8 MAX_SERVICES_PER_ADVERTISEMENT = 32;
     /// with ZX_ERR_ALREADY_BOUND.
     /// The ConnectionReceiver will get calls for connections to the channels included in the
     /// `protocol_descriptor` or `alternative_protocol_descriptors` in the services advertised.
-    /// The `requirements` provided here will be attempted with the peer before a connection is
-    /// established. If a peer cannot provide the requirements before connecting, the connection is
-    /// closed and nothing is delivered to the receiver.
     /// The receiver will be closed if the advertisement cannot be made for any reason with a
     /// suitable epitaph.
     Advertise(vector<ServiceDefinition>:MAX_SERVICES_PER_ADVERTISEMENT services,
-              SecurityRequirements requirements, ChannelParameters parameters,
-              ConnectionReceiver receiver);
+              ChannelParameters parameters, ConnectionReceiver receiver);
 
     /// Register a search for services on newly connected peers.  The SearchResults protocol will be
     /// used to report results for this search.  Any service result with a service matching

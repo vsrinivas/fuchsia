@@ -10,7 +10,7 @@ use fidl_fuchsia_bluetooth_bredr::{
     Attribute, Channel, ChannelMode, ChannelParameters, ConnectParameters,
     ConnectionReceiverRequest, ConnectionReceiverRequestStream, DataElement, Information,
     L2capParameters, ProfileDescriptor, ProfileMarker, ProfileProxy, ProtocolDescriptor,
-    ProtocolIdentifier, SearchResultsRequest, SearchResultsRequestStream, SecurityRequirements,
+    ProtocolIdentifier, SearchResultsRequest, SearchResultsRequestStream,
     ServiceClassProfileIdentifier, ServiceDefinition,
 };
 use fuchsia_async as fasync;
@@ -579,7 +579,6 @@ impl ProfileServerFacade {
             Some(server) => {
                 server.advertise(
                     &mut service_defs.into_iter(),
-                    SecurityRequirements::new_empty(),
                     ChannelParameters::new_empty(),
                     connect_client,
                 )?;

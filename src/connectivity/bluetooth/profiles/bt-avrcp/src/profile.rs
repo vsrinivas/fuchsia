@@ -270,7 +270,6 @@ pub fn connect_and_advertise(
     let service_defs = vec![make_controller_service_definition(), make_target_service_definition()];
     profile_svc.advertise(
         &mut service_defs.into_iter(),
-        SecurityRequirements::new_empty(),
         ChannelParameters {
             channel_mode: Some(ChannelMode::EnhancedRetransmission),
             ..ChannelParameters::new_empty()

@@ -438,6 +438,7 @@ impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
         Ok(fidl_bredr::ChannelParameters {
             channel_mode: src.channel_mode,
             max_rx_sdu_size: src.max_rx_sdu_size,
+            security_requirements: None,
         })
     }
 }
@@ -680,7 +681,11 @@ mod tests {
         let max_rx_sdu_size = Some(MIN_RX_SDU_SIZE);
 
         let local = ChannelParameters { channel_mode, max_rx_sdu_size };
-        let fidl = fidl_bredr::ChannelParameters { channel_mode, max_rx_sdu_size };
+        let fidl = fidl_bredr::ChannelParameters {
+            channel_mode,
+            max_rx_sdu_size,
+            security_requirements: None,
+        };
 
         let local_to_fidl =
             fidl_bredr::ChannelParameters::try_from(&local).expect("conversion should work");
@@ -701,8 +706,11 @@ mod tests {
     fn test_invalid_channel_parameters_fails_gracefully() {
         let too_small_sdu = Some(MIN_RX_SDU_SIZE - 1);
         let local = ChannelParameters { channel_mode: None, max_rx_sdu_size: too_small_sdu };
-        let fidl =
-            fidl_bredr::ChannelParameters { channel_mode: None, max_rx_sdu_size: too_small_sdu };
+        let fidl = fidl_bredr::ChannelParameters {
+            channel_mode: None,
+            max_rx_sdu_size: too_small_sdu,
+            security_requirements: None,
+        };
 
         let local_to_fidl = fidl_bredr::ChannelParameters::try_from(&local);
         assert!(local_to_fidl.is_err());

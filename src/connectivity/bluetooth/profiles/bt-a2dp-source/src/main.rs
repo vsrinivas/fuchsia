@@ -532,7 +532,6 @@ async fn main() -> Result<(), Error> {
     profile_svc
         .advertise(
             &mut service_defs.into_iter(),
-            Decodable::new_empty(),
             bredr::ChannelParameters {
                 channel_mode: Some(signaling_channel_mode),
                 ..Decodable::new_empty()
