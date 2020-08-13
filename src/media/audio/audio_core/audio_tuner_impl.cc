@@ -114,6 +114,10 @@ void AudioTunerImpl::DeleteAudioDeviceProfile(std::string device_id,
 void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
                                           fuchsia::media::tuning::AudioEffectConfig effect,
                                           SetAudioEffectConfigCallback callback) {
+  if (!effect.has_instance_name() || !effect.has_configuration()) {
+    callback(ZX_ERR_BAD_STATE);
+    return;
+  }
   auto promise = context_.device_manager().UpdateDeviceEffect(device_id, effect.instance_name(),
                                                               effect.configuration());
   context_.threading_model().FidlDomain().executor()->schedule_task(

@@ -138,14 +138,13 @@ inline PipelineConfig::MixGroup ToPipelineConfigMixGroup(
     inputs.push_back(ToPipelineConfigMixGroup(std::move(*mix_group.inputs[i])));
   }
   bool loopback = mix_group.loopback;
+  uint32_t output_rate =
+      mix_group.output_rate ? mix_group.output_rate : PipelineConfig::kDefaultMixGroupRate;
+  uint16_t output_channels = mix_group.output_channels ? mix_group.output_channels
+                                                       : PipelineConfig::kDefaultMixGroupChannels;
 
-  return PipelineConfig::MixGroup{name,
-                                  input_streams,
-                                  effects,
-                                  inputs,
-                                  loopback,
-                                  PipelineConfig::kDefaultMixGroupRate,
-                                  PipelineConfig::kDefaultMixGroupChannels};
+  return PipelineConfig::MixGroup{name,     input_streams, effects,        inputs,
+                                  loopback, output_rate,   output_channels};
 }
 
 inline VolumeCurve ToVolumeCurve(const std::vector<fuchsia::media::tuning::Volume> volume_curve) {

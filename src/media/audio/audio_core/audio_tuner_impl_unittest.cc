@@ -386,13 +386,13 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
                                                                        .inputs = {},
                                                                        .loopback = false,
                                                                        .output_rate = 48000,
-                                                                       .output_channels = 2}},
+                                                                       .output_channels = 1}},
                                    .loopback = false,
                                    .output_rate = 48000,
-                                   .output_channels = 2}},
+                                   .output_channels = 1}},
                                .loopback = true,
-                               .output_rate = 48000,
-                               .output_channels = 2});
+                               .output_rate = 96000,
+                               .output_channels = 1});
   auto new_profile = ToAudioDeviceTuningProfile(new_pipeline_config, kVolumeCurve);
   bool completed_update = false;
   under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
@@ -532,6 +532,82 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
         tuning_profile = std::move(profile);
       });
   ExpectEq(expected_pipeline_config.root(), tuning_profile.pipeline());
+}
+
+TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoInstanceName) {
+  auto context = CreateContext(kDefaultProcessConfig);
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
+
+  // Attempt device effect update, missing |instance_name|.
+  std::string updated_effect_config = "new configuration";
+  fuchsia::media::tuning::AudioEffectConfig effect;
+  effect.set_configuration(updated_effect_config);
+  bool completed_update = false;
+  under_test.SetAudioEffectConfig(kDeviceIdString, std::move(effect),
+                                  [&completed_update](zx_status_t result) {
+                                    completed_update = true;
+                                    EXPECT_EQ(ZX_ERR_BAD_STATE, result);
+                                  });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_update);
+}
+
+TEST_F(AudioTunerTest, FailSetAudioEffectConfigNoConfig) {
+  auto context = CreateContext(kDefaultProcessConfig);
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
+
+  // Attempt device effect update, missing |configuration|.
+  std::string updated_effect_config = "new configuration";
+  fuchsia::media::tuning::AudioEffectConfig effect;
+  effect.set_instance_name("");
+  bool completed_update = false;
+  under_test.SetAudioEffectConfig(kDeviceIdString, std::move(effect),
+                                  [&completed_update](zx_status_t result) {
+                                    completed_update = true;
+                                    EXPECT_EQ(ZX_ERR_BAD_STATE, result);
+                                  });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_update);
+}
+
+TEST_F(AudioTunerTest, FailSetAudioEffectConfigInvalidInstanceName) {
+  auto context = CreateContext(kDefaultProcessConfig);
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
+
+  // Attempt device effect update with invalid |instance_name|.
+  std::string updated_effect_config = "new configuration";
+  fuchsia::media::tuning::AudioEffectConfig effect;
+  effect.set_instance_name("invalid_effect");
+  effect.set_configuration("new configuration");
+  bool completed_update = false;
+  under_test.SetAudioEffectConfig(kDeviceIdString, std::move(effect),
+                                  [&completed_update](zx_status_t result) {
+                                    completed_update = true;
+                                    EXPECT_EQ(ZX_ERR_NOT_FOUND, result);
+                                  });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_update);
 }
 
 }  // namespace

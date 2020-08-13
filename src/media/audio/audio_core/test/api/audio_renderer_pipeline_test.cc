@@ -354,25 +354,22 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
 
   // Setup new output pipeline details.
   auto device_id = AudioDevice::UniqueIdToString({{0xff, 0x00}});
-  PipelineConfig::MixGroup root{
-      .name = "linearize",
-      .input_streams =
-          {
-              RenderUsage::MEDIA,
-              RenderUsage::SYSTEM_AGENT,
-              RenderUsage::INTERRUPTION,
-              RenderUsage::COMMUNICATION,
-          },
-      .effects =
-          {
-              {
-                  .lib_name = "inversion_filter.so",
-                  .effect_name = "inversion_filter",
-                  .instance_name = "inverter",
-                  .effect_config = "disable",
-              },
-          },
-  };
+  PipelineConfig::MixGroup root{.name = "linearize",
+                                .input_streams =
+                                    {
+                                        RenderUsage::MEDIA,
+                                        RenderUsage::SYSTEM_AGENT,
+                                        RenderUsage::INTERRUPTION,
+                                        RenderUsage::COMMUNICATION,
+                                    },
+                                .effects = {
+                                    {
+                                        .lib_name = "inversion_filter.so",
+                                        .effect_name = "inversion_filter",
+                                        .instance_name = "inverter",
+                                        .effect_config = "disable",
+                                    },
+                                }};
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto device_profile_with_inversion_effect =
