@@ -61,8 +61,8 @@ def main():
                     'files':
                         [
                             {
-                                'source': source,
-                                'destination': destination
+                                'source': os.path.normpath(source),
+                                'destination': os.path.normpath(destination)
                             } for destination, source in files.items()
                         ],
                     'type': args.type,

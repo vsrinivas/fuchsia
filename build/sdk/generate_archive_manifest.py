@@ -51,7 +51,9 @@ def main():
 
     all_files = {}
 
-    def add(dest, src):
+    def add(dest_path, src_path):
+        dest = os.path.normpath(dest_path)
+        src = os.path.normpath(src_path)
         if dest in all_files:
             print('Error: multiple entries for %s' % dest)
             print('  - %s' % all_files[dest])
