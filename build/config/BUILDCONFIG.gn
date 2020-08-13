@@ -1057,7 +1057,13 @@ template("variant_target") {
 
         selected = true
         if (selected && defined(selector.host)) {
-          selected = current_toolchain == host_toolchain == selector.host
+          # NOTE: Do not use 'current_toolchain == host_toolchain' to verify
+          # that the current toolchain is a host one, because this condition
+          # will be false when building host_arm64 executables on host_x64.
+          # On the other hand, `is_host` is always correct in either host_x64
+          # or host_arm64, due to the way it is set above in this file.
+          # See https://fxbug.dev/58102 for details.
+          selected = is_host == selector.host
         }
 
         if (selected && defined(selector.testonly)) {
