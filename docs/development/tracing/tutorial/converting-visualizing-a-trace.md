@@ -227,7 +227,7 @@ If you click on `Blob::Read`, you can see the following information:
 ![drawing](images/trace-example-blobread.png)
 
 Note: For information on how tracing is performed for `Blob::Read`,
-see [//zircon/system/ulib/blobfs/blob.cc](/zircon/system/ulib/blobfs/blob.cc).
+see [//src/storage/blobfs/blob.cc](/src/storage/blobfs/blob.cc).
 
 The code for `Blob::Read` is:
 

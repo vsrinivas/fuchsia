@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+template("blobfs_large_integration_test") {
+  test_case_sources = invoker.sources
+  test_target_name = "blobfs-large-integration-${target_name}"
+  test(test_target_name) {
+    output_name = "$test_target_name-test"
+
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    sources = [ "integration/large/main.cc" ]
+    sources += test_case_sources
+    include_dirs = [ "integration" ]
+    deps = [
+      ":integration-fixtures",
+      ":load-generator",
+      ":test-utils",
+      "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+      "//sdk/lib/fdio",
+      "//src/storage/blobfs",
+      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/fs-test-utils",
+      "//zircon/system/ulib/fs/test_support",
+      "//zircon/system/ulib/fvm",
+      "//zircon/system/ulib/memfs",
+    ]
+  }
+
+  paged_target_name = "${test_target_name}-paged"
+  test(paged_target_name) {
+    output_name = "$paged_target_name-test"
+
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    sources = [
+      "integration/large/paged_main.cc",
+      "integration/launch.cc",
+    ]
+    include_dirs = [ "integration" ]
+    deps = [
+      "//sdk/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+    defines = [
+      "BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE=\"${test_target_name}-test\"",
+    ]
+  }
+}

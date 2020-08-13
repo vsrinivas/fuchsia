@@ -10162,11 +10162,11 @@
     ],
     "test": {
       "cpu": "x64",
-      "label": "//zircon/system/ulib/blobfs/test/blobfs-host:blobfs-host(//build/toolchain:host_x64)",
+      "label": "//src/storage/blobfs/test/blobfs-host:blobfs-host(//build/toolchain:host_x64)",
       "name": "host_x64/blobfs-host",
       "os": "linux",
       "path": "host_x64/blobfs-host",
-      "runtime_deps": "host_x64/gen/zircon/system/ulib/blobfs/test/blobfs-host.deps.json"
+      "runtime_deps": "host_x64/gen/src/storage/blobfs/test/blobfs-host.deps.json"
     }
   },
   {

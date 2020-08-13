@@ -108,7 +108,7 @@ group("migrated-tests") {
     "//sdk/lib/fdio/test/host",
 
     #------------------
-    "//zircon/system/ulib/blobfs/test:blobfs-host",
+    "//src/storage/blobfs/test:blobfs-host",
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/ffl/test:ffl",
     "//zircon/system/ulib/fit/test",

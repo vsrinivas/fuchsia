@@ -129,7 +129,7 @@ For more information on the `TRACE_ENABLED` macro, see
 In some cases, you may need to time a function or procedure.
 
 This example is from a `blobfs` vnode constructor. See
-[//zircon/system/ulib/blobfs/blobfs.cc](/zircon/system/ulib/blobfs/blobfs.cc).
+[//src/storage/blobfs/blobfs.cc](/src/storage/blobfs/blobfs.cc).
 
 * {C++}
 
