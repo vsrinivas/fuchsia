@@ -94,6 +94,7 @@ host_test_data("fx_bash_tests") {
 
       files = [
         "//tools/devshell/contrib/blobstats",
+        "//tools/devshell/contrib/lib/symbol-index.sh",
         "//tools/devshell/cp",
         "//tools/devshell/emu",
         "//tools/devshell/fdt",

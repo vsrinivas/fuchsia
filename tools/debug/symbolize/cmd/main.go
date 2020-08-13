@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ const (
 var (
 	symbolServers   argList
 	symbolCache     string
+	symbolIndex     string
 	buildIDDirPaths argList
 	colors          color.EnableColor
 	jsonOutput      string
@@ -53,8 +55,14 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.InfoLevel
 
+	defaultSymbolIndex := ""
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		defaultSymbolIndex = filepath.Join(homeDir, ".fuchsia", "debug", "symbol-index")
+	}
+
 	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
+	flag.StringVar(&symbolIndex, "symbol-index", defaultSymbolIndex, "path to the symbol-index file")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
 	flag.Var(&idsPaths, "ids", "(deprecated) alias for -ids-txt")
@@ -77,7 +85,6 @@ func main() {
 	log := logger.NewLogger(level, painter, os.Stdout, os.Stderr, "")
 	ctx := logger.WithLogger(context.Background(), log)
 
-	// Construct the nodes of the pipeline
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath, llvmSymboRestartInterval)
 	var repo symbolize.CompositeRepo
 	for _, dir := range buildIDDirPaths {
@@ -86,6 +93,33 @@ func main() {
 	for _, idsPath := range idsPaths {
 		repo.AddRepo(symbolize.NewIDsTxtRepo(idsPath, idsRel))
 	}
+
+	// Setup symbol index.
+	if symbolIndex != "" {
+		if _, err := os.Stat(symbolIndex); !os.IsNotExist(err) {
+			file, err := os.Open(symbolIndex)
+			if err != nil {
+				log.Fatalf("failed to open %q: %w", err)
+			}
+			defer file.Close()
+
+			index, err := symbolize.LoadIndex(file)
+			if err != nil {
+				log.Fatalf("failed to load the symbol-index: %w", err)
+			}
+			for _, entry := range index {
+				if fi, err := os.Stat(entry.SymbolPath); !os.IsNotExist(err) {
+					if fi.IsDir() {
+						repo.AddRepo(symbolize.NewBuildIDRepo(entry.SymbolPath))
+					} else {
+						repo.AddRepo(symbolize.NewIDsTxtRepo(entry.SymbolPath, idsRel))
+					}
+				}
+			}
+		}
+	}
+
+	// Setup symbol cache.
 	var filecache *cache.FileCache
 	if len(symbolServers) > 0 {
 		if symbolCache == "" {
@@ -109,6 +143,8 @@ func main() {
 		cloudRepo.SetTimeout(cloudFetchTimeout)
 		repo.AddRepo(cloudRepo)
 	}
+
+	// Construct the nodes of the pipeline
 	demuxer := symbolize.NewDemuxer(&repo, symbolizer)
 	presenter := symbolize.NewBasicPresenter(os.Stdout, painter.Enabled())
 

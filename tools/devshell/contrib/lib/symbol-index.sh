@@ -6,9 +6,9 @@
 # * symbol-index
 # * debug
 # * fidlcat
+# * symbolize
 #
 # This file is not self-contained! ../../lib/vars.sh must be sourced before this file.
-
 
 function symbol-index {
   local symbol_index="${FUCHSIA_BUILD_DIR}/host-tools/symbol-index"

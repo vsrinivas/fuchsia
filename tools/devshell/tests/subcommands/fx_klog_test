@@ -8,6 +8,7 @@
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/contrib/lib/symbol-index.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
@@ -16,13 +17,14 @@ BT_FILE_DEPS=(
   "tools/devshell/klog"
 )
 
-declare fx symbolize loglistener
+declare fx symbolize loglistener symbol_index
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   symbolize="$(btf::make_hosttools_mock symbolize)"
   loglistener="$(btf::make_installed_hosttools_mock loglistener)"
+  symbol_index="$(btf::make_installed_hosttools_mock symbol-index)"
 }
 
 TEST_klog_local() {

@@ -34,23 +34,18 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 
 function symbolize {
   fx-config-read
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/contrib/lib/symbol-index.sh || exit $?
+  ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
   local symbolize="${HOST_OUT_DIR}/symbolize"
   if [[ ! -x "${symbolize}" ]]; then
     fx-error "Cannot execute '${symbolize}'. Try \`fx build\` first."
     exit 1
   fi
   local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
-  local toolchain_dir="${PREBUILT_CLANG_DIR}/lib/debug/.build-id"
-  local prebuilt_dir="${FUCHSIA_DIR}/prebuilt/.build-id"
-  local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
-  local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
   if [[ "${is_remote}" -eq 1 ]]; then
     trap '_code=$?; set +x; exit-with-warning ${_code}' ERR
   fi
-  "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
-    -ids-rel "${extra_args[@]}" \
-    -build-id-dir "$prebuilt_dir" -build-id-dir "$toolchain_dir" \
-    -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
+  "$symbolize" -llvm-symbolizer "$llvm_symbolizer" -ids-rel "${extra_args[@]}"
 }
 
 function exit-with-warning {

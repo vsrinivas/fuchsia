@@ -8,6 +8,7 @@
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/contrib/lib/symbol-index.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
@@ -15,12 +16,13 @@ BT_FILE_DEPS=(
   "tools/devshell/symbolize"
 )
 
-declare fx symbolize
+declare fx symbolize symbol_index
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   symbolize="$(btf::make_hosttools_mock symbolize)"
+  symbol_index="$(btf::make_installed_hosttools_mock symbol-index)"
 }
 
 TEST_symbolize_local() {
