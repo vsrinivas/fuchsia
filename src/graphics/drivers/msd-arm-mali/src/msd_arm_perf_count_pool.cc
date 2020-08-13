@@ -43,6 +43,7 @@ void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
 
     msd_notification_t notification = {
         .type = MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED};
+    notification.u.perf_counter_result.pool_id = pool_id_;
     notification.u.perf_counter_result.buffer_id = buffer.buffer_id;
     notification.u.perf_counter_result.buffer_offset = buffer.offset;
     notification.u.perf_counter_result.result_flags =

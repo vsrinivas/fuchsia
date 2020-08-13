@@ -62,9 +62,19 @@ class TestConnection : public magma::TestDeviceBase {
 
     magma_perf_count_pool_t pool;
     magma_handle_t notification_handle;
+
+    // Creating and releasing a pool first ensures that the pool will have a non-zero ID (in the
+    // current implementation). This could catch some bugs with default values.
+    for (uint32_t i = 0; i < 3; i++) {
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_create_performance_counter_buffer_pool(
+                                     connection_, &pool, &notification_handle));
+
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_connection_release_performance_counter_buffer_pool(connection_, pool));
+    }
+
     EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_create_performance_counter_buffer_pool(
                                    connection_, &pool, &notification_handle));
-
     uint64_t perf_counter_id = 1;
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_connection_enable_performance_counters(connection_, &perf_counter_id, 1));
