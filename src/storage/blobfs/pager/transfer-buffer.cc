@@ -57,6 +57,9 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   auto block_count =
       static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
+  TRACE_DURATION("blobfs", "StorageBackedTransferBuffer::Populate", "offset",
+                 start_block * kBlobfsBlockSize, "length", block_count * kBlobfsBlockSize);
+
   // Navigate to the start block.
   zx_status_t status = IterateToBlock(&block_iter, start_block);
   if (status != ZX_OK) {
