@@ -135,6 +135,17 @@ paths.
    }
    ```
 
+   It's assumed that the file `meta/my-component.cmx`
+   contains at least the following:
+
+   ```json
+   {
+     "program": {
+        "binary": "bin/my_program"
+     }
+   }
+   ```
+
    * {Rust}
 
    ```gn
@@ -152,6 +163,17 @@ paths.
 
    fuchsia_package("my-package") {
      deps = [ ":my-component" ]
+   }
+   ```
+
+   It's assumed that the file `meta/my-component.cmx`
+   contains at least the following:
+
+   ```json
+   {
+     "program": {
+        "binary": "bin/my_program"
+     }
    }
    ```
 
@@ -175,16 +197,82 @@ paths.
    }
    ```
 
-In all of the examples above, it's assumed that the file `meta/my-component.cmx`
-contains at least the following:
+   It's assumed that the file `meta/my-component.cmx`
+   contains at least the following:
 
-```json
-{
-    "program": {
+   ```json
+   {
+     "program": {
         "binary": "bin/my_program"
-    }
-}
-```
+     }
+   }
+   ```
+
+  * {Dart}
+
+   ```gn
+   import("//build/dart/dart_component.gni")
+   import("//build/dart/dart_library.gni")
+   import("//src/sys/build/components.gni")
+
+   dart_library("lib") {
+     package_name = "my_lib"
+     sources = [ "main.dart" ]
+   }
+
+   dart_component("my-component") {
+     manifest = "meta/my-component.cmx"
+     deps = [ ":lib" ]
+   }
+
+   fuchsia_package("my-package") {
+     deps = [ ":my-component" ]
+   }
+   ```
+
+   It's assumed that the file `meta/my-component.cmx`
+   contains at least the following:
+
+   ```json
+   {
+     "program": {
+        "data": "data/my_component"
+     }
+   }
+   ```
+
+   * {Flutter}
+
+   ```gn
+   import("//build/dart/dart_library.gni")
+   import("//build/flutter/flutter_component.gni")
+   import("//src/sys/build/components.gni")
+
+   dart_library("lib") {
+     package_name = "my_lib"
+     sources = [ "main.dart" ]
+   }
+
+   flutter_component("my-component") {
+     manifest = "meta/my-component.cmx"
+     deps = [ ":lib" ]
+   }
+
+   fuchsia_package("my-package") {
+     deps = [ ":my-component" ]
+   }
+   ```
+
+   It's assumed that the file `meta/my-component.cmx`
+   contains at least the following:
+
+   ```json
+   {
+     "program": {
+        "data": "data/my_component"
+     }
+   }
+   ```
 
 ### Test packages {#test-packages}
 
@@ -297,6 +385,36 @@ fuchsia_test("my-test-component-test") {
 Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
 `fuchsia_package()` target, and add the `fuchsia_test()` target to a standard
 `"tests"` group.
+
+Dart and Flutter tests differ slightly in that they need to be built with a
+`flutter_test_component()` which collects all of the test mains into a single
+main invocation. The `flutter_test_component()` can then be used by the
+`fuchsia_test_package()`.
+
+```gn
+import("//build/dart/dart_test_component.gni")
+import("//build/flutter/flutter_test_component.gni")
+import("//src/sys/build/components.gni")
+
+flutter_test_component("my-flutter-test-component") {
+  testonly = true
+  manifest = "meta/my-flutter-test-component.cmx"
+  sources = [ "foo_flutter_test.dart" ]
+}
+
+dart_test_component("my-dart-test-component") {
+  testonly = true
+  manifest = "meta/my-dart-test-component.cmx"
+  sources = [ "foo_dart_test.dart" ]
+}
+
+fuchsia_test("my-test-component-test") {
+  test_components = [
+    ":my-dart-test-component",
+    ":my-flutter-test-component"
+  ]
+}
+```
 
 ### Unit tests {#unit-tests}
 
