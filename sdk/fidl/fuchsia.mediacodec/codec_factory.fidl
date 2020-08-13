@@ -52,7 +52,8 @@ table CreateDecoder_Params {
     ///
     /// This must be true when creating a video encoder, or the CodecFactory
     /// channel will close.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     2: bool promise_separate_access_units_on_input;
 
     // "require" fields:
@@ -83,7 +84,8 @@ table CreateDecoder_Params {
     /// (require_can_stream_bytes_input true), the client must feed a decoder
     /// separate AUs.  This means the client cannot have parts of two separate AUs
     /// in the same packet, unless require_can_stream_bytes_input is true.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     3: bool require_can_stream_bytes_input;
 
     /// A decoder is allowed to be capable of streaming bytes but not capable of
@@ -94,7 +96,8 @@ table CreateDecoder_Params {
     /// With require_can_stream_bytes_input true but require_can_find_start false,
     /// the client must start the first packet with the start of an AU, but can
     /// send a stream of bytes after that.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     4: bool require_can_find_start;
 
     /// On problematic input data, all decoders are expected to at least be able to
@@ -105,7 +108,8 @@ table CreateDecoder_Params {
     /// able to handle damaged input without closing the Codec channel.  Such a
     /// Codec is encouraged, but not required, to also satisfy requirements of
     /// require_report_all_detected_errors.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     5: bool require_can_re_sync;
 
     /// Sometimes a client would rather fail an overall use of a decoder than fail
@@ -138,11 +142,14 @@ table CreateDecoder_Params {
     ///
     /// Regardless of this setting, not all timestamp_ish values provided on input
     /// are guaranteed to show up on output.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     6: bool require_report_all_detected_errors;
 
-    /// If true, require that the returned codec is HW-accelerated.
-    // TODO(FIDL-609): Default to false.
+    /// If true, require that the returned codec is HW-accelerated.  See also
+    /// `require_sw`.
+    ///
+    /// If not set, defaults to false.
     7: bool require_hw;
 
     /// permit_lack_of_split_header_handling
@@ -173,12 +180,14 @@ table CreateDecoder_Params {
     /// default value of false here a codec that can't properly handle split
     /// headers.  This is not an attempt at a mechanism to fully work around a
     /// codec that doesn't handle split headers.
+    ///
+    /// If not set, defaults to false.
+    //
     // TODO(dustingreen): In the near term, wire this up so that SoftAAC2.cpp
     // used for ADTS is not selected when this field is false, even if there is
     // no other suitable codec.  In the long term, fix or work around the header
     // handling behavior of SoftAAC2 when used in ADTS mode (and any other
     // similar issues in other codecs) and remove this field.
-    // TODO(FIDL-609): Default to false.
     8: bool permit_lack_of_split_header_handling;
 
     /// If set to ON, the decoder must support secure buffers on output, and
@@ -198,6 +207,16 @@ table CreateDecoder_Params {
     ///
     /// If secure_input_mode ON, secure_output_mode must also be ON.
     10: SecureMemoryMode secure_input_mode;
+
+    /// If true, require that the returned codec is entirely SW-based, not
+    /// HW-accelerated (other than possibly using vector CPU instructions).
+    /// This can be useful for testing purposes or other special scenarios, but
+    /// is not recommended for performance-sensitive scenarios.  Also, some
+    /// builds may lack a SW-based decoder for some formats.  See also
+    /// `require_hw`.
+    ///
+    /// If not set, defaults to false.
+    11: bool require_sw;
 };
 
 /// Parameters used to request an encoder.
@@ -211,7 +230,8 @@ table CreateEncoder_Params {
     1: fuchsia.media.FormatDetails input_details;
 
     /// If true, require that the returned codec is HW-accelerated.
-    // TODO(FIDL-609): Default to false.
+    ///
+    /// If not set, defaults to false.
     2: bool require_hw;
 };
 

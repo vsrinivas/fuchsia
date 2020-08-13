@@ -411,15 +411,8 @@ impl StreamProcessor {
 
         let decoder_params = CreateDecoderParams {
             input_details: Some(format_details),
-            promise_separate_access_units_on_input: Some(false),
-            require_can_stream_bytes_input: Some(false),
-            require_can_find_start: Some(false),
-            require_can_re_sync: Some(false),
-            require_report_all_detected_errors: Some(false),
-            require_hw: Some(false),
             permit_lack_of_split_header_handling: Some(true),
-            secure_output_mode: None,
-            secure_input_mode: None,
+            ..CreateDecoderParams::new_empty()
         };
 
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()

@@ -209,24 +209,29 @@ void CodecFactoryImpl::CreateDecoder(
   // We don't have any need to bind the codec_request locally to this process.
   // Instead, we find where to delegate the request to.
 
-  // First, try to find a hw-accelerated codec to satisfy the request.
-  const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwCodec(
-      [&params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
-        // TODO(dustingreen): pay attention to the bool constraints of the
-        // params vs. the hw_codec_description bools.  For the moment we just
-        // match the codec_type, mime_type.
-        constexpr fuchsia::mediacodec::CodecType codec_type =
-            fuchsia::mediacodec::CodecType::DECODER;
-        return (codec_type == hw_codec_description.codec_type) &&
-               (params.input_details().mime_type() == hw_codec_description.mime_type);
-      });
-  if (factory) {
-    // prefer HW-accelerated
-    FX_LOGS(INFO) << "CreateDecoder() found HW decoder for: " << params.input_details().mime_type();
-    (*factory)->CreateDecoder(std::move(params), std::move(decoder));
-    return;
+  if (!params.has_require_sw() || !params.require_sw()) {
+    // First, try to find a hw-accelerated codec to satisfy the request.
+    const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwCodec(
+        [&params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
+          // TODO(dustingreen): pay attention to the bool constraints of the
+          // params vs. the hw_codec_description bools.  For the moment we just
+          // match the codec_type, mime_type.
+          constexpr fuchsia::mediacodec::CodecType codec_type =
+              fuchsia::mediacodec::CodecType::DECODER;
+          return (codec_type == hw_codec_description.codec_type) &&
+                 (params.input_details().mime_type() == hw_codec_description.mime_type);
+        });
+    if (factory) {
+      // prefer HW-accelerated
+      FX_LOGS(INFO) << "CreateDecoder() found HW decoder for: "
+                    << params.input_details().mime_type();
+      (*factory)->CreateDecoder(std::move(params), std::move(decoder));
+      return;
+    }
   }
 
+  // This is outside the above if on purpose, in case the client specifies both require_hw and
+  // require_sw, in which case we should fail.
   if (params.has_require_hw() && params.require_hw()) {
     FX_LOGS(WARNING) << "require_hw, but no matching HW decoder factory found ("
                      << params.input_details().mime_type() << "); closing";
