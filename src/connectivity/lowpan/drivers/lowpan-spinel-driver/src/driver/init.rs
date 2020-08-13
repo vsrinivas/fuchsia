@@ -54,25 +54,37 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
         };
 
         if update_state_and_check_if_reset_needed() {
-            traceln!("init_task: WILL RESET.");
+            let mut did_reset: bool = false;
 
-            // Open/Reset the NCP
-            traceln!("init_task: Waiting to open.");
-            self.device_sink.open().await.context("Call to `open()` on Spinel device failed.")?;
+            for _i in 1..3 {
+                traceln!("init_task: WILL RESET. Attempt {}", _i);
 
-            traceln!("init_task: Did open.");
+                // Open/Reset the NCP
+                traceln!("init_task: Waiting to open.");
+                self.device_sink
+                    .open()
+                    .await
+                    .context("Call to `open()` on Spinel device failed.")?;
 
-            // Wait for the reset to be received.
-            let did_reset = self
-                .ncp_did_reset
-                .wait()
-                .then(|_| ready(true))
-                .boxed()
-                .on_timeout(Time::after(DEFAULT_TIMEOUT), || false)
-                .await;
+                traceln!("init_task: Did open.");
+
+                // Wait for the reset to be received.
+                did_reset = self
+                    .ncp_did_reset
+                    .wait()
+                    .then(|_| ready(true))
+                    .boxed()
+                    .on_timeout(Time::after(DEFAULT_TIMEOUT), || false)
+                    .await;
+
+                if did_reset {
+                    break;
+                } else {
+                    fx_log_err!("SpinelDriver: Failed to reset");
+                }
+            }
 
             if !did_reset {
-                fx_log_err!("SpinelDriver: Failed to reset");
                 Err(format_err!("Failed to reset"))?
             }
 
