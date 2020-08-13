@@ -4,6 +4,12 @@
 
 target_cpu = "x64"
 
+board_name = "qemu-x64"
+
+board_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+
+board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+
 board_package_labels = [
   "//garnet/bin/power_manager",
   "//garnet/bin/power_manager:base_config",
@@ -20,4 +26,3 @@ max_fuchsia_zbi_size = "16777216"  # 16 MiB
 max_zedboot_zbi_size = "16777216"  # 16 MiB
 
 add_qemu_to_build_archives = true
-board_name = "qemu-x64"

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//boards/arm64.gni")
+
 board_name = "c18"
 
 # serial console
