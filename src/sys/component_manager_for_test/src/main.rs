@@ -16,6 +16,7 @@ use {
     fidl_fuchsia_component_internal::Config,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_test_manager::HarnessMarker,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_syslog as syslog,
     futures::prelude::*,
@@ -31,13 +32,15 @@ pub fn usage() -> String {
     )
 }
 
+const NUM_THREADS: usize = 2;
+
 /// This is a prototype used with ftf to launch v2 tests.
 /// This is a temporary workaround till we get around using actual component manager.
 /// We will start test as root component and using hub v2 attach its "expose/svc" directory to this
 /// managers out/svc(v1 version) directory.
-#[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["component_manager_for_test"])?;
+    let mut executor = fasync::Executor::new().context("error creating executor")?;
     let args = std::env::args();
     // replace first argument(binary name) with test manager envelope so that it
     // can be launched as root component.
@@ -56,6 +59,11 @@ async fn main() -> Result<(), Error> {
     };
     info!("Component manager for test is starting up...");
 
+    executor.run(run_root(args), NUM_THREADS)
+}
+
+// Run root component and expose services.
+async fn run_root(args: startup::Arguments) -> Result<(), Error> {
     // Create an ELF runner for the root component.
     let runner = Arc::new(ElfRunner::new(&args, None));
     let config = io_util::file::read_in_namespace_to_fidl::<Config>(&args.config)
