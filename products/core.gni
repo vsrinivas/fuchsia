@@ -24,7 +24,6 @@ meta_package_labels += [
 
 base_package_labels += [
   "//build/info:build-info",
-  "//src/connectivity/network/http_client",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
   "//garnet/bin/setui:setui_service",

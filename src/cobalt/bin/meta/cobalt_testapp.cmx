@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx"
+                "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cmx"
             },
             "system-services": [
                 "fuchsia.net.NameLookup",

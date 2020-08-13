@@ -28,7 +28,9 @@ group("config") {
     "dhcpv6/client/sysmgr:config",
     "dns:dns-resolver",
     "dns/sysmgr:config",
-    "http_client/sysmgr:config",
+    "http-client",
+    "http-client/sysmgr:config",
+    "http_client",
   ]
 }
 
@@ -40,7 +42,7 @@ group("tests") {
     "dhcpv6:tests",
     "dns:tests",
     "drivers:tests",
-    "http_client:tests",
+    "http-client:tests",
     "lib:tests",
     "mdns:tests",
     "net-cli:net-cli-tests",

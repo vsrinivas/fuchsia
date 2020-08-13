@@ -11,7 +11,7 @@ group("tests") {
   testonly = true
   deps = [
     ":network_speed_test_test",
-    "//src/connectivity/network/http_client",
+    "//src/connectivity/network/http-client",
   ]
 }
 

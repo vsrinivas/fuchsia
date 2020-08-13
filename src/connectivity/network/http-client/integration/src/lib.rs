@@ -8,10 +8,7 @@ use {
     anyhow::{Context as _, Error},
     fidl::{endpoints::RequestStream, handle::fuchsia_handles::Channel},
     fidl_fuchsia_net_http as http, fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{launch, launcher, App},
-        fuchsia_single_component_package_url,
-    },
+    fuchsia_component::client::{launch, launcher, App},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     rouille::{self, router, Request, Response},
@@ -66,9 +63,12 @@ fn setup() -> Result<(u16, App, http::LoaderProxy), Error> {
     })?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
-    let http_client =
-        launch(&launcher, fuchsia_single_component_package_url!("http_client").to_string(), None)
-            .context("Failed to launch http_client")?;
+    let http_client = launch(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/http-client-integration-test#meta/http-client.cmx".to_string(),
+        None,
+    )
+    .context("Failed to launch http_client")?;
 
     let loader = http_client.connect_to_service::<http::LoaderMarker>()?;
 

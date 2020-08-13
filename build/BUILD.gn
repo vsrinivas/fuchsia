@@ -217,7 +217,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/location/regulatory_region:regulatory_region_tests",
     "//src/connectivity/lowpan/drivers/lowpan_spinel_driver:lowpan_spinel_driver",
     "//src/connectivity/lowpan/drivers/spinel_spi_driver:spinel_spi_driver",
-    "//src/connectivity/network/http_client/integration:http_client_integration_test",
     "//src/connectivity/network/http_client:http_client",
     "//src/connectivity/network/mdns/service:mdns_fuzzers_pkg",
     "//src/connectivity/network/mdns/service:mdns_netemul_tests",
