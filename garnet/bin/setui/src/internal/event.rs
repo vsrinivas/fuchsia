@@ -13,7 +13,7 @@ pub enum Payload {
 }
 
 /// Top level definition of events in the setting service. A new type should
-/// be defined for each component (setting, agent, switchboard, registry, etc.)
+/// be defined for each component (setting, agent, switchboard, proxy, etc.)
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
     Custom(&'static str),

@@ -5,7 +5,7 @@ use {
         BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
     },
     crate::agent::restore_agent,
-    crate::registry::device_storage::testing::InMemoryStorageFactory,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::tests::fakes::bluetooth_service::BluetoothService,
     crate::tests::fakes::fake_hanging_get_handler::HangingGetHandler,
     crate::tests::fakes::fake_hanging_get_types::ChangedPeers,

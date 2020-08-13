@@ -7,10 +7,10 @@ use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::{
     AgentError, Authority, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan,
 };
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
 use crate::internal::event;
 use crate::internal::switchboard;
-use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
 use crate::tests::scaffold;

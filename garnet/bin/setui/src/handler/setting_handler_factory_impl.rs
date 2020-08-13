@@ -1,13 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::handler::{message, Payload};
-use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
-use crate::registry::base::{
+use crate::handler::base::{
     Command, Context, Environment, GenerateHandler, SettingHandlerFactory,
     SettingHandlerFactoryError, State,
 };
-use crate::registry::device_storage::DeviceStorageFactory;
+use crate::handler::device_storage::DeviceStorageFactory;
+use crate::internal::handler::{message, Payload};
+use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::SettingType;
 use async_trait::async_trait;
@@ -79,7 +79,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
 
         // Wait for the startup phase to be over before continuing.
         if let Some(MessageEvent::Status(Status::Received)) = controller_receptor.next().await {
-            // Startup phase is complete and had no errors. The registry can assume it
+            // Startup phase is complete and had no errors. The proxy can assume it
             // has an active controller with create() and startup() already run on it
             // before handling its request.
             return Ok(signature);

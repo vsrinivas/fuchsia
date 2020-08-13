@@ -1,12 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::handler::{message, reply, Payload};
-use crate::message::base::{Audience, MessageEvent};
-use crate::registry::base::{
+use crate::handler::base::{
     Command, Context, ControllerGenerateResult, SettingHandlerResult, State,
 };
-use crate::registry::device_storage::DeviceStorageFactory;
+use crate::handler::device_storage::DeviceStorageFactory;
+use crate::internal::handler::{message, reply, Payload};
+use crate::message::base::{Audience, MessageEvent};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{ControllerStateResult, SettingRequest, SettingType};
 use async_trait::async_trait;
@@ -239,7 +239,7 @@ impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler
 pub mod persist {
     use super::ClientProxy as BaseProxy;
     use super::*;
-    use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
+    use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 
     pub trait Storage: DeviceStorageCompatible + Send + Sync {}
     impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}

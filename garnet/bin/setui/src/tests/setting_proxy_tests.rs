@@ -1,15 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::handler::base::{
+    Command, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
+};
+use crate::handler::setting_handler::ControllerError;
+use crate::handler::setting_proxy::SettingProxy;
 use crate::internal::core::{message::create_hub, Address, Payload};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
-use crate::registry::base::{
-    Command, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
-};
-use crate::registry::registry_impl::RegistryImpl;
-use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
@@ -175,14 +175,14 @@ async fn test_notify() {
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
         SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
     .await
-    .expect("registry creation should succeed");
+    .expect("proxy creation should succeed");
     let setting_type = SettingType::Unknown;
     let (messenger_client, mut receptor) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
@@ -208,7 +208,7 @@ async fn test_notify() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Messenger(registry_signature),
+                Audience::Messenger(proxy_signature),
             )
             .send()
             .wait_for_acknowledge()
@@ -242,7 +242,7 @@ async fn test_notify() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(0),
                 }),
-                Audience::Messenger(registry_signature),
+                Audience::Messenger(proxy_signature),
             )
             .send()
             .ack();
@@ -267,14 +267,14 @@ async fn test_request() {
     let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
         SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
     .await
-    .expect("registry should be created successfully");
+    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
@@ -302,7 +302,7 @@ async fn test_request() {
                 setting_type: setting_type,
                 data: SettingActionData::Request(SettingRequest::Get),
             }),
-            Audience::Messenger(registry_signature),
+            Audience::Messenger(proxy_signature),
         )
         .send();
 
@@ -329,14 +329,14 @@ async fn test_generation() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
         SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
     .await
-    .expect("registry should be created successfully");
+    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
 
@@ -361,7 +361,7 @@ async fn test_generation() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Messenger(registry_signature),
+                Audience::Messenger(proxy_signature),
             )
             .send(),
     )
@@ -379,7 +379,7 @@ async fn test_generation() {
                     setting_type: setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
-                Audience::Messenger(registry_signature),
+                Audience::Messenger(proxy_signature),
             )
             .send(),
     )
@@ -398,14 +398,14 @@ async fn test_regeneration() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
         SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
     .await
-    .expect("registry should be created successfully");
+    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
 
@@ -432,7 +432,7 @@ async fn test_regeneration() {
                         setting_type,
                         data: SettingActionData::Request(SettingRequest::Get),
                     }),
-                    Audience::Messenger(registry_signature),
+                    Audience::Messenger(proxy_signature),
                 )
                 .send(),
         )
@@ -486,7 +486,7 @@ async fn test_regeneration() {
                         setting_type,
                         data: SettingActionData::Request(SettingRequest::Get),
                     }),
-                    Audience::Messenger(registry_signature),
+                    Audience::Messenger(proxy_signature),
                 )
                 .send(),
         )

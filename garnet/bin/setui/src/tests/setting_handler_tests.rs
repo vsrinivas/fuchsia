@@ -4,17 +4,17 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
-    crate::internal::handler::{message, Payload},
-    crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::registry::base::{Command, ContextBuilder, SettingHandlerResult, State},
-    crate::registry::device_storage::DeviceStorageFactory,
-    crate::registry::device_storage::{testing::*, DeviceStorageCompatible},
-    crate::registry::setting_handler::persist::WriteResult,
-    crate::registry::setting_handler::{
+    crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
+    crate::handler::device_storage::DeviceStorageFactory,
+    crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
+    crate::handler::setting_handler::persist::WriteResult,
+    crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller, persist::write,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
         BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
     },
+    crate::internal::handler::{message, Payload},
+    crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest, SettingType,

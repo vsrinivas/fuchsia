@@ -6,12 +6,12 @@ use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
 use crate::call_async;
-use crate::registry::base::SettingHandlerResult;
-use crate::registry::device_storage::DeviceStorageCompatible;
-use crate::registry::setting_handler::persist::{
+use crate::handler::base::SettingHandlerResult;
+use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::registry::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
     ControllerStateResult, SettingRequest, SettingResponse, SettingType,

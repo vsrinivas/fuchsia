@@ -1,12 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::registry::base::{SettingHandlerResult, State};
-use crate::registry::device_storage::DeviceStorageCompatible;
-use crate::registry::setting_handler::persist::{
+use crate::handler::base::{SettingHandlerResult, State};
+use crate::handler::device_storage::DeviceStorageCompatible;
+use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::registry::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError};
 use async_trait::async_trait;
 use {
     crate::input::{InputMonitor, InputMonitorHandle, InputType},

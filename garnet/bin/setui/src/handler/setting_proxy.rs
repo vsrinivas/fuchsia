@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::handler::base::{Command, SettingHandlerFactory, State};
+use crate::handler::setting_handler::ControllerError;
 use crate::internal::core;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
-use crate::registry::base::{Command, SettingHandlerFactory, State};
-use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
@@ -34,7 +34,7 @@ enum ActiveControllerRequest {
     RemoveActive(u64),
 }
 
-pub struct RegistryImpl {
+pub struct SettingProxy {
     setting_type: SettingType,
 
     messenger_client: core::message::Messenger,
@@ -53,8 +53,8 @@ pub struct RegistryImpl {
     active_controller_sender: UnboundedSender<ActiveControllerRequest>,
 }
 
-impl RegistryImpl {
-    /// Creates a RegistryImpl that is listening to SettingAction from the
+impl SettingProxy {
+    /// Creates a SettingProxy that is listening to SettingAction from the
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
         setting_type: SettingType,
@@ -66,10 +66,9 @@ impl RegistryImpl {
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
-        let (registry_messenger_client, mut registry_messenger_receptor) =
-            messenger_result.unwrap();
+        let (core_client, mut core_receptor) = messenger_result.unwrap();
 
-        let signature = registry_messenger_client.get_signature();
+        let signature = core_client.get_signature();
 
         let controller_messenger_result =
             controller_messenger_factory.create(MessengerType::Unbound).await;
@@ -85,14 +84,14 @@ impl RegistryImpl {
             futures::channel::mpsc::unbounded::<ActiveControllerRequest>();
 
         // We must create handle here rather than return back the value as we
-        // reference the registry in the async tasks below.
-        let mut registry = Self {
+        // reference the proxy in the async tasks below.
+        let mut proxy = Self {
             setting_type,
             handler_factory,
             client_signature: None,
             active_requests: HashMap::new(),
             has_active_listener: false,
-            messenger_client: registry_messenger_client,
+            messenger_client: core_client,
             controller_messenger_client,
             controller_messenger_factory,
             active_controller_sender,
@@ -101,8 +100,8 @@ impl RegistryImpl {
         fasync::Task::spawn(async move {
             loop {
                 let controller_fuse = controller_receptor.next().fuse();
-                let registry_fuse = registry_messenger_receptor.next().fuse();
-                futures::pin_mut!(controller_fuse, registry_fuse);
+                let core_fuse = core_receptor.next().fuse();
+                futures::pin_mut!(controller_fuse, core_fuse);
 
                 futures::select! {
                     // handle top level message from controllers.
@@ -110,16 +109,16 @@ impl RegistryImpl {
                         if let Some(
                             MessageEvent::Message(handler::Payload::Changed(setting), _)
                         ) = controller_event {
-                            registry.notify(setting);
+                            proxy.notify(setting);
                         }
                     }
 
-                    // Handle messages from the registry messenger.
-                    registry_event = registry_fuse => {
+                    // Handle messages from the core messenger.
+                    core_event = core_fuse => {
                         if let Some(
                             MessageEvent::Message(core::Payload::Action(action), message_client)
-                        ) = registry_event {
-                            registry.process_action(action, message_client).await;
+                        ) = core_event {
+                            proxy.process_action(action, message_client).await;
                         }
                     }
 
@@ -128,10 +127,10 @@ impl RegistryImpl {
                         if let Some(request) = request {
                             match request {
                                 ActiveControllerRequest::AddActive(id, active_request) => {
-                                    registry.add_active_request(id, active_request);
+                                    proxy.add_active_request(id, active_request);
                                 }
                                 ActiveControllerRequest::RemoveActive(id) => {
-                                    registry.remove_active_request(id).await;
+                                    proxy.remove_active_request(id).await;
                                 }
                             }
                         }
@@ -143,7 +142,7 @@ impl RegistryImpl {
         Ok((signature, handler_signature))
     }
 
-    /// Interpret action from switchboard into registry actions.
+    /// Interpret action from switchboard into proxy actions.
     async fn process_action(
         &mut self,
         action: SettingAction,
