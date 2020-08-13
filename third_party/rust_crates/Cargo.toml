@@ -146,7 +146,6 @@ hyper-rustls = { version = "0.20.0", default-features = false }
 id_tree = "1.5"
 itoa = "0.4"
 lipsum = "0.6.0"
-nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 num-bigint = { version = "0.2", features = ["rand"] }
 openat = "0.1.17"
 owning_ref = "0.4.0"
@@ -191,12 +190,13 @@ async-std = { version = "1.6.0", features = ["attributes"] }
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 indoc = "0.3.3"
+nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 petgraph = "0.5.1"
-pulldown-cmark = "0.6.0"
 proc-macro2 = "1.0.9"
+pulldown-cmark = "0.6.0"
 quote = "1.0.2"
-simplelog = "0.7.5"
 signal-hook = "0.1.13"
+simplelog = "0.7.5"
 smol = "0.1.11"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
