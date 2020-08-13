@@ -9,7 +9,7 @@ use {
 };
 
 // Third field is whether the file is required.
-const BUGREPORT_FILES: [(&str, Source, bool); 5] = [
+const SNAPSHOT_FILES: [(&str, Source, bool); 5] = [
     ("inspect.json", Source::Inspect, true),
     ("log.kernel.txt", Source::Klog, false),
     ("log.system.txt", Source::Syslog, false),
@@ -18,7 +18,7 @@ const BUGREPORT_FILES: [(&str, Source, bool); 5] = [
 ];
 
 pub fn diagnostics_from_directory(directory: &Path) -> Result<Vec<DiagnosticData>, Error> {
-    BUGREPORT_FILES
+    SNAPSHOT_FILES
         .iter()
         .map(|(name, source, required)| diagnostic_from_file(directory, name, source, required))
         .collect::<Result<Vec<_>, _>>()

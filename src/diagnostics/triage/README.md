@@ -2,13 +2,13 @@
 
 Reviewed on: 2019-12-08
 
-Triage analyzes bugreports for out-of-range values. The analysis is specified by
+Triage analyzes snapshots for out-of-range values. The analysis is specified by
 configuration files.
 
 ## Building
 
-To add this project to your build, append `--with //src/diagnostics/triage`
-in the `fx set` invocation.
+To add this project to your build, append `--with //src/diagnostics/triage` in
+the `fx set` invocation.
 
 For example:
 
@@ -18,22 +18,22 @@ fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagno
 
 ## Running
 
-To fetch and analyze a fresh bugreport from the default device:
+To fetch and analyze a fresh snapshot from the default device:
 
 ```
 fx triage
 ```
 
-To analyze an existing bugreport:
+To analyze an existing snapshot:
 
 ```
-fx triage --data /path/to/bugreport.zip
+fx triage --data /path/to/snapshot.zip
 ```
 
 or
 
 ```
-fx triage --data /path/to/unzipped_bugreport_dir
+fx triage --data /path/to/unzipped_snapshot_dir
 ```
 
 To specify config files to use:
@@ -42,27 +42,28 @@ To specify config files to use:
 fx triage --config path/file1 --config path/file2 --config "path/with/globs/*.triage"
 ```
 
-Note that the triage command, not the OS, must expand the globs, so put the
-path in quotes.
+Note that the triage command, not the OS, must expand the globs, so put the path
+in quotes.
 
 TODO(cphoenix): Should these paths be relative to tree-root, or CWD?
 
-Config file format is described in [Configuring 'fx triage'](config.md). It includes:
+Config file format is described in [Configuring 'fx triage'](config.md). It
+includes:
 
- *   Selectors which specify the data to extract from the inspect.json produced
-     by bugreport.zip.
- *   Eval expressions which specify calculations.
- *   Actions to take on specified values.
- *   Tests to ensure your actions trigger (or not) appropriately with sample data
-     you supply.
+*   Selectors which specify the data to extract from the inspect.json produced
+    by snapshot.zip.
+*   Eval expressions which specify calculations.
+*   Actions to take on specified values.
+*   Tests to ensure your actions trigger (or not) appropriately with sample data
+    you supply.
 
 ## Testing
 
 Use `--with //src/diagnostics/triage:tests` for all tests.
 
-Unit tests for the Rust code are linked into CQ/CI. There are also a
-series of integration tests which live in the integration.rs file
-which are run in CQ/CI as well. To run them manually:
+Unit tests for the Rust code are linked into CQ/CI. There are also a series of
+integration tests which live in the integration.rs file which are run in CQ/CI
+as well. To run them manually:
 
 ```
 fx test triage_lib_tests
@@ -72,11 +73,10 @@ fx test triage_lib_tests
 
 *   //tools/devshell/contrib/triage - A bash script which implements the entry
     point to the "fx triage" command.
-    *   Invokes //src/diagnostics/triage/src/main.rs
-        to analyze a bugreport.
+    *   Invokes //src/diagnostics/triage/src/main.rs to analyze a snapshot.
 *   //src/diagnostics/triage/
-    *   Entry point of the main "triage" program. Parses command line
-        arguments, loads files, launches analysis, and formats output.
+    *   Entry point of the main "triage" program. Parses command line arguments,
+        loads files, launches analysis, and formats output.
 *   //src/diagnostics/lib/triage/src/
     *   metrics.rs - Data structures and calculation engine for metrics.
         *   metrics/fetch.rs - Business logic to read values from the

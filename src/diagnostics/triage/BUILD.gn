@@ -51,17 +51,17 @@ copy("copy_configs") {
 }
 
 # Needed for testing on host
-copy("copy_bugreport") {
+copy("copy_snapshot") {
   testonly = true
 
   sources = [
-    "test_data/bugreport/annotations.json",
-    "test_data/bugreport/inspect.json",
+    "test_data/snapshot/annotations.json",
+    "test_data/snapshot/inspect.json",
   ]
 
   # If this path changes then the integration.rs file needs to be udpated
   # to look in the correct place.
-  outputs = [ "$root_out_dir/test_data/triage/bugreport/{{source_file_part}}" ]
+  outputs = [ "$root_out_dir/test_data/triage/snapshot/{{source_file_part}}" ]
 }
 
 # Needed to generate the runtime deps file which is used in CQ for sandboxing
@@ -69,13 +69,13 @@ group("test_data") {
   testonly = true
 
   deps = [
-    ":copy_bugreport",
     ":copy_configs",
+    ":copy_snapshot",
   ]
 
   # Need to indicate our dependencies for host side integration testing
   runtime_deps =
-      get_target_outputs(":copy_bugreport") +
+      get_target_outputs(":copy_snapshot") +
       get_target_outputs(":copy_configs") + [ "${root_out_dir}/triage" ]
 
   metadata = {

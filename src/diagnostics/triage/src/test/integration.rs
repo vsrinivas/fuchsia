@@ -9,7 +9,7 @@ use {
 };
 
 enum Input {
-    Bugreport(String),
+    Snapshot(String),
 }
 
 /// Returns the path relative to the current exectuable.
@@ -46,23 +46,20 @@ fn config_file_path(filename: &str) -> Result<String, Error> {
 
 /// This is needed to work correctly in CQ. If this call fails make sure
 /// that you have added the file to the `copy` target in the BUILD.gn file.
-fn bugreport_path() -> Result<String, Error> {
-    path_for_file("bugreport", Some(&Path::new("test_data").join("triage")))
+fn snapshot_path() -> Result<String, Error> {
+    path_for_file("snapshot", Some(&Path::new("test_data").join("triage")))
 }
 
 /// This is needed to work correctly in CQ. If this call fails make sure
 /// that you have added the file to the `copy` target in the BUILD.gn file.
 fn inspect_file_path() -> Result<String, Error> {
-    path_for_file("inspect.json", Some(&Path::new("test_data").join("triage").join("bugreport")))
+    path_for_file("inspect.json", Some(&Path::new("test_data").join("triage").join("snapshot")))
 }
 
 /// This is needed to work correctly in CQ. If this call fails make sure
 /// that you have added the file to the `copy` target in the BUILD.gn file.
 fn annotations_file_path() -> Result<String, Error> {
-    path_for_file(
-        "annotations.json",
-        Some(&Path::new("test_data").join("triage").join("bugreport")),
-    )
+    path_for_file("annotations.json", Some(&Path::new("test_data").join("triage").join("snapshot")))
 }
 
 /// Returns the path to the triage binary.
@@ -80,9 +77,9 @@ fn run_command(
     let mut args = Vec::new();
 
     match input {
-        Input::Bugreport(bugreport) => {
+        Input::Snapshot(snapshot) => {
             args.push("--data".to_string());
-            args.push(bugreport);
+            args.push(snapshot);
         }
     }
 
@@ -139,8 +136,8 @@ fn config_file_path_should_find_file() {
 }
 
 #[test]
-fn bugreport_path_should_find_bugreport() {
-    assert!(bugreport_path().is_ok(), "should be able to find the bugreport path");
+fn snapshot_path_should_find_snapshot() {
+    assert!(snapshot_path().is_ok(), "should be able to find the snapshot path");
 }
 
 #[test]
@@ -179,7 +176,7 @@ macro_rules! integration_test {
         #[test]
         fn $name() -> Result<(), Error> {
             let output = crate::test::integration::run_command(
-                Input::Bugreport(crate::test::integration::bugreport_path()?),
+                Input::Snapshot(crate::test::integration::snapshot_path()?),
                 $config
                     .into_iter()
                     .map(|c| crate::test::integration::config_file_path(c).unwrap())
@@ -209,7 +206,7 @@ fn report_missing_inspect() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic
     let output = run_command(
-        Input::Bugreport("not_found_dir".to_string()),
+        Input::Snapshot("not_found_dir".to_string()),
         vec![config_file_path("sample.triage")?],
         vec![],
         vec![],
@@ -227,7 +224,7 @@ fn report_missing_config_file() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic
     let output =
-        run_command(Input::Bugreport(bugreport_path()?), vec!["cfg".to_string()], vec![], vec![])?;
+        run_command(Input::Snapshot(snapshot_path()?), vec!["cfg".to_string()], vec![], vec![])?;
     verify_output(output, 1, StringMatch::Contains("Couldn't read config file"));
     Ok(())
 }

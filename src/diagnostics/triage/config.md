@@ -1,10 +1,10 @@
 # Configuring `fx triage`
 
-[Triage](README.md) analyzes bugreports according to config files.
+[Triage](README.md) analyzes snapshots according to config files.
 
 ## Overview
 
-Triage allows anyone to easily add new ways to analyze `fx bugreport` data for
+Triage allows anyone to easily add new ways to analyze `fx snapshot` data for
 off-nominal conditions.
 
 By default, the config files are read from

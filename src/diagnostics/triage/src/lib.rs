@@ -17,7 +17,7 @@ pub struct Options {
     #[structopt(long = "config")]
     config_files: Vec<String>,
 
-    /// Directory to read diagnostic (bugreport) files from.
+    /// Directory to read diagnostic (snapshot) files from.
     #[structopt(long = "data")]
     data_directory: String,
 
