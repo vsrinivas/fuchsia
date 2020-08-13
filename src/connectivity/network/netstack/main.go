@@ -507,7 +507,7 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 
 	// Use our secure stash.
 	if err := store.Identify(context.Background(), stashStoreIdentificationName); err != nil {
-		syslog.Errorf("failed to identify as %s to the secure stash store: %s", stashStoreIdentificationName, err)
+		syslog.Warnf("failed to identify as %s to the secure stash store: %s", stashStoreIdentificationName, err)
 		return newSecretKeyForOpaqueIID()
 	}
 	storeAccessorReq, storeAccessor, err := stash.NewStoreAccessorWithCtxInterfaceRequest()
@@ -517,7 +517,7 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 	}
 	defer storeAccessor.Close()
 	if err := store.CreateAccessor(context.Background(), false /* readOnly */, storeAccessorReq); err != nil {
-		syslog.Errorf("failed to create accessor to the secure stash store: %s", err)
+		syslog.Warnf("failed to create accessor to the secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
 
