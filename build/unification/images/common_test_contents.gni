@@ -36,7 +36,6 @@ common_test_contents = [
   "//src/storage/blobfs/test:blobfs-large-integration-short-paged",
   "//src/storage/blobfs/test:blobfs-large-integration-use-second-bitmap",
   "//src/storage/blobfs/test:blobfs-large-integration-use-second-bitmap-paged",
-  "//src/storage/blobfs/test:blobfs-unit",
   "//src/storage/fshost:block-watcher-test",
   "//src/storage/fshost:fshost-inspect-test",
   "//src/storage/fshost:fshost-metrics-test",

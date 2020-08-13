@@ -28,20 +28,14 @@ using digest::MerkleTreeCreator;
 using digest::MerkleTreeVerifier;
 
 fbl::Array<uint8_t> LoadTemplateData() {
-  // TODO(jfsulliv): Load aux file properly. Requires componentizing the blobfs tests which use
-  // this helper.
-  // XXX DO NOT COPY THIS. This is not a well supported mechanism for loading test data.
-  const char* file = "bin/test-binary";
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  EXPECT_NE("", root_dir);
-  if (!root_dir)
-    return {};
-  std::string path = std::string(root_dir) + "/" + file;
-
-  fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
+  constexpr char kDataFile[] = "/pkg/data/test_binary";
+  fbl::unique_fd fd(open(kDataFile, O_RDONLY));
   EXPECT_TRUE(fd.is_valid());
-  if (!fd)
+  if (!fd) {
+    fprintf(stderr, "blob_utils.cc: Failed to load template data file %s: %s\n", kDataFile,
+            strerror(errno));
     return {};
+  }
   struct stat s;
   EXPECT_EQ(fstat(fd.get(), &s), 0);
   size_t sz = s.st_size;

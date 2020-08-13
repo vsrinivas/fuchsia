@@ -12,6 +12,7 @@ group("tests") {
     "bin:tests",
     "blobfs-corrupt:tests",
     "blobfs-stress-test",
+    "blobfs/test",
     "conformance:tests",
     "ext4:tests",
     "factory:tests",

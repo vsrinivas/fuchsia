@@ -17,14 +17,24 @@ import("//build/test.gni")
 import("//build/fuzzing/fuzzer.gni")
 
 import("//src/storage/blobfs/test/blobfs_large_integration_test.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
+  testonly = true
+  deps = [ ":blobfs-unittest" ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":blobfs-host" ]
+}
+
+# TODO(fxb/52911): Remove once all targets migrated to test packages.
+group("legacy_test") {
   testonly = true
   deps = [
     ":blobfs-integration",
     ":blobfs-integration-paged",
-    ":blobfs-unit",
-    ":large-test",
     ":zstd-fuzzer",
     ":zstd-seekable-fuzzer",
     ":zstd-seekable-symmetric-fuzzer",
@@ -47,15 +57,17 @@ group("large-test") {
   ]
 }
 
-executable("test-binary") {
-  testonly = false
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+executable("test_binary") {
+  testonly = true
   sources = [ "test_binary_main.cc" ]
+  visibility = [ ":*" ]
+}
+
+resource("test-binary") {
+  testonly = true
+  data_deps = [ ":test_binary" ]
+  sources = [ "$root_out_dir/test_binary" ]
+  outputs = [ "data/test_binary" ]
   visibility = [ ":*" ]
 }
 
@@ -70,7 +82,6 @@ source_set("test-utils") {
     "blob_utils.cc",
     "blob_utils.h",
   ]
-  data_deps = [ ":test-binary" ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
@@ -84,12 +95,7 @@ source_set("test-utils") {
   public_configs = [ ":test-utils-headers" ]
 }
 
-test("blobfs-unit") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-  if (configs + fdio_config - fdio_config != configs) {
-    configs -= fdio_config
-  }
+test("blobfs_unittest") {
   sources = [
     "unit/allocated-extent-iterator-test.cc",
     "unit/allocator-test.cc",
@@ -142,6 +148,15 @@ test("blobfs-unit") {
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+  ]
+  testonly = true
+}
+
+fuchsia_unittest_package("blobfs-unittest") {
+  executable_path = "test/blobfs_unittest"
+  deps = [
+    ":blobfs_unittest",
+    ":test-binary",
   ]
 }
 
