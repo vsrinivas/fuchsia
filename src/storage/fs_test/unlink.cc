@@ -75,6 +75,23 @@ TEST_P(UnlinkTest, UseAfterwards) {
   ASSERT_EQ(open(path.c_str(), O_RDWR, 0644), -1);
 }
 
+TEST_P(UnlinkTest, UseAfterRenameOver) {
+  const std::string path = GetPath("foobar");
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  ASSERT_TRUE(fd);
+
+  ASSERT_NO_FATAL_FAILURE(SimpleWriteTest(fd.get(), 1));
+
+  // When we rename over path, fd is still open.
+  const std::string barfoo = GetPath("barfoo");
+  fbl::unique_fd fd2(open(barfoo.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  ASSERT_EQ(rename(barfoo.c_str(), path.c_str()), 0);
+
+  ASSERT_NO_FATAL_FAILURE(
+      SimpleReadTest(fd.get(), 1));  // It should contain the same data as before
+  ASSERT_NO_FATAL_FAILURE(SimpleWriteTest(fd.get(), 2));  // It should still be writable
+}
+
 TEST_P(UnlinkTest, OpenElsewhere) {
   const std::string path = GetPath("foobar");
   fbl::unique_fd fd1(open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));

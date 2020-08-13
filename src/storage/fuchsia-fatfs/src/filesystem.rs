@@ -92,8 +92,8 @@ impl FatFilesystem {
         // This is safe because we hold the only reference to `inner`, so there are no stray
         // references to fatfs Dir or Files.
         let arc = unsafe { Pin::into_inner_unchecked(self.inner) };
-        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::BAD_HANDLE)?;
-        let inner = mutex.into_inner().map_err(|_| Status::BAD_HANDLE)?;
+        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::UNAVAILABLE)?;
+        let inner = mutex.into_inner().map_err(|_| Status::UNAVAILABLE)?;
         inner.shut_down()
     }
 

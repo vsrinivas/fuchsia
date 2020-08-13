@@ -48,8 +48,21 @@ impl FatfsDirRef {
         unsafe { std::mem::transmute(self.inner.as_mut()) }
     }
 
-    /// Reopen the FatfsDirRef, without affecting the open_count.
-    pub unsafe fn reopen(
+    /// Reopen the FatfsDirRef if open count > 0.
+    pub unsafe fn maybe_reopen(
+        &mut self,
+        fs: &FatFilesystemInner,
+        parent: Option<&Arc<FatDirectory>>,
+        name: &str,
+    ) -> Result<(), Status> {
+        if self.open_count == 0 {
+            Ok(())
+        } else {
+            self.reopen(fs, parent, name)
+        }
+    }
+
+    unsafe fn reopen(
         &mut self,
         fs: &FatFilesystemInner,
         parent: Option<&Arc<FatDirectory>>,
@@ -73,12 +86,12 @@ impl FatfsDirRef {
         parent: Option<&Arc<FatDirectory>>,
         name: &str,
     ) -> Result<(), Status> {
-        if self.open_count == 0 {
-            self.reopen(fs, parent, name)?;
-        }
         if self.open_count == std::usize::MAX {
-            Err(Status::BAD_HANDLE)
+            Err(Status::UNAVAILABLE)
         } else {
+            if self.open_count == 0 {
+                self.reopen(fs, parent, name)?;
+            }
             self.open_count += 1;
             Ok(())
         }
@@ -140,16 +153,26 @@ impl FatfsFileRef {
         self.inner.as_ref()
     }
 
-    pub unsafe fn reopen(
+    /// Reopen the FatfsDirRef if open count > 0.
+    pub unsafe fn maybe_reopen(
         &mut self,
         fs: &FatFilesystemInner,
         parent: &FatDirectory,
         name: &str,
     ) -> Result<(), Status> {
         if self.open_count == 0 {
-            // No need to reopen if the open count is zero.
-            return Ok(());
+            Ok(())
+        } else {
+            self.reopen(fs, parent, name)
         }
+    }
+
+    unsafe fn reopen(
+        &mut self,
+        fs: &FatFilesystemInner,
+        parent: &FatDirectory,
+        name: &str,
+    ) -> Result<(), Status> {
         let file = parent.find_child(fs, name)?.ok_or(Status::NOT_FOUND)?.to_file();
         self.inner.replace(std::mem::transmute(file));
         Ok(())
@@ -161,12 +184,12 @@ impl FatfsFileRef {
         parent: Option<&FatDirectory>,
         name: &str,
     ) -> Result<(), Status> {
-        if self.open_count == 0 {
-            self.reopen(fs, parent.ok_or(Status::BAD_HANDLE)?, name)?;
-        }
         if self.open_count == std::usize::MAX {
             Err(Status::UNAVAILABLE)
         } else {
+            if self.open_count == 0 {
+                self.reopen(fs, parent.ok_or(Status::BAD_HANDLE)?, name)?;
+            }
             self.open_count += 1;
             Ok(())
         }

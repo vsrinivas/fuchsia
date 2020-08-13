@@ -424,7 +424,7 @@ impl Node for FatDirectory {
         // Safe because we hold the fs lock.
         let dir = unsafe { self.dir.get().as_mut().unwrap() };
         // Safe because we have a reference to the FatFilesystem.
-        unsafe { dir.reopen(fs, Some(&new_parent), name)? };
+        unsafe { dir.maybe_reopen(fs, Some(&new_parent), name)? };
 
         assert!(data.parent.replace(new_parent).is_some());
         Ok(())

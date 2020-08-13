@@ -155,7 +155,7 @@ impl Node for FatFile {
         // Safe because we hold the fs lock.
         let file = unsafe { self.file.get().as_mut() }.unwrap();
         // Safe because we have a reference to the FatFilesystem.
-        unsafe { file.reopen(fs, &new_parent, name)? };
+        unsafe { file.maybe_reopen(fs, &new_parent, name)? };
         data.parent.replace(new_parent);
         Ok(())
     }
