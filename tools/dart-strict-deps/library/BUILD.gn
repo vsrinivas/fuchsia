@@ -1,0 +1,21 @@
+import("//build/dart/dart_library.gni")
+dart_library("dart_strict_deps_lib") {
+  package_name = "dart_strict_deps_lib"
+  disable_analysis = true
+  sources = [
+    "dependency_check.dart",
+    "exceptions.dart",
+    "file_processor.dart",
+  ]
+
+  deps = [
+    "../:dart_strict_deps_proto",
+    "//third_party/dart-pkg/pub/analyzer",
+    "//third_party/dart-pkg/pub/collection",
+    "//third_party/dart-pkg/pub/json_annotation",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/package_config",
+    "//third_party/dart-pkg/pub/path",
+    "//third_party/dart-pkg/pub/quiver",
+  ]
+}

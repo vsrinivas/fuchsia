@@ -149,9 +149,9 @@ template("dart_tool") {
     forward_variables_from(invoker,
                            [
                              "disable_analysis",
-                             "disable_strict_deps_check",
                              "testonly",
                              "visibility",
+                             "disable_strict_deps_check",
                            ])
     package_name = package_name
     package_root = package_root

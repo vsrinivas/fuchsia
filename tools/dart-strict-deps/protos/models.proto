@@ -1,0 +1,77 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+package dart_strict_deps;
+
+/// Wrapper for specific metadata collection result.
+///
+/// Metadata is generated from dart_library.gni.
+message BuildInfo {
+  repeated BuildTarget build_targets = 1;
+}
+
+/// GN Build target in metadata collected form.
+message BuildTarget {
+  // Whether gn metadata collection was run on this as starting point.
+  bool __is_current_target = 1 [json_name = "__is_current_target"];
+  // The following are just standard GN variables forwarded.
+  string __package_name = 2 [json_name = "__package_name"];
+  repeated string __deps = 3 [json_name = "__deps"];
+  repeated string __public_deps = 4 [json_name = "__public_deps"];
+  // Represents absolute paths to source files.
+  repeated string __rebased_sources = 5 [json_name = "__rebased_sources"];
+}
+
+/// Result of checking a build target.
+message TargetCheckResult {
+  string target_name = 1;
+  // Represents the list of checked files.
+  repeated FileCheckResult files = 2;
+}
+
+/// Result of checking a single file.
+message FileCheckResult {
+  // Represents absolute path to file.
+  string file_path = 1;
+  // A list of imports.
+  repeated ImportResult imports = 2;
+}
+
+// Result of checking an import.
+message ImportResult {
+  // What line import is on.
+  string line_info = 1;
+  // The uri being imported. (eg. import 'package:abc')
+  string import_uri = 2;
+  // the absolute file path of the resolved file (can be null for dart: imports).
+  string resolved_location = 3;
+
+  enum State {
+    // Was found in direct dependencies.
+    FOUND = 0;
+    // Failed to resolve path of import.
+    NOT_FOUND = 1;
+    // Package imported and file exists but file was not in GN sources list.
+    MISSING_FROM_PACKAGE_SOURCES = 2;
+    // Package was imported but file doesnt exist.
+    FILE_MISSING = 3;
+  }
+  // State of the check.
+  State state = 4;
+
+  enum Type {
+    DART_SDK = 0;
+    RELATIVE = 1;
+    PACKAGE = 2;
+    ERROR = 3;  // eg 'abc:asda/'
+  }
+
+  // Type of import.
+  Type type = 5;
+  // The dart package being imported.
+  string dart_package = 6;
+  // Whether the dart pack package is a direct dep
+  bool is_dart_package_imported = 7;
+}

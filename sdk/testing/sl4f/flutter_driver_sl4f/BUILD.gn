@@ -7,6 +7,10 @@ import("//build/dart/dart_library.gni")
 dart_library("flutter_driver_sl4f") {
   package_name = "flutter_driver_sl4f"
 
+  # TODO(fxbug.dev/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   sdk_category = "partner"
 
   sources = [ "flutter_driver_sl4f.dart" ]

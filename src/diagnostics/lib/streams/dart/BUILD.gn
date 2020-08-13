@@ -26,6 +26,10 @@ dart_library("fuchsia_diagnostic_streams") {
 }
 
 dart_test("fuchsia-diagnostic-streams-unittests") {
+  # TODO(fxbug.dev/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   sources = [
     "internal/bitfield64_test.dart",
     "write_test.dart",
