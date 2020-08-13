@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
@@ -148,10 +149,13 @@ int main(int argc, char* argv[]) {
       }
       factory_server->SetTestPatternMode(std::stoi(value));
       break;
+    case CAPTURE_FRAMES:
+      // TODO(fxbug.dev/58189) does not work, needs to wait for streaming
+      factory_server->Capture();
+      break;
     case START_STREAM:
       // just run the loop so streamers can start, and webui can be used
       break;
-    case CAPTURE_FRAMES:
     case STOP_STREAM:
     case DISPLAY_TO_SCREEN:
     default:

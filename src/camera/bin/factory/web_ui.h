@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_BIN_CAMERA_GYM_WEBUI_H_
-#define SRC_CAMERA_BIN_CAMERA_GYM_WEBUI_H_
+#ifndef SRC_CAMERA_BIN_FACTORY_WEB_UI_H_
+#define SRC_CAMERA_BIN_FACTORY_WEB_UI_H_
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -11,12 +11,19 @@
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include "src/lib/fsl/tasks/fd_waiter.h"
+#include <stdio.h>
 
 #include "src/camera/bin/factory/capture.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace camera {
+
+enum RGBConversionType : uint8_t {
+  NONE,    // treat frame as 8-bit grayscale, do not process to RGB
+  NATIVE,  // use pixel_format to select RGB conversion method
+  NV12,    // treat frame as NV12, do YUV to RGB conversion
+  BAYER,   // treat frame as 8-bit raw sensor data in NV12 stream (output Y plane)
+};
 
 // an interface for caller to provide access to resources
 class WebUIControl {
@@ -42,11 +49,10 @@ class WebUI {
   void Listen(int port);
   void ListenWaiter();
   void OnListenReady(zx_status_t success, uint32_t events);
-  void HandleClient(int fd);
+  void HandleClient(FILE* fp);
 
-  // write out frame as pnm
-  void WritePNGFromNV12(int fd, std::unique_ptr<Capture> frame);
-  void WritePNGFromRaw(int fd, std::unique_ptr<Capture> frame);
+  // handle capture replies
+  void RequestCapture(FILE* fp, RGBConversionType convert, bool saveToStorage);
 
   // controller hooks, owned by the controller (WebUI is a view in MVC)
   WebUIControl* control_;
@@ -58,4 +64,4 @@ class WebUI {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_BIN_CAMERA_GYM_STREAM_CYCLER_H_
+#endif  // SRC_CAMERA_BIN_FACTORY_WEB_UI_H_

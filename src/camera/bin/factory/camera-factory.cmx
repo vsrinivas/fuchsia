@@ -12,9 +12,9 @@
         "services": [
             "fuchsia.camera3.DeviceWatcher",
             "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

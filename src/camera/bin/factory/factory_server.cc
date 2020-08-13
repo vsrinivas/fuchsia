@@ -116,12 +116,30 @@ void FactoryServer::SetTestPatternMode(uint16_t mode) {
   isp_->SetTestPatternMode(mode, []() { return; });
 }
 
+void FactoryServer::Capture() {
+  streamer_->RequestCapture(
+      0, "", true, [&](zx_status_t status, std::unique_ptr<camera::Capture> frame) {
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "capture failed";
+          return;
+        }
+        char file[] = "/data/capture.png";
+        FILE* filefp = fopen(file, "w");
+        if (filefp == NULL) {
+          FX_LOGS(ERROR) << "failed to open " << file << ": " << strerror(errno);
+          return;
+        }
+        frame->WritePNGAsNV12(filefp);
+        fclose(filefp);
+      });
+}
+
 void FactoryServer::RequestCaptureData(uint32_t stream, CaptureResponse callback) {
-  streamer_->RequestCapture(stream, "", true,
-                            [callback = callback.share()](zx_status_t status,
-                               std::unique_ptr<camera::Capture> frame) {
-    callback(status, std::move(frame));
-  });
+  streamer_->RequestCapture(
+      stream, "", true,
+      [callback = callback.share()](zx_status_t status, std::unique_ptr<camera::Capture> frame) {
+        callback(status, std::move(frame));
+      });
 }
 
 }  // namespace camera

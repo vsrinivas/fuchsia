@@ -47,6 +47,7 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
   void SetExposure(float integration_time, float analog_gain, float digital_gain);
   void SetSensorMode(uint32_t mode);
   void SetTestPatternMode(uint16_t mode);
+  void Capture();
 
  private:
   // |fuchsia.camera.factory.Controller|

@@ -77,6 +77,7 @@ void Streamer::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEv
             connected_config_index_ = 0;
             configurations_ = std::move(configurations);
             config_count_ = configurations.size();
+            FX_LOGS(INFO) << "configurations available: " << config_count_;
             // Once we have the known camera configurations, default to the first configuration
             // index. This is automatically chosen in the driver, so we do not need to ask for it.
             // The callback for WatchCurrentConfiguration() will connect to all streams.
@@ -105,6 +106,8 @@ void Streamer::ConnectToAllStreams() {
 }
 
 void Streamer::ConnectToStream(uint32_t config_index, uint32_t stream_index) {
+  FX_LOGS(INFO) << "Connecting to c" << config_index << "s" << stream_index << " of "
+                << configurations_[config_index].streams.size();
   ZX_ASSERT(configurations_.size() > config_index);
   ZX_ASSERT(configurations_[config_index].streams.size() > stream_index);
 
@@ -210,23 +213,23 @@ void Streamer::RequestConfig(uint32_t config) {
 
 void Streamer::RequestCapture(uint32_t stream, const std::string& path, bool wantImage,
                               CaptureResponse callback) {
-  async::PostTask(loop_.dispatcher(), [this, stream, path, wantImage,
-      callback = callback.share()]() mutable {
-    if (stream >= NumConnectedStreams()) {
-      callback(ZX_ERR_OUT_OF_RANGE, nullptr);
-      return;
-    }
-    if (capture_ != nullptr) {
-      callback(ZX_ERR_UNAVAILABLE, nullptr);            // another capture in progress
-      return;
-    }
-    auto capture_result = Capture::Create(stream, path, wantImage, callback.share());
-    if (capture_result.is_error()) {
-      callback(capture_result.error(), nullptr);
-      return;
-    }
-    capture_ = capture_result.take_value();
-  });
+  async::PostTask(
+      loop_.dispatcher(), [this, stream, path, wantImage, callback = callback.share()]() mutable {
+        if (stream >= NumConnectedStreams()) {
+          callback(ZX_ERR_OUT_OF_RANGE, nullptr);
+          return;
+        }
+        if (capture_ != nullptr) {
+          callback(ZX_ERR_UNAVAILABLE, nullptr);  // another capture in progress
+          return;
+        }
+        auto capture_result = Capture::Create(stream, path, wantImage, callback.share());
+        if (capture_result.is_error()) {
+          callback(capture_result.error(), nullptr);
+          return;
+        }
+        capture_ = capture_result.take_value();
+      });
 }
 
 uint32_t Streamer::NumConfigs() { return config_count_; };
