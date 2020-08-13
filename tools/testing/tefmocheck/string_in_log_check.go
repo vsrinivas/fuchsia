@@ -173,5 +173,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// Zircon-related errors to ensure tefmocheck attributes these crashes to
 	// the actual root cause.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component", Type: swarmingOutputType})
 	return ret
 }
