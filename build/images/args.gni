@@ -107,10 +107,16 @@ declare_args() {
   # Include fvm.blob.sparse.blk image into the build if set to true
   include_fvm_blob_sparse = false
 
-  # Allows a product to override the recovery image used in the zirconr slot.
+  # Allows a product to specify the recovery image used in the zirconr slot.
   # Default recovery image is zedboot. Overriding this value will keep zedboot
   # in the build but will not include it as the default zirconr image.
+  # Recovery images can provide an update target by specifying the metadata item
+  # "update_target" in the format <target>=<path>. (Such as `update_target =
+  # [ "recovery=" + rebase_path(recovery_path, root_build_dir) ]`)
   # Example value: "//build/images/recovery"
+  recovery_label = "//build/images/zedboot"
+
+  #TODO(comfoltey) remove obsolete label override_recovery_label
   override_recovery_label = ""
 
   # List of paths to board-specific tools to include in the build output.

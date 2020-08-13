@@ -1705,8 +1705,8 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 From //build/config/BUILDCONFIG.gn:34
 
-### override_recovery_label
-Allows a product to override the recovery image used in the zirconr slot.
+### recovery_label
+Allows a product to specify the recovery image used in the zirconr slot.
 Default recovery image is zedboot. Overriding this value will keep zedboot
 in the build but will not include it as the default zirconr image.
 Example value: "//build/images/recovery"

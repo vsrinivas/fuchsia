@@ -19,10 +19,13 @@ import("//build/unification/zbi/migrated_zbi.gni")
 # Note: the contents of the zbi are now located in the zedboot.gni file in the
 # imports above.
 
-# Zedboot must be included to pave devices until recovery has a replacement mechanism. Products can specify override_recovery_label to determine which image to include in zircon-r.
+# Zedboot must be included to pave devices until recovery has a replacement
+# mechanism. Products can specify recovery_label to determine which
+# image to include in zircon-r.
 use_zedboot_as_recovery = false
 zedboot_metadata_slot = "zedboot"
-if (override_recovery_label == "") {
+if (get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info(":zedboot", "label_with_toolchain")) {
   use_zedboot_as_recovery = true
   zedboot_metadata_slot = "zircon-r"
 }
@@ -110,6 +113,9 @@ migrated_zbi("zbi") {
       },
     ]
 
+    if (custom_signing_script == "" && !use_vboot) {
+      update_target = [ "zedboot=zedboot.zbi" ]
+    }
     image_paths = [ "IMAGE_ZEDBOOT_ZBI=zedboot.zbi" ]
     if (use_zedboot_as_recovery) {
       image_paths += [ "IMAGE_ZIRCONR_ZBI=zedboot.zbi" ]
@@ -139,6 +145,7 @@ if (custom_signing_script != "") {
           type = "zbi.signed"
         },
       ]
+      update_target = [ "zedboot.signed=zedboot.zbi.signed" ]
       if (use_zedboot_as_recovery) {
         image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
       }
@@ -162,6 +169,7 @@ if (custom_signing_script != "") {
           type = "zbi.signed"
         },
       ]
+      update_target = [ "zedboot.signed=zedboot.vboot" ]
       if (use_zedboot_as_recovery) {
         image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot" ]
       }
@@ -215,6 +223,9 @@ if (use_vbmeta) {
       ]
       if (use_zedboot_as_recovery) {
         image_paths = [ "IMAGE_VBMETAR_RAW=zedboot.vbmeta" ]
+
+        # Only include zedboot as recovery.vbmeta if zedboot is used as recovery
+        update_target = [ "recovery.vbmeta=zedboot.vbmeta" ]
       }
     }
   }
@@ -249,9 +260,9 @@ group("zedboot") {
   }
   if (custom_signing_script != "" || use_vboot) {
     deps += [ ":signed" ]
-    if (bootfs_only && use_vbmeta) {
-      deps += [ ":zedboot.vbmeta" ]
-    }
+  }
+  if (use_vbmeta) {
+    deps += [ ":zedboot.vbmeta" ]
   }
   testonly = true
 }

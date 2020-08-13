@@ -906,43 +906,6 @@ if (use_vbmeta) {
   ]
 }
 
-# The updater also wants the zedboot zbi as recovery.
-if (custom_signing_script != "") {
-  update_manifest += [
-    {
-      deps = [ "zedboot:signed" ]
-      sources = [ "$root_out_dir/zedboot.zbi.signed" ]
-      target = "zedboot.signed"
-    },
-  ]
-} else if (use_vboot) {
-  update_manifest += [
-    {
-      deps = [ "zedboot:signed" ]
-      sources = [ "$root_out_dir/zedboot.vboot" ]
-
-      target = "zedboot.signed"
-    },
-  ]
-} else {
-  update_manifest += [
-    {
-      deps = [ "zedboot:zbi" ]
-      sources = [ "$root_out_dir/zedboot.zbi" ]
-      target = "zedboot"
-    },
-  ]
-}
-if (use_vbmeta) {
-  update_manifest += [
-    {
-      deps = [ "zedboot:zedboot.vbmeta" ]
-      sources = [ "$root_out_dir/zedboot.vbmeta" ]
-      target = "recovery.vbmeta"
-    },
-  ]
-}
-
 ###
 ### Complete images for booting and installing the whole system.
 ###
@@ -1462,9 +1425,7 @@ action("flash_script") {
   }
 }
 
-if (override_recovery_label != "") {
-  default_image_deps += [ override_recovery_label ]
-}
+default_image_deps += [ recovery_label ]
 
 paver_targets = [
   {
@@ -1638,6 +1599,15 @@ generate_package_metadata("update_meta_far_merkle_index") {
   ]
 }
 
+recovery_images_list = root_build_dir + "/recovery_images_list"
+generated_file("recovery_images_list") {
+  testonly = true
+  outputs = [ recovery_images_list ]
+  output_conversion = "list lines"
+  data_keys = [ "update_target" ]
+  deps = [ recovery_label ]
+}
+
 action("update_packages.manifest") {
   visibility = [ ":update.manifest" ]
   testonly = true
@@ -1702,15 +1672,24 @@ action("update.manifest") {
   script = "manifest.py"
 
   outputs = [ "$target_out_dir/$target_name" ]
-
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
+
+  recovery_images_list_outputs = get_target_outputs(":recovery_images_list")
+  sources = recovery_images_list_outputs
 
   deps = [
+    ":recovery_images_list",
+
     # This dep ensures the version file included below is always generated,
     # which is presently significant only really for bringup, as bringup still
     # attempts to build this target.
     "//build/info:build-info",
+  ]
+
+  # Use metadata from recovery labels to create manifest targets
+  args += [
+    "--manifest",
+    rebase_path(recovery_images_list_outputs[0], root_build_dir),
   ]
 
   # Each entry optionally specifies deps or sources that are added to that of
@@ -2161,7 +2140,7 @@ group("default-images") {
     ":paver-script",
     ":qemu-kernel",
     ":zedboot-script",
-    "zedboot",
+    recovery_label,
   ]
 
   if (enable_netboot) {
@@ -2178,10 +2157,6 @@ group("default-images") {
       ":updates",
       "recovery",
     ]
-
-    if (override_recovery_label != "") {
-      deps += [ override_recovery_label ]
-    }
   }
 }
 
