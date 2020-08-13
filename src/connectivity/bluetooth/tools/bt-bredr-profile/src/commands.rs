@@ -84,11 +84,12 @@ gen_commands! {
                          "\n\t\tUnregister service corresponding to 'service-id'\n\
                           \t\tExample: remove-service 0"),
         Channels = ("channels", [], "List connected channels and their Ids assigned by the REPL"),
-        Connect = ("connect", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size"],
+        Connect = ("connect", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size", "security-requirements"],
                         "\n\t\tCreate an l2cap channel to the remote device 'peer-id'. \n\
                          \t\t'channel-mode' must be {basic|ertm}. 'psm' and 'max-rx-sdu-size' must be\n\
-                         \t\tpositive integers in the range 0 - 65535.\n\n\
-                         \t\tExample: connect-l2cap 028565803f1368b2 1 basic 672"),
+                         \t\tpositive integers in the range 0 - 65535. 'security-requirements' must be\n\
+                         \t\t{none|auth|sc|auth-sc}.\n\n\
+                         \t\tExample: connect-l2cap 028565803f1368b2 1 basic 672 none"),
         Disconnect = ("disconnect", ["channel-id"],
                            "\n\t\tDrop socket corresponding to 'channel-id', which will disconnect\n\
                             \t\tthe l2cap channel.\n\

@@ -25,7 +25,7 @@ will fail for such peers. `bt-cli` may be used in conjunction with this tool to
 control peer connections.
 
 #### Usage
-`connect <peer-id> <psm> <channel-mode> <max-rx-sdu-size>`
+`connect <peer-id> <psm> <channel-mode> <max-rx-sdu-size> <security-requirements>`
 
 ##### Arguments
 - `peer-id` maps to the `peer_id` field of `Connect`
@@ -33,10 +33,11 @@ control peer connections.
 - `channel-mode` can be one of {`basic`, `ertm`}, and maps to the
   `parameters.channel_mode` field of `Connect`
 - `max-rx-sdu-size` maps to the `parameters.max_rx_sdu_size` field of `Connect`
-
+- `security-requirements` can be one of {`none`, `auth`, `sc`, `auth-sc`}, and maps to the
+  `parameters.security_requirements` field of `Connect`.
 #### Example
 ```
-profile> connect 75870b2c86d9e801 1 basic 672
+profile> connect 75870b2c86d9e801 1 basic 672 none
 Channel:
   Id: 0
   Mode: Basic

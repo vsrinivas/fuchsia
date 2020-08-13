@@ -56,6 +56,25 @@ fn channel_mode_from_str(s: &str) -> Result<ChannelMode, Error> {
     }
 }
 
+fn security_requirements_from_str(s: &str) -> Result<Option<SecurityRequirements>, Error> {
+    match s {
+        "none" => Ok(None),
+        "auth" => Ok(Some(SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: None,
+        })),
+        "sc" => Ok(Some(SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: Some(true),
+        })),
+        "auth-sc" => Ok(Some(SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: Some(true),
+        })),
+        s => Err(anyhow!("Invalid security requirements {}", s)),
+    }
+}
+
 /// Listen on the control event channel for new events.
 async fn connection_receiver(
     mut connection_requests: ConnectionReceiverRequestStream,
@@ -181,7 +200,7 @@ async fn connect(
     state: Arc<RwLock<ProfileState>>,
     args: &Vec<String>,
 ) -> Result<(), Error> {
-    if args.len() != 4 {
+    if args.len() != 5 {
         return Err(anyhow!("Invalid number of arguments"));
     }
     let peer_id: PeerId = args[0].parse()?;
@@ -189,10 +208,11 @@ async fn connect(
     let channel_mode = channel_mode_from_str(args[2].as_ref())?;
     let max_rx_sdu_size =
         args[3].parse::<u16>().map_err(|_| anyhow!("max-sdu-size must be [0, 65535]"))?;
+    let security_requirements = security_requirements_from_str(args[4].as_ref())?;
     let params = ChannelParameters {
         channel_mode: Some(channel_mode),
         max_rx_sdu_size: Some(max_rx_sdu_size),
-        security_requirements: None,
+        security_requirements,
     };
 
     let channel = match profile_svc
