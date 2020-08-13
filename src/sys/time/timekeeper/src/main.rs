@@ -6,8 +6,10 @@
 
 //! `timekeeper` is responsible for external time synchronization in Fuchsia.
 
+mod diagnostics;
+
 use {
-    crate::diagnostics::CobaltDiagnostics,
+    crate::diagnostics::{CobaltDiagnostics, InspectDiagnostics},
     anyhow::{Context as _, Error},
     chrono::prelude::*,
     fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet,
@@ -25,8 +27,6 @@ use {
     std::sync::Arc,
     time_metrics_registry::{self, TimeMetricDimensionEventType},
 };
-
-mod diagnostics;
 
 /// URL of the time source. In the future, this value belongs in a config file.
 const NETWORK_TIME_SERVICE: &str =
@@ -47,9 +47,8 @@ async fn main() -> Result<(), Error> {
             .context("failed to get UTC clock from maintainer")?,
     ));
 
-    diagnostics::init(Arc::clone(&utc_clock));
+    let inspect = InspectDiagnostics::new(diagnostics::INSPECTOR.root(), Arc::clone(&utc_clock));
     let mut fs = ServiceFs::new();
-
     info!("diagnostics initialized, serving on servicefs");
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
@@ -71,7 +70,8 @@ async fn main() -> Result<(), Error> {
         // Keep time_app in the same scope as time_service so the app is not stopped while
         // we are still using it
         let _time_app = time_app;
-        maintain_utc(utc_clock, notifier_clone, time_service, netstack_service, cobalt).await;
+        maintain_utc(utc_clock, notifier_clone, time_service, netstack_service, inspect, cobalt)
+            .await;
     })
     .detach();
 
@@ -106,6 +106,7 @@ async fn maintain_utc(
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
     netstack_service: fnetstack::NetstackProxy,
+    mut inspect: InspectDiagnostics,
     mut cobalt: CobaltDiagnostics,
 ) {
     info!("record the state at initialization.");
@@ -153,6 +154,7 @@ async fn maintain_utc(
                 if let Err(status) = utc_clock.update(zx::ClockUpdate::new().value(updated_time)) {
                     error!("failed to update UTC clock to time {:?}: {}", updated_time, status);
                 }
+                inspect.update_clock();
                 info!("adjusted UTC time to {}", Utc.timestamp_nanos(updated_time.into_nanos()));
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 let utc_now = Utc::now().timestamp_nanos();
@@ -277,7 +279,7 @@ mod tests {
         super::*,
         chrono::{offset::TimeZone, NaiveDate},
         fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload},
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
+        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
         fuchsia_zircon as zx,
         matches::assert_matches,
         std::{
@@ -296,8 +298,10 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1))).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        diagnostics::init(Arc::clone(&clock));
-        let (cobalt_metrics, mut cobalt_receiver) = CobaltDiagnostics::new_mock();
+        let inspector = Inspector::new();
+        let inspect_diagnostics =
+            diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock));
+        let (cobalt_diagnostics, mut cobalt_receiver) = CobaltDiagnostics::new_mock();
         info!("starting single notification test");
 
         let (utc, utc_requests) =
@@ -337,7 +341,8 @@ mod tests {
             notifier.clone(),
             time_service,
             netstack_service,
-            cobalt_metrics,
+            inspect_diagnostics,
+            cobalt_diagnostics,
         ))
         .detach();
 
@@ -409,41 +414,6 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000_000))).unwrap();
         let source = initial_utc_source(&clock);
         assert_matches!(source, ftime::UtcSource::External);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn inspect_values_are_present() -> Result<(), Error> {
-        let dummy_clock = Arc::new(zx::Clock::create(zx::ClockOpts::empty(), None).unwrap());
-        diagnostics::init(Arc::clone(&dummy_clock));
-        assert_inspect_tree!(
-            diagnostics::INSPECTOR,
-            root: contains {
-                start_time_monotonic_nanos: AnyProperty,
-                current: contains {
-                    system_uptime_monotonic_nanos: AnyProperty,
-                    utc_nanos: AnyProperty,
-                    utc_kernel_clock_value_nanos: AnyProperty,
-                    utc_kernel_clock: contains {
-                        backstop_nanos: AnyProperty,
-                        "ticks_to_synthetic.reference_offset": AnyProperty,
-                        "ticks_to_synthetic.synthetic_offset": AnyProperty,
-                        "ticks_to_synthetic.rate.synthetic_ticks": AnyProperty,
-                        "ticks_to_synthetic.rate.reference_ticks": AnyProperty,
-                        "mono_to_synthetic.reference_offset": AnyProperty,
-                        "mono_to_synthetic.synthetic_offset": AnyProperty,
-                        "mono_to_synthetic.rate.synthetic_ticks": AnyProperty,
-                        "mono_to_synthetic.rate.reference_ticks": AnyProperty,
-                        error_bounds: AnyProperty,
-                        query_ticks: AnyProperty,
-                        last_value_update_ticks: AnyProperty,
-                        last_rate_adjust_update_ticks: AnyProperty,
-                        last_error_bounds_update_ticks: AnyProperty,
-                        generation_counter: AnyProperty,
-                    }
-                }
-            }
-        );
-        Ok(())
     }
 
     #[test]

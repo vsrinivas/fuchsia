@@ -6,4 +6,4 @@ mod cobalt;
 mod inspect;
 
 pub use self::cobalt::CobaltDiagnostics;
-pub use self::inspect::{init, INSPECTOR};
+pub use self::inspect::{InspectDiagnostics, INSPECTOR};

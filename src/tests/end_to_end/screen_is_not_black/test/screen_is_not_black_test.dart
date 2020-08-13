@@ -133,12 +133,20 @@ void main(List<String> args) {
     final highRebootWallClock = DateTime.now();
 
     if (healthRoot == null) {
-      log.info('System uptime was not found, using zero values instead.');
+      log.info(
+          'Timekeeper inspect root not found, using zero uptime values instead.');
       return Uptime(
           DateTime.now(), Duration.zero, DateTime.now(), Duration.zero);
     }
 
-    final uptimeNanos = healthRoot['current']['system_uptime_monotonic_nanos'];
+    final uptimeNanos = healthRoot['initialization']['monotonic'];
+    if (uptimeNanos == null) {
+      log.info(
+          'Timekeeper init time not found, using zero uptime values instead.');
+      return Uptime(
+          DateTime.now(), Duration.zero, DateTime.now(), Duration.zero);
+    }
+
     final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
     var sinceReboot = uptime;
     if (sinceReboot > _maxElapsedSincePowerOn) {
