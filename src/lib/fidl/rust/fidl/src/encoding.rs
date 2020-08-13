@@ -2317,10 +2317,7 @@ macro_rules! fidl_table {
                         let end_offset = offset + bytes_len;
                         $(
                             _next_ordinal_to_read += 1;
-                            if next_offset >= end_offset {
-                                // The remaining fields have been omitted, so set them to None
-                                self.$member_name = None;
-                            } else {
+                            if next_offset < end_offset {
                                 // Decode unknown envelopes for gaps in ordinals.
                                 while _next_ordinal_to_read < $ordinal {
                                     $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
@@ -2353,7 +2350,6 @@ macro_rules! fidl_table {
                                         if num_bytes != 0 {
                                             return Err($crate::Error::UnexpectedNullRef);
                                         }
-                                        self.$member_name = None;
                                     }
                                     _ => return Err($crate::Error::Invalid),
                                 }
