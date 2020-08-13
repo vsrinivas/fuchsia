@@ -386,6 +386,10 @@ if [[ "$(uname -s)" == "Linux" ]] && (( ! HEADLESS )); then
     if [[ "$DISPLAY" != "fakedisplay" ]] && ! xset q >/dev/null 2>&1; then
       echo "clients must be allowed to connect to DISPLAY. Please run:"
       echo
+      echo "DISPLAY=$DISPLAY XAUTHORITY=/run/user/`getent passwd | grep /var/lib/gdm | cut -d: -f3`/gdm/Xauthority sudo xhost +"
+      echo
+      echo "or if using lightdm:"
+      echo
       echo "DISPLAY=$DISPLAY XAUTHORITY=/var/run/lightdm/root/$DISPLAY sudo xhost +"
       exit 1
     fi
