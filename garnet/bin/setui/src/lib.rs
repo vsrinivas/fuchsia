@@ -40,7 +40,7 @@ use {
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
-    crate::switchboard::switchboard_impl::SwitchboardBuilder,
+    crate::switchboard::switchboard::SwitchboardBuilder,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,

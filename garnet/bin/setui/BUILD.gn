@@ -173,7 +173,7 @@ rustc_library("lib") {
     "src/switchboard/hanging_get_handler.rs",
     "src/switchboard/intl_types.rs",
     "src/switchboard/light_types.rs",
-    "src/switchboard/switchboard_impl.rs",
+    "src/switchboard/switchboard.rs",
     "src/tests.rs",
     "src/tests/accessibility_tests.rs",
     "src/tests/agent_tests.rs",

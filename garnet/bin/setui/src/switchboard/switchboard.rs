@@ -149,7 +149,7 @@ impl SwitchboardBuilder {
     }
 
     pub async fn build(self) -> Result<(), Error> {
-        SwitchboardImpl::create(
+        Switchboard::create(
             self.core_messenger_factory.unwrap_or(core::message::create_hub()),
             self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
             self.setting_proxies,
@@ -159,7 +159,7 @@ impl SwitchboardBuilder {
     }
 }
 
-pub struct SwitchboardImpl {
+pub struct Switchboard {
     /// Next available action id.
     next_action_id: u64,
     /// Passed as with an `ActionFuse` to listen clients to capture when
@@ -177,8 +177,8 @@ pub struct SwitchboardImpl {
     inspect_node: fuchsia_inspect::Node,
 }
 
-impl SwitchboardImpl {
-    /// Creates a new SwitchboardImpl, which will return the instance along with
+impl Switchboard {
+    /// Creates a new Switchboard, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
     ///
     /// Requests will be recorded to the given inspect node.
