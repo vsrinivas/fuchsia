@@ -260,8 +260,9 @@ enum CheckNotStartedReason {
     /// the event of multiple errors.
     INTERNAL = 1;
 
-    /// If there are required options (or option values in conflict), provided
-    /// via the CheckOptions table to CheckNow, this error will be returned.
+    /// If there are required arguments or options (or option values in
+    /// conflict), provided via the CheckOptions table to CheckNow, this error
+    /// will be returned.
     INVALID_OPTIONS = 2;
 
     /// There was already another update check in progress when this request was
