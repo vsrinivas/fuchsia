@@ -188,11 +188,7 @@ wlan_info_mac_role_t WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
 
 // static
 bool WlanInterface::IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_type_t phy_type) {
-  char* iovar_name;
   uint32_t iovar_data;
-  int32_t iovar_fwerr;
-  char vhtmode[] = "vhtmode";
-  char nmode[] = "nmode";
   zx_status_t iovar_zx_status;
 
   switch (phy_type) {
@@ -202,23 +198,23 @@ bool WlanInterface::IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_typ
       // Broadcom has mandatory support for DSSS, CCK, ERP, and OFDM. See b/158857812.
       return true;
     case WLAN_INFO_PHY_TYPE_HT:
-      iovar_name = nmode;
-      break;
+      iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], "nmode", &iovar_data, nullptr);
+      if (iovar_zx_status != ZX_OK) {
+        BRCMF_DBG(INFO, "Failed to get iovar nmode. Assuming HT phy type not supported");
+        return false;
+      }
+      return iovar_data;
     case WLAN_INFO_PHY_TYPE_VHT:
-      iovar_name = vhtmode;
-      break;
+      iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], "vhtmode", &iovar_data, nullptr);
+      if (iovar_zx_status != ZX_OK) {
+        BRCMF_DBG(INFO, "Failed to get iovar vhtmode. Assuming VHT phy type not supported");
+        return false;
+      }
+      return iovar_data;
     default:
       BRCMF_ERR("wlan_info_phy_type_t value %d not recognized", phy_type);
       return false;
   }
-
-  iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], iovar_name, &iovar_data, &iovar_fwerr);
-  if (iovar_zx_status != ZX_OK) {
-    return false;
-  }
-
-  BRCMF_DBG(INFO, "%s=%d", iovar_name, iovar_data);
-  return iovar_data;
 }
 
 // static
@@ -260,7 +256,6 @@ wlan_info_driver_feature_t WlanInterface::GetSupportedDriverFeatures(struct brcm
 wlan_info_hardware_capability_t WlanInterface::GetSupportedHardwareCapabilities(
     struct brcmf_pub* drvr) {
   uint32_t iovar_data;
-  int32_t iovar_fwerr;
   zx_status_t iovar_zx_status;
   wlan_info_hardware_capability_t hardware_capability_flags = 0;
 
@@ -277,8 +272,10 @@ wlan_info_hardware_capability_t WlanInterface::GetSupportedHardwareCapabilities(
 
   // Radio Resource Management is enabled when 802.11k is included. This is indicated
   // by the "rrm" iovar.
-  iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], "rrm", &iovar_data, &iovar_fwerr);
-  if (iovar_zx_status == ZX_OK && iovar_data) {
+  iovar_zx_status = brcmf_fil_iovar_int_get(drvr->iflist[0], "rrm", &iovar_data, nullptr);
+  if (iovar_zx_status != ZX_OK) {
+    BRCMF_DBG(INFO, "Failed to get iovar rrm. Assuming radio measurement not supported");
+  } else if (iovar_data) {
     hardware_capability_flags |= WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT;
   }
 

@@ -3375,16 +3375,18 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
       bw_cap[WLAN_INFO_BAND_5GHZ] = val;
       return;
     }
-    BRCMF_ERR("Unable to get bw_cap for 5GHz bands");
+    BRCMF_WARN(
+        "Failed to retrieve 5GHz bandwidth info, but sucessfully retrieved bandwidth "
+        "info for 2.4GHz bands.");
     return;
   }
 
   // bw_cap not supported in this version of fw
-  BRCMF_DBG(INFO, "fallback to mimo_bw_cap info");
   uint32_t mimo_bwcap = 0;
   status = brcmf_fil_iovar_int_get(ifp, "mimo_bw_cap", &mimo_bwcap, nullptr);
   if (status != ZX_OK) {
     /* assume 20MHz if firmware does not give a clue */
+    BRCMF_WARN("Failed to retrieve bandwidth capability info. Assuming 20MHz for all.");
     mimo_bwcap = WLC_N_BW_20ALL;
   }
 
@@ -3453,7 +3455,7 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
   uint32_t ampdu_rx_density = 0;
   status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_density", &ampdu_rx_density, nullptr);
   if (status != ZX_OK) {
-    BRCMF_ERR("Unable to retrieve value for AMPDU Rx density from firmware, using 16 us");
+    BRCMF_ERR("Failed to retrieve value for AMPDU Rx density from firmware, using 16 us");
     ampdu_rx_density = 7;
   }
   band->ht_caps.ampdu_params |= ((ampdu_rx_density & 0x7) << IEEE80211_AMPDU_DENSITY_SHIFT);
@@ -3516,6 +3518,7 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
   }
   status = brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap_hw", &txbf_bfr_cap, nullptr);
   if (status != ZX_OK) {
+    BRCMF_DBG(INFO, "Failed to get iovar txbf_bfr_cap_hw. Falling back to txbf_bfr_cap.");
     (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap, nullptr);
   }
 
@@ -3764,8 +3767,8 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   (void)brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode, nullptr);
   status = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode, &fw_err);
   if (status != ZX_OK) {
-    BRCMF_ERR("nmode error: %s, fw err %s", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
+    BRCMF_ERR("nmode error: %s, fw err %s. Assuming both HT mode and VHT mode are not available.",
+              zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
     // VHT requires HT support
     vhtmode = 0;
   } else {
@@ -3782,7 +3785,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   max_ampdu_len_exp = 0;
   status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp, nullptr);
   if (status != ZX_OK) {
-    BRCMF_ERR("Unable to retrieve value for AMPDU maximum Rx length, using 8191 bytes");
+    BRCMF_ERR("Failed to retrieve value for AMPDU maximum Rx length, using 8191 bytes");
   }
 
   // Rx chains (and streams)
@@ -3800,6 +3803,8 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
       // TODO (WLAN-485): The rxstreams_cap iovar isn't yet supported in the BCM4356
       // firmware. For now we use a hard-coded value (another option would be to parse the
       // nvram contents ourselves (looking for the value associated with the key "rxchain").
+      BRCMF_DBG(INFO,
+                "Failed to retrieve value for Rx chains. Assuming chip supports 2 Rx chains.");
       rxchain = 0x3;
     }
   }
@@ -3974,7 +3979,7 @@ zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_
   const auto chanspec_status =
       brcmf_fil_iovar_int_get(ifp, "chanspec", &chanspec, &chanspec_fw_err);
   if (chanspec_status != ZX_OK) {
-    BRCMF_ERR("Failed to get chanspec: %s, fw err %s", zx_status_get_string(chanspec_status),
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s", zx_status_get_string(chanspec_status),
               brcmf_fil_get_errstr(chanspec_fw_err));
     return chanspec_status;
   }
@@ -3984,7 +3989,7 @@ zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_
   const auto version_status =
       brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_VERSION, &version, &version_fw_err);
   if (version_status != ZX_OK) {
-    BRCMF_ERR("Failed to get version: %s, fw err %s", zx_status_get_string(version_status),
+    BRCMF_ERR("Failed to retrieve version: %s, fw err %s", zx_status_get_string(version_status),
               brcmf_fil_get_errstr(version_fw_err));
     return version_status;
   }
@@ -3993,7 +3998,7 @@ zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_
   int32_t rxchain_fw_err = 0;
   const auto rxchain_status = brcmf_fil_iovar_int_get(ifp, "rxchain", &rxchain, &rxchain_fw_err);
   if (rxchain_status != ZX_OK) {
-    BRCMF_ERR("Failed to get rxchain: %s, fw err %s", zx_status_get_string(rxchain_status),
+    BRCMF_ERR("Failed to retrieve rxchain: %s, fw err %s", zx_status_get_string(rxchain_status),
               brcmf_fil_get_errstr(rxchain_fw_err));
     return rxchain_status;
   }
@@ -4305,6 +4310,7 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
   wlan_channel_t chan;
   wlanif_channel_switch_info_t info;
   zx_status_t err = ZX_OK;
+  int32_t fw_err;
   struct brcmf_cfg80211_info* cfg = nullptr;
   struct net_device* ndev = nullptr;
   struct wireless_dev* wdev = nullptr;
@@ -4324,9 +4330,10 @@ static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
   }
 
   // Get channel information from firmware.
-  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), nullptr);
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Fail to get chanspec from firmware, reason: %s\n", zx_status_get_string(err));
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
     return err;
   }
 
@@ -4962,7 +4969,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
     band_bwcap.bw_cap = WLC_BW_CAP_40MHZ;
     err = brcmf_fil_iovar_data_set(ifp, "bw_cap", &band_bwcap, sizeof(band_bwcap), nullptr);
   } else {
-    BRCMF_DBG(INFO, "fallback to mimo_bw_cap");
+    BRCMF_DBG(INFO, "Falling back to mimo_bw_cap to set 40MHz bandwidth for 2.4GHz bands.");
     val = WLC_N_BW_40ALL;
     err = brcmf_fil_iovar_int_set(ifp, "mimo_bw_cap", val, nullptr);
   }

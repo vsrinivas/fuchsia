@@ -2254,6 +2254,8 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
         BRCMF_FWS_MODE_SET_REUSESEQ(fws->mode, 1);
       }
     }
+  } else {
+    BRCMF_DBG(INFO, "sequence number reuse is not supported.");
   }
 
   brcmf_fws_hanger_init(&fws->hanger);

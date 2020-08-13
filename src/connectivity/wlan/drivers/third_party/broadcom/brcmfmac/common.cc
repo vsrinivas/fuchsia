@@ -104,8 +104,8 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
     dload_data->len = chunk_len;
     if ((status = brcmf_fil_iovar_data_set(ifp, "clmload", dload_data,
                                            sizeof(*dload_data) + chunk_len, &fw_err)) != ZX_OK) {
-      BRCMF_ERR("clmload failed at offset %zu: %s (fw err %s)", offset,
-                zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
+      BRCMF_ERR("clmload failed at offset %zu: %s, fw err %s", offset, zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
       return status;
     }
 
@@ -115,7 +115,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
   uint32_t clm_status = 0;
   int32_t fw_err = 0;
   if ((status = brcmf_fil_iovar_int_get(ifp, "clmload_status", &clm_status, &fw_err)) != ZX_OK) {
-    BRCMF_ERR("get clmload_status failed: %s (fw err %s)", zx_status_get_string(status),
+    BRCMF_ERR("get clmload_status failed: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
     return status;
   } else {
@@ -151,7 +151,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
 
   zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Retrieving mac address from firmware failed: %s, fw err %s",
+    BRCMF_ERR("Failed to retrieve mac address from firmware: %s, fw err %s",
               zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     return err;
   }
@@ -169,7 +169,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     // by using brcmf_set_macaddr_from_firmware();
 
     // Fallback to a random mac address.
-    BRCMF_ERR("Failed to get mac address from bootloader. Fallback to random mac address");
+    BRCMF_ERR("Failed to get mac address from bootloader. Falling back to random mac address");
     err = brcmf_gen_random_mac_addr(mac_addr);
     if (err != ZX_OK) {
       return err;
@@ -180,7 +180,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
 
   err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting mac address failed: %s, fw err %s", zx_status_get_string(err),
+    BRCMF_ERR("Failed to set mac address: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     return err;
   }
@@ -195,7 +195,7 @@ zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config) {
   size_t actual;
   err = brcmf_bus_get_wifi_metadata(ifp->drvr->bus_if, config, sizeof(wifi_config_t), &actual);
   if (err != ZX_OK) {
-    BRCMF_ERR("get metadata failed, err: %d", err);
+    BRCMF_ERR("Failed to retrieve wifi metadata: %s", zx_status_get_string(err));
     memset(config, 0, sizeof(*config));
     return err;
   }
@@ -233,7 +233,7 @@ zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country)
   // Search through the table until a valid or Null entry is found
   for (i = 0; i < MAX_CC_TABLE_ENTRIES; i++) {
     if (config.cc_table[i].cc_abbr[0] == 0) {
-      BRCMF_ERR("ccode %c%c not found in table", code[0], code[1]);
+      BRCMF_ERR("Failed to find ccode %c%c in table", code[0], code[1]);
       return ZX_ERR_NOT_FOUND;
     }
     if (memcmp(config.cc_table[i].cc_abbr, code, WLANPHY_ALPHA2_LEN) == 0) {
@@ -371,7 +371,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo), &fw_err);
   ri = &ifp->drvr->revinfo;
   if (err != ZX_OK) {
-    BRCMF_ERR("retrieving revision info failed: %s, fw err %s", zx_status_get_string(err),
+    BRCMF_ERR("Failed to retrieve revision info: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   } else {
     memcpy(&ri->fwrevinfo, &revinfo, sizeof(revinfo));
@@ -383,7 +383,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   strcpy((char*)buf, "ver");
   err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Retrieving version information failed: %s, fw err %s", zx_status_get_string(err),
+    BRCMF_ERR("Failed to retrieve version information: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     goto done;
   } else {
@@ -401,7 +401,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   memset(buf, 0, sizeof(buf));
   err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_DBG(TRACE, "retrieving clmver failed: %s, fw err %s", zx_status_get_string(err),
+    BRCMF_DBG(INFO, "Failed to retrieve clmver: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   } else {
     clmver = (char*)buf;
@@ -485,7 +485,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   err = brcmf_fil_iovar_data_set(ifp, "assoc_retry_max", &kMaxAssocRetries,
                                  sizeof(kMaxAssocRetries), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("assoc_retry_max failed: %s, fw err %s", zx_status_get_string(err),
+    BRCMF_ERR("Failed to set assoc_retry_max: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
 
