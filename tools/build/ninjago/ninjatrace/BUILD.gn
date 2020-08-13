@@ -8,12 +8,12 @@ import("//build/go/go_library.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [
-    "//tools/build/compdb",
-    "//tools/build/ninjalog",
+    "//tools/build/ninjago/compdb",
+    "//tools/build/ninjago/ninjalog",
   ]
 }
 
 go_binary("ninjatrace") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjatrace/cmd"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd"
   deps = [ ":main" ]
 }

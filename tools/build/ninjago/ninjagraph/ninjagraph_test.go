@@ -14,8 +14,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.fuchsia.dev/fuchsia/tools/build/compdb"
-	"go.fuchsia.dev/fuchsia/tools/build/ninjalog"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
 var testDataDir = flag.String("test_data_dir", "", "Path to the test DOT file")

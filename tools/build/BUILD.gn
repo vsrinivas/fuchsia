@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 group("tools") {
   testonly = true
 
-  public_deps = [ "//tools/build/ninjatrace" ]
+  public_deps = [ "//tools/build/ninjago/ninjatrace" ]
 }
 
 group("tests") {
@@ -16,9 +16,7 @@ group("tests") {
 
   deps = [
     ":build_tests",
-    "//tools/build/compdb:compdb_tests",
-    "//tools/build/ninjagraph:tests",
-    "//tools/build/ninjalog:ninjalog_tests",
+    "ninjago:tests",
   ]
 }
 

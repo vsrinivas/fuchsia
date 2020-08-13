@@ -9,16 +9,15 @@ import("//build/testing/host_test_data.gni")
 go_library("ninjagraph") {
   deps = [
     "//third_party/golibs:golang.org/x/sync",
-    "//tools/build/ninjalog",
+    "//tools/build/ninjago/ninjalog",
   ]
 }
 
 if (is_host) {
   _testdata_path = "$target_gen_dir/testdata"
 
-  go_test("test") {
-    output_name = "ninjagraph_tests"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjagraph" ]
+  go_test("ninjagraph_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph" ]
     args = [
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
@@ -26,19 +25,14 @@ if (is_host) {
     deps = [
       ":ninjagraph",
       "//third_party/golibs:github.com/google/go-cmp",
-      "//tools/build/compdb",
-      "//tools/build/ninjalog",
+      "//tools/build/ninjago/compdb",
+      "//tools/build/ninjago/ninjalog",
     ]
     non_go_deps = [ ":testdata" ]
   }
 
   host_test_data("testdata") {
-    sources = [ "//tools/build/ninja_test_data" ]
+    sources = [ "//tools/build/ninjago/test_data" ]
     outputs = [ _testdata_path ]
   }
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":test($host_toolchain)" ]
 }

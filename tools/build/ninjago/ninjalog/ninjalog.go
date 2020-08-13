@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/compdb"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 )
 
 // Step is one step in ninja_log file.

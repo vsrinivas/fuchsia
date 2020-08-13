@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 
-	"go.fuchsia.dev/fuchsia/tools/build/compdb"
-	"go.fuchsia.dev/fuchsia/tools/build/ninjalog"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
 var (

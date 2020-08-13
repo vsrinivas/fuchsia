@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.fuchsia.dev/fuchsia/tools/build/ninjalog"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 	"golang.org/x/sync/errgroup"
 )
 

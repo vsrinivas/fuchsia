@@ -18,7 +18,7 @@ go_binary("affectedtests") {
 go_library("lib") {
   deps = [
     "//tools/build",
-    "//tools/build/ninjagraph",
+    "//tools/build/ninjago/ninjagraph",
   ]
 }
 

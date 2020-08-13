@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
-	"go.fuchsia.dev/fuchsia/tools/build/ninjagraph"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph"
 )
 
 const buildDirRelativePrefix = "../../"

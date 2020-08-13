@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/compdb"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 )
 
 var (
