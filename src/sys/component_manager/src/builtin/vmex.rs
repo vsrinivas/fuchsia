@@ -13,7 +13,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_security_resource as fsec, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased, Resource},
@@ -21,15 +21,13 @@ use {
     lazy_static::lazy_static,
     log::warn,
     std::{
-        convert::TryInto,
         path::PathBuf,
         sync::{Arc, Weak},
     },
 };
 
 lazy_static! {
-    pub static ref VMEX_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.security.resource.Vmex".try_into().unwrap();
+    pub static ref VMEX_CAPABILITY_NAME: CapabilityName = "fuchsia.security.resource.Vmex".into();
 }
 
 /// An implementation of fuchsia.security.resource.Vmex protocol.
@@ -71,13 +69,10 @@ impl VmexService {
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
-                if *capability_path == *VMEX_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(VmexCapabilityProvider::new(self)) as Box<dyn CapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
+        if capability.matches_protocol(&VMEX_CAPABILITY_NAME) {
+            Ok(Some(Box::new(VmexCapabilityProvider::new(self)) as Box<dyn CapabilityProvider>))
+        } else {
+            Ok(capability_provider)
         }
     }
 }
@@ -138,6 +133,7 @@ mod tests {
     use {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
+        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_service,
@@ -231,8 +227,8 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                VMEX_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                VMEX_CAPABILITY_NAME.clone(),
             )),
         };
 

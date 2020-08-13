@@ -9,7 +9,6 @@ use {
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
-            events::source_factory::{EVENT_SOURCE_SERVICE_PATH, EVENT_SOURCE_SYNC_SERVICE_PATH},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
             resolver::ResolverError,
@@ -153,16 +152,13 @@ async fn use_framework_service() {
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
             // If some other capability has already been installed, then there's nothing to
             // do here.
-            match capability {
-                InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
-                    if *capability_path == *REALM_SERVICE =>
-                {
-                    return Ok(Some(Box::new(MockRealmCapabilityProvider::new(
-                        scope_moniker.clone(),
-                        self.clone(),
-                    )) as Box<dyn CapabilityProvider>));
-                }
-                _ => return Ok(capability_provider),
+            if capability.matches_protocol(&REALM_SERVICE) {
+                Ok(Some(Box::new(MockRealmCapabilityProvider::new(
+                    scope_moniker.clone(),
+                    self.clone(),
+                )) as Box<dyn CapabilityProvider>))
+            } else {
+                Ok(capability_provider)
             }
         }
     }
@@ -174,7 +170,7 @@ async fn use_framework_service() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .build(),
@@ -304,8 +300,8 @@ async fn capability_requested_event_at_parent() {
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -332,7 +328,7 @@ async fn capability_requested_event_at_parent() {
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_events(
         &namespace_root,
-        &EVENT_SOURCE_SERVICE_PATH,
+        &CapabilityPath::try_from("/svc/fuchsia.sys2.EventSource").unwrap(),
         vec!["capability_requested".into()],
     )
     .await
@@ -1406,8 +1402,8 @@ async fn use_from_expose_to_framework() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -1415,8 +1411,8 @@ async fn use_from_expose_to_framework() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1427,18 +1423,20 @@ async fn use_from_expose_to_framework() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Framework,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: ExposeTarget::Framework,
                 }))
                 .build(),
@@ -1448,14 +1446,14 @@ async fn use_from_expose_to_framework() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1579,7 +1577,7 @@ async fn use_in_collection() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
@@ -2049,7 +2047,7 @@ async fn use_runner_from_environment_in_collection() {
                 )
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .runner(RunnerDecl {
@@ -2559,7 +2557,7 @@ async fn use_with_destroyed_parent() {
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
@@ -2724,8 +2722,8 @@ async fn use_event_from_framework() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2737,8 +2735,8 @@ async fn use_event_from_framework() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -2784,8 +2782,8 @@ async fn cannot_offer_capability_requested_event() {
         ComponentDeclBuilder::new()
             .offer(OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferServiceSource::Parent,
-                source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 target: OfferTarget::Child("b".to_string()),
                 dependency_type: DependencyType::Strong,
             }))
@@ -2848,8 +2846,8 @@ async fn use_event_from_parent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2861,8 +2859,8 @@ async fn use_event_from_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2915,8 +2913,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2942,8 +2940,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2962,8 +2960,8 @@ async fn use_event_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3038,8 +3036,8 @@ async fn event_filter_routing() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3051,8 +3049,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3070,15 +3068,15 @@ async fn event_filter_routing() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("d".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3113,8 +3111,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3139,8 +3137,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    source_path: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,

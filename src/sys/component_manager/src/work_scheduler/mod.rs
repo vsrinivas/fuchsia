@@ -10,8 +10,8 @@ mod work_item;
 mod work_scheduler;
 
 pub use self::work_scheduler::{
-    WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
-    WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+    WorkScheduler, WORKER_CAPABILITY_NAME, WORK_SCHEDULER_CAPABILITY_NAME,
+    WORK_SCHEDULER_CONTROL_CAPABILITY_NAME,
 };
 
 #[cfg(test)]

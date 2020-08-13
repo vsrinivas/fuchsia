@@ -15,7 +15,7 @@ use {
     },
     anyhow::{Context as _, Error},
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2::*,
     fuchsia_async::{self as fasync},
@@ -24,7 +24,6 @@ use {
     lazy_static::lazy_static,
     log::warn,
     std::{
-        convert::TryInto,
         path::PathBuf,
         sync::{Arc, Weak},
         time::Duration,
@@ -32,8 +31,8 @@ use {
 };
 
 lazy_static! {
-    pub static ref SYSTEM_CONTROLLER_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.SystemController".try_into().unwrap();
+    pub static ref SYSTEM_CONTROLLER_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.sys2.SystemController".into();
 }
 
 #[derive(Clone)]
@@ -60,16 +59,13 @@ impl SystemController {
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
-                if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(SystemControllerCapabilityProvider::new(
-                    self.model.clone(),
-                    self.shutdown_timeout.clone(),
-                )) as Box<dyn CapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
+        if capability.matches_protocol(&SYSTEM_CONTROLLER_CAPABILITY_NAME) {
+            Ok(Some(Box::new(SystemControllerCapabilityProvider::new(
+                self.model.clone(),
+                self.shutdown_timeout.clone(),
+            )) as Box<dyn CapabilityProvider>))
+        } else {
+            Ok(capability_provider)
         }
     }
 }

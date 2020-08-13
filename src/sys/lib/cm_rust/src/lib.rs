@@ -420,23 +420,43 @@ impl ComponentDecl {
         self.collections.iter().find(|c| c.name == collection_name)
     }
 
-    /// Indicates whether the capability specified by `target_path` is exposed to the framework.
-    pub fn is_protocol_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
+    /// Indicates whether the capability specified by `target_name` is exposed to the framework.
+    pub fn is_protocol_exposed_to_framework(&self, in_target_name: &CapabilityName) -> bool {
         self.exposes.iter().any(|expose| match expose {
-            ExposeDecl::Protocol(ls) => {
-                ls.target == ExposeTarget::Framework
-                    && ls.target_path == CapabilityNameOrPath::Path(target_path.clone())
+            ExposeDecl::Protocol(ExposeProtocolDecl {
+                target,
+                target_path: target_name_or_path,
+                ..
+            }) if target == &ExposeTarget::Framework => {
+                match target_name_or_path {
+                    CapabilityNameOrPath::Name(name) => name == in_target_name,
+                    CapabilityNameOrPath::Path(path) => {
+                        // TODO(56604): Remove this legacy compatibility path
+                        let res: Result<CapabilityPath, _> =
+                            format!("/svc/{}", in_target_name).parse();
+                        if res.is_err() {
+                            return false;
+                        }
+                        let in_target_path = res.unwrap();
+                        path == &in_target_path
+                    }
+                }
             }
             _ => false,
         })
     }
 
-    /// Indicates whether the capability specified by `source_path` is requested.
-    pub fn uses_protocol(&self, source_path: &CapabilityPath) -> bool {
+    /// Indicates whether the capability specified by `source_name` is requested.
+    pub fn uses_protocol(&self, source_name: &CapabilityName) -> bool {
         self.uses.iter().any(|use_decl| match use_decl {
-            UseDecl::Protocol(ls) => {
-                ls.source_path == CapabilityNameOrPath::Path(source_path.clone())
-            }
+            UseDecl::Protocol(ls) => match &ls.source_path {
+                CapabilityNameOrPath::Path(p) => {
+                    let source_path: CapabilityPath =
+                        format!("/svc/{}", source_name).parse().expect("bad path");
+                    p == &source_path
+                }
+                CapabilityNameOrPath::Name(n) => n == source_name,
+            },
             _ => false,
         })
     }

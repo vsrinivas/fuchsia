@@ -3,15 +3,12 @@ use {
         model::testing::mocks::ManagedNamespace,
         model::testing::{routing_test_helpers::*, test_helpers::*},
         model::{binding::Binder, moniker::AbsoluteMoniker, testing::mocks::FakeBinder},
-        work_scheduler::{
-            WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
-            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
-        },
+        work_scheduler::WorkScheduler,
     },
     cm_rust::{
-        self, CapabilityNameOrPath, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget,
-        UseDecl, UseProtocolDecl, UseSource,
+        self, CapabilityName, CapabilityNameOrPath, CapabilityPath, DependencyType, ExposeDecl,
+        ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
+        OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -49,7 +46,7 @@ async fn call_work_scheduler_svc_from_namespace(
     namespace: &ManagedNamespace,
     should_succeed: bool,
 ) {
-    let path = &WORK_SCHEDULER_CAPABILITY_PATH;
+    let path: CapabilityPath = "/svc/fuchsia.sys2.WorkScheduler".parse().unwrap();
     let dir_proxy = capability_util::take_dir_from_namespace(namespace, &path.dirname).await;
     let node_proxy = io_util::open_node(
         &dir_proxy,
@@ -139,16 +136,23 @@ async fn use_work_scheduler_with_expose_to_framework() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .protocol(
+                    ProtocolDeclBuilder::new("fuchsia.sys2.Worker")
+                        .path("/svc/fuchsia.sys2.Worker")
+                        .build(),
+                )
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Worker").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Worker").unwrap(),
                     target: ExposeTarget::Framework,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
-                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
                 }))
                 .build(),
         ),
@@ -174,8 +178,10 @@ async fn use_work_scheduler_without_expose() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
-                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
                 }))
                 .build(),
         ),
@@ -199,16 +205,23 @@ async fn use_work_scheduler_with_expose_to_realm() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .protocol(
+                    ProtocolDeclBuilder::new("fuchsia.sys2.Worker")
+                        .path("/svc/fuchsia.sys2.Worker")
+                        .build(),
+                )
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
-                    target_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Worker").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("fuchsia.sys2.Worker").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
-                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
+                    source_path: CapabilityNameOrPath::try_from("fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
+                        .unwrap(),
                 }))
                 .build(),
         ),
@@ -226,17 +239,19 @@ async fn use_work_scheduler_with_expose_to_realm() {
 /// b: uses WorkSchedulerControl offered by by a
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_work_scheduler_control_routed() {
-    let offer_use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
+    let offer_use_name = CapabilityName::from("WorkSchedulerControl");
+    let use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
     let components = vec![
         (
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(
-                        WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
-                    ),
-                    target_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
+                    source_path: CapabilityNameOrPath::try_from(
+                        "fuchsia.sys2.WorkSchedulerControl",
+                    )
+                    .unwrap(),
+                    target_path: CapabilityNameOrPath::Name(offer_use_name.clone()),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -248,8 +263,8 @@ async fn use_work_scheduler_control_routed() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
-                    target_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Name(offer_use_name.clone()),
+                    target_path: use_path.clone(),
                 }))
                 .build(),
         ),
@@ -259,7 +274,7 @@ async fn use_work_scheduler_control_routed() {
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
 
-    check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), true).await;
+    check_use_work_scheduler_control(&test, vec!["b:0"].into(), use_path.clone(), true).await;
 }
 
 ///   a
@@ -269,17 +284,19 @@ async fn use_work_scheduler_control_routed() {
 /// b: uses framework service /svc/fuchsia.sys2.WorkSchedulerControl from framework (not allowed)
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_work_scheduler_control_error() {
-    let offer_use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
+    let offer_use_name = CapabilityName::from("WorkSchedulerControl");
+    let use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
     let components = vec![
         (
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::Path(
-                        WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
-                    ),
-                    target_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
+                    source_path: CapabilityNameOrPath::try_from(
+                        "fuchsia.sys2.WorkSchedulerControl",
+                    )
+                    .unwrap(),
+                    target_path: CapabilityNameOrPath::Name(offer_use_name.clone()),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -291,8 +308,8 @@ async fn use_work_scheduler_control_error() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
-                    target_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Name(offer_use_name.clone()),
+                    target_path: use_path.clone(),
                 }))
                 .build(),
         ),
@@ -301,6 +318,5 @@ async fn use_work_scheduler_control_error() {
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
 
-    check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), false)
-        .await;
+    check_use_work_scheduler_control(&test, vec!["b:0"].into(), use_path.clone(), false).await;
 }

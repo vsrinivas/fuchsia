@@ -18,21 +18,19 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath, ComponentDecl},
+    cm_rust::{CapabilityName, ComponentDecl},
     futures::lock::Mutex,
     lazy_static::lazy_static,
     std::{
         collections::HashMap,
-        convert::TryInto,
         sync::{Arc, Weak},
     },
 };
 
 lazy_static! {
-    pub static ref EVENT_SOURCE_SERVICE_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.EventSource".try_into().unwrap();
-    pub static ref EVENT_SOURCE_SYNC_SERVICE_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap();
+    pub static ref EVENT_SOURCE_SERVICE_NAME: CapabilityName = "fuchsia.sys2.EventSource".into();
+    pub static ref EVENT_SOURCE_SYNC_SERVICE_NAME: CapabilityName =
+        "fuchsia.sys2.BlockingEventSource".into();
 }
 
 /// Allows to create `EventSource`s and tracks all the created ones.
@@ -110,20 +108,18 @@ impl EventSourceFactory {
         target_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match (capability, capability_decl) {
-            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(source_path)))
-                if *source_path == *EVENT_SOURCE_SERVICE_PATH
-                    || *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
-            {
-                let event_source_registry = self.event_source_registry.lock().await;
-                if let Some(event_source) = event_source_registry.get(&target_moniker) {
-                    Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
-                } else {
-                    // Evidently the component was destroyed.
-                    Err(ModelError::instance_not_found(target_moniker.clone()))
-                }
+        if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME)
+            || capability_decl.matches_protocol(&EVENT_SOURCE_SYNC_SERVICE_NAME)
+        {
+            let event_source_registry = self.event_source_registry.lock().await;
+            if let Some(event_source) = event_source_registry.get(&target_moniker) {
+                Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
+            } else {
+                // Evidently the component was destroyed.
+                Err(ModelError::instance_not_found(target_moniker.clone()))
             }
-            (c, _) => Ok(c),
+        } else {
+            Ok(capability)
         }
     }
 
@@ -141,9 +137,9 @@ impl EventSourceFactory {
         // from framework. This now needs to be done on CapabilityRouted as the protocol name that
         // we have in the component decl might not match the source name after all the routing and
         // potential renames.
-        let sync_mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_PATH) {
+        let sync_mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_NAME) {
             SyncMode::Async
-        } else if decl.uses_protocol(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
+        } else if decl.uses_protocol(&EVENT_SOURCE_SYNC_SERVICE_NAME) {
             SyncMode::Sync
         } else {
             return Ok(());
@@ -219,8 +215,8 @@ mod tests {
         let decl = ComponentDeclBuilder::new()
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Framework,
-                source_path: CapabilityNameOrPath::Path(EVENT_SOURCE_SYNC_SERVICE_PATH.clone()),
-                target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                source_path: CapabilityNameOrPath::Name(EVENT_SOURCE_SYNC_SERVICE_NAME.clone()),
+                target_path: format!("/svc/{}", *EVENT_SOURCE_SYNC_SERVICE_NAME).parse().unwrap(),
             }))
             .use_(UseDecl::Event(UseEventDecl {
                 source: UseSource::Framework,
@@ -324,11 +320,8 @@ mod tests {
                 Ok(EventPayload::CapabilityRouted {
                     capability_provider: capability_provider.clone(),
                     source: CapabilitySource::Framework {
-                        capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                            CapabilityPath {
-                                dirname: "/svc".to_string(),
-                                basename: "fuchsia.sys2.EventSource".to_string(),
-                            },
+                        capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                            EVENT_SOURCE_SERVICE_NAME.clone(),
                         )),
                         scope_moniker: scope.clone(),
                     },

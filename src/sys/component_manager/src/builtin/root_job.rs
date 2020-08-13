@@ -6,31 +6,30 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
     fuchsia_runtime::job_default,
     fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 lazy_static! {
-    pub static ref ROOT_JOB_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.RootJob".try_into().unwrap();
-    pub static ref ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.RootJobForInspect".try_into().unwrap();
+    pub static ref ROOT_JOB_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.RootJob".into();
+    pub static ref ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.boot.RootJobForInspect".into();
 }
 
 /// An implementation of the `fuchsia.boot.RootJob` protocol.
 pub struct RootJob {
-    capability_path: &'static CapabilityPath,
+    capability_name: &'static CapabilityName,
     rights: zx::Rights,
 }
 
 impl RootJob {
-    pub fn new(capability_path: &'static CapabilityPath, rights: zx::Rights) -> Arc<Self> {
-        Arc::new(Self { capability_path, rights })
+    pub fn new(capability_name: &'static CapabilityName, rights: zx::Rights) -> Arc<Self> {
+        Arc::new(Self { capability_name, rights })
     }
 }
 
@@ -48,7 +47,7 @@ impl BuiltinCapability for RootJob {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(capability, InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *self.capability_path)
+        capability.matches_protocol(self.capability_name)
     }
 }
 
@@ -60,6 +59,7 @@ mod tests {
             hooks::{Event, EventPayload, Hooks},
             moniker::AbsoluteMoniker,
         },
+        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -70,7 +70,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn has_correct_rights() -> Result<(), Error> {
-        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_PATH, zx::Rights::TRANSFER);
+        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::TRANSFER);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fboot::RootJobMarker>()?;
         fasync::Task::local(
             root_job.serve(stream).unwrap_or_else(|err| panic!("Error serving root job: {}", err)),
@@ -85,14 +85,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_connect() -> Result<(), Error> {
-        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_PATH, zx::Rights::SAME_RIGHTS);
+        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::SAME_RIGHTS);
         let hooks = Hooks::new(None);
         hooks.install(root_job.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                ROOT_JOB_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                ROOT_JOB_CAPABILITY_NAME.clone(),
             )),
         };
 

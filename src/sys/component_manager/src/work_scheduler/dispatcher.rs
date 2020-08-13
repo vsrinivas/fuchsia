@@ -5,8 +5,9 @@
 use {
     crate::{
         model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker, realm::BindReason},
-        work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
+        work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_NAME},
     },
+    cm_rust::CapabilityPath,
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -97,6 +98,12 @@ async fn dispatch(
 ) -> Result<(), Error> {
     let (client_end, mut server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
+    // TODO(58212): This logic isn't really correct. We should be looking up the outgoing path from
+    // the ProtocolDecl corresponding to WORKER_CAPABILITY_NAME in the ComponentDecl.  However,
+    // currently the model doesn't supply an abstraction for connecting to exposed framework
+    // capabilities.
+    let svc_path: CapabilityPath =
+        format!("/svc/{}", *WORKER_CAPABILITY_NAME).parse().expect("bad path");
     binder
         .bind(&target_moniker, &BindReason::Scheduled)
         .await
@@ -104,7 +111,7 @@ async fn dispatch(
         .open_outgoing(
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
-            WORKER_CAPABILITY_PATH.to_path_buf(),
+            svc_path.to_path_buf(),
             &mut server_end,
         )
         .await

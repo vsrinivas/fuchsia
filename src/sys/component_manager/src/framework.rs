@@ -19,7 +19,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_fidl_validator,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath, FidlIntoNative},
+    cm_rust::{CapabilityName, FidlIntoNative},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::DirectoryMarker,
@@ -29,14 +29,13 @@ use {
     log::*,
     std::{
         cmp,
-        convert::TryInto,
         path::PathBuf,
         sync::{Arc, Weak},
     },
 };
 
 lazy_static! {
-    pub static ref REALM_SERVICE: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
+    pub static ref REALM_SERVICE: CapabilityName = "fuchsia.sys2.Realm".into();
 }
 
 // The default implementation for framework services.
@@ -325,16 +324,11 @@ impl RealmCapabilityHost {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
-        match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
-                if *capability_path == *REALM_SERVICE =>
-            {
-                return Ok(Some(
-                    Box::new(RealmCapabilityProvider::new(scope_moniker, self.clone()))
-                        as Box<dyn CapabilityProvider>,
-                ));
-            }
-            _ => return Ok(capability_provider),
+        if capability_provider.is_none() && capability.matches_protocol(&REALM_SERVICE) {
+            Ok(Some(Box::new(RealmCapabilityProvider::new(scope_moniker, self.clone()))
+                as Box<dyn CapabilityProvider>))
+        } else {
+            Ok(capability_provider)
         }
     }
 }
@@ -768,17 +762,18 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_static_child() {
         // Create a hierarchy of three components, the last with eager startup. The middle
-        // component hosts and exposes the "/svc/hippo" service.
+        // component hosts and exposes the "hippo" service.
         let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 (
                     "system",
                     ComponentDeclBuilder::new()
+                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                            source_path: CapabilityNameOrPath::try_from("foo").unwrap(),
+                            target_path: CapabilityNameOrPath::try_from("hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .add_eager_child("eager")
@@ -801,7 +796,7 @@ mod tests {
         let _ = res.expect("failed to bind to system").expect("failed to bind to system");
         let node_proxy = io_util::open_node(
             &dir_proxy,
-            &PathBuf::from("svc/hippo"),
+            &PathBuf::from("hippo"),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
         )
@@ -832,10 +827,11 @@ mod tests {
                 (
                     "system",
                     ComponentDeclBuilder::new()
+                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                            source_path: CapabilityNameOrPath::try_from("foo").unwrap(),
+                            target_path: CapabilityNameOrPath::try_from("hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .build(),
@@ -860,7 +856,7 @@ mod tests {
         let _ = res.expect("failed to bind to system").expect("failed to bind to system");
         let node_proxy = io_util::open_node(
             &dir_proxy,
-            &PathBuf::from("svc/hippo"),
+            &PathBuf::from("hippo"),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
         )

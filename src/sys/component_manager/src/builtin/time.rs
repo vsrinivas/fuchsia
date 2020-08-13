@@ -6,18 +6,17 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::InternalCapability},
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_time as ftime,
     fuchsia_zircon::{Clock, ClockOpts, ClockUpdate, HandleBased, Rights, Time},
     futures::prelude::*,
     io_util::{file, OPEN_RIGHT_READABLE},
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 lazy_static! {
-    static ref TIME_MAINTENANCE_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.time.Maintenance".try_into().unwrap();
+    static ref TIME_MAINTENANCE_CAPABILITY_NAME: CapabilityName = "fuchsia.time.Maintenance".into();
 }
 
 /// An implementation of the `fuchsia.time.Maintenance` protocol, which
@@ -52,10 +51,7 @@ impl BuiltinCapability for UtcTimeMaintainer {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *TIME_MAINTENANCE_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&TIME_MAINTENANCE_CAPABILITY_NAME)
     }
 }
 

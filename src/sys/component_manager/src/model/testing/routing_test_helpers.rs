@@ -671,8 +671,7 @@ impl RoutingTest {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use {
-        super::*, crate::model::events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
-        anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
+        super::*, anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
         fidl_fuchsia_sys2::BlockingEventSourceMarker, std::path::PathBuf,
     };
 
@@ -843,7 +842,8 @@ pub mod capability_util {
         expected_res: ExpectedResult,
         events: Vec<CapabilityName>,
     ) {
-        let res = subscribe_to_events(namespace, &EVENT_SOURCE_SYNC_SERVICE_PATH, events).await;
+        let path: CapabilityPath = "/svc/fuchsia.sys2.BlockingEventSource".parse().unwrap();
+        let res = subscribe_to_events(namespace, &path, events).await;
         match (res, expected_res) {
             (Err(e), ExpectedResult::Ok) => {
                 panic!("unexpected failure {}", e);
@@ -860,11 +860,9 @@ pub mod capability_util {
         event_source_path: &CapabilityPath,
         events: Vec<CapabilityName>,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
-        let event_source_proxy = connect_to_svc_in_namespace::<BlockingEventSourceMarker>(
-            namespace,
-            &*event_source_path,
-        )
-        .await;
+        let event_source_proxy =
+            connect_to_svc_in_namespace::<BlockingEventSourceMarker>(namespace, event_source_path)
+                .await;
         let event_names: Vec<String> = events.into_iter().map(|event| event.to_string()).collect();
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;

@@ -10,7 +10,7 @@ use {
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
             process_launcher::ProcessLauncher,
-            root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
+            root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             system_controller::SystemController,
@@ -299,12 +299,12 @@ impl BuiltinEnvironment {
         };
 
         // Set up RootJob service.
-        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_PATH, zx::Rights::SAME_RIGHTS);
+        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::SAME_RIGHTS);
         model.root_realm.hooks.install(root_job.hooks()).await;
 
         // Set up RootJobForInspect service.
         let root_job_for_inspect = RootJob::new(
-            &ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH,
+            &ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME,
             zx::Rights::INSPECT
                 | zx::Rights::ENUMERATE
                 | zx::Rights::DUPLICATE

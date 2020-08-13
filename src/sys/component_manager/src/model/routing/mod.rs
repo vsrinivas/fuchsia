@@ -263,7 +263,7 @@ pub async fn open_capability_at_source(
         // is not provided by a hook in the component tree, then attempt to connect to the service
         // in component manager's namespace. We could have modeled this as a default provider,
         // but several hooks (such as WorkScheduler) require that a provider is not set.
-        let path = match &source {
+        let namespace_path = match &source {
             CapabilitySource::Component { .. } => {
                 unreachable!(
                     "Capability source is a component, which should have been caught by \
@@ -277,13 +277,13 @@ pub async fn open_capability_at_source(
                 );
             }
             CapabilitySource::AboveRoot { capability } => {
-                // TODO(56604): Handle name-based capabilities here
                 match capability.name_or_path() {
-                    Some(CapabilityNameOrPath::Path(path)) => path,
-                    Some(CapabilityNameOrPath::Name(_)) => {
-                        return Err(ModelError::unsupported(
-                            "name-based capabilities are not supported yet",
-                        ));
+                    Some(CapabilityNameOrPath::Path(path)) => path.clone(),
+                    Some(CapabilityNameOrPath::Name(name)) => {
+                        // Capabilities backed by the namespace are served at
+                        // "/svc/{capability-name}".
+                        let path_str = format!("/svc/{}", name);
+                        path_str.parse().map_err(|_| ModelError::path_invalid(path_str))?
                     }
                     None => {
                         return Err(ModelError::from(
@@ -295,11 +295,14 @@ pub async fn open_capability_at_source(
                 }
             }
         };
-        let path = path.to_path_buf().attach(relative_path);
-        let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
+        let namespace_path = namespace_path.to_path_buf().attach(relative_path);
+        let namespace_path = namespace_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
         let server_chan = channel::take_channel(server_chan);
-        io_util::connect_in_namespace(path, server_chan, flags)
-            .map_err(|e| RoutingError::open_component_manager_namespace_failed(path, e).into())
+        io_util::connect_in_namespace(namespace_path, server_chan, flags).map_err(|e| {
+            RoutingError::open_component_manager_namespace_failed(namespace_path, e).into()
+        })
     }
 }
 

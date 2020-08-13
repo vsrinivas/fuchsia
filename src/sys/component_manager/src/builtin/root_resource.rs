@@ -6,17 +6,16 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
     fuchsia_zircon::{self as zx, HandleBased, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 lazy_static! {
-    static ref ROOT_RESOURCE_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.RootResource".try_into().unwrap();
+    static ref ROOT_RESOURCE_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.RootResource".into();
 }
 
 /// An implementation of the `fuchsia.boot.RootResource` protocol.
@@ -46,10 +45,7 @@ impl BuiltinCapability for RootResource {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *ROOT_RESOURCE_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&ROOT_RESOURCE_CAPABILITY_NAME)
     }
 }
 
@@ -61,6 +57,7 @@ mod tests {
             hooks::{Event, EventPayload, Hooks},
             moniker::AbsoluteMoniker,
         },
+        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         futures::lock::Mutex,
@@ -75,8 +72,8 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                ROOT_RESOURCE_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                ROOT_RESOURCE_CAPABILITY_NAME.clone(),
             )),
         };
 

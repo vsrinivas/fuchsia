@@ -248,6 +248,25 @@ impl InternalCapability {
             }
         }
     }
+
+    /// Returns true if this is a protocol with name that matches `name` or a protocol with path
+    /// that matches `/svc/{name}`.
+    pub fn matches_protocol(&self, name: &CapabilityName) -> bool {
+        match self {
+            Self::Protocol(name_or_path) => match name_or_path {
+                CapabilityNameOrPath::Name(n) => n == name,
+                CapabilityNameOrPath::Path(p) => {
+                    let res: Result<CapabilityPath, _> = format!("/svc/{}", name).parse();
+                    if res.is_err() {
+                        return false;
+                    }
+                    let path = res.unwrap();
+                    p == &path
+                }
+            },
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for InternalCapability {

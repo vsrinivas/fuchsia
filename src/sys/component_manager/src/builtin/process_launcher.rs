@@ -13,7 +13,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
@@ -25,7 +25,7 @@ use {
         BuiltProcess, NamespaceEntry, ProcessBuilder, ProcessBuilderError, StartupHandle,
     },
     std::{
-        convert::{TryFrom, TryInto},
+        convert::TryFrom,
         ffi::CString,
         path::PathBuf,
         sync::{Arc, Weak},
@@ -34,8 +34,8 @@ use {
 };
 
 lazy_static! {
-    pub static ref PROCESS_LAUNCHER_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.process.Launcher".try_into().unwrap();
+    pub static ref PROCESS_LAUNCHER_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.process.Launcher".into();
 }
 
 /// Internal error type for ProcessLauncher which conveniently wraps errors that might
@@ -102,14 +102,12 @@ impl ProcessLauncher {
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
-                if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
-                    as Box<dyn CapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
+        if capability.matches_protocol(&PROCESS_LAUNCHER_CAPABILITY_NAME) {
+            Ok(Some(
+                Box::new(ProcessLauncherCapabilityProvider::new()) as Box<dyn CapabilityProvider>
+            ))
+        } else {
+            Ok(capability_provider)
         }
     }
 
@@ -325,6 +323,7 @@ mod tests {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
         anyhow::{format_err, Context},
+        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -374,8 +373,8 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                PROCESS_LAUNCHER_CAPABILITY_NAME.clone(),
             )),
         };
 

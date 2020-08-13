@@ -6,17 +6,16 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_kernel as fkernel,
     fuchsia_zircon::Resource,
     futures::prelude::*,
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 lazy_static! {
-    static ref KERNEL_STATS_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.kernel.Stats".try_into().unwrap();
+    static ref KERNEL_STATS_CAPABILITY_NAME: CapabilityName = "fuchsia.kernel.Stats".into();
 }
 
 /// An implementation of the `fuchsia.kernel.Stats` protocol.
@@ -89,10 +88,7 @@ impl BuiltinCapability for KernelStats {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *KERNEL_STATS_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&KERNEL_STATS_CAPABILITY_NAME)
     }
 }
 

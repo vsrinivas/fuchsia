@@ -18,21 +18,20 @@ use {
         model::{binding::Binder, moniker::AbsoluteMoniker},
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
-    cm_rust::{CapabilityPath, ComponentDecl},
+    cm_rust::{CapabilityName, ComponentDecl},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 // If you change this block, please update test `work_scheduler_capability_paths`.
 lazy_static! {
-    pub static ref WORKER_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.Worker".try_into().unwrap();
-    pub static ref WORK_SCHEDULER_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.WorkScheduler".try_into().unwrap();
-    pub static ref WORK_SCHEDULER_CONTROL_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.sys2.WorkSchedulerControl".try_into().unwrap();
+    pub static ref WORKER_CAPABILITY_NAME: CapabilityName = "fuchsia.sys2.Worker".into();
+    pub static ref WORK_SCHEDULER_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.sys2.WorkScheduler".into();
+    pub static ref WORK_SCHEDULER_CONTROL_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.sys2.WorkSchedulerControl".into();
 }
 
 /// Owns the `Mutex`-synchronized `WorkSchedulerDelegate`, which contains business logic and state
@@ -139,8 +138,8 @@ impl WorkScheduler {
 mod path_tests {
     use {
         super::{
-            WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
-            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+            WORKER_CAPABILITY_NAME, WORK_SCHEDULER_CAPABILITY_NAME,
+            WORK_SCHEDULER_CONTROL_CAPABILITY_NAME,
         },
         fidl::endpoints::ServiceMarker,
         fidl_fuchsia_sys2 as fsys,
@@ -148,17 +147,14 @@ mod path_tests {
 
     #[test]
     fn work_scheduler_capability_paths() {
+        assert_eq!(format!("{}", fsys::WorkerMarker::NAME), WORKER_CAPABILITY_NAME.to_string());
         assert_eq!(
-            format!("/svc/{}", fsys::WorkerMarker::NAME),
-            WORKER_CAPABILITY_PATH.to_string()
+            format!("{}", fsys::WorkSchedulerMarker::NAME),
+            WORK_SCHEDULER_CAPABILITY_NAME.to_string()
         );
         assert_eq!(
-            format!("/svc/{}", fsys::WorkSchedulerMarker::NAME),
-            WORK_SCHEDULER_CAPABILITY_PATH.to_string()
-        );
-        assert_eq!(
-            format!("/svc/{}", fsys::WorkSchedulerControlMarker::NAME),
-            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.to_string()
+            format!("{}", fsys::WorkSchedulerControlMarker::NAME),
+            WORK_SCHEDULER_CONTROL_CAPABILITY_NAME.to_string()
         );
     }
 }
@@ -725,7 +721,7 @@ mod time_tests {
 #[cfg(test)]
 mod connect_tests {
     use {
-        super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH},
+        super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_NAME},
         crate::{
             capability::{CapabilitySource, InternalCapability},
             model::{
@@ -754,8 +750,8 @@ mod connect_tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                WORK_SCHEDULER_CONTROL_CAPABILITY_NAME.clone(),
             )),
         };
 

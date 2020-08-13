@@ -6,19 +6,17 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
     fuchsia_zircon::{self as zx, DebugLog, DebugLogOpts, HandleBased, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 lazy_static! {
-    static ref READ_ONLY_LOG_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.ReadOnlyLog".try_into().unwrap();
-    static ref WRITE_ONLY_LOG_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.WriteOnlyLog".try_into().unwrap();
+    static ref READ_ONLY_LOG_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.ReadOnlyLog".into();
+    static ref WRITE_ONLY_LOG_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.WriteOnlyLog".into();
 }
 
 /// An implementation of the `fuchsia.boot.ReadOnlyLog` protocol.
@@ -59,10 +57,7 @@ impl BuiltinCapability for ReadOnlyLog {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *READ_ONLY_LOG_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&READ_ONLY_LOG_CAPABILITY_NAME)
     }
 }
 
@@ -93,10 +88,7 @@ impl BuiltinCapability for WriteOnlyLog {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *WRITE_ONLY_LOG_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&WRITE_ONLY_LOG_CAPABILITY_NAME)
     }
 }
 
@@ -108,6 +100,7 @@ mod tests {
             hooks::{Event, EventPayload, Hooks},
             moniker::AbsoluteMoniker,
         },
+        cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -146,8 +139,8 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                READ_ONLY_LOG_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                READ_ONLY_LOG_CAPABILITY_NAME.clone(),
             )),
         };
 
@@ -212,8 +205,8 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
-                WRITE_ONLY_LOG_CAPABILITY_PATH.clone(),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Name(
+                WRITE_ONLY_LOG_CAPABILITY_NAME.clone(),
             )),
         };
 

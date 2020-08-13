@@ -6,21 +6,19 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::{CapabilityNameOrPath, CapabilityPath},
+    cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
     futures::prelude::*,
     lazy_static::lazy_static,
     std::{
         collections::{hash_map::Iter, HashMap},
-        convert::TryInto,
         env,
         sync::Arc,
     },
 };
 
 lazy_static! {
-    static ref BOOT_ARGS_CAPABILITY_PATH: CapabilityPath =
-        "/svc/fuchsia.boot.Arguments".try_into().unwrap();
+    static ref BOOT_ARGS_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.Arguments".into();
 }
 
 struct Env {
@@ -127,10 +125,7 @@ impl BuiltinCapability for Arguments {
     }
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
-        matches!(
-            capability,
-            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *BOOT_ARGS_CAPABILITY_PATH
-        )
+        capability.matches_protocol(&BOOT_ARGS_CAPABILITY_NAME)
     }
 }
 

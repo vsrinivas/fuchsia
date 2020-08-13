@@ -13,12 +13,11 @@ use {
             routing::RoutingError,
         },
         work_scheduler::work_scheduler::{
-            WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+            WorkScheduler, WORK_SCHEDULER_CAPABILITY_NAME, WORK_SCHEDULER_CONTROL_CAPABILITY_NAME,
         },
     },
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityNameOrPath,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -49,14 +48,13 @@ impl WorkScheduler {
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
-                if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
-                    as Box<dyn CapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
+        if capability_provider.is_none()
+            && capability.matches_protocol(&WORK_SCHEDULER_CONTROL_CAPABILITY_NAME)
+        {
+            Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
+                as Box<dyn CapabilityProvider>))
+        } else {
+            Ok(capability_provider)
         }
     }
 
@@ -68,26 +66,22 @@ impl WorkScheduler {
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
-                if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
-            {
-                // Only clients that expose the Worker protocol to the framework can
-                // use WorkScheduler.
-                if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
-                    return Err(RoutingError::used_expose_not_found(
-                        &scope_moniker,
-                        capability_path.to_string(),
-                    )
-                    .into());
-                }
-
-                Ok(Some(
-                    Box::new(WorkSchedulerCapabilityProvider::new(scope_moniker, self.clone()))
-                        as Box<dyn CapabilityProvider>,
-                ))
+        if capability_provider.is_none()
+            && capability.matches_protocol(&WORK_SCHEDULER_CAPABILITY_NAME)
+        {
+            // Only clients that expose the Worker protocol to the framework can
+            // use WorkScheduler.
+            if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
+                return Err(RoutingError::used_expose_not_found(
+                    &scope_moniker,
+                    WORK_SCHEDULER_CAPABILITY_NAME.to_string(),
+                )
+                .into());
             }
-            _ => Ok(capability_provider),
+            Ok(Some(Box::new(WorkSchedulerCapabilityProvider::new(scope_moniker, self.clone()))
+                as Box<dyn CapabilityProvider>))
+        } else {
+            Ok(capability_provider)
         }
     }
 }

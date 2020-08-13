@@ -9,7 +9,7 @@ use {
             dispatcher::Dispatcher,
             timer::WorkSchedulerTimer,
             work_item::WorkItem,
-            work_scheduler::{WorkScheduler, WORKER_CAPABILITY_PATH},
+            work_scheduler::{WorkScheduler, WORKER_CAPABILITY_NAME},
         },
     },
     cm_rust::ComponentDecl,
@@ -71,7 +71,7 @@ impl WorkSchedulerDelegate {
         target_moniker: &AbsoluteMoniker,
         decl: &ComponentDecl,
     ) {
-        if decl.is_protocol_exposed_to_framework(&WORKER_CAPABILITY_PATH) {
+        if decl.is_protocol_exposed_to_framework(&WORKER_CAPABILITY_NAME) {
             self.worker_monikers.push(target_moniker.clone());
         }
     }

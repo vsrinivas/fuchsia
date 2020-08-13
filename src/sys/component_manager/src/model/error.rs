@@ -47,6 +47,8 @@ pub enum ModelError {
     ComponentInvalid,
     #[error("path is not utf-8: {:?}", path)]
     PathIsNotUtf8 { path: PathBuf },
+    #[error("path is not valid: {:?}", path)]
+    PathInvalid { path: String },
     #[error("filename is not utf-8: {:?}", name)]
     NameIsNotUtf8 { name: OsString },
     #[error("component manifest invalid {}: {}", url, err)]
@@ -143,6 +145,10 @@ impl ModelError {
 
     pub fn path_is_not_utf8(path: PathBuf) -> ModelError {
         ModelError::PathIsNotUtf8 { path }
+    }
+
+    pub fn path_invalid(path: impl Into<String>) -> ModelError {
+        ModelError::PathInvalid { path: path.into() }
     }
 
     pub fn name_is_not_utf8(name: OsString) -> ModelError {
