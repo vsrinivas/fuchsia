@@ -45,6 +45,15 @@ bool IsSame(const Attachment& snapshot1, const Attachment& snapshot2) {
   return fsl::GetKoid(snapshot1.value.vmo.get()) == fsl::GetKoid(snapshot2.value.vmo.get());
 }
 
+std::string PoolSize(const std::vector<Annotation>& annotations) {
+  auto pool_size =
+      std::find_if(annotations.begin(), annotations.end(), [](const Annotation& annotation) {
+        return annotation.key == kAnnotationDebugSnapshotPoolSize;
+      });
+  FX_CHECK(pool_size != annotations.end());
+  return pool_size->value;
+}
+
 class SnapshotRequestManagerTest : public UnitTestFixture {
  public:
   SnapshotRequestManagerTest()
@@ -183,18 +192,21 @@ TEST_F(SnapshotRequestManagerTest, SetsPoolSizeAnnotation) {
   ASSERT_TRUE(context2.snapshot.has_annotations());
   ASSERT_TRUE(context3.snapshot.has_annotations());
 
-  EXPECT_THAT(context1.snapshot.annotations(),
-              UnorderedElementsAreArray({
-                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "2"),
-              }));
-  EXPECT_THAT(context2.snapshot.annotations(),
-              UnorderedElementsAreArray({
-                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "2"),
-              }));
-  EXPECT_THAT(context3.snapshot.annotations(),
-              UnorderedElementsAreArray({
-                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "1"),
-              }));
+  EXPECT_THAT(context1.snapshot.annotations(), UnorderedElementsAreArray({
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolSize),
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolUuid),
+                                               }));
+  EXPECT_EQ(PoolSize(context1.snapshot.annotations()), "2");
+  EXPECT_THAT(context2.snapshot.annotations(), UnorderedElementsAreArray({
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolSize),
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolUuid),
+                                               }));
+  EXPECT_EQ(PoolSize(context2.snapshot.annotations()), "2");
+  EXPECT_THAT(context3.snapshot.annotations(), UnorderedElementsAreArray({
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolSize),
+                                                   MatchesKey(kAnnotationDebugSnapshotPoolUuid),
+                                               }));
+  EXPECT_EQ(PoolSize(context3.snapshot.annotations()), "1");
 }
 
 }  // namespace

@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -56,15 +57,15 @@ void SnapshotRequestManager::Respond(uint64_t id, Snapshot snapshot) {
     return;
   }
 
-  // We log the pool size as an extra annotation.
-  if (!snapshot.has_annotations() ||
-      (snapshot.has_annotations() &&
-       snapshot.annotations().size() < fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED)) {
-    snapshot.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
-        .key = kAnnotationDebugSnapshotPoolSize,
-        .value = std::to_string(pool->callbacks.size()),
-    });
-  }
+  // We log the pool size and UUID as extra debug annotations.
+  snapshot.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
+      .key = kAnnotationDebugSnapshotPoolSize,
+      .value = std::to_string(pool->callbacks.size()),
+  });
+  snapshot.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
+      .key = kAnnotationDebugSnapshotPoolUuid,
+      .value = uuid::Generate(),
+  });
 
   for (const auto& callback : pool->callbacks) {
     // The underlying snapshot.zip is shared across all requesters, only its handle is copied.

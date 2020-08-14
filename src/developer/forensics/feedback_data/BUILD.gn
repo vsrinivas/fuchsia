@@ -87,12 +87,11 @@ source_set("data_provider") {
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
-    "snapshot_request_manager.cc",
-    "snapshot_request_manager.h",
   ]
 
   public_deps = [
     ":integrity_reporter",
+    ":snapshot_request_manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/cobalt",
@@ -119,6 +118,7 @@ source_set("data_provider") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/uuid",
     "//third_party/libpng",
   ]
 }
@@ -265,5 +265,23 @@ source_set("integrity_reporter") {
 
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
+  ]
+}
+
+source_set("snapshot_request_manager") {
+  sources = [
+    "snapshot_request_manager.cc",
+    "snapshot_request_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/lib/timekeeper:system",
+  ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/uuid",
   ]
 }

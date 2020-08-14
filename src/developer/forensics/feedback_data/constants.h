@@ -20,11 +20,14 @@ namespace feedback_data {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 const uint32_t kMaxNumPlatformAnnotations = 32u;
-const uint32_t kMaxNumNonPlatformAnnotations = 32u;
-static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations ==
+const uint32_t kMaxNumNonPlatformAnnotations = 30u;
+const uint32_t kMaxNumDebugAnnotations = 2u;
+static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations +
+                      kMaxNumDebugAnnotations ==
                   fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
               "The max number of provided annotations has to be split between a max number of "
-              "platform annotations and a max number of non-platform annotations");
+              "platform annotations, a max number of non-platform annotations, and a max number of "
+              "debug annotations");
 
 // Platform annotation keys.
 constexpr char kAnnotationBuildBoard[] = "build.board";
@@ -32,7 +35,8 @@ constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
 constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
 constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";
-constexpr char kAnnotationDebugSnapshotPoolSize[] = "debug.snapshot.pool-size";
+constexpr char kAnnotationDebugSnapshotPoolSize[] = "debug.snapshot.pool.size";
+constexpr char kAnnotationDebugSnapshotPoolUuid[] = "debug.snapshot.pool.uuid";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
 constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";

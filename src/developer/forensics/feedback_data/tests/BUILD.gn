@@ -381,15 +381,12 @@ executable("screenshot_ptr_unittest_exe") {
 executable("snapshot_request_manager_unittest_exe") {
   testonly = true
 
-  sources = [
-    "//src/developer/forensics/feedback_data/snapshot_request_manager.cc",
-    "//src/developer/forensics/feedback_data/snapshot_request_manager.h",
-    "snapshot_request_manager_unittest.cc",
-  ]
+  sources = [ "snapshot_request_manager_unittest.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data:snapshot_request_manager",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",

@@ -46,6 +46,7 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
+using fuchsia::feedback::Annotation;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 using fuchsia::feedback::Snapshot;
@@ -429,8 +430,14 @@ TEST_F(DataProviderTest, GetSnapshot_NoDataOnEmptyAllowlists) {
   EXPECT_FALSE(snapshot.has_archive());
   EXPECT_TRUE(snapshot.has_annotations());
   EXPECT_THAT(snapshot.annotations(), UnorderedElementsAreArray({
-                                          MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "1"),
+                                          MatchesKey(kAnnotationDebugSnapshotPoolUuid),
+                                          MatchesKey(kAnnotationDebugSnapshotPoolSize),
                                       }));
+  auto pool_size = std::find_if(snapshot.annotations().begin(), snapshot.annotations().end(),
+                                [](const Annotation& annotation) {
+                                  return annotation.key == kAnnotationDebugSnapshotPoolSize;
+                                });
+  EXPECT_EQ(pool_size->value, "1");
 }
 
 }  // namespace
