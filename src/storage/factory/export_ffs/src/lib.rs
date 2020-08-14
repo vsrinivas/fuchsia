@@ -23,7 +23,7 @@ const DIRENT_START_BLOCK: u32 = 1;
 /// Size of the actual data in the superblock in bytes. We are only writing, and only care about the
 /// latest version, so as long as this is updated whenever the superblock is changed we don't have
 /// to worry about backwards-compatibility.
-const SUPERBLOCK_DATA_SIZE: u32 = 36;
+const SUPERBLOCK_DATA_SIZE: u32 = 52;
 const FACTORYFS_MAJOR_VERSION: u32 = 1;
 const FACTORYFS_MINOR_VERSION: u32 = 0;
 
@@ -73,14 +73,7 @@ struct FactoryFS {
 }
 
 impl FactoryFS {
-    /// Write the bytes of a FactoryFS partition to a byte writer. We assume the writer is seeked to
-    /// the beginning. Serialization returns immediately after encountering a writing error for the
-    /// first time, and as such may be in the middle of writing the partition. On error, there is no
-    /// guarantee of a consistent partition.
-    ///
-    /// NOTE: if the superblock serialization is changed in any way, make sure SUPERBLOCK_DATA_SIZE
-    /// is still correct.
-    fn serialize<Writer>(&self, writer: &mut Writer) -> Result<(), Error>
+    fn serialize_superblock<Writer>(&self, writer: &mut Writer) -> Result<(u32, u32), Error>
     where
         Writer: Write,
     {
@@ -98,14 +91,14 @@ impl FactoryFS {
         //     directory_size: u32,
         //     /// Number of directory entries.
         //     directory_entries: u32,
+        //     /// Time of creation of all files. We aren't going to write anything here though.
+        //     create_time: u64,
         //     /// Filesystem block size.
         //     block_size: u32,
         //     /// Number of blocks for directory entries.
         //     directory_ent_blocks: u32,
         //     /// Start block for directory entries.
         //     directory_ent_start_block: u32,
-        //     /// Time of creation of all files. We aren't going to write anything here though.
-        //     create_time: u64,
         //     /// Reserved for future use. Written to disk as all zeros.
         //     reserved: [u32; rest_of_the_block],
         // }
@@ -126,21 +119,38 @@ impl FactoryFS {
         let entries_bytes = self.entries.iter().fold(0, |size, entry| size + entry.metadata_size());
         let entries_blocks = num_blocks(entries_bytes);
         writer.write_u32::<LittleEndian>(entries_bytes)?;
-
         writer.write_u32::<LittleEndian>(self.entries.len() as u32)?;
+
+        // filesystem was created at the beginning of time
+        writer.write_u64::<LittleEndian>(0)?;
+
         writer.write_u32::<LittleEndian>(self.block_size)?;
 
         writer.write_u32::<LittleEndian>(entries_blocks)?;
         writer.write_u32::<LittleEndian>(DIRENT_START_BLOCK)?;
 
-        // filesystem was created at the beginning of time
-        writer.write_u64::<LittleEndian>(0)?;
+        Ok((entries_bytes, entries_blocks))
+    }
+
+    /// Write the bytes of a FactoryFS partition to a byte writer. We assume the writer is seeked to
+    /// the beginning. Serialization returns immediately after encountering a writing error for the
+    /// first time, and as such may be in the middle of writing the partition. On error, there is no
+    /// guarantee of a consistent partition.
+    ///
+    /// NOTE: if the superblock serialization is changed in any way, make sure SUPERBLOCK_DATA_SIZE
+    /// is still correct.
+    fn serialize<Writer>(&self, writer: &mut Writer) -> Result<(), Error>
+    where
+        Writer: Write,
+    {
+        let (entries_bytes, entries_blocks) =
+            self.serialize_superblock(writer).context("failed to serialize superblock")?;
 
         // write out zeros for the rest of the first block
         block_align(writer, SUPERBLOCK_DATA_SIZE)?;
 
         // data starts after the superblock and all the blocks for the directory entries
-        let mut data_offset = 1 + entries_blocks;
+        let mut data_offset = DIRENT_START_BLOCK + entries_blocks;
         // write out the directory entry metadata
         for entry in &self.entries {
             entry.serialize_metadata(writer, data_offset)?;
@@ -212,10 +222,9 @@ impl DirectoryEntry {
 
         let name_len = self.name.len() as u32;
         writer.write_u32::<LittleEndian>(name_len)?;
-        writer.write_all(&self.name)?;
-
         writer.write_u32::<LittleEndian>(self.data.len() as u32)?;
         writer.write_u32::<LittleEndian>(data_offset)?;
+        writer.write_all(&self.name)?;
 
         // align the directory entry to a 4-byte boundary
         let padding = round_up_to_align(name_len, 4) - name_len;
@@ -333,7 +342,8 @@ pub async fn export_directory(dir: &fio::DirectoryProxy, device: zx::Channel) ->
 mod tests {
     use super::{
         block_align, export_directory, get_entries, num_blocks, round_up_to_block_size,
-        DirectoryEntry, BLOCK_SIZE,
+        DirectoryEntry, FactoryFS, BLOCK_SIZE, FACTORYFS_MAJOR_VERSION, FACTORYFS_MINOR_VERSION,
+        SUPERBLOCK_DATA_SIZE,
     };
 
     use {
@@ -383,6 +393,33 @@ mod tests {
             assert_eq!(w.len(), case.1 as usize);
             assert!(w.into_iter().all(|v| v == 0));
         }
+    }
+
+    #[test]
+    fn test_superblock_data() {
+        let name = "test_name".as_bytes();
+        let data = vec![1, 2, 3, 4, 5];
+
+        let entry = DirectoryEntry { name: name.to_owned(), data: data.clone() };
+
+        let metadata_size = entry.metadata_size();
+        let metadata_blocks = num_blocks(metadata_size);
+
+        let factoryfs = FactoryFS {
+            major_version: FACTORYFS_MAJOR_VERSION,
+            minor_version: FACTORYFS_MINOR_VERSION,
+            flags: 0,
+            block_size: BLOCK_SIZE,
+            entries: vec![entry],
+        };
+
+        let mut out = vec![];
+        assert_eq!(
+            factoryfs.serialize_superblock(&mut out).unwrap(),
+            (metadata_size, metadata_blocks),
+        );
+
+        assert_eq!(out.len() as u32, SUPERBLOCK_DATA_SIZE);
     }
 
     #[test]
