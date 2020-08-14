@@ -19,6 +19,6 @@ fx-config-read
 
 for dir in "$ZIRCON_BUILDROOT" "$FUCHSIA_BUILD_DIR"; do
   "$HOST_OUT_DIR/ninjatrace" \
-    -filename "$dir/.ninja_log" -trace-json "$dir/ninjatrace.json"
+    -ninjalog "$dir/.ninja_log" -trace-json "$dir/ninjatrace.json"
   echo "Now visit chrome://tracing and load $dir/ninjatrace.json"
 done

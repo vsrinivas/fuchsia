@@ -5,7 +5,7 @@
 // ninjatrace converts .ninja_log into trace-viewer formats.
 //
 // usage:
-//  $ go run ninjatrace.go --filename out/debug-x64/.ninja_log
+//  $ go run ninjatrace.go --ninjalog out/debug-x64/.ninja_log
 //
 package main
 
@@ -21,13 +21,19 @@ import (
 	"runtime/pprof"
 
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
 var (
-	filename   = flag.String("filename", ".ninja_log", "filename of .ninja_log")
-	compdbPath = flag.String("compdb", "", "filename of compile_commands.json")
-	traceJSON  = flag.String("trace-json", "trace.json", "output filename of trace.json")
+	// TODO(jayzhuang): deprecate `-filename` in favor of `-ninjalog`.
+	filename     = flag.String("filename", "", "path of .ninja_log")
+	ninjalogPath = flag.String("ninjalog", "", "path of .ninja_log")
+	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
+	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
+	criticalPath = flag.Bool("critical-path", false, "whether only include critical path in the trace, --ninjagraph must be set for this to work")
+
+	traceJSON  = flag.String("trace-json", "trace.json", "output path of trace.json")
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
 )
 
@@ -67,8 +73,26 @@ func convert(fname string) ([]ninjalog.Trace, error) {
 		}
 		steps = ninjalog.Populate(steps, commands)
 	}
-	flow := ninjalog.Flow(steps)
-	return ninjalog.ToTraces(flow, 1), nil
+
+	if *criticalPath {
+		dotFile, err := os.Open(*graphPath)
+		if err != nil {
+			return nil, err
+		}
+		defer dotFile.Close()
+		graph, err := ninjagraph.FromDOT(dotFile)
+		if err != nil {
+			return nil, err
+		}
+		if err := graph.PopulateEdges(steps); err != nil {
+			return nil, err
+		}
+		steps, err = graph.CriticalPath()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ninjalog.ToTraces(ninjalog.Flow(steps), 1), nil
 }
 
 func output(fname string, traces []ninjalog.Trace) (err error) {
@@ -102,7 +126,12 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	traces, err := convert(*filename)
+	// TODO(jayzhuang): deprecate `-filename` in favor of `-ninjalog`.
+	logPath := *filename
+	if logPath == "" {
+		logPath = *ninjalogPath
+	}
+	traces, err := convert(logPath)
 	if err != nil {
 		log.Fatal(err)
 	}

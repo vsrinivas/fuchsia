@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 	"golang.org/x/sync/errgroup"
@@ -111,6 +112,16 @@ type Node struct {
 	In *Edge
 	// Outs contains all edges that use this node as input.
 	Outs []*Edge
+
+	// Fields below are used to memoize search results while looking up the
+	// critical path.
+
+	// criticalInput points to the one of inputs used to produce this node, which
+	// took the longest time to build.
+	criticalInput *Node
+	// criticalBuildDuration is the sum of build durations of all edges along the
+	// critical path that produced this output.
+	criticalBuildDuration *time.Duration
 }
 
 // Edge is an edge in Ninja's build graph. It links nodes with a build rule.
@@ -122,7 +133,8 @@ type Edge struct {
 	// Fields below are populated after `PopulateEdges`.
 
 	// Step is a build step associated with this edge. It can be derived from
-	// joining with ninja_log.
+	// joining with ninja_log. After the join, all steps on non-phony edges are
+	// populated.
 	Step *ninjalog.Step
 }
 
@@ -368,8 +380,8 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 	}
 
 	for _, edge := range g.Edges {
-		// Skip "phony" builds, e.g. "build default: phony obj/default.stamp" can be
-		// included in the graph.
+		// Skip "phony" builds. For example "build default: phony obj/default.stamp"
+		// can be included in the graph.
 		if edge.Rule == "phony" {
 			continue
 		}
@@ -415,4 +427,87 @@ func (g *Graph) pathsOf(outputs []int64) []string {
 		paths = append(paths, node.Path)
 	}
 	return paths
+}
+
+// buildTimeOf returns the total amount of time spent to produce the output.
+//
+// This function also memoizes results on the nodes to avoid repeated work.
+func (g *Graph) buildTimeOf(id int64) (time.Duration, error) {
+	node, ok := g.Nodes[id]
+	if !ok {
+		return 0, fmt.Errorf("node %x not found", id)
+	}
+	// Root nodes take no time to build since they are readily available at the
+	// beginning of the build.
+	if node.In == nil {
+		return 0, nil
+	}
+
+	// Return memoized results immediate to avoid repeated traversal of
+	// overlapping parts of the graph.
+	if node.criticalBuildDuration != nil {
+		return *node.criticalBuildDuration, nil
+	}
+
+	if node.In.Rule != "phony" && node.In.Step == nil {
+		return 0, fmt.Errorf("edge with outputs %v has no step associated to it, this should not happen if edges are correctly populated", g.pathsOf(node.In.Outputs))
+	}
+
+	var maxBuildTime time.Duration
+	for _, input := range node.In.Inputs {
+		d, err := g.buildTimeOf(input)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get build time of input node %x: %v", input, err)
+		}
+		if d >= maxBuildTime {
+			node.criticalInput = g.Nodes[input]
+			maxBuildTime = d
+		}
+	}
+
+	if node.In.Step != nil {
+		maxBuildTime += node.In.Step.Duration()
+	}
+	node.criticalBuildDuration = &maxBuildTime
+
+	return maxBuildTime, nil
+}
+
+// CriticalPath returns the build path that takes the longest time to finish.
+// That is, the sum of build durations on edges along this path is the largest
+// among all build paths.
+//
+// `Step`s on all non-phony edges must be populated before this function is
+// called, otherwise an error is returned.
+func (g *Graph) CriticalPath() ([]ninjalog.Step, error) {
+	var lastCriticalNode *Node
+	var maxBuildDuration time.Duration
+	for id, node := range g.Nodes {
+		d, err := g.buildTimeOf(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct critical path: %v", err)
+		}
+		if d >= maxBuildDuration {
+			maxBuildDuration = d
+			lastCriticalNode = node
+		}
+	}
+
+	if lastCriticalNode == nil {
+		return nil, nil
+	}
+
+	var criticalPath []ninjalog.Step
+	for lastCriticalNode.criticalInput != nil {
+		// Phony edges don't have steps associated with them.
+		if lastCriticalNode.In.Step != nil {
+			criticalPath = append(criticalPath, *lastCriticalNode.In.Step)
+		}
+		lastCriticalNode = lastCriticalNode.criticalInput
+	}
+	// Reverse the critical path to follow chronological order.
+	for left, right := 0, len(criticalPath)-1; left < right; left, right = left+1, right-1 {
+		criticalPath[left], criticalPath[right] = criticalPath[right], criticalPath[left]
+	}
+	return criticalPath, nil
 }

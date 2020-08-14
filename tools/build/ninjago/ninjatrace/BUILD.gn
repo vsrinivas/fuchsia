@@ -9,6 +9,7 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     "//tools/build/ninjago/compdb",
+    "//tools/build/ninjago/ninjagraph",
     "//tools/build/ninjago/ninjalog",
   ]
 }

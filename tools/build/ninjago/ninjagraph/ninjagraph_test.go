@@ -204,7 +204,7 @@ func TestFromDOT(t *testing.T) {
 			// This ordering is not perfect but good enough for this test, since we
 			// always have unique Rule names in edges.
 			orderEdgesByRule := cmpopts.SortSlices(func(x, y *Edge) bool { return x.Rule < y.Rule })
-			if diff := cmp.Diff(tc.want, got, cmpopts.EquateEmpty(), orderEdgesByRule); diff != "" {
+			if diff := cmp.Diff(tc.want, got, cmpopts.EquateEmpty(), cmpopts.IgnoreUnexported(Node{}), orderEdgesByRule); diff != "" {
 				t.Errorf("FromDOT(%s) got diff (-want +got):\n%s", tc.dot, diff)
 			}
 		})
@@ -403,7 +403,7 @@ func TestPopulateEdges(t *testing.T) {
 			if err := tc.graph.PopulateEdges(tc.steps); err != nil {
 				t.Errorf("PopulateEdges(%v) failed: %v", tc.steps, err)
 			}
-			if diff := cmp.Diff(tc.wantGraph, tc.graph); diff != "" {
+			if diff := cmp.Diff(tc.wantGraph, tc.graph, cmpopts.IgnoreUnexported(Node{})); diff != "" {
 				t.Errorf("PopulateEdges(%v) got graph diff (-want +got):\n%s", tc.steps, diff)
 			}
 		})
@@ -523,11 +523,223 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 	}
 
 	for _, e := range graph.Edges {
-		if e.Rule == "phony" {
-			continue
+		if isPhony, gotNilStep := e.Rule == "phony", e.Step == nil; isPhony != gotNilStep {
+			t.Errorf("Invalid edge after `PopulateEdges`, isPhony (%t) != gotNilStep (%t), outputs of this edge: %v", isPhony, gotNilStep, graph.pathsOf(e.Outputs))
 		}
-		if e.Step == nil {
-			t.Errorf("No steps associated with edge after `PopulateEdges`, outputs of this edge: %v", graph.pathsOf(e.Outputs))
-		}
+	}
+}
+
+func TestCriticalPath(t *testing.T) {
+	for _, tc := range []struct {
+		desc  string
+		graph Graph
+		want  []ninjalog.Step
+	}{
+		{
+			desc: "empty graph",
+		},
+		{
+			// a -> b -> c
+			desc: "single inputs",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					// `Outs` edges on nodes are omitted since they don't affect this test.
+					1: {ID: 1, Path: "a"},
+					2: {
+						ID:   2,
+						Path: "b",
+						In: &Edge{
+							Inputs:  []int64{1},
+							Outputs: []int64{2},
+							Step:    &ninjalog.Step{End: time.Second, Out: "b"},
+						},
+					},
+					3: {
+						ID:   3,
+						Path: "c",
+						In: &Edge{
+							Inputs: []int64{2},
+							Step:   &ninjalog.Step{Start: time.Second, End: 2 * time.Second, Out: "c"},
+						},
+					},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+			want: []ninjalog.Step{
+				{End: time.Second, Out: "b"},
+				{Start: time.Second, End: 2 * time.Second, Out: "c"},
+			},
+		},
+		{
+			// a -> b --phony--> c
+			desc: "phony edge",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					// `Outs` edges on nodes are omitted since they don't affect this test.
+					1: {ID: 1, Path: "a"},
+					2: {
+						ID:   2,
+						Path: "b",
+						In: &Edge{
+							Inputs:  []int64{1},
+							Outputs: []int64{2},
+							Step:    &ninjalog.Step{End: time.Second, Out: "b"},
+						},
+					},
+					3: {
+						ID:   3,
+						Path: "c",
+						In:   &Edge{Inputs: []int64{1}, Outputs: []int64{2}, Rule: "phony"},
+					},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+			want: []ninjalog.Step{
+				{End: time.Second, Out: "b"},
+			},
+		},
+		{
+			// a -> b ---> e
+			//         /
+			// c -> d -
+			desc: "multiple inputs same start time",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					// `Outs` edges on nodes are omitted since they don't affect this test.
+					1: {ID: 1, Path: "a"},
+					2: {
+						ID:   2,
+						Path: "b",
+						In: &Edge{
+							Inputs:  []int64{1},
+							Outputs: []int64{2},
+							Step:    &ninjalog.Step{End: 10 * time.Second, Out: "b"},
+						},
+					},
+
+					3: {
+						ID:   3,
+						Path: "c",
+					},
+					4: {
+						ID:   2,
+						Path: "d",
+						In: &Edge{
+							Inputs:  []int64{3},
+							Outputs: []int64{4},
+							Step:    &ninjalog.Step{End: 100 * time.Second, Out: "d"},
+						},
+					},
+
+					5: {
+						ID:   3,
+						Path: "e",
+						In: &Edge{
+							Inputs:  []int64{2, 4},
+							Outputs: []int64{5},
+							Step:    &ninjalog.Step{Start: 100 * time.Second, End: 101 * time.Second, Out: "e"},
+						},
+					},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+			want: []ninjalog.Step{
+				{End: 100 * time.Second, Out: "d"},
+				{Start: 100 * time.Second, End: 101 * time.Second, Out: "e"},
+			},
+		},
+		{
+			// a -> b ---> e
+			//         /
+			// c -> d -
+			desc: "multiple inputs different start times",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					// `Outs` edges on nodes are omitted since they don't affect this test.
+					1: {ID: 1, Path: "a"},
+					2: {
+						ID:   2,
+						Path: "b",
+						In: &Edge{
+							Inputs:  []int64{1},
+							Outputs: []int64{2},
+							Step:    &ninjalog.Step{End: 10 * time.Second, Out: "b"},
+						},
+					},
+
+					3: {
+						ID:   3,
+						Path: "c",
+					},
+					4: {
+						ID:   2,
+						Path: "d",
+						In: &Edge{
+							Inputs:  []int64{3},
+							Outputs: []int64{4},
+							Step:    &ninjalog.Step{Start: 99 * time.Second, End: 100 * time.Second, Out: "d"},
+						},
+					},
+
+					5: {
+						ID:   3,
+						Path: "e",
+						In: &Edge{
+							Inputs:  []int64{2, 4},
+							Outputs: []int64{5},
+							Step:    &ninjalog.Step{Start: 100 * time.Second, End: 101 * time.Second, Out: "e"},
+						},
+					},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+			want: []ninjalog.Step{
+				{End: 10 * time.Second, Out: "b"},
+				{Start: 100 * time.Second, End: 101 * time.Second, Out: "e"},
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got, err := tc.graph.CriticalPath()
+			if err != nil {
+				t.Errorf("CriticalPath() got error: %v, graph: %v", err, tc.graph)
+			}
+			if diff := cmp.Diff(tc.want, got, cmpopts.IgnoreUnexported(Node{})); diff != "" {
+				t.Errorf("CriticalPath() from graph: %v, got diff (-want, +got):\n%s", tc.graph, diff)
+			}
+		})
+	}
+}
+
+func TestCriticalPathErrors(t *testing.T) {
+	for _, tc := range []struct {
+		desc  string
+		graph Graph
+	}{
+		{
+			desc: "edge missing step",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Path: "a"},
+					2: {ID: 2, Path: "b", In: &Edge{Inputs: []int64{1}, Outputs: []int64{2}}},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+		},
+		{
+			desc: "missing input node",
+			graph: Graph{
+				Nodes: map[int64]*Node{
+					2: {ID: 2, Path: "b", In: &Edge{Inputs: []int64{1}, Outputs: []int64{2}}},
+				},
+				// `Edges` are omitted since they don't affect this test.
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			if _, err := tc.graph.CriticalPath(); err == nil {
+				t.Error("CriticalPath() got no error, want error")
+			}
+		})
 	}
 }
