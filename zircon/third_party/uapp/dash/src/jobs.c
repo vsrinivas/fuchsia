@@ -502,7 +502,7 @@ start:
 			break;
 		}
 		if (++ps == psend) {
-			outcslow('\n', out);
+			outc('\n', out);
 			break;
 		}
 	} while (1);
@@ -1479,7 +1479,7 @@ showpipe(struct job *jp, struct output *out)
 	spend = jp->ps + jp->nprocs;
 	for (sp = jp->ps + 1; sp < spend; sp++)
 		outfmt(out, " | %s", sp->cmd);
-	outcslow('\n', out);
+	outc('\n', out);
 	flushall();
 }
 

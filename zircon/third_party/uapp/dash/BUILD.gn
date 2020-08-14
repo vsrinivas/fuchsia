@@ -92,9 +92,11 @@ config("config") {
   defines = [
     "BSD",
     "DEBUG",
+    "FLUSHERR",
     "IFS_BROKEN",
     "JOBS=0",
     "SHELL",
+    "USE_GLIBC_STDIO",
     "USE_LINENOISE",
     "_GNU_SOURCE",
   ]

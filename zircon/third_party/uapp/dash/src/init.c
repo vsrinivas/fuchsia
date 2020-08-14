@@ -246,7 +246,6 @@ reset() {
 
       /* from output.c: */
       {
-#ifdef notyet
 	      out1 = &output;
 	      out2 = &errout;
 #ifdef USE_GLIBC_STDIO
@@ -257,7 +256,6 @@ reset() {
 		      ckfree(memout.buf);
 		      memout.buf = NULL;
 	      }
-#endif
       }
 
       /* from var.c: */

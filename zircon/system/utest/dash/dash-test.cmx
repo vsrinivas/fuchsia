@@ -1,0 +1,10 @@
+{
+  "program": {
+    "binary": "test/dash-test"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.process.Launcher"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+
+test("dash-test") {
+  sources = [ "dash.cpp" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/unittest",
+  ]
+}
+
+package("dash") {
+  testonly = true
+
+  package_name = "dash-test"
+  deps = [
+    ":dash-test",
+    "//zircon/third_party/uapp/dash",
+  ]
+
+  meta = [
+    {
+      path = "dash-test.cmx"
+      dest = "dash-test.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "sh"
+    },
+  ]
+
+  tests = [
+    {
+      name = "dash-test"
+    },
+  ]
+}
