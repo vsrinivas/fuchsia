@@ -1,0 +1,82 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("lib") {
+  sources = [ "log.cc" ]
+
+  public = [ "log.h" ]
+
+  deps = [
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/syslog",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.logger" ]
+}
+
+executable("bin") {
+  output_name = "log"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+package("log") {
+  deps = [ ":bin" ]
+
+  meta = [
+    {
+      dest = "log.cmx"
+      path = "log.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "log"
+      shell = true
+    },
+  ]
+}
+
+executable("tools_log_test") {
+  testonly = true
+
+  sources = [ "test.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/syslog",
+  ]
+}
+
+unittest_package("log-test") {
+  deps = [ ":tools_log_test" ]
+
+  tests = [
+    {
+      name = "tools_log_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":log-test" ]
+}

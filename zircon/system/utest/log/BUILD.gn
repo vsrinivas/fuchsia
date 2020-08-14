@@ -15,6 +15,7 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 test("log") {
+  output_name = "log_test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

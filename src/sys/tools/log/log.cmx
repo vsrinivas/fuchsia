@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/log"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

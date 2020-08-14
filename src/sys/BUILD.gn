@@ -33,5 +33,6 @@ group("tests") {
     "test_runners:tests",
     "time:tests",
     "tools/cs:tests",
+    "tools/log:tests",
   ]
 }
