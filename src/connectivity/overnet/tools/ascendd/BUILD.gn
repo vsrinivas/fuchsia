@@ -4,7 +4,7 @@
 
 import("//build/host.gni")
 
-if (!is_fuchsia) {
+if (is_host) {
   import("//build/rust/rustc_binary.gni")
   import("//build/rust/rustc_library.gni")
 
@@ -58,7 +58,7 @@ if (!is_fuchsia) {
 }
 
 install_host_tools("host") {
-  deps = [ ":bin($host_toolchain)" ]
+  deps = [ ":bin" ]
 
   outputs = [ "ascendd" ]
 }

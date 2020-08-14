@@ -5,7 +5,7 @@
 import("//build/rust/rustc_macro.gni")
 import("//build/tools/json_merge/json_merge.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   json_merge("config.json") {
     sources = [
       rebase_path("//src/developer/ffx/daemon/data/config.json"),

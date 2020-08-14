@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("./build/ffx.gni")
 
 group("ffx") {
@@ -14,7 +15,7 @@ group("ffx") {
   ]
 }
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   ffx("ffx") {
     version = "0.1.0"
     edition = "2018"
@@ -44,10 +45,19 @@ if (host_toolchain == current_toolchain) {
       "src/main.rs",
     ]
   }
+
+  sdk_host_tool("bin_sdk") {
+    # TODO(fxbug.dev/57313): partner only at this time while we shake
+    # out alpha bugs and fill-in docs, etc.
+    category = "partner"
+    output_name = "ffx"
+
+    deps = [ ":ffx_bin" ]
+  }
 }
 
 install_host_tools("host") {
-  deps = [ ":ffx_bin($host_toolchain)" ]
+  deps = [ ":ffx_bin" ]
   outputs = [ "ffx" ]
 }
 
@@ -55,7 +65,6 @@ group("ffx_tool") {
   deps = [
     ":ffx_bin($host_toolchain)",
     ":host",
-    "daemon:lib($host_toolchain)",
   ]
 }
 

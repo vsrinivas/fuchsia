@@ -6,30 +6,28 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
-if (host_toolchain == current_toolchain) {
-  rustc_library("lib") {
-    name = "fastboot"
-    edition = "2018"
-    with_unit_tests = true
+rustc_library("lib") {
+  name = "fastboot"
+  edition = "2018"
+  with_unit_tests = true
 
-    deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:log",
-      "//third_party/rust_crates:thiserror",
-    ]
-    non_rust_deps = [ "//third_party/boringssl" ]
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
+  ]
+  non_rust_deps = [ "//third_party/boringssl" ]
 
-    sources = [
-      "src/command.rs",
-      "src/lib.rs",
-      "src/reply.rs",
-    ]
-  }
+  sources = [
+    "src/command.rs",
+    "src/lib.rs",
+    "src/reply.rs",
+  ]
 }
 
 group("fastboot") {
-  deps = [ ":lib($host_toolchain)" ]
+  deps = [ ":lib" ]
 }
 
 group("tests") {

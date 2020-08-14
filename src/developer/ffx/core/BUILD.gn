@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_library("lib") {
     name = "ffx_core"
     version = "0.1.0"

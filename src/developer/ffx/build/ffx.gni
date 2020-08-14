@@ -8,6 +8,8 @@ import("ffx_plugin.gni")
 # Defines FFX
 #
 template("ffx") {
+  assert(is_host, "ffx presently only builds in host toolchains")
+
   ffx_deps = []
   if (defined(invoker.plugin_deps)) {
     foreach(d, invoker.plugin_deps) {
@@ -76,10 +78,10 @@ template("ffx") {
     testonly = true
 
     deps = [
-      ":" + ffx_name + "_bin_test($host_toolchain)",
-      ":" + suite_name + "_tests($host_toolchain)",
-      "config:tests($host_toolchain)",
-      "core:tests($host_toolchain)",
+      ":" + ffx_name + "_bin_test",
+      ":" + suite_name + "_tests",
+      "config:tests",
+      "core:tests",
     ]
   }
 }

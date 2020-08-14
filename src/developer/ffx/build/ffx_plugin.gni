@@ -76,7 +76,7 @@ template("ffx_plugin") {
   suite_name = output_name + "_suite"
   tests_deps = []
 
-  if (host_toolchain == current_toolchain) {
+  if (is_host) {
     args_deps = []
     if (defined(invoker.args_deps)) {
       args_deps += invoker.args_deps

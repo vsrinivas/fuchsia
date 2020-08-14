@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_macro("lib") {
     name = "core_macros"
     version = "0.1.0"
