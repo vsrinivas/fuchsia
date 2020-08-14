@@ -278,17 +278,5 @@ TEST(Alarm, RemainingTimeBothAlarms) {
     // Verify that the actual remaining time should be within expected range
     EXPECT_LE(remaining_time_us, expected_remaining_time_max_us);
     EXPECT_GE(remaining_time_us, expected_remaining_time_min_us);
-  } else {
-    // Alarm may have expired. This case is expected to be rare.
-    // The real intent of the test is to have timer not expired
-    if (kUsAlarmDelay > execution_time_inner_bound_us) {
-      // This is indeterminate case, we don't really know
-      // whether alarm had expired before or after the call to
-      // Get Remaining time
-    } else {
-      // Alarm definitely expired, so remaining time reported must be zero
-      constexpr uint32_t kExpectedRemainingTimeAlarmFired = 0;
-      EXPECT_EQ(remaining_time_us, kExpectedRemainingTimeAlarmFired);
-    }
   }
 }
