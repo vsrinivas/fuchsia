@@ -266,6 +266,10 @@ function firewall_cmd_macos {
 
 function firewall_check {
   if is_macos; then
+    if firewall_cmd_macos --getglobalstate | grep "disabled" > /dev/null; then
+      return 0
+    fi
+
     if ! firewall_cmd_macos --getappblocked "$1" | grep "permitted" > /dev/null; then
       fx-warn "Firewall rules are not configured, you may need to run \"fx setup-macos\""
       return 1
