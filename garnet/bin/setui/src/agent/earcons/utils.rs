@@ -5,6 +5,7 @@ use {
     crate::call_async,
     crate::internal::event::Publisher,
     crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
+    crate::switchboard::base::AudioStreamType,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
@@ -57,12 +58,14 @@ pub async fn connect_to_sound_player(
 /// Plays a sound with the given [id] and [file_name] via the [sound_player_proxy].
 ///
 /// The id and file_name are expected to be unique and mapped 1:1 to each other. This allows
-/// the sound file to be reused without having to load it again.
+/// the sound file to be reused without having to load it again. [stream_type] is needed
+/// if the sound is for Audio.
 pub async fn play_sound<'a>(
     sound_player_proxy: &ExternalServiceProxy<PlayerProxy>,
     file_name: &'a str,
     id: u32,
     added_files: Arc<Mutex<HashSet<&'a str>>>,
+    stream_type: Option<AudioStreamType>,
 ) -> Result<(), Error> {
     // New sound, add it to the sound player set.
     if added_files.lock().await.insert(file_name) {
@@ -84,8 +87,11 @@ pub async fn play_sound<'a>(
     // This fasync thread is needed so that the earcons sounds can play rapidly and not wait
     // for the previous sound to finish to send another request.
     fasync::Task::spawn(async move {
-        match call_async!(sound_player_proxy => play_sound(id, AudioRenderUsage::Background)).await
-        {
+        let usage = match stream_type {
+            Some(AudioStreamType::Interruption) => AudioRenderUsage::Interruption,
+            Some(AudioStreamType::Media) | _ => AudioRenderUsage::Background,
+        };
+        match call_async!(sound_player_proxy => play_sound(id, usage)).await {
             Ok(_) => {
                 // TODO(fxb/50246): Add inspect logging.
             }

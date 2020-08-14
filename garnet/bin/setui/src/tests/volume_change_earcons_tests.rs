@@ -59,7 +59,13 @@ const INITIAL_SYSTEM_AGENT_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSet
     user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
 };
 
-const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings {
+const INITIAL_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Interruption),
+    source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
+    user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
+};
+
+const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
     user_volume: Some(Volume {
@@ -70,6 +76,24 @@ const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings
 
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(MAX_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+    }),
+};
+
+const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Interruption),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL_2),
+        muted: Some(CHANGED_VOLUME_MUTED),
+    }),
+};
+
+const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Interruption),
     source: Some(AudioStreamSettingSource::User),
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
@@ -205,14 +229,14 @@ async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
     proxy.set(audio_settings).await.expect("set completed").expect("set successful");
 }
 
-async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
-    assert_eq!(receiver.next().await.unwrap(), (id, AudioRenderUsage::Background));
+async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32, usage: AudioRenderUsage) {
+    assert_eq!(receiver.next().await.unwrap(), (id, usage));
 }
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
-// with the correct ids.
+// with the correct ids for the media stream.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_sounds() {
+async fn test_media_sounds() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
@@ -222,13 +246,42 @@ async fn test_sounds() {
     let mut sound_event_receiver =
         fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
-    // Test that the volume-changed sound gets played on the soundplayer.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
+    // Test that the volume-changed sound gets played on the soundplayer for media.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
 
-    // Test that the volume-max sound gets played on the soundplayer.
+    // Test that the volume-max sound gets played on the soundplayer for media.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
+        .await;
+}
+
+// Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
+// with the correct ids for the interruption stream.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_interruption_sounds() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, ..) = create_environment(
+        service_registry,
+        vec![INITIAL_MEDIA_STREAM_SETTINGS, INITIAL_INTERRUPTION_STREAM_SETTINGS],
+    )
+    .await;
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
+
+    // Test that the volume-changed sound gets played on the soundplayer for interruption.
+    set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Interruption)
+        .await;
+
+    // Test that the volume-max sound gets played on the soundplayer for interruption.
+    set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX]).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Interruption)
+        .await;
 }
 
 // Test to ensure that when the volume is increased while already at max volume, the earcon for
@@ -244,7 +297,8 @@ async fn test_max_volume_sound_on_press() {
 
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
+        .await;
 
     // Try to increase volume. Only serves to set the "last volume button press" event
     // to 1 (volume up).
@@ -254,11 +308,13 @@ async fn test_max_volume_sound_on_press() {
 
     // Sets volume max again.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
+        .await;
 
     // Set volume to max again, to simulate holding button.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
+        .await;
 
     // Check that the sound played the correct number of times.
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(3));
@@ -293,10 +349,11 @@ async fn test_earcons_on_multiple_channel_change() {
     )
     .await;
 
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
+        .await;
 
     // Playing sound right after ensures that only 1 max sound was in the
     // pipeline.
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
 }

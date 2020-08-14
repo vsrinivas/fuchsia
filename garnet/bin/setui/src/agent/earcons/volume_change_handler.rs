@@ -21,12 +21,12 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::FutureExt;
 use futures::StreamExt;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
 pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
-    last_media_user_volume: Option<f32>,
+    last_user_volumes: HashMap<AudioStreamType, f32>,
     volume_button_event: i8,
     modified_timestamps: ModifiedTimestamps,
     switchboard_messenger: switchboard::message::Messenger,
@@ -57,9 +57,6 @@ impl VolumeChangeHandler {
         )
         .await?;
 
-        // Get initial user media volume level.
-        let mut last_media_user_volume = None;
-
         let mut receptor = switchboard_messenger
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
@@ -70,26 +67,34 @@ impl VolumeChangeHandler {
             )
             .send();
 
-        if let Ok((
+        // Get initial user media volume level.
+        let last_user_volumes = if let Ok((
             switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(
                 SettingResponse::Audio(info),
             )))),
             _,
         )) = receptor.next_payload().await
         {
-            last_media_user_volume = info
-                .streams
+            // Create map from stream type to user volume levels for each stream.
+            info.streams
                 .iter()
-                .find(|&&x| x.stream_type == AudioStreamType::Media)
-                .map(|stream| stream.user_volume_level);
-        }
+                .filter(|x| {
+                    x.stream_type == AudioStreamType::Media
+                        || x.stream_type == AudioStreamType::Interruption
+                })
+                .map(|stream| (stream.stream_type, stream.user_volume_level))
+                .collect()
+        } else {
+            // Could not extract info from response, default to empty volumes.
+            HashMap::new()
+        };
 
         let (volume_tx, mut volume_rx) = futures::channel::mpsc::unbounded::<SettingResponse>();
 
         fasync::Task::spawn(async move {
             let mut handler = Self {
                 common_earcons_params: params,
-                last_media_user_volume,
+                last_user_volumes,
                 volume_button_event: 0,
                 modified_timestamps: create_default_modified_timestamps(),
                 switchboard_messenger: switchboard_messenger.clone(),
@@ -190,6 +195,46 @@ impl VolumeChangeHandler {
             .collect()
     }
 
+    /// Retrieve a user volume of the specified [stream_type] from the given [changed_streams].
+    fn get_user_volume(
+        &self,
+        changed_streams: Vec<AudioStream>,
+        stream_type: AudioStreamType,
+    ) -> Option<f32> {
+        changed_streams.iter().find(|&&x| x.stream_type == stream_type).map(|x| x.user_volume_level)
+    }
+
+    /// Helper for on_audio_info. Handles the changes for a specific AudioStreamType.
+    /// Enables separate handling of earcons on different streams.
+    async fn on_audio_info_for_stream(
+        &mut self,
+        new_user_volume: f32,
+        stream_type: AudioStreamType,
+    ) {
+        let volume_up_max_pressed = new_user_volume == MAX_VOLUME && self.volume_button_event == 1;
+        let last_user_volume = self.last_user_volumes.get(&stream_type);
+
+        // Logging for debugging volume changes.
+        fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
+        fx_log_debug!(
+            "[earcons_agent] New {:?} user volume: {:?}, Last {:?} user volume: {:?}",
+            stream_type,
+            new_user_volume,
+            stream_type,
+            last_user_volume,
+        );
+
+        if last_user_volume != Some(&new_user_volume) || volume_up_max_pressed {
+            if last_user_volume != None {
+                // On restore, the last media user volume is set for the first time, and registers
+                // as different from the last seen volume, because it is initially None. Don't play
+                // the earcons sound on that set.
+                self.play_volume_sound(stream_type, new_user_volume);
+            }
+            self.last_user_volumes.insert(stream_type, new_user_volume);
+        }
+    }
+
     /// Invoked when a new `AudioInfo` is retrieved. Determines whether an
     /// earcon should be played and plays sound if necessary.
     async fn on_audio_info(&mut self, audio_info: AudioInfo) {
@@ -202,43 +247,24 @@ impl VolumeChangeHandler {
             )
         };
 
-        let new_media_user_volume: Option<f32> =
-            match changed_streams.iter().find(|&&x| x.stream_type == AudioStreamType::Media) {
-                Some(stream) => Some(stream.user_volume_level),
-                None => None,
-            };
-        let volume_up_max_pressed =
-            new_media_user_volume == Some(MAX_VOLUME) && self.volume_button_event == 1;
-        let stream_is_media =
-            changed_streams.iter().find(|&&x| x.stream_type == AudioStreamType::Media).is_some();
+        let media_user_volume =
+            self.get_user_volume(changed_streams.clone(), AudioStreamType::Media);
+        let interruption_user_volume =
+            self.get_user_volume(changed_streams, AudioStreamType::Interruption);
 
-        if !stream_is_media {
-            return;
+        if let Some(media_user_volume) = media_user_volume {
+            self.on_audio_info_for_stream(media_user_volume, AudioStreamType::Media).await;
         }
-
-        // Logging for debugging volume changes.
-        fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
-        fx_log_debug!(
-            "[earcons_agent] New media user volume: {:?}, Last media user volume: {:?}",
-            new_media_user_volume,
-            self.last_media_user_volume
-        );
-
-        if (self.last_media_user_volume != new_media_user_volume) || volume_up_max_pressed {
-            if self.last_media_user_volume != None {
-                // On restore, the last media user volume is set for the first time, and registers
-                // as different from the last seen volume, because it is initially None. Don't play
-                // the earcons sound on that set.
-                self.play_media_volume_sound(new_media_user_volume);
-            }
-            self.last_media_user_volume = new_media_user_volume;
+        if let Some(interruption_user_volume) = interruption_user_volume {
+            self.on_audio_info_for_stream(interruption_user_volume, AudioStreamType::Interruption)
+                .await;
         }
     }
 
     /// Play the earcons sound given the changed volume streams.
     ///
     /// The parameters are packaged together. See [VolumeChangeParams].
-    fn play_media_volume_sound(&self, volume: Option<f32>) {
+    fn play_volume_sound(&self, stream_type: AudioStreamType, volume: f32) {
         let common_earcons_params = self.common_earcons_params.clone();
 
         let publisher = self.publisher.clone();
@@ -256,7 +282,7 @@ impl VolumeChangeHandler {
             let sound_player_connection = sound_player_connection_clone.lock().await;
             let sound_player_added_files = common_earcons_params.sound_player_added_files;
 
-            if let (Some(sound_player_proxy), Some(volume_level)) =
+            if let (Some(sound_player_proxy), volume_level) =
                 (sound_player_connection.as_ref(), volume)
             {
                 if volume_level >= 1.0 {
@@ -265,6 +291,7 @@ impl VolumeChangeHandler {
                         VOLUME_MAX_FILE_PATH,
                         VOLUME_MAX_SOUND_ID,
                         sound_player_added_files.clone(),
+                        Some(stream_type),
                     )
                     .await
                     .ok();
@@ -274,6 +301,7 @@ impl VolumeChangeHandler {
                         VOLUME_CHANGED_FILE_PATH,
                         VOLUME_CHANGED_SOUND_ID,
                         sound_player_added_files.clone(),
+                        Some(stream_type),
                     )
                     .await
                     .ok();
@@ -326,6 +354,9 @@ mod tests {
             switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
         let publisher =
             event::Publisher::create(&event_messenger_factory, MessengerType::Unbound).await;
+        let mut last_user_volumes = HashMap::new();
+        last_user_volumes.insert(AudioStreamType::Media, 1.0);
+        last_user_volumes.insert(AudioStreamType::Interruption, 0.5);
 
         let mut handler = VolumeChangeHandler {
             switchboard_messenger: messenger,
@@ -334,7 +365,7 @@ mod tests {
                 sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },
-            last_media_user_volume: Some(1.0),
+            last_user_volumes,
             volume_button_event: 0,
             modified_timestamps: old_timestamps,
             publisher,

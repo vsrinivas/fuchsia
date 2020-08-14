@@ -65,6 +65,7 @@ async fn play_bluetooth_sound(
                 BLUETOOTH_CONNECTED_FILE_PATH,
                 BLUETOOTH_CONNECTED_SOUND_ID,
                 sound_player_added_files.clone(),
+                None,
             )
             .await
             .ok(),
@@ -73,6 +74,7 @@ async fn play_bluetooth_sound(
                 BLUETOOTH_DISCONNECTED_FILE_PATH,
                 BLUETOOTH_DISCONNECTED_SOUND_ID,
                 sound_player_added_files.clone(),
+                None,
             )
             .await
             .ok(),
