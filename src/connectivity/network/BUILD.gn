@@ -30,7 +30,6 @@ group("config") {
     "dns/sysmgr:config",
     "http-client",
     "http-client/sysmgr:config",
-    "http_client",
   ]
 }
 
