@@ -59,6 +59,7 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
 
   // |WebUIControl|
   void RequestCaptureData(uint32_t stream_index, CaptureResponse callback) override;
+  void SetIspBypassMode(bool on) override;
 
   async::Loop loop_;
   fit::closure stop_callback_;

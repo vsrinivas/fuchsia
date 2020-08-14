@@ -62,7 +62,7 @@ void Capture::WritePNGAsNV12(FILE* fp) {
                       << " V=" << (int)uvpos[j/2] << " v=" << v;
       }
       */
-      // RGB
+      // TODO(fxbug.dev/58306) This doesn't convert YUV to RGB right
 #define CLIP(x) ((x) < 0 ? 0 : (x) > 255 ? 255 : (x))
       row[j * 3 + 0] = CLIP(y + 1.402 * v);
       row[j * 3 + 1] = CLIP(y - 0.34414 * u - 0.71414 * v);
@@ -82,7 +82,8 @@ void Capture::WritePNGAsNV12(FILE* fp) {
   return;
 }
 
-// write image as grayscale png.  If isBayer, just output the top 2/3 (Y of YUV NV12 format)
+// write image as grayscale png.
+// If isBayer, output the top 2/3 (Y of YUV NV12 format) and use 16-bit gray
 void Capture::WritePNGUnprocessed(FILE* fp, bool isBayer) {
   auto& iformat = properties_.image_format;
   auto& pformat = iformat.pixel_format;
@@ -91,6 +92,8 @@ void Capture::WritePNGUnprocessed(FILE* fp, bool isBayer) {
   uint32_t vmo_size = image_->size();
   uint32_t width = iformat.bytes_per_row;              // pretend it's 8-bit gray
   uint32_t height = vmo_size / iformat.bytes_per_row;  // number of whole rows, could be non-image
+  uint32_t depth = 8;
+  uint32_t scanline = iformat.bytes_per_row;
 
   auto png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   auto info_ptr = png_create_info_struct(png_ptr);
@@ -100,14 +103,32 @@ void Capture::WritePNGUnprocessed(FILE* fp, bool isBayer) {
     png_destroy_write_struct(&png_ptr, &info_ptr);
     return;
   }
+  // TODO(fxbug.dev/58283) remove when stream format is accurate for bayer mode
+  if (isBayer) {
+    // 2200x2720 is from sensor config
+    width = 2200;
+    height = 2720 - 40;         // -40 determined experimentally
+    depth = 16;
+    scanline = 2208;            // pass to a multiple of 16 pixels?
+  }
   png_init_io(png_ptr, fp);
-  png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
+  png_set_IHDR(png_ptr, info_ptr, width, height, depth, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
                PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
 
+  std::vector<uint8_t> row;     // only used for 16-bit case
+  row.resize(width*2);
   for (uint32_t i = 0; i < height; i++) {
-    png_write_row(png_ptr, pos);  // consumes width bytes
-    pos += iformat.bytes_per_row;
+    if (depth == 8) {
+      png_write_row(png_ptr, pos);  // consumes width bytes
+    } else {
+      for (uint32_t j = 0; j < width; j++) {
+        row[j*2] = pos[j];      // MSB goes here
+        row[j*2+1] = 0;         // LSB is 0
+      }
+      png_write_row(png_ptr, row.data());
+    }
+    pos += scanline;
   }
   png_write_end(png_ptr, NULL);
   png_destroy_write_struct(&png_ptr, &info_ptr);

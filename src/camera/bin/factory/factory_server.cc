@@ -142,4 +142,8 @@ void FactoryServer::RequestCaptureData(uint32_t stream, CaptureResponse callback
       });
 }
 
+void FactoryServer::SetIspBypassMode(bool on) {
+  isp_->SetBypassMode(on, []() { return; });
+}
+
 }  // namespace camera

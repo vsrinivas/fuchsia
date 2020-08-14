@@ -131,4 +131,9 @@ protocol Isp {
     /// * See [`camera-sensor.banjo`] for more information on this param:
     ///     //sdk/banjo/ddk.protocol.camera.sensor/camera-sensor.banjo
     SetTestPatternMode(uint16 mode) -> ();
+
+    /// Sets the bypass mode.
+    ///
+    /// + request `on` True to enable 19:4 (16-bit) bypass mode, outputting raw sensor bits
+    SetBypassMode(bool on) -> ();
 };

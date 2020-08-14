@@ -118,42 +118,62 @@ void WebUI::HandleClient(FILE* fp) {
   *space = 0;
   FX_LOGS(INFO) << "processing request: " << cmd;
   if (strcmp(cmd, "") == 0 || strcmp(cmd, "index.html") == 0) {
-    fputs(
-        "HTTP/1.1 200 OK\nContent-Type: text/html\n\n"
-        "<html><body>\n"
-        "<a href=info>info</a> - show some info<br>"
-        "<a href=frame>frame</a> - capture a frame, convert to RGB, show as PNG<br>"
-        "<a href=save>save</a> - capture a frame, convert to RGB, save to /data/capture.png<br>"
-        "<a href=nv12>nv12</a> - capture a frame, convert to RGB assuming NV12<br>"
-        "<a href=unprocessed>unprocessed</a> - capture a frame, return unprocessed gray PNG<br>"
-        "<a href=bayer>bayer</a> - capture a frame, return Y plane gray PNG, assuming NV12<br>",
-        fp);
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\n", fp);
+    fputs(R"HTML(<html><body>
+		 <a href="frame">frame</a> - capture and show a frame<br>
+                 <a href="save">save</a> - capture a frame, save to /data/capture.png<br>
+                 <a href="bayer/on">bayer/on</a> - output raw sensor bayer image<br>
+                 <a href="bayer/off">bayer/off</a> - output normal processed image<br>
+                 <br>
+		)HTML",
+          fp);
+    fprintf(fp, "Bayer mode is %s.<br>\n", isBayer_ ? "ON" : "OFF");
+    fputs(R"HTML(<br>
+                 The follow may be useful for debugging:<br>
+                 <a href="frame/nv12">frame/nv12</a> - process as NV12<br>
+                 <a href="frame/bayer">frame/bayer</a> - process as raw sensor data<br>
+                 <a href="frame/unprocessed">frame/unprocessed</a> - do no processing<br>
+		)HTML",
+          fp);
     return;
   }
-  if (strcmp(cmd, "info") == 0) {
-    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nhere is some info\n", fp);
-    return;
-  }
+
+  // expected factory usage
   if (strcmp(cmd, "frame") == 0) {
     RequestCapture(fp, NATIVE, false);
     return;
   }
   if (strcmp(cmd, "save") == 0) {
-    RequestCapture(fp, NV12, true);
+    RequestCapture(fp, NATIVE, true);
     return;
   }
-  if (strcmp(cmd, "nv12") == 0) {
+  if (strcmp(cmd, "bayer/on") == 0) {
+    control_->SetIspBypassMode(true);
+    isBayer_ = true;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is on\n", fp);
+    return;
+  }
+  if (strcmp(cmd, "bayer/off") == 0) {
+    control_->SetIspBypassMode(false);
+    isBayer_ = false;
+    fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is off\n", fp);
+    return;
+  }
+
+  // for debugging
+  if (strcmp(cmd, "frame/nv12") == 0) {
     RequestCapture(fp, NV12, false);
     return;
   }
-  if (strcmp(cmd, "unprocessed") == 0) {
-    RequestCapture(fp, NONE, false);
-    return;
-  }
-  if (strcmp(cmd, "bayer") == 0) {
+  if (strcmp(cmd, "frame/bayer") == 0) {
     RequestCapture(fp, BAYER, false);
     return;
   }
+  if (strcmp(cmd, "frame/unprocessed") == 0) {
+    RequestCapture(fp, NONE, false);
+    return;
+  }
+
   fputs("HTTP/1.1 404 Not Found\n", fp);
 }
 
@@ -164,61 +184,70 @@ void WebUI::RequestCapture(FILE* fp, RGBConversionType convert, bool saveToStora
     fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: dup failed", fp2);
     return;
   }
-  control_->RequestCaptureData(
-      0, [fp2, convert, saveToStorage](zx_status_t status, std::unique_ptr<Capture> frame) {
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "RequestCaptureData failed";
-          fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: capture failed", fp2);
-          fclose(fp2);
-          return;
-        }
-        FILE* filefp = fp2;  // default to write png in HTTP reply
-        if (saveToStorage) {
-          char file[] = "/data/capture.png";
-          filefp = fopen(file, "w");
-          if (filefp == NULL) {
-            FX_LOGS(ERROR) << "failed to open " << file << ": " << strerror(errno);
-            fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: local file write failed", fp2);
-            fclose(fp2);
-            return;
-          }
-        }
-
-        char mime[] = "image/png";
-        uint32_t vmo_size = frame->image_->size();
-        fprintf(fp2, "HTTP/1.1 200 OK\nContent-Type: %s\nXContent-Length: %u\n\n", mime, vmo_size);
-
-        auto& iformat = frame->properties_.image_format;
-        auto& pformat = iformat.pixel_format;
-
-        switch (convert) {
-          default:
-            FX_LOGS(INFO) << "unknown CaptureType";
-            // fall through to NATIVE
-          case NATIVE:
-            if (pformat.type == fuchsia::sysmem::PixelFormatType::NV12) {
-              frame->WritePNGAsNV12(filefp);
-            } else {
-              FX_LOGS(INFO) << "writing unusual format " << (int)pformat.type << " as unprocessed";
-              frame->WritePNGUnprocessed(filefp, false);
-            }
-            break;
-          case NONE:
-            frame->WritePNGUnprocessed(filefp, false);
-            break;
-          case BAYER:
-            frame->WritePNGUnprocessed(filefp, true);
-            break;
-          case NV12:
-            frame->WritePNGAsNV12(filefp);
-            break;
-        }
-        if (filefp != fp2) {
-          fputs("Frame saved to local storage.", fp2);
-          fclose(filefp);
-        }
+  control_->RequestCaptureData(0, [fp2, isBayer = isBayer_, convert, saveToStorage](
+                                      zx_status_t status, std::unique_ptr<Capture> frame) {
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "RequestCaptureData failed";
+      fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: capture failed", fp2);
+      fclose(fp2);
+      return;
+    }
+    FILE* filefp = fp2;  // default to write png in HTTP reply
+    if (saveToStorage) {
+      char file[] = "/data/capture.png";
+      filefp = fopen(file, "w");
+      if (filefp == NULL) {
+        FX_LOGS(ERROR) << "failed to open " << file << ": " << strerror(errno);
+        fputs("HTTP/1.1 500 Internal Server Error\n\nERROR: local file write failed", fp2);
         fclose(fp2);
-      });
+        return;
+      }
+    }
+
+    uint32_t vmo_size = frame->image_->size();
+    fprintf(fp2, "HTTP/1.1 200 OK\nContent-Type: %s\nXContent-Length: %u\n\n",
+            saveToStorage ? "text/html" : "image/png", vmo_size);
+
+    if (saveToStorage) {
+      fputs("Please wait while frame is written to local storage...<br>\n", fp2);
+      fflush(fp2);
+    }
+
+    auto& iformat = frame->properties_.image_format;
+    auto& pformat = iformat.pixel_format;
+
+    switch (convert) {
+      default:
+        FX_LOGS(INFO) << "unknown CaptureType";
+        // fall through to NATIVE
+      case NATIVE:
+        if (isBayer) {
+          frame->WritePNGUnprocessed(filefp, isBayer);
+        } else if (pformat.type == fuchsia::sysmem::PixelFormatType::NV12) {
+          frame->WritePNGAsNV12(filefp);
+        } else {
+          FX_LOGS(INFO) << "writing unusual format " << (int)pformat.type << " as unprocessed";
+          frame->WritePNGUnprocessed(filefp, false);
+        }
+        break;
+      case NONE:
+        frame->WritePNGUnprocessed(filefp, false);
+        break;
+      case BAYER:
+        frame->WritePNGUnprocessed(filefp, true);
+        break;
+      case NV12:
+        frame->WritePNGAsNV12(filefp);
+        break;
+    }
+    if (filefp != fp2) {
+      fputs("Frame saved to local storage.<br>", fp2);
+      fprintf(fp2, "Path is likely: %s.<br>",
+              "/data/r/sys/fuchsia.com:camera-factory:0#meta:camera-factory.cmx/capture.png");
+      fclose(filefp);
+    }
+    fclose(fp2);
+  });
 }
 
 }  // namespace camera
