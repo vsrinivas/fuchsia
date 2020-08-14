@@ -7,6 +7,6 @@ package constants
 const (
 	// FailedToReconnectMsg is logged attempting to reconnect to SSH after an error fails.
 	FailedToReconnectMsg = "failed to reconnect over SSH"
-	// FailedToRunBugreportMsg is logged if testrunner fails to run bugreport over ssh.
-	FailedToRunBugreportMsg = "failed to run bugreport over ssh"
+	// FailedToRunSnapshotMsg is logged if testrunner fails to run snapshot over ssh.
+	FailedToRunSnapshotMsg = "failed to run snapshot over ssh"
 )

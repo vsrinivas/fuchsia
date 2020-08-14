@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	testFunc         = "Test"
-	copySinksFunc    = "CopySinks"
-	runBugreportFunc = "RunBugreport"
+	testFunc        = "Test"
+	copySinksFunc   = "CopySinks"
+	runSnapshotFunc = "RunSnapshot"
 )
 
 type fakeTester struct {
@@ -50,8 +50,8 @@ func (t *fakeTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference
 	return nil
 }
 
-func (t *fakeTester) RunBugreport(_ context.Context, _ string) error {
-	t.funcCalls = append(t.funcCalls, runBugreportFunc)
+func (t *fakeTester) RunSnapshot(_ context.Context, _ string) error {
+	t.funcCalls = append(t.funcCalls, runSnapshotFunc)
 	return nil
 }
 

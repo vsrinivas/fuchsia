@@ -55,8 +55,12 @@ var (
 	// default will be run_test_component.
 	useRuntests bool
 
-	// The output filename for the bugreport. This will be created in the outDir.
+	// The output filename for the snapshot. This will be created in the outDir.
+	// TODO(fxb/50926): to be deprecated in favor of `snapshotFile`.
 	bugreportFile string
+
+	// The output filename for the snapshot. This will be created in the outDir.
+	snapshotFile string
 
 	// Per-test timeout.
 	perTestTimeout time.Duration
@@ -77,7 +81,9 @@ func main() {
 	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
-	flag.StringVar(&bugreportFile, "bugreport-output", "", "The output filename for the bugreport. This will be created in the output directory.")
+	// TODO(fxb/50926): to be deprecated in favor of `snapshot-output`.
+	flag.StringVar(&bugreportFile, "bugreport-output", "", "The output filename for the snapshot. This will be created in the output directory.")
+	flag.StringVar(&snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	// TODO(fxb/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Usage = usage
@@ -185,7 +191,7 @@ type tester interface {
 	Test(context.Context, testsharder.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
 	Close() error
 	CopySinks(context.Context, []runtests.DataSinkReference) error
-	RunBugreport(context.Context, string) error
+	RunSnapshot(context.Context, string) error
 }
 
 // TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
@@ -248,7 +254,12 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			continue
 		}
 		defer t.Close()
-		if err := t.RunBugreport(ctx, bugreportFile); err != nil {
+		// TODO(fxb/50926): temporarily fallback on the legacy `bugreportFile` if the replacing flag has not been set.
+		file := snapshotFile
+		if file == "" {
+			file = bugreportFile
+		}
+		if err := t.RunSnapshot(ctx, file); err != nil {
 			return err
 		}
 		if err := t.CopySinks(ctx, sinks); err != nil {

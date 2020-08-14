@@ -166,7 +166,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/56494.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// For fxbug.dev/56651.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunBugreportMsg), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
 	// For fxbug.dev/52719.
 	// Kernel panics and other low-level errors often cause crashes that
 	// manifest as SSH failures, so this check must come after all

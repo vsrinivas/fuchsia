@@ -116,7 +116,7 @@ func (t *subprocessTester) CopySinks(_ context.Context, _ []runtests.DataSinkRef
 	return nil
 }
 
-func (t *subprocessTester) RunBugreport(_ context.Context, _ string) error {
+func (t *subprocessTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
@@ -251,22 +251,23 @@ func (t *fuchsiaSSHTester) CopySinks(ctx context.Context, sinks []runtests.DataS
 	return nil
 }
 
-// RunBugreport runs `bugreport` on the device.
-func (t *fuchsiaSSHTester) RunBugreport(ctx context.Context, bugreportFile string) error {
-	if bugreportFile == "" {
+// RunSnapshot runs `bugreport` on the device.
+func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string) error {
+	if snapshotFile == "" {
 		return nil
 	}
-	bugreportOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, bugreportFile))
+	snapshotOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, snapshotFile))
 	if err != nil {
-		return fmt.Errorf("failed to create bugreport output file: %w", err)
+		return fmt.Errorf("failed to create snapshot output file: %w", err)
 	}
-	defer bugreportOutFile.Close()
+	defer snapshotOutFile.Close()
 	startTime := time.Now()
-	err = t.client.Run(ctx, []string{"/bin/bugreport"}, bugreportOutFile, os.Stderr)
+	// TODO(50926): switch to /bin/snapshot once fxr/416328 is merged.
+	err = t.client.Run(ctx, []string{"/bin/bugreport"}, snapshotOutFile, os.Stderr)
 	if err != nil {
-		logger.Errorf(ctx, "%s: %v", constants.FailedToRunBugreportMsg, err)
+		logger.Errorf(ctx, "%s: %v", constants.FailedToRunSnapshotMsg, err)
 	}
-	logger.Debugf(ctx, "ran bugreport in %v", time.Now().Sub(startTime))
+	logger.Debugf(ctx, "ran snapshot in %v", time.Now().Sub(startTime))
 	return err
 }
 
@@ -326,7 +327,7 @@ func (t *fuchsiaSerialTester) CopySinks(_ context.Context, _ []runtests.DataSink
 	return nil
 }
 
-func (t *fuchsiaSerialTester) RunBugreport(_ context.Context, _ string) error {
+func (t *fuchsiaSerialTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
