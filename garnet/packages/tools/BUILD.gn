@@ -5,16 +5,17 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
+###
+#   DO NOT ADD TO THIS FILE.
+#   Tools added here will not normally make it into builds. This file is long
+#   deprecated and must only shrink.
+###
+
 # WARNING: Known to topaz.
 group("scenic") {
   testonly = true
   public_deps = [
-    "//src/ui/tools:gltf_export",
-    "//src/ui/tools:input",
-    "//src/ui/tools:present_view",
-    "//src/ui/tools:print_input",
-    "//src/ui/tools:screencap",
-    "//src/ui/tools:snapshot",
+    "//src/ui/tools:scenic"
   ]
 }
 

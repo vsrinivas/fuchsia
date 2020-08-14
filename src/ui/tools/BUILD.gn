@@ -4,6 +4,17 @@
 
 import("//build/package.gni")
 
+group("scenic") {
+  deps = [
+    ":gltf_export",
+    ":input",
+    ":present_view",
+    ":print_input",
+    ":screencap",
+    ":snapshot",
+  ]
+}
+
 group("tools") {
   deps = [
     ":gltf_export",
