@@ -1,6 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
@@ -38,7 +39,34 @@ rustc_library("lib") {
 fuchsia_unittest_package("diagnostics-testing-tests") {
   manifest = "meta/diagnostics-testing-unittest.cmx"
   deps = [
+    ":emitter-for-test",
     ":lib_test",
+  ]
+}
+
+fuchsia_component("emitter-for-test") {
+  testonly = true
+  deps = [
+    ":emitter-bin",
     "//src/lib/diagnostics/inspect/rust:inspect_test_component",
   ]
+  manifest = "meta/emitter-for-test.cmx"
+}
+
+rustc_binary("emitter-bin") {
+  testonly = true
+  edition = "2018"
+  source_root = "test/emitter.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "test/emitter.rs" ]
 }

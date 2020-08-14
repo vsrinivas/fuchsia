@@ -137,6 +137,7 @@ async fn listen_for_klog_routed_stdio() {
 #[fasync::run_singlethreaded(test)]
 async fn observer_stop_api() {
     let (status, logs) = AppWithDiagnostics::launch(
+        "logging",
         "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx",
         None,
     )

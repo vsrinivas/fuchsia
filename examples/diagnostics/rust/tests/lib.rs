@@ -9,7 +9,7 @@ use fuchsia_syslog as syslog;
 #[fasync::run_singlethreaded(test)]
 async fn launch_example_and_read_hello_world() {
     let url = "fuchsia-pkg://fuchsia.com/rust-logs-example-tests#meta/rust-logs-example.cmx";
-    let (status, mut logs) = AppWithDiagnostics::launch(url, None).wait().await;
+    let (status, mut logs) = AppWithDiagnostics::launch("logged", url, None).wait().await;
     assert!(status.success());
 
     logs.sort_by_key(|l| l.time);
