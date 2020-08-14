@@ -111,6 +111,8 @@ class SimpleButtonsAndLabelPageState extends State<SimpleButtonsAndLabelPage> {
 
   @override
   Widget build(BuildContext context) {
+    const double buttonHeight = 50;
+
     return SizedBox.expand(
       child: Center(
         child: Column(
@@ -122,19 +124,30 @@ class SimpleButtonsAndLabelPageState extends State<SimpleButtonsAndLabelPage> {
             TapCounter(
                 label:
                     'Yellow tapped $yellowCounter time${yellowCounter != 1 ? 's' : ''}'),
-            TapButton(
-              label: 'Blue',
-              color: blue,
-              onTap: () => setState(() {
-                blueCounter++;
-              }),
-            ),
-            TapButton(
-              label: 'Yellow',
-              color: yellow,
-              onTap: () => setState(() {
-                yellowCounter++;
-              }),
+            // Embed the buttons in a ListView that is constrained to only be able to
+            // display a single button at a time
+            SizedBox(
+              height: buttonHeight,
+              child: ListView(
+                children: <Widget>[
+                  TapButton(
+                    label: 'Blue',
+                    color: blue,
+                    onTap: () => setState(() {
+                      blueCounter++;
+                    }),
+                    height: buttonHeight,
+                  ),
+                  TapButton(
+                    label: 'Yellow',
+                    color: yellow,
+                    onTap: () => setState(() {
+                      yellowCounter++;
+                    }),
+                    height: buttonHeight,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

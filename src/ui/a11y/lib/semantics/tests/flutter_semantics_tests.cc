@@ -58,8 +58,10 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
     // ID: 0 Label:
     //   ID: 1 Label:Blue tapped 0 times
     //   ID: 2 Label:Yellow tapped 0 times
-    //   ID: 3 Label:Blue
-    //   ID: 4 Label:Yellow
+    //   ID: 3 Label:
+    //     ID: 6 Label:
+    //       ID: 4 Label:Blue
+    //       ID: 5 Label:Yellow
   }
 
   zx_koid_t view_ref_koid() const { return view_ref_koid_; }
@@ -131,6 +133,41 @@ TEST_F(FlutterSemanticsTests, PerformAction) {
       [this, root] {
         auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 1 time");
         return node != nullptr;
+      },
+      kTimeout));
+}
+
+// Loads ally-demo flutter app and validates scroll-to-make-visible
+TEST_F(FlutterSemanticsTests, ScrollToMakeVisible) {
+  auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+
+  // The "Yellow" node should be off-screen in a scrollable list
+  auto node = FindNodeWithLabel(root, view_ref_koid(), "Yellow");
+  ASSERT_TRUE(node);
+  // Record the location of a corner of the node's bounding box.  We record this rather than the
+  // transform or the location fields since the runtime could change either when an element is
+  // moved.
+  auto node_corner =
+      GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
+
+  bool callback_handled = PerformAccessibilityAction(
+      view_ref_koid(), node->node_id(), fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
+  EXPECT_TRUE(callback_handled);
+
+  // Verify the "Yellow" node has moved
+  // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
+  // more clearly written as waiting for notification of an update then checking the tree.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, root, &node_corner] {
+        auto node = FindNodeWithLabel(root, view_ref_koid(), "Yellow");
+        if (node == nullptr) {
+          return false;
+        }
+
+        auto new_node_corner =
+            GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
+        return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
+               node_corner.z != new_node_corner.z;
       },
       kTimeout));
 }
