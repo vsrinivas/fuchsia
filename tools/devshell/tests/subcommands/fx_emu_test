@@ -33,11 +33,39 @@ TEST_kernel_cmdline_append() {
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   # The last arg will contain the kernel command line string.
-  local cmdline_string="${BT_MOCK_ARGS[-1]}"
+  local cmdline_string="${BT_MOCK_ARGS[${#BT_MOCK_ARGS[@]}-1]}"
 
   # Convert the string to an array so we can easily examine the last element.
   local cmdline_array=($cmdline_string)
-  BT_EXPECT_EQ "${cmdline_array[-1]}" "foobar"
+  BT_EXPECT_EQ "${cmdline_array[${#cmdline_array[@]}-1]}" "foobar"
+}
+
+# Test that -A argument works.
+TEST_arch_arm64() {
+  BT_EXPECT ${fx} emu --headless -a off --experiment-arm64 -A arm64
+  source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
+
+  local machine_arg="$(get_machine_arg)"
+  BT_EXPECT_EQ "${machine_arg}" "virt"
+}
+
+# Test that -A argument works.
+TEST_arch_x64() {
+  BT_EXPECT ${fx} emu --headless -a off -A x64
+  source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
+
+  local machine_arg="$(get_machine_arg)"
+  BT_EXPECT_EQ "${machine_arg}" "q35"
+}
+
+get_machine_arg() {
+  for i in "${!BT_MOCK_ARGS[@]}"; do
+    if [[ "${BT_MOCK_ARGS[$i]}" == "-machine" ]]; then
+      echo ${BT_MOCK_ARGS[(($i + 1))]}
+      return
+    fi
+  done
+  echo "invalid"
 }
 
 BT_RUN_TESTS "$@"

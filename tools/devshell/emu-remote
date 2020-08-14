@@ -6,17 +6,19 @@
 #### CATEGORY=Other
 ### Remotely run emulator
 
-## usage: fx emu-remote [--no-emu] [--no-turn] [--no-open] [--display DPY]
-## [--port PORT] HOST [DIR] [-- ARGS]
+## usage: fx emu-remote [--no-build] [--stream [--no-emu] [--no-turn] [--no-open] [--display DPY] [--port PORT]] HOST [DIR] [-- ARGS]
 ##
-## Connect to HOST, run a build using fx from DIR, start the emulator,
-## and open WebRTC connection using local browser.
+## Connect to HOST, run a build using fx from DIR, fetch the artifacts and
+## start the emulator. Alternatively, start the emulator on HOST,
+## and open an WebRTC connection to it using local browser.
 ##
-##  --no-emu      only tunnel, do not start emulator
-##  --no-turn     do not use turn configuration
-##  --no-open     do not open https://web-femu.appspot.com, just run emulator
-##  --display DPY do not start virtual display, use DPY instead
-##  --port PORT   port used on local machine to connect with emulator over HTTP (default: 8080).
+##  --no-build    do not build, just pull artifacts already present
+##  --stream      stream output from remote emulator using WebRTC instead of fetching artifacts
+##  --no-emu      only tunnel, do not start remote emulator
+##  --no-turn     do not use turn configuration for remote emulator
+##  --no-open     do not open https://web-femu.appspot.com, just run remote emulator
+##  --display DPY do not start remote virtual display, use DPY instead
+##  --port PORT   port used on local machine to connect with remote emulator over HTTP (default: 8080)
 ##
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
@@ -29,6 +31,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
 fx-config-read
 
+build=true
+stream=false
 emu=true
 turn=true
 open=true
@@ -42,6 +46,12 @@ while [[ $# -ne 0 ]]; do
   --help|-h)
     fx-command-help
     exit 0
+    ;;
+  --no-build)
+    build=false
+    ;;
+  --stream)
+    stream=true
     ;;
   --no-emu)
     emu=false
@@ -89,19 +99,68 @@ if [[ -z "${host}" ]]; then
   exit 1
 fi
 
-if "${emu}"; then
-  if [[ -z "${dir}" ]]; then
-    if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
-      dir="~/fuchsia"
-    else
-      fx-error "failed to find ~/fuchsia on $host, please specify DIR"
-      fx-command-help
-      exit 1
-    fi
+# Use a dedicated ControlPath so script can manage a connection separately from the user's. We
+# intentionally do not use %h/%p in the control path because there can only be one forwarding
+# session at a time (due to the local forward of 8083).
+ssh_base_args=(
+  "${host}"
+  -S "~/.ssh/control-fuchsia-fx-remote"
+  -o ControlMaster=auto
+)
+ssh_exit() {
+  ssh "${ssh_base_args[@]}" -O exit > /dev/null 2>&1
+  wait # for ssh to exit
+}
+# If there is already control master then exit it. We can't be sure its to the right host and it
+# also could be stale.
+ssh_exit
+# When we exit the script, close the background ssh connection.
+trap_exit() {
+  ssh_exit
+  exit
+}
+trap trap_exit EXIT
+
+if [[ -z "${dir}" ]]; then
+  echo ssh "${ssh_base_args[@]}" ls \~/fuchsia/.jiri_root/bin/fx
+  if ssh "${ssh_base_args[@]}" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+    dir="~/fuchsia"
+  else
+    fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+    fx-command-help
+    exit 1
   fi
 fi
 
+emu_targets=(multiboot.bin fuchsia.zbi obj/build/images/fvm.blk)
+
+if "${build}"; then
+  ssh "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/fx build ${emu_targets[@]}" || exit $?
+fi
+build_dir=$(ssh "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
+
 save_remote_info "$host" "$dir"
+
+# Fetch artifacts and run local emulator when streaming is disabled.
+if [[ "${stream}" == "false" ]]; then
+  build_arch=$(ssh "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/fx exec sh -c 'echo \${FUCHSIA_ARCH}'")
+
+  mkdir -p out/fetched
+  printf -v files '%s,' "${emu_targets[@]}"
+  rsync -z -P "${host}":"${build_dir}/{${files%,}}" out/fetched/
+  echo >&2 "Build images fetched into out/fetched"
+
+  fx-command-exec emu \
+      -K out/fetched/multiboot.bin \
+      -z out/fetched/fuchsia.zbi \
+      -f out/fetched/fvm.blk \
+      -A "${build_arch}" "$@"
+fi
+
+#
+# The code below handles the case where output from a remote emulator
+# is streamed using WebRTC to a local browser instance.
+#
 
 # Check if the port given in argument "$1" is listened by other processes.
 #
@@ -132,22 +191,6 @@ if is_port_used ${local_port}; then
 fi
 
 echo "Using remote ${host}:${dir}"
-
-# First we need to check if we already have a control master for the
-# host, if we do, we might already have the forwards and so we don't
-# need to worry about tearing down:
-if ! ssh -O check "${host}" > /dev/null 2>&1; then
-  # If we didn't have a control master, and the device already has 8080
-  # bound, then there's a good chance there's a stale sshd instance
-  # running from another device or another session that will block the
-  # forward, so we'll check for that and speculatively attempt to clean
-  # it up. Unfortunately this means authing twice, but it's likely the
-  # best we can do for now.
-  if ssh "${host}" "ss -ln | grep :${remote_port}" > /dev/null; then
-    ssh "${host}" 'pkill -u $USER sshd'
-    ssh "${host}" -O exit > /dev/null 2>&1
-  fi
-fi
 
 wait_and_open() {
   timeout=10
@@ -186,15 +229,14 @@ ssh_args=(
   # Requests to the WebRTC service address locally go to the workstation.
   -L "${local_port}:localhost:${remote_port}"
   -o ExitOnForwardFailure=yes
-  "${host}"
 )
 
 if "${emu}"; then
   # If the user requested emulator, then we'll check to see if there's a
   # emulator already running and kill it, this prevents most cases where
   # signal propagation not make it to "qemu-system".
-  if ssh "$host" 'pgrep -u $USER goldfish-webrtc' > /dev/null; then
-    ssh "$host" 'pkill -u $USER qemu-system; pkill -u $USER goldfish-webrtc'
+  if ssh "${ssh_base_args[@]}" 'pgrep -u $USER goldfish-webrtc' > /dev/null; then
+    ssh "${ssh_base_args[@]}" 'pkill -u $USER qemu-system; pkill -u $USER goldfish-webrtc'
   fi
 
   emu_args=(-x ${remote_port})
@@ -235,5 +277,5 @@ cleanup_processes_and_ports() {
 }
 trap cleanup_processes_and_ports EXIT
 
-ssh "${ssh_args[@]}"
+ssh "${ssh_base_args[@]}" "${ssh_args[@]}"
 

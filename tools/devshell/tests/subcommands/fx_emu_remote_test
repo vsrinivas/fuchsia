@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx emu-remote
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/emu-remote"
+  "tools/devshell/lib/fvm.sh"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/fx-remote.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/emu"
+  "bin/rsync"
+)
+
+declare fx sshmock rsyncmock
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  sshmock=$(btf::make_mock_binary "ssh")
+  rsyncmock="$(btf::make_mock_binary "rsync")"
+  btf::add_binary_to_path "$sshmock"
+  btf::add_binary_to_path "$rsyncmock"
+}
+
+# Test that fetching artifacts and launching local emulator works.
+TEST_fetch_and_launch() {
+  BT_EXPECT ${fx} emu-remote 127.0.0.1 dir
+  btf::expect-mock-args "$rsyncmock" "-z" "-P" \
+      "127.0.0.1:/{multiboot.bin,fuchsia.zbi,obj/build/images/fvm.blk}" \
+      "out/fetched/"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/emu" \
+      "-K" "out/fetched/multiboot.bin" \
+      "-z" "out/fetched/fuchsia.zbi" \
+      "-f" "out/fetched/fvm.blk" \
+      "-A" ""
+}
+
+BT_RUN_TESTS "$@"
