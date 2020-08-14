@@ -8,9 +8,10 @@ pub enum WpanMethod {
     GetNcpMacAddress,
     GetNcpRssi,
     GetNetworkName,
+    GetPartitionId,
     GetThreadRloc16,
     GetWeaveNodeId,
-    InitializeProxies
+    InitializeProxies,
 }
 
 impl std::str::FromStr for WpanMethod {
@@ -22,6 +23,7 @@ impl std::str::FromStr for WpanMethod {
             "GetNcpMacAddress" => Ok(WpanMethod::GetNcpMacAddress),
             "GetNcpRssi" => Ok(WpanMethod::GetNcpRssi),
             "GetNetworkName" => Ok(WpanMethod::GetNetworkName),
+            "GetPartitionId" => Ok(WpanMethod::GetPartitionId),
             "GetThreadRloc16" => Ok(WpanMethod::GetThreadRloc16),
             "GetWeaveNodeId" => Ok(WpanMethod::GetWeaveNodeId),
             "InitializeProxies" => Ok(WpanMethod::InitializeProxies),

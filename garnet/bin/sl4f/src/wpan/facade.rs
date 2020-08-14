@@ -103,6 +103,15 @@ impl WpanFacade {
             None => bail!("Network name is not specified!"),
         }
     }
+
+    ///Returns the partition id from the DeviceTest proxy service.
+    pub async fn get_partition_id(&self) -> Result<u32, Error> {
+        let partition_id = match self.device_test.read().as_ref() {
+            Some(device_test) => device_test.get_partition_id().await?,
+            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+        };
+        Ok(partition_id)
+    }
 }
 
 #[cfg(test)]
@@ -221,5 +230,11 @@ mod tests {
     async fn test_get_network_name() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_network_name(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_partition_id() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_partition_id(), facade.1).await;
     }
 }
