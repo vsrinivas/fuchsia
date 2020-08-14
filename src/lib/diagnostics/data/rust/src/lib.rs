@@ -21,6 +21,7 @@ pub enum DataSource {
     Unknown,
     Inspect,
     LifecycleEvent,
+    Logs,
 }
 
 impl Default for DataSource {
@@ -48,6 +49,7 @@ pub enum Metadata {
     Empty,
     Inspect(InspectMetadata),
     LifecycleEvent(LifecycleEventMetadata),
+    Logs(LogsMetadata),
 }
 
 impl Default for Metadata {
@@ -119,10 +121,23 @@ pub struct InspectMetadata {
     pub timestamp: Timestamp,
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct LogsMetadata {
+    // TODO(fxbug.dev/58369) figure out exact spelling of pid/tid context and severity
+    /// Optional vector of errors encountered by platform.
+    pub errors: Option<Vec<Error>>,
+
+    /// The url with which the component was launched.
+    pub component_url: String,
+
+    /// Monotonic time in nanos.
+    pub timestamp: Timestamp,
+}
+
 /// An instance of diagnostics data with typed metadata and an optional nested payload.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct Data<Key, Metadata> {
-    /// The sourde of the data.
+    /// The source of the data.
     #[serde(default)]
     // TODO(fxb/58033) remove this once the Metadata enum is gone everywhere
     pub data_source: DataSource,

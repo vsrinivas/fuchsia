@@ -70,6 +70,8 @@ enum DataType : uint8 {
     INSPECT = 1;
     /// Start|Stop|Running|DiagnosticsReady events on the system.
     LIFECYCLE = 2;
+    /// Log streams on the system.
+    LOGS = 3;
 };
 
 flexible union ClientSelectorConfiguration {

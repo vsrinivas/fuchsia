@@ -4,7 +4,7 @@
 
 // TODO(fxb/58038) use thiserror for library errors
 use anyhow::{Context as _, Error};
-use diagnostics_data::{Data, InspectData, InspectMetadata, LifecycleEventMetadata};
+use diagnostics_data::{Data, InspectData, InspectMetadata, LifecycleEventMetadata, LogsMetadata};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
@@ -299,6 +299,19 @@ impl BatchIteratorType for Lifecycle {
 
     fn data_type() -> DataType {
         DataType::Lifecycle
+    }
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
+    }
+}
+
+pub struct Logs;
+impl BatchIteratorType for Logs {
+    type Metadata = LogsMetadata;
+
+    fn data_type() -> DataType {
+        DataType::Logs
     }
 
     fn component_url(metadata: &Self::Metadata) -> &str {

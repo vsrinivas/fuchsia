@@ -221,6 +221,15 @@ impl ArchiveAccessor {
         }
     }
 
+    fn handle_stream_logs(
+        &self,
+        _result_stream: ServerEnd<BatchIteratorMarker>,
+        _stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
+    ) -> Result<(), Error> {
+        error!("stream logs not yet implemented");
+        Ok(())
+    }
+
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
     pub fn spawn_archive_accessor_server(self, mut stream: ArchiveAccessorRequestStream) {
@@ -249,6 +258,9 @@ impl ArchiveAccessor {
                                     result_stream,
                                     stream_parameters,
                                 )?,
+                                Some(DataType::Logs) => {
+                                    self.handle_stream_logs(result_stream, stream_parameters)?
+                                }
                                 None => {
                                     warn!("Client failed to specify a valid data type.");
 
