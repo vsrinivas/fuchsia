@@ -10,6 +10,7 @@ if (is_host) {
   source_set("src") {
     sources = [
       "command_line_options.cc",
+      "reader.cc",
       "symbol_index.cc",
     ]
     deps = [
@@ -35,6 +36,7 @@ if (is_host) {
   test("symbol_index_tests") {
     sources = [
       "command_line_options_test.cc",
+      "reader_test.cc",
       "symbol_index_test.cc",
     ]
     deps = [

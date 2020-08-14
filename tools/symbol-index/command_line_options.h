@@ -16,6 +16,7 @@ struct CommandLineOptions {
   enum class Verb {
     kList,
     kAdd,
+    kAddAll,
     kRemove,
     kPurge,
   };

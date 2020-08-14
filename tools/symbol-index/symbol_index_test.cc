@@ -5,12 +5,15 @@
 #include "tools/symbol-index/symbol_index.h"
 
 #include <filesystem>
+#include <fstream>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace symbol_index {
+
+namespace {
 
 TEST(SymbolIndexTest, AddAndRemove) {
   SymbolIndex symbol_index;
@@ -39,6 +42,22 @@ TEST(SymbolIndexTest, AddAndRemoveRelatively) {
 
   ASSERT_TRUE(symbol_index.Remove("relative/path//./to/symbol"));
   ASSERT_EQ(symbol_index.entries().size(), 0UL);
+}
+
+TEST(SymbolIndexTest, AddAll) {
+  files::ScopedTempDir temp_dir;
+  std::filesystem::path temp_dir_path = temp_dir.path();
+  std::string temp_file;
+
+  ASSERT_TRUE(temp_dir.NewTempFile(&temp_file));
+  std::ofstream(temp_file) << ".build-id/ .";
+
+  SymbolIndex symbol_index;
+
+  symbol_index.AddAll(temp_file);
+  ASSERT_EQ(symbol_index.entries().size(), 1UL);
+  ASSERT_EQ(symbol_index.entries()[0].symbol_path, temp_dir_path / ".build-id");
+  ASSERT_EQ(symbol_index.entries()[0].build_dir, temp_dir_path);
 }
 
 TEST(SymbolIndexTest, Purge) {
@@ -70,5 +89,7 @@ TEST(SymbolIndexTest, LoadAndSave) {
   ASSERT_TRUE(symbol_index2.Load().empty());
   ASSERT_EQ(symbol_index2.entries().size(), 1UL) << "File location: " << temp_file;
 }
+
+}  // namespace
 
 }  // namespace symbol_index

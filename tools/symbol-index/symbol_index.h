@@ -39,7 +39,15 @@ class SymbolIndex {
   // Returns a bool indicating whether the insertion is actually done.
   bool Add(std::string symbol_path, std::string build_dir = "");
 
-  // Remove the given symbol_path from the symbol index.
+  // Reads the input and adds all symbol paths with optional build directories.
+  // The input file could contain empty lines and comments. Paths in the empty line could also
+  // be relative and will be canonicalized based on the input file.
+  //
+  // If the input_file is empty, stdin will be used and relative paths will be resolved based on
+  // the current directory.
+  Error AddAll(const std::string& input_file = "");
+
+  // Removes the given symbol_path from the symbol index.
   // Does nothing if the symbol_path is not in the symbol index.
   // Returns a bool indicating whether the removal is actually done.
   bool Remove(std::string symbol_path);

@@ -9,10 +9,12 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "tools/symbol-index/reader.h"
 
 namespace symbol_index {
 
@@ -39,7 +41,9 @@ std::string SymbolIndex::Entry::ToString() const {
 
 SymbolIndex::SymbolIndex(const std::string& path) {
   if (path.empty()) {
-    file_path_ = std::string(std::getenv("HOME")) + "/.fuchsia/debug/symbol-index";
+    char* home = std::getenv("HOME");
+    FX_CHECK(home);
+    file_path_ = std::string(home) + "/.fuchsia/debug/symbol-index";
   } else {
     file_path_ = path;
   }
@@ -51,41 +55,33 @@ Error SymbolIndex::Load() {
   entries_.clear();
   std::error_code err;
 
+  // Non-existing files are not considered an error.
   if (!std::filesystem::exists(file_path_, err)) {
     return "";
   }
 
   std::ifstream file(file_path_);
-  if (file.fail()) {
-    return fxl::StringPrintf("Cannot open %s to read", file_path_.c_str());
+  std::vector<std::vector<std::string>> entries;
+  Reader reader('\t');
+
+  if (Error err = reader.Read(file, file_path_, &entries); !err.empty()) {
+    return err;
   }
 
-  std::string line;
-  std::string symbol_path;
-  std::string build_dir;
+  for (const auto& entry : entries) {
+    FX_CHECK(entry.size() >= 1);
 
-  while (!file.eof()) {
-    std::getline(file, line);
-    if (file.fail()) {
-      // If the file ends with \n, we will get failbit, eofbit and line == "".
-      if (file.eof())
-        break;
-      return fxl::StringPrintf("Error reading %s", file_path_.c_str());
-    }
+    std::string symbol_path = entry[0];
+    std::string build_dir;
 
-    size_t tab_index = line.find('\t');
-    if (tab_index != std::string::npos) {
-      symbol_path = line.substr(0, tab_index);
-      build_dir = line.substr(tab_index + 1);
-    } else {
-      symbol_path = line;
-      build_dir.clear();
+    if (entry.size() >= 2) {
+      build_dir = entry[1];
     }
 
     // Both paths must be absolute.
     if (symbol_path.empty() || symbol_path[0] != '/' ||
         (!build_dir.empty() && build_dir[0] != '/')) {
-      FX_LOGS(ERROR) << "Invalid line in " << file_path_ << ": " << line;
+      FX_LOGS(ERROR) << "Invalid line in " << file_path_ << ": " << symbol_path;
       continue;
     }
 
@@ -106,6 +102,39 @@ bool SymbolIndex::Add(std::string symbol_path, std::string build_dir) {
   }
   entries_.emplace_back(symbol_path, build_dir);
   return true;
+}
+
+Error SymbolIndex::AddAll(const std::string& input_file) {
+  std::vector<std::vector<std::string>> entries;
+  Reader reader(' ');
+  Error err;
+  std::string prefix;
+
+  if (input_file.empty()) {
+    err = reader.Read(std::cin, "stdin", &entries);
+  } else {
+    std::ifstream file(input_file);
+    err = reader.Read(file, input_file, &entries);
+    prefix = input_file + "/../";
+  }
+
+  if (!err.empty())
+    return err;
+
+  for (const auto& entry : entries) {
+    FX_CHECK(entry.size() >= 1);
+
+    std::string symbol_path = prefix + entry[0];
+    std::string build_dir;
+
+    if (entry.size() >= 2) {
+      build_dir = prefix + entry[1];
+    }
+
+    Add(symbol_path, build_dir);
+  }
+
+  return "";
 }
 
 bool SymbolIndex::Remove(std::string symbol_path) {

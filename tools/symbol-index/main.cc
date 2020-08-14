@@ -10,7 +10,7 @@
 
 namespace symbol_index {
 
-int ConsoleMain(int argc, const char* argv[]) {
+int Main(int argc, const char* argv[]) {
   CommandLineOptions options;
 
   if (const Error error = ParseCommandLine(argc, argv, &options); !error.empty()) {
@@ -32,10 +32,15 @@ int ConsoleMain(int argc, const char* argv[]) {
         std::cout << entry.ToString() << std::endl;
       break;
     case CommandLineOptions::Verb::kAdd:
-      if (options.params.size() == 2)
-        symbol_index.Add(options.params[0], options.params[1]);
-      else
-        symbol_index.Add(options.params[0]);
+      if (options.params.size() == 1)
+        options.params.push_back("");
+      symbol_index.Add(options.params[0], options.params[1]);
+      break;
+    case CommandLineOptions::Verb::kAddAll:
+      if (options.params.size() == 0)
+        options.params.push_back("");
+      if (auto err = symbol_index.AddAll(options.params[0]); !err.empty())
+        std::cerr << err << std::endl;
       break;
     case CommandLineOptions::Verb::kRemove:
       symbol_index.Remove(options.params[0]);
@@ -58,4 +63,4 @@ int ConsoleMain(int argc, const char* argv[]) {
 
 }  // namespace symbol_index
 
-int main(int argc, const char* argv[]) { return symbol_index::ConsoleMain(argc, argv); }
+int main(int argc, const char* argv[]) { return symbol_index::Main(argc, argv); }

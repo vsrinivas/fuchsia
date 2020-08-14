@@ -28,6 +28,14 @@ Available verbs:
       to locate the source code. If the symbol path is already in symbol-index,
       no changes will be made regardless of the optional build directory.
 
+  add-all [ <input file> ]
+      Reads the input and adds all symbol paths with optional build directories.
+      The input file can contain multiple lines, each describing a symbol path.
+      An optional build directory could be supplemented and separated from the
+      symbol path with whitespaces. Relative paths will be resolved based on
+      the input file. Empty lines and lines starting with "#" will be ignored.
+      If the input file is not specified, the input will be read from the stdin.
+
   remove <symbol path>
       Removes a symbol path from symbol-index.
 
@@ -53,6 +61,8 @@ Error CommandLineOptions::SetVerb(const std::string& str) {
     verb = Verb::kList;
   else if (str == "add")
     verb = Verb::kAdd;
+  else if (str == "add-all")
+    verb = Verb::kAddAll;
   else if (str == "remove")
     verb = Verb::kRemove;
   else if (str == "purge")
@@ -72,6 +82,12 @@ Error CommandLineOptions::Validate() {
     case Verb::kAdd:
       if (params_size < 1 || params_size > 2) {
         return fxl::StringPrintf("Verb add requires 1 or 2 arguments, but %lu is given.",
+                                 params_size);
+      }
+      break;
+    case Verb::kAddAll:
+      if (params_size > 1) {
+        return fxl::StringPrintf("Verb add-all requires 0 or 1 arguments, but %lu is given.",
                                  params_size);
       }
       break;

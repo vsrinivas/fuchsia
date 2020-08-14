@@ -8,6 +8,8 @@
 
 namespace symbol_index {
 
+namespace {
+
 TEST(CommandLineOptionsTest, List) {
   CommandLineOptions options;
   const char* argv[] = {"", "list"};
@@ -62,5 +64,7 @@ TEST(CommandLineOptionsTest, CustomPath) {
   const Error error = ParseCommandLine(sizeof(argv) / sizeof(char*), argv, &options);
   ASSERT_EQ(options.symbol_index_file, "path/to/config");
 }
+
+}  // namespace
 
 }  // namespace symbol_index
