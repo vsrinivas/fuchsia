@@ -41,6 +41,7 @@
  * MFP: 802.11w Management Frame Protection.
  * GSCAN: enhanced scan offload feature.
  * FWSUP: Firmware supplicant.
+ * DHIST: Detailed histograms for station and antenna metrics.
  */
 #define BRCMF_FEAT_LIST           \
   BRCMF_FEAT_DEF(AP)              \
@@ -62,7 +63,8 @@
   BRCMF_FEAT_DEF(WOWL_ARP_ND)     \
   BRCMF_FEAT_DEF(MFP)             \
   BRCMF_FEAT_DEF(GSCAN)           \
-  BRCMF_FEAT_DEF(FWSUP)
+  BRCMF_FEAT_DEF(FWSUP)           \
+  BRCMF_FEAT_DEF(DHIST)
 
 /*
  * Quirks:

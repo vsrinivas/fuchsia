@@ -28,6 +28,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "third_party/bcmdhd/crossdriver/dhd.h"
 
 /*
  * expand feature list to array of feature strings.
@@ -69,6 +70,31 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
     BRCMF_DBG(TRACE, "%s feature check failed: %s, fw err %s", brcmf_feat_names[id],
               zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
   }
+}
+
+/**
+ * brcmf_feat_iovar_data_get() - determine feature through iovar data query.
+ *
+ * @ifp: interface to query.
+ * @id: feature id.
+ * @name: iovar name.
+ * @len: length (in bytes) of data type for the given iovar.
+ */
+static void brcmf_feat_iovar_data_get(struct brcmf_if* ifp, enum brcmf_feat_id id, const char* name,
+                                      size_t len) {
+  void* data = std::malloc(len);
+  if (data == nullptr) {
+    BRCMF_DBG(TRACE, "%s feature check failed: malloc failed", brcmf_feat_names[id]);
+    return;
+  }
+  const auto status = brcmf_fil_iovar_data_get(ifp, name, data, len, nullptr);
+  if (status == ZX_OK) {
+    BRCMF_DBG(INFO, "enabling feature: %s", brcmf_feat_names[id]);
+    ifp->drvr->feat_flags |= BIT(id);
+  } else {
+    BRCMF_DBG(TRACE, "%s feature check failed: %d", brcmf_feat_names[id], status);
+  }
+  std::free(data);
 }
 
 static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id id, const char* name,
@@ -121,7 +147,6 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
 
 void brcmf_feat_attach(struct brcmf_pub* drvr) {
   struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
-  struct brcmf_pno_macaddr_le pfn_mac;
   struct brcmf_gscan_config gscan_cfg;
   uint32_t wowl_cap;
   zx_status_t err;
@@ -155,11 +180,8 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
   brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_TDLS, "tdls_enable");
   brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_MFP, "mfp");
 
-  pfn_mac.version = BRCMF_PFN_MACADDR_CFG_VER;
-  err = brcmf_fil_iovar_data_get(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), nullptr);
-  if (err == ZX_OK) {
-    ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_SCAN_RANDOM_MAC);
-  }
+  brcmf_feat_iovar_data_get(ifp, BRCMF_FEAT_SCAN_RANDOM_MAC, "pfn_macaddr",
+                            sizeof(brcmf_pno_macaddr_le));
 
   if (drvr->settings->feature_disable) {
     BRCMF_DBG(INFO, "Features: 0x%02x, disable: 0x%02x", ifp->drvr->feat_flags,
@@ -167,6 +189,8 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
     ifp->drvr->feat_flags &= ~drvr->settings->feature_disable;
   }
   brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_FWSUP, "sup_wpa");
+
+  brcmf_feat_iovar_data_get(ifp, BRCMF_FEAT_DHIST, "wstats_counters", sizeof(wl_wstats_cnt_t));
 
   /* set chip related quirks */
   switch (drvr->bus_if->chip) {

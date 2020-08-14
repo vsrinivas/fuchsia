@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/errors.h>
+
 #include <ddk/protocol/wlanif.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -19,6 +21,7 @@
 
 namespace wlan::brcmfmac {
 
+using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::SizeIs;
 
@@ -73,6 +76,7 @@ class AssocTest : public SimTest {
   void AssocErrorInject();
 
   void SendStatsQuery();
+  void DetailedHistogramErrorInject();
 
  protected:
   struct AssocContext {
@@ -444,6 +448,35 @@ TEST_F(AssocTest, StatsQueryReqTest) {
             expected_snr_num_frames);
 }
 
+// Verify that StatsQueryReq works when detailed histogram feature is disabled.
+TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  DetailedHistogramErrorInject();
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::msec(30), &AssocTest::SendStatsQuery, this);
+
+  env_->Run(kTestDuration);
+
+  // Verify that a stats query response was received.
+  ASSERT_THAT(context_.iface_stats.mlme_stats, NotNull());
+  ASSERT_TRUE(context_.iface_stats.mlme_stats->is_client_mlme_stats());
+  const auto& client_mlme_stats = context_.iface_stats.mlme_stats->client_mlme_stats();
+
+  // All detailed histogram fields should be empty.
+  ASSERT_THAT(client_mlme_stats.noise_floor_histograms, IsEmpty());
+  ASSERT_THAT(client_mlme_stats.rssi_histograms, IsEmpty());
+  ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms, IsEmpty());
+  ASSERT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
+}
+
 void AssocTest::AssocErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
@@ -517,6 +550,12 @@ void AssocTest::TxFakeDisassocReq() {
   simulation::SimDisassocReqFrame wrong_sta_frame(context_.bssid, wrong_dst,
                                                   kDefaultApDisassocReason);
   env_->Tx(wrong_sta_frame, context_.tx_info, this);
+}
+
+void AssocTest::DetailedHistogramErrorInject() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("wstats_counters", ZX_ERR_NOT_SUPPORTED,
+                                       client_ifc_.iface_id_);
 }
 
 // For this test, we want the pre-assoc scan test to fail because no APs are found.

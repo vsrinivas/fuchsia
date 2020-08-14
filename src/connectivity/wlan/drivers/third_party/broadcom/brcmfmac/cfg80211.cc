@@ -4086,11 +4086,14 @@ void brcmf_if_stats_query_req(net_device* ndev) {
             ndev->stats.rssi_buckets.data();
         mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = RSSI_HISTOGRAM_LEN;
 
-        // Detailed histograms populated from wstats_counters iovar.
+        // Skip wlanif detailed histogram collection if feature is not enabled.
+        if (!brcmf_feat_is_enabled(ifp->drvr, BRCMF_FEAT_DHIST)) {
+          break;
+        }
         histograms_report_t histograms_report;
         const auto hist_status = brcmf_get_histograms_report(ifp, &histograms_report);
         if (hist_status != ZX_OK) {
-          BRCMF_ERR("Could not get histograms: %s\n", zx_status_get_string(hist_status));
+          // If wlanif detailed histogram collection fails, leave the histogram fields empty.
           break;
         }
         wlanif_antenna_id_t antenna_id;
