@@ -6,6 +6,7 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
@@ -49,7 +50,10 @@ zx_status_t CountryCodeTest::ClearCountryCode() { return device_->WlanphyImplCle
 // state of the country code setting by bypassing the interfaces.
 void CountryCodeTest::GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode) {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "country", ccode, sizeof(brcmf_fil_country_le));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status =
+      brcmf_fil_iovar_data_get(ifp, "country", ccode, sizeof(brcmf_fil_country_le), nullptr);
+  EXPECT_EQ(status, ZX_OK);
 }
 
 TEST_F(CountryCodeTest, SetDefault) {

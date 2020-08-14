@@ -164,6 +164,7 @@ retry:
 
   /* Check the ERROR flag */
   if (flags & BCDC_DCMD_ERROR) {
+    BRCMF_DBG(BCDC, "fwerr %s", brcmf_fil_get_errstr(msg->status));
     *fwerr = msg->status;
   }
 done:

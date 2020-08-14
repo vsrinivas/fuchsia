@@ -7,6 +7,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
@@ -185,9 +186,15 @@ void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
 }
 
 void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status;
+
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_), nullptr);
   EXPECT_EQ(wsec_, (uint32_t)0);
+
+  status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
+  EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(wpa_auth_, (uint32_t)0);
 
   // Prepare auth request
@@ -237,9 +244,9 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   if (auth_status_ != WLAN_AUTH_RESULT_SUCCESS) {
     return;
   }
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_));
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "auth", &auth_, sizeof(auth_));
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_), nullptr);
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "auth", &auth_, sizeof(auth_), nullptr);
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_), nullptr);
 
   if (sec_type_ != SEC_TYPE_WPA1 && sec_type_ != SEC_TYPE_WPA2) {
     EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
@@ -370,8 +377,16 @@ void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   if (assoc_status_ != WLAN_ASSOC_RESULT_SUCCESS) {
     return;
   }
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
+
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status;
+
+  status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
+  EXPECT_EQ(status, ZX_OK);
+
+  status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
+  EXPECT_EQ(status, ZX_OK);
 
   if (sec_type_ == SEC_TYPE_WPA1) {
     // The wsec iovar is set after sending assoc_req to driver.
@@ -468,8 +483,9 @@ TEST_F(AuthTest, IgnoreTest) {
   uint32_t max_retries = 0;
 
   brcmf_simdev* sim = device_->GetSim();
-  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_retries,
-                                          sizeof(max_retries)));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {
     expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
@@ -553,8 +569,9 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   uint32_t max_retries = 0;
 
   brcmf_simdev* sim = device_->GetSim();
-  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_retries,
-                                          sizeof(max_retries)));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {
     expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);

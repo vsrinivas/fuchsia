@@ -8,6 +8,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
@@ -199,12 +200,14 @@ zx_status_t CreateSoftAPTest::StartSoftAP() {
 
   // Retrieve wsec from SIM FW to check if it is set appropriately
   brcmf_simdev* sim = device_->GetSim();
-  int32_t wsec;
-  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "wsec", &wsec, sizeof(wsec));
+  uint32_t wsec;
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, softap_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "wsec", &wsec, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   if (sec_enabled_ == true)
-    EXPECT_NE(wsec, 0);
+    EXPECT_NE(wsec, (uint32_t)0);
   else
-    EXPECT_EQ(wsec, 0);
+    EXPECT_EQ(wsec, (uint32_t)0);
   return ZX_OK;
 }
 

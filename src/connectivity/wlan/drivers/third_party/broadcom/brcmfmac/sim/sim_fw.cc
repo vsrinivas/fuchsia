@@ -134,7 +134,12 @@ zx_status_t SimFirmware::BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* dcmd, 
     status = IovarsSet(ifidx, name_begin, value_buffer.get(), value_size);
   } else {
     // IovarsGet modifies the buffer in-place
-    status = IovarsGet(ifidx, reinterpret_cast<const char*>(data), data, dcmd->len);
+    status = IovarsGet(ifidx, reinterpret_cast<const char*>(data), data, dcmd->len, &dcmd->status);
+    if (dcmd->status != BCME_OK) {
+      dcmd->flags |= BCDC_DCMD_ERROR;
+    }
+    BRCMF_DBG(SIM, "dcmd->status=%s dcmd->flags=0x%08x", brcmf_fil_get_errstr(dcmd->status),
+              dcmd->flags);
   }
 
   if (status == ZX_OK) {
@@ -548,19 +553,21 @@ uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
 // operation, which has been stored in bcdc_response_. In real hardware, we may have to
 // indicate that the TX CTL operation has not completed. In simulated hardware, we perform
 // all operations synchronously.
+//
+// This function is a simplified version of brcmf_sdio_bus_rxctl. As much of the
+// response `msg_` last stored by BcdcResponse::Set() is written to `data` as possible,
+// and the actual size of `msg_` is returned in `len_out`.
 zx_status_t SimFirmware::BusRxCtl(unsigned char* msg, uint len, int* rxlen_out) {
   if (bcdc_response_.IsClear()) {
+    BRCMF_ERR("no response available");
     return ZX_ERR_UNAVAILABLE;
   }
 
-  size_t actual_len;
-  zx_status_t result = bcdc_response_.Get(msg, len, &actual_len);
-  if (result == ZX_OK) {
-    // Responses are not re-sent on subsequent requests
-    bcdc_response_.Clear();
-    *rxlen_out = actual_len;
-  }
-  return result;
+  zx_status_t status = bcdc_response_.Get(msg, len, rxlen_out);
+
+  // Responses are not re-sent on subsequent requests
+  bcdc_response_.Clear();
+  return status;
 }
 
 struct pktq* SimFirmware::BusGetTxQueue() {
@@ -584,13 +591,13 @@ void SimFirmware::BusCancelTimer(uint64_t id) { hw_.CancelCallback(id); }
 
 void SimFirmware::BcdcResponse::Clear() { len_ = 0; }
 
-zx_status_t SimFirmware::BcdcResponse::Get(uint8_t* data, size_t len, size_t* len_out) {
-  if (len < len_) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+zx_status_t SimFirmware::BcdcResponse::Get(uint8_t* msg, size_t len, int* rxlen_out) {
+  memcpy(msg, msg_, std::min(len, len_));
+  if (len_ > INT_MAX) {
+    BRCMF_ERR("response length exceeds INT_MAX.");
+    return ZX_ERR_INTERNAL;
   }
-
-  memcpy(data, msg_, len_);
-  *len_out = len_;
+  *rxlen_out = static_cast<int>(len_);
   return ZX_OK;
 }
 
@@ -1622,8 +1629,21 @@ const char* kFirmwareCap =
     "txpwrcache stbc-tx stbc-rx-1ss epno pfnx wnm bsstrans mfp ndoe rssi_mon cptlv-4";
 
 zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value_out,
-                                   size_t value_len) {
+                                   size_t value_len, bcme_status_t* fw_err) {
   zx_status_t status;
+
+  if (fw_err == nullptr) {
+    // TODO: Remove these exceptions from specifying nullptr as fw_err. At the moment,
+    // these are the only cases where IovarsGet is called directly outside of
+    // iovar_test.
+    if (!(!strcmp(name, "wsec") || !strcmp(name, "auth") || !strcmp(name, "wsec_key"))) {
+      BRCMF_ERR("%s is not a whitelisted iovar for calling IovarsGet with fw_err as nullptr", name);
+      return ZX_ERR_INTERNAL;
+    }
+  } else {
+    *fw_err = BCME_OK;
+  }
+
   std::optional<const void*> err_inj_alt_value;
   if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, &err_inj_alt_value, ifidx)) {
     if (err_inj_alt_value) {
@@ -1631,6 +1651,7 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     } else {
       memset(value_out, 0, value_len);
     }
+
     return status;
   }
 
@@ -1790,12 +1811,12 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     memcpy(value_out, assoc_resp_ies_, assoc_resp_ies_len_);
   } else if (!std::strcmp(name, "cap")) {
-    if (value_len >= (strlen(kFirmwareCap) + 1)) {
-      // TODO: Provide means to simulate hardware with different capabilities.
-      strlcpy(static_cast<char*>(value_out), kFirmwareCap, value_len);
-    } else {
-      return ZX_ERR_INVALID_ARGS;
+    // TODO: Provide means to simulate hardware with different capabilities.
+    if (value_len < strlen(kFirmwareCap) + 1) {
+      *fw_err = BCME_BUFTOOSHORT;
+      return ZX_OK;
     }
+    strlcpy(static_cast<char*>(value_out), kFirmwareCap, value_len);
   } else if (!std::strcmp(name, "nmode")) {
     if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_INVALID_ARGS;

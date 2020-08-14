@@ -11,6 +11,7 @@
 #include "fuchsia/wlan/stats/cpp/fidl.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/drivers/wlanif/convert.h"
@@ -672,10 +673,11 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   env_->Run(kTestDuration);
 
-  uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
-                         sizeof(max_assoc_retries));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  uint32_t max_assoc_retries;
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   ASSERT_NE(max_assoc_retries, 0U);
   // We should have gotten a rejection from the fake AP
   EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
@@ -768,7 +770,9 @@ void AssocTest::SendMultipleResp() {
 void AssocTest::SendAssocRespWithWmm() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_buf, ETH_ALEN, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   common::MacAddr my_mac(mac_buf);
   simulation::SimAssocRespFrame assoc_resp_frame(context_.bssid, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
 
@@ -1024,17 +1028,19 @@ TEST_F(AssocTest, AssocMaxRetries) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
+  zx_status_t status;
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
-                         sizeof(max_assoc_retries));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,
-                         sizeof(max_assoc_retries));
+  status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many rejections as the configured # of retries.
   EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
@@ -1059,8 +1065,9 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
-                         sizeof(max_assoc_retries));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
@@ -1083,17 +1090,19 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
+  zx_status_t status;
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
-                         sizeof(max_assoc_retries));
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
 
   env_->Run(kTestDuration);
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,
-                         sizeof(max_assoc_retries));
+  status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
+  EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // We should have gotten a rejection from the fake AP
   EXPECT_EQ(auth_resp_status_list_.size(), 1U);

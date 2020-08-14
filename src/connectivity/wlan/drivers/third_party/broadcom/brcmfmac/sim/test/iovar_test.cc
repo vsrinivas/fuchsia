@@ -16,6 +16,7 @@ class IovarTest : public SimTest {
   IovarTest() = default;
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
+  SimFirmware* sim_fw_;
 
   void Init();
 
@@ -55,7 +56,8 @@ TEST_F(IovarTest, CheckIovarGet) {
   // Get the value through the public iovar interface and compare
   brcmf_simdev* sim = device_->GetSim();
   uint32_t cur_val;
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  bcme_status_t fw_err;
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val), &fw_err);
   EXPECT_EQ(cur_val, read_val);
 }
 
@@ -66,7 +68,8 @@ TEST_F(IovarTest, CheckIovarSet) {
   brcmf_simdev* sim = device_->GetSim();
   // Get the current value of mpc through the public interface
   uint32_t cur_val;
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  bcme_status_t fw_err;
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val), &fw_err);
   // Change the value and set it through the factory iovar interface
   uint32_t new_val = cur_val ? 0 : 1;
   char buf[32];
@@ -77,7 +80,7 @@ TEST_F(IovarTest, CheckIovarSet) {
   zx_status_t status = IovarSet(buf, strlen(buf) + 1 + sizeof(uint32_t));
   EXPECT_EQ(status, ZX_OK);
   // Get the value again through the public iovar interface and compare
-  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val), &fw_err);
   printf("new value of mpc is: %d\n", cur_val);
   EXPECT_EQ(cur_val, new_val);
 }
@@ -95,5 +98,36 @@ TEST_F(IovarTest, CheckIovarWrongBufLen) {
   strcpy(buf, "wsec_key");
   status = IovarSet(buf, strlen(buf) + 1 + sizeof(uint32_t));
   EXPECT_NE(status, ZX_OK);
+}
+
+TEST_F(IovarTest, CheckIovarBufLenTooShort) {
+  Init();
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  EXPECT_EQ(DeviceCount(), 2u);
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status;
+  char caps[25] = "originalbuffer";
+  bcme_status_t fw_err;
+  status = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
+
+  // We expect ZX_ERR_IO_REFUSED and BCMF_BUFTOOSHORT to be returned when
+  // the buffer provided for an iovar value is too small. The buffer should
+  // also remain untouched.
+  EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
+  EXPECT_EQ(fw_err, BCME_BUFTOOSHORT);
+  EXPECT_TRUE(0 == strncmp("originalbuffer", caps, 25));
+}
+
+TEST_F(IovarTest, CheckFilIovarFuncs) {
+  Init();
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  EXPECT_EQ(DeviceCount(), 2u);
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status;
+  char caps[500];
+  status = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), nullptr);
+  EXPECT_EQ(status, ZX_OK);
 }
 }  // namespace wlan::brcmfmac

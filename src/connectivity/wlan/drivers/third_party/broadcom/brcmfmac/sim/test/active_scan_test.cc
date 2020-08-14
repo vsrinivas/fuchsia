@@ -9,6 +9,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
@@ -109,8 +110,12 @@ void ActiveScanTest::EndSimulation() {
 
 void ActiveScanTest::GetFirmwarePfnMac() {
   brcmf_simdev* sim = device_->GetSim();
-  if (!sim_fw_pfn_mac_)
-    sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
+  if (!sim_fw_pfn_mac_) {
+    struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+    zx_status_t status =
+        brcmf_fil_iovar_data_get(ifp, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN, nullptr);
+    EXPECT_EQ(status, ZX_OK);
+  }
 }
 
 void ActiveScanTest::VerifyScanResults() {

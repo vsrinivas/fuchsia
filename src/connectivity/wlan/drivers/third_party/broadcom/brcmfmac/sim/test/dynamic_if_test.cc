@@ -5,6 +5,7 @@
 #include <ddk/protocol/wlanif.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
@@ -108,19 +109,19 @@ void DynamicIfTest::VerifyAssocWithSoftAP() {
 
 void DynamicIfTest::SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result) {
   brcmf_simdev* sim = device_->GetSim();
-  zx_status_t err =
-      sim->sim_fw->IovarsSet(is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_,
-                             "chanspec", chanspec, sizeof(uint16_t));
-  EXPECT_EQ(err, expect_result);
+  struct brcmf_if* ifp =
+      brcmf_get_ifp(sim->drvr, is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_set(ifp, "chanspec", *chanspec, nullptr);
+  EXPECT_EQ(status, expect_result);
 }
 
 uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result) {
   brcmf_simdev* sim = device_->GetSim();
-  uint16_t chanspec;
-  zx_status_t err =
-      sim->sim_fw->IovarsGet(is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_,
-                             "chanspec", &chanspec, sizeof(uint16_t));
-  EXPECT_EQ(err, expect_result);
+  uint32_t chanspec;
+  struct brcmf_if* ifp =
+      brcmf_get_ifp(sim->drvr, is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_);
+  zx_status_t status = brcmf_fil_iovar_int_get(ifp, "chanspec", &chanspec, nullptr);
+  EXPECT_EQ(status, expect_result);
   return chanspec;
 }
 
@@ -165,7 +166,11 @@ TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
   Init();
   common::MacAddr pre_set_mac;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(0, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN);
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  zx_status_t status =
+      brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN, nullptr);
+  EXPECT_EQ(status, ZX_OK);
+
   EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, pre_set_mac),
             ZX_OK);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));

@@ -65,9 +65,9 @@ class SimFirmware {
    public:
     void Clear();
 
-    // Copy data into buffer. If buffer is not large enough, set len_out to needed size and
-    // return ZX_ERR_BUFFER_TOO_SMALL.
-    zx_status_t Get(uint8_t* data, size_t len, size_t* len_out);
+    // Copy data into buffer. This function will return ZX_ERR_INTERNAL
+    // if len_ exceeds INT_MAX.
+    zx_status_t Get(uint8_t* data, size_t len, int* rxlen_out);
 
     bool IsClear();
 
@@ -194,7 +194,8 @@ class SimFirmware {
 
   // Firmware iovar accessors
   zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len);
-  zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len);
+  zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len,
+                        bcme_status_t* fw_err);
 
   // Firmware error injection related methods
   void ErrorInjectSetBit(size_t inject_bit);
