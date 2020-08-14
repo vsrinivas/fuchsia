@@ -15,7 +15,7 @@ const CM_URL: &str =
     "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/cm_for_test.cmx";
 const ROOT_URL: &str =
     "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/test_root.cm";
-const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config.json";
+const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {

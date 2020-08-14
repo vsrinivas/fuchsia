@@ -22,13 +22,6 @@ group("appmgr_policy_eng") {
   ]
 }
 
-# In the future this will probably need to be merged into a more complete component_manager config
-# file, but for now this is the only config.
-resource("component_manager_policy_bootfs") {
-  sources = [ "component_manager_policy.json" ]
-  outputs = [ "config/component_manager" ]
-}
-
 config_data("appmgr_build_info_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "build_info_allowlist_eng.txt" ]

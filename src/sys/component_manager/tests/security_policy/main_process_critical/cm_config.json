@@ -1,4 +1,5 @@
 {
+    debug: true,
     security_policy: {
         job_policy: {
             main_process_critical: [

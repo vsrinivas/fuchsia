@@ -124,17 +124,19 @@ impl CapabilityProvider for RunnerCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{
-            hooks::Hooks,
-            moniker::AbsoluteMoniker,
-            testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
+        crate::{
+            config::{JobPolicyAllowlists, SecurityPolicy},
+            model::{
+                hooks::Hooks,
+                moniker::AbsoluteMoniker,
+                testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
+            },
         },
         anyhow::Error,
         cm_rust::{self, CapabilityName, ChildDecl, ComponentDecl, UseDecl, UseRunnerDecl},
         fidl_fuchsia_sys2 as fsys,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
-        std::convert::TryFrom,
     };
 
     fn sample_start_info(name: &str) -> fcrunner::ComponentStartInfo {
@@ -183,8 +185,15 @@ mod tests {
     // Test plumbing a `BuiltinRunner` through the hook system.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn builtin_runner_hook() -> Result<(), Error> {
-        let config = r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: ["/foo"] } } }"#;
-        let config = Arc::new(RuntimeConfig::try_from(config).expect("Bad config"));
+        let config = Arc::new(RuntimeConfig {
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        });
         let runner = Arc::new(MockRunner::new());
         let builtin_runner =
             Arc::new(BuiltinRunner::new("elf".into(), runner.clone(), Arc::downgrade(&config)));

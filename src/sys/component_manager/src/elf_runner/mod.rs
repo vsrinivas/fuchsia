@@ -760,7 +760,10 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
-        crate::{config::RuntimeConfig, model::moniker::AbsoluteMoniker},
+        crate::{
+            config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            model::moniker::AbsoluteMoniker,
+        },
         fdio,
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_component as fcomp, fidl_fuchsia_data as fdata,
@@ -1210,8 +1213,15 @@ mod tests {
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
 
-        let config = r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: ["/foo"] } } }"#;
-        let config = Arc::new(RuntimeConfig::try_from(config).expect("Bad config"));
+        let config = Arc::new(RuntimeConfig {
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        });
         let args = Arguments {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()

@@ -8,72 +8,56 @@ use {
         startup,
     },
     anyhow::{Context, Error},
-    fidl_fuchsia_component_internal::Config,
-    serde::Deserialize,
+    fidl_fuchsia_component_internal as component_internal,
     std::{convert::TryFrom, path::PathBuf, sync::Weak},
     thiserror::Error,
 };
 
-// TODO(viktard): Consider translating Config into Rust-native struct and merge with RuntimeConfig.
-
 /// Runtime configuration options.
 /// This configuration intended to be "global", in that the same configuration
 /// is applied throughout a given running instance of component_manager.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(default, deny_unknown_fields)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct RuntimeConfig {
     /// How many children, maximum, are returned by a call to `ChildIterator.next()`.
     pub list_children_batch_size: usize,
 
     /// Security policy configuration.
     pub security_policy: SecurityPolicy,
+
+    /// If true, component manager will be in debug mode. In this mode, component manager
+    /// provides the `BlockingEventSource` protocol and exposes this protocol. Component
+    /// manager will not start until it is resumed by a call to
+    /// `BlockingEventSource.StartComponentTree`.
+    ///
+    /// This is done so that an external component (say an integration test) can subscribe
+    /// to events before the root component has started.
+    pub debug: bool,
 }
 
 /// Runtime security policy.
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(default, deny_unknown_fields)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct SecurityPolicy {
     /// Allowlists for Zircon job policy.
-    job_policy: JobPolicyAllowlists,
+    pub job_policy: JobPolicyAllowlists,
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(default, deny_unknown_fields)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct JobPolicyAllowlists {
     /// Absolute monikers for components allowed to be given the ZX_POL_AMBIENT_MARK_VMO_EXEC job
     /// policy.
     ///
     /// Components must request this policy by including "job_policy_ambient_mark_vmo_exec: true" in
     /// their manifest's program object and must be using the ELF runner.
-
     /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
-    #[serde(deserialize_with = "absolute_monikers_from_strings")]
-    ambient_mark_vmo_exec: Vec<AbsoluteMoniker>,
+    pub ambient_mark_vmo_exec: Vec<AbsoluteMoniker>,
 
     /// Absolute monikers for components allowed to have their original process marked as critical
     /// to component_manager's job.
     ///
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their manifest's program object and must be using the ELF runner.
-    #[serde(deserialize_with = "absolute_monikers_from_strings")]
-    main_process_critical: Vec<AbsoluteMoniker>,
-}
-
-pub async fn load_config_from_args(args: &startup::Arguments) -> Result<Config, Error> {
-    io_util::file::read_in_namespace_to_fidl::<Config>(&args.config)
-        .await
-        .context(format!("Failed to read config file {}", args.config))
-}
-
-fn absolute_monikers_from_strings<'de, D>(deserializer: D) -> Result<Vec<AbsoluteMoniker>, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    let strs: Vec<String> = Deserialize::deserialize(deserializer)?;
-    let result: Result<Vec<AbsoluteMoniker>, MonikerError> =
-        strs.iter().map(|s| AbsoluteMoniker::parse_string_without_instances(s)).collect();
-    result.map_err(serde::de::Error::custom)
+    pub main_process_critical: Vec<AbsoluteMoniker>,
 }
 
 impl Default for RuntimeConfig {
@@ -84,45 +68,76 @@ impl Default for RuntimeConfig {
             // security_policy must default to empty to ensure that it fails closed if no
             // configuration is present or it fails to load.
             security_policy: Default::default(),
+
+            debug: false,
         }
     }
 }
 
 impl RuntimeConfig {
-    /// Load RuntimeConfig from the '--config-file' command line arg if one was given. If one was
-    /// given and it is loaded successfully, returns both the RuntimeConfig and the path that the
-    /// config was loaded from. Returns Ok(None) if no config file path is given, or Err() if an
-    /// an error occurs loading it.
-    pub async fn load_from_file(
-        args: &startup::Arguments,
-    ) -> Result<Option<(Self, PathBuf)>, Error> {
-        if let Some(args_path) = &args.runtime_config {
-            let contents = io_util::file::read_in_namespace_to_string(args_path)
+    /// Load RuntimeConfig from the '--config' command line arg. Returns both the RuntimeConfig
+    /// and the path that the config was loaded from. Returns Err() if an an error occurs
+    /// loading it.
+    pub async fn load_from_file(args: &startup::Arguments) -> Result<(Self, PathBuf), Error> {
+        let config =
+            io_util::file::read_in_namespace_to_fidl::<component_internal::Config>(&args.config)
                 .await
-                .context(format!("Failed to read config file {}", args_path))?;
-            return Self::try_from(contents.as_str())
-                .map(|s| Some((s, PathBuf::from(args_path))))
-                .context(format!("Failed to load config file {}", args_path));
-        }
-        Ok(None)
+                .context(format!("Failed to read config file {}", &args.config))?;
+
+        Self::try_from(&config)
+            .map(|s| (s, PathBuf::from(&args.config)))
+            .context(format!("Failed to apply config file {}", &args.config))
     }
 }
 
-impl TryFrom<&str> for RuntimeConfig {
+fn parse_absolute_monikers_from_strings(
+    strs: &Option<Vec<String>>,
+) -> Result<Vec<AbsoluteMoniker>, Error> {
+    let result: Result<Vec<AbsoluteMoniker>, MonikerError> = if let Some(strs) = strs {
+        strs.iter().map(|s| AbsoluteMoniker::parse_string_without_instances(s)).collect()
+    } else {
+        Ok(Vec::new())
+    };
+    result.context(format!("Moniker parsing error for {:?}", strs))
+}
+
+impl TryFrom<&component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
-    fn try_from(s: &str) -> Result<Self, Error> {
-        // TODO(viktard): Configuration is currently encoded as JSON5. This will likely be replaced
-        // with persistent FIDL.
-        serde_json5::from_str(s).map_err(|e| e.into())
+    fn try_from(config: &component_internal::Config) -> Result<Self, Error> {
+        let default = RuntimeConfig::default();
+        let job_policy =
+            if let Some(component_internal::SecurityPolicy { job_policy: Some(job_policy) }) =
+                &config.security_policy
+            {
+                let ambient_mark_vmo_exec =
+                    parse_absolute_monikers_from_strings(&job_policy.ambient_mark_vmo_exec)?;
+                let main_process_critical =
+                    parse_absolute_monikers_from_strings(&job_policy.main_process_critical)?;
+                JobPolicyAllowlists { ambient_mark_vmo_exec, main_process_critical }
+            } else {
+                JobPolicyAllowlists::default()
+            };
+
+        let list_children_batch_size = if let Some(value) = config.list_children_batch_size {
+            usize::try_from(value)?
+        } else {
+            default.list_children_batch_size
+        };
+        Ok(RuntimeConfig {
+            list_children_batch_size: list_children_batch_size,
+            security_policy: SecurityPolicy { job_policy },
+            debug: config.debug.unwrap_or(default.debug),
+        })
     }
 }
 
-/// Errors retured by ScopedPolicyChecker.
+/// Errors returned by ScopedPolicyChecker.
 #[derive(Debug, Clone, Error)]
 pub enum PolicyError {
     #[error("Security policy was unavailable to check")]
     PolicyUnavailable,
+
     #[error("security policy disallows \"{policy}\" job policy for \"{moniker}\"")]
     JobPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
 }
@@ -174,33 +189,21 @@ mod tests {
     use {
         super::*,
         crate::model::moniker::ChildMoniker,
+        fidl::encoding::encode_persistent,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io as fio,
         fuchsia_async::EHandle,
         fuchsia_zircon as zx,
+        futures::future,
         matches::assert_matches,
         std::sync::Arc,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, path, pseudo_directory,
+            file::pcb::asynchronous::read_only, path, pseudo_directory,
         },
     };
 
-    macro_rules! test_config_from_str_err {
-        (
-            $(
-                $test_name:ident => $input:expr,
-            )+
-        ) => {
-            $(
-                #[test]
-                fn $test_name() {
-                    assert_matches!(RuntimeConfig::try_from($input), Err(_));
-                }
-            )+
-        };
-    }
-    macro_rules! test_config_from_str_ok {
+    macro_rules! test_config_ok {
         (
             $(
                 $test_name:ident => ($input:expr, $expected:expr),
@@ -209,74 +212,58 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    assert_matches!(RuntimeConfig::try_from($input), Ok(v) if v == $expected);
+                    assert_matches!(RuntimeConfig::try_from(&$input), Ok(v) if v == $expected);
                 }
             )+
         };
     }
 
-    test_config_from_str_err! {
-        empty_string => "",
-        bad_json_1 => "{",
-        bad_json_2 => "{ security_policy }",
-        unknown_field_1 => "{ foobar: 1",
-        unknown_field_2 => "{ list_children_batch_size: 1, foobar: 1 }",
-        unknown_field_3 => "{ security_policy: { foobar: 1 } }",
-        invalid_moniker => r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: [\"/\", \"bad\"] } } }"#,
+    #[test]
+    fn invalid_moniker() {
+        let config = component_internal::Config {
+            debug: None,
+            list_children_batch_size: None,
+            security_policy: Some(component_internal::SecurityPolicy {
+                job_policy: Some(component_internal::JobPolicyAllowlists {
+                    main_process_critical: None,
+                    ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
+                }),
+            }),
+        };
+
+        assert_matches!(RuntimeConfig::try_from(&config), Err(_));
     }
-    test_config_from_str_ok! {
-        empty_object => ("{}", RuntimeConfig::default()),
-        valid_1 => ("{ security_policy: {} }", RuntimeConfig::default()),
-        valid_2 => ("{ list_children_batch_size: 5 }", RuntimeConfig { list_children_batch_size: 5, ..Default::default() }),
-        valid_3 => (r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: ["/foo"] } } }"#,
+
+    test_config_ok! {
+        all_fields_none => (component_internal::Config {
+            debug: None,
+            list_children_batch_size: None,
+            security_policy: None,
+        }, RuntimeConfig::default()),
+        all_leaf_nodes_none => (component_internal::Config {
+            debug: Some(false),
+            list_children_batch_size: Some(5),
+            security_policy: Some(component_internal::SecurityPolicy {
+                job_policy: Some(component_internal::JobPolicyAllowlists {
+                    main_process_critical: None,
+                    ambient_mark_vmo_exec: None,
+                }),
+            }),
+        }, RuntimeConfig { debug:false, list_children_batch_size: 5, ..Default::default() }),
+        all_fields_some => (
+            component_internal::Config {
+                debug: Some(true),
+                list_children_batch_size: Some(42),
+                security_policy: Some(component_internal::SecurityPolicy {
+                    job_policy: Some(component_internal::JobPolicyAllowlists {
+                        main_process_critical: Some(vec!["/something/important".to_string()]),
+                        ambient_mark_vmo_exec: Some(vec!["/".to_string(), "/foo/bar".to_string()]),
+                    }),
+                }),
+            },
             RuntimeConfig {
-                security_policy: SecurityPolicy {
-                    job_policy: JobPolicyAllowlists {
-                        ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
-                        main_process_critical: vec![],
-                    }
-                },
-                ..Default::default()
-            }
-        ),
-        valid_4 => (r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: ["/", "/foo/bar"] } } }"#,
-            RuntimeConfig {
-                security_policy: SecurityPolicy {
-                    job_policy: JobPolicyAllowlists {
-                        ambient_mark_vmo_exec: vec![
-                            AbsoluteMoniker::root(),
-                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
-                        ],
-                        main_process_critical: vec![
-                        ],
-                    }
-                },
-                ..Default::default()
-            }
-        ),
-        valid_5 => (r#"{ security_policy: { job_policy: { main_process_critical: ["/", "/foo/bar"] } } }"#,
-            RuntimeConfig {
-                security_policy: SecurityPolicy {
-                    job_policy: JobPolicyAllowlists {
-                        ambient_mark_vmo_exec: vec![],
-                        main_process_critical: vec![
-                            AbsoluteMoniker::root(),
-                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
-                        ],
-                    }
-                },
-                ..Default::default()
-            }
-        ),
-        valid_6 => (r#"{
-                security_policy: {
-                    job_policy: {
-                        ambient_mark_vmo_exec: ["/", "/foo/bar"],
-                        main_process_critical: ["/something/important"]
-                    }
-                }
-            }"#,
-            RuntimeConfig {
+                debug: true,
+                list_children_batch_size: 42,
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![
@@ -288,7 +275,6 @@ mod tests {
                         ],
                     }
                 },
-                ..Default::default()
             }
         ),
     }
@@ -296,7 +282,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn config_from_file_no_arg() -> Result<(), Error> {
         let args = startup::Arguments::default();
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Ok(None));
+        assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
         Ok(())
     }
 
@@ -310,9 +296,13 @@ mod tests {
         Ok(())
     }
 
-    fn install_config_dir_in_namespace(config_dir: &str, runtime_config: &str, config_str: &str) {
+    fn install_config_dir_in_namespace(
+        config_dir: &str,
+        config_file: &str,
+        content: Vec<u8>,
+    ) -> Result<(), Error> {
         let dir = pseudo_directory!(
-            runtime_config => read_only_static(config_str.to_string()),
+            config_file => read_only(move || future::ready(Ok(content.clone()))),
         );
         let (dir_server, dir_client) = zx::Channel::create().unwrap();
         dir.open(
@@ -325,29 +315,28 @@ mod tests {
 
         let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
         ns.bind(config_dir, dir_client).expect("Failed to bind test directory");
+        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn config_from_file_valid() -> Result<(), Error> {
         // Install a directory containing a test config file in the test process's namespace.
         let config_dir = "/valid_config";
-        let runtime_config = "test_config";
-        install_config_dir_in_namespace(
-            config_dir,
-            runtime_config,
-            "{ list_children_batch_size: 42 }",
-        );
-
-        let config_path = [config_dir, "/", runtime_config].concat();
-        let args = startup::Arguments {
-            runtime_config: Some(config_path.to_string()),
-            ..Default::default()
+        let config_file = "test_config";
+        let mut config = component_internal::Config {
+            debug: None,
+            list_children_batch_size: Some(42),
+            security_policy: None,
         };
+        install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
+
+        let config_path = [config_dir, "/", config_file].concat();
+        let args = startup::Arguments { config: config_path.to_string(), ..Default::default() };
         let expected = (
             RuntimeConfig { list_children_batch_size: 42, ..Default::default() },
             PathBuf::from(config_path),
         );
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Ok(Some(v)) if v == expected);
+        assert_matches!(RuntimeConfig::load_from_file(&args).await, Ok(v) if v == expected);
         Ok(())
     }
 
@@ -355,14 +344,12 @@ mod tests {
     async fn config_from_file_invalid() -> Result<(), Error> {
         // Install a directory containing a test config file in the test process's namespace.
         let config_dir = "/invalid_config";
-        let runtime_config = "test_config";
-        install_config_dir_in_namespace(config_dir, runtime_config, "{");
+        let config_file = "test_config";
+        // Add config file containing garbage data.
+        install_config_dir_in_namespace(config_dir, config_file, vec![0xfa, 0xde])?;
 
-        let config_path = [config_dir, "/", runtime_config].concat();
-        let args = startup::Arguments {
-            runtime_config: Some(config_path.to_string()),
-            ..Default::default()
-        };
+        let config_path = [config_dir, "/", config_file].concat();
+        let args = startup::Arguments { config: config_path.to_string(), ..Default::default() };
         assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
         Ok(())
     }

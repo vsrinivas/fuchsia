@@ -22,9 +22,8 @@ use {
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fidl_examples_echo as echo,
-    fidl_fuchsia_component_internal::Config,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -672,11 +671,8 @@ pub async fn new_test_model(
         ..Default::default()
     };
 
-    let config = Config { debug: None };
-
     let builtin_environment = Arc::new(
         BuiltinEnvironmentBuilder::new()
-            .set_config(config)
             .set_args(args)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())

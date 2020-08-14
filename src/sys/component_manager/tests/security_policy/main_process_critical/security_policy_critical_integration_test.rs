@@ -14,7 +14,7 @@ use {
 const COMPONENT_MANAGER_URL: &str = "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/component_manager.cmx";
 const ROOT_URL: &str =
     "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/test_root.cm";
-const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config.json";
+const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
 
 const COMPONENT_MANAGER_DEATH_TIMEOUT: i64 = 5;
 

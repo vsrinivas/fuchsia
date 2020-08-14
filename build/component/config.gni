@@ -35,10 +35,10 @@ template("component_config") {
                          [
                            "testonly",
                            "visibility",
-                           "source",
+                           "sources",
                          ])
 
-  assert(defined(source), "Parameter source=... is required")
+  assert(defined(sources), "Parameter source=... is required")
 
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
@@ -49,18 +49,28 @@ template("component_config") {
 
   compiled_target = "${target_name}"
   compiled_action(compiled_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
     tool = "//tools/component_manager_config:generate_config_bin"
     tool_output_name = "generate_config"
 
-    inputs = [ source ]
+    inputs = sources
 
     outputs = [ output_file_name ]
 
     args = [
       "--output",
       rebase_path(output_file_name, root_build_dir),
-      "--input",
-      rebase_path(source, root_build_dir),
     ]
+    foreach(source, sources) {
+      args += [
+        "--input",
+        rebase_path(source, root_build_dir),
+      ]
+    }
   }
 }

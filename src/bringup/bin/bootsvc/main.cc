@@ -178,14 +178,11 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     // Note that arguments are comma-delimited.
-    // TODO(fxbug.dev/57400): migrate --runtime-config to --config.
     bootsvc_next =
         "bin/component_manager,"
         "fuchsia-boot:///#meta/root.cm,"
-        "--runtime-config,"
-        "/boot/config/component_manager,"
         "--config,"
-        "/boot/config/component_manager_config,"
+        "/boot/config/component_manager,"
         "--use-builtin-process-launcher,"
         "--maintain-utc-clock";
   }

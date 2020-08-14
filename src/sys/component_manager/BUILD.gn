@@ -58,8 +58,6 @@ template("component_manager") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
@@ -329,12 +327,15 @@ group("tests") {
   ]
 }
 
-component_config("component_manager_config") {
-  source = "config.json"
+group("bootfs") {
+  deps = [
+    ":bin",
+    ":component_manager_config_bootfs_resource",
+  ]
 }
 
-component_config("component_manager_test_config") {
-  source = "test_config.json"
+component_config("component_manager_config") {
+  sources = [ "config.json" ]
 }
 
 resource("component_manager_config_resource") {
@@ -343,21 +344,25 @@ resource("component_manager_config_resource") {
   deps = [ ":component_manager_config" ]
 }
 
+component_config("component_manager_test_config") {
+  sources = [ "test_config.json" ]
+}
+
 resource("component_manager_test_config_resource") {
   sources = [ "$target_gen_dir/component_manager_test_config" ]
   outputs = [ "data/component_manager_config" ]
   deps = [ ":component_manager_test_config" ]
 }
 
-resource("component_manager_config_bootfs") {
-  sources = [ "$target_gen_dir/component_manager_config" ]
-  outputs = [ "config/component_manager_config" ]
-  deps = [ ":component_manager_config" ]
+component_config("component_manager_bootfs_config") {
+  sources = [
+    "config.json",
+    rebase_path("//src/security/policy/component_manager_policy.json"),
+  ]
 }
 
-group("bootfs") {
-  deps = [
-    ":bin",
-    ":component_manager_config_bootfs",
-  ]
+resource("component_manager_config_bootfs_resource") {
+  sources = [ "$target_gen_dir/component_manager_bootfs_config" ]
+  outputs = [ "config/component_manager" ]
+  deps = [ ":component_manager_bootfs_config" ]
 }

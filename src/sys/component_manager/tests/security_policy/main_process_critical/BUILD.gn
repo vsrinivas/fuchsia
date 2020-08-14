@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
@@ -50,12 +51,16 @@ rustc_binary("exit_on_command") {
   sources = [ "exit_on_command.rs" ]
 }
 
+component_config("cm_config") {
+  sources = [ "cm_config.json" ]
+}
+
 test_package("security-policy-critical-integration-test") {
   deps = [
+    ":cm_config",
     ":exit_on_command",
     ":security_policy_critical_integration_test_bin",
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   tests = [
@@ -97,12 +102,8 @@ test_package("security-policy-critical-integration-test") {
 
   resources = [
     {
-      path = "cm_config.json"
-      dest = "cm_config.json"
-    },
-    {
-      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
-      dest = "component_manager_config"
+      path = "$target_gen_dir/cm_config"
+      dest = "cm_config"
     },
   ]
 }

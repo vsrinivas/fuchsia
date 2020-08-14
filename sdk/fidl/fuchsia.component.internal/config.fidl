@@ -4,6 +4,12 @@
 
 library fuchsia.component.internal;
 
+using fuchsia.component;
+
+/// The maximum size of the JobPolicyAllowlists entries.
+/// This value is currently set arbitrarily.
+const uint64 MAX_ALLOWLIST_SIZE = 128;
+
 table Config {
     /// If true, component manager will be in debug mode. In this mode, component manager
     /// provides the `BlockingEventSource` protocol and exposes this protocol. Component
@@ -13,4 +19,34 @@ table Config {
     /// This is done so that an external component (say an integration test) can subscribe
     /// to events before the root component has started.
     1: bool debug;
+
+    /// How many children, maximum, are returned by a call to `Realm.ChildIterator.next()`.
+    2: uint32 list_children_batch_size;
+
+    /// Security policy configuration.
+    3: SecurityPolicy security_policy;
+};
+
+/// Runtime security policy.
+table SecurityPolicy {
+    /// Allowlists for Zircon job policy.
+    1: JobPolicyAllowlists job_policy;
+};
+
+/// Allowlists for Zircon job policy.
+table JobPolicyAllowlists {
+    /// Absolute monikers for components allowed to be given the ZX_POL_AMBIENT_MARK_VMO_EXEC job
+    /// policy.
+    ///
+    /// Components must request this policy by including "job_policy_ambient_mark_vmo_exec: true" in
+    /// their CML's `program` section and must be using the ELF runner.
+    /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
+    1: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE ambient_mark_vmo_exec;
+
+    /// Absolute monikers for components allowed to have their original process marked as critical
+    /// to component_manager's job.
+    ///
+    /// Components must request this critical marking by including "main_process_critical: true" in
+    /// their CML's `program` section and must be using the ELF runner.
+    2: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE main_process_critical;
 };

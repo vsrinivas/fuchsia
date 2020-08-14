@@ -27,7 +27,7 @@ pub async fn start_policy_test(
 ) -> Result<(OpaqueTest, fsys::RealmProxy), Error> {
     let test = OpaqueTestBuilder::new(root_component_url)
         .component_manager_url(component_manager_url)
-        .runtime_config(config_path)
+        .config(config_path)
         .build()
         .await?;
     let event_source = test.connect_to_event_source().await?;

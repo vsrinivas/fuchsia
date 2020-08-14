@@ -45,7 +45,6 @@ use {
     anyhow::{format_err, Context as _, Error},
     cm_rust::CapabilityName,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
-    fidl_fuchsia_component_internal::Config,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -72,7 +71,6 @@ pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_sec
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     args: Option<Arguments>,
-    config: Option<Config>,
     runtime_config: Option<RuntimeConfig>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
@@ -92,12 +90,7 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
-    pub fn set_config(mut self, config: Config) -> Self {
-        self.config = Some(config);
-        self
-    }
-
-    // TODO(viktard): add a method to populate config from Args.
+    /// Unless set, `RuntimeConfig` will be loaded from a file specified by `args`.
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
         self.runtime_config = Some(runtime_config);
         self
@@ -174,6 +167,18 @@ impl BuiltinEnvironmentBuilder {
 
     pub async fn build(self) -> Result<BuiltinEnvironment, Error> {
         let args = self.args.unwrap_or_default();
+        let runtime_config = if let Some(runtime_config) = self.runtime_config {
+            runtime_config
+        } else {
+            match RuntimeConfig::load_from_file(&args).await {
+                Ok((config, path)) => {
+                    info!("Loaded runtime config from {}", path.display());
+                    config
+                }
+                Err(err) => panic!("Failed to load runtime config: {}", err),
+            }
+        };
+
         let runner_map = self
             .runners
             .iter()
@@ -206,7 +211,7 @@ impl BuiltinEnvironmentBuilder {
         }
 
         // Wrap BuiltinRunnerFactory in BuiltinRunner now that we have the definite RuntimeConfig.
-        let runtime_config = Arc::new(self.runtime_config.unwrap_or_default());
+        let runtime_config = Arc::new(runtime_config);
         let builtin_runners = self
             .runners
             .into_iter()
@@ -215,18 +220,8 @@ impl BuiltinEnvironmentBuilder {
             })
             .collect();
 
-        let config =
-            self.config.ok_or(format_err!("Config is required for BuiltinEnvironment."))?;
-
-        Ok(BuiltinEnvironment::new(
-            model,
-            config,
-            args,
-            runtime_config,
-            builtin_runners,
-            self.utc_clock,
-        )
-        .await?)
+        Ok(BuiltinEnvironment::new(model, args, runtime_config, builtin_runners, self.utc_clock)
+            .await?)
     }
 
     /// Checks if the appmgr loader service is available through our namespace and connects to it if
@@ -283,12 +278,24 @@ pub struct BuiltinEnvironment {
 impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
-        config: Config,
         args: Arguments,
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         utc_clock: Option<Arc<Clock>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
+        let execution_mode = match runtime_config.debug {
+            true => ExecutionMode::Debug,
+            false => ExecutionMode::Production,
+        };
+
+        let event_logger = if runtime_config.debug {
+            let event_logger = Arc::new(EventLogger::new());
+            model.root_realm.hooks.install(event_logger.hooks()).await;
+            Some(event_logger)
+        } else {
+            None
+        };
+
         // Set up ProcessLauncher if available.
         let process_launcher = if args.use_builtin_process_launcher {
             let process_launcher = Arc::new(ProcessLauncher::new());
@@ -423,11 +430,6 @@ impl BuiltinEnvironment {
         };
         model.root_realm.hooks.install(event_registry.hooks()).await;
 
-        let execution_mode = match config.debug {
-            Some(true) => ExecutionMode::Debug,
-            _ => ExecutionMode::Production,
-        };
-
         // Set up the event source factory.
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
@@ -441,14 +443,6 @@ impl BuiltinEnvironment {
             execution_mode.clone(),
         ));
         model.root_realm.hooks.install(event_stream_provider.hooks()).await;
-
-        let event_logger = if config.debug.unwrap_or(false) {
-            let event_logger = Arc::new(EventLogger::new());
-            model.root_realm.hooks.install(event_logger.hooks()).await;
-            Some(event_logger)
-        } else {
-            None
-        };
 
         Ok(BuiltinEnvironment {
             model,
