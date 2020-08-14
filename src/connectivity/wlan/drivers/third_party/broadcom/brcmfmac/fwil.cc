@@ -56,9 +56,11 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     return ZX_ERR_IO;
   }
 
-  if (data != NULL) {
-    len = std::min<uint>(len, BRCMF_DCMD_MAXLEN);
+  if (len > BRCMF_DCMD_MAXLEN) {
+    BRCMF_ERR("Buffer (%u bytes) exceeds maximum DCMD length (%u bytes).", len, BRCMF_DCMD_MAXLEN);
+    return ZX_ERR_IO_INVALID;
   }
+
   if (set) {
     err = brcmf_proto_set_dcmd(drvr, ifp->ifidx, cmd, data, len, &fwerr);
   } else {

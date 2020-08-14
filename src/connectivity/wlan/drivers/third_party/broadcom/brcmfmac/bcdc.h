@@ -54,6 +54,8 @@ struct brcmf_proto_bcdc_header {
  * for bus alignment padding.
  */
 #define BUS_HEADER_LEN (16 + 64)
+#define BCDC_TX_IOCTL_MAX_MSG_SIZE \
+  (BRCMF_TX_IOCTL_MAX_MSG_SIZE - sizeof(struct brcmf_proto_bcdc_dcmd))
 struct brcmf_bcdc {
   uint16_t reqid;
   uint8_t bus_header[BUS_HEADER_LEN];

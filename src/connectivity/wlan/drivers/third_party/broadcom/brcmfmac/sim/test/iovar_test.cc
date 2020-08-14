@@ -4,6 +4,7 @@
 
 #include <ddk/protocol/wlanif.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -129,5 +130,15 @@ TEST_F(IovarTest, CheckFilIovarFuncs) {
   char caps[500];
   status = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), nullptr);
   EXPECT_EQ(status, ZX_OK);
+}
+
+TEST_F(IovarTest, CheckIovarBufLenTooLong) {
+  Init();
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  EXPECT_EQ(DeviceCount(), 2u);
+  char buf[BRCMF_DCMD_MAXLEN + 1];
+  strcpy(buf, "anything");
+  zx_status_t status = IovarGet(buf, BRCMF_DCMD_MAXLEN + 1);
+  EXPECT_NE(status, ZX_OK);
 }
 }  // namespace wlan::brcmfmac

@@ -23,6 +23,8 @@
 
 #include <zircon/status.h>
 
+#include <algorithm>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -49,63 +51,91 @@ struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr) {
 }
 
 static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                        uint len, bool set) {
+                                        uint buflen, bool set) {
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
-  struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
+  uint cmdlen = buflen;
   uint32_t flags;
+
   if (cmd == BRCMF_C_GET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, static_cast<char*>(buf));
+    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", buflen, static_cast<char*>(buf));
   } else if (cmd == BRCMF_C_SET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, static_cast<char*>(buf));
+    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", buflen, static_cast<char*>(buf));
   } else {
     BRCMF_DBG(BCDC, "Enter");
   }
 
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), buf, len,
-                     "Sending BCDC Message (%u bytes)", len);
+  if (cmdlen > BCDC_TX_IOCTL_MAX_MSG_SIZE) {
+    BRCMF_DBG(BCDC, "Only the first %lu bytes of the buffer (%u bytes) will be transmitted.",
+              BCDC_TX_IOCTL_MAX_MSG_SIZE, buflen);
+    cmdlen = BCDC_TX_IOCTL_MAX_MSG_SIZE;
+  }
 
-  memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
+  /* Initialize bcdc->msg */
+  memset(&bcdc->msg, 0, sizeof(bcdc->msg));
+  bcdc->msg.cmd = cmd;
+  // Even though we only transmit at most BCDC_TX_IOCTL_MAX_MSG_SIZE bytes, the bcdc->msg.len field
+  // should still contain the actual length of the buffer so the firmware knows the upper bound of
+  // bytes it can respond with.
+  bcdc->msg.len = buflen;
 
-  msg->cmd = cmd;
-  msg->len = len;
   flags = (++bcdc->reqid << BCDC_DCMD_ID_SHIFT);
   if (set) {
     flags |= BCDC_DCMD_SET;
   }
   flags = (flags & ~BCDC_DCMD_IF_MASK) | (ifidx << BCDC_DCMD_IF_SHIFT);
-  msg->flags = flags;
+  bcdc->msg.flags = flags;
 
   if (buf) {
-    memcpy(bcdc->buf, buf, len);
+    // Copy the entire buffer into bcdc->buf even though only the first BCDC_TX_IOCTL_MAX_MSG_SIZE
+    // bytes may be transmitted. This is to ensure the received data will be correct on the
+    // other end in case the entire buffer is not overwritten by the response.
+    memcpy(bcdc->buf, buf, buflen);
   }
 
-  len += sizeof(*msg);
-  if (len > BRCMF_TX_IOCTL_MAX_MSG_SIZE) {
-    len = BRCMF_TX_IOCTL_MAX_MSG_SIZE;
-  }
   /* Send request */
-  return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len);
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), &bcdc->msg, bcdc->msg.len,
+                     "Sending BCDC Message (%u bytes)", bcdc->msg.len);
+  if (cmdlen < bcdc->msg.len) {
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), (unsigned char*)buf + cmdlen,
+                       bcdc->msg.len - cmdlen,
+                       "IOCTL from host to device is limited to %lu bytes. The following bytes "
+                       "at the end of the BCDC message were not transmitted.",
+                       BCDC_TX_IOCTL_MAX_MSG_SIZE);
+  }
+  return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg,
+                         sizeof(struct brcmf_proto_bcdc_dcmd) + cmdlen);
 }
 
 static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, uint32_t len,
-                                          int* rxlen_out) {
+                                          int* rxbuflen) {
   zx_status_t ret;
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
+  int rxlen_out = 0;
 
   BRCMF_DBG(BCDC, "Enter");
-  len += sizeof(struct brcmf_proto_bcdc_dcmd);
   do {
-    ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len, rxlen_out);
+    ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg,
+                          sizeof(struct brcmf_proto_bcdc_dcmd) + len, &rxlen_out);
     if (ret != ZX_OK) {
       break;
     }
+    // bcdc->msg.flags is written to by the brcmf_bus_rxctl call as long as msglen is
+    // at least sizeof(struct brcmf_proto_bcdc_dcmd) bytes
   } while (BCDC_DCMD_ID(bcdc->msg.flags) != id);
 
-  uint32_t actual_len = bcdc->msg.len;
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), bcdc->buf, actual_len,
-                     "Received BCDC Message (%u bytes)", actual_len);
+  if (rxbuflen) {
+    *rxbuflen = std::max(0, rxlen_out - (int)sizeof(struct brcmf_proto_bcdc_dcmd));
+
+    if (*rxbuflen < (int)len) {
+      BRCMF_DBG(BCDC, "brcmf_bus_rxctl only overwrote the first %d bytes of bcdc->buf (%u bytes)",
+                *rxbuflen, len);
+    }
+  }
+
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), &bcdc->msg, bcdc->msg.len,
+                     "Received BCDC Message (%d bytes)", bcdc->msg.len);
 
   return ret;
 }
@@ -117,7 +147,7 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
   void* info;
   zx_status_t ret = ZX_OK;
   int retries = 0;
-  int rxlen;
+  int rxbuflen;
   uint32_t id, flags;
 
   BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
@@ -131,7 +161,7 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
 
 retry:
   /* wait for interrupt and get first fragment */
-  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen);
+  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxbuflen);
   if (ret != ZX_OK) {
     goto done;
   }
@@ -154,8 +184,8 @@ retry:
 
   /* Copy info buffer */
   if (buf) {
-    if (rxlen < (int)len) {
-      len = rxlen;
+    if (rxbuflen < (int)len) {
+      len = rxbuflen;
     }
     memcpy(buf, info, len);
   }
@@ -177,7 +207,6 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
   struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
   zx_status_t ret;
   uint32_t flags, id;
-  int rxlen_out;
 
   BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
 
@@ -187,7 +216,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
     goto done;
   }
 
-  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
+  ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, NULL);
   if (ret != ZX_OK) {
     BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d", ret);
     goto done;
@@ -203,6 +232,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
     goto done;
   }
 
+  BRCMF_DBG(BCDC, "Set DCMD message received.");
   ret = ZX_OK;
 
   /* Check the ERROR flag */

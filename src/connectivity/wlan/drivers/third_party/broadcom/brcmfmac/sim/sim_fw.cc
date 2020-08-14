@@ -593,10 +593,7 @@ void SimFirmware::BcdcResponse::Clear() { len_ = 0; }
 
 zx_status_t SimFirmware::BcdcResponse::Get(uint8_t* msg, size_t len, int* rxlen_out) {
   memcpy(msg, msg_, std::min(len, len_));
-  if (len_ > INT_MAX) {
-    BRCMF_ERR("response length exceeds INT_MAX.");
-    return ZX_ERR_INTERNAL;
-  }
+  ZX_ASSERT_MSG(len_ <= INT_MAX, "Response length exceeds INT_MAX");
   *rxlen_out = static_cast<int>(len_);
   return ZX_OK;
 }

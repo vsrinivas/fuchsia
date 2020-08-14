@@ -2761,9 +2761,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(brcmf_bus* bus_if, unsigned char* msg, u
   free(buf);
 
   if (rxlen) {
-    if (rxlen != msglen) {
-      BRCMF_DBG(CTL, "resumed on rxctl frame, got %d expected %d", rxlen, msglen);
-    }
+    BRCMF_DBG(CTL, "resumed on rxctl frame, received %d, message length %d", rxlen, msglen);
   } else if (timeout) {
     BRCMF_ERR("resumed on timeout");
     brcmf_sdio_checkdied(bus);
