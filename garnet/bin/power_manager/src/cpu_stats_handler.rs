@@ -260,8 +260,8 @@ impl InspectData {
 
 #[async_trait(?Send)]
 impl Node for CpuStatsHandler {
-    fn name(&self) -> &'static str {
-        "CpuStatsHandler"
+    fn name(&self) -> String {
+        "CpuStatsHandler".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

@@ -147,8 +147,8 @@ impl CrashReportHandler {
 
 #[async_trait(?Send)]
 impl Node for CrashReportHandler {
-    fn name(&self) -> &'static str {
-        "CrashReportHandler"
+    fn name(&self) -> String {
+        "CrashReportHandler".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

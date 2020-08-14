@@ -222,8 +222,8 @@ impl ShutdownWatcher {
 
 #[async_trait(?Send)]
 impl Node for ShutdownWatcher {
-    fn name(&self) -> &'static str {
-        "ShutdownWatcher"
+    fn name(&self) -> String {
+        "ShutdownWatcher".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

@@ -35,7 +35,6 @@ use std::rc::Rc;
 /// FIDL dependencies: N/A
 
 pub struct ThermalShutdownBuilder {
-    sensor_name: String,
     thermal_shutdown_temperature: Celsius,
     poll_interval: Seconds,
     filter_time_constant: Seconds,
@@ -45,13 +44,8 @@ pub struct ThermalShutdownBuilder {
 
 impl ThermalShutdownBuilder {
     #[cfg(test)]
-    fn new(
-        name: String,
-        temperature_node: Rc<dyn Node>,
-        system_shutdown_node: Rc<dyn Node>,
-    ) -> Self {
+    fn new(temperature_node: Rc<dyn Node>, system_shutdown_node: Rc<dyn Node>) -> Self {
         ThermalShutdownBuilder {
-            sensor_name: name,
             thermal_shutdown_temperature: Celsius(0.0),
             poll_interval: Seconds(0.0),
             filter_time_constant: Seconds(0.0),
@@ -63,7 +57,6 @@ impl ThermalShutdownBuilder {
     pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
         #[derive(Deserialize)]
         struct Config {
-            sensor_name: String,
             thermal_shutdown_temperature_c: f64,
             poll_interval_s: f64,
             filter_time_constant_s: f64,
@@ -83,7 +76,6 @@ impl ThermalShutdownBuilder {
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self {
-            sensor_name: data.config.sensor_name,
             thermal_shutdown_temperature: Celsius(data.config.thermal_shutdown_temperature_c),
             poll_interval: Seconds(data.config.poll_interval_s),
             filter_time_constant: Seconds(data.config.filter_time_constant_s),
@@ -100,7 +92,6 @@ impl ThermalShutdownBuilder {
 
     pub fn build(self) -> Result<Rc<ThermalShutdown>, Error> {
         let node = Rc::new(ThermalShutdown {
-            sensor_name: self.sensor_name,
             temperature_filter: TemperatureFilter::new(
                 self.temperature_node.clone(),
                 self.filter_time_constant,
@@ -116,11 +107,7 @@ impl ThermalShutdownBuilder {
     }
 }
 
-#[allow(unused)]
 pub struct ThermalShutdown {
-    /// Human-friendly name of the sensor that this node is monitoring.
-    sensor_name: String,
-
     /// Provides filtered temperature values according to the configured filter constant.
     temperature_filter: TemperatureFilter,
 
@@ -159,7 +146,7 @@ impl ThermalShutdown {
         if self.temperature_filter.get_temperature(get_current_timestamp()).await?.filtered
             >= self.thermal_shutdown_temperature
         {
-            info!("{:?} crossed high temperature mark. Rebooting...", self.sensor_name);
+            info!("{:?} crossed high temperature mark. Rebooting...", self.temperature_node.name());
             self.send_message(
                 &self.system_shutdown_node,
                 &Message::SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)),
@@ -174,8 +161,8 @@ impl ThermalShutdown {
 
 #[async_trait(?Send)]
 impl Node for ThermalShutdown {
-    fn name(&self) -> &'static str {
-        "ThermalShutdown"
+    fn name(&self) -> String {
+        "ThermalShutdown".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
@@ -198,7 +185,6 @@ mod tests {
             "type": "ThermalShutdown",
             "name": "thermal_shutdown",
             "config": {
-                "sensor_name": "qwerty",
                 "thermal_shutdown_temperature_c": 1.2,
                 "poll_interval_s": 3.4,
                 "filter_time_constant_s": 5.6
@@ -231,7 +217,7 @@ mod tests {
             )],
         );
 
-        let node = ThermalShutdownBuilder::new("Fake".to_string(), temperature_node, shutdown_node)
+        let node = ThermalShutdownBuilder::new(temperature_node, shutdown_node)
             .with_thermal_shutdown_temperature(Celsius(99.0))
             .build()
             .unwrap();

@@ -451,8 +451,8 @@ impl ThermalLimiter {
 
 #[async_trait(?Send)]
 impl Node for ThermalLimiter {
-    fn name(&self) -> &'static str {
-        "ThermalLimiter"
+    fn name(&self) -> String {
+        "ThermalLimiter".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

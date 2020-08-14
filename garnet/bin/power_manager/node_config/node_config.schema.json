@@ -387,9 +387,6 @@
           "config": {
             "type": "object",
             "properties": {
-              "sensor_name": {
-                "type": "string"
-              },
               "thermal_shutdown_temperature_c": {
                 "type": "number"
               },
@@ -402,7 +399,6 @@
             },
             "additionalProperties": false,
             "required": [
-              "sensor_name",
               "thermal_shutdown_temperature_c",
               "poll_interval_s",
               "filter_time_constant_s"

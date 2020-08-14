@@ -14,7 +14,7 @@ pub trait Node {
     ///
     /// Each node should use this function to indicate a meaningful name.
     /// The name may be used for logging and/or debugging purposes.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> String;
 
     /// Handle a new message
     ///
@@ -41,8 +41,8 @@ pub trait Node {
             "message_start",
             fuchsia_trace::Scope::Thread,
             "message" => format!("{:?}", msg).as_str(),
-            "source_node" => self.name(),
-            "dest_node" => node.name()
+            "source_node" => self.name().as_str(),
+            "dest_node" => node.name().as_str()
         );
 
         let result = node.handle_message(msg).await;
@@ -51,8 +51,8 @@ pub trait Node {
             "message_result",
             fuchsia_trace::Scope::Thread,
             "message" => format!("{:?}", msg).as_str(),
-            "source_node" => self.name(),
-            "dest_node" => node.name(),
+            "source_node" => self.name().as_str(),
+            "dest_node" => node.name().as_str(),
             "result" => format!("{:?}", result).as_str()
         );
         result

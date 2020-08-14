@@ -146,20 +146,10 @@ impl TemperatureHandler {
         );
         let (status, temperature) =
             self.driver_proxy.get_temperature_celsius().await.map_err(|e| {
-                format_err!(
-                    "{} ({}): get_temperature_celsius IPC failed: {}",
-                    self.name(),
-                    self.driver_path,
-                    e
-                )
+                format_err!("{}: get_temperature_celsius IPC failed: {}", self.name(), e)
             })?;
         zx::Status::ok(status).map_err(|e| {
-            format_err!(
-                "{} ({}): get_temperature_celsius driver returned error: {}",
-                self.name(),
-                self.driver_path,
-                e
-            )
+            format_err!("{}: get_temperature_celsius driver returned error: {}", self.name(), e)
         })?;
         Ok(Celsius(temperature.into()))
     }
@@ -167,8 +157,8 @@ impl TemperatureHandler {
 
 #[async_trait(?Send)]
 impl Node for TemperatureHandler {
-    fn name(&self) -> &'static str {
-        "TemperatureHandler"
+    fn name(&self) -> String {
+        format!("TemperatureHandler ({})", self.driver_path)
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

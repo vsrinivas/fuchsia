@@ -397,8 +397,8 @@ pub fn force_shutdown() {
 
 #[async_trait(?Send)]
 impl Node for SystemShutdownHandler {
-    fn name(&self) -> &'static str {
-        "SystemShutdownHandler"
+    fn name(&self) -> String {
+        "SystemShutdownHandler".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

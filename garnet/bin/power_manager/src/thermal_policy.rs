@@ -766,8 +766,8 @@ impl ThermalPolicy {
 
 #[async_trait(?Send)]
 impl Node for ThermalPolicy {
-    fn name(&self) -> &'static str {
-        "ThermalPolicy"
+    fn name(&self) -> String {
+        "ThermalPolicy".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

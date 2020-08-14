@@ -29,7 +29,7 @@ macro_rules! msg_ok_return {
 /// specified data.
 struct MockNode {
     /// Name of this MockNode, used mainly for logging
-    name: &'static str,
+    name: String,
 
     /// A vector of (Message, Result) pairs. This specifies the list of Messages the MockNode
     /// expects to receive, along with the Result that the MockNode will respond with.
@@ -66,8 +66,8 @@ fn match_variant(msg1: &Message, msg2: &Message) -> bool {
 
 #[async_trait(?Send)]
 impl Node for MockNode {
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
@@ -122,7 +122,7 @@ pub fn create_mock_node(
     msg_response_pairs.reverse();
 
     Rc::new(MockNode {
-        name,
+        name: name.to_string(),
         msg_response_pairs: RefCell::new(msg_response_pairs),
         msg_rcv_count: Cell::new(0),
     })
@@ -135,8 +135,8 @@ struct DummyNode {}
 
 #[async_trait(?Send)]
 impl Node for DummyNode {
-    fn name(&self) -> &'static str {
-        "DummyNode"
+    fn name(&self) -> String {
+        "DummyNode".to_string()
     }
 
     async fn handle_message(&self, _msg: &Message) -> Result<MessageReturn, PowerManagerError> {

@@ -130,14 +130,10 @@ impl DeviceControlHandler {
     }
 
     async fn get_performance_state(&self) -> Result<u32, Error> {
-        let state = self.driver_proxy.get_current_performance_state().await.map_err(|e| {
-            format_err!(
-                "{} ({}): get_performance_state IPC failed: {}",
-                self.name(),
-                self.driver_path,
-                e
-            )
-        })?;
+        let state =
+            self.driver_proxy.get_current_performance_state().await.map_err(|e| {
+                format_err!("{}: get_performance_state IPC failed: {}", self.name(), e)
+            })?;
 
         Ok(state)
     }
@@ -180,22 +176,12 @@ impl DeviceControlHandler {
         // Make the FIDL call
         let (status, _out_state) =
             self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
-                format_err!(
-                    "{} ({}): set_performance_state IPC failed: {}",
-                    self.name(),
-                    self.driver_path,
-                    e
-                )
+                format_err!("{}: set_performance_state IPC failed: {}", self.name(), e)
             })?;
 
         // Check the status code
         zx::Status::ok(status).map_err(|e| {
-            format_err!(
-                "{} ({}): set_performance_state driver returned error: {}",
-                self.name(),
-                self.driver_path,
-                e
-            )
+            format_err!("{}: set_performance_state driver returned error: {}", self.name(), e)
         })?;
 
         Ok(())
@@ -204,8 +190,8 @@ impl DeviceControlHandler {
 
 #[async_trait(?Send)]
 impl Node for DeviceControlHandler {
-    fn name(&self) -> &'static str {
-        "DeviceControlHandler"
+    fn name(&self) -> String {
+        format!("DeviceControlHandler ({})", self.driver_path)
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {

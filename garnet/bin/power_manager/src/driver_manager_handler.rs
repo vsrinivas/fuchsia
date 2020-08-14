@@ -475,8 +475,8 @@ impl DriverManagerHandler {
 
 #[async_trait(?Send)]
 impl Node for DriverManagerHandler {
-    fn name(&self) -> &'static str {
-        "DriverManagerHandler"
+    fn name(&self) -> String {
+        "DriverManagerHandler".to_string()
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
