@@ -52,6 +52,7 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/lib/deprecated_service_provider",
+    "//src/modular/lib/fidl:view_host",
     "//src/modular/lib/scoped_tmpfs",
   ]
 
@@ -80,7 +81,6 @@ source_set("sessionmgr_lib") {
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/fidl:json_xdr",
-    "//src/modular/lib/fidl:view_host",
     "//src/modular/lib/modular_config:modular_config",
   ]
 }
