@@ -42,6 +42,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     however they may contribute to the config-data and shell-commands meta
 #     packages.
 #
+#   bootfs_labels (optional)
+#     [list of labels] If present, this list contains the objects installed
+#     on the bootfs partition of the generated ZBI.
+#
 #   netboot (default: false)
 #     [boolean] Whether the generated ZBI should contain the entire system.
 #
@@ -428,15 +432,21 @@ template("assemble_system") {
                            ])
 
     testonly = true
-    deps =
-        [
-          ":${image_name}_cmdline",
-          ":${image_name}_devmgr_config",
-          ":${image_name}_system_image.manifest",
-          ":${image_name}_zxcrypt_config",
-          ":${image_name}_ta",
-          "//build/unification/zbi:kernel",
-        ] + product_bootfs_labels + board_bootfs_labels + common_image_contents
+    deps = [
+      ":${image_name}_cmdline",
+      ":${image_name}_devmgr_config",
+      ":${image_name}_system_image.manifest",
+      ":${image_name}_ta",
+      ":${image_name}_zxcrypt_config",
+      "//build/unification/zbi:kernel",
+    ]
+
+    if (defined(invoker.bootfs_labels)) {
+      deps += invoker.bootfs_labels
+    } else {
+      deps +=
+          product_bootfs_labels + board_bootfs_labels + common_image_contents
+    }
 
     if (netboot) {
       deps += [ ":${image_name}_fvm.blk_ramdisk" ]
