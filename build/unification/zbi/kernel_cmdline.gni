@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("zbi_input.gni")
+
+# Declare arguments to be added to the kernel command line of a ZBI file.
+#
+# Parameters
+#
+#   args
+#     Required: List of strings representing the arguments to add to the kernel
+#     command line.
+
+template("kernel_cmdline") {
+  assert(defined(invoker.args), "Arguments are required")
+
+  zbi_input(target_name) {
+    type = "cmdline"
+    args = []
+    foreach(args, invoker.args) {
+      args += [ "--entry=$arg" ]
+    }
+  }
+}
