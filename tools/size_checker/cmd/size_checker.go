@@ -327,11 +327,11 @@ func processBlobsJSON(
 
 // Processes the given input and throws an error if any component in the input is above its
 // allocated space limit.
-func processInput(input *Input, buildDir, blobList, blobSize string) (map[string]int64, error) {
+func processInput(input *Input, buildDir, blobList, blobSize string) (map[string]int64, string, bool) {
 	outputSizes := map[string]int64{}
 	blobMap, packages, err := extractPackages(buildDir, blobList, blobSize)
 	if err != nil {
-		return outputSizes, err
+		return outputSizes, err.Error(), true
 	}
 
 	// We create a set of extensions that should be considered as assets.
@@ -355,7 +355,7 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	}
 	// We process the meta.far files that were found in the blobs.manifest here.
 	if err := processPackages(buildDir, packages, &st); err != nil {
-		return outputSizes, fmt.Errorf("error processing packages: %s", err)
+		return outputSizes, fmt.Sprintf("error processing packages: %s", err), true
 	}
 
 	var total int64
@@ -363,7 +363,7 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	var report strings.Builder
 	root, err := st.root.getOnlyChild()
 	if err != nil {
-		return outputSizes, err
+		return outputSizes, err.Error(), true
 	}
 
 	for _, component := range input.Components {
@@ -381,11 +381,11 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 		if s := checkLimit(component.Component, size, component.Limit); s != "" {
 			noSpace = true
 			report.WriteString(s + "\n")
-			for _, n := range nodes {
-				report.WriteString(n.storageBreakdown(1))
-			}
-			report.WriteString("\n")
 		}
+		for _, n := range nodes {
+			report.WriteString(n.storageBreakdown(1))
+		}
+		report.WriteString("\n")
 	}
 
 	const assetsName = "Assets (Fonts / Strings / Images)"
@@ -411,11 +411,7 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 		}
 	}
 
-	if noSpace {
-		return outputSizes, fmt.Errorf(report.String())
-	}
-
-	return outputSizes, nil
+	return outputSizes, fmt.Sprintf(report.String()), noSpace
 }
 
 // Checks a given component to see if its size is greater than its allocated space limit as defined
@@ -494,13 +490,15 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	outputSizes, processErr := processInput(&input, buildDir, BlobList, BlobSizes)
+	outputSizes, report, hasErr := processInput(&input, buildDir, BlobList, BlobSizes)
 	if len(fileSizeOutPath) > 0 {
 		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
 			log.Fatal(err)
 		}
 	}
-	if processErr != nil {
-		log.Fatal(processErr)
+	if hasErr {
+		log.Fatal(report)
+	} else {
+		log.Println(report)
 	}
 }

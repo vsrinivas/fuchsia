@@ -429,10 +429,10 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
 	blobSizeF.Close()
-	sizes, err := processInput(&input, buildDir, blobListRelPath, blobSizeRelPath)
-	if err == nil {
+	sizes, report, hasErr := processInput(&input, buildDir, blobListRelPath, blobSizeRelPath)
+	if !hasErr {
 		t.Fatalf("Expected processInput to return an error because size is above limit")
-	} else if !strings.Contains(err.Error(), "foo") {
+	} else if !strings.Contains(report, "foo") {
 		t.Fatalf("Expected error message to mention component name \"foo\". Actual error: %v", err)
 	} else {
 		t.Logf("Error returned from processInput (probably expected): %v", err)
