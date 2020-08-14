@@ -7,16 +7,27 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
 package("magma-tools") {
-  deps = [ ":tools" ]
+  deps = [
+    ":tools",
+    "src/tools/mali-performance-counters",
+  ]
   binaries = [
     {
       name = "magma_info"
+    },
+    {
+      name = "mali-performance-counters"
+      shell = true
     },
   ]
   meta = [
     {
       path = rebase_path("meta/magma-info.cmx")
       dest = "magma-info.cmx"
+    },
+    {
+      path = rebase_path("meta/mali-performance-counters.cmx")
+      dest = "mali-performance-counters.cmx"
     },
   ]
 }

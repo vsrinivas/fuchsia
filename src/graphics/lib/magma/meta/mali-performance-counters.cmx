@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/mali-performance-counters"
+    },
+    "sandbox": {
+        "dev": [
+            "class/gpu-performance-counters"
+        ],
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test_package("mali-performance-counters-test") {
+  deps = [ ":mali-performance-counters-test-executable" ]
+  tests = [
+    {
+      name = "mali-performance-counters-test"
+      environments = [
+        sherlock_env,
+        astro_env,
+      ]
+    },
+  ]
+}
+
+source_set("common_srcs") {
+  sources = [
+    "mali-performance-counters.cc",
+    "mali-performance-counters.h",
+  ]
+
+  public_deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//third_party/github.com/ARM-software/HWCPipe:mali_profiler",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+
+  cflags = [ "-fno-sanitize=shadow-call-stack" ]
+  configs -= [ "//build/config:no_exceptions" ]
+}
+
+executable("mali-performance-counters") {
+  sources = [ "main.cc" ]
+
+  deps = [ ":common_srcs" ]
+
+  cflags = [ "-fno-sanitize=shadow-call-stack" ]
+  configs -= [ "//build/config:no_exceptions" ]
+}
+
+executable("mali-performance-counters-test-executable") {
+  testonly = true
+  output_name = "mali-performance-counters-test"
+  sources = [ "test.cc" ]
+
+  deps = [
+    ":common_srcs",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+  ]
+
+  cflags = [ "-fno-sanitize=shadow-call-stack" ]
+  configs -= [ "//build/config:no_exceptions" ]
+}

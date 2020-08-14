@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/mali-performance-counters-test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/gpu-performance-counters"
+        ],
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
