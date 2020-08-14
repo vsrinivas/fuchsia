@@ -5,7 +5,7 @@
 use {
     crate::error::{Error, Location},
     crate::{cml, one_or_many::OneOrMany},
-    cm_json::{self, JsonSchema, CMX_SCHEMA},
+    cm_json::{JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
     lazy_static::lazy_static,
     serde_json::Value,

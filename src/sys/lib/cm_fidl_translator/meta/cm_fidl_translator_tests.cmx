@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/cm_fidl_translator_tests"
-    }
-}

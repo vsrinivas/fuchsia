@@ -6,7 +6,7 @@ use crate::cml::{self, CapabilityClause};
 use crate::error::Error;
 use crate::one_or_many::OneOrMany;
 use crate::validate;
-use cm_json::cm;
+use cm_types as cm;
 use fidl::encoding::encode_persistent;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;

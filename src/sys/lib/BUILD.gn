@@ -6,7 +6,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "cm_fidl_translator:tests",
     "cm_fidl_validator:tests",
     "cm_json:tests",
     "cm_rust:tests",

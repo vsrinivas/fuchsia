@@ -197,7 +197,7 @@ impl From<cm_json::Location> for Location {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cm_json::cm;
+    use cm_types as cm;
     use matches::assert_matches;
 
     #[test]

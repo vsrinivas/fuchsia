@@ -95,7 +95,6 @@ rustc_binary("cmc_integration_test_bin") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/sys/lib/cm_fidl_translator",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
