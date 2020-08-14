@@ -23,7 +23,7 @@ assemble_system("overnet") {
     "//src/connectivity/overnet/tools/debug-serial",
   ]
   bootfs_labels = common_image_contents
-  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
+  bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
   netboot = true
 }
 

@@ -81,7 +81,7 @@ assemble_system("recovery-eng") {
   cmdline_inputs = zedboot_cmdline_files
 
   bootfs_labels = common_image_contents + board_recovery_bootfs_labels
-  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
+  bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress
@@ -101,7 +101,7 @@ assemble_system("recovery-fdr") {
   cmdline = []
 
   bootfs_labels = common_image_contents + board_recovery_bootfs_labels
-  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
+  bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress
