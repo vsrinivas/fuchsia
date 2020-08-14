@@ -250,7 +250,7 @@ mod tests {
             .record_connect_result(
                 test_id_2.clone().into(),
                 &credential_2.clone(),
-                fidl_sme::ConnectResultCode::BadCredentials,
+                fidl_sme::ConnectResultCode::CredentialRejected,
             )
             .await;
 

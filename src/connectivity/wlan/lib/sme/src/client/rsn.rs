@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::{protection::Protection, InvalidPasswordArgError},
-    anyhow::{ensure, format_err},
+    crate::client::protection::Protection,
+    anyhow::{bail, ensure, format_err},
     eapol,
     fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo},
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -159,13 +159,8 @@ pub fn compute_psk(
             ensure!(psk.len() == 32, "PSK must be 32 octets but was {}", psk.len());
             Ok(psk.clone().into_boxed_slice())
         }
-        fidl_sme::Credential::None(..) => {
-            Err(InvalidPasswordArgError("expected credentials but none is provided").into())
-        }
-        _ => {
-            let msg = "unsupported credentials configuration for computing PSK";
-            Err(InvalidPasswordArgError(msg).into())
-        }
+        fidl_sme::Credential::None(..) => bail!("expected credentials but none provided"),
+        _ => bail!("unsupported credentials configuration for computing PSK"),
     }
 }
 

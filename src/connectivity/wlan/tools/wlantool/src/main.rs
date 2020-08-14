@@ -591,8 +591,9 @@ async fn handle_connect_transaction(
                         eprintln!("Connecting was canceled or superseded by another command")
                     }
                     ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
-                    ConnectResultCode::BadCredentials => {
-                        eprintln!("Failed to connect to network; bad credentials")
+                    ConnectResultCode::CredentialRejected
+                    | ConnectResultCode::WrongCredentialType => {
+                        eprintln!("Failed to connect to network: {:?}", code)
                     }
                 }
                 break;
@@ -780,9 +781,8 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy, futures::task::Poll, pin_utils::pin_mut,
-        wlan_common::assert_variant,
-        matches::assert_matches,
+        super::*, fidl::endpoints::create_proxy, futures::task::Poll, matches::assert_matches,
+        pin_utils::pin_mut, wlan_common::assert_variant,
     };
 
     #[test]

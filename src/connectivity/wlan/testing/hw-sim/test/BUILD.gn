@@ -59,6 +59,15 @@ fuchsia_component("connect-with-failed-association") {
   ]
 }
 
+fuchsia_component("connect-with-wrong-credential-type") {
+  testonly = true
+  manifest = "meta/connect_with_wrong_credential_type.cmx"
+  deps = [
+    "connect_with_wrong_credential_type",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_component("ethernet-tx-rx") {
   testonly = true
   manifest = "meta/ethernet_tx_rx.cmx"
@@ -139,6 +148,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":connect-to-wpa2-network",
     ":connect-with-bad-password",
     ":connect-with-failed-association",
+    ":connect-with-wrong-credential-type",
     ":ethernet-tx-rx",
     ":multi-ifaces",
     ":multiple-clients-ap",

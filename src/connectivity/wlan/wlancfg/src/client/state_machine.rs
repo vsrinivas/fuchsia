@@ -387,14 +387,14 @@ async fn connecting_state(
                             connected_state(common_options, options.connect_request).into_state()
                         );
                     },
-                    fidl_sme::ConnectResultCode::BadCredentials => {
-                        info!("Failed to connect, bad credentials, will not retry");
+                    fidl_sme::ConnectResultCode::CredentialRejected | fidl_sme::ConnectResultCode::WrongCredentialType => {
+                        info!("Failed to connect. Will not retry because of credential error: {:?}", code);
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
                                 id: options.connect_request.network,
                                 state: types::ConnectionState::Failed,
-                                status: Some(types::DisconnectStatus::CredentialsFailed)
+                                status: Some(types::DisconnectStatus::CredentialsFailed),
                             },
                         );
                         return Ok(idle_state(common_options).into_state());
@@ -1210,7 +1210,7 @@ mod tests {
     }
 
     #[test]
-    fn connecting_state_fails_to_connect_with_bad_credentials() {
+    fn connecting_state_fails_to_connect_with_bad_password() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
         set_logger_for_test();
@@ -1218,7 +1218,7 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let stash_id = "connecting_state_fails_to_connect_with_bad_credentials";
+        let stash_id = "connecting_state_fails_to_connect_with_bad_password";
         let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
@@ -1286,7 +1286,7 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::BadCredentials)
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::CredentialRejected)
                     .expect("failed to send connection completion");
             }
         );
@@ -1326,7 +1326,7 @@ mod tests {
         let network_config = configs.pop().expect("Failed to get saved network");
         let mut failures = network_config.perf_stats.failure_list.get_recent(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
-        assert_eq!(connect_failure.reason, FailureReason::BadCredentials);
+        assert_eq!(connect_failure.reason, FailureReason::CredentialRejected);
     }
 
     #[test]

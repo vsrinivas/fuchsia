@@ -34,7 +34,6 @@ use {
         timer::{self, TimedEvent},
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
-    anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{
         self as fidl_mlme, BssDescription, DeviceInfo, MlmeEvent, ScanRequest,
@@ -44,7 +43,6 @@ use {
     futures::channel::{mpsc, oneshot},
     log::{error, info},
     std::sync::Arc,
-    thiserror::Error,
     wep_deprecated,
     wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, mac::MacAddr, RadioConfig},
     wlan_inspect::wrappers::InspectWlanChan,
@@ -152,11 +150,19 @@ impl ConnectFailure {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct CredentialErrorMessage(String);
+
+impl From<CredentialErrorMessage> for SelectNetworkFailure {
+    fn from(msg: CredentialErrorMessage) -> Self {
+        SelectNetworkFailure::CredentialError(msg)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum SelectNetworkFailure {
     NoScanResultWithSsid,
     NoCompatibleNetwork,
-    InvalidPasswordArg,
-    InternalError,
+    CredentialError(CredentialErrorMessage),
 }
 
 impl From<SelectNetworkFailure> for ConnectFailure {
@@ -356,22 +362,22 @@ impl super::Station for ClientSme {
                                             .take()
                                             .map(|state| state.connect(cmd, &mut self.context));
                                     }
-                                    Err(err) => {
-                                        inspect_msg.replace(format!("cannot join: {}", err));
+                                    Err(credential_error_message) => {
+                                        inspect_msg.replace(format!(
+                                            "cannot join: {:?}",
+                                            credential_error_message
+                                        ));
                                         error!(
-                                            "cannot join '{}' ({}): {}",
+                                            "cannot join '{}' ({}): {:?}",
                                             String::from_utf8_lossy(&best_bss.ssid[..]),
                                             best_bss.bssid.to_mac_str(),
-                                            err
+                                            credential_error_message,
                                         );
-                                        let f = match err.downcast::<InvalidPasswordArgError>() {
-                                            Ok(_) => SelectNetworkFailure::InvalidPasswordArg,
-                                            Err(_) => SelectNetworkFailure::InternalError,
-                                        };
                                         report_connect_finished(
                                             Some(token.responder),
                                             &mut self.context,
-                                            f.into(),
+                                            SelectNetworkFailure::from(credential_error_message)
+                                                .into(),
                                         );
                                     }
                                 }
@@ -411,7 +417,7 @@ impl super::Station for ClientSme {
                             result: format!("scan failure: {:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
-                        let result = ConnectResult::Failed(ConnectFailure::ScanFailure(e));
+                        let result = ConnectFailure::ScanFailure(e).into();
                         report_connect_finished(Some(token.responder), &mut self.context, result);
                     }
                     scan::ScanResult::DiscoveryFinished { tokens, result } => {
@@ -498,39 +504,40 @@ fn report_connect_finished(
     }
 }
 
-#[derive(Error, Debug)]
-#[error("{}", _0)]
-pub(crate) struct InvalidPasswordArgError(&'static str);
-
 pub fn get_protection(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Protection, anyhow::Error> {
+) -> Result<Protection, CredentialErrorMessage> {
     match bss.get_protection() {
         wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
-            _ => Err(InvalidPasswordArgError(
-                "password provided for open network, but none expected",
-            )
-            .into()),
+            _ => Err(CredentialErrorMessage("credentials provided for open network".to_string())),
         },
         wlan_common::bss::Protection::Wep => match credential {
             fidl_sme::Credential::Password(pwd) => wep_deprecated::derive_key(&pwd[..])
                 .map(Protection::Wep)
-                .map_err(|e| format_err!("error deriving WEP key from input: {}", e)),
-            _ => Err(InvalidPasswordArgError("unsupported credential type").into()),
+                .map_err(|e| CredentialErrorMessage(e.to_string())),
+            _ => {
+                Err(CredentialErrorMessage(format!("unsupported credential type {:?}", credential)))
+            }
         },
         wlan_common::bss::Protection::Wpa1 => {
-            get_legacy_wpa_association(device_info, credential, bss)
+            get_legacy_wpa_association(device_info, credential, bss).map_err(|e| {
+                CredentialErrorMessage(format!("failed to get protection for legacy WPA: {}", e))
+            })
         }
         wlan_common::bss::Protection::Wpa1Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Personal
-        | wlan_common::bss::Protection::Wpa2Wpa3Personal => get_rsna(device_info, credential, bss),
+        | wlan_common::bss::Protection::Wpa2Wpa3Personal => get_rsna(device_info, credential, bss)
+            .map_err(|e| CredentialErrorMessage(e.to_string())),
         wlan_common::bss::Protection::Unknown => {
-            return Err(format_err!("unable to deduce protection type of BSS"))
+            Err(CredentialErrorMessage("unknown protection type for targeted SSID".to_string()))
         }
-        other => return Err(format_err!("unsupported BSS protection type {:?}", other)),
+        other => Err(CredentialErrorMessage(format!(
+            "unsupported protection type for targeted SSID: {:?}",
+            other
+        ))),
     }
 }
 
@@ -832,9 +839,16 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
-        });
+        assert_variant!(
+            connect_fut.try_recv(),
+            Ok(
+                Some(
+                    ConnectResult::Failed(
+                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                    ),
+                ),
+            )
+        );
     }
 
     #[test]
@@ -875,9 +889,16 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
-        });
+        assert_variant!(
+            connect_fut.try_recv(),
+            Ok(
+                Some(
+                    ConnectResult::Failed(
+                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                    ),
+                ),
+            )
+        );
     }
 
     #[test]
@@ -916,9 +937,16 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
-        });
+        assert_variant!(
+            connect_fut.try_recv(),
+            Ok(
+                Some(
+                    ConnectResult::Failed(
+                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                    ),
+                ),
+            )
+        );
     }
 
     #[test]

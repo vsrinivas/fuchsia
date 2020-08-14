@@ -254,6 +254,30 @@ pub fn create_wpa3_network_config<S: ToString>(ssid: &[u8], password: S) -> Netw
     create_network_config(ssid, SecurityType::Wpa3, Some(password))
 }
 
+// WPA1 still needs to be tested until we remove support.
+pub fn create_deprecated_wpa1_psk_authenticator(
+    bssid: &mac::Bssid,
+    ssid: &[u8],
+    passphrase: &str,
+) -> wlan_rsn::Authenticator {
+    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
+    let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
+        .expect("creating gtk provider");
+    let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
+    let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_wpa1_vendor_ie());
+    let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_wpa1_vendor_ie());
+    wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
+        nonce_rdr,
+        std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+        psk,
+        CLIENT_MAC_ADDR,
+        s_protection,
+        bssid.0,
+        a_protection,
+    )
+    .expect("creating authenticator")
+}
+
 pub fn create_wpa2_psk_authenticator(
     bssid: &mac::Bssid,
     ssid: &[u8],

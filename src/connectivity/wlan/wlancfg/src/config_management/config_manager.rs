@@ -361,8 +361,11 @@ impl SavedNetworksManager {
                                     });
                             }
                         }
-                        fidl_sme::ConnectResultCode::BadCredentials => {
-                            network.perf_stats.failure_list.add(FailureReason::BadCredentials);
+                        fidl_sme::ConnectResultCode::CredentialRejected => {
+                            network.perf_stats.failure_list.add(FailureReason::CredentialRejected);
+                        }
+                        fidl_sme::ConnectResultCode::WrongCredentialType => {
+                            network.perf_stats.failure_list.add(FailureReason::WrongCredentialType);
                         }
                         fidl_sme::ConnectResultCode::Failed => {
                             network.perf_stats.failure_list.add(FailureReason::GeneralFailure);
@@ -691,7 +694,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                fidl_sme::ConnectResultCode::BadCredentials,
+                fidl_sme::ConnectResultCode::CredentialRejected,
             )
             .await;
 
@@ -706,7 +709,7 @@ mod tests {
             saved_config.perf_stats.failure_list.get_recent(before_recording);
         assert_eq!(1, connect_failures.len());
         let connect_failure = connect_failures.pop().expect("Failed to get a connect failure");
-        assert_eq!(FailureReason::BadCredentials, connect_failure.reason);
+        assert_eq!(FailureReason::CredentialRejected, connect_failure.reason);
     }
 
     #[fasync::run_singlethreaded(test)]

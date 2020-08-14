@@ -82,8 +82,9 @@ pub async fn connect(
             fx_log_err!("Failed to connect to network");
             false
         }
-        fidl_sme::ConnectResultCode::BadCredentials => {
-            fx_log_err!("Failed to connect to network; bad credentials");
+        fidl_sme::ConnectResultCode::CredentialRejected
+        | fidl_sme::ConnectResultCode::WrongCredentialType => {
+            fx_log_err!("Failed to connect to network: {:?}", connection_code);
             false
         }
         e => {
@@ -755,8 +756,14 @@ mod tests {
     }
 
     #[test]
-    fn connect_bad_credentials_returns_false() {
-        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::BadCredentials);
+    fn connect_with_wrong_credential_type_returns_false() {
+        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::WrongCredentialType);
+        assert!(!connect_result);
+    }
+
+    #[test]
+    fn connect_with_unaccepted_credentials_returns_false() {
+        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::CredentialRejected);
         assert!(!connect_result);
     }
 

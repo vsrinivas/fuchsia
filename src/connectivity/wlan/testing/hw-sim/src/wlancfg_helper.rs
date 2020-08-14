@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    crate::create_network_config,
     crate::test_utils::RetryWithBackoff,
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_policy::SecurityType,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
-    log::debug,
+    log::{debug, info},
 };
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
@@ -161,6 +163,38 @@ pub async fn get_update_from_client_listener(
     update.into()
 }
 
+pub async fn save_network_and_connect(
+    wlan_controller: &fidl_policy::ClientControllerProxy,
+    ssid: &[u8],
+    security_type: SecurityType,
+    password: Option<&str>,
+) {
+    let network_config = create_network_config(ssid, security_type, password.clone());
+
+    info!("Saving network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
+    wlan_controller
+        .save_network(network_config)
+        .await
+        .expect("save_network future failed")
+        .expect("client controller failed to save network");
+}
+
+pub async fn remove_network(
+    wlan_controller: &fidl_policy::ClientControllerProxy,
+    ssid: &[u8],
+    security_type: SecurityType,
+    password: Option<&str>,
+) {
+    let network_config = create_network_config(ssid, security_type, password.clone());
+
+    info!("Removing network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
+    wlan_controller
+        .remove_network(network_config)
+        .await
+        .expect("remove_network future failed")
+        .expect("client controller failed to remove network");
+}
+
 async fn assert_next_client_listener_update(
     listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     networks: Vec<fidl_policy::NetworkState>,
@@ -169,4 +203,36 @@ async fn assert_next_client_listener_update(
     debug!("Next update from client listener: {:?}", update);
     assert_eq!(update.state, Some(fidl_policy::WlanClientState::ConnectionsEnabled));
     assert_eq!(update.networks, Some(networks));
+}
+
+pub async fn assert_connecting(
+    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    network_identifier: fidl_policy::NetworkIdentifier,
+) {
+    // The next update in the queue should be "Connecting".
+    assert_next_client_listener_update(
+        listener_stream,
+        vec![fidl_policy::NetworkState {
+            id: Some(network_identifier),
+            state: Some(fidl_policy::ConnectionState::Connecting),
+            status: None,
+        }],
+    )
+    .await;
+}
+
+pub async fn assert_failed(
+    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    network_identifier: fidl_policy::NetworkIdentifier,
+    disconnect_status: fidl_policy::DisconnectStatus,
+) {
+    assert_next_client_listener_update(
+        listener_stream,
+        vec![fidl_policy::NetworkState {
+            id: Some(network_identifier),
+            state: Some(fidl_policy::ConnectionState::Failed),
+            status: Some(disconnect_status),
+        }],
+    )
+    .await;
 }

@@ -18,7 +18,7 @@ use void::Void;
 use wlan_inspect;
 use wlan_sme::client::{
     BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, ConnectionAttemptId,
-    EstablishRsnaFailure, InfoEvent, ScanTxnId,
+    EstablishRsnaFailure, InfoEvent, ScanTxnId, SelectNetworkFailure,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -334,18 +334,49 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
     }
 }
 
+fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode {
+    match result {
+        ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
+        ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
+        // This case is for errors associated with the credential type specified.
+        // Example problems are specifying an unsupported protection type or
+        // specifying a password for an open network.
+        ConnectResult::Failed(ConnectFailure::SelectNetwork(
+            SelectNetworkFailure::CredentialError(_),
+        )) => fidl_sme::ConnectResultCode::WrongCredentialType,
+        // Assuming the correct type of credentials are given, a bad password
+        // will cause EstablishRsnaFailure::KeyFrameExchangeTimeout. This error
+        // is not returned if and only if a bad password is given, but a bad
+        // password is the most likely cause. The authenticator will silently
+        // drop EAPOL handshake frames when the password is wrong.
+        //
+        // NOTE: The alternative possibilities for seeing an
+        // EstablishRsnaFailure::KeyFrameExchangeTimeout are an error in
+        // our crypto parameter parsing and crypto implementation, or a lost
+        // connection with the AP.
+        ConnectResult::Failed(ConnectFailure::EstablishRsna(
+            EstablishRsnaFailure::KeyFrameExchangeTimeout,
+        )) => fidl_sme::ConnectResultCode::CredentialRejected,
+        ConnectResult::Failed(..) => fidl_sme::ConnectResultCode::Failed,
+    }
+}
+
 fn send_connect_result(
     handle: Option<fidl_sme::ConnectTransactionControlHandle>,
     result: Option<ConnectResult>,
 ) -> Result<(), fidl::Error> {
     if let Some(handle) = handle {
         let code = match result {
-            Some(ConnectResult::Success) => fidl_sme::ConnectResultCode::Success,
-            Some(ConnectResult::Canceled) => fidl_sme::ConnectResultCode::Canceled,
-            Some(ConnectResult::Failed(ConnectFailure::EstablishRsna(
-                EstablishRsnaFailure::KeyFrameExchangeTimeout,
-            ))) => fidl_sme::ConnectResultCode::BadCredentials,
-            Some(ConnectResult::Failed(..)) | None => fidl_sme::ConnectResultCode::Failed,
+            Some(connect_result) => {
+                if let ConnectResult::Failed(_) = connect_result {
+                    error!("Connection failed: {:?}", connect_result);
+                }
+                convert_connect_result(&connect_result)
+            }
+            None => {
+                error!("Connection failed. No result from SME.");
+                fidl_sme::ConnectResultCode::Failed
+            }
         };
         handle.send_on_finished(code)?;
     }

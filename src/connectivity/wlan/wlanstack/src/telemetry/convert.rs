@@ -234,9 +234,8 @@ pub(super) fn convert_select_network_failure(
     use metrics::NetworkSelectionFailureMetricDimensionErrorReason::*;
     match failure {
         SelectNetworkFailure::NoScanResultWithSsid => NoScanResultWithSsid,
-        SelectNetworkFailure::InvalidPasswordArg => InvalidPasswordArg,
         SelectNetworkFailure::NoCompatibleNetwork => NoCompatibleNetwork,
-        SelectNetworkFailure::InternalError => InternalError,
+        SelectNetworkFailure::CredentialError(_) => CredentialError,
     }
 }
 

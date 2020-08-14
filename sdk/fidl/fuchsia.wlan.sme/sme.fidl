@@ -60,9 +60,12 @@ enum ConnectResultCode {
     CANCELED = 1;
     // Failed to join for some reason
     FAILED = 2;
-    // Failed to join due to bad credentials
-    BAD_CREDENTIALS = 3;
-    // TODO(hahnr): Add result code for attempting to join an incompatible network
+    // Failed to join because the type of credentials provided does not
+    // match what is required. For example, this code would be returned if
+    // a credential was provided for an open network.
+    WRONG_CREDENTIAL_TYPE = 3;
+    // Failed to join because the authenticator rejected the credentials.
+    CREDENTIAL_REJECTED = 4;
 };
 
 protocol ConnectTransaction {

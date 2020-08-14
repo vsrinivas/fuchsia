@@ -43,8 +43,12 @@ impl PerformanceStats {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FailureReason {
-    // Failed to join due to wrong credentials, mapped from SME ConnectResultCode::BadCredentials
-    BadCredentials,
+    // Failed to join because the authenticator did not accept the credentials provided.
+    CredentialRejected,
+    // Failed to join because the type of credentials provided does not
+    // match what is required. For example, this reason would be returned if
+    // a credential was provided for an open network.
+    WrongCredentialType,
     // Failed to join for other reason, mapped from SME ConnectResultCode::Failed
     GeneralFailure,
 }
