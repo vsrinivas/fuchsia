@@ -27,6 +27,9 @@ class TestEvents : public ::testing::Test {
   }
 
  protected:
+  // Usually the MsdVsiDevice would be the AddressSpaceOwner, however its implementation
+  // of |AddressSpaceReleased| would throw an assert when it attempts to free the page
+  // table slot.
   class AddressSpaceOwner : public AddressSpace::Owner {
    public:
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
@@ -53,8 +56,12 @@ class TestEvents : public ::testing::Test {
     EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
   }
 
-  std::unique_ptr<MsdVsiDevice> device_;  // Device should be destroyed last.
+  // The address space owner needs to be destroyed last, as the address space destructor
+  // will call into the address space owner, and the device may be the one dropping the
+  // last address space reference. Usually this is not an issue as the device would also
+  // be the address space owner, but in this case we want to override that functionality.
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
+  std::unique_ptr<MsdVsiDevice> device_;
   std::shared_ptr<AddressSpace> address_space_;
   std::shared_ptr<MsdVsiContext> context_;
 };
