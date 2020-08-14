@@ -76,11 +76,7 @@ struct AmlTdmOutDeviceTest : public AmlTdmOutDevice {
 };
 
 struct AmlG12I2sOutTest : public AmlG12TdmStream {
-  AmlG12I2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                   ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-      : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
-    codecs_.push_back(SimpleCodecClient());
-    codecs_[0].SetProtocol(codec_protocol);
+  void SetCommonDefaults() {
     metadata_.is_input = false;
     metadata_.mClockDivFactor = 10;
     metadata_.sClockDivFactor = 25;
@@ -89,9 +85,30 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     metadata_.bus = metadata::AmlBus::TDM_C;
     metadata_.version = metadata::AmlVersion::kS905D2G;
     metadata_.tdm.type = metadata::TdmType::I2s;
+  }
+  AmlG12I2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
+                   ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
+      : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
+    SetCommonDefaults();
+    codecs_.push_back(SimpleCodecClient());
+    codecs_[0].SetProtocol(codec_protocol);
+    aml_audio_ = AmlTdmOutDeviceTest::Create(region);
     metadata_.tdm.number_of_codecs = 1;
     metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
+  }
+  AmlG12I2sOutTest(codec_protocol_t* codec_protocol1, codec_protocol_t* codec_protocol2,
+                   ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                   ddk::GpioProtocolClient enable_gpio)
+      : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
+    SetCommonDefaults();
+    codecs_.push_back(SimpleCodecClient());
+    codecs_.push_back(SimpleCodecClient());
+    codecs_[0].SetProtocol(codec_protocol1);
+    codecs_[1].SetProtocol(codec_protocol2);
     aml_audio_ = AmlTdmOutDeviceTest::Create(region);
+    metadata_.tdm.number_of_codecs = 2;
+    metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
+    metadata_.tdm.codecs[1] = metadata::Codec::Tas27xx;
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -198,8 +215,10 @@ TEST(AmlG12Tdm, InitializePcmOut) {
 TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   fake_ddk::Bind tester;
 
-  auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
-  auto codec_proto = codec->GetProto();
+  auto codec1 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec2 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec1_proto = codec1->GetProto();
+  auto codec2_proto = codec2->GetProto();
 
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
   fbl::Array<ddk_mock::MockMmioReg> regs =
@@ -225,7 +244,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
+      &codec1_proto, &codec2_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
@@ -270,7 +289,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   client.SetGain(audio_fidl::GainState{});
 
   // Check that we set the codec to the new rate.
-  ASSERT_EQ(codec->last_frame_rate_, kTestFrameRate2);
+  ASSERT_EQ(codec1->last_frame_rate_, kTestFrameRate2);
+  ASSERT_EQ(codec2->last_frame_rate_, kTestFrameRate2);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();

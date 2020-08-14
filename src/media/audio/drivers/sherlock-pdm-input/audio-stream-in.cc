@@ -105,10 +105,10 @@ zx_status_t SherlockAudioStreamIn::InitPDev() {
     return status;
   }
 
-  pdm_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL,
-                              7,    // clk_div for mclk = T931_HIFI_PLL_RATE/clk_div = 219.43 MHz.
-                              499,  // clk_div for pdm_dclk = T931_HIFI_PLL_RATE/clk_div = 3.07MHz.
-                              TODDR_B);
+  // HIFI_PLL should be configurd to provide 768MHz to audio clock tree
+  // sysclk tarket is 192MHz, achieved by a divider value of 4 (write 3 to register)
+  // dclk target is 3.072MHz, achieved by a divider value of 250 (write 249 to register)
+  pdm_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 3, 249, TODDR_B);
   if (pdm_ == nullptr) {
     zxlogf(ERROR, "%s failed to create pdm device", __func__);
     return ZX_ERR_NO_MEMORY;

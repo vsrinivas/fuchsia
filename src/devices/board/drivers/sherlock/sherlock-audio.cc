@@ -300,8 +300,8 @@ zx_status_t Sherlock::AudioInit() {
   snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
   metadata.is_input = false;
   // Compatible clocks with other TDM drivers.
-  metadata.mClockDivFactor = 125;
-  metadata.sClockDivFactor = 4;
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
   metadata.bus = metadata::AmlBus::TDM_C;
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
   metadata.tdm.type = metadata::TdmType::I2s;
@@ -381,8 +381,8 @@ zx_status_t Sherlock::AudioInit() {
     snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
     metadata.is_input = false;
     // Compatible clocks with other TDM drivers.
-    metadata.mClockDivFactor = 125;
-    metadata.sClockDivFactor = 4;
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
@@ -475,8 +475,8 @@ zx_status_t Sherlock::AudioInit() {
     snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
     metadata.is_input = true;
     // Compatible clocks with other TDM drivers.
-    metadata.mClockDivFactor = 125;
-    metadata.sClockDivFactor = 4;
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;

@@ -132,6 +132,7 @@ zx_status_t AmlG12TdmStream::InitHW() {
     // mclk rate for 96kHz = 768MHz/5 = 153.6MHz
     // mclk rate for 48kHz = 768MHz/10 = 76.8MHz
     // Note: absmax mclk frequency is 500MHz per AmLogic
+    ZX_ASSERT(!(metadata_.mClockDivFactor % 2));  // mClock div factor must be divisable by 2.
     uint32_t mdiv = metadata_.mClockDivFactor / ((dai_formats_[0].frame_rate == 96000) ? 2 : 1);
     status = aml_audio_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
     if (status != ZX_OK) {
@@ -504,13 +505,12 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       }
     }
 
-    // Only frame_rate from dai_format_[0] is used.
-    uint32_t last_rate = dai_formats_[0].frame_rate;
-    dai_formats_[0].frame_rate = req.frames_per_second;
+    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+      dai_formats_[i].frame_rate = req.frames_per_second;
+    }
     channels_to_use_ = req.channels_to_use_bitmask;
     auto status = InitHW();
     if (status != ZX_OK) {
-      dai_formats_[0].frame_rate = last_rate;
       zxlogf(ERROR, "%s failed to reinitialize the HW", __FILE__);
       return status;
     }
