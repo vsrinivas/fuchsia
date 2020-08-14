@@ -1,5 +1,3 @@
-auradkar@google.com
-tianruichen@google.com
-*
+include /src/storage/OWNERS
 
 # COMPONENT: Zircon>storage

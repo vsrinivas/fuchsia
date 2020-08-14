@@ -1,10 +1,3 @@
-auradkar@google.com
-csuter@google.com
-manalib@google.com
-gevalentino@google.com
-kamen@google.com
-sron@google.com
-tianruichen@google.com
-*
+include /src/storage/OWNERS
 
 # COMPONENT: Zircon>storage
