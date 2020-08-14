@@ -108,6 +108,7 @@ declare_args() {
   zircon_args = {
     use_ccache = use_ccache
     use_goma = use_goma
+    output_gsym = output_gsym
     goma_dir = rebase_path(goma_dir)
     zbi_compression = zbi_compression
     if (clang_prefix != default_clang_prefix) {

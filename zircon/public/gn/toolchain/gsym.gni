@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/prebuilt.gni")
+import("$zx/public/gn/toolchain/clang.gni")
+
+declare_args() {
+  # Controls whether we should output GSYM files for Fuchsia binaries.
+  output_gsym = false
+}

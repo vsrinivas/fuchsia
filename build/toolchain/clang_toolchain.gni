@@ -103,6 +103,10 @@ template("clang_toolchain") {
           # The breakpad module name for executables and loadable modules.
           breakpad_name = "<_>"
         }
+        if (output_gsym && invoker.toolchain_os == "fuchsia") {
+          # TODO(58294): enable for other targets.
+          gsymutil = "${prefix}/llvm-gsymutil"
+        }
       }
     }
 
@@ -221,6 +225,10 @@ template("clang_toolchain") {
           host_os != "mac") {
         command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
         outputs += [ "$outfile.sym" ]
+      }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
       }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
@@ -380,6 +388,10 @@ template("clang_toolchain") {
         command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
         outputs += [ "$outfile.sym" ]
       }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
+      }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
@@ -470,6 +482,10 @@ template("clang_toolchain") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
+      }
     }
 
     tool("solink_module") {
@@ -507,6 +523,10 @@ template("clang_toolchain") {
       if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -552,6 +572,10 @@ template("clang_toolchain") {
       if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.sym" ]
         command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
       }
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"

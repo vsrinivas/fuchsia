@@ -8,6 +8,7 @@ import("ccache.gni")
 import("clang.gni")
 import("gcc.gni")
 import("goma.gni")
+import("gsym.gni")
 import("toolchain.gni")
 
 declare_args() {
@@ -276,6 +277,12 @@ template("c_toolchain") {
     }
   }
 
+  # TODO(58294): enable for other targets and binary formats.
+  use_gsym = output_gsym && is_elf && invoker.os == "fuchsia"
+  if (use_gsym) {
+    gsymutil = rebase_path("$clang_tool_dir/llvm-gsymutil", root_build_dir)
+  }
+
   _compile_common = {
     outputs =
         [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
@@ -367,6 +374,12 @@ template("c_toolchain") {
           "touch \"$breakpad_outfile\" || " +
           "$dump_syms \"$unstripped_outfile\" > \"$breakpad_outfile\"" +
           "; }"  # But makes the control flow a little clearer.
+    }
+
+    if (use_gsym) {
+      gsym_outfile = "${outfile_base}.gsym"
+      outputs += [ gsym_outfile ]
+      strip_command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$gsym_outfile.gsym\""
     }
   }
 

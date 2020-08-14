@@ -32,6 +32,9 @@ declare_args() {
 
   # Sets if we should output breakpad symbols for Fuchsia binaries.
   output_breakpad_syms = false
+
+  # Controls whether we should output GSYM files for Fuchsia binaries.
+  output_gsym = false
 }
 
 if (target_os == "") {
