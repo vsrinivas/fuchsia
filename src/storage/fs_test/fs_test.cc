@@ -133,9 +133,13 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 }
 
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
-  return std::vector<TestFilesystemOptions>{
-      TestFilesystemOptions::DefaultMinfs(), TestFilesystemOptions::MinfsWithoutFvm(),
-      TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs()};
+  return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
+                                            TestFilesystemOptions::MinfsWithoutFvm(),
+                                            TestFilesystemOptions::DefaultMemfs(),
+#ifdef TEST_FATFS
+                                            TestFilesystemOptions::DefaultFatfs()
+#endif
+  };
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
