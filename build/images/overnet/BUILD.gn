@@ -4,6 +4,7 @@
 
 import("//build/images/assemble_system.gni")
 import("//build/testing/host_test_data.gni")
+import("//build/unification/images/common_image_contents.gni")
 
 assemble_system("overnet") {
   base_packages = [
@@ -21,6 +22,8 @@ assemble_system("overnet") {
     "//src/connectivity/overnet/overnetstack:overnetstack_config",
     "//src/connectivity/overnet/tools/debug-serial",
   ]
+  bootfs_labels = common_image_contents
+  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
   netboot = true
 }
 

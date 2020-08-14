@@ -8,6 +8,7 @@ import("//build/images/recovery/recovery_args.gni")
 import("//build/images/ta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
+import("//build/unification/images/common_image_contents.gni")
 
 group("recovery") {
   testonly = true
@@ -79,6 +80,9 @@ assemble_system("recovery-eng") {
             ] + zedboot_cmdline_args + board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
+  bootfs_labels = common_image_contents + board_recovery_bootfs_labels
+  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
+
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress
   bootfs_allowlist = []
@@ -95,6 +99,9 @@ assemble_system("recovery-fdr") {
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ]
   cmdline = []
+
+  bootfs_labels = common_image_contents + board_recovery_bootfs_labels
+  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
 
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/images/assemble_system.gni")
+import("//build/unification/images/common_image_contents.gni")
 
 assemble_system("guest") {
   base_packages = [
@@ -20,5 +21,7 @@ assemble_system("guest") {
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
   ]
+  bootfs_labels = common_image_contents
+  bootfs_labels += [ "//src/security/policy:component_manager_policy_bootfs" ]
   sysmgr_golden = "sysmgr-golden.json"
 }
