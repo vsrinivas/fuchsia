@@ -6,6 +6,7 @@
 
 use {
     core::mem,
+    log::warn,
     thiserror::{self, Error},
     wlan_bitfield::bitfield,
     wlan_common::{
@@ -20,8 +21,6 @@ use {
 pub enum Error {
     #[error("unexpected end of buffer while parsing frame")]
     FrameTruncated,
-    #[error("bytes remaining after parsing frame")]
-    FramePadded,
     #[error("buffer too short to write frame")]
     BufferTooShort,
     #[error("attempted to parse the wrong frame type")]
@@ -85,10 +84,12 @@ impl<B: ByteSlice> KeyFrameRx<B> {
                 let key_data = reader
                     .read_bytes(key_data_len.get().to_native().into())
                     .ok_or(Error::FrameTruncated)?;
+                // Some APs add additional bytes to the 802.1X body. This is odd, but doesn't break anything.
                 match reader.peek_remaining().len() {
-                    0 => Ok(KeyFrameRx { eapol_fields, key_frame_fields, key_mic, key_data }),
-                    _ => Err(Error::FramePadded),
+                    0 => (),
+                    extra => warn!("Ignoring {} additional bytes in eapol frame body", extra),
                 }
+                Ok(KeyFrameRx { eapol_fields, key_frame_fields, key_mic, key_data })
             }
             _ => Err(Error::WrongEapolFrame),
         }
@@ -450,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_too_long() {
+    fn test_padding_okay() {
         let frame: Vec<u8> = vec![
             0x01, 0x03, 0x00, 0x63, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x01, 0x39, 0x5c, 0xc7, 0x6e, 0x1a, 0xe9, 0x9f, 0xa0, 0xb1, 0x22, 0x79,
@@ -461,8 +462,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x03, 0x01, 0x02, 0x03, 0x04,
         ];
-        let result = KeyFrameRx::parse(16, &frame[..]);
-        assert_variant!(result, Err(Error::FramePadded));
+        KeyFrameRx::parse(16, &frame[..]).expect("parsing keyframe failed");
     }
 
     #[test]

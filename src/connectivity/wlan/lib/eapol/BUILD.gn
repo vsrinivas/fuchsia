@@ -18,6 +18,7 @@ rustc_library("eapol") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/lib.rs" ]
