@@ -82,7 +82,7 @@ The issue is that without this option then TraceManager won't be present
 when the driver starts and thus the driver won't be able to participate
 in tracing when TraceManager is started later.
 
-See the documentation for (fx)[../../../docs/development/build/fx.md]
+See the documentation for [fx](/docs/development/build/fx.md)
 or even just the output of `fx help` and especially `fx help set` for further
 documentation of running `fx` in general and `fx set` specifically.
 
