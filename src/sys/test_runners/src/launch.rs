@@ -5,6 +5,7 @@
 //! Helpers for launching components.
 
 use {
+    crate::errors::FdioError,
     crate::logs::{create_log_stream, LoggerError, LoggerStream},
     anyhow::Error,
     fidl_fuchsia_process as fproc,
@@ -22,6 +23,9 @@ pub enum LaunchError {
     #[error("{:?}", _0)]
     Logger(#[from] LoggerError),
 
+    #[error("{:?}", _0)]
+    Fdio(#[from] FdioError),
+
     #[error("Error connecting to launcher: {:?}", _0)]
     Launcher(Error),
 
@@ -33,6 +37,9 @@ pub enum LaunchError {
 
     #[error("Error launching process: {:?}", _0)]
     ProcessLaunch(zx::Status),
+
+    #[error("Error launching process, cannot create socket {:?}", _0)]
+    CreateSocket(zx::Status),
 
     #[error("unexpected error")]
     UnExpectedError,
@@ -54,6 +61,8 @@ pub struct LaunchProcessArgs<'a> {
     pub name_infos: Option<Vec<fproc::NameInfo>>,
     /// Process environment variables.
     pub environs: Option<Vec<String>>,
+    // Extra handle infos to add. Handles for stdout and stderr are added.
+    pub handle_infos: Option<Vec<fproc::HandleInfo>>,
 }
 
 /// Launches process, assigns a logger as stdout/stderr to launched process.
@@ -68,7 +77,7 @@ pub async fn launch_process(
     let (logger, stdout_handle, stderr_handle) =
         create_log_stream().map_err(LaunchError::Logger)?;
 
-    let mut handle_infos = vec![];
+    let mut handle_infos = args.handle_infos.unwrap_or(vec![]);
 
     handle_infos.push(fproc::HandleInfo {
         handle: stdout_handle,

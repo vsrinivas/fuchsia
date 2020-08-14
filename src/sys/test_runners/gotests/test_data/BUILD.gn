@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("test_data") {
+  testonly = true
+  public_deps = [
+    ":go-test-runner-example",
+    "empty_go_test",
+    "sample_go_test",
+  ]
+}
+
+fuchsia_package("go-test-runner-example") {
+  testonly = true
+  deps = [
+    "empty_go_test:empty-go-test",
+    "sample_go_test:sample-go-test",
+  ]
+}

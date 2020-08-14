@@ -5,7 +5,7 @@
 //! Type definitions for common errors related to running component or tests.
 
 use {
-    crate::{launch::LaunchError, logs::LogError},
+    crate::{elf::KernelError, launch::LaunchError, logs::LogError},
     fuchsia_zircon as zx,
     runner::component::ComponentNamespaceError,
     serde_json,
@@ -38,11 +38,20 @@ pub enum EnumerationError {
 
     #[error("{:?}", _0)]
     Log(#[from] Arc<LogError>),
+
+    #[error("{:?}", _0)]
+    Kernel(#[from] Arc<KernelError>),
 }
 
 impl From<NamespaceError> for EnumerationError {
     fn from(e: NamespaceError) -> Self {
         EnumerationError::Namespace(Arc::new(e))
+    }
+}
+
+impl From<KernelError> for EnumerationError {
+    fn from(e: KernelError) -> Self {
+        EnumerationError::Kernel(Arc::new(e))
     }
 }
 
@@ -128,4 +137,17 @@ pub enum RunTestError {
 
     #[error("error reloading list of tests: {:?}", _0)]
     EnumerationError(#[from] EnumerationError),
+}
+
+/// Error encountered while calling fdio operations.
+#[derive(Debug, PartialEq, Eq, Error, Clone)]
+pub enum FdioError {
+    #[error("Cannot create file descriptor: {:?}", _0)]
+    Create(zx::Status),
+
+    #[error("Cannot clone file descriptor: {:?}", _0)]
+    Clone(zx::Status),
+
+    #[error("Cannot transfer file descriptor: {:?}", _0)]
+    Transfer(zx::Status),
 }

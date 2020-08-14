@@ -5,6 +5,7 @@
 //! Helpers for capturing logs from Fuchsia processes.
 
 use {
+    crate::errors::FdioError,
     fdio::fdio_sys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
@@ -17,19 +18,6 @@ use {
     thiserror::Error,
     zx::HandleBased,
 };
-
-/// Error encountered while calling fdio operations.
-#[derive(Debug, PartialEq, Eq, Error, Clone)]
-pub enum FdioError {
-    #[error("Cannot create file descriptor: {:?}", _0)]
-    Create(zx::Status),
-
-    #[error("Cannot clone file descriptor: {:?}", _0)]
-    Clone(zx::Status),
-
-    #[error("Cannot transfer file descriptor: {:?}", _0)]
-    Transfer(zx::Status),
-}
 
 /// Error returned by this library.
 #[derive(Debug, PartialEq, Eq, Error, Clone)]

@@ -429,6 +429,7 @@ where
         args: Some(args),
         name_infos: None,
         environs: test_invoke.map(|test_invoke| vec![test_invoke]),
+        handle_infos: None,
     })
     .await?)
 }

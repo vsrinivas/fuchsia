@@ -1,28 +1,23 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
-rustc_library("lib") {
-  name = "test_runners_lib"
+rustc_binary("bin") {
+  testonly = true
+  name = "go_test_runner"
   with_unit_tests = true
   edition = "2018"
 
-  # Only for internal use.
-  visibility = [
-    "gtest/*",
-    "rust/*",
-    "gotests/*",
-    ":*",
-  ]
-
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test:rust_measure_tape_for_case",
     "//src/lib/fdio/rust:fdio",
@@ -30,74 +25,65 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
     "//src/sys/lib/runner",
+    "//src/sys/test_runners:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:uuid",
+  ]
+
+  test_deps = [
+    "//src/sys/test_runners:test_lib",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pretty_assertions",
   ]
 
   sources = [
-    "src/cases.rs",
-    "src/elf/elf_component.rs",
-    "src/elf/mod.rs",
-    "src/elf/server.rs",
-    "src/errors.rs",
-    "src/launch.rs",
-    "src/lib.rs",
-    "src/logs.rs",
+    "src/main.rs",
+    "src/test_server.rs",
   ]
 }
 
-rustc_library("test_lib") {
+fuchsia_component("go_test_runner") {
   testonly = true
-  name = "test_runners_test_lib"
-  edition = "2018"
-  source_root = "src/test_lib.rs"
-
-  # Only for internal use.
-  visibility = [
-    "gtest/*",
-    "rust/*",
-    "gotests/*",
-    ":*",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-  ]
-
-  sources = [ "src/test_lib.rs" ]
+  manifest = "meta/go-test-runner.cml"
+  component_name = "go-test-runner"
+  deps = [ ":bin" ]
 }
 
-fuchsia_unittest_package("test-runner-unit-tests") {
-  deps = [ ":lib_test" ]
-  executable_path = "bin/test_runners_lib_lib_test"
-}
-
-group("test_runners") {
+fuchsia_package("go-test-runner") {
   testonly = true
+  deps = [ ":go_test_runner" ]
+}
+
+group("gotests") {
+  testonly = true
+  deps = [ ":go-test-runner" ]
+}
+
+fuchsia_unittest_package("go-test-runner-unit-test") {
   deps = [
-    "gotests",
-    "gtest",
-    "rust",
+    ":bin_test",
+    "test_data",
   ]
+  executable_path = "bin/go_test_runner_bin_test"
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":test-runner-unit-tests",
-    "gotests:tests",
-    "gtest:tests",
-    "rust:tests",
+    ":go-test-runner-unit-test",
+    "test_data",
   ]
 }

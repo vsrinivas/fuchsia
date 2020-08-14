@@ -567,6 +567,7 @@ where
         args: Some(args),
         name_infos: Some(names),
         environs: None,
+        handle_infos: None,
     })
     .await?)
 }

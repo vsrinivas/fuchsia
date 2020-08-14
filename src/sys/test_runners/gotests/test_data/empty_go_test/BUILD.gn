@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//src/sys/build/components.gni")
+
+fuchsia_component("empty-go-test") {
+  testonly = true
+  manifest = "meta/empty_go_test.cml"
+  component_name = "empty_go_test"
+  deps = [ ":empty_go_test" ]
+}
+
+go_library("empty_go_test_lib") {
+  name = "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/empty_go_test/..."
+}
+
+go_test("empty_go_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/empty_go_test" ]
+  deps = [ ":empty_go_test_lib" ]
+}

@@ -1,0 +1,28 @@
+{
+    program: {
+        binary: "bin/go_test_runner",
+    },
+    capabilities: [
+        {
+            runner: "go_test_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { storage: "data" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            runner: "go_test_runner",
+            from: "self",
+        },
+    ],
+}
