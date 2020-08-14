@@ -34,7 +34,6 @@ rustc_library("element_management") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//src/lib/test_util",
     "//third_party/rust_crates:lazy_static",
   ]

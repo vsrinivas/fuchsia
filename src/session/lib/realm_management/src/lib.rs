@@ -155,7 +155,7 @@ mod tests {
     }
 
     /// Tests that creating a child results in the appropriate call to the `RealmProxy`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn create_child_parameters() {
         let child_name = "test_child";
         let child_url = "test_url";
@@ -181,7 +181,7 @@ mod tests {
 
     /// Tests that a success received when creating a child results in an appropriate result from
     /// `create_child`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn create_child_success() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
@@ -197,7 +197,7 @@ mod tests {
 
     /// Tests that an error received when creating a child results in an appropriate error from
     /// `create_child`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn create_child_error() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
@@ -212,7 +212,7 @@ mod tests {
     }
 
     /// Tests that `bind_child` results in the appropriate call to `RealmProxy`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn bind_child_parameters() {
         let child_name = "test_child";
         let child_collection = "test_collection";
@@ -234,7 +234,7 @@ mod tests {
 
     /// Tests that a success received when binding a child results in an appropriate result from
     /// `bind_child`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn bind_child_success() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
@@ -248,8 +248,8 @@ mod tests {
         assert!(bind_child_component("", "", &realm_proxy).await.is_ok());
     }
 
-    /// Tests that binding a child returns the childs exposed Directory.
-    #[fasync::run_singlethreaded(test)]
+    /// Tests that binding a child returns the child's exposed Directory.
+    #[fasync::run_until_stalled(test)]
     async fn bind_child_exposed_dir_success() {
         // Make a static call counter to avoid unneeded complexity with cloned Arc<Mutex>.
         lazy_static! {
@@ -257,13 +257,7 @@ mod tests {
         }
 
         let directory_request_handler = |directory_request| match directory_request {
-            fio::DirectoryRequest::Open {
-                flags: _, // assume: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
-                mode: _,  // assume: FDIO_CONNECT_MODE,
-                path: fake_capability_path,
-                object: _, // assume: fidl::endpoints::ServerEnd<NodeMarker>,
-                control_handle: _,
-            } => {
+            fio::DirectoryRequest::Open { path: fake_capability_path, .. } => {
                 CALL_COUNT.inc();
                 assert_eq!(fake_capability_path, "fake_capability_path");
             }
@@ -308,7 +302,7 @@ mod tests {
 
         // Attempting to invoke and await an arbitrary method to ensure the
         // `directory_request_handler` responds to the Open() method and increment
-        // the CALL_COUNT.
+        // the DIRECTORY_OPEN_CALL_COUNT.
         //
         // Since this is a fake capability (of any arbitrary type), it should fail.
         assert!(client_end.rewind().await.is_err());
@@ -319,7 +313,7 @@ mod tests {
 
     /// Tests that an error received when binding a child results in an appropriate error from
     /// `bind_child`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn bind_child_error() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
@@ -334,7 +328,7 @@ mod tests {
     }
 
     /// Tests that `destroy_child` results in the appropriate call to `RealmProxy`.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn destroy_child_parameters() {
         let child_name = "test_child";
         let child_collection = "test_collection";

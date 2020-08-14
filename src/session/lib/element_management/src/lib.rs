@@ -93,7 +93,7 @@ impl ElementManagerError {
 ///
 /// #Parameters
 /// - `component_url`: The component url.
-fn is_realm_aware_component(component_url: &str) -> bool {
+fn is_v2_component(component_url: &str) -> bool {
     component_url.ends_with(".cm")
 }
 
@@ -214,8 +214,8 @@ impl Element {
 
     // # Note
     //
-    // The methods below are copied verbatim from fuchsia_component::client::App in order to offer
-    // services in exactly the same way, but from any `Element`, wrapping either a v1 `App` or a v2
+    // The methods below are copied from fuchsia_component::client::App in order to offer
+    // services in the same way, but from any `Element`, wrapping either a v1 `App` or a v2
     // component's `Directory` of exposed services.
 
     /// Returns a reference to the component's `Directory` of exposed capabilities. A session can
@@ -235,7 +235,7 @@ impl Element {
     fn service_path_prefix(&self) -> &str {
         match &self.exposed_capabilities {
             ExposedCapabilities::App(..) => "",
-            ExposedCapabilities::Directory(..) => "/svc/",
+            ExposedCapabilities::Directory(..) => "svc/",
         }
     }
 
@@ -250,7 +250,7 @@ impl Element {
     #[inline]
     pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.pass_to_service::<S>(server_channel)?;
+        self.connect_to_service_with_channel::<S>(server_channel)?;
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
@@ -283,11 +283,11 @@ impl Element {
     /// # Returns
     /// - Result::Ok or an error if the service is not available from the `Element`.
     #[inline]
-    pub fn pass_to_service<S: DiscoverableService>(
+    pub fn connect_to_service_with_channel<S: DiscoverableService>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), anyhow::Error> {
-        self.pass_to_named_service(S::SERVICE_NAME, server_channel)
+        self.connect_to_named_service_with_channel(S::SERVICE_NAME, server_channel)
     }
 
     /// Connect to a service by name.
@@ -300,7 +300,7 @@ impl Element {
     /// # Returns
     /// - Result::Ok or an error if the service is not available from the `Element`.
     #[inline]
-    pub fn pass_to_named_service(
+    pub fn connect_to_named_service_with_channel(
         &self,
         service_name: &str,
         server_channel: zx::Channel,
@@ -377,7 +377,7 @@ impl SimpleElementManager {
         SimpleElementManager { realm, sys_launcher: Ok(sys_launcher) }
     }
 
-    /// Launches a component with the specified URL.
+    /// Launches a v1 component with the specified URL.
     ///
     /// #Parameters
     /// - `child_url`: The component url of the child added to the session. This function launches
@@ -387,10 +387,7 @@ impl SimpleElementManager {
     ///
     /// #Returns
     /// The launched application.
-    async fn launch_component_outside_realm(
-        &self,
-        child_url: &str,
-    ) -> Result<Element, ElementManagerError> {
+    async fn launch_v1_component(&self, child_url: &str) -> Result<Element, ElementManagerError> {
         let sys_launcher = (&self.sys_launcher).as_ref().map_err(|err: &anyhow::Error| {
             ElementManagerError::not_launched(
                 child_url.clone(),
@@ -473,11 +470,11 @@ impl ElementManager for SimpleElementManager {
             .component_url
             .ok_or_else(|| ElementManagerError::url_missing(child_name, child_collection))?;
 
-        let mut element = if is_realm_aware_component(&child_url) {
+        let mut element = if is_v2_component(&child_url) {
             self.launch_child_component(&child_name, &child_url, child_collection, &self.realm)
                 .await?
         } else {
-            self.launch_component_outside_realm(&child_url).await?
+            self.launch_v1_component(&child_url).await?
         };
         if spec.annotations.is_some() {
             element.set_annotations(spec.annotations.unwrap()).map_err(|err: anyhow::Error| {
@@ -492,13 +489,13 @@ impl ElementManager for SimpleElementManager {
 #[cfg(test)]
 mod tests {
     use {
-        super::{Element, ElementManager, ElementManagerError, SimpleElementManager},
-        async_trait::async_trait,
+        super::{ElementManager, ElementManagerError, SimpleElementManager},
         fidl::encoding::Decodable,
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_intl as fintl, fidl_fuchsia_io as fio,
+        fidl::endpoints::{create_proxy_and_stream, ServerEnd},
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
         fidl_fuchsia_session::ElementSpec,
         fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+        fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},
         lazy_static::lazy_static,
         test_util::Counter,
@@ -569,162 +566,15 @@ mod tests {
         launcher_proxy
     }
 
-    struct TestElementManager {
-        realm: fsys2::RealmProxy,
-    }
-
-    #[async_trait]
-    impl ElementManager for TestElementManager {
-        async fn launch_element(
-            &self,
-            spec: ElementSpec,
-            child_name: &str,
-            child_collection: &str,
-        ) -> Result<Element, ElementManagerError> {
-            let child_url = spec
-                .component_url
-                .ok_or_else(|| ElementManagerError::url_missing(child_name, child_collection))?;
-
-            realm_management::create_child_component(
-                &child_name,
-                &child_url,
-                child_collection,
-                &self.realm,
-            )
-            .await
-            .map_err(|err: fcomponent::Error| {
-                ElementManagerError::not_created(
-                    child_name,
-                    child_collection,
-                    child_url.to_string(),
-                    err,
-                )
-            })?;
-
-            let exposed_capabilities = match realm_management::bind_child_component(
-                child_name,
-                child_collection,
-                &self.realm,
-            )
-            .await
-            {
-                Ok(channel) => channel,
-                Err(err) => {
-                    return Err(ElementManagerError::not_bound(
-                        child_name,
-                        child_collection,
-                        child_url.to_string(),
-                        err,
-                    ))
-                }
-            };
-            Ok(Element::from_directory_channel(
-                exposed_capabilities,
-                child_name,
-                &child_url,
-                child_collection,
-            ))
-        }
-    }
-
-    /// Tests that adding a component with a .cm file successfully returns [`Ok`].
-    #[fasync::run_singlethreaded(test)]
-    async fn element_manager_trait_test_launch_element() {
-        lazy_static! {
-            static ref CALL_COUNT: Counter = Counter::new(0);
-        }
-
-        let component_url = "test_url.cm";
-        let child_name = "child";
-        let child_collection = "elements";
-
-        let directory_request_handler = |directory_request| match directory_request {
-            fio::DirectoryRequest::Open {
-                flags: _, // assume: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
-                mode: _,  // assume: FDIO_CONNECT_MODE,
-                path: capability_path,
-                object: _, // assume: fidl::endpoints::ServerEnd<NodeMarker>,
-                control_handle: _,
-            } => {
-                CALL_COUNT.inc();
-                assert_eq!(capability_path, "/svc/fuchsia.intl.PropertyProvider");
-            }
-            _ => {
-                assert!(false);
-            }
-        };
-
-        let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
-                CALL_COUNT.inc();
-                assert_eq!(decl.url.unwrap(), component_url);
-                assert_eq!(decl.name.unwrap(), child_name);
-                assert_eq!(&collection.name, child_collection);
-
-                let _ = responder.send(&mut Ok(()));
-            }
-            fsys2::RealmRequest::BindChild {
-                child,
-                exposed_dir: exposed_dir_server,
-                responder,
-            } => {
-                CALL_COUNT.inc();
-                assert_eq!(child.collection, Some(child_collection.to_string()));
-                spawn_directory_server(
-                    exposed_dir_server.into_stream().unwrap(),
-                    directory_request_handler,
-                );
-                let _ = responder.send(&mut Ok(()));
-            }
-            _ => {
-                assert!(false);
-            }
-        });
-
-        let element_manager = TestElementManager { realm };
-        let result = element_manager
-            .launch_element(
-                ElementSpec {
-                    component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
-                },
-                child_name,
-                child_collection,
-            )
-            .await;
-
-        assert!(result.is_ok());
-        let element = result.unwrap();
-
-        assert!(format!("{:?}", element).contains(component_url));
-
-        // Connect should succeed, but it is still an asynchronous operation.
-        // The `directory_request_handler` is not called yet.
-        let connect_result = element.connect_to_service::<fintl::PropertyProviderMarker>();
-        assert!(connect_result.is_ok());
-        let fake_intl_provider = connect_result.unwrap();
-
-        // Attempting to invoke and await an arbitrary method to ensure the
-        // `directory_request_handler` responds to the Open() method and increments
-        // the CALL_COUNT.
-        //
-        // There is no actual service here. Calls on this fake service are expected to fail.
-        assert!(fake_intl_provider.get_profile().await.is_err());
-
-        // Calls to Realm::CreateChild, Realm::BindChild and Directory::Open should have happened.
-        assert_eq!(CALL_COUNT.get(), 3);
-    }
-
-    /// Tests that adding a component with a cmx file successfully returns [`Ok`].
-    #[fasync::run_singlethreaded(test)]
+    /// Tests that adding a component with a cmx file successfully returns an Element
+    /// with outgoing directory routing appropriate for v1 components.
+    #[fasync::run_until_stalled(test)]
     async fn add_v1_element_success() {
         lazy_static! {
-            static ref CALL_COUNT: Counter = Counter::new(0);
+            static ref CREATE_COMPONENT_CALL_COUNT: Counter = Counter::new(0);
         }
 
         const ELEMENT_COUNT: usize = 1;
-
-        let (sender, receiver) = channel::<()>(ELEMENT_COUNT);
 
         let component_url = "test_url.cmx";
         let child_name = "child";
@@ -737,16 +587,37 @@ mod tests {
             }
         });
 
+        let (directory_open_sender, directory_open_receiver) = channel::<String>(1);
+        let directory_request_handler = move |directory_request| match directory_request {
+            fio::DirectoryRequest::Open { path: capability_path, .. } => {
+                let mut result_sender = directory_open_sender.clone();
+                fasync::Task::spawn(async move {
+                    let _ = result_sender.send(capability_path).await;
+                })
+                .detach()
+            }
+            _ => {
+                assert!(false);
+            }
+        };
+
+        let (create_component_sender, create_component_receiver) = channel::<()>(ELEMENT_COUNT);
         let launcher = spawn_launcher_server(move |launcher_request| match launcher_request {
             fsys::LauncherRequest::CreateComponent {
-                launch_info: fsys::LaunchInfo { url, .. },
+                launch_info: fsys::LaunchInfo { url, directory_request, .. },
                 ..
             } => {
                 assert_eq!(url, component_url);
-                let mut result_sender = sender.clone();
+                let mut result_sender = create_component_sender.clone();
+                spawn_directory_server(
+                    ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap())
+                        .into_stream()
+                        .unwrap(),
+                    directory_request_handler.clone(),
+                );
                 fasync::Task::spawn(async move {
-                    let _ = result_sender.send(()).await.expect("Could not create component.");
-                    CALL_COUNT.inc();
+                    let _ = result_sender.send(()).await;
+                    CREATE_COMPONENT_CALL_COUNT.inc();
                 })
                 .detach()
             }
@@ -763,20 +634,29 @@ mod tests {
                 child_collection,
             )
             .await;
-        assert!(result.is_ok());
-        assert!(format!("{:?}", result.unwrap()).contains(component_url));
+        let element = result.unwrap();
+        assert!(format!("{:?}", element).contains(component_url));
 
         // Verify that the CreateComponent was actually called.
-        receiver.into_future().await;
-        assert_eq!(CALL_COUNT.get(), ELEMENT_COUNT);
+        create_component_receiver.into_future().await;
+        assert_eq!(CREATE_COMPONENT_CALL_COUNT.get(), ELEMENT_COUNT);
+
+        // Now use the element api to open a service in the element's outgoing dir. Verify
+        // that the directory channel received the request with the correct path.
+        let (_client_channel, server_channel) = zx::Channel::create().unwrap();
+        let _ = element.connect_to_named_service_with_channel("myService", server_channel);
+        let open_paths = directory_open_receiver.take(1).collect::<Vec<_>>().await;
+        // While a standard v1 component publishes its services to "svc/...", LaunchInfo.directory_request,
+        // which is mocked in the test setup, points to the "svc" subdirectory in production. This is why
+        // the expected path does not contain the "svc/" prefix.
+        assert_eq!(vec!["myService"], open_paths);
     }
 
-    /// Tests that adding multiple components without "*.cm" successfully returns [`Ok`] and the
-    /// components are properly stored in `elements`.
-    #[fasync::run_singlethreaded(test)]
+    /// Tests that adding multiple components without "*.cm" successfully returns [`Ok`].
+    #[fasync::run_until_stalled(test)]
     async fn add_multiple_v1_element_success() {
         lazy_static! {
-            static ref CALL_COUNT: Counter = Counter::new(0);
+            static ref CREATE_COMPONENT_CALL_COUNT: Counter = Counter::new(0);
         }
 
         const ELEMENT_COUNT: usize = 2;
@@ -805,7 +685,7 @@ mod tests {
                 let mut result_sender = sender.clone();
                 fasync::Task::spawn(async move {
                     let _ = result_sender.send(()).await.expect("Could not create component.");
-                    CALL_COUNT.inc();
+                    CREATE_COMPONENT_CALL_COUNT.inc();
                 })
                 .detach()
             }
@@ -837,15 +717,30 @@ mod tests {
 
         // Verify that the CreateComponent was actually called.
         receiver.into_future().await;
-        assert_eq!(CALL_COUNT.get(), ELEMENT_COUNT);
+        assert_eq!(CREATE_COMPONENT_CALL_COUNT.get(), ELEMENT_COUNT);
     }
 
-    /// Tests that adding a *.cm element successfully returns [`Ok`].
-    #[fasync::run_singlethreaded(test)]
-    async fn launch_element_success() {
+    /// Tests that adding a *.cm element successfully returns an Element with
+    /// outgoing directory routing appropriate for v2 components.
+    #[fasync::run_until_stalled(test)]
+    async fn launch_v2_element_success() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
         let child_name = "child";
         let child_collection = "elements";
+
+        let (directory_open_sender, directory_open_receiver) = channel::<String>(1);
+        let directory_request_handler = move |directory_request| match directory_request {
+            fio::DirectoryRequest::Open { path: capability_path, .. } => {
+                let mut result_sender = directory_open_sender.clone();
+                fasync::Task::spawn(async move {
+                    let _ = result_sender.send(capability_path).await;
+                })
+                .detach()
+            }
+            _ => {
+                assert!(false);
+            }
+        };
 
         let realm = spawn_realm_server(move |realm_request| match realm_request {
             fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
@@ -855,9 +750,12 @@ mod tests {
 
                 let _ = responder.send(&mut Ok(()));
             }
-            fsys2::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+            fsys2::RealmRequest::BindChild { child, exposed_dir, responder } => {
                 assert_eq!(child.collection, Some(child_collection.to_string()));
-
+                spawn_directory_server(
+                    exposed_dir.into_stream().unwrap(),
+                    directory_request_handler.clone(),
+                );
                 let _ = responder.send(&mut Ok(()));
             }
             _ => {
@@ -865,7 +763,7 @@ mod tests {
             }
         });
         let element_manager = SimpleElementManager::new(realm);
-        assert!(element_manager
+        let result = element_manager
             .launch_element(
                 ElementSpec {
                     component_url: Some(component_url.to_string()),
@@ -874,12 +772,19 @@ mod tests {
                 child_name,
                 child_collection,
             )
-            .await
-            .is_ok());
+            .await;
+        let element = result.unwrap();
+
+        // Now use the element api to open a service in the element's outgoing dir. Verify
+        // that the directory channel received the request with the correct path.
+        let (_client_channel, server_channel) = zx::Channel::create().unwrap();
+        let _ = element.connect_to_named_service_with_channel("myService", server_channel);
+        let open_paths = directory_open_receiver.take(1).collect::<Vec<_>>().await;
+        assert_eq!(vec!["svc/myService"], open_paths);
     }
 
-    /// Tests that adding an element does not use the launcher.
-    #[fasync::run_singlethreaded(test)]
+    /// Tests that adding a .cm element does not use fuchsia.sys.Launcher.
+    #[fasync::run_until_stalled(test)]
     async fn launch_element_success_not_use_launcher() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
         let child_name = "child";
@@ -923,7 +828,7 @@ mod tests {
     }
 
     /// Tests that adding an element with no URL returns the appropriate error.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn launch_element_no_url() {
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
@@ -943,7 +848,7 @@ mod tests {
 
     /// Tests that adding an element which is not successfully created in the realm returns an
     /// appropriate error.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn launch_element_create_error_internal() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
@@ -978,7 +883,7 @@ mod tests {
 
     /// Tests that adding an element which is not successfully created in the realm returns an
     /// appropriate error.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn launch_element_create_error_no_space() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
@@ -1018,7 +923,7 @@ mod tests {
 
     /// Tests that adding an element which is not successfully bound in the realm returns an
     /// appropriate error.
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn launch_element_bind_error() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
