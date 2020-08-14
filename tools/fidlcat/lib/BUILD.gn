@@ -8,6 +8,8 @@ import("//third_party/protobuf/proto_library.gni")
 if (is_host) {
   static_library("host_lib") {
     public = [
+      "code_generator/code_generator.h",
+      "code_generator/test_generator.h",
       "comparator.h",
       "decoder.h",
       "event.h",

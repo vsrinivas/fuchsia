@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fidl_codec/semantic.h"
+#include "tools/fidlcat/lib/code_generator/test_generator.h"
 #include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/top.h"
@@ -760,6 +761,9 @@ void SyscallDisplayDispatcher::SessionEnded() {
           top.Display(os_);
           break;
         }
+        case ExtraGeneration::Kind::kCpp:
+          GenerateTests(std::to_string(std::time(0)));
+          break;
       }
       separator = "\n";
     } else {
@@ -776,6 +780,9 @@ void SyscallDisplayDispatcher::SessionEnded() {
             top.Display(output);
             break;
           }
+          case ExtraGeneration::Kind::kCpp:
+            GenerateTests(extra_generation.path);
+            break;
         }
       }
     }
@@ -786,6 +793,16 @@ std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
     InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                           std::make_unique<SyscallCompare>(this, comparator_, os_));
+}
+
+void SyscallDisplayDispatcher::GenerateTests(std::string session_id) {
+  if (processes().size() != 1) {
+    std::cout << "Error: Cannot generate tests for more than one process.\n";
+    return;
+  }
+
+  auto test_generator = TestGenerator(processes().begin()->second->name(), session_id);
+  test_generator.GenerateTests();
 }
 
 }  // namespace fidlcat

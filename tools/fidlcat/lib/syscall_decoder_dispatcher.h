@@ -2057,6 +2057,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   void DisplayTop(std::ostream& os);
 
+  void GenerateTests(std::string session_id);
+
  private:
   // Class which can decode a FIDL message.
   fidl_codec::MessageDecoderDispatcher message_decoder_dispatcher_;

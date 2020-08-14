@@ -239,6 +239,36 @@ void main(List<String> arguments) {
           reason: instanceReplay.additionalResult);
     });
 
+    test('Test --with=generate-tests (more than one proces)', () async {
+      final String echoProto =
+          Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
+          ['--with=generate-tests=e2e', '--from=$echoProto']);
+
+      expect(
+          instance.stdout,
+          equals('Error: Cannot generate tests for more than one process.\n'
+              ''),
+          reason: instance.additionalResult);
+    });
+
+    test('Test --with=generate-tests', () async {
+      final String echoClientProto = Platform.script
+          .resolve('runtime_deps/echo_client.proto')
+          .toFilePath();
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
+          ['--with=generate-tests=e2e', '--from=$echoClientProto']);
+
+      expect(
+          instance.stdout,
+          equals(
+              'Writing tests on disk (session id: e2e, process name: echo_client_cpp)\n'
+              ''),
+          reason: instance.additionalResult);
+    });
+
     test('Test --with=summary', () async {
       final String echoProto =
           Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
