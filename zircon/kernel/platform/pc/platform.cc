@@ -17,6 +17,8 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
+#include <kernel/cpu_distance_map.h>
+#include <ktl/algorithm.h>
 
 #include "platform_p.h"
 #if defined(WITH_KERNEL_PCIE)
@@ -710,10 +712,11 @@ void platform_early_init(void) {
 
 void platform_prevm_init() {}
 
-static void platform_init_smp(void) {
-  fbl::AllocChecker ac;
-  fbl::Vector<uint32_t> apic_ids;
+// Maps from contiguous id to APICID.
+static fbl::Vector<uint32_t> apic_ids;
+static size_t bsp_apic_id_index;
 
+static void traverse_topology(uint32_t) {
   // Filter out hyperthreads if we've been told not to init them
   const bool use_ht = gCmdline.GetBool("kernel.smp.ht", true);
 
@@ -721,17 +724,21 @@ static void platform_init_smp(void) {
   const uint32_t bsp_apic_id = apic_local_id();
   DEBUG_ASSERT(bsp_apic_id == apic_bsp_id());
 
+  // Maps from contiguous id to logical id in topology.
+  fbl::Vector<cpu_num_t> logical_ids;
+
   // Iterate over all the cores, copy apic ids of active cores into list.
   dprintf(INFO, "cpu topology:\n");
   size_t cpu_index = 0;
-  size_t bsp_apic_id_index = 0;
+  bsp_apic_id_index = 0;
   for (const auto* processor_node : system_topology::GetSystemTopology().processors()) {
     const auto& processor = processor_node->entity.processor;
     for (size_t i = 0; i < processor.architecture_info.x86.apic_id_count; i++) {
       const uint32_t apic_id = processor.architecture_info.x86.apic_ids[i];
       const bool keep = (i < 1) || use_ht;
+      const size_t index = cpu_index++;
 
-      dprintf(INFO, "\t%3zu: apic id %#4x %s%s%s\n", cpu_index++, apic_id, (i > 0) ? "SMT " : "",
+      dprintf(INFO, "\t%3zu: apic id %#4x %s%s%s\n", index, apic_id, (i > 0) ? "SMT " : "",
               (apic_id == bsp_apic_id) ? "BSP " : "", keep ? "" : "(not using)");
 
       if (keep) {
@@ -739,9 +746,15 @@ static void platform_init_smp(void) {
           bsp_apic_id_index = apic_ids.size();
         }
 
+        fbl::AllocChecker ac;
         apic_ids.push_back(apic_id, &ac);
         if (!ac.check()) {
-          TRACEF("failed to allocate apic_ids table, disabling SMP\n");
+          dprintf(CRITICAL, "Failed to allocate apic_ids table, disabling SMP!\n");
+          return;
+        }
+        logical_ids.push_back(static_cast<cpu_num_t>(index), &ac);
+        if (!ac.check()) {
+          dprintf(CRITICAL, "Failed to allocate logical_ids table, disabling SMP!\n");
           return;
         }
       }
@@ -761,6 +774,7 @@ static void platform_init_smp(void) {
     // TODO(edcoyne): Implement fbl::Vector()::resize().
     while (apic_ids.size() > max_cpus) {
       apic_ids.pop_back();
+      logical_ids.pop_back();
     }
   }
 
@@ -777,6 +791,64 @@ static void platform_init_smp(void) {
     ASSERT(found_bp);
   }
 
+  const size_t cpu_count = logical_ids.size();
+  CpuDistanceMap::Initialize(cpu_count, [&logical_ids](cpu_num_t from_id, cpu_num_t to_id) {
+    using system_topology::Node;
+    using system_topology::Graph;
+
+    const cpu_num_t logical_from_id = logical_ids[from_id];
+    const cpu_num_t logical_to_id = logical_ids[to_id];
+    const Graph& topology = system_topology::GetSystemTopology();
+
+    Node* from_node = nullptr;
+    if (topology.ProcessorByLogicalId(logical_from_id, &from_node) != ZX_OK) {
+      printf("Failed to get processor node for logical CPU %u\n", logical_from_id);
+      return -1;
+    }
+    DEBUG_ASSERT(from_node != nullptr);
+
+    Node* to_node = nullptr;
+    if (topology.ProcessorByLogicalId(logical_to_id, &to_node) != ZX_OK) {
+      printf("Failed to get processor node for logical CPU %u\n", logical_to_id);
+      return -1;
+    }
+    DEBUG_ASSERT(to_node != nullptr);
+
+    Node* from_cache_node = nullptr;
+    for (Node* node = from_node->parent; node != nullptr; node = node->parent) {
+      if (node->entity_type == ZBI_TOPOLOGY_ENTITY_CACHE) {
+        from_cache_node = node;
+        break;
+      }
+    }
+    Node* to_cache_node = nullptr;
+    for (Node* node = to_node->parent; node != nullptr; node = node->parent) {
+      if (node->entity_type == ZBI_TOPOLOGY_ENTITY_CACHE) {
+        to_cache_node = node;
+        break;
+      }
+    }
+
+    const uint32_t from_cache_id = from_cache_node ? from_cache_node->entity.cache.cache_id : 0;
+    const uint32_t to_cache_id = to_cache_node ? to_cache_node->entity.cache.cache_id : 0;
+
+    // Return the maximum cache depth that is not shared by the CPUs.
+    // TODO(eieio): Consider NUMA node and other caches.
+    return ktl::max(
+        {1 * int{logical_from_id != logical_to_id}, 2 * int{from_cache_id != to_cache_id}});
+  });
+
+  // TODO(eieio): Determine this automatically. The current value matches the
+  // distance value of the cache above.
+  const CpuDistanceMap::Distance kDistanceThreshold = 2u;
+  CpuDistanceMap::Get().set_distance_threshold(kDistanceThreshold);
+
+  CpuDistanceMap::Get().Dump();
+}
+LK_INIT_HOOK(pc_traverse_topology, traverse_topology, LK_INIT_LEVEL_TOPOLOGY)
+
+// Must be called after traverse_topology has processed the SMP data.
+static void platform_init_smp() {
   x86_init_smp(apic_ids.data(), static_cast<uint32_t>(apic_ids.size()));
 
   // trim the boot cpu out of the apic id list before passing to the AP booting routine

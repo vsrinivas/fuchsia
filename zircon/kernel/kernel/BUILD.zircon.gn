@@ -9,6 +9,7 @@ import("$zx/kernel/params.gni")
 source_set("kernel") {
   sources = [
     "brwlock.cc",
+    "cpu_search_set.cc",
     "deadline.cc",
     "debug.cc",
     "dpc.cc",

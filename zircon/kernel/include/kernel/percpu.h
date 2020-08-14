@@ -17,6 +17,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <ffl/fixed.h>
 #include <kernel/align.h>
+#include <kernel/cpu_search_set.h>
 #include <kernel/dpc.h>
 #include <kernel/scheduler.h>
 #include <kernel/stats.h>
@@ -44,6 +45,9 @@ struct percpu {
   using PerformanceScale = ffl::Fixed<int32_t, 8>;
   PerformanceScale performance_scale{1};
   PerformanceScale performance_scale_reciprocal{1};
+
+  // per cpu search set
+  CpuSearchSet search_set;
 
   // per cpu scheduler
   Scheduler scheduler;

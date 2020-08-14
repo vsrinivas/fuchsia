@@ -71,6 +71,7 @@ if (toolchain.environment == "kernel") {
       "brwlock_tests.cc",
       "cache_tests.cc",
       "clock_tests.cc",
+      "cpu_search_tests.cc",
       "dpc_tests.cc",
       "event_tests.cc",
       "fibo.cc",

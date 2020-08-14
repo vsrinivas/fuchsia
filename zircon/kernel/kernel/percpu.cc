@@ -14,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 #include <ffl/string.h>
 #include <kernel/align.h>
+#include <kernel/cpu_distance_map.h>
 #include <kernel/lockdep.h>
 #include <ktl/algorithm.h>
 #include <ktl/unique_ptr.h>
@@ -43,7 +44,7 @@ percpu::percpu(cpu_num_t cpu_num) {
 void percpu::InitializeBoot() { boot_processor_.Initialize(0); }
 
 void percpu::InitializeSecondary(uint32_t /*init_level*/) {
-  processor_count_ = system_topology::GetSystemTopology().logical_processor_count();
+  processor_count_ = CpuDistanceMap::Get().cpu_count();
   DEBUG_ASSERT(processor_count_ != 0);
 
   const size_t index_size = sizeof(percpu*) * processor_count_;
@@ -87,6 +88,17 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
     } else {
       dprintf(INFO, "Failed to allocate temp buffer, using default performance for all CPUs\n");
     }
+  }
+
+  // Determine the clusters before initializing the CPU search sets.
+  CpuSearchSet::AutoCluster(processor_count_);
+  CpuSearchSet::DumpClusters();
+
+  // Initialize the search set for each CPU.
+  dprintf(INFO, "CPU search order:\n");
+  for (cpu_num_t i = 0; i < processor_count_; i++) {
+    processor_index_[i]->search_set.Initialize(i, processor_count_);
+    processor_index_[i]->search_set.Dump();
   }
 }
 
