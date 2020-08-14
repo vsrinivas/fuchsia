@@ -1,27 +1,31 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use fuchsia_async as fasync;
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::channel::oneshot;
+use futures::lock::Mutex;
+use futures::StreamExt;
+
+use async_trait::async_trait;
+
 use crate::handler::base::{
     Command, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
 use crate::handler::setting_proxy::SettingProxy;
-use crate::internal::core::{message::create_hub, Address, Payload};
+use crate::internal::core::message::{create_hub, Messenger, Receptor};
+use crate::internal::core::{self, Address, Payload};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
-
-use async_trait::async_trait;
-use fuchsia_async as fasync;
-use futures::channel::mpsc::UnboundedSender;
-use futures::channel::oneshot;
-use futures::lock::Mutex;
-use futures::StreamExt;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 pub type SwitchboardReceptor = BaseReceptor<Payload, Address>;
 
@@ -168,56 +172,87 @@ impl SettingHandlerFactory for FakeFactory {
     }
 }
 
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_notify() {
+pub struct TestEnvironment {
+    proxy_signature: core::message::Signature,
+    proxy_handler_signature: handler::message::Signature,
+    messenger_client: Messenger,
+    messenger_receptor: Receptor,
+    handler_factory: Arc<Mutex<FakeFactory>>,
+    setting_handler_rx: UnboundedReceiver<State>,
+    setting_handler: Arc<Mutex<SettingHandler>>,
+}
+
+/// Generates a setting proxy, switchboard, and setting handler for testing.
+///
+/// If done_tx is provided, it will be passed to the created setting handler.
+async fn create_test_environment(
+    setting_type: SettingType,
+    done_tx: Option<oneshot::Sender<()>>,
+) -> TestEnvironment {
     let messenger_factory = create_hub();
     let handler_messenger_factory = handler::message::create_hub();
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
     let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
-        SettingType::Unknown,
+        setting_type,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
     .await
     .expect("proxy creation should succeed");
-    let setting_type = SettingType::Unknown;
-    let (messenger_client, mut receptor) =
+    let (messenger_client, receptor) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
 
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, mut state_rx) = futures::channel::mpsc::unbounded::<State>();
+    let (state_tx, state_rx) = futures::channel::mpsc::unbounded::<State>();
     let handler = SettingHandler::create(
         handler_messenger,
         handler_receptor,
         proxy_handler_signature,
         setting_type,
         state_tx,
-        None,
+        done_tx,
     );
+
+    TestEnvironment {
+        proxy_signature,
+        proxy_handler_signature,
+        messenger_client,
+        messenger_receptor: receptor,
+        handler_factory,
+        setting_handler_rx: state_rx,
+        setting_handler: handler,
+    }
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_notify() {
+    let setting_type = SettingType::Unknown;
+    let mut environment = create_test_environment(setting_type, None).await;
 
     // Send a listen state and make sure sink is notified.
     {
-        assert!(messenger_client
+        assert!(environment
+            .messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: 1,
-                    setting_type: setting_type,
+                    setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Messenger(proxy_signature),
+                Audience::Messenger(environment.proxy_signature),
             )
             .send()
             .wait_for_acknowledge()
             .await
             .is_ok());
 
-        handler.lock().await.notify();
+        environment.setting_handler.lock().await.notify();
 
-        while let Some(event) = receptor.next().await {
+        while let Some(event) = environment.messenger_receptor.next().await {
             if let MessageEvent::Message(Payload::Event(SettingEvent::Changed(changed_type)), _) =
                 event
             {
@@ -227,7 +262,7 @@ async fn test_notify() {
         }
     }
 
-    if let Some(state) = state_rx.next().await {
+    if let Some(state) = environment.setting_handler_rx.next().await {
         assert_eq!(state, State::Listen);
     } else {
         panic!("should have received state update");
@@ -235,26 +270,27 @@ async fn test_notify() {
 
     // Send an end listen state and make sure sink is notified.
     {
-        messenger_client
+        environment
+            .messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: 1,
-                    setting_type: setting_type,
+                    setting_type,
                     data: SettingActionData::Listen(0),
                 }),
-                Audience::Messenger(proxy_signature),
+                Audience::Messenger(environment.proxy_signature),
             )
             .send()
             .ack();
     }
 
-    if let Some(state) = state_rx.next().await {
+    if let Some(state) = environment.setting_handler_rx.next().await {
         assert_eq!(state, State::EndListen);
     } else {
         panic!("should have received EndListen state update");
     }
 
-    if let Some(state) = state_rx.next().await {
+    if let Some(state) = environment.setting_handler_rx.next().await {
         assert_eq!(state, State::Teardown);
     } else {
         panic!("should have received Teardown state update");
@@ -263,46 +299,22 @@ async fn test_notify() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_request() {
-    let messenger_factory = create_hub();
-    let handler_messenger_factory = handler::message::create_hub();
-    let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
-
-    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
-        SettingType::Unknown,
-        handler_factory.clone(),
-        messenger_factory.clone(),
-        handler_messenger_factory,
-    )
-    .await
-    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
-    let (messenger_client, _) =
-        messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-
-    let (handler_messenger, handler_receptor) =
-        handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let handler = SettingHandler::create(
-        handler_messenger,
-        handler_receptor,
-        proxy_handler_signature,
-        setting_type,
-        state_tx,
-        None,
-    );
     let request_id = 42;
+    let environment = create_test_environment(setting_type, None).await;
 
-    handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
 
     // Send initial request.
-    let mut receptor = messenger_client
+    let mut receptor = environment
+        .messenger_client
         .message(
             Payload::Action(SettingAction {
                 id: request_id,
                 setting_type: setting_type,
                 data: SettingActionData::Request(SettingRequest::Get),
             }),
-            Audience::Messenger(proxy_signature),
+            Audience::Messenger(environment.proxy_signature),
         )
         .send();
 
@@ -323,116 +335,69 @@ async fn test_request() {
 /// Ensures setting handler is only generated once if never torn down.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_generation() {
-    let messenger_factory = create_hub();
-    let handler_messenger_factory = handler::message::create_hub();
-    let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
-
-    let (messenger_client, _) =
-        messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
-        SettingType::Unknown,
-        handler_factory.clone(),
-        messenger_factory.clone(),
-        handler_messenger_factory,
-    )
-    .await
-    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
-
-    let (handler_messenger, handler_receptor) =
-        handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let _handler = SettingHandler::create(
-        handler_messenger,
-        handler_receptor,
-        proxy_handler_signature,
-        setting_type,
-        state_tx,
-        None,
-    );
+    let environment = create_test_environment(setting_type, None).await;
 
     // Send initial request.
     let _ = get_response(
-        messenger_client
+        environment
+            .messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
                     setting_type: setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Messenger(proxy_signature),
+                Audience::Messenger(environment.proxy_signature),
             )
             .send(),
     )
     .await;
 
     // Ensure the handler was only created once.
-    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+    assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
 
     // Send followup request.
     let _ = get_response(
-        messenger_client
+        environment
+            .messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
                     setting_type: setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
-                Audience::Messenger(proxy_signature),
+                Audience::Messenger(environment.proxy_signature),
             )
             .send(),
     )
     .await;
 
     // Make sure no followup generation was invoked.
-    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+    assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
 }
 
 /// Ensures setting handler is generated multiple times successfully if torn down.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_regeneration() {
-    let messenger_factory = create_hub();
-    let handler_messenger_factory = handler::message::create_hub();
-    let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
-
-    let (messenger_client, _) =
-        messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
-        SettingType::Unknown,
-        handler_factory.clone(),
-        messenger_factory.clone(),
-        handler_messenger_factory,
-    )
-    .await
-    .expect("proxy should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
-
-    let (handler_messenger, handler_receptor) =
-        handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, mut state_rx) = futures::channel::mpsc::unbounded::<State>();
     let (done_tx, done_rx) = oneshot::channel();
-    let handler = SettingHandler::create(
-        handler_messenger,
-        handler_receptor,
-        proxy_handler_signature,
-        setting_type,
-        state_tx,
-        Some(done_tx),
-    );
+    let mut environment = create_test_environment(setting_type, Some(done_tx)).await;
 
     // Send initial request.
     assert!(
         get_response(
-            messenger_client
+            environment
+                .messenger_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
                         setting_type,
                         data: SettingActionData::Request(SettingRequest::Get),
                     }),
-                    Audience::Messenger(proxy_signature),
+                    Audience::Messenger(environment.proxy_signature),
                 )
                 .send(),
         )
@@ -442,13 +407,13 @@ async fn test_regeneration() {
     );
 
     // Ensure the handler was only created once.
-    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+    assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
 
     // The subsequent teardown should happen here.
     done_rx.await.ok();
     let mut hit_teardown = false;
     loop {
-        let state = state_rx.next().await;
+        let state = environment.setting_handler_rx.next().await;
         match state {
             Some(State::Teardown) => {
                 hit_teardown = true;
@@ -459,18 +424,22 @@ async fn test_regeneration() {
         }
     }
     assert!(hit_teardown, "Handler should have torn down");
-    drop(handler);
+    drop(environment.setting_handler);
 
-    // Now that the handler is dropped, state_rx should be dropped too
-    assert!(state_rx.next().await.is_none(), "There should be no more states after teardown");
+    // Now that the handler is dropped, the setting_handler_tx should be dropped too and the rx end
+    // will return none.
+    assert!(
+        environment.setting_handler_rx.next().await.is_none(),
+        "There should be no more states after teardown"
+    );
 
     let (handler_messenger, handler_receptor) =
-        handler_factory.lock().await.create(setting_type).await;
+        environment.handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
     let _handler = SettingHandler::create(
         handler_messenger,
         handler_receptor,
-        proxy_handler_signature,
+        environment.proxy_handler_signature,
         setting_type,
         state_tx,
         None,
@@ -479,14 +448,15 @@ async fn test_regeneration() {
     // Send followup request.
     assert!(
         get_response(
-            messenger_client
+            environment
+                .messenger_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
                         setting_type,
                         data: SettingActionData::Request(SettingRequest::Get),
                     }),
-                    Audience::Messenger(proxy_signature),
+                    Audience::Messenger(environment.proxy_signature),
                 )
                 .send(),
         )
@@ -496,7 +466,7 @@ async fn test_regeneration() {
     );
 
     // Check that the handler was re-generated.
-    assert_eq!(2, handler_factory.lock().await.get_request_count(setting_type));
+    assert_eq!(2, environment.handler_factory.lock().await.get_request_count(setting_type));
 }
 
 async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingHandlerResult)> {
