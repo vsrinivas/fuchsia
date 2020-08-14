@@ -6,6 +6,7 @@
 
 #include <float.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 #include <math.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -19,10 +20,11 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
-#include "lib/zx/time.h"
 #include "rdma-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/amlogic-display.h"
 #include "src/graphics/display/drivers/amlogic-display/common.h"
 #include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
 #include "vpp-regs.h"
@@ -34,22 +36,9 @@ namespace amlogic_display {
 #define WRITE32_VPU_REG(a, v) vpu_mmio_->Write32(v, a)
 
 namespace {
-constexpr uint32_t VpuViuOsd1BlkCfgTblAddrShift = 16;
-constexpr uint32_t VpuViuOsd1BlkCfgLittleEndian = (1 << 15);
 constexpr uint32_t VpuViuOsd1BlkCfgOsdBlkMode32Bit = 5;
-constexpr uint32_t VpuViuOsd1BlkCfgOsdBlkModeShift = 8;
 constexpr uint32_t VpuViuOsd1BlkCfgColorMatrixArgb = 1;
-constexpr uint32_t VpuViuOsd1BlkCfgColorMatrixShift = 2;
-
-constexpr uint32_t VpuViuOsd1CtrlStatOsdBlkEnable = (1 << 0);
-
-constexpr uint32_t VpuViuOsd1CtrlStat2ReplacedAlphaEn = (1 << 14);
-constexpr uint32_t VpuViuOsd1CtrlStat2ReplacedAlphaShift = 6u;
-
 constexpr uint32_t kMaximumAlpha = 0xff;
-constexpr uint32_t kOsdGlobalAlphaShift = 12;
-constexpr uint32_t kOsdGlobalAlphaMask = (0x1FF << kOsdGlobalAlphaShift);
-constexpr uint32_t kHwOsdBlockEnable0 = 0x0001;  // osd blk0 enable
 
 // We use bicubic interpolation for scaling.
 // TODO(payamm): Add support for other types of interpolation
@@ -70,6 +59,19 @@ constexpr int32_t kMaxFloatToFixed2_10 = (2 * kFloatToFixed2_10ScaleFactor) - 1;
 constexpr int32_t kMinFloatToFixed2_10 = -2 * kFloatToFixed2_10ScaleFactor;
 constexpr uint32_t kFloatToFixed2_10Mask = 0xFFF;
 
+// AFBC related constants
+constexpr uint32_t kAfbcb16x16Pixel = 0;
+__UNUSED constexpr uint32_t kAfbc32x8Pixel = 1;
+constexpr uint32_t kAfbcSplitOff = 0;
+__UNUSED constexpr uint32_t kAfbcSplitOn = 1;
+constexpr uint32_t kAfbcYuvTransferOff = 0;
+__UNUSED constexpr uint32_t kAfbcYuvTransferOn = 1;
+constexpr uint32_t kAfbcRGBA8888 = 5;
+constexpr uint32_t kAfbcColorReorderR = 1;
+constexpr uint32_t kAfbcColorReorderG = 2;
+constexpr uint32_t kAfbcColorReorderB = 3;
+constexpr uint32_t kAfbcColorReorderA = 4;
+
 }  // namespace
 
 int Osd::RdmaThread() {
@@ -82,12 +84,21 @@ int Osd::RdmaThread() {
     }
     // RDMA completed. Remove source for all finished DMA channels
     for (int i = 0; i < kMaxRdmaChannels; i++) {
-      if (vpu_mmio_->Read32(VPU_RDMA_STATUS) & RDMA_STATUS_DONE(i)) {
+      if (RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(i + 1)) {
         fbl::AutoLock lock(&rdma_lock_);
         uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
-        regVal &= ~RDMA_ACCESS_AUTO_INT_EN(i);  // VSYNC interrupt source
+        regVal &= ~RDMA_ACCESS_AUTO_INT_EN(i);  // Remove VSYNC interrupt source
         vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
       }
+    }
+
+    // For AFBC, we simply clear the interrupt. We keep it enabled since it needs to get triggered
+    // every vsync. It will get disabled if FlipOnVsync does not use AFBC.
+    if (RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(kAfbcRdmaChannel)) {
+      fbl::AutoLock lock(&rdma_lock_);
+      RdmaCtrlReg::Get()
+          .ReadFrom(&(*vpu_mmio_))
+          .set_clear_done(RDMA_CTRL_INT_DONE(kAfbcRdmaChannel));
     }
   }
   return status;
@@ -146,17 +157,15 @@ zx_status_t Osd::Init(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void Osd::StopRdma() { vpu_mmio_->ClearBits32(RDMA_ACCESS_AUTO_INT_EN_ALL, VPU_RDMA_ACCESS_AUTO); }
-
 void Osd::Disable(void) {
   ZX_DEBUG_ASSERT(initialized_);
   StopRdma();
-  vpu_mmio_->ClearBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
+  Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(0).WriteTo(&(*vpu_mmio_));
 }
 
 void Osd::Enable(void) {
   ZX_DEBUG_ASSERT(initialized_);
-  vpu_mmio_->SetBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
+  Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(1).WriteTo(&(*vpu_mmio_));
 }
 
 uint32_t Osd::FloatToFixed2_10(float f) {
@@ -178,6 +187,7 @@ uint32_t Osd::FloatToFixed3_10(float f) {
 }
 
 void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
+  auto info = reinterpret_cast<ImageInfo*>(config[0].layer_list[0]->cfg.primary.image.handle);
   // Get the first available channel
   int rdma_channel = GetNextAvailableRdmaChannel();
   uint8_t retry_count = 0;
@@ -215,21 +225,26 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
                         VppGammaCntlPortReg::Get().ReadFrom(&(*vpu_mmio_)).en());
     }
   }
-
-  // Update CFG_W0 with correct Canvas Index
-  uint32_t cfg_w0 = (idx << VpuViuOsd1BlkCfgTblAddrShift) | VpuViuOsd1BlkCfgLittleEndian |
-                    (VpuViuOsd1BlkCfgOsdBlkMode32Bit << VpuViuOsd1BlkCfgOsdBlkModeShift) |
-                    (VpuViuOsd1BlkCfgColorMatrixArgb << VpuViuOsd1BlkCfgColorMatrixShift);
-  SetRdmaTableValue(rdma_channel, IDX_CFG_W0, cfg_w0);
+  auto cfg_w0 = Osd1Blk0CfgW0Reg::Get().FromValue(0);
+  cfg_w0.set_blk_mode(VpuViuOsd1BlkCfgOsdBlkMode32Bit)
+      .set_color_matrix(VpuViuOsd1BlkCfgColorMatrixArgb);
+  if (info->is_afbc) {
+    // AFBC: Enable sourcing from mali + configure as big endian
+    cfg_w0.set_mali_src_en(1).set_little_endian(0);
+  } else {
+    // Update CFG_W0 with correct Canvas Index
+    cfg_w0.set_mali_src_en(0).set_little_endian(1).set_tbl_addr(idx);
+  }
+  SetRdmaTableValue(rdma_channel, IDX_BLK0_CFG_W0, cfg_w0.reg_value());
 
   auto primary_layer = config->layer_list[0]->cfg.primary;
 
   // Configure ctrl_stat and ctrl_stat2 registers
-  uint32_t osd_ctrl_stat_val = vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT);
-  uint32_t osd_ctrl_stat2_val = vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT2);
+  auto osd_ctrl_stat_val = Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_));
+  auto osd_ctrl_stat2_val = Osd1CtrlStat2Reg::Get().ReadFrom(&(*vpu_mmio_));
 
   // enable OSD Block
-  osd_ctrl_stat_val |= VpuViuOsd1CtrlStatOsdBlkEnable;
+  osd_ctrl_stat_val.set_blk_en(1);
 
   // Amlogic supports two types of alpha blending:
   // Global: This alpha value is applied to the entire plane (i.e. all pixels)
@@ -251,25 +266,67 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   // - Disable "replaced_alpha" which allows hardware to use per-pixel alpha channel.
 
   // Load default values: Set global alpha to 1 and enable replaced_alpha.
-  osd_ctrl_stat2_val |=
-      (kMaximumAlpha << VpuViuOsd1CtrlStat2ReplacedAlphaShift) | VpuViuOsd1CtrlStat2ReplacedAlphaEn;
-  osd_ctrl_stat_val |= kMaximumAlpha << kOsdGlobalAlphaShift;
+  osd_ctrl_stat2_val.set_replaced_alpha_en(1).set_replaced_alpha(kMaximumAlpha);
+  osd_ctrl_stat_val.set_global_alpha(kMaximumAlpha);
 
   if (primary_layer.alpha_mode != ALPHA_DISABLE) {
     // If a global alpha value is provided, apply it.
     if (!isnan(primary_layer.alpha_layer_val)) {
       auto num = static_cast<uint8_t>(round(primary_layer.alpha_layer_val * kMaximumAlpha));
-      osd_ctrl_stat_val &= ~(kOsdGlobalAlphaMask);
-      osd_ctrl_stat_val |= (num << kOsdGlobalAlphaShift);
+      osd_ctrl_stat_val.set_global_alpha(num);
     }
     // If format includes alpha channel, disable "replaced_alpha"
     if (primary_layer.image.pixel_format != ZX_PIXEL_FORMAT_RGB_x888) {
-      osd_ctrl_stat2_val &= ~(VpuViuOsd1CtrlStat2ReplacedAlphaEn);
+      osd_ctrl_stat2_val.set_replaced_alpha_en(0);
     }
   }
 
-  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT, osd_ctrl_stat_val);
-  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT2, osd_ctrl_stat2_val);
+  // Use linear address for AFBC, Canvas otherwise
+  osd_ctrl_stat_val.set_osd_mem_mode(info->is_afbc ? 1 : 0);
+  osd_ctrl_stat2_val.set_pending_status_cleanup(1);
+
+  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT, osd_ctrl_stat_val.reg_value());
+  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT2, osd_ctrl_stat2_val.reg_value());
+
+  if (info->is_afbc) {
+    // Line Stride calculation based on vendor code
+    auto a = fbl::round_up(fbl::round_up(info->image_width * 4, 16u) / 16, 2u);
+    auto r = Osd1Blk2CfgW4Reg::Get().FromValue(0).set_linear_stride(a).reg_value();
+    SetRdmaTableValue(rdma_channel, IDX_BLK2_CFG_W4, r);
+
+    // Set AFBC's Physical address since it does not use Canvas
+    SetRdmaTableValue(rdma_channel, IDX_AFBC_HEAD_BUF_ADDR_LOW, (info->paddr & 0xFFFFFFFF));
+    SetRdmaTableValue(rdma_channel, IDX_AFBC_HEAD_BUF_ADDR_HIGH, (info->paddr >> 32));
+
+    // Set OSD to unpack Mali source
+    auto upackreg = Osd1MaliUnpackCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mali_unpack_en(1);
+    SetRdmaTableValue(rdma_channel, IDX_MALI_UNPACK_CTRL, upackreg.reg_value());
+
+    // Switch OSD to Mali Source
+    auto miscctrl = OsdPathMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_osd1_mali_sel(1);
+    SetRdmaTableValue(rdma_channel, IDX_PATH_MISC_CTRL, miscctrl.reg_value());
+
+    // S0 is our index of 0, which is programmed for OSD1
+    SetRdmaTableValue(
+        rdma_channel, IDX_AFBC_SURFACE_CFG,
+        AfbcSurfaceCfgReg::Get().ReadFrom(&(*vpu_mmio_)).set_cont(0).set_s0_en(1).reg_value());
+    // set command - This uses a separate RDMA Table
+    SetAfbcRdmaTableValue(AfbcCommandReg::Get().FromValue(0).set_direct_swap(1).reg_value());
+  } else {
+    // Set OSD to unpack Normal source
+    auto upackreg = Osd1MaliUnpackCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mali_unpack_en(0);
+    SetRdmaTableValue(rdma_channel, IDX_MALI_UNPACK_CTRL, upackreg.reg_value());
+
+    // Switch OSD to DDR Source
+    auto miscctrl = OsdPathMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_osd1_mali_sel(0);
+    SetRdmaTableValue(rdma_channel, IDX_PATH_MISC_CTRL, miscctrl.reg_value());
+
+    // Disable afbc sourcing
+    SetRdmaTableValue(rdma_channel, IDX_AFBC_SURFACE_CFG,
+                      AfbcSurfaceCfgReg::Get().ReadFrom(&(*vpu_mmio_)).set_s0_en(0).reg_value());
+    // clear command - This uses a separate RDMA Table
+    SetAfbcRdmaTableValue(AfbcCommandReg::Get().FromValue(0).set_direct_swap(0).reg_value());
+  }
 
   // Perform color correction if needed
   if (config->cc_flags) {
@@ -344,6 +401,16 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
                       vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_EN_CTRL) & ~(1 << 0));
   }
   FlushRdmaTable(rdma_channel);
+  if (info->is_afbc) {
+    FlushAfbcRdmaTable();
+    // Write the start and end address of the table.  End address is the last address that the
+    // RDMA engine reads from.
+    vpu_mmio_->Write32(static_cast<uint32_t>(afbc_rdma_chnl_container_.phys_offset),
+                       VPU_RDMA_AHB_START_ADDR(kAfbcRdmaChannel - 1));
+    vpu_mmio_->Write32(static_cast<uint32_t>(afbc_rdma_chnl_container_.phys_offset +
+                                             (sizeof(RdmaTable) * kRdmaTableMaxSize) - 4),
+                       VPU_RDMA_AHB_END_ADDR(kAfbcRdmaChannel - 1));
+  }
 
   // Write the start and end address of the table. End address is the last address that the
   // RDMA engine reads from.
@@ -359,6 +426,15 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   regVal |= RDMA_ACCESS_AUTO_INT_EN(rdma_channel);  // VSYNC interrupt source
   regVal |= RDMA_ACCESS_AUTO_WRITE(rdma_channel);   // Write
   vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
+
+  if (info->is_afbc) {
+    // Enable Auto mode: Non-Increment, VSync Interrupt Driven, Write
+    RdmaAccessAuto2Reg::Get().FromValue(0).set_chn7_auto_write(1).WriteTo(&(*vpu_mmio_));
+    RdmaAccessAuto3Reg::Get().FromValue(0).set_chn7_intr(1).WriteTo(&(*vpu_mmio_));
+  } else {
+    // Remove interrupt source
+    RdmaAccessAuto3Reg::Get().FromValue(0).set_chn7_intr(0).WriteTo(&(*vpu_mmio_));
+  }
 }
 
 void Osd::DefaultSetup() {
@@ -413,7 +489,13 @@ void Osd::DefaultSetup() {
   WRITE32_REG(VPU, VPU_VIU_OSD1_BLK0_CFG_W2, ((fb_height_ - 1) & 0x1fff) << 16);
 
   // enable osd blk0
-  SET_BIT32(VPU, VPU_VIU_OSD1_CTRL_STAT, kHwOsdBlockEnable0, 0, 4);
+  Osd1CtrlStatReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_rsv(0)
+      .set_osd_mem_mode(0)
+      .set_premult_en(0)
+      .set_blk_en(1)
+      .WriteTo(&(*vpu_mmio_));
 }
 
 void Osd::EnableScaling(bool enable) {
@@ -491,7 +573,7 @@ void Osd::ResetRdmaTable() {
   // Setup RDMA Table Register values
   for (auto& i : rdma_chnl_container_) {
     auto* rdma_table = reinterpret_cast<RdmaTable*>(i.virt_offset);
-    rdma_table[IDX_CFG_W0].reg = (VPU_VIU_OSD1_BLK0_CFG_W0 >> 2);
+    rdma_table[IDX_BLK0_CFG_W0].reg = (VPU_VIU_OSD1_BLK0_CFG_W0 >> 2);
     rdma_table[IDX_CTRL_STAT].reg = (VPU_VIU_OSD1_CTRL_STAT >> 2);
     rdma_table[IDX_CTRL_STAT2].reg = (VPU_VIU_OSD1_CTRL_STAT2 >> 2);
     rdma_table[IDX_MATRIX_EN_CTRL].reg = (VPU_VPP_POST_MATRIX_EN_CTRL >> 2);
@@ -505,7 +587,15 @@ void Osd::ResetRdmaTable() {
     rdma_table[IDX_MATRIX_PRE_OFFSET0_1].reg = (VPU_VPP_POST_MATRIX_PRE_OFFSET0_1 >> 2);
     rdma_table[IDX_MATRIX_PRE_OFFSET2].reg = (VPU_VPP_POST_MATRIX_PRE_OFFSET2 >> 2);
     rdma_table[IDX_GAMMA_EN].reg = (VPP_GAMMA_CNTL_PORT >> 2);
+    rdma_table[IDX_BLK2_CFG_W4].reg = (VPU_VIU_OSD1_BLK2_CFG_W4 >> 2);
+    rdma_table[IDX_MALI_UNPACK_CTRL].reg = (VIU_OSD1_MALI_UNPACK_CTRL >> 2);
+    rdma_table[IDX_PATH_MISC_CTRL].reg = (VPU_OSD_PATH_MISC_CTRL >> 2);
+    rdma_table[IDX_AFBC_HEAD_BUF_ADDR_LOW].reg = (VPU_MAFBC_HEADER_BUF_ADDR_LOW_S0 >> 2);
+    rdma_table[IDX_AFBC_HEAD_BUF_ADDR_HIGH].reg = (VPU_MAFBC_HEADER_BUF_ADDR_HIGH_S0 >> 2);
+    rdma_table[IDX_AFBC_SURFACE_CFG].reg = (VPU_MAFBC_SURFACE_CFG >> 2);
   }
+  auto* afbc_rdma_table = reinterpret_cast<RdmaTable*>(afbc_rdma_chnl_container_.virt_offset);
+  afbc_rdma_table->reg = (VPU_MAFBC_COMMAND >> 2);
 }
 
 void Osd::SetRdmaTableValue(uint32_t channel, uint32_t idx, uint32_t val) {
@@ -525,26 +615,81 @@ void Osd::FlushRdmaTable(uint32_t channel) {
   }
 }
 
+void Osd::SetAfbcRdmaTableValue(uint32_t val) const {
+  auto* afbc_rdma_table = reinterpret_cast<RdmaTable*>(afbc_rdma_chnl_container_.virt_offset);
+  afbc_rdma_table->val = val;
+}
+
+void Osd::FlushAfbcRdmaTable() const {
+  zx_status_t status = zx_cache_flush(afbc_rdma_chnl_container_.virt_offset, sizeof(RdmaTable),
+                                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not clean cache %d\n", status);
+    return;
+  }
+}
+
 int Osd::GetNextAvailableRdmaChannel() {
   // The next RDMA channel is the one that is not being used by hardware
   // A channel is considered available if it's not busy OR the done bit is set
   for (int i = 0; i < kMaxRdmaChannels; i++) {
     if (!rdma_chnl_container_[i].active ||
-        vpu_mmio_->Read32(VPU_RDMA_STATUS) & RDMA_STATUS_DONE(i)) {
+        RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(i + 1)) {
       // found one
       rdma_chnl_container_[i].active = true;
       // clear interrupts
-      vpu_mmio_->Write32(vpu_mmio_->Read32(VPU_RDMA_CTRL) | RDMA_CTRL_INT_DONE(i), VPU_RDMA_CTRL);
+      RdmaCtrlReg::Get()
+          .ReadFrom(&(*vpu_mmio_))
+          .set_clear_done(RDMA_CTRL_INT_DONE(i + 1))
+          .WriteTo(&(*vpu_mmio_));
       return i;
     }
   }
-
   return -1;
+}
+
+// TODO(fxbug.dev/57633): stop all channels for safer reloads.
+void Osd::StopRdma() {
+  fbl::AutoLock l(&rdma_lock_);
+
+  // Grab a copy of active DMA channels before clearing it
+  const uint32_t aa = RdmaAccessAutoReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value();
+  const uint32_t aa3 = RdmaAccessAuto3Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value();
+
+  // Disable triggering for channels 0-2.
+  RdmaAccessAutoReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_chn1_intr(0)
+      .set_chn2_intr(0)
+      .set_chn3_intr(0)
+      .WriteTo(&(*vpu_mmio_));
+  // Also disable 7, the dedicated AFBC channel.
+  RdmaAccessAuto3Reg::Get().FromValue(0).set_chn7_intr(0).WriteTo(&(*vpu_mmio_));
+
+  // Wait for all active copies to complete
+  constexpr size_t kMaxRdmaWaits = 5;
+  uint32_t expected = RdmaStatusReg::DoneFromAccessAuto(aa, 0, aa3);
+  for (size_t i = 0; i < kMaxRdmaWaits; i++) {
+    if (RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() == expected) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::usec(5)));
+  }
+
+  // Clear interrupt status
+  RdmaCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_clear_done(0xFF).WriteTo(&(*vpu_mmio_));
+  for (auto& i : rdma_chnl_container_) {
+    i.active = false;
+  }
+  afbc_rdma_chnl_container_.active = false;
 }
 
 zx_status_t Osd::SetupRdma() {
   zx_status_t status = ZX_OK;
   DISP_INFO("Setting up Display RDMA\n");
+
+  // First, clean up any ongoing DMA that a previous incarnation of this driver
+  // may have started, and tell the BTI to drop its quarantine list.
   StopRdma();
   bti_.release_quarantine();
 
@@ -580,11 +725,38 @@ zx_status_t Osd::SetupRdma() {
     rdma_chnl_container_[i].active = false;
   }
 
+  // Allocate RDMA Table for AFBC engine
+  status =
+      zx_vmo_create_contiguous(bti_.get(), ZX_PAGE_SIZE, 0, afbc_rdma_vmo_.reset_and_get_address());
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not create afbc RDMA VMO (%d)\n", status);
+    return status;
+  }
+
+  status = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, afbc_rdma_vmo_.get(), 0,
+                      ZX_PAGE_SIZE, &afbc_rdma_phys_, 1, &afbc_rdma_pmt_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not pin afbc RDMA VMO (%d)\n", status);
+    return status;
+  }
+
+  status =
+      zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, afbc_rdma_vmo_.get(),
+                  0, ZX_PAGE_SIZE, reinterpret_cast<zx_vaddr_t*>(&afbc_rdma_vbuf_));
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map afbc vmar (%d)\n", status);
+    return status;
+  }
+
+  // Initialize AFBC rdma channel container
+  afbc_rdma_chnl_container_.phys_offset = afbc_rdma_phys_;
+  afbc_rdma_chnl_container_.virt_offset = afbc_rdma_vbuf_;
+  afbc_rdma_chnl_container_.active = false;
+
   // Setup RDMA_CTRL:
   // Default: no reset, no clock gating, burst size 4x16B for read and write
   // DDR Read/Write request urgent
-  uint32_t regVal = RDMA_CTRL_READ_URGENT | RDMA_CTRL_WRITE_URGENT;
-  vpu_mmio_->Write32(regVal, VPU_RDMA_CTRL);
+  RdmaCtrlReg::Get().FromValue(0).set_write_urgent(1).set_read_urgent(1).WriteTo(&(*vpu_mmio_));
 
   ResetRdmaTable();
 
@@ -692,6 +864,64 @@ void Osd::SetMinimumRgb(uint8_t minimum_rgb) {
       .WriteTo(&(*vpu_mmio_));
 }
 
+// These configuration could be done during initialization.
+zx_status_t Osd::ConfigAfbc() {
+  // Set AFBC to 16x16 Blocks, Split Mode OFF, YUV Transfer OFF, and RGBA8888 Format
+  // Note RGBA8888 works for both RGBA and ABGR formats. The channels order will be set
+  // by mali_unpack_ctrl register
+  AfbcFormatSpecifierS0Reg::Get()
+      .FromValue(0)
+      .set_block_split(kAfbcSplitOff)
+      .set_yuv_transform(kAfbcYuvTransferOff)
+      .set_super_block_aspect(kAfbcb16x16Pixel)
+      .set_pixel_format(kAfbcRGBA8888)
+      .WriteTo(&(*vpu_mmio_));
+
+  // Setup color RGBA channel order
+  Osd1MaliUnpackCtrlReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_r(kAfbcColorReorderR)
+      .set_g(kAfbcColorReorderG)
+      .set_b(kAfbcColorReorderB)
+      .set_a(kAfbcColorReorderA)
+      .WriteTo(&(*vpu_mmio_));
+
+  // Set afbc input buffer width/height in pixel
+  AfbcBufferWidthS0Reg::Get().FromValue(0).set_buffer_width(fb_width_).WriteTo(&(*vpu_mmio_));
+  AfbcBufferHeightS0Reg::Get().FromValue(0).set_buffer_height(fb_height_).WriteTo(&(*vpu_mmio_));
+
+  // Set afbc input buffer
+  AfbcBoundingBoxXStartS0Reg::Get().FromValue(0).set_buffer_x_start(0).WriteTo(&(*vpu_mmio_));
+  AfbcBoundingBoxXEndS0Reg::Get()
+      .FromValue(0)
+      .set_buffer_x_end(fb_width_ - 2)  // vendor code has width - 1 - 1
+      .WriteTo(&(*vpu_mmio_));
+  AfbcBoundingBoxYStartS0Reg::Get().FromValue(0).set_buffer_y_start(0).WriteTo(&(*vpu_mmio_));
+  AfbcBoundingBoxYEndS0Reg::Get()
+      .FromValue(0)
+      .set_buffer_y_end(fb_height_ - 2)  // vendor code has height -1 -1
+      .WriteTo(&(*vpu_mmio_));
+
+  // Set output buffer stride
+  AfbcOutputBufStrideS0Reg::Get()
+      .FromValue(0)
+      .set_output_buffer_stride(fb_width_ * 4)
+      .WriteTo(&(*vpu_mmio_));
+
+  // Set afbc output buffer index
+  // The way this is calculated based on vendor code is as follows:
+  // Take OSD being used (1-based index): Therefore OSD1 -> index 1
+  // out_addr = index << 24
+  AfbcOutputBufAddrLowS0Reg::Get().FromValue(0).set_output_buffer_addr(1 << 24).WriteTo(
+      &(*vpu_mmio_));
+  AfbcOutputBufAddrHighS0Reg::Get().FromValue(0).set_output_buffer_addr(0).WriteTo(&(*vpu_mmio_));
+
+  // Set linear address to the out_addr mentioned above
+  Osd1Blk1CfgW4Reg::Get().FromValue(0).set_frame_addr(1 << 24).WriteTo(&(*vpu_mmio_));
+
+  return ZX_OK;
+}
+
 void Osd::HwInit() {
   ZX_DEBUG_ASSERT(initialized_);
   // Setup VPP horizontal width
@@ -716,12 +946,20 @@ void Osd::HwInit() {
 
   SET_MASK32(VPU, VPP_MISC, VPP_POSTBLEND_EN);
   CLEAR_MASK32(VPU, VPP_MISC, VPP_PREBLEND_EN);
-  // just disable osd to avoid booting hang up
-  regVal = 0x1 << 0;
-  regVal |= kMaximumAlpha << kOsdGlobalAlphaShift;
-  regVal |= (1 << 21);
-  WRITE32_REG(VPU, VPU_VIU_OSD1_CTRL_STAT, regVal);
-  WRITE32_REG(VPU, VPU_VIU_OSD2_CTRL_STAT, regVal);
+
+  Osd1CtrlStatReg::Get()
+      .FromValue(0)
+      .set_blk_en(1)
+      .set_global_alpha(kMaximumAlpha)
+      .set_osd_en(1)
+      .WriteTo(&(*vpu_mmio_));
+
+  Osd2CtrlStatReg::Get()
+      .FromValue(0)
+      .set_blk_en(1)
+      .set_global_alpha(kMaximumAlpha)
+      .set_osd_en(1)
+      .WriteTo(&(*vpu_mmio_));
 
   DefaultSetup();
 
@@ -742,6 +980,9 @@ void Osd::HwInit() {
   WRITE32_REG(VPU, VPU_VPP_OSD1_BLD_H_SCOPE, display_width_ - 1);
   WRITE32_REG(VPU, VPU_VPP_OSD1_BLD_V_SCOPE, display_height_ - 1);
   WRITE32_REG(VPU, VPU_VPP_OUT_H_V_SIZE, display_width_ << 16 | display_height_);
+
+  // Configure AFBC Engine's one-time programmable fields, so it's ready
+  ConfigAfbc();
 }
 
 #define REG_OFFSET (0x20 << 2)

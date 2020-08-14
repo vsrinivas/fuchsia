@@ -4,6 +4,8 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
 
 #define VPU_RDMA_AHB_START_ADDR_MAN (0x1100 << 2)
 #define VPU_RDMA_AHB_END_ADDR_MAN (0x1101 << 2)
@@ -33,29 +35,61 @@
 #define VPU_RDMA_STATUS3 (0x1117 << 2)
 
 // VPU_RDMA_ACCESS_AUTO Bit Definition
-#define RDMA_ACCESS_AUTO_INT_EN_ALL (0xFF << 8)
 #define RDMA_ACCESS_AUTO_INT_EN(channel) (1 << ((channel + 1) << 3))
 #define RDMA_ACCESS_AUTO_WRITE(channel) (1 << ((channel + 1) + 4))
-#define RDMA_ACCESS_AUTO_INCREMENT(channel) (1 << (channel + 1))
 
 // VPU_RDMA_CTRL Bit Definition
-#define RMA_CTR_ALL_INT_DONE (0xFF << 24)
-#define RDMA_CTRL_INT_DONE(channel) (1 << (24 + (channel + 1)))
-#define RDMA_CTRL_WRITE_URGENT (1 << 7)
-#define RDMA_CTRL_READ_URGENT (1 << 6)
-#define RDMA_CTRL_WRITE_BURST_SIZE_4x16B (0 << 4)
-#define RDMA_CTRL_WRITE_BURST_SIZE_8x16B (1 << 4)
-#define RDMA_CTRL_WRITE_BURST_SIZE_12x16B (2 << 4)
-#define RDMA_CTRL_WRITE_BURST_SIZE_16x16B (3 << 4)
-#define RDMA_CTRL_READ_BURST_SIZE_4x16B (0 << 4)
-#define RDMA_CTRL_READ_BURST_SIZE_8x16B (1 << 4)
-#define RDMA_CTRL_READ_BURST_SIZE_12x16B (2 << 4)
-#define RDMA_CTRL_READ_BURST_SIZE_16x16B (3 << 4)
-#define RDMA_CTRL_RESET (1 << 1)
-#define RDMA_CTRL_CLK_GATE_EN (1 << 0)
+#define RDMA_CTRL_INT_DONE(channel) (1 << (channel))
 
 // VPU_RDMA_STATUS Bit Definition
-#define RDMA_STATUS_BUSY (0x0003C0FF)
-#define RDMA_STATUS_DONE(channel) (1 << (24 + (channel + 1)))
+#define RDMA_STATUS_DONE(channel) (1 << (channel))
+
+class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, done);
+  DEF_FIELD(7, 0, req_latch);
+  static auto Get() { return hwreg::RegisterAddr<RdmaStatusReg>(VPU_RDMA_STATUS); }
+
+  // compute a value for .done() to match given the current state of
+  // VPU_RDMA_ACCESS_AUTO, AUTO2, and AUTO3.
+  static uint32_t DoneFromAccessAuto(const uint32_t aa, const uint32_t aa2, const uint32_t aa3) {
+    const uint32_t chn7 = ((aa3 >> 24) & 0x1) << 7;
+    const uint32_t chn2 = ((aa >> 24) & 0x1) << 2;
+    const uint32_t chn1 = ((aa >> 16) & 0x1) << 1;
+    const uint32_t chn0 = ((aa >> 8) & 0x1) << 0;
+    return chn7 | chn2 | chn1 | chn0;
+  }
+};
+
+class RdmaCtrlReg : public hwreg::RegisterBase<RdmaCtrlReg, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, clear_done);
+  DEF_BIT(7, write_urgent);
+  DEF_BIT(6, read_urgent);
+  static auto Get() { return hwreg::RegisterAddr<RdmaCtrlReg>(VPU_RDMA_CTRL); }
+};
+
+class RdmaAccessAutoReg : public hwreg::RegisterBase<RdmaAccessAutoReg, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, chn3_intr);
+  DEF_FIELD(23, 16, chn2_intr);
+  DEF_FIELD(15, 8, chn1_intr);
+  DEF_BIT(7, chn3_auto_write);
+  DEF_BIT(6, chn2_auto_write);
+  DEF_BIT(5, chn1_auto_write);
+  static auto Get() { return hwreg::RegisterAddr<RdmaAccessAutoReg>(VPU_RDMA_ACCESS_AUTO); }
+};
+
+class RdmaAccessAuto2Reg : public hwreg::RegisterBase<RdmaAccessAuto2Reg, uint32_t> {
+ public:
+  DEF_BIT(7, chn7_auto_write);
+  static auto Get() { return hwreg::RegisterAddr<RdmaAccessAuto2Reg>(VPU_RDMA_ACCESS_AUTO2); }
+};
+
+class RdmaAccessAuto3Reg : public hwreg::RegisterBase<RdmaAccessAuto3Reg, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, chn7_intr);
+  static auto Get() { return hwreg::RegisterAddr<RdmaAccessAuto3Reg>(VPU_RDMA_ACCESS_AUTO3); }
+};
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_

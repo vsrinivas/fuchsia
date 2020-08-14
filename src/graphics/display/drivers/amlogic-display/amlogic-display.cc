@@ -6,6 +6,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
@@ -46,7 +47,8 @@ namespace amlogic_display {
 namespace {
 
 // List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[2] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kSupportedPixelFormats[4] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888,
+                                               ZX_PIXEL_FORMAT_ABGR_8888, ZX_PIXEL_FORMAT_BGR_888x};
 
 bool is_format_supported(zx_pixel_format_t format) {
   for (auto f : kSupportedPixelFormats) {
@@ -196,7 +198,12 @@ zx_status_t AmlogicDisplay::DisplayInit() {
       DISP_ERROR("DSI Host On failed! %d\n", status);
       return status;
     }
+  } else {
+    // Make sure AFBC engine is on. Since bootloader does not use AFBC, it might not have powered
+    // on AFBC engine.
+    vpu_->AfbcPower(true);
   }
+
   osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
       &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active, &inspector_.GetRoot());
   if (!ac.check()) {
@@ -262,47 +269,72 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  sysmem::PixelFormatType::BGRA32);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
-  ZX_DEBUG_ASSERT(
-      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
-          sysmem::FORMAT_MODIFIER_LINEAR ||
-      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
-          sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE);
 
-  uint32_t minimum_row_bytes;
-  if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
-                                        image->width, &minimum_row_bytes)) {
-    DISP_ERROR("Invalid image width %d for collection\n", image->width);
-    return ZX_ERR_INVALID_ARGS;
+  const auto format_modifier =
+      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value;
+
+  switch (format_modifier) {
+    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_TE: {
+      // AFBC does not use canvas.
+      uint64_t offset = collection_info.buffers[index].vmo_usable_start;
+      size_t size =
+          ZX_ROUNDUP(ImageFormatImageSize(image_format::ConstraintsToFormat(
+                                              collection_info.settings.image_format_constraints,
+                                              image->width, image->height)
+                                              .value()),
+                     PAGE_SIZE);
+      zx_paddr_t paddr;
+      zx_status_t status =
+          bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, collection_info.buffers[index].vmo,
+                   offset & ~(PAGE_SIZE - 1), size, &paddr, 1, &import_info->pmt);
+      if (status != ZX_OK) {
+        DISP_ERROR("Could not pin BTI (%d)\n", status);
+        return status;
+      }
+      import_info->paddr = paddr;
+      import_info->image_height = image->height;
+      import_info->image_width = image->width;
+      import_info->is_afbc = true;
+    } break;
+    case sysmem::FORMAT_MODIFIER_LINEAR:
+    case sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE: {
+      uint32_t minimum_row_bytes;
+      if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
+                                            image->width, &minimum_row_bytes)) {
+        DISP_ERROR("Invalid image width %d for collection\n", image->width);
+        return ZX_ERR_INVALID_ARGS;
+      }
+      canvas_info_t canvas_info;
+      canvas_info.height = image->height;
+      canvas_info.stride_bytes = minimum_row_bytes;
+      canvas_info.wrap = 0;
+      canvas_info.blkmode = 0;
+      canvas_info.endianness = 0;
+      canvas_info.flags = CANVAS_FLAGS_READ;
+
+      uint8_t local_canvas_idx;
+      status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
+                                     collection_info.buffers[index].vmo_usable_start, &canvas_info,
+                                     &local_canvas_idx);
+      if (status != ZX_OK) {
+        DISP_ERROR("Could not configure canvas: %d\n", status);
+        return ZX_ERR_NO_RESOURCES;
+      }
+      import_info->canvas = canvas_;
+      import_info->canvas_idx = local_canvas_idx;
+      import_info->image_height = image->height;
+      import_info->image_width = image->width;
+      import_info->is_afbc = false;
+    } break;
+    default:
+      ZX_DEBUG_ASSERT_MSG(false, "Invalid pixel format modifier: %lu\n", format_modifier);
+      return ZX_ERR_INVALID_ARGS;
   }
-
-  canvas_info_t canvas_info;
-  canvas_info.height = image->height;
-  canvas_info.stride_bytes = minimum_row_bytes;
-  canvas_info.wrap = 0;
-  canvas_info.blkmode = 0;
-  canvas_info.endianness = 0;
-  canvas_info.flags = CANVAS_FLAGS_READ;
-
-  uint8_t local_canvas_idx;
-  status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
-                                 collection_info.buffers[index].vmo_usable_start, &canvas_info,
-                                 &local_canvas_idx);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not configure canvas: %d\n", status);
-    status = ZX_ERR_NO_RESOURCES;
-    return status;
-  }
-  fbl::AutoLock lock(&image_lock_);
-  import_info->canvas = canvas_;
-  import_info->canvas_idx = local_canvas_idx;
-  import_info->image_height = image->height;
-  import_info->image_width = image->width;
-  import_info->image_stride = minimum_row_bytes;
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
+  fbl::AutoLock lock(&image_lock_);
   imported_images_.push_back(std::move(import_info));
   return status;
 }
@@ -531,7 +563,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = sysmem::HeapType::SYSTEM_RAM;
   buffer_constraints.heap_permitted[1] = sysmem::HeapType::AMLOGIC_SECURE;
-  constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 2;
+  constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 4;
   for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
     sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[i];
 
@@ -556,10 +588,28 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
       // The beginning of ARM linear TE memory is a regular linear image, so we can support it by
       // ignoring everything after that. We never write to the image, so we don't need to worry
       // about keeping the TE buffer in sync.
-      ZX_DEBUG_ASSERT(i <= 1);
-      image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
-      image_constraints.pixel_format.format_modifier.value =
-          i == 0 ? sysmem::FORMAT_MODIFIER_LINEAR : sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
+      ZX_DEBUG_ASSERT(i <= 3);
+      switch (i) {
+        case 0:
+          image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+          break;
+        case 1:
+          image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+          image_constraints.pixel_format.format_modifier.value =
+              sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
+          break;
+        case 2:
+          image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.format_modifier.value =
+              sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16;
+          break;
+        case 3:
+          image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+          image_constraints.pixel_format.format_modifier.value =
+              sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16_TE;
+          break;
+      }
       buffer_name = "Display";
     }
     image_constraints.bytes_per_row_divisor = kBufferAlignment;
@@ -644,8 +694,6 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   import_capture->canvas_idx = canvas_idx;
   import_capture->image_height = collection_info.settings.image_format_constraints.min_coded_height;
   import_capture->image_width = collection_info.settings.image_format_constraints.min_coded_width;
-  import_capture->image_stride =
-      collection_info.settings.image_format_constraints.min_bytes_per_row;
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
   imported_captures_.push_back(std::move(import_capture));
   return ZX_OK;
