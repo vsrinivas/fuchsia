@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/tools/snapshot/view.h"
+#include "src/ui/tools/scenic_snapshot_viewer/view.h"
 
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
 #include "src/ui/scenic/lib/gfx/snapshot/version.h"
 
-namespace snapshot {
+namespace scenic_snapshot_viewer {
 
 View::View(scenic::ViewContext view_context) : BaseView(std::move(view_context), "Snapshot View") {
   component_context()->outgoing()->AddPublicService(loader_bindings_.GetHandler(this));
@@ -148,4 +148,4 @@ void View::LoadMaterial(scenic::ShapeNode& shape_node, const snapshot::Node* fla
   }
 }
 
-}  // namespace snapshot
+}  // namespace scenic_snapshot_viewer

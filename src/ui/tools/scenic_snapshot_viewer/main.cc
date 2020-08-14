@@ -9,7 +9,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/ui/base_view/view_provider_component.h"
-#include "src/ui/tools/snapshot/view.h"
+#include "src/ui/tools/scenic_snapshot_viewer/view.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [](scenic::ViewContext view_context) {
-        return std::make_unique<snapshot::View>(std::move(view_context));
+        return std::make_unique<scenic_snapshot_viewer::View>(std::move(view_context));
       },
       &loop);
 

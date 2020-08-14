@@ -10,8 +10,8 @@ group("scenic") {
     ":input",
     ":present_view",
     ":print_input",
+    ":scenic-snapshot-viewer",
     ":screencap",
-    ":snapshot",
   ]
 }
 
@@ -21,8 +21,8 @@ group("tools") {
     ":input",
     ":present_view",
     ":print_input",
+    ":scenic-snapshot-viewer",
     ":screencap",
-    ":snapshot",
     "paper_shader_compiler",
     "print-input-report",
     "simple-touch",
@@ -41,6 +41,26 @@ group("tests") {
   ]
 }
 
+package("scenic-snapshot-viewer") {
+  meta = [
+    {
+      path =
+          rebase_path("scenic_snapshot_viewer/meta/scenic_snapshot_viewer.cmx")
+      dest = "scenic_snapshot_viewer.cmx"
+    },
+  ]
+
+  deps = [ "scenic_snapshot_viewer" ]
+
+  binaries = [
+    {
+      name = "scenic-snapshot-viewer"
+      source = "scenic_snapshot_viewer"
+      shell = true
+    },
+  ]
+}
+
 # Component shell tools can be run as shell command or as components via a
 # component URI. The following list contains the names of such components that
 # follow the pattern:
@@ -50,7 +70,6 @@ component_shell_tools = [
   "gltf_export",
   "present_view",
   "screencap",
-  "snapshot",
 ]
 foreach(tool, component_shell_tools) {
   package(tool) {

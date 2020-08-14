@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/snapshot"
+        "binary": "bin/scenic-snapshot-viewer"
     },
     "sandbox": {
         "services": [

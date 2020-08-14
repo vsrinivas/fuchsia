@@ -14,7 +14,7 @@
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/ui/scenic/lib/gfx/snapshot/snapshot_generated.h"
 
-namespace snapshot {
+namespace scenic_snapshot_viewer {
 
 // A view that displays saved snapshot of views.
 class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Loader {
@@ -38,6 +38,6 @@ class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Lo
   FXL_DISALLOW_COPY_AND_ASSIGN(View);
 };
 
-}  // namespace snapshot
+}  // namespace scenic_snapshot_viewer
 
 #endif  // SRC_UI_TOOLS_SNAPSHOT_VIEW_H_
