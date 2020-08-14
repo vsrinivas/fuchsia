@@ -107,6 +107,7 @@ where
     }
 
     /// Ensure that the service is monitoring the media buttons.
+    // TODO(fxbug.dev/57917): Use config to propagate error if buttons should be present.
     pub async fn ensure_monitor(&mut self) {
         if self.service_connected {
             return;

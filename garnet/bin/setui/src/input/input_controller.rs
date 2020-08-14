@@ -58,6 +58,7 @@ impl InputControllerInner {
     }
 
     /// Restores the input state.
+    // TODO(fxbug.dev/57917): After config is implemented, this should return a ControllerStateResult.
     async fn restore(&mut self) {
         // Get hardware state.
         let mut input_monitor = self.input_monitor.lock().await;
@@ -111,6 +112,7 @@ impl controller::Handle for InputController {
         match request {
             SettingRequest::Restore => {
                 // Get hardware state.
+                // TODO(fxbug.dev/57917): After config is implemented, handle the error here.
                 self.inner.lock().await.restore().await;
                 Some(Ok(None))
             }
@@ -130,6 +132,7 @@ impl controller::Handle for InputController {
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         match state {
             State::Startup => {
+                // TODO(fxbug.dev/57917): After config is implemented, handle the error here.
                 self.inner.lock().await.restore().await;
                 Some(Ok(()))
             }

@@ -33,6 +33,7 @@ const ENV_NAME: &str = "settings_service_audio_test_environment";
 const CONTEXT_ID: u64 = 0;
 
 const CHANGED_VOLUME_LEVEL: f32 = 0.7;
+const CHANGED_VOLUME_LEVEL_2: f32 = 0.95;
 const CHANGED_VOLUME_MUTED: bool = true;
 
 const CHANGED_MEDIA_STREAM: AudioStream = AudioStream {
@@ -42,11 +43,27 @@ const CHANGED_MEDIA_STREAM: AudioStream = AudioStream {
     user_volume_muted: CHANGED_VOLUME_MUTED,
 };
 
+const CHANGED_MEDIA_STREAM_2: AudioStream = AudioStream {
+    stream_type: AudioStreamType::Media,
+    source: AudioSettingSource::User,
+    user_volume_level: CHANGED_VOLUME_LEVEL_2,
+    user_volume_muted: CHANGED_VOLUME_MUTED,
+};
+
 const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_MUTED),
+    }),
+};
+
+const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
     }),
 };
@@ -181,6 +198,46 @@ async fn test_audio() {
         stored_streams = store_lock.get().await.streams;
     }
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_consecutive_volume_changes() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, store) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+
+    assert_eq!(
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap()
+    );
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
+
+    assert_eq!(
+        (CHANGED_VOLUME_LEVEL_2, CHANGED_VOLUME_MUTED),
+        fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap()
+    );
+
+    // Check to make sure value wrote out to store correctly.
+    let stored_streams: [AudioStream; 5];
+    {
+        let mut store_lock = store.lock().await;
+        stored_streams = store_lock.get().await.streams;
+    }
+    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
 }
 
 #[fuchsia_async::run_until_stalled(test)]

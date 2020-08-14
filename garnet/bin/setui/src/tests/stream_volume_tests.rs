@@ -68,7 +68,8 @@ async fn test_drop_thread() {
             create_default_audio_stream(AudioStreamType::Media),
             Some(publisher),
         )
-        .await;
+        .await
+        .ok();
     }
 
     let received_event =
