@@ -256,8 +256,6 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status;
 
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_), nullptr);
-
   {
     // Since auth_ is uint16_t, we need a uint32_t to get the iovar
     uint32_t auth32;
@@ -269,7 +267,11 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
   EXPECT_EQ(status, ZX_OK);
 
-  if (sec_type_ != SEC_TYPE_WPA1 && sec_type_ != SEC_TYPE_WPA2) {
+  // The wsec_key iovar is only meaningful for WEP security
+  if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
+      sec_type_ == SEC_TYPE_WEP_OPEN) {
+    status = brcmf_fil_bsscfg_data_get(ifp, "wsec_key", &wsec_key_, sizeof(wsec_key_));
+    EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
     EXPECT_EQ(wsec_key_.index, kDefaultKeyIndex);
   }
