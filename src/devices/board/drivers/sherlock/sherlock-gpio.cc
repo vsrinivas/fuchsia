@@ -102,7 +102,7 @@ static const gpio_pin_t gpio_pins[] = {
     {T931_GPIOE(4)},     {T931_GPIOE(5)},     {T931_GPIOE(6)},     {T931_GPIOE(7)},
 };
 #else
-#define GPIO_PIN_COUNT 26
+#define GPIO_PIN_COUNT 27
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {T931_WIFI_HOST_WAKE},
@@ -144,6 +144,9 @@ static const gpio_pin_t gpio_pins[] = {
 
     // Luis Audio
     {GPIO_AMP_24V_EN},
+
+    // Luis camera switch, unused on Sherlock
+    {GPIO_CAM_MUTE},
 };
 #endif  // FACTORY_BUILD
 

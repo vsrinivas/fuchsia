@@ -17,7 +17,8 @@
 #define BUTTONS_ID_PLAY_PAUSE            0x04
 #define BUTTONS_ID_KEY_A                 0x05
 #define BUTTONS_ID_KEY_M                 0x06
-#define BUTTONS_ID_MAX                   0x07
+#define BUTTONS_ID_CAM_MUTE              0x07
+#define BUTTONS_ID_MAX                   0x08
 
 #define BUTTONS_TYPE_DIRECT              0x00
 #define BUTTONS_TYPE_MATRIX              0x01

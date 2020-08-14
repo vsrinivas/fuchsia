@@ -466,8 +466,11 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
 }
 
 TEST_F(DeviceEnumerationTest, LuisTest) {
-  static const char* kDevicePaths[] = {"sys/platform/05:04:16/sherlock-audio-in",
-                                       "luis-i2s-audio-out"};
+  static const char* kDevicePaths[] = {
+      "sys/platform/05:04:16/sherlock-audio-in",
+      "luis-i2s-audio-out",
+      "sherlock-buttons/hid-buttons",
+  };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
