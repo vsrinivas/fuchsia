@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::moniker::RelativeMoniker,
-    crate::model::testing::{routing_test_helpers::*, test_helpers::*},
+    crate::model::{
+        moniker::RelativeMoniker,
+        rights,
+        testing::{routing_test_helpers::*, test_helpers::*},
+    },
     cm_rust::*,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
@@ -70,6 +73,57 @@ async fn storage_and_dir_from_parent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "data".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                })
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            type_: fsys::StorageType::Cache,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            from_cm_namespace: false,
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
+/// a: has storage decl with name "mystorage" with a source of self at path /data
+/// a: offers cache storage to b from "mystorage"
+/// b: uses cache storage as /storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn storage_and_dir_from_parent_legacy_path_based() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -106,6 +160,58 @@ async fn storage_and_dir_from_parent() {
 ///    \
 ///     b
 ///
+/// a: has storage decl with name "mystorage" with a source of self at path /data, but /data
+///    has only read rights
+/// a: offers cache storage to b from "mystorage"
+/// b: uses cache storage as /storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn storage_and_dir_from_parent_invalid_rights() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS)
+                        .build(),
+                )
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "data".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                })
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            type_: fsys::StorageType::Cache,
+            storage_relation: None,
+            from_cm_namespace: false,
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
 /// a: has storage decl with name "mystorage" with a source of self at path /data
 /// a: offers meta storage to b from "mystorage"
 /// b: uses meta storage
@@ -115,6 +221,12 @@ async fn meta_storage_and_dir_from_parent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -122,7 +234,7 @@ async fn meta_storage_and_dir_from_parent() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -154,6 +266,75 @@ async fn meta_storage_and_dir_from_parent() {
 /// c: uses data storage as /storage
 #[fuchsia_async::run_singlethreaded(test)]
 async fn storage_from_parent_dir_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Self_,
+                    source_path: "data".try_into().unwrap(),
+                    target_path: "minfs".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    rights: Some(fio2::Operations::Connect),
+                    subdir: None,
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .add_lazy_child("c")
+                .storage(StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Parent,
+                })
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            type_: fsys::StorageType::Data,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: offers directory /data to b as /minfs
+/// b: has storage decl with name "mystorage" with a source of realm at path /minfs
+/// b: offers data storage to c from "mystorage"
+/// c: uses data storage as /storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn storage_from_parent_dir_from_grandparent_legacy_path_based() {
     let components = vec![
         (
             "a",
@@ -221,6 +402,12 @@ async fn storage_and_dir_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -228,7 +415,7 @@ async fn storage_and_dir_from_grandparent() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -279,6 +466,12 @@ async fn meta_storage_and_dir_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -286,7 +479,7 @@ async fn meta_storage_and_dir_from_grandparent() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -326,6 +519,72 @@ async fn meta_storage_and_dir_from_grandparent() {
 /// c: uses cache storage as /storage
 #[fuchsia_async::run_singlethreaded(test)]
 async fn storage_from_parent_dir_from_sibling() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .storage(StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "minfs".try_into().unwrap(),
+                    source: StorageDirectorySource::Child("b".to_string()),
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .add_lazy_child("b")
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source_path: "data".try_into().unwrap(),
+                    source: ExposeSource::Self_,
+                    target_path: "minfs".try_into().unwrap(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(fio2::Operations::Connect),
+                    subdir: None,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            type_: fsys::StorageType::Cache,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
+        },
+    )
+    .await;
+}
+
+///   a
+///  / \
+/// b   c
+///
+/// b: exposes directory /data as /minfs
+/// a: has storage decl with name "mystorage" with a source of child b at path /minfs
+/// a: offers cache storage to c from "mystorage"
+/// c: uses cache storage as /storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn storage_from_parent_dir_from_sibling_legacy_path_based() {
     let components = vec![
         (
             "a",
@@ -388,16 +647,21 @@ async fn storage_from_parent_dir_from_sibling() {
 /// [c]: uses storage as /storage
 /// [c]: destroyed and storage goes away
 #[fuchsia_async::run_singlethreaded(test)]
-#[ignore] // TODO(dgonyeo): reenable this test
 async fn use_in_collection_from_parent() {
     let components = vec![
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: "/data".try_into().unwrap(),
-                    target_path: "/minfs".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
+                    target_path: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
@@ -411,7 +675,7 @@ async fn use_in_collection_from_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    source_path: "fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
@@ -428,7 +692,7 @@ async fn use_in_collection_from_parent() {
                 })))
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/minfs".try_into().unwrap(),
+                    source_path: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                 })
                 .add_transient_collection("coll")
@@ -518,6 +782,12 @@ async fn use_in_collection_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -533,7 +803,7 @@ async fn use_in_collection_from_grandparent() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -543,7 +813,7 @@ async fn use_in_collection_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    source_path: "fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
@@ -664,7 +934,7 @@ async fn storage_multiple_types() {
             ComponentDeclBuilder::new()
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/minfs".try_into().unwrap(),
+                    source_path: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Child("b".to_string()),
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
@@ -686,10 +956,16 @@ async fn storage_multiple_types() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: ExposeSource::Self_,
-                    target_path: "/minfs".try_into().unwrap(),
+                    target_path: "minfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
@@ -777,6 +1053,12 @@ async fn use_the_wrong_type_of_storage() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
@@ -784,7 +1066,7 @@ async fn use_the_wrong_type_of_storage() {
                 .add_lazy_child("b")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -832,10 +1114,16 @@ async fn directories_are_not_storage() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: "/data".try_into().unwrap(),
-                    target_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
+                    target_path: "data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
@@ -878,9 +1166,15 @@ async fn use_storage_when_not_offered() {
             "a",
             ComponentDeclBuilder::new()
                 .add_lazy_child("b")
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/data".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
                 .build(),
@@ -932,10 +1226,16 @@ async fn dir_offered_from_nonexecutable() {
         (
             "a",
             ComponentDeclBuilder::new_empty_component()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: "/data".try_into().unwrap(),
-                    target_path: "/minfs".try_into().unwrap(),
+                    source_path: "data".try_into().unwrap(),
+                    target_path: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
@@ -958,7 +1258,7 @@ async fn dir_offered_from_nonexecutable() {
                 .add_lazy_child("c")
                 .storage(StorageDecl {
                     name: "mystorage".to_string(),
-                    source_path: "/minfs".try_into().unwrap(),
+                    source_path: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                 })
                 .build(),

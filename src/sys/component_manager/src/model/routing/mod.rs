@@ -374,8 +374,6 @@ async fn route_storage_capability<'a>(
         ))
     })?;
 
-    // Storage capabilities are always require rw rights to be valid so this must be
-    // explicitly encoded into its starting walk state.
     let capability = ComponentCapability::Use(UseDecl::Storage(use_decl.clone()));
     let cap_state = CapabilityState::new(&capability);
     let mut pos = WalkPosition {
@@ -406,9 +404,11 @@ async fn route_storage_capability<'a>(
                 if let CapabilityNameOrPath::Path(source_path) = storage_decl.source_path {
                     source_path.clone()
                 } else {
-                    return Err(ModelError::unsupported(
-                        "Name-based directories are not supported yet",
-                    ));
+                    let realm_state = source_realm.lock_resolved_state().await?;
+                    let decl = realm_state.decl();
+                    let capability = ComponentCapability::Storage(storage_decl.clone());
+                    let capability = pos.finalize_directory(&capability, decl, None, None)?;
+                    capability.source_path().expect("directory has no source path?").clone()
                 };
             (source_path, Some(source_realm), pos.cap_state)
         }
@@ -417,14 +417,8 @@ async fn route_storage_capability<'a>(
             let (source, cap_state) = find_capability_source(capability, &source_realm).await?;
             match source {
                 CapabilitySource::Component { capability, realm } => {
-                    let source_path = match capability.source_path() {
-                        Some(path) => path.clone(),
-                        None => {
-                            return Err(ModelError::unsupported(
-                                "Name-based directories are not supported yet",
-                            ));
-                        }
-                    };
+                    let source_path =
+                        capability.source_path().expect("directory has no source path?").clone();
                     (source_path, Some(realm.upgrade()?), cap_state)
                 }
                 CapabilitySource::Framework { .. } => {
@@ -438,9 +432,13 @@ async fn route_storage_capability<'a>(
                     let source_path = match capability.name_or_path() {
                         Some(CapabilityNameOrPath::Path(path)) => path.clone(),
                         Some(CapabilityNameOrPath::Name(_)) => {
-                            return Err(ModelError::unsupported(
-                                "Name-based directories are not supported yet",
-                            ));
+                            // TODO(56604): Come up with a solution to route name-based
+                            // capabilities from component manager's namespace.
+                            return Err(RoutingError::storage_directory_source_is_not_component(
+                                "component manager's namespace",
+                                &source_realm.abs_moniker,
+                            )
+                            .into());
                         }
                         None => {
                             panic!("Invalid capability source for storage");
@@ -471,14 +469,8 @@ async fn route_storage_capability<'a>(
             let source = walk_expose_chain(&mut pos).await?;
             match source {
                 CapabilitySource::Component { capability, realm } => {
-                    let source_path = match capability.source_path() {
-                        Some(path) => path.clone(),
-                        None => {
-                            return Err(ModelError::unsupported(
-                                "Name-based directories are not supported yet",
-                            ));
-                        }
-                    };
+                    let source_path =
+                        capability.source_path().expect("directory has no source path?").clone();
                     (source_path, Some(realm.upgrade()?), pos.cap_state)
                 }
                 CapabilitySource::Framework { .. } | CapabilitySource::AboveRoot { .. } => {
@@ -609,10 +601,13 @@ impl CapabilityState {
                 rights_state: WalkState::new(),
                 subdir: PathBuf::new(),
             },
-            ComponentCapability::Storage(_) => CapabilityState::Directory {
-                rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
-                subdir: PathBuf::new(),
-            },
+            // Directories backing storage must provide read and write rights.
+            ComponentCapability::Use(UseDecl::Storage { .. }) | ComponentCapability::Storage(_) => {
+                CapabilityState::Directory {
+                    rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
+                    subdir: PathBuf::new(),
+                }
+            }
             _ => CapabilityState::Other,
         }
     }
@@ -1409,6 +1404,7 @@ pub(super) fn report_routing_failure(
 fn routing_epitaph(err: &ModelError) -> zx::Status {
     match err {
         ModelError::RoutingError { err } => err.as_zx_status(),
+        ModelError::RightsError { err } => err.as_zx_status(),
         // Any other type of error is not expected.
         _ => zx::Status::INTERNAL,
     }

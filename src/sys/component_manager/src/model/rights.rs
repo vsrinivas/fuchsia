@@ -6,6 +6,7 @@ use {
     crate::model::walk_state::WalkStateUnit,
     fidl_fuchsia_io::{self as fio},
     fidl_fuchsia_io2::{self as fio2},
+    fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::cmp::Ordering,
     std::collections::HashSet,
@@ -127,6 +128,13 @@ pub enum RightsError {
 
     #[error("Directory routes must end at source with a rights declaration")]
     InvalidFinalize,
+}
+
+impl RightsError {
+    /// Convert this error into its approximate `zx::Status` equivalent.
+    pub fn as_zx_status(&self) -> zx::Status {
+        zx::Status::UNAVAILABLE
+    }
 }
 
 impl WalkStateUnit for Rights {
