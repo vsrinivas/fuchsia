@@ -433,7 +433,7 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(process_->process_handle(), process_->dl_debug_addr(), thread_handle(), *regs,
+      UnwindStack(process_->process_handle(), process_->module_list(), thread_handle(), *regs,
                   max_stack_depth, &record.frames);
     }
   } else {
@@ -499,6 +499,21 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
     FixSoftwareBreakpointAddress(found_bp, regs);
 
+    switch (process_->HandleSpecialBreakpoint(found_bp)) {
+      case DebuggedProcess::SpecialBreakpointResult::kContinue: {
+        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Loader breakpoint, internally resuming.";
+        current_breakpoint_ = found_bp;
+        return OnStop::kResume;
+      }
+      case DebuggedProcess::SpecialBreakpointResult::kKeepSuspended: {
+        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Loader breakpoint, keeping stopped.";
+        current_breakpoint_ = found_bp;
+        return OnStop::kIgnore;
+      }
+      case DebuggedProcess::SpecialBreakpointResult::kNotSpecial:
+        break;
+    }
+
     // When hitting a breakpoint, we need to check if indeed this exception should apply to this
     // thread or not.
     if (!found_bp->ShouldHitThread(koid())) {
@@ -510,42 +525,43 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, hit_breakpoints);
     // Note: may have deleted found_bp!
-  } else {
+  } else if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
-    if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
-      // The breakpoint is a hardcoded instruction in the program code. In this case we want to
-      // continue from the following instruction since the breakpoint instruction will never go
-      // away.
-      regs.set_ip(arch::NextInstructionForSoftwareExceptionAddress(regs.ip()));
-      thread_handle_->SetGeneralRegisters(regs);
+    //
+    // The breakpoint is a hardcoded instruction in the program code. In this case we want to
+    // continue from the following instruction since the breakpoint instruction will never go
+    // away.
+    regs.set_ip(arch::NextInstructionForSoftwareExceptionAddress(regs.ip()));
+    thread_handle_->SetGeneralRegisters(regs);
 
-      if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
-        DEBUG_LOG(Thread) << ThreadPreamble(this) << "Found ld.so breakpoint. Sending modules.";
-        // This breakpoint was the explicit breakpoint ld.so executes to notify us that the loader
-        // is ready (see DebuggerProcess::RegisterDebugState).
-        //
-        // Send the current module list and keep this thread stopped. The client will explicitly
-        // resume this thread when it's ready to continue (it will need to load symbols for the
-        // modules and may need to set breakpoints based on them).
-        //
-        // SendModuleNotification() assumes all threads in the process are stopped, but during
-        // ld.so initialization, there should be only one thread (this one).
-        process_->SendModuleNotification();
+    switch (process_->HandleSpecialBreakpoint(found_bp)) {
+      case DebuggedProcess::SpecialBreakpointResult::kContinue: {
+        DEBUG_LOG(Thread) << ThreadPreamble(this)
+                          << "Hardcoded loader breakpoint, internally resuming.";
+        return OnStop::kResume;
+      }
+      case DebuggedProcess::SpecialBreakpointResult::kKeepSuspended: {
+        DEBUG_LOG(Thread) << ThreadPreamble(this)
+                          << "Hardcoded loader breakpoint, keeping stopped.";
+        current_breakpoint_ = found_bp;
         return OnStop::kIgnore;
       }
-    } else {
-      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x"
-                        << std::hex << breakpoint_address;
-      // Not a breakpoint instruction. Probably the breakpoint instruction used to be ours but its
-      // removal raced with the exception handler. Resume from the instruction that used to be the
-      // breakpoint.
-      regs.set_ip(breakpoint_address);
-
-      // Don't automatically continue execution here. A race for this should be unusual and maybe
-      // something weird happened that caused an exception we're not set up to handle. Err on the
-      // side of telling the user about the exception.
+      case DebuggedProcess::SpecialBreakpointResult::kNotSpecial:
+        break;
     }
+  } else {
+    // Not a breakpoint instruction. Probably the breakpoint instruction used to be ours but its
+    // removal raced with the exception handler. Resume from the instruction that used to be the
+    // breakpoint.
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x" << std::hex
+                      << breakpoint_address;
+    regs.set_ip(breakpoint_address);
+
+    // Don't automatically continue execution here. A race for this should be unusual and maybe
+    // something weird happened that caused an exception we're not set up to handle. Err on the
+    // side of telling the user about the exception.
   }
+
   return OnStop::kNotify;
 }
 

@@ -28,6 +28,11 @@ zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,
                                                        uint64_t dl_debug_addr);
 
+// Given a dl_debug_addr for a process, looks up the adderss that the dynamic loader has indicated
+// to use for a breakpoint that will be triggered immediately after every shared library load or
+// unload. Returns 0 on failure.
+uint64_t GetLoaderBreakpointAddress(const ProcessHandle& process, uint64_t dl_debug_addr);
+
 }  // namespace debug_agent
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ELF_UTILS_H_

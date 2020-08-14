@@ -14,6 +14,7 @@
 #include "src/developer/debug/debug_agent/align.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/debug_agent/elf_utils.h"
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
@@ -85,8 +86,6 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
     : debug_agent_(debug_agent),
       process_handle_(std::move(create_info.handle)),
       from_limbo_(create_info.from_limbo) {
-  RegisterDebugState();
-
   // If create_info out or err are not valid, calling Init on the
   // BufferedZxSocket will fail and leave it in an invalid state. This is
   // expected if the io sockets could be obtained from the inferior.
@@ -122,6 +121,8 @@ void DebuggedProcess::DetachFromProcess() {
 }
 
 zx_status_t DebuggedProcess::Init() {
+  RegisterDebugState();
+
   // Watch for process events.
   if (zx_status_t status = process_handle_->Attach(this); status != ZX_OK)
     return status;
@@ -296,9 +297,61 @@ bool DebuggedProcess::RegisterDebugState() {
 
   dl_debug_addr_ = debug_addr;
 
-  // TODO(brettw) register breakpoint for dynamic loads. This current code
-  // only notifies for the initial set of binaries loaded by the process.
+  // Register a breakpoint for dynamic loads.
+  if (auto load_addr = GetLoaderBreakpointAddress(process_handle(), dl_debug_addr_)) {
+    loader_breakpoint_ = std::make_unique<Breakpoint>(debug_agent_, true);
+    if (loader_breakpoint_->SetSettings("Internal shared library load breakpoint", koid(),
+                                        load_addr) != ZX_OK) {
+      DEBUG_LOG(Process) << LogPreamble(this) << "Could not set shared library load breakpoint at "
+                         << std::hex << load_addr;
+      // Continue even in the error case: we can continue with most things working even if the
+      // loader breakpoint fails for some reason.
+    }
+  }
+
   return true;
+}
+
+DebuggedProcess::SpecialBreakpointResult DebuggedProcess::HandleSpecialBreakpoint(
+    ProcessBreakpoint* optional_bp) {
+  // The special Fuchsia loader breakpoint will be a hardcodeed breakpoint (so no input
+  // ProcessBreakpoint object) before we've seen the dl_debug_addr_.
+  if (!dl_debug_addr_ && !optional_bp) {
+    if (RegisterDebugState()) {
+      // Register our state and continue transparently.
+      if (module_list_.Update(process_handle(), dl_debug_addr_)) {
+        // The initial loader breakpoint will happen very early in the process startup so it
+        // will be single threaded. Since the one thread is already stopped, we can skip suspending
+        // the threads and just notify the client, keeping the calling one suspended.
+        SendModuleNotification();
+        return SpecialBreakpointResult::kKeepSuspended;
+      }
+
+      // Modules haven't changed, resume.
+      return SpecialBreakpointResult::kContinue;
+    }
+  }
+
+  // Our special loader breakpoint is a breakpoint we've inserted for every shared library load.
+  if (optional_bp) {
+    const auto& breakpoints = optional_bp->breakpoints();
+    if (std::find(breakpoints.begin(), breakpoints.end(), loader_breakpoint_.get()) !=
+        breakpoints.end()) {
+      if (module_list_.Update(process_handle(), dl_debug_addr_)) {
+        // The debugged process could be multithreaded and have just dynamically loaded a new
+        // module. Suspend all threads so the client can resolve breakpoint addresses before
+        // continuing.
+        SuspendAndSendModulesIfKnown();
+        return SpecialBreakpointResult::kKeepSuspended;
+      }
+
+      // Modules haven't changed, resume.
+      return SpecialBreakpointResult::kContinue;
+    }
+  }
+
+  // Not one of our special breakpoints.
+  return SpecialBreakpointResult::kNotSpecial;
 }
 
 void DebuggedProcess::SuspendAndSendModulesIfKnown() {
@@ -317,7 +370,7 @@ void DebuggedProcess::SendModuleNotification() {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid();
-  notify.modules = process_handle_->GetModules(dl_debug_addr_);
+  notify.modules = module_list_.modules();
 
   // All threads are assumed to be stopped.
   for (auto& [thread_koid, thread_ptr] : threads_)

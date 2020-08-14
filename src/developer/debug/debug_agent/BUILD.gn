@@ -42,6 +42,8 @@ static_library("lib") {
     "job_handle.cc",
     "job_handle.h",
     "limbo_provider.h",
+    "module_list.cc",
+    "module_list.h",
     "process_breakpoint.cc",
     "process_breakpoint.h",
     "process_handle.h",
@@ -291,6 +293,9 @@ test_package("debug_agent_tests") {
   binaries += [
     {
       name = "breakpoint_test_exe"
+    },
+    {
+      name = "load_so_exe"
     },
     {
       name = "multithreaded_breakpoint_test_exe"

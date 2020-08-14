@@ -6,6 +6,7 @@ executable("integration_tests") {
   testonly = true
   output_name = "debug_agent_integration_tests"
 
+  # Helper classes.
   sources = [
     "message_loop_wrapper.cc",
     "message_loop_wrapper.h",
@@ -17,6 +18,7 @@ executable("integration_tests") {
   sources += [
     "breakpoint_test.cc",
     "debugged_job_test.cc",
+    "dynamic_loader.cc",
     "multithreaded_breakpoint_test.cc",
     "watchpoint_test.cc",
 

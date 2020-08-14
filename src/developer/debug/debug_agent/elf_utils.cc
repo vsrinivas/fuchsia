@@ -120,4 +120,16 @@ std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& proc
   return modules;
 }
 
+// The dynamic loader puts the address of the code it calls after changing the shared library
+// lists in r_debug.r_brk where the dl_debug_addr points to the r_debug structure.
+uint64_t GetLoaderBreakpointAddress(const ProcessHandle& process, uint64_t dl_debug_addr) {
+  size_t num_read = 0;
+  uint64_t rbrk = 0;
+  if (process.ReadMemory(dl_debug_addr + offsetof(r_debug, r_brk), &rbrk, sizeof(rbrk),
+                         &num_read) == ZX_OK &&
+      num_read == sizeof(rbrk))
+    return rbrk;
+  return 0;
+}
+
 }  // namespace debug_agent

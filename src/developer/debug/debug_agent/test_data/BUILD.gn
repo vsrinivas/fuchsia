@@ -49,6 +49,7 @@ group("test_executables") {
 
   public_deps = [
     ":breakpoint_test_exe",
+    ":load_so_exe",
     ":multithreaded_breakpoint_test_exe",
     ":watchpoint_test_exe",
   ]
@@ -66,6 +67,14 @@ executable("breakpoint_test_exe") {
   output_name = "breakpoint_test_exe"
   sources = [ "breakpoint_test_exe.cc" ]
   deps = [ ":debug_agent_test_so" ]
+}
+
+executable("load_so_exe") {
+  testonly = true
+  sources = [ "load_so.cc" ]
+
+  # This must use the loadable module because it's loaded dynamically.
+  deps = [ ":debug_agent_test_loadable_module" ]
 }
 
 executable("multithreaded_breakpoint_test_exe") {

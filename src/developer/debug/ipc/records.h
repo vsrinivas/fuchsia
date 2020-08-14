@@ -328,10 +328,14 @@ const char* BreakpointTypeToString(BreakpointType);
 // Read, ReadWrite and Write are considered watchpoint types.
 bool IsWatchpointType(BreakpointType);
 
+constexpr uint32_t kDebugAgentInternalBreakpointId = static_cast<uint32_t>(-1);
+
 struct BreakpointSettings {
   // The ID if this breakpoint. This is assigned by the client. This is different than the ID in
   // the console frontend which can be across mutliple processes or may match several addresses in
   // a single process.
+  //
+  // The ID kDebugAgentInternalBreakpointId is reserved for internal use by the backend.
   uint32_t id = 0;
 
   BreakpointType type = BreakpointType::kSoftware;

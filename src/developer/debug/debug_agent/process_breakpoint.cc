@@ -78,7 +78,10 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
       continue;
 
     breakpoint->OnHit();
-    hit_breakpoints->push_back(breakpoint->stats());
+
+    // The breakpoint stats are for the client, don't tell it about our internal ones.
+    if (!breakpoint->is_debug_agent_internal())
+      hit_breakpoints->push_back(breakpoint->stats());
   }
 }
 

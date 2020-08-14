@@ -121,7 +121,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings) {
 
   SyncBackend();
 
-  if (changed) {
+  if (changed && !IsInternal()) {
     for (auto& observer : session()->breakpoint_observers())
       observer.OnBreakpointMatched(this, true);
   }
@@ -167,8 +167,10 @@ void BreakpointImpl::DidCreateProcess(Process* process, bool autoattached) {
     if (RegisterProcess(process)) {
       SyncBackend();
 
-      for (auto& observer : session()->breakpoint_observers())
-        observer.OnBreakpointMatched(this, false);
+      if (!IsInternal()) {
+        for (auto& observer : session()->breakpoint_observers())
+          observer.OnBreakpointMatched(this, false);
+      }
     }
   }
 }
@@ -210,8 +212,10 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols*
   if (needs_sync) {
     SyncBackend();
 
-    for (auto& observer : session()->breakpoint_observers())
-      observer.OnBreakpointMatched(this, false);
+    if (!IsInternal()) {
+      for (auto& observer : session()->breakpoint_observers())
+        observer.OnBreakpointMatched(this, false);
+    }
   }
 }
 

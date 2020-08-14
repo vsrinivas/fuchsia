@@ -14,6 +14,7 @@
 namespace debug_agent {
 
 class GeneralRegisters;
+class ModuleList;
 class ProcessHandle;
 class ThreadHandle;
 
@@ -22,7 +23,7 @@ class ThreadHandle;
 enum class UnwinderType { kNgUnwind, kAndroid };
 void SetUnwinderType(UnwinderType unwinder_type);
 
-zx_status_t UnwindStack(const ProcessHandle& process, uint64_t dl_debug_addr,
+zx_status_t UnwindStack(const ProcessHandle& process, const ModuleList& modules,
                         const ThreadHandle& thread, const GeneralRegisters& regs, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack);
 

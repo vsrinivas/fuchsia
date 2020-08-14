@@ -13,6 +13,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
+#include "src/developer/debug/debug_agent/module_list.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
@@ -96,23 +97,16 @@ containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
   return containers::array_view<NGUnwindRegisterMap>(std::begin(kGeneral), std::end(kGeneral));
 }
 
-zx_status_t UnwindStackAndroid(const ProcessHandle& process, uint64_t dl_debug_addr,
+zx_status_t UnwindStackAndroid(const ProcessHandle& process, const ModuleList& modules,
                                const ThreadHandle& thread, const GeneralRegisters& regs,
                                size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
-  // The modules are sorted by load address.
-  //
-  // Ignore errors getting modules, the empty case can at least give the current location, and maybe
-  // more if there are stack pointers.
-  ModuleVector modules = process.GetModules(dl_debug_addr);
-  std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
-
   unwindstack::Maps maps;
-  for (size_t i = 0; i < modules.size(); i++) {
+  for (size_t i = 0; i < modules.modules().size(); i++) {
     // Our module currently doesn't have a size so just report the next address boundary.
     // TODO(brettw) hook up the real size.
     uint64_t end;
-    if (i < modules.size() - 1)
-      end = modules[i + 1].base;
+    if (i < modules.modules().size() - 1)
+      end = modules.modules()[i + 1].base;
     else
       end = std::numeric_limits<uint64_t>::max();
 
@@ -126,7 +120,7 @@ zx_status_t UnwindStackAndroid(const ProcessHandle& process, uint64_t dl_debug_a
     // from /proc.
     uint64_t load_bias = 0;
 
-    maps.Add(modules[i].base, end, offset, flags, modules[i].name, load_bias);
+    maps.Add(modules.modules()[i].base, end, offset, flags, modules.modules()[i].name, load_bias);
   }
 
   unwindstack::RegsFuchsia unwind_regs;
@@ -178,17 +172,15 @@ zx_status_t UnwindStackAndroid(const ProcessHandle& process, uint64_t dl_debug_a
   return 0;
 }
 
-using ModuleVector = std::vector<debug_ipc::Module>;
-
 // Callback for ngunwind.
 int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name) {
   // Context is a ModuleVector sorted by load address, need to find the largest one smaller than or
   // equal to the pc.
   //
   // We could use lower_bound for better perf with lots of modules but we expect O(10) modules.
-  const ModuleVector* modules = static_cast<const ModuleVector*>(context);
-  for (int i = static_cast<int>(modules->size()) - 1; i >= 0; i--) {
-    const debug_ipc::Module& module = (*modules)[i];
+  const ModuleList* modules = static_cast<const ModuleList*>(context);
+  for (int i = static_cast<int>(modules->modules().size()) - 1; i >= 0; i--) {
+    const debug_ipc::Module& module = modules->modules()[i];
     if (pc >= module.base) {
       *base = module.base;
       *name = module.name.c_str();
@@ -198,21 +190,14 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name)
   return 0;
 }
 
-zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, uint64_t dl_debug_addr,
+zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& modules,
                                 const ThreadHandle& thread, const GeneralRegisters& regs,
                                 size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
-  // The modules are sorted by load address.
-  //
-  // Ignore errors getting modules, the empty case can at least give the current location, and maybe
-  // more if there are stack pointers.
-  ModuleVector modules = process.GetModules(dl_debug_addr);
-  std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
-
   // Any of these functions can fail if the program or thread was killed out from under us.
   unw_fuchsia_info_t* fuchsia = unw_create_fuchsia(
-      process.GetNativeHandle().get(), thread.GetNativeHandle().get(), &modules, &LookupDso);
+      process.GetNativeHandle().get(), thread.GetNativeHandle().get(), (void*)&modules, &LookupDso);
   if (!fuchsia)
     return ZX_ERR_INTERNAL;
 
@@ -284,14 +269,14 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, uint64_t dl_debug_
 
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
 
-zx_status_t UnwindStack(const ProcessHandle& process, uint64_t dl_debug_addr,
+zx_status_t UnwindStack(const ProcessHandle& process, const ModuleList& modules,
                         const ThreadHandle& thread, const GeneralRegisters& regs, size_t max_depth,
                         std::vector<debug_ipc::StackFrame>* stack) {
   switch (unwinder_type) {
     case UnwinderType::kNgUnwind:
-      return UnwindStackNgUnwind(process, dl_debug_addr, thread, regs, max_depth, stack);
+      return UnwindStackNgUnwind(process, modules, thread, regs, max_depth, stack);
     case UnwinderType::kAndroid:
-      return UnwindStackAndroid(process, dl_debug_addr, thread, regs, max_depth, stack);
+      return UnwindStackAndroid(process, modules, thread, regs, max_depth, stack);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

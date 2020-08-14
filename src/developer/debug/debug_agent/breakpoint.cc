@@ -93,8 +93,8 @@ void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) 
       ss << ", T: " << location.thread_koid;
 
     // Print the actual location.
-    ss << "], addr: 0x" << std::hex << location.address << ", range: "
-       << location.address_range.ToString();
+    ss << "], addr: 0x" << std::hex << location.address
+       << ", range: " << location.address_range.ToString();
   }
 
   DEBUG_LOG_WITH_LOCATION(Breakpoint, location) << Preamble(bp) << ss.str();
@@ -102,7 +102,8 @@ void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) 
 
 }  // namespace
 
-Breakpoint::Breakpoint(ProcessDelegate* process_delegate) : process_delegate_(process_delegate) {}
+Breakpoint::Breakpoint(ProcessDelegate* process_delegate, bool is_debug_agent_internal)
+    : process_delegate_(process_delegate), is_debug_agent_internal_(is_debug_agent_internal) {}
 
 Breakpoint::~Breakpoint() {
   DEBUG_LOG(Breakpoint) << Preamble(this) << "Deleting.";
@@ -141,6 +142,18 @@ zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& setting
 
   FX_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(settings_.type);
   return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Breakpoint::SetSettings(std::string name, zx_koid_t process_koid, uint64_t address) {
+  debug_ipc::BreakpointSettings settings;
+  settings.id = debug_ipc::kDebugAgentInternalBreakpointId;
+  settings.name = std::move(name);
+
+  debug_ipc::ProcessBreakpointSettings& location = settings.locations.emplace_back();
+  location.process_koid = process_koid;
+  location.address = address;
+
+  return SetSettings(settings);
 }
 
 zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettings& settings) {

@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/module_list.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
@@ -100,15 +101,18 @@ void DoUnwindTest() {
     std::optional<GeneralRegisters> regs = data.thread->GetGeneralRegisters();
     ASSERT_TRUE(regs);
 
-    // The debug addr is necessary to find the unwind information.
+    // Find the module information.
     uintptr_t debug_addr = 0;
     zx_status_t status = zx::process::self()->get_property(ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr,
                                                            sizeof(debug_addr));
     ASSERT_EQ(ZX_OK, status);
     ASSERT_NE(0u, debug_addr);
 
+    ModuleList modules;
+    modules.Update(process, debug_addr);
+
     // Do the unwinding.
-    status = UnwindStack(process, debug_addr, *data.thread, *regs, 16, &stack);
+    status = UnwindStack(process, modules, *data.thread, *regs, 16, &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;
