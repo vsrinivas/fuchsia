@@ -116,6 +116,57 @@ class HandleInfo {
   std::vector<std::unique_ptr<HandleSession>> sessions_;
 };
 
+// A FIDL method used by one process.
+class Method {
+ public:
+  explicit Method(const fidl_codec::InterfaceMethod* method) : method_(method) {}
+
+  const fidl_codec::InterfaceMethod* method() const { return method_; }
+  size_t event_count() const { return events_.size(); }
+  const std::vector<const OutputEvent*>& events() const { return events_; }
+
+  void AddEvent(const OutputEvent* event) { events_.emplace_back(event); }
+
+ private:
+  // The FIDL method.
+  const fidl_codec::InterfaceMethod* const method_;
+  // All the vents for this method (for one process).
+  std::vector<const OutputEvent*> events_;
+};
+
+// A FIDL protocol (interface) used by one process.
+class Protocol {
+ public:
+  explicit Protocol(const fidl_codec::Interface* interface) : interface_(interface) {}
+
+  const fidl_codec::Interface* interface() const { return interface_; }
+  const std::map<fidl_codec::Ordinal64, std::unique_ptr<Method>>& methods() const {
+    return methods_;
+  }
+  uint64_t event_count() const { return event_count_; }
+
+  Method* GetMethod(fidl_codec::Ordinal64 ordinal, const fidl_codec::InterfaceMethod* method) {
+    auto result = methods_.find(ordinal);
+    if (result != methods_.end()) {
+      return result->second.get();
+    }
+    auto new_method = std::make_unique<Method>(method);
+    auto returned_value = new_method.get();
+    methods_.emplace(std::make_pair(ordinal, std::move(new_method)));
+    return returned_value;
+  }
+
+  void AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageValue* message);
+
+ private:
+  // The FIDL interface.
+  const fidl_codec::Interface* const interface_;
+  // All the methods of this interface used by one process.
+  std::map<fidl_codec::Ordinal64, std::unique_ptr<Method>> methods_;
+  // The event count for this interface for one process.
+  uint64_t event_count_ = 0;
+};
+
 class Process {
  public:
   Process(std::string_view name, zx_koid_t koid, fxl::WeakPtr<zxdb::Process> zxdb_process)
@@ -126,6 +177,10 @@ class Process {
   zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
   std::vector<HandleInfo*>& handle_infos() { return handle_infos_; }
   std::map<uint32_t, HandleInfo*>& handle_info_map() { return handle_info_map_; }
+  const std::map<const fidl_codec::Interface*, std::unique_ptr<Protocol>>& protocols() const {
+    return protocols_;
+  }
+  uint64_t event_count() const { return event_count_; }
 
   void LoadHandleInfo(Inference* inference);
 
@@ -136,6 +191,19 @@ class Process {
     }
     return result->second;
   }
+
+  Protocol* GetProtocol(const fidl_codec::Interface* interface) {
+    auto result = protocols_.find(interface);
+    if (result != protocols_.end()) {
+      return result->second.get();
+    }
+    auto protocol = std::make_unique<Protocol>(interface);
+    auto returned_value = protocol.get();
+    protocols_.emplace(std::make_pair(interface, std::move(protocol)));
+    return returned_value;
+  }
+
+  void AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageValue* message);
 
  private:
   // The name of the process.
@@ -152,6 +220,10 @@ class Process {
   std::vector<HandleInfo*> handle_infos_;
   // A map to quickly find a handle for a process.
   std::map<uint32_t, HandleInfo*> handle_info_map_;
+  // All the protocols used by the process.
+  std::map<const fidl_codec::Interface*, std::unique_ptr<Protocol>> protocols_;
+  // The count of events (read/write/call) for this process.
+  uint64_t event_count_ = 0;
 };
 
 inline FidlcatPrinter& operator<<(FidlcatPrinter& printer, const Process& process) {
@@ -204,7 +276,7 @@ class Event {
   virtual void Write(proto::Event* dst) const = 0;
 
   // Display a short version of the event (without all the details).
-  virtual void Display(FidlcatPrinter& printer) const {}
+  virtual void Display(FidlcatPrinter& printer, bool with_channel = false) const {}
 
  private:
   const int64_t timestamp_;
@@ -359,7 +431,7 @@ class OutputEvent final : public SyscallEvent {
 
   void Write(proto::Event* dst) const override;
 
-  void Display(FidlcatPrinter& printer) const override;
+  void Display(FidlcatPrinter& printer, bool with_channel) const override;
 
   void PrettyPrint(FidlcatPrinter& printer) const;
 

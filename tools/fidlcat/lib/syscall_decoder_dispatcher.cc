@@ -17,6 +17,7 @@
 #include "src/lib/fidl_codec/semantic.h"
 #include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
+#include "tools/fidlcat/lib/top.h"
 #include "tools/fidlcat/proto/session.pb.h"
 
 namespace fidlcat {
@@ -746,20 +747,37 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
 
 void SyscallDisplayDispatcher::SessionEnded() {
   SyscallDecoderDispatcher::SessionEnded();
+  const char* separator = "";
   for (const auto& extra_generation : extra_generation()) {
-    switch (extra_generation.kind) {
-      case ExtraGeneration::Kind::kSummary:
-        if (extra_generation.path.empty()) {
+    if (extra_generation.path.empty()) {
+      os_ << separator;
+      switch (extra_generation.kind) {
+        case ExtraGeneration::Kind::kSummary:
           DisplaySummary(os_);
-        } else {
-          std::fstream output(extra_generation.path, std::ios::out | std::ios::trunc);
-          if (output.fail()) {
-            FX_LOGS(ERROR) << "Can't open <" << extra_generation.path << "> for writing.";
-          } else {
+          break;
+        case ExtraGeneration::Kind::kTop: {
+          Top top(this);
+          top.Display(os_);
+          break;
+        }
+      }
+      separator = "\n";
+    } else {
+      std::fstream output(extra_generation.path, std::ios::out | std::ios::trunc);
+      if (output.fail()) {
+        FX_LOGS(ERROR) << "Can't open <" << extra_generation.path << "> for writing.";
+      } else {
+        switch (extra_generation.kind) {
+          case ExtraGeneration::Kind::kSummary:
             DisplaySummary(output);
+            break;
+          case ExtraGeneration::Kind::kTop: {
+            Top top(this);
+            top.Display(output);
+            break;
           }
         }
-        break;
+      }
     }
   }
 }

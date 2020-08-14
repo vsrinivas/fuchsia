@@ -4,6 +4,8 @@
 
 #include "tools/fidlcat/lib/statistics.h"
 
+#include <algorithm>
+
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 #include "tools/fidlcat/proto/session.pb.h"
 

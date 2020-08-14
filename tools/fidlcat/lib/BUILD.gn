@@ -19,6 +19,7 @@ if (is_host) {
       "statistics.h",
       "syscall_decoder.h",
       "syscall_decoder_dispatcher.h",
+      "top.h",
       "type_decoder.h",
     ]
 
@@ -35,6 +36,7 @@ if (is_host) {
       "syscall_decoder.cc",
       "syscall_decoder_dispatcher.cc",
       "syscall_definition.cc",
+      "top.cc",
       "type_decoder.cc",
     ]
 

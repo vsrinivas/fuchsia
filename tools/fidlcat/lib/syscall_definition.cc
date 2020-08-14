@@ -3407,6 +3407,7 @@ void SyscallDecoderDispatcher::Populate() {
       if ((message != nullptr) && !message->unknown_direction()) {
         CreateHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
+        event->thread()->process()->AddEvent(event, message);
       }
     });
   }
@@ -3453,6 +3454,7 @@ void SyscallDecoderDispatcher::Populate() {
       if ((message != nullptr) && !message->unknown_direction()) {
         CreateHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
+        event->thread()->process()->AddEvent(event, message);
       }
     });
   }
@@ -3486,6 +3488,7 @@ void SyscallDecoderDispatcher::Populate() {
       if ((message != nullptr) && !message->unknown_direction()) {
         CloseHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
+        event->thread()->process()->AddEvent(event, message);
       }
     });
   }
@@ -3545,6 +3548,7 @@ void SyscallDecoderDispatcher::Populate() {
       if (request != nullptr) {
         CloseHandleVisitor close_handle_visitor(event);
         request->Visit(&close_handle_visitor, nullptr);
+        event->thread()->process()->AddEvent(event, request);
       }
       const fidl_codec::FidlMessageValue* response = event->GetMessage();
       if (response != nullptr) {

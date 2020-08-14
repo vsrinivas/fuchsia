@@ -440,5 +440,84 @@ void main(List<String> arguments) {
               ''),
           reason: instance.additionalResult);
     });
+
+    test('Test --with=top', () async {
+      final String echoProto =
+          Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
+          ['--with=top', '--from=$echoProto']);
+
+      expect(
+          instance.stdout,
+          equals(
+              '--------------------------------------------------------------------------------'
+              'echo_client_cpp.cmx 26251: 11 events\n'
+              '  fuchsia.io/Directory: 4 events\n'
+              '    Open: 4 events\n'
+              '      write request  fuchsia.io/Directory.Open(Channel:4cb5cb07(dir:/svc))\n'
+              '      write request  fuchsia.io/Directory.Open(Channel:4db5cb4f(dir:/svc))\n'
+              '      write request  fuchsia.io/Directory.Open(Channel:4cc5cba7('
+              'server:fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx))\n'
+              '      read  request  fuchsia.io/Directory.Open(Channel:4c85cb0f('
+              'directory-request:/))\n'
+              '\n'
+              '  fuchsia.io/Node: 3 events\n'
+              '    OnOpen: 2 events\n'
+              '      write event    fuchsia.io/Node.OnOpen(Channel:4cc5cb2f('
+              'directory-request:/))\n'
+              '      write event    fuchsia.io/Node.OnOpen(Channel:4df5f45f('
+              'directory-request:/diagnostics))\n'
+              '    Clone: 1 event\n'
+              '      read  request  fuchsia.io/Node.Clone(Channel:4c85cb0f(directory-request:/))\n'
+              '\n'
+              '  fidl.examples.echo/Echo: 2 events\n'
+              '    EchoString: 2 events\n'
+              '      write request  fidl.examples.echo/Echo.EchoString(Channel:4c85f443('
+              'server:fuchsia-pkg://fuchsia.com/echo_server_cpp'
+              '#meta/echo_server_cpp.cmx/fidl.examples.echo.Echo))\n'
+              '      read  response fidl.examples.echo/Echo.EchoString(Channel:4c85f443('
+              'server:fuchsia-pkg://fuchsia.com/echo_server_cpp#'
+              'meta/echo_server_cpp.cmx/fidl.examples.echo.Echo))\n'
+              '\n'
+              '  fuchsia.sys/ComponentController: 1 event\n'
+              '    OnDirectoryReady: 1 event\n'
+              '      read  event    fuchsia.sys/ComponentController.OnDirectoryReady('
+              'Channel:4c65cbb3('
+              'server-control:fuchsia-pkg://fuchsia.com/echo_server_cpp'
+              '#meta/echo_server_cpp.cmx))\n'
+              '\n'
+              '  fuchsia.sys/Launcher: 1 event\n'
+              '    CreateComponent: 1 event\n'
+              '      write request  fuchsia.sys/Launcher.CreateComponent(Channel:4ca5cbab('
+              'dir:/svc/fuchsia.sys.Launcher))\n'
+              '\n'
+              '--------------------------------------------------------------------------------'
+              'echo_server_cpp.cmx 26568: 8 events\n'
+              '  fuchsia.io/Directory: 4 events\n'
+              '    Open: 4 events\n'
+              '      write request  fuchsia.io/Directory.Open(Channel:830ae0cb(dir:/svc))\n'
+              '      read  request  fuchsia.io/Directory.Open(Channel:839ae0d7('
+              'directory-request:/))\n'
+              '      read  request  fuchsia.io/Directory.Open(Channel:83cadf63('
+              'directory-request:/svc))\n'
+              '      read  request  fuchsia.io/Directory.Open(Channel:839ae0d7('
+              'directory-request:/))\n'
+              '\n'
+              '  fidl.examples.echo/Echo: 2 events\n'
+              '    EchoString: 2 events\n'
+              '      read  request  fidl.examples.echo/Echo.EchoString(Channel:833adf7b('
+              'directory-request:/svc/fidl.examples.echo.Echo))\n'
+              '      write response fidl.examples.echo/Echo.EchoString(Channel:833adf7b('
+              'directory-request:/svc/fidl.examples.echo.Echo))\n'
+              '\n'
+              '  fuchsia.io/Node: 2 events\n'
+              '    Clone: 1 event\n'
+              '      read  request  fuchsia.io/Node.Clone(Channel:839ae0d7(directory-request:/))\n'
+              '    OnOpen: 1 event\n'
+              '      write event    fuchsia.io/Node.OnOpen(Channel:83aae003('
+              'directory-request:/))\n'),
+          reason: instance.additionalResult);
+    });
   }, timeout: _timeout);
 }

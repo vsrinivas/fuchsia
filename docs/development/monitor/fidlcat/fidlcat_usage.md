@@ -340,7 +340,7 @@ authentication page. You then have to use the generated key to authenticate.
 ## High level summary
 
 Sometime, you don't need to display all the messages exchanged but only a high level view of the
-session. The options "--with=summary" and "--with=summary=&lt;path&gt;" generate a high level
+session. The options `--with=summary` and `--with=summary=&lt;path&gt;` generate a high level
 summary of the session.
 
 With those options, fidlcat displays a list of all the monitored processes.
@@ -370,3 +370,9 @@ Finally fidlcat displays how the handle was closed:
 
 If fidlcat doesn't display that a handle is closed, that probably means that the program forgot to
 close it.
+
+## Top protocols
+
+The options `--with=top` and `--with=top&lt;path&gt;` generate a view that groups the output by
+process, protocol, and method. The groups are sorted by number of events, so groups with more
+associated events are listed earlier.

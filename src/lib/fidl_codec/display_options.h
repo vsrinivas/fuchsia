@@ -6,7 +6,7 @@
 #define SRC_LIB_FIDL_CODEC_DISPLAY_OPTIONS_H_
 
 struct ExtraGeneration {
-  enum class Kind { kSummary };
+  enum class Kind { kSummary, kTop };
   Kind kind;
   std::string path;
   ExtraGeneration(Kind kind, std::string_view path) : kind(kind), path(path) {}

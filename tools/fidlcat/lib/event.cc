@@ -58,6 +58,19 @@ void Process::LoadHandleInfo(Inference* inference) {
       });
 }
 
+void Protocol::AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageValue* message) {
+  Method* method = GetMethod(message->ordinal(), message->method());
+  method->AddEvent(event);
+  ++event_count_;
+}
+
+void Process::AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageValue* message) {
+  Protocol* protocol = GetProtocol(
+      (message->method() != nullptr) ? &message->method()->enclosing_interface() : nullptr);
+  protocol->AddEvent(event, message);
+  ++event_count_;
+}
+
 void ProcessLaunchedEvent::Write(proto::Event* dst) const {
   dst->set_timestamp(timestamp());
   proto::ProcessLaunchedEvent* event = dst->mutable_process_launched();
@@ -243,7 +256,7 @@ void OutputEvent::Write(proto::Event* dst) const {
   }
 }
 
-void OutputEvent::Display(FidlcatPrinter& printer) const {
+void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
   const fidl_codec::FidlMessageValue* message = invoked_event_->GetMessage();
   if (message == nullptr) {
     message = GetMessage();
@@ -268,10 +281,10 @@ void OutputEvent::Display(FidlcatPrinter& printer) const {
   if (message->ordinal() == kFidlOrdinalEpitaph) {
     printer << fidl_codec::WhiteOnMagenta << "epitaph " << fidl_codec::ResetColor << ' '
             << ((message->epitaph_error() == "ZX_OK") ? fidl_codec::Green : fidl_codec::Red)
-            << message->epitaph_error() << fidl_codec::ResetColor << '\n';
+            << message->epitaph_error() << fidl_codec::ResetColor;
   } else {
     if (method == nullptr) {
-      printer << " ordinal=" << std::hex << message->ordinal() << std::dec << '\n';
+      printer << " ordinal=" << std::hex << message->ordinal() << std::dec;
     } else {
       printer << fidl_codec::WhiteOnMagenta
               << (message->is_request()
@@ -279,9 +292,15 @@ void OutputEvent::Display(FidlcatPrinter& printer) const {
                       : ((method->request() != nullptr) ? "response" : "event   "))
               << fidl_codec::ResetColor << ' ' << fidl_codec::Green
               << method->enclosing_interface().name() << '.' << method->name()
-              << fidl_codec::ResetColor << '\n';
+              << fidl_codec::ResetColor;
     }
   }
+  if (with_channel && (invoked_event()->handle_info() != nullptr)) {
+    printer << '(';
+    printer.DisplayHandleInfo(invoked_event()->handle_info());
+    printer << ')';
+  }
+  printer << '\n';
 }
 
 void OutputEvent::PrettyPrint(FidlcatPrinter& printer) const {

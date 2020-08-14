@@ -71,16 +71,23 @@
 ##                      --format=json      The session is printed using a json format.
 ##                      --format=textproto The session is printed using a text protobuf format.
 ##                      --format=          Nothing is displayed on the standard output (this option
-##                                         only makes sense when used with --to=<path>).
+##                                         only makes sense when used with --to=<path> or with
+##                                         --with).
 ##                                         When there is no output, fidlcat is much faster (this is
 ##                                         better when you want to monitor real time components).
 ##                                         This is the default output is --with is used.
 ##
 ## Extra generation:
+##    These options can be used several times.
 ##    --with=summary        At the end of the session, a summary of the session is displayed on the
 ##                          standard output.
-##    --with=summary=<path> At the end of the session, a summary of the session is stored in the
-##                          file specified by path.
+##    --with=summary=<path> Like --with=summary but the result is stored into the file specified by
+##                          <path>.
+##    --with=top            At the end of the session, generate a view that groups the output by
+##                          process, protocol, and method. The groups are sorted by number of
+##                          events, so groups with more associated events are listed earlier.
+##    --with=top=<path>     Like --with=top but the result is stored into the file specified by
+##                          <path>.
 ##
 ## Display options:
 ##    --with-process-info         Display the process name, process id and thread id on

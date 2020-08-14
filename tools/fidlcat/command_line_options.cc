@@ -118,16 +118,22 @@ const char* const kFormatHelp = R"(  --format=<output>
       --format=json      The session is printed using a json format.
       --format=textproto The session is printed using a text protobuf format.
       --format=none      Nothing is displayed on the standard output (this option only makes sense
-                         when used with --to=<path>).
+                         when used with --to=<path> or with --with).
                          When there is no output, fidlcat is much faster (this is better when you
                          want to monitor real time components).
                          This is the default output is --with is used.)";
 
-const char* const kWithHelp = R"(  --with=summary
+const char* const kWithHelp = R"(These options can be used several times.
+  --with=summary
       At the end of the session, a summary of the session is displayed on the standard output.
   --with=summary=<path>
-      At the end of the session, a summary of the session is stored in the file specified by
-      path.)";
+      Like --with=summary but the result is stored into the file specified by <path>.
+  --with=top
+      At the end of the session, generate a view that groups the output by process, protocol, and
+      method. The groups are sorted by number of events, so groups with more associated events are
+      listed earlier.
+  --with=top=<path>
+      Like --with=top but the result is stored into the file specified by <path>..)";
 
 const char* const kCompareHelp = R"(  --compare=<path>
       Compare output with the one stored in the given file)";
@@ -442,6 +448,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     } else if (extra_generation.find("summary=") == 0) {
       display_options->AddExtraGeneration(ExtraGeneration::Kind::kSummary,
                                           extra_generation.substr(8));
+    } else if (extra_generation == "top") {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kTop, "");
+    } else if (extra_generation.find("top=") == 0) {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kTop, extra_generation.substr(4));
     } else {
       return "Invalid generation " + extra_generation + " for option --with.";
     }
