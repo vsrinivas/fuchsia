@@ -17,6 +17,8 @@
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
 
+#include <deque>
+
 #include <fbl/unique_fd.h>
 
 #include "vk_dispatch_table_helper.h"
@@ -146,7 +148,7 @@ void ImagePipeSurfaceDisplay::ControllerOnDisplaysChanged(
   width_ = info[0].modes[0].horizontal_resolution;
   height_ = info[0].modes[0].vertical_resolution;
   display_id_ = info[0].id;
-  std::vector<VkSurfaceFormatKHR> formats;
+  std::deque<VkSurfaceFormatKHR> formats;
   auto pixel_format = reinterpret_cast<const int32_t*>(info[0].pixel_format.data());
   for (unsigned i = 0; i < info[0].pixel_format.size(); i++) {
     switch (pixel_format[i]) {
@@ -155,15 +157,17 @@ void ImagePipeSurfaceDisplay::ControllerOnDisplaysChanged(
         formats.push_back({VK_FORMAT_B8G8R8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
         break;
       case ZX_PIXEL_FORMAT_BGR_888x:
-        formats.push_back({VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
-        formats.push_back({VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        // Push front to prefer R8G8B8A8 formats.
+        formats.push_front({VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        formats.push_front({VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
         break;
       default:
         // Ignore unknown formats.
         break;
     }
   }
-  supported_image_properties_ = {formats};
+  supported_image_properties_ =
+      SupportedImageProperties{.formats = {formats.begin(), formats.end()}};
   have_display_ = true;
 }
 
