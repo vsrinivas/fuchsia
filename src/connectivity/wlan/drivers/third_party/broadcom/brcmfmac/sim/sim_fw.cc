@@ -1636,7 +1636,7 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     // TODO: Remove these exceptions from specifying nullptr as fw_err. At the moment,
     // these are the only cases where IovarsGet is called directly outside of
     // iovar_test.
-    if (!(!strcmp(name, "wsec") || !strcmp(name, "auth") || !strcmp(name, "wsec_key"))) {
+    if (strcmp(name, "wsec_key")) {
       BRCMF_ERR("%s is not a whitelisted iovar for calling IovarsGet with fw_err as nullptr", name);
       return ZX_ERR_INTERNAL;
     }

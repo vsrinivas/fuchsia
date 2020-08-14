@@ -2764,7 +2764,11 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
       goto fail;
     }
   } else {
-    brcmf_configure_opensecurity(ifp);
+    status = brcmf_configure_opensecurity(ifp);
+    if (status != ZX_OK) {
+      BRCMF_ERR("Failed to configure AP for open security: %s", zx_status_get_string(status));
+      goto fail;
+    }
   }
 
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period, &fw_err);
@@ -2998,10 +3002,15 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   wlanif_join_confirm_t result;
   result.result_code = WLAN_JOIN_RESULT_SUCCESS;
 
-  brcmf_configure_opensecurity(ifp);
+  zx_status_t status = brcmf_configure_opensecurity(ifp);
+  if (status != ZX_OK) {
+    result.result_code = WLAN_JOIN_RESULT_INTERNAL_ERROR;
+  }
+
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s",
             result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
             : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
+            : result.result_code == WLAN_JOIN_RESULT_INTERNAL_ERROR         ? "internal error"
                                                                      : "unknown");
   wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }

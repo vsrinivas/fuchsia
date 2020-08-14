@@ -308,6 +308,7 @@ struct WlanifScanEnd {
 enum WlanJoinResult : uint8 {
     SUCCESS = 0;
     FAILURE_TIMEOUT = 1;
+    INTERNAL_ERROR = 2;
 };
 
 struct WlanifJoinConfirm {

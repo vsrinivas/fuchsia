@@ -67,6 +67,7 @@ class AuthTest : public SimTest {
 
   simulation::FakeAp ap_;
 
+  uint8_t join_status_ = WLAN_JOIN_RESULT_SUCCESS;
   uint8_t auth_status_ = WLAN_AUTH_RESULT_SUCCESS;
   uint8_t assoc_status_ = WLAN_ASSOC_RESULT_SUCCESS;
   std::list<AuthFrameContent> rx_auth_frames_;
@@ -186,11 +187,17 @@ void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
 }
 
 void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
+  join_status_ = resp->result_code;
+  if (join_status_ != WLAN_JOIN_RESULT_SUCCESS) {
+    return;
+  }
+
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status;
 
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_), nullptr);
+  status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
+  EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(wsec_, (uint32_t)0);
 
   status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
@@ -244,9 +251,23 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   if (auth_status_ != WLAN_AUTH_RESULT_SUCCESS) {
     return;
   }
+
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  zx_status_t status;
+
   sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_), nullptr);
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "auth", &auth_, sizeof(auth_), nullptr);
-  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_), nullptr);
+
+  {
+    // Since auth_ is uint16_t, we need a uint32_t to get the iovar
+    uint32_t auth32;
+    status = brcmf_fil_bsscfg_int_get(ifp, "auth", &auth32);
+    auth_ = static_cast<uint16_t>(auth32);
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
+  EXPECT_EQ(status, ZX_OK);
 
   if (sec_type_ != SEC_TYPE_WPA1 && sec_type_ != SEC_TYPE_WPA2) {
     EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
@@ -551,7 +572,7 @@ TEST_F(AuthTest, WPA2TestFail) {
 
   env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_NE(assoc_status_, WLAN_AUTH_RESULT_SUCCESS);
+  EXPECT_NE(join_status_, WLAN_JOIN_RESULT_SUCCESS);
 }
 
 // This test case verifies that auth req will be refused when security types of client and AP are
