@@ -54,7 +54,7 @@
 /// }
 ///
 /// One action(e.g. "goBack") can have multiple shortcuts.
-/// See [Key] class in fuchisa_ui_input2 package to find valid "char" values.
+/// See [Key] class in fuchsia_ui_input2 package to find valid "char" values.
 /// See [_modifierFromString] method in src/keyboard_shortcuts.dart to fine valid "modifier" values.
 
 export 'src/keyboard_shortcuts.dart';
