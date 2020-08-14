@@ -38,7 +38,7 @@ class FvmInfo {
   zx_status_t Write(fvm::host::FileWrapper* wrapper, size_t disk_offset, size_t disk_size);
 
   // Allocates new partition (in memory) with a single slice.
-  zx_status_t AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,
+  zx_status_t AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
                                 uint32_t* vpart_index);
 
   // Allocates new slice for given partition (in memory).
@@ -48,7 +48,7 @@ class FvmInfo {
   zx_status_t GetPartition(size_t index, fvm::vpart_entry_t** out) const;
   zx_status_t GetSlice(size_t index, fvm::slice_entry_t** out) const;
 
-  fvm::fvm_t* SuperBlock() const;
+  fvm::Header* SuperBlock() const;
   size_t MetadataSize() const { return metadata_size_; }
   size_t DiskSize() const { return SuperBlock()->fvm_partition_size; }
   size_t SliceSize() const { return SuperBlock()->slice_size; }

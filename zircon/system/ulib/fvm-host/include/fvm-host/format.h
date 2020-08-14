@@ -158,7 +158,7 @@ class Format {
   // Empty the data block (i.e. fill with all 0's)
   virtual zx_status_t EmptyBlock() = 0;
 
-  void GetPartitionInfo(fvm::partition_descriptor_t* partition) const {
+  void GetPartitionInfo(fvm::PartitionDescriptor* partition) const {
     memcpy(partition->type, type_, sizeof(type_));
     strncpy(reinterpret_cast<char*>(partition->name), Name(), fvm::kMaxVPartitionNameLength);
     partition->flags = flags_;

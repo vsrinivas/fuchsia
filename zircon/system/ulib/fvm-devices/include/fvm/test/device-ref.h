@@ -16,7 +16,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fvm/format.h>
+#include <fvm/fvm.h>
 #include <ramdevice-client/ramdisk.h>
 
 // This utility library introduces objects wrapping the devices we interact with, to make it clear

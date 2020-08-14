@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/fvm-info.h"
-
 #include <memory>
 
-#include "fvm-host/format.h"
+#include <fvm-host/format.h>
+#include <fvm-host/fvm-info.h>
+#include <fvm/fvm.h>
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
   valid_ = false;
@@ -24,7 +24,7 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
   memset(metadata_.get(), 0, metadata_size_);
 
   // Superblock
-  fvm::fvm_t* sb = SuperBlock();
+  fvm::Header* sb = SuperBlock();
   sb->magic = fvm::kMagic;
   sb->version = fvm::kVersion;
   sb->pslice_count = fvm::UsableSlicesCount(disk_size, slice_size);
@@ -69,16 +69,16 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
 
   // For now just reset this to the fvm header size - we can grow it to the full metadata size
   // later.
-  metadata_.reset(new uint8_t[sizeof(fvm::fvm_t)]);
+  metadata_.reset(new uint8_t[sizeof(fvm::Header)]);
 
   // If Container already exists, read metadata from disk.
   // Read superblock first so we can determine if container has a different slice size.
   file->Seek(disk_offset, SEEK_SET);
-  ssize_t result = file->Read(metadata_.get(), sizeof(fvm::fvm_t));
+  ssize_t result = file->Read(metadata_.get(), sizeof(fvm::Header));
   file->Seek(start_position, SEEK_SET);
 
-  if (result != static_cast<ssize_t>(sizeof(fvm::fvm_t))) {
-    fprintf(stderr, "Superblock read failed: expected %ld, actual %ld\n", sizeof(fvm::fvm_t),
+  if (result != static_cast<ssize_t>(sizeof(fvm::Header))) {
+    fprintf(stderr, "Superblock read failed: expected %ld, actual %ld\n", sizeof(fvm::Header),
             result);
     return ZX_ERR_IO;
   }
@@ -125,7 +125,7 @@ zx_status_t FvmInfo::Validate() const {
   const void* primary = nullptr;
   const void* backup =
       reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) + metadata_size_);
-  zx_status_t status = fvm_validate_header(metadata_.get(), backup, metadata_size_, &primary);
+  zx_status_t status = fvm::ValidateHeader(metadata_.get(), backup, metadata_size_, &primary);
 
   if (status != ZX_OK) {
     fprintf(stderr, "Header validation failed with status %d\n", status);
@@ -141,7 +141,7 @@ zx_status_t FvmInfo::Validate() const {
 }
 
 zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, size_t disk_size) {
-  fvm::fvm_t* sb = SuperBlock();
+  fvm::Header* sb = SuperBlock();
   if (disk_size != sb->fvm_partition_size) {
     // If disk size has changed, update and attempt to grow metadata.
     sb->pslice_count = fvm::UsableSlicesCount(disk_size, SliceSize());
@@ -155,7 +155,7 @@ zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, siz
     }
   }
 
-  fvm_update_hash(metadata_.get(), metadata_size_);
+  fvm::UpdateHash(metadata_.get(), metadata_size_);
   memcpy(metadata_.get() + metadata_size_, metadata_.get(), metadata_size_);
 
   if (Validate() != ZX_OK) {
@@ -211,7 +211,7 @@ zx_status_t FvmInfo::GrowForSlices(size_t slice_count) {
   return Grow(required_size);
 }
 
-zx_status_t FvmInfo::AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,
+zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
                                        uint32_t* vpart_index) {
   CheckValid();
   for (unsigned index = vpart_hint_; index < fvm::kMaxVPartitions; index++) {
@@ -239,7 +239,7 @@ zx_status_t FvmInfo::AllocatePartition(const fvm::partition_descriptor_t* partit
 
 zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice) {
   CheckValid();
-  fvm::fvm_t* sb = SuperBlock();
+  fvm::Header* sb = SuperBlock();
 
   for (uint32_t index = pslice_hint_; index <= sb->pslice_count; index++) {
     zx_status_t status;
@@ -300,4 +300,6 @@ zx_status_t FvmInfo::GetSlice(size_t index, fvm::slice_entry_t** out) const {
   return ZX_OK;
 }
 
-fvm::fvm_t* FvmInfo::SuperBlock() const { return static_cast<fvm::fvm_t*>((void*)metadata_.get()); }
+fvm::Header* FvmInfo::SuperBlock() const {
+  return static_cast<fvm::Header*>((void*)metadata_.get());
+}

@@ -187,7 +187,7 @@ zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
   std::unique_ptr<PartitionClient> partition = std::move(status.value());
 
   // TODO(fxbug.dev/39753): Configuration values should come from the build or environment.
-  fvm::sparse_image_t header = {};
+  fvm::SparseImage header = {};
   header.slice_size = 1 << 20;
 
   fbl::unique_fd fvm_fd(

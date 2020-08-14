@@ -36,7 +36,7 @@ class Container {
   // Returns a Container representation of an existing FVM or sparse container starting at |
   // offset| within |path| (where offset is only valid for an FVM). Returns an error if the file
   // does not exist or is not a valid Container type, or if flags is not zero or a valid
-  // combination of fvm::sparse_flags_t.
+  // combination of fvm::SparseFlags.
   static zx_status_t Create(const char* path, off_t offset, uint32_t flags,
                             std::unique_ptr<Container>* out);
 
@@ -298,7 +298,7 @@ class SparseContainer final : public Container {
   bool dirty_;
   size_t disk_size_;
   size_t extent_size_;
-  fvm::sparse_image_t image_;
+  fvm::SparseImage image_;
   fbl::Vector<SparsePartitionInfo> partitions_;
   CompressionContext compression_;
   std::unique_ptr<fvm::SparseReader> reader_;

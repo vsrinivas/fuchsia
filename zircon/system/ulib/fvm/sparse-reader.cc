@@ -109,10 +109,10 @@ SparseReader::SparseReader(std::unique_ptr<ReaderInterface> reader, bool verbose
 
 zx_status_t SparseReader::ReadMetadata() {
   // Read sparse image header.
-  fvm::sparse_image_t image;
+  fvm::SparseImage image;
   size_t actual;
-  auto status = reader_->Read(&image, sizeof(fvm::sparse_image_t), &actual);
-  if (status != ZX_OK || actual != sizeof(fvm::sparse_image_t)) {
+  auto status = reader_->Read(&image, sizeof(fvm::SparseImage), &actual);
+  if (status != ZX_OK || actual != sizeof(fvm::SparseImage)) {
     fprintf(stderr, "failed to read the sparse header\n");
     return ZX_ERR_IO;
   }
@@ -211,13 +211,13 @@ SparseReader::~SparseReader() {
   }
 }
 
-fvm::sparse_image_t* SparseReader::Image() {
-  return reinterpret_cast<fvm::sparse_image_t*>(metadata_.get());
+fvm::SparseImage* SparseReader::Image() {
+  return reinterpret_cast<fvm::SparseImage*>(metadata_.get());
 }
 
-fvm::partition_descriptor_t* SparseReader::Partitions() {
-  return reinterpret_cast<fvm::partition_descriptor_t*>(
-      reinterpret_cast<uintptr_t>(metadata_.get()) + sizeof(fvm::sparse_image_t));
+fvm::PartitionDescriptor* SparseReader::Partitions() {
+  return reinterpret_cast<fvm::PartitionDescriptor*>(reinterpret_cast<uintptr_t>(metadata_.get()) +
+                                                     sizeof(fvm::SparseImage));
 }
 
 zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual) {
@@ -334,7 +334,7 @@ zx_status_t SparseReader::WriteDecompressed(fbl::unique_fd outfd) {
   }
 
   // Update metadata and write to new file.
-  fvm::sparse_image_t* image = Image();
+  fvm::SparseImage* image = Image();
   image->flags &= ~fvm::kSparseFlagLz4;
 
   if (write(outfd.get(), metadata_.get(), image->header_length) !=

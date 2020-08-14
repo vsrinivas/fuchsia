@@ -152,14 +152,14 @@ constexpr std::string_view kSerializedVolumeImage2 = R"(
 // This struct represents a typed version of how the serialized contents of
 // |SerializedVolumeImage1| and |SerializedVolumeImage2| would look.
 struct SerializedSparseImage {
-  fvm::sparse_image_t header;
+  fvm::SparseImage header;
   struct {
-    fvm::partition_descriptor_t descriptor;
-    fvm::extent_descriptor_t extents[3];
+    fvm::PartitionDescriptor descriptor;
+    fvm::ExtentDescriptor extents[3];
   } partition_1 __attribute__((packed));
   struct {
-    fvm::partition_descriptor_t descriptor;
-    fvm::extent_descriptor_t extents[2];
+    fvm::PartitionDescriptor descriptor;
+    fvm::ExtentDescriptor extents[2];
   } partition_2 __attribute__((packed));
   uint8_t extent_data[211];
 } __attribute__((packed));
@@ -199,9 +199,9 @@ TEST(FvmSparseImageTest, FvmSparseGenerateHeaderMatchersFvmDescriptor) {
   for (const auto& partition : descriptor.partitions()) {
     extent_count += partition.address().mappings.size();
   }
-  uint64_t expected_header_length = sizeof(fvm::sparse_image_t) +
-                                    sizeof(fvm::partition_descriptor_t) * header.partition_count +
-                                    sizeof(fvm::extent_descriptor_t) * extent_count;
+  uint64_t expected_header_length = sizeof(fvm::SparseImage) +
+                                    sizeof(fvm::PartitionDescriptor) * header.partition_count +
+                                    sizeof(fvm::ExtentDescriptor) * extent_count;
   EXPECT_EQ(header.header_length, expected_header_length);
 }
 
@@ -225,7 +225,7 @@ TEST(FvmSparseImageTest, FvmSparGeneratePartitionEntryMatchesPartition) {
 
 TEST(FvmSparseImageTest, FvmSparseCalculateUncompressedImageSizeForEmptyDescriptorIsHeaderSize) {
   FvmDescriptor descriptor;
-  EXPECT_EQ(sizeof(fvm::sparse_image_t), FvmSparseCalculateUncompressedImageSize(descriptor));
+  EXPECT_EQ(sizeof(fvm::SparseImage), FvmSparseCalculateUncompressedImageSize(descriptor));
 }
 
 TEST(FvmSparseImageTest,
@@ -345,8 +345,8 @@ std::vector<FvmSparsePartitionEntry> GetExpectedPartitionEntries(const FvmDescri
   return partitions;
 }
 
-auto HeaderEq(const fvm::sparse_image_t& expected_header) {
-  using Header = fvm::sparse_image_t;
+auto HeaderEq(const fvm::SparseImage& expected_header) {
+  using Header = fvm::SparseImage;
   return testing::AllOf(
       testing::Field(&Header::header_length, testing::Eq(expected_header.header_length)),
       testing::Field(&Header::flags, testing::Eq(expected_header.flags)),
@@ -357,8 +357,8 @@ auto HeaderEq(const fvm::sparse_image_t& expected_header) {
       testing::Field(&Header::version, testing::Eq(expected_header.version)));
 }
 
-auto PartitionDescriptorEq(const fvm::partition_descriptor_t& expected_descriptor) {
-  using PartitionDescriptor = fvm::partition_descriptor_t;
+auto PartitionDescriptorEq(const fvm::PartitionDescriptor& expected_descriptor) {
+  using PartitionDescriptor = fvm::PartitionDescriptor;
   return testing::AllOf(
       testing::Field(&PartitionDescriptor::magic, testing::Eq(expected_descriptor.magic)),
       testing::Field(&PartitionDescriptor::flags, testing::Eq(expected_descriptor.flags)),
@@ -372,8 +372,8 @@ auto PartitionDescriptorMatchesEntry(const FvmSparsePartitionEntry& expected_des
   return PartitionDescriptorEq(expected_descriptor.descriptor);
 }
 
-[[maybe_unused]] auto ExtentDescriptorEq(const fvm::extent_descriptor_t& expected_descriptor) {
-  using ExtentDescriptor = fvm::extent_descriptor_t;
+[[maybe_unused]] auto ExtentDescriptorEq(const fvm::ExtentDescriptor& expected_descriptor) {
+  using ExtentDescriptor = fvm::ExtentDescriptor;
   return testing::AllOf(
       testing::Field(&ExtentDescriptor::magic, testing::Eq(expected_descriptor.magic)),
       testing::Field(&ExtentDescriptor::slice_start, testing::Eq(expected_descriptor.slice_start)),
@@ -630,8 +630,8 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   // Partition 1 metadata.
   {
     const auto& partition_descriptor = sparse_reader->Partitions()[0];
-    const auto partition_extent_descriptors = fbl::Span<const fvm::extent_descriptor_t>(
-        reinterpret_cast<const fvm::extent_descriptor_t*>(
+    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+        reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         3);
 
@@ -644,12 +644,11 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
 
   // Partition 2 metadata.
   {
-    off_t partition_2_offset =
-        sizeof(fvm::partition_descriptor_t) + 3 * sizeof(fvm::extent_descriptor_t);
-    const auto& partition_descriptor = *reinterpret_cast<fvm::partition_descriptor_t*>(
+    off_t partition_2_offset = sizeof(fvm::PartitionDescriptor) + 3 * sizeof(fvm::ExtentDescriptor);
+    const auto& partition_descriptor = *reinterpret_cast<fvm::PartitionDescriptor*>(
         reinterpret_cast<uint8_t*>(sparse_reader->Partitions()) + partition_2_offset);
-    const auto partition_extent_descriptors = fbl::Span<const fvm::extent_descriptor_t>(
-        reinterpret_cast<const fvm::extent_descriptor_t*>(
+    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+        reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         2);
     EXPECT_THAT(partition_descriptor,
@@ -697,8 +696,8 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
   // Partition 1 metadata.
   {
     const auto& partition_descriptor = sparse_reader->Partitions()[0];
-    const auto partition_extent_descriptors = fbl::Span<const fvm::extent_descriptor_t>(
-        reinterpret_cast<const fvm::extent_descriptor_t*>(
+    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+        reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         3);
 
@@ -711,12 +710,11 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
 
   // Partition 2 metadata.
   {
-    off_t partition_2_offset =
-        sizeof(fvm::partition_descriptor_t) + 3 * sizeof(fvm::extent_descriptor_t);
-    const auto& partition_descriptor = *reinterpret_cast<fvm::partition_descriptor_t*>(
+    off_t partition_2_offset = sizeof(fvm::PartitionDescriptor) + 3 * sizeof(fvm::ExtentDescriptor);
+    const auto& partition_descriptor = *reinterpret_cast<fvm::PartitionDescriptor*>(
         reinterpret_cast<uint8_t*>(sparse_reader->Partitions()) + partition_2_offset);
-    const auto partition_extent_descriptors = fbl::Span<const fvm::extent_descriptor_t>(
-        reinterpret_cast<const fvm::extent_descriptor_t*>(
+    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+        reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         2);
     EXPECT_THAT(partition_descriptor,

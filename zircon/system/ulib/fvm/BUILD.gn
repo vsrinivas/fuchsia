@@ -22,6 +22,7 @@ zx_library("fvm") {
     "fvm/format.h",
     "fvm/fvm-sparse.h",
     "fvm/fvm-check.h",
+    "fvm/fvm.h",
   ]
   host = true
   sources = [

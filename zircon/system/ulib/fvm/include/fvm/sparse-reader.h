@@ -102,8 +102,8 @@ class SparseReader {
 
   ~SparseReader();
 
-  fvm::sparse_image_t* Image();
-  fvm::partition_descriptor_t* Partitions();
+  fvm::SparseImage* Image();
+  fvm::PartitionDescriptor* Partitions();
 
   // Read requested data from sparse file into buffer
   zx_status_t ReadData(uint8_t* data, size_t length, size_t* actual);

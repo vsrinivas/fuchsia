@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_FVM_SPARSE_H_
+#define FVM_FVM_SPARSE_H_
 
 #include <stdlib.h>
 
@@ -42,19 +43,19 @@ namespace fvm {
 //   P1, Extent 0
 //   P2, Extent 0
 
-constexpr uint64_t kSparseFormatMagic = (0x53525053204d5646ull);  // 'FVM SPRS'
+constexpr uint64_t kSparseFormatMagic = 0x53525053204d5646ull;  // 'FVM SPRS'
 constexpr uint64_t kSparseFormatVersion = 0x3;
 
-typedef enum sparse_flags {
+enum SparseFlags {
   kSparseFlagLz4 = 0x1,
   kSparseFlagZxcrypt = 0x2,
   // Marks a partition as intentionaly corrupted.
   kSparseFlagCorrupted = 0x4,
   // The final value is the bitwise-OR of all other flags
   kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt | kSparseFlagCorrupted,
-} sparse_flags_t;
+};
 
-typedef struct sparse_image {
+struct __attribute__((packed)) SparseImage {
   uint64_t magic;
   uint64_t version;
   uint64_t header_length;
@@ -65,25 +66,27 @@ typedef struct sparse_image {
   // The initial size is always the size of the block device being formatted.
   uint64_t maximum_disk_size;
   uint32_t flags;
-} __attribute__((packed)) sparse_image_t;
+};
 
-constexpr uint64_t kPartitionDescriptorMagic = (0x0bde4df7cf5c4c5dull);
+constexpr uint64_t kPartitionDescriptorMagic = 0x0bde4df7cf5c4c5dull;
 
-typedef struct partition_descriptor {
+struct __attribute__((packed)) PartitionDescriptor {
   uint64_t magic;
   uint8_t type[fvm::kGuidSize];
   uint8_t name[fvm::kMaxVPartitionNameLength];
   uint32_t flags;
   uint32_t extent_count;
-} __attribute__((packed)) partition_descriptor_t;
+};
 
-constexpr uint64_t kExtentDescriptorMagic = (0xa5b8742906e8382eull);
+constexpr uint64_t kExtentDescriptorMagic = 0xa5b8742906e8382eull;
 
-typedef struct extent_descriptor {
+struct __attribute__((packed)) ExtentDescriptor {
   uint64_t magic;
   uint64_t slice_start;    // Unit: slice
   uint64_t slice_count;    // Unit: slice
   uint64_t extent_length;  // Unit: bytes. Must be <= slice_count * slice_size.
-} __attribute__((packed)) extent_descriptor_t;
+};
 
 }  // namespace fvm
+
+#endif  // FVM_FVM_SPARSE_H_

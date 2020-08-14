@@ -15,27 +15,27 @@
 namespace storage::volume_image {
 namespace fvm_sparse_internal {
 
-// Returns a bit set representing the suported options in the |fvm::sparse_image_t|
-// that are equivalent in |FvmOptions|.
+// Returns a bit set representing the suported options in the |fvm::SparseImage| that are equivalent
+// in |FvmOptions|.
 uint32_t GetImageFlags(const FvmOptions& options);
 
-// Returns a bit set representing the suported options in the |fvm::partition_descriptor_t|
-// that are equivalent in |Partition|.
+// Returns a bit set representing the suported options in the |fvm::PartitionDescriptor| that are
+// equivalent in |Partition|.
 uint32_t GetPartitionFlags(const Partition& partition);
 
 }  // namespace fvm_sparse_internal
 
-// Represents a |Partition| in the |fvm::sparse_image_t| format.
+// Represents a |Partition| in the |fvm::SparseImage| format.
 struct FvmSparsePartitionEntry {
   // Describes a partition, with things like name, guid and flags.
-  fvm::partition_descriptor_t descriptor;
+  fvm::PartitionDescriptor descriptor;
 
   // Describes each extent individually.
-  std::vector<fvm::extent_descriptor_t> extents;
+  std::vector<fvm::ExtentDescriptor> extents;
 };
 
-// Returns a |fvm::sparse_image_t| representation of |descriptor| on success.
-fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor);
+// Returns a |fvm::SparseImage| representation of |descriptor| on success.
+fvm::SparseImage FvmSparseGenerateHeader(const FvmDescriptor& descriptor);
 
 // Returns a |FvmSparsePartitionEntry| representation of |partition| on success.
 fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntry(
@@ -44,7 +44,7 @@ fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntr
 // Returns the size in bytes of the generated sparse image for |descriptor|.
 uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor);
 
-// Returns the size of the written image in bytes when successfully writing a |sparse_image_t| and
+// Returns the size of the written image in bytes when successfully writing a |SparseImage| and
 // its data with |writer|.
 fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
                                                        Writer* writer,

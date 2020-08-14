@@ -89,12 +89,12 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   uint64_t current_offset = 0;
 
   // Write the header.
-  fvm::sparse_image_t header = FvmSparseGenerateHeader(descriptor);
+  fvm::SparseImage header = FvmSparseGenerateHeader(descriptor);
   auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
   if (result.is_error()) {
     return result.take_error_result();
   }
-  current_offset += sizeof(fvm::sparse_image_t);
+  current_offset += sizeof(fvm::SparseImage);
 
   for (const auto& partition : descriptor.partitions()) {
     auto partition_entry_result =
@@ -108,19 +108,19 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
     if (partition_result.is_error()) {
       return partition_result.take_error_result();
     }
-    current_offset += sizeof(fvm::partition_descriptor_t);
+    current_offset += sizeof(fvm::PartitionDescriptor);
 
     for (const auto& extent : entry.extents) {
       auto extent_result = writer->Write(current_offset, FixedSizeStructToSpan(extent));
       if (extent_result.is_error()) {
         return extent_result.take_error_result();
       }
-      current_offset += sizeof(fvm::extent_descriptor_t);
+      current_offset += sizeof(fvm::ExtentDescriptor);
     }
   }
 
   if (current_offset != header.header_length) {
-    return fit::error("fvm::sparse_image_t data does not start at header_length.");
+    return fit::error("fvm::SparseImage data does not start at header_length.");
   }
 
   std::vector<uint8_t> data(kReadBufferSize, 0);
@@ -170,8 +170,8 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
 
 }  // namespace
 
-fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
-  fvm::sparse_image_t sparse_image_header = {};
+fvm::SparseImage FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
+  fvm::SparseImage sparse_image_header = {};
   sparse_image_header.magic = fvm::kSparseFormatMagic;
   sparse_image_header.version = fvm::kSparseFormatVersion;
   sparse_image_header.slice_size = descriptor.options().slice_size;
@@ -184,8 +184,8 @@ fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
     extent_count += partition.address().mappings.size();
   }
   sparse_image_header.header_length =
-      sizeof(fvm::partition_descriptor_t) * descriptor.partitions().size() +
-      sizeof(fvm::extent_descriptor_t) * extent_count + sizeof(fvm::sparse_image_t);
+      sizeof(fvm::PartitionDescriptor) * descriptor.partitions().size() +
+      sizeof(fvm::ExtentDescriptor) * extent_count + sizeof(fvm::SparseImage);
 
   return sparse_image_header;
 }
@@ -213,7 +213,7 @@ fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntr
                         ". FVM Sparse Image requires slice aligned extent |vslice_start|.");
     }
 
-    fvm::extent_descriptor_t extent_entry = {};
+    fvm::ExtentDescriptor extent_entry = {};
     extent_entry.magic = fvm::kExtentDescriptorMagic;
     extent_entry.slice_start = slice_offset;
     extent_entry.slice_count = slice_count;
@@ -234,16 +234,16 @@ fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& desc
 }
 
 uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor) {
-  uint64_t image_size = sizeof(fvm::sparse_image_t);
+  uint64_t image_size = sizeof(fvm::SparseImage);
 
   for (const auto& partition : descriptor.partitions()) {
-    image_size += sizeof(fvm::partition_descriptor_t);
+    image_size += sizeof(fvm::PartitionDescriptor);
     for (const auto& mapping : partition.address().mappings) {
       // Account for extent size, in the current format trailing zeroes are omitted,
       // and later filled as the difference between extent_length and slice_count * slice_size.
       image_size += mapping.count;
       // Extent descriptor size.
-      image_size += sizeof(fvm::extent_descriptor_t);
+      image_size += sizeof(fvm::ExtentDescriptor);
     }
   }
 

@@ -5,28 +5,23 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
 
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
-#include <fvm/format.h>
-
-#ifdef __cplusplus
-
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
-
 #include <atomic>
 #include <memory>
 #include <optional>
 
+#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
@@ -34,6 +29,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
+#include <fvm/fvm.h>
 
 #include "slice-extent.h"
 #include "vpartition.h"
@@ -50,7 +46,7 @@ using ManagerDeviceType =
 class VPartitionManager : public ManagerDeviceType {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
-  static zx_status_t Bind(zx_device_t* dev);
+  static zx_status_t Bind(void*, zx_device_t* dev);
 
   // Read the underlying block device, initialize the recorded VPartitions.
   zx_status_t Load();
@@ -146,7 +142,9 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
   zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
 
-  fvm_t* GetFvmLocked() const TA_REQ(lock_) { return reinterpret_cast<fvm_t*>(metadata_.start()); }
+  Header* GetFvmLocked() const TA_REQ(lock_) {
+    return reinterpret_cast<Header*>(metadata_.start());
+  }
 
   // Mark a slice as free in the metadata structure.
   // Update free slice accounting.
@@ -202,17 +200,5 @@ class VPartitionManager : public ManagerDeviceType {
 };
 
 }  // namespace fvm
-
-#endif  // ifdef __cplusplus
-
-__BEGIN_CDECLS
-
-/////////////////// C-compatibility definitions (Provided to C from C++)
-
-// Binds FVM driver to a device; loads the VPartition devices asynchronously in
-// a background thread.
-zx_status_t fvm_bind(zx_device_t* dev);
-
-__END_CDECLS
 
 #endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_

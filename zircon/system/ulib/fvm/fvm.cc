@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <fvm/fvm.h>
+
 #ifdef __Fuchsia__
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
@@ -25,7 +27,7 @@
 #include <fbl/unique_fd.h>
 #include <fvm/format.h>
 
-#define ZXDEBUG 0
+namespace fvm {
 
 namespace {
 
@@ -33,7 +35,7 @@ constexpr size_t MetadataSizeOrZero(size_t disk_size, size_t slice_size) {
   if (disk_size == 0 || slice_size == 0) {
     return 0;
   }
-  return fvm::MetadataSize(disk_size, slice_size);
+  return MetadataSize(disk_size, slice_size);
 }
 
 constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metadata_allocated_size,
@@ -50,8 +52,7 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
   // enough to address them all. This only happens when the rounded up block value happens to
   // match the disk size.
   // TODO(gevalentino): Fix underlying cause and remove workaround.
-  if ((fvm::AllocationTable::kOffset + slice_count * sizeof(fvm::SliceEntry)) ==
-      metadata_allocated_size) {
+  if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size) {
     slice_count--;
   }
   return slice_count;
@@ -59,7 +60,7 @@ constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metad
 
 // Return true if g1 is greater than or equal to g2.
 // Safe against integer overflow.
-bool generation_ge(uint64_t g1, uint64_t g2) {
+bool GenerationGE(uint64_t g1, uint64_t g2) {
   if (g1 == UINT64_MAX && g2 == 0) {
     return false;
   } else if (g1 == 0 && g2 == UINT64_MAX) {
@@ -70,9 +71,9 @@ bool generation_ge(uint64_t g1, uint64_t g2) {
 
 // Validate the metadata's hash value.
 // Returns 'true' if it matches, 'false' otherwise.
-bool fvm_check_hash(const void* metadata, size_t metadata_size) {
-  ZX_ASSERT(metadata_size >= sizeof(fvm::Header));
-  const fvm::Header* header = static_cast<const fvm::Header*>(metadata);
+bool CheckHash(const void* metadata, size_t metadata_size) {
+  ZX_ASSERT(metadata_size >= sizeof(Header));
+  const Header* header = static_cast<const Header*>(metadata);
   const void* metadata_after_hash =
       reinterpret_cast<const void*>(header->hash + sizeof(header->hash));
   uint8_t empty_hash[sizeof(header->hash)];
@@ -80,20 +81,18 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 
   digest::Digest digest;
   digest.Init();
-  digest.Update(metadata, offsetof(fvm::Header, hash));
+  digest.Update(metadata, offsetof(Header, hash));
   digest.Update(empty_hash, sizeof(empty_hash));
   digest.Update(metadata_after_hash,
-                metadata_size - (offsetof(fvm::Header, hash) + sizeof(header->hash)));
+                metadata_size - (offsetof(Header, hash) + sizeof(header->hash)));
   digest.Final();
   return digest == header->hash;
 }
 
 }  // namespace
 
-#ifdef __cplusplus
-
-fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const Header& superblock) {
-  fvm::FormatInfo format_info;
+FormatInfo FormatInfo::FromSuperBlock(const Header& superblock) {
+  FormatInfo format_info;
   format_info.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
   format_info.metadata_size_ =
       MetadataSizeOrZero(superblock.fvm_partition_size, superblock.slice_size);
@@ -104,9 +103,9 @@ fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const Header& superblock) {
   return format_info;
 }
 
-fvm::FormatInfo fvm::FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
-                                                      size_t slice_size) {
-  fvm::FormatInfo format_info;
+FormatInfo FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
+                                            size_t slice_size) {
+  FormatInfo format_info;
   format_info.metadata_allocated_size_ = MetadataSizeOrZero(max_size, slice_size);
   format_info.metadata_size_ = MetadataSizeOrZero(initial_size, slice_size);
   format_info.slice_size_ = slice_size;
@@ -115,38 +114,34 @@ fvm::FormatInfo fvm::FormatInfo::FromPreallocatedSize(size_t initial_size, size_
   return format_info;
 }
 
-fvm::FormatInfo fvm::FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
+FormatInfo FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
   return FromPreallocatedSize(disk_size, disk_size, slice_size);
 }
 
-#endif  // __cplusplus
-
-void fvm_update_hash(void* metadata, size_t metadata_size) {
-  fvm::Header* header = static_cast<fvm::Header*>(metadata);
+void UpdateHash(void* metadata, size_t metadata_size) {
+  Header* header = static_cast<Header*>(metadata);
   memset(header->hash, 0, sizeof(header->hash));
   digest::Digest digest;
   const uint8_t* hash = digest.Hash(metadata, metadata_size);
   memcpy(header->hash, hash, sizeof(header->hash));
 }
 
-zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t metadata_size,
-                                const void** out) {
-  const fvm::Header* primary_header = static_cast<const fvm::Header*>(metadata);
-  fvm::FormatInfo primary_info = fvm::FormatInfo::FromSuperBlock(*primary_header);
+zx_status_t ValidateHeader(const void* metadata, const void* backup, size_t metadata_size,
+                           const void** out) {
+  const Header* primary_header = static_cast<const Header*>(metadata);
+  FormatInfo primary_info = FormatInfo::FromSuperBlock(*primary_header);
   size_t primary_metadata_size = primary_info.metadata_size();
 
-  const fvm::Header* backup_header = static_cast<const fvm::Header*>(backup);
-  fvm::FormatInfo backup_info = fvm::FormatInfo::FromSuperBlock(*backup_header);
+  const Header* backup_header = static_cast<const Header*>(backup);
+  FormatInfo backup_info = FormatInfo::FromSuperBlock(*backup_header);
   size_t backup_metadata_size = backup_info.metadata_size();
 
-  auto check_value_consitency = [metadata_size](const fvm::Header* header,
-                                                const fvm::FormatInfo& info) {
+  auto check_value_consitency = [metadata_size](const Header* header, const FormatInfo& info) {
     // Check no overflow for each region of metadata.
     uint64_t calculated_metadata_size = 0;
-    if (add_overflow(header->allocation_table_size, fvm::kAllocTableOffset,
-                     &calculated_metadata_size)) {
+    if (add_overflow(header->allocation_table_size, kAllocTableOffset, &calculated_metadata_size)) {
       fprintf(stderr, "fvm: Calculated metadata size produces overflow(%" PRIu64 ", %zu).\n",
-              header->allocation_table_size, fvm::kAllocTableOffset);
+              header->allocation_table_size, kAllocTableOffset);
       return false;
     }
 
@@ -159,10 +154,10 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
     }
 
     // Check metadata size is as least as big as the header.
-    if (info.metadata_size() < sizeof(fvm::Header)) {
+    if (info.metadata_size() < sizeof(Header)) {
       fprintf(stderr,
               "fvm: Reported metadata size of %zu is smaller than header buffer size %lu.\n",
-              info.metadata_size(), sizeof(fvm::Header));
+              info.metadata_size(), sizeof(Header));
       return false;
     }
 
@@ -191,12 +186,12 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
   // from [start, reported_size] are valid.
   // The metadata size should always be at least the size of the header.
   bool primary_valid = check_value_consitency(primary_header, primary_info) &&
-                       fvm_check_hash(metadata, primary_metadata_size);
+                       CheckHash(metadata, primary_metadata_size);
   if (!primary_valid) {
     fprintf(stderr, "fvm: Primary metadata invalid\n");
   }
   bool backup_valid = check_value_consitency(backup_header, backup_info) &&
-                      fvm_check_hash(backup, backup_metadata_size);
+                      CheckHash(backup, backup_metadata_size);
   if (!backup_valid) {
     fprintf(stderr, "fvm: Secondary metadata invalid\n");
   }
@@ -211,15 +206,15 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
   } else if (!primary_valid && backup_valid) {
     use_primary = false;
   } else {
-    use_primary = generation_ge(primary_header->generation, backup_header->generation);
+    use_primary = GenerationGE(primary_header->generation, backup_header->generation);
   }
 
-  const fvm::Header* header = use_primary ? primary_header : backup_header;
-  if (header->magic != fvm::kMagic) {
+  const Header* header = use_primary ? primary_header : backup_header;
+  if (header->magic != kMagic) {
     fprintf(stderr, "fvm: Bad magic\n");
     return ZX_ERR_BAD_STATE;
   }
-  if (header->version > fvm::kVersion) {
+  if (header->version > kVersion) {
     fprintf(stderr, "fvm: Header Version does not match fvm driver\n");
     return ZX_ERR_BAD_STATE;
   }
@@ -231,3 +226,5 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
   }
   return ZX_OK;
 }
+
+}  // namespace fvm

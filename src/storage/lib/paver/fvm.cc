@@ -32,6 +32,7 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
+#include <fvm/fvm.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
@@ -97,15 +98,15 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 struct PartitionInfo {
   PartitionInfo() : pd(nullptr), active(false) {}
 
-  fvm::partition_descriptor_t* pd;
+  fvm::PartitionDescriptor* pd;
   fbl::unique_fd new_part;
   bool active;
 };
 
-inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size_t extent) {
-  return reinterpret_cast<fvm::extent_descriptor_t*>(reinterpret_cast<uintptr_t>(pd) +
-                                                     sizeof(fvm::partition_descriptor_t) +
-                                                     extent * sizeof(fvm::extent_descriptor_t));
+inline fvm::ExtentDescriptor* GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {
+  return reinterpret_cast<fvm::ExtentDescriptor*>(reinterpret_cast<uintptr_t>(pd) +
+                                                  sizeof(fvm::PartitionDescriptor) +
+                                                  extent * sizeof(fvm::ExtentDescriptor));
 }
 
 // Registers a FIFO
@@ -161,7 +162,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
   const size_t vmo_cap = mapper.size();
   for (size_t e = 0; e < part->pd->extent_count; e++) {
     LOG("Writing extent %zu... \n", e);
-    fvm::extent_descriptor_t* ext = GetExtent(part->pd, e);
+    fvm::ExtentDescriptor* ext = GetExtent(part->pd, e);
     size_t offset = ext->slice_start * slice_size;
     size_t bytes_left = ext->extent_length;
 
@@ -277,7 +278,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 }
 
 fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
-                                  const fvm::sparse_image_t& header, BindOption option,
+                                  const fvm::SparseImage& header, BindOption option,
                                   FormatResult* format_result) {
   // Although the format (based on the magic in the FVM superblock)
   // indicates this is (or at least was) an FVM image, it may be invalid.
@@ -299,7 +300,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
         auto result = volume::VolumeManager::Call::GetInfo(
             fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
         if (result.status() == ZX_OK) {
-          auto get_maximum_slice_count = [](const fvm::sparse_image_t& header) {
+          auto get_maximum_slice_count = [](const fvm::SparseImage& header) {
             return fvm::FormatInfo::FromDiskSize(header.maximum_disk_size, header.slice_size)
                 .GetMaxAllocatableSlices();
           };
@@ -396,7 +397,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     return status;
   }
 
-  fvm::extent_descriptor_t* ext = GetExtent(part->pd, 0);
+  fvm::ExtentDescriptor* ext = GetExtent(part->pd, 0);
   size_t reserved = volume->reserved_slices();
 
   // |Create| guarantees at least |reserved| + 1 slices are allocated.  If the first extent had a
@@ -489,8 +490,8 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
                                  const std::unique_ptr<fvm::SparseReader>& reader,
                                  const fbl::Array<PartitionInfo>& parts,
                                  size_t* out_requested_slices) {
-  fvm::partition_descriptor_t* part = reader->Partitions();
-  fvm::sparse_image_t* hdr = reader->Image();
+  fvm::PartitionDescriptor* part = reader->Partitions();
+  fvm::SparseImage* hdr = reader->Image();
 
   // Validate the header and determine the necessary slice requirements for
   // all partitions and all offsets.
@@ -508,7 +509,7 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
       return status;
     }
 
-    fvm::extent_descriptor_t* ext = GetExtent(parts[p].pd, 0);
+    fvm::ExtentDescriptor* ext = GetExtent(parts[p].pd, 0);
     if (ext->magic != fvm::kExtentDescriptorMagic) {
       ERROR("Bad extent magic\n");
       return ZX_ERR_IO;
@@ -551,8 +552,8 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 
       requested_slices += ext->slice_count;
     }
-    part = reinterpret_cast<fvm::partition_descriptor*>(reinterpret_cast<uintptr_t>(ext) +
-                                                        sizeof(fvm::extent_descriptor_t));
+    part = reinterpret_cast<fvm::PartitionDescriptor*>(reinterpret_cast<uintptr_t>(ext) +
+                                                       sizeof(fvm::ExtentDescriptor));
   }
 
   *out_requested_slices = requested_slices;
@@ -566,7 +567,7 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::unique_fd& fvm_fd,
                                fbl::Array<PartitionInfo>* parts) {
   for (size_t p = 0; p < parts->size(); p++) {
-    fvm::extent_descriptor_t* ext = GetExtent((*parts)[p].pd, 0);
+    fvm::ExtentDescriptor* ext = GetExtent((*parts)[p].pd, 0);
     alloc_req_t alloc = {};
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
@@ -612,13 +613,12 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
   return ZX_OK;
 }
 
-// Holds the description of a partition with a single extent.
-// Note that even though some code asks for a partition_descriptor_t, in reality
-// it treats that as a descriptor followed by a bunch of extents, so this copes
-// with that de-facto pattern.
+// Holds the description of a partition with a single extent. Note that even though some code asks
+// for a PartitionDescriptor, in reality it treats that as a descriptor followed by a bunch of
+// extents, so this copes with that de-facto pattern.
 struct FvmPartition {
-  fvm::partition_descriptor_t descriptor;
-  fvm::extent_descriptor_t extent;
+  fvm::PartitionDescriptor descriptor;
+  fvm::ExtentDescriptor extent;
 };
 
 // Description of the basic FVM partitions, with no real information about extents.
@@ -632,8 +632,8 @@ constexpr FvmPartition kBasicPartitions[] = {{{0, GUID_BLOB_VALUE, "blobfs", 0, 
 zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                      const fbl::unique_fd& fvm_fd) {
   fbl::Array<PartitionInfo> partitions(new PartitionInfo[2], 2);
-  partitions[0].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[0].descriptor);
-  partitions[1].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[1].descriptor);
+  partitions[0].pd = const_cast<fvm::PartitionDescriptor*>(&kBasicPartitions[0].descriptor);
+  partitions[1].pd = const_cast<fvm::PartitionDescriptor*>(&kBasicPartitions[1].descriptor);
   partitions[0].active = true;
   partitions[1].active = true;
 
@@ -652,7 +652,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
   LOG("Header Validated - OK\n");
 
-  fvm::sparse_image_t* hdr = reader->Image();
+  fvm::SparseImage* hdr = reader->Image();
   // Acquire an fd to the FVM, either by finding one that already
   // exists, or formatting a new one.
   fbl::unique_fd fvm_fd(

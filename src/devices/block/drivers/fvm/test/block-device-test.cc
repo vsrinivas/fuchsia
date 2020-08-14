@@ -32,7 +32,7 @@ Header MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_tab
   superblock.version = fvm::kMagic;
   superblock.magic = fvm::kVersion;
   superblock.generation = 1;
-  fvm_update_hash(&superblock, sizeof(Header));
+  fvm::UpdateHash(&superblock, sizeof(Header));
   return superblock;
 }
 

@@ -14,8 +14,8 @@
 #include "fvm-host/fvm-info.h"
 
 struct SparsePartitionInfo {
-  fvm::partition_descriptor_t descriptor;
-  fbl::Vector<fvm::extent_descriptor_t> extents;
+  fvm::PartitionDescriptor descriptor;
+  fbl::Vector<fvm::ExtentDescriptor> extents;
   std::unique_ptr<Format> format;
 };
 
@@ -43,7 +43,7 @@ class SparsePaver {
 
   // Allocates the extent described by |extent| to the partition at |vpart_index|, as well as
   // allocating its slices and persisting all associated data.
-  zx_status_t AddExtent(uint32_t vpart_index, fvm::extent_descriptor_t* extent,
+  zx_status_t AddExtent(uint32_t vpart_index, fvm::ExtentDescriptor* extent,
                         fvm::SparseReader* reader);
 
   // Writes the next slice out to disk, reading as many of |bytes_left| as possible from |reader|

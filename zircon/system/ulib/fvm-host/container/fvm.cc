@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <fvm/format.h>
+#include <fvm/fvm.h>
 
 #include "fvm-host/container.h"
 
@@ -138,9 +139,8 @@ zx_status_t FvmContainer::InitExisting() {
     return ZX_ERR_IO;
   }
 
-  fvm::fvm_t fvm_superblock;
-
-  if (pread(fd_.get(), &fvm_superblock, sizeof(fvm::fvm_t), disk_offset_) != sizeof(fvm::fvm_t)) {
+  fvm::Header fvm_superblock;
+  if (pread(fd_.get(), &fvm_superblock, sizeof(fvm::Header), disk_offset_) != sizeof(fvm::Header)) {
     fprintf(stderr, "Failed to read FVM metadata from disk\n");
     return ZX_ERR_IO;
   }
@@ -185,7 +185,7 @@ zx_status_t FvmContainer::Verify() const {
     return status;
   }
 
-  fvm::fvm_t* sb = info_.SuperBlock();
+  fvm::Header* sb = info_.SuperBlock();
 
   xprintf("Total size is %zu\n", disk_size_);
   xprintf("Metadata size is %zu\n", info_.MetadataSize());
@@ -452,7 +452,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   uint32_t vpart_index;
   uint8_t guid[fvm::kGuidSize];
   format->Guid(guid);
-  fvm::partition_descriptor_t descriptor;
+  fvm::PartitionDescriptor descriptor;
   format->GetPartitionInfo(&descriptor);
   if ((status = info_.AllocatePartition(&descriptor, guid, &vpart_index)) != ZX_OK) {
     return status;

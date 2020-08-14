@@ -25,7 +25,6 @@ source_set("shared") {
   visibility = [ "./*" ]
   configs += [ "//build/config:all_source" ]
   sources = [
-    "fvm.c",
     "fvm.cc",
     "slice-extent.cc",
     "vpartition.cc",

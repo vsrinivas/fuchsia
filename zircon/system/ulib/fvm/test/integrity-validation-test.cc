@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <fvm/format.h>
+#include <fvm/fvm.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -35,7 +35,7 @@ Header MakeHeader(size_t part_size, size_t part_table_size, size_t alloc_table_s
   superblock.magic = fvm::kMagic;
   superblock.version = fvm::kVersion;
   superblock.generation = 1;
-  fvm_update_hash(&superblock, sizeof(Header));
+  UpdateHash(&superblock, sizeof(Header));
   return superblock;
 }
 
@@ -57,14 +57,14 @@ TEST(IntegrityValidationTest, BothHashesAreOkPickLatest) {
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->generation =
       reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->generation + 1;
-  fvm_update_hash(metadata_1.superblock.get(), metadata_1.size);
-  fvm_update_hash(metadata_2.superblock.get(), metadata_2.size);
+  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
+  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
 
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
 }
 
@@ -72,13 +72,13 @@ TEST(IntegrityValidationTest, PrimaryIsOkAndSecondaryIsCorruptedPicksPrimary) {
   Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->fvm_partition_size = 0;
-  fvm_update_hash(metadata_1.superblock.get(), metadata_1.size);
+  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
 
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
 }
 
@@ -86,13 +86,13 @@ TEST(IntegrityValidationTest, PrimaryIsCorruptedAndSecondaryIsOkPicksSecondary) 
   Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->fvm_partition_size = 0;
-  fvm_update_hash(metadata_2.superblock.get(), metadata_2.size);
+  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
 
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
 }
 
@@ -104,8 +104,8 @@ TEST(IntegrityValidationTest, BothAreCorruptedIsBadState) {
 
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_EQ(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, nullptr),
             ZX_ERR_BAD_STATE);
 }
 
@@ -113,13 +113,13 @@ TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnPrimaryPicksSecond
   Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->allocation_table_size = 0;
-  fvm_update_hash(metadata_2.superblock.get(), metadata_2.size);
+  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
 
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
 }
 
@@ -127,13 +127,13 @@ TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnSecondaryPicksPrim
   Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->allocation_table_size = 0;
-  fvm_update_hash(metadata_1.superblock.get(), metadata_1.size);
+  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
 
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
 }
 
@@ -145,15 +145,15 @@ TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnBothIsBadState) {
 
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_EQ(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, nullptr),
             ZX_ERR_BAD_STATE);
 }
 
 TEST(IntegrityValidationTest, ValidatesMetadataSizeNotCapacity) {
   Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  fvm_update_hash(metadata_1.superblock.get(), metadata_1.size);
+  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
   // This is not taken into account when validating the metadata header, we only check the data
   // we are actually using.
   memset(metadata_1.superblock.get() + metadata_1.size, 1, metadata_1.capacity - metadata_1.size);
@@ -161,8 +161,8 @@ TEST(IntegrityValidationTest, ValidatesMetadataSizeNotCapacity) {
   const void* picked_metadata;
   ASSERT_EQ(metadata_1.size, metadata_2.size);
   ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, &picked_metadata));
+  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, &picked_metadata));
   EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
 }
 
@@ -173,8 +173,8 @@ TEST(IntegrityValidationTest, ZeroedHeaderIsBadState) {
   Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
   memset(metadata_2.superblock.get(), 0, metadata_2.capacity);
 
-  ASSERT_EQ(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                                metadata_1.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
+                           metadata_1.capacity, nullptr),
             ZX_ERR_BAD_STATE);
 }
 
@@ -184,8 +184,8 @@ TEST(IntegrityValidationTest, MetadataHasOverflowInCalculatedSizeIsBadState) {
 
   header->allocation_table_size = std::numeric_limits<uint64_t>::max() - fvm::kAllocTableOffset + 1;
 
-  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
-                                metadata.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
+                           nullptr),
             ZX_ERR_BAD_STATE);
 }
 
@@ -196,8 +196,8 @@ TEST(IntegrityValidationTest, FvmPartitionNotBigForBothCopiesOfMetadataIsBadStat
 
   header->fvm_partition_size = 2 * info.metadata_allocated_size() - 1;
 
-  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
-                                metadata.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
+                           nullptr),
             ZX_ERR_BAD_STATE);
 }
 
@@ -209,8 +209,8 @@ TEST(IntegrityValidationTest, LastSliceOutOfFvmPartitionIsBadState) {
   // Now the last slice ends past the fvm partition and would trigger a Page Fault, probably.
   header->fvm_partition_size = info.GetSliceStart(0) + info.slice_count() * info.slice_size() - 1;
 
-  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
-                                metadata.capacity, nullptr),
+  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
+                           nullptr),
             ZX_ERR_BAD_STATE);
 }
 

@@ -47,7 +47,7 @@ zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
     return ZX_OK;
   }
 
-  fvm::sparse_image_t* image = reinterpret_cast<fvm::sparse_image_t*>(data);
+  fvm::SparseImage* image = reinterpret_cast<fvm::SparseImage*>(data);
   if (image->magic == fvm::kSparseFormatMagic) {
     if (offset > 0) {
       fprintf(stderr, "Invalid offset for sparse file\n");

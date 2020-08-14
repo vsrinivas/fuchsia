@@ -37,7 +37,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 // Formats the FVM within the provided partition if it is not already formatted.
 // Returns a file descriptor for the FVM's device.
 fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
-                                  const fvm::sparse_image_t& header, BindOption option,
+                                  const fvm::SparseImage& header, BindOption option,
                                   FormatResult* format_result = nullptr);
 
 // Allocates empty partitions inside the volume manager. Note that the partitions

@@ -22,10 +22,14 @@
 #include <new>
 #include <utility>
 
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fvm/fvm.h>
 
 #include "fvm-private.h"
 #include "slice-extent.h"
@@ -52,7 +56,7 @@ VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& in
 VPartitionManager::~VPartitionManager() = default;
 
 // static
-zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
+zx_status_t VPartitionManager::Bind(void*, zx_device_t* dev) {
   block_info_t block_info;
   block_impl_protocol_t bp;
   size_t block_op_size = 0;
@@ -81,8 +85,7 @@ void VPartitionManager::DdkInit(ddk::InitTxn txn) {
   init_txn_ = std::move(txn);
 
   // Read vpartition table asynchronously.
-  int rc =
-      thrd_create_with_name(&initialization_thread_, FvmLoadThread, this, "fvm-init");
+  int rc = thrd_create_with_name(&initialization_thread_, FvmLoadThread, this, "fvm-init");
   if (rc < 0) {
     fprintf(stderr, "fvm: ERROR: block device '%s': Could not load initialization thread\n",
             device_get_name(parent()));
@@ -209,7 +212,7 @@ zx_status_t VPartitionManager::Load() {
     return status;
   }
 
-  fvm_t sb;
+  Header sb;
   status = vmo.read(&sb, 0, sizeof(sb));
   if (status != ZX_OK) {
     return status;
@@ -276,8 +279,8 @@ zx_status_t VPartitionManager::Load() {
 
   // Validate metadata headers before growing and pick the correct one.
   const void* metadata;
-  if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(),
-                                    format_info_.metadata_allocated_size(), &metadata)) != ZX_OK) {
+  if ((status = ValidateHeader(mapper.start(), mapper_backup.start(),
+                               format_info_.metadata_allocated_size(), &metadata)) != ZX_OK) {
     fprintf(stderr, "fvm: Header validation failure: %d\n", status);
     return status;
   }
@@ -374,7 +377,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
   zx_status_t status;
 
   GetFvmLocked()->generation++;
-  fvm_update_hash(GetFvmLocked(), format_info_.metadata_size());
+  UpdateHash(GetFvmLocked(), format_info_.metadata_size());
 
   // If we were reading from the primary, write to the backup.
   status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(), format_info_.metadata_size(),
@@ -717,8 +720,15 @@ void VPartitionManager::DdkRelease() {
   delete this;
 }
 
+zx_driver_ops_t driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = VPartitionManager::Bind,
+};
+
 }  // namespace fvm
 
-// C-compatibility definitions
-
-zx_status_t fvm_bind(zx_device_t* parent) { return fvm::VPartitionManager::Bind(parent); }
+// clang-format off
+ZIRCON_DRIVER_BEGIN(fvm, fvm::driver_ops, "zircon", "0.1", 2)
+  BI_ABORT_IF_AUTOBIND,
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
+ZIRCON_DRIVER_END(fvm)

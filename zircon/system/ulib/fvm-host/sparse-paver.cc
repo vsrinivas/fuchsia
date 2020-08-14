@@ -33,7 +33,7 @@ zx_status_t SparsePaver::AddPartition(const SparsePartitionInfo* partition,
   }
 
   uint32_t vpart_index;
-  const fvm::partition_descriptor_t* descriptor = &partition->descriptor;
+  const fvm::PartitionDescriptor* descriptor = &partition->descriptor;
   zx_status_t status = info_.AllocatePartition(descriptor, guid, &vpart_index);
   if (status != ZX_OK) {
     return status;
@@ -92,7 +92,7 @@ zx_status_t SparsePaver::Init(std::unique_ptr<fvm::host::FileWrapper> wrapper, s
   return ZX_OK;
 }
 
-zx_status_t SparsePaver::AddExtent(uint32_t vpart_index, fvm::extent_descriptor_t* extent,
+zx_status_t SparsePaver::AddExtent(uint32_t vpart_index, fvm::ExtentDescriptor* extent,
                                    fvm::SparseReader* reader) {
   uint32_t pslice_start = 0;
   uint32_t pslice_total = 0;

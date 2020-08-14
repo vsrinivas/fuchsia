@@ -16,6 +16,7 @@
 #include <fbl/vector.h>
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
+#include <fvm/fvm.h>
 #include <gpt/guid.h>
 
 namespace fvm {
@@ -69,7 +70,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     logger_.Error("Could not read header\n");
     return false;
   }
-  const fvm::fvm_t* superblock = reinterpret_cast<fvm::fvm_t*>(header.get());
+  const fvm::Header* superblock = reinterpret_cast<fvm::Header*>(header.get());
   const fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
   if (format_info.slice_size() % block_size_ != 0) {
     logger_.Error("Slice size not divisible by block size\n");
@@ -91,7 +92,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
 
   const void* valid_metadata;
   zx_status_t status =
-      fvm_validate_header(metadata1, metadata2, format_info.metadata_size(), &valid_metadata);
+      ValidateHeader(metadata1, metadata2, format_info.metadata_size(), &valid_metadata);
   if (status != ZX_OK) {
     logger_.Error("Invalid FVM metadata\n");
     return false;
@@ -220,8 +221,8 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
 }
 
 bool Checker::CheckFVM(const FvmInfo& info) const {
-  auto superblock = reinterpret_cast<const fvm::fvm_t*>(info.valid_metadata);
-  auto invalid_superblock = reinterpret_cast<const fvm::fvm_t*>(info.invalid_metadata);
+  auto superblock = reinterpret_cast<const fvm::Header*>(info.valid_metadata);
+  auto invalid_superblock = reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
   fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
 
   logger_.Log("[  FVM Info  ]\n");

@@ -30,7 +30,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <fvm/format.h>
+#include <fvm/fvm.h>
 
 namespace {
 
@@ -139,7 +139,7 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
   memset(mvmo.get(), 0, format_info.metadata_allocated_size());
 
   // Superblock
-  fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(mvmo.get());
+  fvm::Header* sb = reinterpret_cast<fvm::Header*>(mvmo.get());
   sb->magic = fvm::kMagic;
   sb->version = fvm::kVersion;
   sb->pslice_count = format_info.slice_count();
@@ -153,13 +153,13 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
     return ZX_ERR_NO_SPACE;
   }
 
-  fvm_update_hash(mvmo.get(), format_info.metadata_size());
+  fvm::UpdateHash(mvmo.get(), format_info.metadata_size());
 
   void* backup = mvmo.get() + format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
   memcpy(backup, mvmo.get(), format_info.metadata_size());
 
   zx_status_t status =
-      fvm_validate_header(mvmo.get(), backup, format_info.metadata_size(), nullptr);
+      fvm::ValidateHeader(mvmo.get(), backup, format_info.metadata_size(), nullptr);
   if (status != ZX_OK) {
     return status;
   }

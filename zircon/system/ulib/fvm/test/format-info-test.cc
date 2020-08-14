@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fvm/format.h>
-
+#include <fvm/fvm.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -29,7 +28,7 @@ Header MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_tab
   superblock.version = fvm::kMagic;
   superblock.magic = fvm::kVersion;
   superblock.generation = 1;
-  fvm_update_hash(&superblock, sizeof(Header));
+  UpdateHash(&superblock, sizeof(Header));
   return superblock;
 }
 

@@ -130,7 +130,7 @@ zx_status_t SparseContainer::InitNew() {
   image_.slice_size = slice_size_;
   image_.partition_count = 0;
   image_.maximum_disk_size = 0;
-  image_.header_length = sizeof(fvm::sparse_image_t);
+  image_.header_length = sizeof(fvm::SparseImage);
   image_.flags = flags_;
   partitions_.reset();
   dirty_ = true;
@@ -175,7 +175,7 @@ zx_status_t SparseContainer::InitExisting() {
     return status;
   }
 
-  memcpy(&image_, reader_->Image(), sizeof(fvm::sparse_image_t));
+  memcpy(&image_, reader_->Image(), sizeof(fvm::SparseImage));
   flags_ = image_.flags;
   slice_size_ = image_.slice_size;
   extent_size_ = disk_size_ - image_.header_length;
@@ -184,15 +184,15 @@ zx_status_t SparseContainer::InitExisting() {
   for (unsigned i = 0; i < image_.partition_count; i++) {
     SparsePartitionInfo partition;
     memcpy(&partition.descriptor, reinterpret_cast<void*>(partition_ptr),
-           sizeof(fvm::partition_descriptor_t));
+           sizeof(fvm::PartitionDescriptor));
     partitions_.push_back(std::move(partition));
-    partition_ptr += sizeof(fvm::partition_descriptor_t);
+    partition_ptr += sizeof(fvm::PartitionDescriptor);
 
     for (size_t j = 0; j < partitions_[i].descriptor.extent_count; j++) {
-      fvm::extent_descriptor_t extent;
-      memcpy(&extent, reinterpret_cast<void*>(partition_ptr), sizeof(fvm::extent_descriptor_t));
+      fvm::ExtentDescriptor extent;
+      memcpy(&extent, reinterpret_cast<void*>(partition_ptr), sizeof(fvm::ExtentDescriptor));
       partitions_[i].extents.push_back(extent);
-      partition_ptr += sizeof(fvm::extent_descriptor_t);
+      partition_ptr += sizeof(fvm::ExtentDescriptor);
     }
   }
   auto result = CompressionContext::Create();
@@ -382,27 +382,27 @@ zx_status_t SparseContainer::Commit() {
     return ZX_ERR_IO;
   }
 
-  header_length += sizeof(fvm::sparse_image_t);
-  if (write(fd_.get(), &image_, sizeof(fvm::sparse_image_t)) != sizeof(fvm::sparse_image_t)) {
+  header_length += sizeof(fvm::SparseImage);
+  if (write(fd_.get(), &image_, sizeof(fvm::SparseImage)) != sizeof(fvm::SparseImage)) {
     fprintf(stderr, "Write sparse image header failed\n");
     return ZX_ERR_IO;
   }
 
   for (unsigned i = 0; i < image_.partition_count; i++) {
-    fvm::partition_descriptor_t partition = partitions_[i].descriptor;
+    fvm::PartitionDescriptor partition = partitions_[i].descriptor;
 
-    header_length += sizeof(fvm::partition_descriptor_t);
-    if (write(fd_.get(), &partition, sizeof(fvm::partition_descriptor_t)) !=
-        sizeof(fvm::partition_descriptor_t)) {
+    header_length += sizeof(fvm::PartitionDescriptor);
+    if (write(fd_.get(), &partition, sizeof(fvm::PartitionDescriptor)) !=
+        sizeof(fvm::PartitionDescriptor)) {
       fprintf(stderr, "Write partition failed\n");
       return ZX_ERR_IO;
     }
 
     for (unsigned j = 0; j < partition.extent_count; j++) {
-      fvm::extent_descriptor_t extent = partitions_[i].extents[j];
-      header_length += sizeof(fvm::extent_descriptor_t);
-      if (write(fd_.get(), &extent, sizeof(fvm::extent_descriptor_t)) !=
-          sizeof(fvm::extent_descriptor_t)) {
+      fvm::ExtentDescriptor extent = partitions_[i].extents[j];
+      header_length += sizeof(fvm::ExtentDescriptor);
+      if (write(fd_.get(), &extent, sizeof(fvm::ExtentDescriptor)) !=
+          sizeof(fvm::ExtentDescriptor)) {
         fprintf(stderr, "Write extent failed\n");
         return ZX_ERR_IO;
       }
@@ -421,7 +421,7 @@ zx_status_t SparseContainer::Commit() {
 
   // Write each partition out to sparse file
   for (unsigned i = 0; i < image_.partition_count; i++) {
-    fvm::partition_descriptor_t partition = partitions_[i].descriptor;
+    fvm::PartitionDescriptor partition = partitions_[i].descriptor;
     // For this case write a single extent with the right magic and GUID.
     // For now we just do this for minfs, there is no need to generalize.
     // All this code will be rewritten because is unmantainable.
@@ -580,7 +580,7 @@ zx_status_t SparseContainer::AddCorruptedPartition(const char* type, uint64_t ta
   descriptor.flags = fvm::kSparseFlagCorrupted;
   descriptor.extent_count = 0;
 
-  image_.header_length += sizeof(fvm::partition_descriptor_t);
+  image_.header_length += sizeof(fvm::PartitionDescriptor);
   partitions_.push_back(std::move(info));
   image_.partition_count++;
   zx_status_t status = ZX_OK;
@@ -633,7 +633,7 @@ zx_status_t SparseContainer::AllocatePartition(std::unique_ptr<Format> format,
   format->GetPartitionInfo(&partition.descriptor);
   partition.descriptor.magic = fvm::kPartitionDescriptorMagic;
   partition.descriptor.extent_count = 0;
-  image_.header_length += sizeof(fvm::partition_descriptor_t);
+  image_.header_length += sizeof(fvm::PartitionDescriptor);
   uint32_t part_index = safemath::checked_cast<uint32_t>(image_.partition_count);
 
   zx_status_t status;
@@ -682,7 +682,7 @@ zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_
   ZX_ASSERT(slice_size_ == image_.slice_size);
   ZX_ASSERT((slice_count * image_.slice_size) >= extent_length);
   SparsePartitionInfo* partition = &partitions_[part_index];
-  fvm::extent_descriptor_t extent;
+  fvm::ExtentDescriptor extent;
   extent.magic = fvm::kExtentDescriptorMagic;
   extent.slice_start = slice_start;
   extent.slice_count = slice_count;
@@ -694,7 +694,7 @@ zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_
     return ZX_ERR_INTERNAL;
   }
 
-  image_.header_length += sizeof(fvm::extent_descriptor_t);
+  image_.header_length += sizeof(fvm::ExtentDescriptor);
   extent_size_ += extent_length;
   dirty_ = true;
   return ZX_OK;
