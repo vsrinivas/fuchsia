@@ -164,8 +164,8 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
 
     while (position_.FrameCanBeMixed()) {
-      auto src_offset_to_cache = RightIdx(frac_src_off - neg_filter_width().raw_value())
-                                 << kPtsFractionalBits;
+      auto src_offset_to_cache =
+          RightIdx(frac_src_off - neg_filter_width().raw_value()) * Mixer::FRAC_ONE;
       const auto frames_needed = std::min<uint32_t>(src_frames - next_src_idx_to_copy,
                                                     kDataCacheLength - next_cache_idx_to_fill);
 
