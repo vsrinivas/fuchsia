@@ -40,8 +40,8 @@ const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
         Mutex::new(DefaultSetting::new(
-            DEFAULT_AUDIO_INFO,
-            Some("/config/data/audio_config_data.json"),
+            Some(DEFAULT_AUDIO_INFO),
+            "/config/data/audio_config_data.json",
         ));
 }
 
@@ -70,7 +70,7 @@ pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioS
 }
 
 pub fn default_audio_info() -> AudioInfo {
-    AUDIO_DEFAULT_SETTINGS.lock().unwrap().get_default_value()
+    AUDIO_DEFAULT_SETTINGS.lock().unwrap().get_default_value().expect("no audio default settings")
 }
 
 impl DeviceStorageCompatible for AudioInfo {

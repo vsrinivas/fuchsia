@@ -14,9 +14,9 @@ where
     T: DeserializeOwned + Clone,
     P: AsRef<Path> + Display,
 {
-    default_value: T,
-    config_file_path: Option<P>,
-    cached_value: Option<T>,
+    default_value: Option<T>,
+    config_file_path: P,
+    cached_value: Option<Option<T>>,
 }
 
 impl<T, P> DefaultSetting<T, P>
@@ -24,11 +24,11 @@ where
     T: DeserializeOwned + Clone,
     P: AsRef<Path> + Display,
 {
-    pub fn new(default_value: T, config_file_path: Option<P>) -> Self {
+    pub fn new(default_value: Option<T>, config_file_path: P) -> Self {
         DefaultSetting { default_value, config_file_path, cached_value: None }
     }
 
-    pub fn get_default_value(&mut self) -> T {
+    pub fn get_default_value(&mut self) -> Option<T> {
         if self.cached_value.is_none() {
             self.cached_value = Some(self.load_default_settings());
         }
@@ -36,16 +36,16 @@ where
         self.cached_value.as_ref().unwrap().clone()
     }
 
-    fn load_default_settings(&self) -> T {
-        self.config_file_path
-            .as_ref()
-            .and_then(|file_path| {
-                File::open(file_path)
-                    .map_err(|e| {
-                        fx_log_info!("unable to open {}, using defaults: {:?}", file_path, e);
-                    })
-                    .ok()
+    /// Attempts to load the settings from the given config_file_path.
+    ///
+    /// Returns the default value if unable to read or parse the file. The returned option will
+    /// only be None if the default_value was provided as None.
+    fn load_default_settings(&self) -> Option<T> {
+        File::open(self.config_file_path.as_ref())
+            .map_err(|e| {
+                fx_log_info!("unable to open {}, using defaults: {:?}", self.config_file_path, e);
             })
+            .ok()
             .and_then(|file| {
                 serde_json::from_reader(BufReader::new(file))
                     .map_err(|e| {
@@ -70,27 +70,34 @@ pub mod testing {
     #[test]
     fn test_load_valid_config_data() {
         let mut setting = DefaultSetting::new(
-            TestConfigData { value: 3 },
-            Some("/config/data/fake_config_data.json"),
+            Some(TestConfigData { value: 3 }),
+            "/config/data/fake_config_data.json",
         );
 
-        assert_eq!(setting.get_default_value().value, 10);
+        assert_eq!(setting.get_default_value().unwrap().value, 10);
     }
 
     #[test]
     fn test_load_invalid_config_data() {
         let mut setting = DefaultSetting::new(
-            TestConfigData { value: 3 },
-            Some("/config/data/fake_invalid_config_data.json"),
+            Some(TestConfigData { value: 3 }),
+            "/config/data/fake_invalid_config_data.json",
         );
 
-        assert_eq!(setting.get_default_value().value, 3);
+        assert_eq!(setting.get_default_value().unwrap().value, 3);
     }
 
     #[test]
     fn test_load_invalid_config_file_path() {
-        let mut setting = DefaultSetting::new(TestConfigData { value: 3 }, Some("nuthatch"));
+        let mut setting = DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch");
 
-        assert_eq!(setting.get_default_value().value, 3);
+        assert_eq!(setting.get_default_value().unwrap().value, 3);
+    }
+
+    #[test]
+    fn test_load_default_none() {
+        let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch");
+
+        assert!(setting.get_default_value().is_none());
     }
 }

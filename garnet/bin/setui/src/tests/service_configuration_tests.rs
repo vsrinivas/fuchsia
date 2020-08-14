@@ -16,6 +16,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
+const FAKE_PATH: &str = "not_a_real_path.json";
 
 pub fn get_test_settings_types() -> HashSet<SettingType> {
     return vec![SettingType::Accessibility, SettingType::Privacy].into_iter().collect();
@@ -29,10 +30,12 @@ async fn test_no_configuration_provided() {
         EnabledServicesConfiguration::with_services(get_test_settings_types());
 
     // Don't load a real configuration, use the default configuration.
-    let configuration = DefaultSetting::new(default_configuration, Some("not_a_real_path.json"))
-        .get_default_value();
-    let flags = DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json"))
-        .get_default_value();
+    let configuration = DefaultSetting::new(Some(default_configuration), FAKE_PATH)
+        .get_default_value()
+        .expect("no default enabled service configuration");
+    let flags = DefaultSetting::new(Some(ServiceFlags::default()), FAKE_PATH)
+        .get_default_value()
+        .expect("no default service flags");
     let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)
@@ -56,10 +59,12 @@ async fn test_default_configuration_provided() {
 
     // Load test configuration, which only has Accessibility, default will not be used.
     let configuration =
-        DefaultSetting::new(default_configuration, Some("/config/data/service_configuration.json"))
-            .get_default_value();
-    let flags = DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json"))
-        .get_default_value();
+        DefaultSetting::new(Some(default_configuration), "/config/data/service_configuration.json")
+            .get_default_value()
+            .expect("no default enabled service configuration");
+    let flags = DefaultSetting::new(Some(ServiceFlags::default()), FAKE_PATH)
+        .get_default_value()
+        .expect("no default service flags");
     let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)

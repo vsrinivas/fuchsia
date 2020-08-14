@@ -5,7 +5,7 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
-use crate::call_async;
+use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -17,6 +17,7 @@ use crate::switchboard::base::{
     ControllerStateResult, SettingRequest, SettingResponse, SettingType,
 };
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
+use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
 use std::convert::TryInto;
 
@@ -38,6 +39,12 @@ pub struct LightController {
 
     /// Proxy for interacting with light hardware.
     light_proxy: ExternalServiceProxy<LightProxy>,
+
+    /// Hardware configuration that determines what lights to return to the client.
+    ///
+    /// If present, overrides the lights from the underlying fuchsia.hardware.light API.
+    // TODO(fxbug.dev/53313): use config to override underlying light data
+    _light_hardware_config: Option<LightHardwareConfiguration>,
 }
 
 #[async_trait]
@@ -57,7 +64,13 @@ impl data_controller::Create<LightInfo> for LightController {
                 ))
             })?;
 
-        Ok(LightController { client, light_proxy })
+        let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
+            None,
+            "/config/data/light_hardware_config.json",
+        )
+        .get_default_value();
+
+        Ok(LightController { client, light_proxy, _light_hardware_config: light_hardware_config })
     }
 }
 
@@ -70,7 +83,7 @@ impl controller::Handle for LightController {
             SettingRequest::Get => {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
                 // value to ensure we have the latest light state.
-                // TODO(fxb/56319): remove once all clients are migrated.
+                // TODO(fxbug.dev/56319): remove once all clients are migrated.
                 self.restore().await.ok();
                 Some(Ok(Some(SettingResponse::Light(self.client.read().await))))
             }
@@ -269,8 +282,8 @@ impl LightController {
             info.name.clone(),
             LightGroup {
                 name: info.name,
-                // TODO(fxb/53313): actually set this value once we can read configs and determine
-                // the expected behavior for it.
+                // TODO(fxbug.dev/53313): actually set this value once we can read configs and
+                // determine the expected behavior for it.
                 enabled: true,
                 light_type,
                 lights: vec![LightState { value: Some(value) }],

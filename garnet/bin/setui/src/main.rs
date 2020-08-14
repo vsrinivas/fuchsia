@@ -37,12 +37,14 @@ fn main() -> Result<(), Error> {
         EnabledServicesConfiguration::with_services(get_default_setting_types());
 
     let configuration =
-        DefaultSetting::new(default_configuration, Some("/config/data/service_configuration.json"))
-            .get_default_value();
+        DefaultSetting::new(Some(default_configuration), "/config/data/service_configuration.json")
+            .get_default_value()
+            .expect("no default enabled service configuration");
 
     let flags =
-        DefaultSetting::new(ServiceFlags::default(), Some("/config/data/service_flags.json"))
-            .get_default_value();
+        DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
+            .get_default_value()
+            .expect("no default service flags");
 
     let configuration = ServiceConfiguration::from(configuration, flags);
 
