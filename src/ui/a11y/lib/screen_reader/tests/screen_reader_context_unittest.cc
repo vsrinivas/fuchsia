@@ -55,5 +55,13 @@ TEST_F(ScreenReaderContextTest, ContainsLocaleId) {
 // Makes sure that the Speaker is instantiated in when the context is created.
 TEST_F(ScreenReaderContextTest, GetSpeaker) { ASSERT_TRUE(screen_reader_context_->speaker()); }
 
+TEST_F(ScreenReaderContextTest, SetsSemanticLevel) {
+  EXPECT_EQ(screen_reader_context_->semantic_level(),
+            a11y::ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  screen_reader_context_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kWord);
+  EXPECT_EQ(screen_reader_context_->semantic_level(),
+            a11y::ScreenReaderContext::SemanticLevel::kWord);
+}
+
 }  // namespace
 }  // namespace accessibility_test

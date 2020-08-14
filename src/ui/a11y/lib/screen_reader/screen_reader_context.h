@@ -19,8 +19,6 @@ namespace a11y {
 // ScreenReaderContext class stores the current state of the screen reader which includes the
 // currently selected node(via the a11y focus manager) and state(currently selected semantic level).
 // This class will be queried by "Actions" to get screen reader information.
-// TODO(fxb/45886): Add support to store currently selected semantic level inside the
-// ScreenReaderContext class.
 class ScreenReaderContext {
  public:
   // Describes Screen Reader possible modes of navigation.
@@ -33,6 +31,26 @@ class ScreenReaderContext {
     // will only come after the user moves to a different node. In contrast, when the user is not in
     // continuous exploration, if the node is explored multiple times, they will always be informed.
     kContinuousExploration,
+  };
+
+  // Defines the different semantic levels.
+  // A semantic level is a granularity level of navigation that is used to select the appropriate
+  // action when the user performs actions of the form next / previous element. In order to select
+  // what is the next element, the Screen Reader uses the semantic level to choose the appropriate
+  // logic to use.
+  enum class SemanticLevel {
+    // Linear Navigation defines what will be the next / previous element.
+    kNormalNavigation,
+    // Adjusts a value in a slider or range control element.
+    kAdjustValue,
+    // User is navigating by characters of the text.
+    kCharacter,
+    // User is navigating by the words of the text.
+    kWord,
+    // User is navigating by the headings of the text.
+    kHeader,
+    // User is navigating by form controls.
+    kFormControl,
   };
 
   // |a11y_focus_manager| will be owned by this class.
@@ -54,6 +72,10 @@ class ScreenReaderContext {
   // Sets the Screen Reader current mode.
   void set_mode(ScreenReaderMode mode) { mode_ = mode; }
   ScreenReaderMode mode() const { return mode_; }
+
+  // Sets the Screen Reader semantic level.
+  void set_semantic_level(SemanticLevel semantic_level) { semantic_level_ = semantic_level; }
+  SemanticLevel semantic_level() const { return semantic_level_; }
 
   void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
   const std::string& locale_id() const { return locale_id_; }
@@ -78,6 +100,9 @@ class ScreenReaderContext {
 
   // Current Screen Reader mode.
   ScreenReaderMode mode_ = ScreenReaderMode::kNormal;
+
+  // Current semantic level.
+  SemanticLevel semantic_level_ = SemanticLevel::kNormalNavigation;
 
   // Unicode BCP-47 Locale Identifier.
   std::string locale_id_;
