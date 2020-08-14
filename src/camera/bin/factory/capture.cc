@@ -26,7 +26,7 @@ Capture::Capture() {}
 void Capture::WritePNGAsNV12(FILE* fp) {
   auto& iformat = properties_.image_format;
   auto& pformat = iformat.pixel_format;
-  FX_LOGS(INFO) << "writing format " << int(pformat.type) << " as NV12";
+  FX_LOGS(INFO) << "writing format " << static_cast<int>(pformat.type) << " as NV12";
 
   // NV12 is 8 bit Y (width x height) then 8 bit UV (width x height/2)
 
@@ -48,25 +48,15 @@ void Capture::WritePNGAsNV12(FILE* fp) {
   png_write_info(png_ptr, info_ptr);
 
   for (uint32_t i = 0; i < height; i++) {
-    // FX_LOGS(INFO) << "i=" << i << " of " << height;
     png_byte row[width * 3];
     for (uint32_t j = 0; j < width; j++) {
       int32_t y = ypos[j];
-      int32_t u = uvpos[j / 2 + 1] - 128;
-      int32_t v = uvpos[j / 2] - 128;
-      /*
-      if (j == width/2 && u != 0 && v != 0) {
-        FX_LOGS(INFO) << " i=" << i
-                      << " Y=" << (int)ypos[j] << " y=" << y
-                      << " U=" << (int)uvpos[j/2+1] << " u=" << u
-                      << " V=" << (int)uvpos[j/2] << " v=" << v;
-      }
-      */
-      // TODO(fxbug.dev/58306) This doesn't convert YUV to RGB right
+      int32_t u = uvpos[static_cast<int32_t>(j / 2) * 2] - 128;
+      int32_t v = uvpos[static_cast<int32_t>(j / 2) * 2 + 1] - 128;
 #define CLIP(x) ((x) < 0 ? 0 : (x) > 255 ? 255 : (x))
-      row[j * 3 + 0] = CLIP(y + 1.402 * v);
-      row[j * 3 + 1] = CLIP(y - 0.34414 * u - 0.71414 * v);
-      row[j * 3 + 2] = CLIP(y + 1.772 * u);
+      row[j * 3 + 0] = CLIP(y + 1.28033 * v);
+      row[j * 3 + 1] = CLIP(y - 0.21482 * u - 0.38059 * v);
+      row[j * 3 + 2] = CLIP(y + 2.12798 * u);
     }
     png_write_row(png_ptr, row);
     ypos += iformat.bytes_per_row;
@@ -87,7 +77,7 @@ void Capture::WritePNGAsNV12(FILE* fp) {
 void Capture::WritePNGUnprocessed(FILE* fp, bool isBayer) {
   auto& iformat = properties_.image_format;
   auto& pformat = iformat.pixel_format;
-  FX_LOGS(INFO) << "writing format " << int(pformat.type) << " as unprocessed grayscale";
+  FX_LOGS(INFO) << "writing format " << static_cast<int>(pformat.type) << " as unprocessed gray";
 
   uint32_t vmo_size = image_->size();
   uint32_t width = iformat.bytes_per_row;              // pretend it's 8-bit gray
