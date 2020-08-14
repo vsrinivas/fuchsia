@@ -5,8 +5,12 @@
 use {
     anyhow::format_err,
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::{profile, types::Uuid},
-    std::{collections::HashSet, convert::TryFrom},
+    fuchsia_bluetooth::{profile, util::CollectExt},
+    std::{
+        collections::HashSet,
+        convert::{TryFrom, TryInto},
+        iter::FromIterator,
+    },
 };
 
 use crate::types::{Psm, ServiceRecord};
@@ -19,74 +23,36 @@ pub fn build_l2cap_descriptor(psm: Psm) -> Vec<bredr::ProtocolDescriptor> {
     }]
 }
 
-/// Attempts to parse the PSM from the protocol descriptor list.
-/// Returns an Error if the ProtocolDescriptorList is formatted incorrectly.
-fn psm_from_protocol_descriptor_list(
-    prot_desc_list: &[bredr::ProtocolDescriptor],
-) -> Result<Psm, anyhow::Error> {
-    for prot_desc in prot_desc_list {
-        if prot_desc.protocol == bredr::ProtocolIdentifier::L2Cap {
-            if prot_desc.params.is_empty() {
-                return Err(format_err!("No PSM provided in primary protocol desc list."));
-            }
-
-            // The PSM is always the first element.
-            if let bredr::DataElement::Uint16(psm) = prot_desc.params[0] {
-                return Ok(Psm(psm));
-            } else {
-                return Err(format_err!("Protocol descriptor has invalid format."));
-            }
-        }
-    }
-
-    Err(format_err!("No L2Cap entry in ProtocolDescriptorList."))
-}
-
 fn parse_service_definition(
     def: &bredr::ServiceDefinition,
 ) -> Result<ServiceRecord, anyhow::Error> {
+    let definition: profile::ServiceDefinition = def.try_into()?;
     // Parse the service class UUIDs into ServiceClassProfileIdentifiers.
-    let svc_ids = match &def.service_class_uuids {
-        Some(uuids) if !uuids.is_empty() => {
-            let mut svc_ids = HashSet::new();
-            for id in uuids {
-                let uuid: Uuid = id.into();
-                let svc_id = bredr::ServiceClassProfileIdentifier::try_from(uuid)?;
-                svc_ids.insert(svc_id);
-            }
-            svc_ids
-        }
-        _ => return Err(format_err!("Service definition must contain at least one service class")),
+    let svc_ids = {
+        let uuids_vec = definition
+            .service_class_uuids
+            .iter()
+            .map(|uuid| bredr::ServiceClassProfileIdentifier::try_from(uuid.clone()))
+            .collect_results()?;
+        HashSet::from_iter(uuids_vec)
+    };
+    if svc_ids.is_empty() {
+        return Err(format_err!("There must be at least one service class UUID"));
     };
 
-    // Parse the primary protocol descriptor list. This field is optional. If it exists,
-    // attempt to parse out the PSM.
-    let primary_psm = def.protocol_descriptor_list.as_ref().map_or(Ok(None), |prot_desc_list| {
-        psm_from_protocol_descriptor_list(prot_desc_list).map(Some)
-    })?;
+    // Convert primary PSM into local Psm type.
+    let primary_psm = definition.primary_psm().map(|psm| Psm(psm));
 
-    // Parse the (optional) additional protocol descriptor lists.
-    let mut addl_psms = HashSet::new();
-    if let Some(additional_prot_desc_list) = &def.additional_protocol_descriptor_lists {
-        for addl_list in additional_prot_desc_list {
-            let addl_psm = psm_from_protocol_descriptor_list(addl_list)?;
-            addl_psms.insert(addl_psm);
-        }
-    }
+    // Convert (potential) additional PSMs into local Psm type.
+    let additional_psms = definition.additional_psms().iter().map(|psm| Psm(*psm)).collect();
 
-    // Parse the (optional) profile descriptors.
-    let prof_descriptors = def
-        .profile_descriptors
-        .as_ref()
-        .map_or(Vec::new(), |profile_descriptors| profile_descriptors.iter().cloned().collect());
-
-    // Parse the (optional) additional attributes.
-    let attributes = def
-        .additional_attributes
-        .as_ref()
-        .map_or(Vec::new(), |attrs| attrs.iter().map(profile::Attribute::from).collect());
-
-    Ok(ServiceRecord::new(svc_ids, primary_psm, addl_psms, prof_descriptors, attributes))
+    Ok(ServiceRecord::new(
+        svc_ids,
+        primary_psm,
+        additional_psms,
+        definition.profile_descriptors,
+        definition.additional_attributes,
+    ))
 }
 
 pub fn parse_service_definitions(
@@ -108,7 +74,7 @@ pub(crate) mod tests {
 
     use fidl::encoding::Decodable;
     use fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, PSM_AVCTP, PSM_AVCTP_BROWSE, PSM_AVDTP};
-    use fuchsia_bluetooth::profile;
+    use fuchsia_bluetooth::{profile, types::Uuid};
 
     const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 
@@ -229,47 +195,6 @@ pub(crate) mod tests {
         (def, record)
     }
 
-    /// Builds a list of invalid ServiceDefinitions.
-    /// 1. Contains a primary protocol descriptor list, but is empty.
-    /// 2. Contains a primary protocol descriptor list, but the PSM is missing.
-    /// 3. Contains a primary protocol descriptor list, but the provided PSM is not the first entry.
-    fn build_invalid_service_definitions(
-    ) -> Vec<(bredr::ServiceDefinition, Result<Vec<ServiceRecord>, String>)> {
-        use bredr::ServiceClassProfileIdentifier::{AudioSink, AvRemoteControl, Hdp};
-
-        let def1 = bredr::ServiceDefinition {
-            service_class_uuids: Some(vec![Uuid::new16(AudioSink as u16).into()]),
-            protocol_descriptor_list: Some(vec![]),
-            ..bredr::ServiceDefinition::new_empty()
-        };
-        let err1 = Err(format!("No L2Cap entry in ProtocolDescriptorList."));
-
-        let def2 = bredr::ServiceDefinition {
-            service_class_uuids: Some(vec![Uuid::new16(AvRemoteControl as u16).into()]),
-            protocol_descriptor_list: Some(vec![bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![],
-            }]),
-            ..bredr::ServiceDefinition::new_empty()
-        };
-        let err2 = Err(format!("No PSM provided in primary protocol desc list."));
-
-        let def3 = bredr::ServiceDefinition {
-            service_class_uuids: Some(vec![Uuid::new16(Hdp as u16).into()]),
-            protocol_descriptor_list: Some(vec![bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![
-                    bredr::DataElement::B(true),
-                    bredr::DataElement::Uint16(PSM_AVCTP_BROWSE as u16),
-                ],
-            }]),
-            ..bredr::ServiceDefinition::new_empty()
-        };
-        let err3 = Err(format!("Protocol descriptor has invalid format."));
-
-        vec![(def1, err1), (def2, err2), (def3, err3)]
-    }
-
     #[test]
     fn test_parse_service_definitions_success() {
         // Empty is ok.
@@ -291,32 +216,5 @@ pub(crate) mod tests {
             Ok(vec![expected_a2dp_record, expected_avrcp_record]),
             parsed.map_err(|e| format!("{:?}", e))
         );
-    }
-
-    #[test]
-    fn test_parse_invalid_service_definitions() {
-        // No service classes is invalid.
-        let no_service_id = vec![bredr::ServiceDefinition::new_empty()];
-        assert_eq!(
-            Err(format!("Service definition must contain at least one service class")),
-            parse_service_definitions(no_service_id).map_err(|e| format!("{:?}", e))
-        );
-
-        // A combination of a valid and invalid services should still result in an error.
-        let (id_only_def, _) = build_minimal_service_definition();
-        let overall_invalid = vec![id_only_def, bredr::ServiceDefinition::new_empty()];
-        assert_eq!(
-            Err(format!("Service definition must contain at least one service class")),
-            parse_service_definitions(overall_invalid).map_err(|e| format!("{:?}", e))
-        );
-
-        // Service definitions in which the Primary ProtocolDescriptorList is formatted incorrectly.
-        let invalid_defs_with_errs = build_invalid_service_definitions();
-        for (invalid_def, expected_err) in invalid_defs_with_errs {
-            assert_eq!(
-                expected_err,
-                parse_service_definitions(vec![invalid_def]).map_err(|e| format!("{:?}", e))
-            );
-        }
     }
 }

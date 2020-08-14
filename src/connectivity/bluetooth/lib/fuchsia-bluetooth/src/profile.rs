@@ -8,7 +8,10 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         self as fidl_bredr, ProfileDescriptor, ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
     },
-    std::convert::{TryFrom, TryInto},
+    std::{
+        collections::HashSet,
+        convert::{TryFrom, TryInto},
+    },
 };
 
 use crate::types::Uuid;
@@ -82,6 +85,24 @@ pub fn find_profile_descriptors(
         }
     }
     Err(format_err!("Profile Descriptor not found"))
+}
+
+/// Returns the PSM from the provided `protocol`. Returns None if the protocol
+/// is not L2CAP or does not contain a PSM.
+pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<u16> {
+    for descriptor in protocol {
+        if descriptor.protocol == fidl_bredr::ProtocolIdentifier::L2Cap {
+            if descriptor.params.len() != 1 {
+                return None;
+            }
+
+            if let DataElement::Uint16(psm) = descriptor.params[0] {
+                return Some(psm);
+            }
+            return None;
+        }
+    }
+    None
 }
 
 /// The basic building block for elements in a SDP record.
@@ -273,7 +294,7 @@ impl TryFrom<&Information> for fidl_bredr::Information {
 /// See [fuchsia.bluetooth.bredr.ServiceDefinition] for more documentation.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServiceDefinition {
-    pub service_class_uuids: Vec<fidl_bt::Uuid>,
+    pub service_class_uuids: Vec<Uuid>,
     pub protocol_descriptor_list: Vec<ProtocolDescriptor>,
     pub additional_protocol_descriptor_lists: Vec<Vec<ProtocolDescriptor>>,
     pub profile_descriptors: Vec<fidl_bredr::ProfileDescriptor>,
@@ -281,15 +302,39 @@ pub struct ServiceDefinition {
     pub additional_attributes: Vec<Attribute>,
 }
 
+impl ServiceDefinition {
+    /// Returns the primary PSM associated with this ServiceDefinition.
+    pub fn primary_psm(&self) -> Option<u16> {
+        psm_from_protocol(&self.protocol_descriptor_list)
+    }
+
+    /// Returns the additional PSMs associated with this ServiceDefinition.
+    pub fn additional_psms(&self) -> HashSet<u16> {
+        self.additional_protocol_descriptor_lists
+            .iter()
+            .filter_map(|protocol| psm_from_protocol(protocol))
+            .collect()
+    }
+
+    /// Returns all the PSMs associated with this ServiceDefinition.
+    ///
+    /// It's possible that the definition doesn't provide any PSMs, in which
+    /// case the returned set will be empty.
+    pub fn psm_set(&self) -> HashSet<u16> {
+        let mut psms = self.additional_psms();
+        self.primary_psm().map(|psm| psms.insert(psm));
+        psms
+    }
+}
+
 impl TryFrom<&fidl_bredr::ServiceDefinition> for ServiceDefinition {
     type Error = Error;
 
     fn try_from(src: &fidl_bredr::ServiceDefinition) -> Result<ServiceDefinition, Self::Error> {
-        let service_class_uuids =
-            src.service_class_uuids.clone().ok_or(format_err!("Must contain uuids"))?;
-        if service_class_uuids.is_empty() {
-            return Err(format_err!("There must be at least one service class UUID"));
-        }
+        let service_class_uuids = match &src.service_class_uuids {
+            Some(uuids) if !uuids.is_empty() => uuids.iter().map(Uuid::from).collect(),
+            _ => return Err(format_err!("There must be at least one service class UUID")),
+        };
 
         let protocol_descriptor_list: Vec<ProtocolDescriptor> = src
             .protocol_descriptor_list
@@ -330,10 +375,10 @@ impl TryFrom<&ServiceDefinition> for fidl_bredr::ServiceDefinition {
     type Error = Error;
 
     fn try_from(src: &ServiceDefinition) -> Result<fidl_bredr::ServiceDefinition, Self::Error> {
-        let service_class_uuids = src.service_class_uuids.clone();
-        if service_class_uuids.is_empty() {
+        if src.service_class_uuids.is_empty() {
             return Err(format_err!("There must be at least one service class UUID"));
         }
+        let service_class_uuids = src.service_class_uuids.iter().map(fidl_bt::Uuid::from).collect();
 
         let protocol_descriptor_list: Vec<fidl_bredr::ProtocolDescriptor> = src
             .protocol_descriptor_list
@@ -369,10 +414,10 @@ impl TryFrom<&ServiceDefinition> for fidl_bredr::ServiceDefinition {
 /// Corresponds directly to the FIDL `SecurityRequirements` definition - with the extra properties
 /// of Clone and PartialEq.
 /// See [fuchsia.bluetooth.bredr.SecurityRequirements] for more documentation.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct SecurityRequirements {
-    authentication_required: Option<bool>,
-    secure_connections_required: Option<bool>,
+    pub authentication_required: Option<bool>,
+    pub secure_connections_required: Option<bool>,
 }
 
 impl From<&fidl_bredr::SecurityRequirements> for SecurityRequirements {
@@ -402,10 +447,10 @@ const MIN_RX_SDU_SIZE: u16 = 48;
 /// of Clone and PartialEq.
 /// The invariants of the FIDL definition are enforced - the max SDU size must be >= 48.
 /// See [fuchsia.bluetooth.bredr.ChannelParameters] for more documentation.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ChannelParameters {
-    channel_mode: Option<fidl_bredr::ChannelMode>,
-    max_rx_sdu_size: Option<u16>,
+    pub channel_mode: Option<fidl_bredr::ChannelMode>,
+    pub max_rx_sdu_size: Option<u16>,
 }
 
 impl TryFrom<&fidl_bredr::ChannelParameters> for ChannelParameters {
@@ -501,6 +546,37 @@ mod tests {
     }
 
     #[test]
+    fn test_psm_from_protocol() {
+        let empty = vec![];
+        assert_eq!(None, psm_from_protocol(&empty));
+
+        let no_psm = vec![ProtocolDescriptor {
+            protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
+            params: vec![],
+        }];
+        assert_eq!(None, psm_from_protocol(&no_psm));
+
+        let psm = 10;
+        let valid_psm = vec![ProtocolDescriptor {
+            protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(psm)],
+        }];
+        assert_eq!(Some(psm), psm_from_protocol(&valid_psm));
+
+        let rfcomm = vec![
+            ProtocolDescriptor {
+                protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
+                params: vec![], // PSM omitted for RFCOMM.
+            },
+            ProtocolDescriptor {
+                protocol: fidl_bredr::ProtocolIdentifier::Rfcomm,
+                params: vec![DataElement::Uint8(10)], // Server channel
+            },
+        ];
+        assert_eq!(None, psm_from_protocol(&rfcomm));
+    }
+
+    #[test]
     fn test_elem_to_profile_descriptor_works() {
         let element = fidl_bredr::DataElement::Sequence(vec![
             Some(Box::new(fidl_bredr::DataElement::Uuid(Uuid::new16(0x1101).into()))),
@@ -574,6 +650,54 @@ mod tests {
     }
 
     #[test]
+    fn test_get_psm_from_service_definition() {
+        let uuid = Uuid::new32(1234);
+        let psm1 = 10;
+        let psm2 = 12;
+        let mut def = ServiceDefinition {
+            service_class_uuids: vec![uuid],
+            protocol_descriptor_list: vec![],
+            additional_protocol_descriptor_lists: vec![],
+            profile_descriptors: vec![],
+            information: vec![],
+            additional_attributes: vec![],
+        };
+
+        assert_eq!(def.primary_psm(), None);
+        assert_eq!(def.additional_psms(), HashSet::new());
+        assert_eq!(def.psm_set(), HashSet::new());
+
+        def.protocol_descriptor_list = vec![ProtocolDescriptor {
+            protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(psm1)],
+        }];
+
+        let mut expected_psms = HashSet::new();
+        expected_psms.insert(psm1);
+        assert_eq!(def.primary_psm(), Some(psm1));
+        assert_eq!(def.additional_psms(), HashSet::new());
+        assert_eq!(def.psm_set(), expected_psms);
+
+        def.additional_protocol_descriptor_lists = vec![
+            vec![ProtocolDescriptor {
+                protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
+                params: vec![DataElement::Uint16(psm2)],
+            }],
+            vec![ProtocolDescriptor {
+                protocol: fidl_bredr::ProtocolIdentifier::Avdtp,
+                params: vec![DataElement::Uint16(0x0103)],
+            }],
+        ];
+
+        let mut expected_psms = HashSet::new();
+        expected_psms.insert(psm2);
+        assert_eq!(def.primary_psm(), Some(psm1));
+        assert_eq!(def.additional_psms(), expected_psms);
+        expected_psms.insert(psm1);
+        assert_eq!(def.psm_set(), expected_psms);
+    }
+
+    #[test]
     fn test_service_definition_conversions() {
         let uuid = fidl_bt::Uuid { value: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] };
         let prof_descs = vec![ProfileDescriptor {
@@ -589,7 +713,7 @@ mod tests {
         let attribute_value = 0xF00FC0DE;
 
         let local = ServiceDefinition {
-            service_class_uuids: vec![uuid],
+            service_class_uuids: vec![uuid.into()],
             protocol_descriptor_list: vec![ProtocolDescriptor {
                 protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
                 params: vec![DataElement::Uint16(10)],
