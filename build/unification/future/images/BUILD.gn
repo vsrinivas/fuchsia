@@ -5,8 +5,6 @@
 import("//build/board.gni")
 import("//build/images/args.gni")
 import("//build/images/zxcrypt.gni")
-import("//build/product.gni")
-import("//build/testing/golden_file.gni")
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zbi/zbi_input.gni")
 
@@ -20,50 +18,11 @@ group("zxcrypt") {
   deps = [ "//src/security/policy/zxcrypt:$zxcrypt_key_source" ]
 }
 
-if (product_kernel_cmdline_golden != "") {
-  generated_file("product_kernel_cmdline_args_txt") {
-    outputs = [ "$root_build_dir/product_kernel_cmdline_args.txt" ]
-    contents = kernel_cmdline_args
-  }
-
-  golden_file("product_kernel_cmdline_golden_file") {
-    golden = product_kernel_cmdline_golden
-    current = "$root_build_dir/product_kernel_cmdline_args.txt"
-
-    # Error on changes.
-    warn_on_changes = false
-    deps = [ ":product_kernel_cmdline_args_txt" ]
-  }
-}
-
-if (board_kernel_cmdline_golden != "") {
-  generated_file("board_kernel_cmdline_args_txt") {
-    outputs = [ "$root_build_dir/board_kernel_cmdline_args.txt" ]
-    contents = board_kernel_cmdline_args
-  }
-
-  golden_file("board_kernel_cmdline_golden_file") {
-    golden = board_kernel_cmdline_golden
-    current = "$root_build_dir/board_kernel_cmdline_args.txt"
-
-    # Error on changes.
-    warn_on_changes = false
-    deps = [ ":board_kernel_cmdline_args_txt" ]
-  }
-}
-
 zbi_input("fuchsia_kernel_cmdline") {
   type = "cmdline"
   args = []
   foreach(arg, kernel_cmdline_args + board_kernel_cmdline_args) {
     args += [ "--entry=$arg" ]
-  }
-  deps = []
-  if (product_kernel_cmdline_golden != "") {
-    deps += [ ":product_kernel_cmdline_golden_file" ]
-  }
-  if (board_kernel_cmdline_golden != "") {
-    deps += [ ":board_kernel_cmdline_golden_file" ]
   }
   sources = kernel_cmdline_files
 }
