@@ -28,9 +28,15 @@ namespace Internal {
 
 NetworkProvisioningServerImpl NetworkProvisioningServerImpl::sInstance;
 
-WEAVE_ERROR NetworkProvisioningServerImpl::_Init(void) { return WEAVE_NO_ERROR; }
+WEAVE_ERROR NetworkProvisioningServerImpl::_Init(void) {
+  return GenericNetworkProvisioningServerImpl<NetworkProvisioningServerImpl>::DoInit();
+}
 
-void NetworkProvisioningServerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {}
+void NetworkProvisioningServerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
+  // Propagate the event to the GenericNetworkProvisioningServerImpl<> base class so
+  // that it can take action on specific events.
+  GenericImplClass::_OnPlatformEvent(event);
+}
 
 WEAVE_ERROR NetworkProvisioningServerImpl::GetWiFiStationProvision(NetworkInfo& netInfo,
                                                                    bool includeCredentials) {

@@ -131,6 +131,14 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    // Initialize the Network Provisioning server.
+    err = NetworkProvisioningSvr().Init();
+    if (err != WEAVE_NO_ERROR)
+    {
+      FX_LOGS(ERROR) << "NetworkProvisioningServer init failed: " << ErrorStr(err);
+      return err;
+    }
+
     err = FabricProvisioningSvr().Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "FabricProvisioningServer init failed: " << ErrorStr(err);
