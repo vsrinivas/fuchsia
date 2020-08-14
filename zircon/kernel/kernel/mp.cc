@@ -298,7 +298,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
 
   Thread* thread = nullptr;
   auto cleanup_thread = fbl::MakeAutoCall([&thread, &leaked_thread, cpu_id]() {
-    // TODO(fxb/34447): Work around a race in thread cleanup by leaking the thread and stack
+    // TODO(fxbug.dev/34447): Work around a race in thread cleanup by leaking the thread and stack
     // structure. Since we're only using this while turning off the system currently, it's not a big
     // problem leaking the thread structure and stack.
     if (leaked_thread) {

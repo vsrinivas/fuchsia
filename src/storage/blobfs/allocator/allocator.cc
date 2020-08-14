@@ -72,7 +72,7 @@ zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
   storage::OwnedVmoid block_map_vmoid;
   storage::OwnedVmoid node_map_vmoid;
 
-  // TODO(fxb/49093): Change to use fit::result<OwnedVmo, zx_status_t>.
+  // TODO(fxbug.dev/49093): Change to use fit::result<OwnedVmo, zx_status_t>.
   status = space_manager_->BlockAttachVmo(block_map_.StorageUnsafe()->GetVmo(),
                                           &block_map_vmoid.GetReference(space_manager_));
   if (status != ZX_OK) {

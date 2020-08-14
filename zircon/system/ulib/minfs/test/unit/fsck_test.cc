@@ -154,7 +154,7 @@ TEST_F(ConsistencyCheckerFixtureVerbose, TwoInodesPointToABlock) {
   size_t file2_ino = file2_stat.inode % kMinfsInodesPerBlock;
 
   // The test code has hard dependency on filesystem layout.
-  // TODO(fxb/39741): Isolate this test from the on-disk format.
+  // TODO(fxbug.dev/39741): Isolate this test from the on-disk format.
   EXPECT_GT(inodes[file1_ino].dnum[0], 0);
   EXPECT_EQ(inodes[file2_ino].dnum[0], 0);
 

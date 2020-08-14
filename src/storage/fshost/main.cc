@@ -129,7 +129,7 @@ int RamctlWatcher(void* arg) {
 }
 
 // Setup the loader service to be used by all processes spawned by devmgr.
-// TODO(fxb/34633): this loader service is deprecated and should be deleted.
+// TODO(fxbug.dev/34633): this loader service is deprecated and should be deleted.
 loader_service_t* setup_loader_service() {
   loader_service_t* svc;
   zx_status_t status = loader_service_create_fs(nullptr, &svc);

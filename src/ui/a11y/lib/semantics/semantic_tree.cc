@@ -475,7 +475,7 @@ std::string SemanticTree::ToString() const {
   return tree_string;
 }
 
-// TODO(fxb/55220): Refine definition of describability.
+// TODO(fxbug.dev/55220): Refine definition of describability.
 bool SemanticTree::NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) const {
   return node &&
          ((node->has_attributes() && node->attributes().has_label() &&

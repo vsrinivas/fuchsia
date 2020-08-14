@@ -32,12 +32,12 @@ constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
 
 // For the moment we rely on this being < 1/3 of kStreamBufferSize.
 //
-// TODO(fxb/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
+// TODO(fxbug.dev/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 1 * 1024 * 1024;
 
 // For the moment we rely on this being > 3 * kStreamBufferSize.
 //
-// TODO(fxb/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
+// TODO(fxbug.dev/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
 constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
 
 }  // namespace

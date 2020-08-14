@@ -626,7 +626,7 @@ TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegion
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
 
-// TODO(fxb/57091)
+// TODO(fxbug.dev/57091)
 #if !defined(HAS_FEATURE_ASAN)
 TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 

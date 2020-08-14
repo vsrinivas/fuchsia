@@ -9,8 +9,8 @@
 namespace fio = ::llcpp::fuchsia::io;
 
 TEST_F(NamespaceTest, HasShellCommands) {
-  // TODO(fxb/37858): pkgfs/thinfs do not properly support hierarchical directory rights so the
-  // StrictRights test fails, switch to that once fixed
+  // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so
+  // the StrictRights test fails, switch to that once fixed
   ExpectExists("/bin");
   ExpectPathSupportsRights("/bin", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 }

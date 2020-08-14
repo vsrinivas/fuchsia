@@ -70,7 +70,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
   }
 
   Guard<Mutex> guard{get_lock()};
-  // TODO(fxb/56205): When the time has come to switch this over from a warning
+  // TODO(fxbug.dev/56205): When the time has come to switch this over from a warning
   // to enforcement, come back here and delete the #else half of this #ifdef.
 #if 0
   // User may not pin new memory if either our BTI has hit zero handles, or if
@@ -262,7 +262,7 @@ void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked(BtiPageLeak
       break;
   }
 
-  // TODO(fxb/56157): Make this an OOPS once the driver bugs are fixed.
+  // TODO(fxbug.dev/56157): Make this an OOPS once the driver bugs are fixed.
   printf("KERN: Bus Transaction Initiator (ID 0x%lx, name \"%s\") has leaked %" PRIu64
          " pages in %zu VMOs. Leak was caused by %s. The last handle was closed by process "
          "\"%s\", and thread \"%s\"\n",

@@ -103,7 +103,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     if (!args->power_states) {
-      // TODO(fxb/34081): Remove when all drivers declare power states
+      // TODO(fxbug.dev/34081): Remove when all drivers declare power states
       // Temporarily allocate working and non-working power states
       r = dev->SetPowerStates(internal::kDeviceDefaultPowerStates,
                               countof(internal::kDeviceDefaultPowerStates));

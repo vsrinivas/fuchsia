@@ -44,7 +44,7 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   // EINPROGRESS because a TCP handshake will never be performed (the test is
   // run without network configurations that make the remote routable).
   //
-  // TODO(fxb/46817): Set errno to the same value as linux when a remote is
+  // TODO(fxbug.dev/46817): Set errno to the same value as linux when a remote is
   // unroutable.
 #if defined(__linux__)
   ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
@@ -77,7 +77,7 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
   // EINPROGRESS because a TCP handshake will never be performed (the test is
   // run without network configurations that make the remote routable).
   //
-  // TODO(fxb/46817): Set errno to the same value as linux when a remote is
+  // TODO(fxbug.dev/46817): Set errno to the same value as linux when a remote is
   // unroutable.
 #if defined(__linux__)
   ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);

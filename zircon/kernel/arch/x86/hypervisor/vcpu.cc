@@ -993,7 +993,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // Spectre V2: Ensure that code executed in the VM guest cannot influence either
       // return address predictions or indirect branch prediction in the host.
       //
-      // TODO(fxb/33667): We may be able to avoid the IBPB here; the kernel is either
+      // TODO(fxbug.dev/33667): We may be able to avoid the IBPB here; the kernel is either
       // built with a retpoline or has Enhanced IBRS enabled. We currently execute an
       // IBPB on context-switch to a new aspace. The IBPB is currently only here to
       // protect hypervisor user threads.

@@ -57,8 +57,8 @@ void NamespaceTest::ExpectDoesNotExist(const char* path) {
   EXPECT_FALSE(Exists(path)) << "Unexpectedly found " << path;
 }
 
-// TODO(fxb/37419): Once fuchsia.io/Node supports GetFlags, we should update this test utility to
-// use that instead of just testing rights through a Directory.Open
+// TODO(fxbug.dev/37419): Once fuchsia.io/Node supports GetFlags, we should update this test utility
+// to use that instead of just testing rights through a Directory.Open
 void NamespaceTest::ExpectPathSupportsRights(const char* path, uint32_t rights) {
   ASSERT_FALSE(rights & ~kKnownFsRights) << "Unsupported rights in ExpectPathSupportsRights call";
 
@@ -68,8 +68,8 @@ void NamespaceTest::ExpectPathSupportsRights(const char* path, uint32_t rights) 
   EXPECT_GE(fd.get(), 0);
 }
 
-// TODO(fxb/37419): Once fuchsia.io/Node supports GetFlags, we should update this test utility to
-// use that instead of just testing rights through a Directory.Open
+// TODO(fxbug.dev/37419): Once fuchsia.io/Node supports GetFlags, we should update this test utility
+// to use that instead of just testing rights through a Directory.Open
 void NamespaceTest::ExpectPathSupportsStrictRights(const char* path, uint32_t rights,
                                                    bool require_access_denied) {
   ExpectPathSupportsRights(path, rights);

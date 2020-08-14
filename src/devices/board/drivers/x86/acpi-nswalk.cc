@@ -545,7 +545,7 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
   // we go, and publishing any static metadata we need to publish before
   // publishing any devices.
   //
-  // TODO(fxb/56832): Remove this pass when we have a better way to manage
+  // TODO(fxbug.dev/56832): Remove this pass when we have a better way to manage
   // driver dependencies on ACPI.  Once drivers can access their metadata
   // directly via a connection to the ACPI driver, we will not need to bother
   // with publishing static metadata before we publish devices.
@@ -586,7 +586,7 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
         // device driver can access it when the PCI device itself is finally
         // published.
         //
-        // TODO(fxb/56832): Remove this when we have a better way to manage driver
+        // TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
         // dependencies on ACPI.
         constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
         constexpr uint32_t kI2Cx_Id = make_fourcc('I', '2', 'C', 0);

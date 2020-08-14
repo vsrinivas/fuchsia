@@ -303,7 +303,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
     }
 
     // This is expected in test environments where driver_manager has terminated.
-    // TODO(fxb/52627): Support graceful termination.
+    // TODO(fxbug.dev/52627): Support graceful termination.
     LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
     exit(1);
   }

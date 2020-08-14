@@ -401,8 +401,8 @@ zx_status_t BlockDeviceInterface::Add() {
       return AttachDriver(kMBRDriverPath);
     }
     case DISK_FORMAT_BLOCK_VERITY: {
-      // TODO(fxb/55936): this should launch a thread to call OpenForVerifiedRead when the verity
-      // device is available. It should only launch that thread if we are not in FCT mode.
+      // TODO(fxbug.dev/55936): this should launch a thread to call OpenForVerifiedRead when the
+      // verity device is available. It should only launch that thread if we are not in FCT mode.
       return AttachDriver(kBlockVerityDriverPath);
     }
     case DISK_FORMAT_ZXCRYPT: {

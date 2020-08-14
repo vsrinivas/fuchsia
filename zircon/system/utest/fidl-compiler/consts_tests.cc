@@ -246,7 +246,7 @@ const string:5 d = c;
   ASSERT_TRUE(library.Compile());
 }
 
-// TODO(fxb/37314): Both declarations should have the same type.
+// TODO(fxbug.dev/37314): Both declarations should have the same type.
 TEST(ConstsTests, GoodConstTestStringShouldHaveInferredBounds) {
   TestLibrary library(R"FIDL(
 library example;

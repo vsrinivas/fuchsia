@@ -302,7 +302,7 @@ TEST(MinfsInspector, WriteSuperblock) {
   EXPECT_EQ(reload_sb.version_minor, kMinfsMinorVersion);
 }
 
-// TODO(fxb/46821): Implement these tests once we have a fake block device
+// TODO(fxbug.dev/46821): Implement these tests once we have a fake block device
 // that can send proper error codes when bad operations are passed in.
 // Currently if we send a read beyond device command, the block device
 // itself will fail some test checks leading to this case being impossible to

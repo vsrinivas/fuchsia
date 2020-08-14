@@ -58,7 +58,7 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
              kReservedAnnotationNamespaces.end()) {
     FX_LOGS(WARNING) << fxl::StringPrintf(
         "Ignoring non-platform annotations, %s is a reserved namespace", data.namespace_().c_str());
-    // TODO(fxb/48664): close connection with ZX_ERR_INVALID_ARGS instead.
+    // TODO(fxbug.dev/48664): close connection with ZX_ERR_INVALID_ARGS instead.
     callback();
     return;
   } else {
@@ -72,7 +72,7 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
 
   UpdateJson(namespace_, namespaced_annotations_[namespace_]);
 
-  // TODO(fxb/48666): close all connections if false.
+  // TODO(fxbug.dev/48666): close all connections if false.
   datastore_->TrySetNonPlatformAnnotations(Flatten(namespaced_annotations_));
 
   callback();

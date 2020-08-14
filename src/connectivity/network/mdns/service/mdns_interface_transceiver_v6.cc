@@ -76,7 +76,7 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      // TODO(fxb/41357): remove the bug reference when the bug is fixed.
+      // TODO(fxbug.dev/41357): remove the bug reference when the bug is fixed.
       FX_LOGS(WARNING)
           << "fxb/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
@@ -110,7 +110,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_HOPLIMIT, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      // TODO(fxb/41358): remove the bug reference when the bug is fixed.
+      // TODO(fxbug.dev/41358): remove the bug reference when the bug is fixed.
       FX_LOGS(WARNING) << "fxb/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {

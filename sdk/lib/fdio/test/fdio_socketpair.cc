@@ -25,7 +25,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-// TODO(fxb/44390): Remove once parameterized tests are supported.
+// TODO(fxbug.dev/44390): Remove once parameterized tests are supported.
 // This macro is a cheap workaround, as each test must be uniquely named
 // and it's best to have each test exercise a single use case.
 #define TEST_P(TestCase, Test)                        \

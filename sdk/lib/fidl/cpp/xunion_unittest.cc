@@ -49,7 +49,7 @@ TEST(XUnion, FlexibleXUnionWithUnknownData) {
   EXPECT_EQ(*xu.UnknownData(),
             std::vector<uint8_t>(input.cbegin() + sizeof(fidl_xunion_t), input.cend()));
 
-  // TODO(fxb/7847): Decide how unions with unknown data should be re-encoded
+  // TODO(fxbug.dev/7847): Decide how unions with unknown data should be re-encoded
   // The union itself is re-encoded as an empty union
   std::vector<uint8_t> empty_union = {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal

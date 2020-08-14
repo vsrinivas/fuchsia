@@ -63,7 +63,7 @@ volatile pt_entry_t pdp_high[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
 #if __has_feature(address_sanitizer)
 volatile pt_entry_t kasan_shadow_pt[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);  // Leaf page tables
 volatile pt_entry_t kasan_shadow_pd[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);  // Page directories
-// TODO(fxb/30033): Share this with the vm::zero_page
+// TODO(fxbug.dev/30033): Share this with the vm::zero_page
 volatile uint8_t kasan_zero_page[PAGE_SIZE] __ALIGNED(PAGE_SIZE);
 #endif
 

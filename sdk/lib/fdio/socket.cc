@@ -608,7 +608,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
     zx_status_t channel_status = base_close(zs->client.channel());
-    // TODO(fxb/45407): When the syscall to detach a handle from its object is added,
+    // TODO(fxbug.dev/45407): When the syscall to detach a handle from its object is added,
     // we should use that to mark the handle as detached, instead of closing
     // the handle with risks of race behavior.
     zs->event.reset();

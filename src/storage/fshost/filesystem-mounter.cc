@@ -22,7 +22,7 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
   return launcher.Launch(*zx::job::default_job(), argv[0], argv, nullptr, -1,
-                         /* TODO(fxb/32044) */ zx::resource(), hnd, ids, len, nullptr, fs_flags);
+                         /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr, fs_flags);
 }
 
 zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const char* binary,
@@ -155,7 +155,7 @@ void FilesystemMounter::TryMountPkgfs() {
   //   could launch and query for it later, this synchronization point means that
   //   subsequent clients will no longer need to query.
   //
-  // TODO(fxb/38621): In the future, this mechanism may be replaced with a feed-forward
+  // TODO(fxbug.dev/38621): In the future, this mechanism may be replaced with a feed-forward
   // design to the mounted filesystems.
   if (!pkgfs_mounted_ && blob_mounted_ && (data_mounted_ || !WaitForData())) {
     LaunchPkgfs(this);

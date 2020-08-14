@@ -375,8 +375,8 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
   // Check that the actual time waited was close to the expectation.
   const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 
-  // TODO(fxb/40135) Only the lower bound of the elapsed time is checked. The upper bound check is
-  // ignored as the syscall could far miss the defined deadline to return.
+  // TODO(fxbug.dev/40135): Only the lower bound of the elapsed time is checked. The upper bound
+  // check is ignored as the syscall could far miss the defined deadline to return.
   EXPECT_GT(elapsed, timeout - margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
             elapsed_ms.count(), margin.count(), std::chrono::milliseconds(timeout).count());
 

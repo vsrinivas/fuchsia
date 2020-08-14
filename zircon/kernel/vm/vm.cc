@@ -160,7 +160,7 @@ void vm_init() {
 #if defined(__aarch64__)
   physmap_protect_non_arena_regions();
 #elif defined(__x86_64__)
-  // TODO(fxb/48018): Call this on x64.  On x64, we access some non-arena parts of the physmap
+  // TODO(fxbug.dev/48018): Call this on x64.  On x64, we access some non-arena parts of the physmap
   // (e.g. for smbios) so we can't change their protection.  Track down and remove these
   // dependencies so we can unify the arm64 and x64 paths.
 #else

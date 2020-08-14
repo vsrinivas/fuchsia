@@ -90,7 +90,7 @@ TEST(LlcppTransaction, concurrent_access_asserts) {
   Completer completer(&txn);
   std::thread t([&] { completer.Reply(1); });
   sync_completion_wait(&wait, ZX_TIME_INFINITE);
-  // TODO(fxb/54499) Hide assertion failed messages from output - they are confusing.
+  // TODO(fxbug.dev/54499): Hide assertion failed messages from output - they are confusing.
   ASSERT_DEATH([&] { completer.Reply(1); }, "concurrent access should crash");
   ASSERT_DEATH([&] { completer.Close(ZX_OK); }, "concurrent access should crash");
   ASSERT_DEATH([&] { completer.EnableNextDispatch(); }, "concurrent access should crash");

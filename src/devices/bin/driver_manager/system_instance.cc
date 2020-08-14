@@ -165,7 +165,7 @@ zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
     LOGF(ERROR, "Failed to create svc_job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
+  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
   // this job is created from the root job. The processes spawned under this job will eventually
   // move out of driver_manager into their own components.
   static const zx_policy_basic_v2_t policy[] = {
@@ -195,7 +195,7 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
     LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
+  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
   // this job is created from the root job. The driver_host job should move to being created from
   // something other than the root job. (Although note that it can't simply be created from
   // driver_manager's own job, because that has timer slack job policy automatically applied by the

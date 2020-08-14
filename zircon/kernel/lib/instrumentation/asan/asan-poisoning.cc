@@ -65,7 +65,7 @@ void print_error_shadow(uintptr_t address, size_t bytes, void* caller, uintptr_t
   bool caret = false;
   size_t caret_ind = 0;
   for (size_t i = 0; i < 5; i++) {
-    // TODO(fxb/51170): When kernel printf properly supports #, switch.
+    // TODO(fxbug.dev/51170): When kernel printf properly supports #, switch.
     printf("0x%016lx:", start_addr);
     for (size_t j = 0; j < 8; j++) {
       printf(" 0x%02hhx", reinterpret_cast<uint8_t*>(start_addr)[j]);

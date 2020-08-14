@@ -34,7 +34,7 @@ grpc::Status DockyardServiceImpl::SendInspectJson(
   while (stream->Read(&inspect)) {
     GT_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
                  << inspect.dockyard_id() << ": " << inspect.json();
-    // TODO(fxb/43): interpret the data.
+    // TODO(fxbug.dev/43): interpret the data.
   }
   return grpc::Status::OK;
 }

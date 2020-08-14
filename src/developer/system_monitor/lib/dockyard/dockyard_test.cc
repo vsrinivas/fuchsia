@@ -71,7 +71,7 @@ class SystemMonitorDockyardTest : public ::testing::Test {
     return !!dockyard_.grpc_server_ && dockyard_.server_thread_.joinable();
   }
 
-  // TODO(fxb/37317): add further tests for paths.
+  // TODO(fxbug.dev/37317): add further tests for paths.
   void TestPathsCallback(const std::vector<PathInfo>& add,
                          const std::vector<uint32_t>& remove) {}
 

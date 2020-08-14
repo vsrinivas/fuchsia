@@ -772,7 +772,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {
-    // TODO(fxb/42174): If blobfs initialization failed, it is possible that the
+    // TODO(fxbug.dev/42174): If blobfs initialization failed, it is possible that the
     // info_mapping_ vmo that we use to send writes to the underlying block device
     // has not been initialized yet. Change Blobfs::Create ordering to try and get
     // the object into a valid state as soon as possible and reassess what is needed

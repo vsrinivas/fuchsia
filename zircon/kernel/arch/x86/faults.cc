@@ -523,7 +523,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
                                     zx_exception_report_t* report) {
   zx_exception_context_t* zx_context = &report->context;
 
-  // TODO(fxb/30521): |frame| will be nullptr for synthetic exceptions that
+  // TODO(fxbug.dev/30521): |frame| will be nullptr for synthetic exceptions that
   // don't provide general register values yet.
   if (arch_context->frame) {
     zx_context->arch.u.x86_64.vector = arch_context->frame->vector;
@@ -539,7 +539,8 @@ zx_status_t arch_dispatch_user_policy_exception(void) {
 
 bool arch_install_exception_context(Thread* thread, const arch_exception_context_t* context) {
   if (!context->frame) {
-    // TODO(fxb/30521): Must be a synthetic exception as they don't (yet) provide the registers.
+    // TODO(fxbug.dev/30521): Must be a synthetic exception as they don't (yet) provide the
+    // registers.
     return false;
   }
 

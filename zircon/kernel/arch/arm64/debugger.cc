@@ -32,7 +32,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
-  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
+  // TODO(fxbug.dev/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -57,7 +57,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
-  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
+  // TODO(fxbug.dev/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -82,7 +82,7 @@ zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* 
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
-  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
+  // TODO(fxbug.dev/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -105,7 +105,7 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   // Punt if registers aren't available. E.g.,
-  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
+  // TODO(fxbug.dev/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch().suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -221,7 +221,7 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
   // If the suspended registers are not there, we cannot save the MDSCR values for this thread,
   // meaning that the debug HW state will be cleared almost immediatelly.
   // This should always be there.
-  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
+  // TODO(fxbug.dev/30521): Registers aren't available in synthetic exceptions.
   if (!thread->arch().suspended_general_regs) {
     return ZX_ERR_NOT_SUPPORTED;
   }

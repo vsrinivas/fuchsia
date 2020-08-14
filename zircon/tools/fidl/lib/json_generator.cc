@@ -181,7 +181,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
       case flat::Type::Kind::kRequestHandle: {
         auto type = static_cast<const flat::RequestHandleType*>(value);
         GenerateObjectMember("subtype", type->protocol_type->name);
-        // TODO(fxb/43803) Add required and optional rights.
+        // TODO(fxbug.dev/43803): Add required and optional rights.
         GenerateObjectMember("nullable", type->nullability);
         break;
       }

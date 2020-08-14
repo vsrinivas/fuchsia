@@ -548,11 +548,11 @@ zx_status_t Coordinator::AddDevice(
     return ZX_ERR_NO_MEMORY;
   }
 
-  // TODO(fxb/43370): remove this check once init tasks can be enabled for all devices.
+  // TODO(fxbug.dev/43370): remove this check once init tasks can be enabled for all devices.
   bool want_init_task = has_init || always_init;
   // We use the legacy invisible / device_make_visible behavior if the device is added
   // as invisible and the device has not implemented the init hook.
-  // TODO(fxb/43261): remove |has_init| once device_make_visible() is deprecated.
+  // TODO(fxbug.dev/43261): remove |has_init| once device_make_visible() is deprecated.
   bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
   zx_status_t status =
@@ -587,7 +587,7 @@ zx_status_t Coordinator::AddDevice(
   }
 
   VLOGF(1, "Added device %p '%s'", dev.get(), dev->name().data());
-  // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
+  // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
   if (!invisible && !want_init_task) {
     status = dev->SignalReadyForBind();
     if (status != ZX_OK) {
@@ -1732,7 +1732,7 @@ void Coordinator::BindDrivers() {
 
 void Coordinator::UseFallbackDrivers() { drivers_.splice(drivers_.end(), fallback_drivers_); }
 
-// TODO(fxb/42257): Temporary helper to convert state to flags.
+// TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
 // Will be removed eventually.
 uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
     power_fidl::statecontrol::SystemPowerState state) {

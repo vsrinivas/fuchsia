@@ -28,6 +28,6 @@ void arm64_uarch_do_spectre_v2_mitigation() {
   // path speculation may leak secrets via cache side channels.
   //
   // Invalidate indirect branch predictors to guard the kernel by executing a PSCI call
-  // TODO(fxb/33667): Use SMCCC ARCH_WORKAROUND and v1.1 calling convention if available.
+  // TODO(fxbug.dev/33667): Use SMCCC ARCH_WORKAROUND and v1.1 calling convention if available.
   psci_get_version();
 }

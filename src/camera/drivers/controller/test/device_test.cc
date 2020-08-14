@@ -52,7 +52,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
   }
 
   static void WaitForChannelClosure(const zx::channel& channel) {
-    // TODO(fxb/38554): allow unidirectional message processing
+    // TODO(fxbug.dev/38554): allow unidirectional message processing
     // Currently, running a loop associated with fidl::InterfacePtr handles both inbound and
     // outbound messages. Depending on how quickly the server handles such requests, the
     // channel may or may not be closed by the time a single call to RunUntilIdle returns.

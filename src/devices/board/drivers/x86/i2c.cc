@@ -61,7 +61,7 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
         // If we have a CID, and it matches the I2C HID CID, then add the
         // I2C HID class to our devprops if we can.
         //
-        // TODO(fxb/56832): This is a very focused hack to support binding to I2C
+        // TODO(fxbug.dev/56832): This is a very focused hack to support binding to I2C
         // HID Touch controllers on some older hardware.  Once the bug has been
         // resolved, driver clients will be able to access their relevant ACPI info
         // on their own and all of this can go away.

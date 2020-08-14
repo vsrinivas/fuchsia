@@ -31,9 +31,9 @@ void Cbuf::Initialize(size_t len, void* buf) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("len %zu, len_pow2 %u\n", len, len_pow2_);
 }
 
-// TODO(fxb/48878) We want to revisit the Cbuf API. It's intended to be used from interrupt context,
-// at which time clients can rely on being the only accessor. For now, we disable thread safety
-// analysis on this function.
+// TODO(fxbug.dev/48878): We want to revisit the Cbuf API. It's intended to be used from interrupt
+// context, at which time clients can rely on being the only accessor. For now, we disable thread
+// safety analysis on this function.
 bool Cbuf::Full() const TA_NO_THREAD_SAFETY_ANALYSIS {
   uint32_t consumed = modpow2(head_ - tail_, len_pow2_);
   size_t avail = valpow2(len_pow2_) - consumed - 1;

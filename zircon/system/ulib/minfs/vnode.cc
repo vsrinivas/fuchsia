@@ -138,7 +138,7 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
 //
-// TODO(fxb/51589): Add init metrics.
+// TODO(fxbug.dev/51589): Add init metrics.
 zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
   if (vmo_.is_valid()) {
     return ZX_OK;

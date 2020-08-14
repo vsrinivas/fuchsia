@@ -484,7 +484,7 @@ zx_status_t H264MultiDecoderV1::InitializeHardware() {
   DebugReg1::Get().FromValue(0).WriteTo(owner_->dosbus());
   DebugReg2::Get().FromValue(0).WriteTo(owner_->dosbus());
   H264DecodeInfo::Get().FromValue(1 << 13).WriteTo(owner_->dosbus());
-  // TODO(fxb/13483): Use real values.
+  // TODO(fxbug.dev/13483): Use real values.
   constexpr uint32_t kBytesToDecode = 100000;
   H264DecodeSizeReg::Get().FromValue(kBytesToDecode).WriteTo(owner_->dosbus());
   ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
@@ -499,7 +499,7 @@ zx_status_t H264MultiDecoderV1::InitializeHardware() {
   InitFlagReg::Get().FromValue(have_initialized_).WriteTo(owner_->dosbus());
   have_initialized_ = true;
 
-  // TODO(fxb/13483): Set to 1 when SEI is supported.
+  // TODO(fxbug.dev/13483): Set to 1 when SEI is supported.
   NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
   state_ = DecoderState::kInitialWaitingForInput;
   return ZX_OK;
@@ -512,7 +512,7 @@ void H264MultiDecoderV1::StartFrameDecode() {
 
   // For now, just use the decode size from InitializeHardware.
   if (state_ == DecoderState::kInitialWaitingForInput) {
-    // TODO(fxb/13483): Use real value.
+    // TODO(fxbug.dev/13483): Use real value.
     constexpr uint32_t kBytesToDecode = 100000;
     ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
     owner_->core()->StartDecoding();
@@ -825,7 +825,7 @@ void H264MultiDecoderV1::DumpStatus() {
 void H264MultiDecoderV1::HandlePicDataDone() {
   ZX_DEBUG_ASSERT(current_frame_);
   owner_->watchdog()->Cancel();
-  // TODO(fxb/13483): Get PTS
+  // TODO(fxbug.dev/13483): Get PTS
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
 
@@ -1098,8 +1098,8 @@ bool H264MultiDecoderV1::CanBeSwappedIn() {
   // then be swapped out (if necessary). Similarly, if there isn't enough data for a complete frame
   // it will be swapped in, will put what data exists in the stream buffer, then hit
   // kRanOutOfStreamData before trying to decode any of it.
-  // TODO(fxb/13483): Wait for all requirements before swapping in the hardware to avoid unnecessary
-  // changes.
+  // TODO(fxbug.dev/13483): Wait for all requirements before swapping in the hardware to avoid
+  // unnecessary changes.
   return current_decoder_buffer_ || frame_data_provider_->HasMoreInputData();
 }
 

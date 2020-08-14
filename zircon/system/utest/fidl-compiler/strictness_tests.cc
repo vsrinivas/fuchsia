@@ -26,7 +26,7 @@ void invalid_strictness(const std::string& type, const std::string& definition) 
 }
 
 void redundant_strictness(const std::string& strictness, const std::string& definition) {
-  // TODO(fxb/7847): Prepending a redundant "strict" qualifier is currently
+  // TODO(fxbug.dev/7847): Prepending a redundant "strict" qualifier is currently
   // allowed for bits, enums and unions to more easily transition those FIDL
   // types to be flexible by default. This test should be updated and re-enabled
   // when that's done.

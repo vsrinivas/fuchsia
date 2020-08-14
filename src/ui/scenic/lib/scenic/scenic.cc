@@ -146,8 +146,8 @@ void Scenic::CreateSessionImmediately(
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
-    // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
@@ -158,8 +158,8 @@ void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback 
 
 void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
-    // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
@@ -171,8 +171,8 @@ void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback 
 void Scenic::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
-    // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
+    // TODO(fxbug.dev/23686): This code assumes that, once all systems have been initialized, that
+    // there will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.

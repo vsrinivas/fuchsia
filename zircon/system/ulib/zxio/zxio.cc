@@ -37,7 +37,7 @@ typedef struct zxio_internal {
 
   // When true, operations on this object must error with |ZX_ERR_BAD_HANDLE|.
   //
-  // TODO(fxb/45407): This is a stop-gap solution until we have handle detaching support.
+  // TODO(fxbug.dev/45407): This is a stop-gap solution until we have handle detaching support.
   // When handles could be detached in a zxio_close implementation, future calls on that
   // handle will directly fail, so it is cleaner to encode the alive-ness of a zxio
   // object on the handles, rather than keeping track of an extra state here.

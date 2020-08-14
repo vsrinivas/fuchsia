@@ -58,9 +58,9 @@ zx_status_t fdio_zxio_close(fdio_t* io) {
   return zxio_close(z);
 }
 
-// TODO(fxb/45813): This is mainly used by pipes. Consider merging this with the
+// TODO(fxbug.dev/45813): This is mainly used by pipes. Consider merging this with the
 // POSIX-to-zxio signal translation in |fdio_zxio_remote_wait_begin|.
-// TODO(fxb/47132): Do not change the signal mapping here and in |fdio_zxio_wait_end|
+// TODO(fxbug.dev/47132): Do not change the signal mapping here and in |fdio_zxio_wait_end|
 // until linked issue is resolved.
 static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_handle,
                                  zx_signals_t* out_signals) {

@@ -69,7 +69,7 @@ class TestHarnessLauncherTest : public gtest::RealLoopFixture {
 };
 
 // Test that the TestHarnessLauncher is able to launch modular_test_harness.cmx.
-// TODO(fxb/37263): re-enable once flake is resolved.
+// TODO(fxbug.dev/37263): re-enable once flake is resolved.
 TEST_F(TestHarnessLauncherTest, CanLaunchTestHarness) {
   modular_testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
   RunLoopUntil([this] { return is_running(); });

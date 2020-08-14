@@ -71,8 +71,8 @@ void WriteValueToRecordWithKey(::fuchsia::diagnostics::stream::Record* record,
   } else if (auto int_value = value.int_value()) {
     message.value.WithSignedInt(int64_t(*int_value));
   } else {
-    // TODO(57571): LogValue also supports lists and nested objects, which Record doesn't. It does
-    // NOT support unsigned values, or floats, which Record does.
+    // TODO(fxbug.dev/57571): LogValue also supports lists and nested objects, which Record doesn't.
+    // It does NOT support unsigned values, or floats, which Record does.
     message.value.WithText(value.ToString());
   }
 }
@@ -170,7 +170,7 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
     tag_arg.value.WithText(tag);
   }
 
-  // TODO(56051): Enable this everywhere once doing so won't spam everything.
+  // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
   if (severity >= syslog::LOG_ERROR) {
     auto& file = record.arguments.emplace_back();
     file.name = kFileFieldName;

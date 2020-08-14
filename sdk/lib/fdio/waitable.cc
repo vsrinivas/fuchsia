@@ -38,7 +38,7 @@ static zx_status_t fdio_waitable_destroy(zxio_t* io) {
 }
 
 static zx_status_t fdio_waitable_close(zxio_t* io) {
-  // TODO(fxb/45407): When the syscall to detach a handle from its object is added,
+  // TODO(fxbug.dev/45407): When the syscall to detach a handle from its object is added,
   // we should use that to mark the handle as detached, instead of closing
   // the handle with risks of race behavior.
   return ZX_OK;

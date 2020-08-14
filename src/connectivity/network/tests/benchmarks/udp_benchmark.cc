@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   // Wait for tracing to get set up.  Without this, the tracing system can miss
   // some of the initial tracing events we generate later.
   //
-  // TODO(fxb/22911): Replace this sleep with single function that will start
+  // TODO(fxbug.dev/22911): Replace this sleep with single function that will start
   // a TraceProvider in a non-racy way.
   zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
 

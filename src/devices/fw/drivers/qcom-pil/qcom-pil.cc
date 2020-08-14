@@ -56,7 +56,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   metadata.read(phdrs.data(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
 
   // Copy metadata to the intended physical address.
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
   status = zx_vmo_read(metadata.get(), (void*)mmios_[fw_n]->get(), 0,
                        ZX_ROUNDUP(metadata_size, PAGE_SIZE));
   if (status != ZX_OK) {

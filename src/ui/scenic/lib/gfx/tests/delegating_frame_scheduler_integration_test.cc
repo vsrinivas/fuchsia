@@ -41,7 +41,7 @@ TestSession CreateTestSession(std::shared_ptr<EventReporter> event_reporter,
 // Test that if FrameScheduler is set _after_ a call to Session::ScheduleUpdateForPresent,
 // that the FrameScheduler will still get a call to FrameScheduler::ScheduleUpdateForSession.
 //
-// TODO(fxb/42536): Revamp this test when FrameScheduler is moved into Scenic::Session.
+// TODO(fxbug.dev/42536): Revamp this test when FrameScheduler is moved into Scenic::Session.
 TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration1) {
   TestSession session = CreateTestSession(shared_event_reporter(), shared_error_reporter());
 

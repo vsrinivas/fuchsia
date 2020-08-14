@@ -366,7 +366,7 @@ TEST(Bti, DecommitRace) {
   thread.join();
 }
 
-// TODO(fxb/56205): Re-enable this test when enforcement of the "no pinning
+// TODO(fxbug.dev/56205): Re-enable this test when enforcement of the "no pinning
 // while there are quarantined pages" rule has been turned on in the kernel.
 #if 0
 TEST(Bti, QuarantineDisallowsPin) {

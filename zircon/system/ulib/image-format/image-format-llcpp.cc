@@ -18,7 +18,7 @@ fuchsia_sysmem_ImageFormatConstraints GetCConstraints(
                 "Not trivially copyable");
   static_assert(sizeof(c) == sizeof(cpp), "LLCPP and C image format constraints don't match");
   // Hacky copy that should work for now.
-  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  // TODO(fxbug.dev/37078): Switch away from C bindings everywhere.
   memcpy(&c, &cpp, sizeof(c));
   return c;
 }
@@ -30,7 +30,7 @@ llcpp::fuchsia::sysmem::PixelFormat GetCppPixelFormat(const fuchsia_sysmem_Pixel
                 "Not trivially copyable");
   // Hacky copy that should work for now. We need the static_cast because sysmem::PixelFormat is a
   // non-trivial class and otherwise GCC complains.
-  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  // TODO(fxbug.dev/37078): Switch away from C bindings everywhere.
   memcpy(static_cast<void*>(&cpp), &c, sizeof(c));
   return cpp;
 }
@@ -41,7 +41,7 @@ fuchsia_sysmem_PixelFormat GetCPixelFormat(const llcpp::fuchsia::sysmem::PixelFo
                 "Not trivially copyable");
   static_assert(sizeof(c) == sizeof(cpp), "LLCPP and C pixel format don't match");
   // Hacky copy that should work for now.
-  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  // TODO(fxbug.dev/37078): Switch away from C bindings everywhere.
   memcpy(&c, &cpp, sizeof(c));
   return c;
 }
@@ -53,7 +53,7 @@ llcpp::fuchsia::sysmem::ImageFormat_2 GetCppImageFormat(const fuchsia_sysmem_Ima
                 "Not trivially copyable");
   // Hacky copy that should work for now. We need the static_cast because sysmem::PixelFormat is a
   // non-trivial class and otherwise GCC complains.
-  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  // TODO(fxbug.dev/37078): Switch away from C bindings everywhere.
   memcpy(static_cast<void*>(&cpp), &c, sizeof(c));
   return cpp;
 }
@@ -64,7 +64,7 @@ fuchsia_sysmem_ImageFormat_2 GetCImageFormat(const llcpp::fuchsia::sysmem::Image
                 "Not trivially copyable");
   static_assert(sizeof(c) == sizeof(cpp), "LLCPP and C image formats don't match");
   // Hacky copy that should work for now.
-  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  // TODO(fxbug.dev/37078): Switch away from C bindings everywhere.
   memcpy(&c, &cpp, sizeof(c));
   return c;
 }

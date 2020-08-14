@@ -85,7 +85,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(
 
 DockyardProxyStatus DockyardProxyGrpc::SendSample(
     const std::string& dockyard_path, uint64_t value) {
-  // TODO(fxb/35): system_clock might be at usec resolution. Consider
+  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -101,7 +101,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSample(
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList& list) {
-  // TODO(fxb/35): system_clock might be at usec resolution. Consider
+  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -121,7 +121,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList& list) {
 
 DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
     const StringSampleList& list) {
-  // TODO(fxb/35): system_clock might be at usec resolution. Consider
+  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -150,7 +150,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
 
 DockyardProxyStatus DockyardProxyGrpc::SendSamples(
     const SampleList& int_samples, const StringSampleList& string_samples) {
-  // TODO(fxb/35): system_clock might be at usec resolution. Consider
+  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(

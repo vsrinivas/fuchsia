@@ -217,7 +217,7 @@ void MdnsServiceImpl::PublishServiceInstance(
     return;
   }
 
-  // TODO(fxb/56579): Review this approach to conflicts.
+  // TODO(fxbug.dev/56579): Review this approach to conflicts.
   std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
 
   // If there's an existing publisher for this full name, destroy it so the new publication

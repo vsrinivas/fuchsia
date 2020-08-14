@@ -340,7 +340,7 @@ int MsdVsiDevice::DeviceThreadLoop() {
       default:
         MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
         DASSERT(false);
-        // TODO(fxb/44475): handle wait errors.
+        // TODO(fxbug.dev/44475): handle wait errors.
     }
 
     while (true) {
@@ -1115,7 +1115,7 @@ std::unique_ptr<MsdVsiConnection> MsdVsiDevice::Open(msd_client_id_t client_id) 
 
 magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_identity) {
   if (device_id() != 0x8000) {
-    // TODO(fxb/37962): Read hardcoded values from features database instead.
+    // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }
   memset(out_identity, 0, sizeof(*out_identity));
@@ -1143,7 +1143,7 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
 
 magma_status_t MsdVsiDevice::ChipOption(magma_vsi_vip_chip_option* out_option) {
   if (device_id() != 0x8000) {
-    // TODO(fxb/37962): Read hardcoded values from features database instead.
+    // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }
   memset(out_option, 0, sizeof(*out_option));

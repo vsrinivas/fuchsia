@@ -287,7 +287,7 @@ void MtdRsTest::BlockWriteLimitsTest() {
 }
 
 // Register All Tests
-// TODO(fxb/44390): Convert to parameterized tests instead of custom macro
+// TODO(fxbug.dev/44390): Convert to parameterized tests instead of custom macro
 
 TEST_F(MtdRsTest, NandReadWriteTest) {
   is_nand_ = true;

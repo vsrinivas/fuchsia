@@ -25,9 +25,9 @@
 #include "util.h"
 #include "watchdog.h"
 
-// TODO(fxb/13483): Currently there's one frame of latency imposed by the need for another NALU
-// after the last byte of a frame for that frame to generate a pic data done interrupt.  A client
-// can mitigate this by queueing an access unit delimeter NALU after each input frame's slice
+// TODO(fxbug.dev/13483): Currently there's one frame of latency imposed by the need for another
+// NALU after the last byte of a frame for that frame to generate a pic data done interrupt.  A
+// client can mitigate this by queueing an access unit delimeter NALU after each input frame's slice
 // NALU(s), but we should consider paying attention to access unit flags on the packet so that a
 // client delivering complete frames and never putting data from more than one frame in a single
 // packet can set the flag on the last packet of a frame and not see 1 frame latency.  The argument
@@ -600,7 +600,7 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   InitFlagReg::Get().FromValue(have_initialized_).WriteTo(owner_->dosbus());
   have_initialized_ = true;
 
-  // TODO(fxb/13483): Set to 1 when SEI is supported.
+  // TODO(fxbug.dev/13483): Set to 1 when SEI is supported.
   NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   state_ = DecoderState::kWaitingForInputOrOutput;
@@ -819,7 +819,7 @@ void H264MultiDecoder::ConfigureDpb() {
     ZX_DEBUG_ASSERT(frames_to_output_.empty());
     video_frames_.clear();
 
-    // TODO(fxb/13483): Reset initial I frame tracking if FW doesn't do that itself.
+    // TODO(fxbug.dev/13483): Reset initial I frame tracking if FW doesn't do that itself.
 
     // This is doing the same thing as the amlogic code, but it's unlikely to matter.  This has
     // basically nothing to do with the DPB size, and is just round-tripping a number back to the HW
@@ -937,7 +937,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   // Any "not avaialable from FW" comments below should be read as "not obviously avaialble from
   // FW, but maybe?".
   //
-  // TODO(fxb/13483): Test with multi-slice pictures.
+  // TODO(fxbug.dev/13483): Test with multi-slice pictures.
 
   // SPS
   //
@@ -1451,7 +1451,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // the input stream is broken (seen during fuzzing of the input stream).  For now we just fail
     // when broken input data is detected.
     //
-    // TODO(fxb/13483): Be more resilient to broken input data.
+    // TODO(fxbug.dev/13483): Be more resilient to broken input data.
     LOG(ERROR, "frame_num_ && frame_num_.value() != frame_num");
     OnFatalError();
     return;
@@ -1800,8 +1800,8 @@ void H264MultiDecoder::HandlePicDataDone() {
   // than other paths which save the state while !is_hw_active_ && is_decoder_started_, then
   // StopDecoding().  IDK if saving before StopDecoding() in this path would work.
   //
-  // TODO(fxb/13483): Check if flipping the order here helps with the decode output flake that looks
-  // like a loop filter issue (see use_h264_multi_decoder_flake_repro_test).
+  // TODO(fxbug.dev/13483): Check if flipping the order here helps with the decode output flake that
+  // looks like a loop filter issue (see use_h264_multi_decoder_flake_repro_test).
   owner_->core()->StopDecoding();
   is_decoder_started_ = false;
 
@@ -1815,8 +1815,8 @@ void H264MultiDecoder::HandlePicDataDone() {
   // here if the next frame decode doesn't complete with input data available so far).  Typically
   // we'll have enough input data to avoid excessive re-decodes.
   //
-  // TODO(fxb/13483): Make the "typically" in the previous paragraph more true by doing the TODOs
-  // before PumpDecoder to put more input data into StreamBuffer if available before starting
+  // TODO(fxbug.dev/13483): Make the "typically" in the previous paragraph more true by doing the
+  // TODOs before PumpDecoder to put more input data into StreamBuffer if available before starting
   // decode.
   ZX_DEBUG_ASSERT(!force_swap_out_);
   force_swap_out_ = true;
@@ -2082,7 +2082,7 @@ void H264MultiDecoder::SubmitSliceData(SliceData data) {
 void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id) {
   ZX_DEBUG_ASSERT(reference_frame->in_use);
 #if 0
-  // TODO(fxb/13483): Re-plumb this (not necessarily here).
+  // TODO(fxbug.dev/13483): Re-plumb this (not necessarily here).
   auto sar_size = media_decoder_->GetSarSize();
   if (sar_size.width() > 0 && sar_size.height() > 0) {
     has_sar = true;
@@ -2134,17 +2134,17 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       // Also, we don't want to overwrite any portion of the stream buffer which we may later need
       // to re-decode.
       //
-      // TODO(fxb/13483): Handle copying only as much as can fit, then copying more in later from
-      // the same input packet (a TODO for PumpDecoder()).  Convert this case into an assert.
+      // TODO(fxbug.dev/13483): Handle copying only as much as can fit, then copying more in later
+      // from the same input packet (a TODO for PumpDecoder()).  Convert this case into an assert.
       //
       // This may happen if a stream fails to provide any decode-able data within the size of the
       // stream buffer.  This is currently how we partially mitigate the cost of the re-decode
       // strategy should a client provide no useful input data.
       //
-      // TODO(fxb/13483): Test, and possibly mitigate better, a hostile client providing 1 byte of
-      // useless data at a time, causing repeated re-decode of the whole stream buffer as it slowly
-      // grows to maximum size, before finally hitting this case and failing the stream.  The test
-      // should verify that the decoder remains reasonably avaialble to a competing concurrent
+      // TODO(fxbug.dev/13483): Test, and possibly mitigate better, a hostile client providing 1
+      // byte of useless data at a time, causing repeated re-decode of the whole stream buffer as it
+      // slowly grows to maximum size, before finally hitting this case and failing the stream.  The
+      // test should verify that the decoder remains reasonably avaialble to a competing concurrent
       // well-behaved client providing a well-behaved stream.
       DECODE_ERROR("Empty space in stream buffer %d too small for video data (0x%x)",
                    stream_buffer_empty_space, length);
@@ -2201,8 +2201,8 @@ bool H264MultiDecoder::CanBeSwappedIn() {
 }
 
 bool H264MultiDecoder::CanBeSwappedOut() const {
-  // TODO(fxb/13483): kWaitingForConfigChange ideally would allow swapping out decoder; VP9 doesn't
-  // yet either, so punt for the moment.
+  // TODO(fxbug.dev/13483): kWaitingForConfigChange ideally would allow swapping out decoder; VP9
+  // doesn't yet either, so punt for the moment.
   return force_swap_out_ ||
          (!is_async_pump_pending_ && state_ == DecoderState::kWaitingForInputOrOutput);
 }
@@ -2301,7 +2301,7 @@ void H264MultiDecoder::RequestStreamReset() {
   owner_->TryToReschedule();
 }
 
-// TODO(fxb/13483): Overhaul PumpDecoder to do these things:
+// TODO(fxbug.dev/13483): Overhaul PumpDecoder to do these things:
 //  * Separate into fill stream buffer vs. start decode stages.
 //  * As long as there's progress since last decode or more input to decode vs. last time we
 //    attempted decode, start decode even if no new data was added, or even if only data added was
@@ -2405,13 +2405,13 @@ void H264MultiDecoder::PumpDecoder() {
   // of an AU that splits across multiple packets.  At the moment none of these are supported.
   SubmitDataToHardware(current_input.data.data(), current_input.length, current_input.codec_buffer,
                        current_input.buffer_start_offset);
-  // TODO(fxb/13483): We'd like to add padding here (and potentially overwrite that padding later
-  // depending) so that the decoder would decode all the input data so far without requiring more
-  // input data (roughly 512-1024 bytes more), but first we'll need a reliable way to detect when we
-  // get a pic data done interrupt only because of a frame being interrupted by padding, vs. getting
-  // a pic data done for an actual complete frame decode.  One way would be to delay moving on to
-  // the next frame until we get both the pic data done _and_ <a slice header for the next frame
-  // _or_ a config DPB>.
+  // TODO(fxbug.dev/13483): We'd like to add padding here (and potentially overwrite that padding
+  // later depending) so that the decoder would decode all the input data so far without requiring
+  // more input data (roughly 512-1024 bytes more), but first we'll need a reliable way to detect
+  // when we get a pic data done interrupt only because of a frame being interrupted by padding, vs.
+  // getting a pic data done for an actual complete frame decode.  One way would be to delay moving
+  // on to the next frame until we get both the pic data done _and_ <a slice header for the next
+  // frame _or_ a config DPB>.
 
   // After this, we'll see an interrupt from the HW, either slice header or one of the out-of-data
   // interrupts.

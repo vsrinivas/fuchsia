@@ -372,7 +372,7 @@ TEST_F(MediaPlayerTests, PlayWav) {
 
 // Play a synthetic WAV file from beginning to end, delaying the retirement of
 // the last packet to simulate delayed end-of-stream recognition.
-// TODO(fxb/35616): Flaking.
+// TODO(fxbug.dev/35616): Flaking.
 TEST_F(MediaPlayerTests, PlayWavDelayEos) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                         {1024, 4096, 0xeaf137125d313800},

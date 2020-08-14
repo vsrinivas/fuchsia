@@ -411,7 +411,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   if (count == 1 && items[0].type == MAGMA_POLL_TYPE_SEMAPHORE &&
       items[0].condition == MAGMA_POLL_CONDITION_SIGNALED) {
     items[0].result = 0;
-    // TODO(fxb/49103) change WaitNoReset to take ns
+    // TODO(fxbug.dev/49103): change WaitNoReset to take ns
     if (!reinterpret_cast<magma::PlatformSemaphore*>(items[0].semaphore)
              ->WaitNoReset(magma::ns_to_ms(timeout_ns)))
       return MAGMA_STATUS_TIMED_OUT;
@@ -473,7 +473,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   if (map.empty())
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Nothing to do");
 
-  // TODO(fxb/49103) change PlatformPort::Wait to take ns
+  // TODO(fxbug.dev/49103): change PlatformPort::Wait to take ns
   uint64_t key;
   magma::Status status = port->Wait(&key, magma::ns_to_ms(timeout_ns));
   if (!status)

@@ -828,7 +828,7 @@ void Minfs::StopWriteback() {
   }
 
   if (IsReadonly() == false) {
-    // TODO(fxb/51588): Maybe check the status here?
+    // TODO(fxbug.dev/51588): Maybe check the status here?
     UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
   }
 

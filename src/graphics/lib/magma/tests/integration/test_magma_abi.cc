@@ -266,7 +266,7 @@ class TestConnection {
 
   void BufferReleaseHandle() {
     if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxb/13278)
+      GTEST_SKIP();  // TODO(fxbug.dev/13278)
 
     uint64_t id;
     uint32_t handle;
@@ -285,7 +285,7 @@ class TestConnection {
 
   static void BufferImportExport(TestConnection* test1, TestConnection* test2) {
     if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxb/13278)
+      GTEST_SKIP();  // TODO(fxbug.dev/13278)
 
     uint32_t handle;
     uint64_t id;
@@ -525,7 +525,7 @@ class TestConnection {
 
   static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2) {
     if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxb/13278)
+      GTEST_SKIP();  // TODO(fxbug.dev/13278)
 
     uint32_t handle;
     uint64_t id;

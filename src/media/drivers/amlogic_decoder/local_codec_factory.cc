@@ -46,7 +46,8 @@ const CodecAdapterFactory kCodecFactories[] = {
             // codec_common.fidl.
             .mime_type = "video/h264",
 
-            // TODO(fxb/13483): Make more of these true by implementing in CodecAdapterH264Multi.
+            // TODO(fxbug.dev/13483): Make more of these true by implementing in
+            // CodecAdapterH264Multi.
             .can_stream_bytes_input = true,
             .can_find_start = false,
             .can_re_sync = false,

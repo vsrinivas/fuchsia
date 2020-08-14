@@ -21,12 +21,12 @@ static struct {
     {"/blob", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, true},
     {"/data", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, true},
 
-    // TODO(fxb/45603): devfs should reject EXECUTABLE and ADMIN but doesn't, switch this to strict
-    // after it's ported to ulib/fs
+    // TODO(fxbug.dev/45603): devfs should reject EXECUTABLE and ADMIN but doesn't, switch this to
+    // strict after it's ported to ulib/fs
     {"/dev", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, false},
 
-    // TODO(fxb/37858): pkgfs/thinfs do not properly support hierarchical directory rights so the
-    // StrictRights test fails, switch to that once fixed
+    // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so
+    // the StrictRights test fails, switch to that once fixed
     {"/bin", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, false},
     {"/config/ssl", fio::OPEN_RIGHT_READABLE, false},
     {"/pkgfs", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, false},

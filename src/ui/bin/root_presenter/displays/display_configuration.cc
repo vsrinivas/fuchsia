@@ -70,7 +70,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
     FX_LOGS(INFO) << "RootPresenter: treating display as a 24in monitor.";
     return 4.16f;
   } else if (width_in_px == 2560 && height_in_px == 1440) {
-    // TODO(fxb/42794): Allow Root Presenter clients to specify exact pixel ratio
+    // TODO(fxbug.dev/42794): Allow Root Presenter clients to specify exact pixel ratio
     // Assume display is a 27in 2K monitor.
     FX_LOGS(INFO) << "RootPresenter: treating device as a 27in 2k monitor.";
     return 5.22f;

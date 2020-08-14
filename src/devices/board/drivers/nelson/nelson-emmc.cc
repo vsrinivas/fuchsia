@@ -54,7 +54,7 @@ static aml_sd_emmc_config_t config = {
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
-// TODO(fxb/43729): Choose better partitions later
+// TODO(fxbug.dev/43729): Choose better partitions later
 static const guid_map_t guid_map[] = {
     {"system_a", GUID_ZIRCON_R_VALUE},
     {"system_b", GUID_ZIRCON_B_VALUE},

@@ -242,7 +242,7 @@ StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
                                              std::initializer_list<DspModule> modules) {
   // Create a pipeline.
   //
-  // TODO(fxb/31426): Calculate actual memory usage.
+  // TODO(fxbug.dev/31426): Calculate actual memory usage.
   const uint16_t pipeline_memory_pages_needed = 4;
   StatusOr<DspPipelineId> pipeline_or_err =
       controller->CreatePipeline(/*pipeline_priority=*/0,

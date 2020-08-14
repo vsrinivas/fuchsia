@@ -601,7 +601,7 @@ zx_status_t H264Decoder::InitializeStream() {
   }
 
   // The HW decoder / firmware seems to require several extra frames or it won't continue decoding
-  // frames. TODO(fxb/43085): Verify whether min_buffer_count_for_camping (as opposed to
+  // frames. TODO(fxbug.dev/43085): Verify whether min_buffer_count_for_camping (as opposed to
   // min_buffer_count) can be reduced to max_dpb_size + 1, which is what you would expect based on
   // max_num_reorder_frames from the h.264 spec.
   constexpr uint32_t kDbpSizeAdj = 6;

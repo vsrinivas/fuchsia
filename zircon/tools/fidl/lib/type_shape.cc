@@ -13,7 +13,7 @@
 
 namespace {
 
-// TODO(fxb/7680): We may want to fail instead of saturating.
+// TODO(fxbug.dev/7680): We may want to fail instead of saturating.
 using DataSize = safemath::ClampedNumeric<uint32_t>;
 
 // Given |offset| in bytes, returns how many padding bytes need to be added to |offset| to be
@@ -526,8 +526,8 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;
 
-    // TODO(fxb/36327): This code is technically incorrect; see the visit(Struct&) overload for more
-    // details.
+    // TODO(fxbug.dev/36327): This code is technically incorrect; see the visit(Struct&) overload
+    // for more details.
     auto guard = recursion_detector.Enter(&object);
     if (!guard) {
       return DataSize(0);
@@ -549,10 +549,10 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   std::any Visit(const flat::Service& object) override { return DataSize(1); }
 
   std::any Visit(const flat::Struct& object) override {
-    // TODO(fxb/36327): This is technically incorrect: if a struct is recursive, it may not directly
-    // contain a handle, but could contain e.g. a struct that contains a handle. In that case, this
-    // code will return 0 instead of std::numeric_limits<DataSize>::max(). This does pass all
-    // current tests and Fuchsia compilation, so fixing it isn't super-urgent.
+    // TODO(fxbug.dev/36327): This is technically incorrect: if a struct is recursive, it may not
+    // directly contain a handle, but could contain e.g. a struct that contains a handle. In that
+    // case, this code will return 0 instead of std::numeric_limits<DataSize>::max(). This does pass
+    // all current tests and Fuchsia compilation, so fixing it isn't super-urgent.
     if (object.recursive) {
       for (const auto& member : object.members) {
         switch (member.type_ctor->type->kind) {
@@ -872,8 +872,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Union& object) override {
-    // TODO(fxb/36332): Unions currently return true for has_padding in all cases, which should
-    // be fixed.
+    // TODO(fxbug.dev/36332): Unions currently return true for has_padding in all cases, which
+    // should be fixed.
     return true;
   }
 
@@ -882,8 +882,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    // TODO(fxb/36331): This code only accounts for inline padding for the union member. We also
-    // need to account for out-of-line padding.
+    // TODO(fxbug.dev/36331): This code only accounts for inline padding for the union member. We
+    // also need to account for out-of-line padding.
     return object.fieldshape(wire_format()).Padding() > 0;
   }
 
@@ -997,7 +997,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Protocol& object) override { return false; }
 };
 
-// TODO(fxb/7989): Instead of traversing the types to determine if they
+// TODO(fxbug.dev/7989): Instead of traversing the types to determine if they
 // transitively contain handles, we should rely on the `resource` FIDL keyword.
 class IsResourceVisitor final : public TypeShapeVisitor<bool> {
  public:

@@ -13,7 +13,7 @@ bool SetUpLogging(int argc, const char* const* argv) {
   int log_level = static_cast<int>(g_log_level);
   int low = static_cast<int>(GuiToolsLogLevel::DEBUG);
   int high = static_cast<int>(GuiToolsLogLevel::FATAL);
-  // TODO(fxb/31): add --help output.
+  // TODO(fxbug.dev/31): add --help output.
   for (int i = 0; i < argc; ++i) {
     if (strcmp("--quiet", argv[i]) == 0) {
       if (log_level < high) {

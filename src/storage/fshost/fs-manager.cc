@@ -161,7 +161,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   outgoing_dir->AddEntry("fs-manager-svc",
                          fbl::MakeRefCounted<fs::RemoteDir>(std::move(services_client)));
 
-  // TODO(fxb/39588): delete this
+  // TODO(fxbug.dev/39588): delete this
   // Add the delayed directory
   zx::channel filesystems_client_2, filesystems_server_2;
   status = zx::channel::create(0, &filesystems_client_2, &filesystems_server_2);

@@ -30,7 +30,7 @@ TEST(UsbHciTests, IsochronousTests) {
   // We should be receiving 120000 packets in 15 seconds (with period of 125 microseconds)
   // but in practice we aren't meeting this with our current driver today.
   // TODO(bbosak): Update this test when the xHCI rewrite gets in.
-  // TODO(fxb/45736): Add metrics when infra supports this.
+  // TODO(fxbug.dev/45736): Add metrics when infra supports this.
   ASSERT_GE(static_cast<double>(results.response().results.received_isoch_packets),
             EXPECTED_ISOCH_PACKETS);
 }

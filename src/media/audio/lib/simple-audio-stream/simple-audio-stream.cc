@@ -172,7 +172,7 @@ void SimpleAudioStream::DdkRelease() {
 }
 
 void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
-  // TODO(fxb/42613): Implement proper power management based on the requested state.
+  // TODO(fxbug.dev/42613): Implement proper power management based on the requested state.
   Shutdown();
   txn.Reply(ZX_OK, txn.requested_state());
 }

@@ -101,7 +101,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
-  // TODO(fxb/53325): ALL_GRANT counter is broken on S905D2.
+  // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.
   bool all_grant_broken = info.pid == PDEV_PID_AMLOGIC_S905D2;
 
   fbl::AllocChecker ac;

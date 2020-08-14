@@ -26,7 +26,7 @@
 #include "src/devices/lib/log/log.h"
 #include "suspend_task.h"
 
-// TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
+// TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
@@ -133,7 +133,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   // that we don't send "device added" notifications.
   // The init task must complete before marking the device visible.
   // If |wait_make_visible| is true, we also wait for a device_make_visible call.
-  // TODO(fxb/43370): this check should be removed once init tasks apply to all devices.
+  // TODO(fxbug.dev/43370): this check should be removed once init tasks apply to all devices.
   if (wait_make_visible || want_init_task) {
     dev->flags |= DEV_CTX_INVISIBLE;
   }
@@ -522,7 +522,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     // If the device is already dead, we are detecting an expected disconnect from the driver_host.
     if (dev->state() != Device::State::kDead) {
-      // TODO(fxb/56208): Change this log back to error once isolated devmgr is fixed.
+      // TODO(fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
       LOGF(WARNING, "Disconnected device %p '%s', see fxb/56208 for potential cause", dev.get(),
            dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);

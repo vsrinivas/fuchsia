@@ -25,7 +25,7 @@ void AddCpuValue(SampleBundle* samples, size_t cpu, const std::string& path,
 }  // namespace
 
 void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t root_resource) {
-  // TODO(fxb/34): Determine the array size at runtime (32 is arbitrary).
+  // TODO(fxbug.dev/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
   zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,

@@ -23,7 +23,7 @@
 using driver_integration_test::IsolatedDevmgr;
 using llcpp::fuchsia::device::Controller;
 
-// TODO(fxb/38095): Fix flakiness and re-enable.
+// TODO(fxbug.dev/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
@@ -71,7 +71,7 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_OK);
 }
 
-// TODO(fxb/38095): Fix flakiness and re-enable.
+// TODO(fxbug.dev/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingAddInBind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
@@ -116,7 +116,7 @@ TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingAddInB
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD);
 }
 
-// TODO(fxb/38095): Fix flakiness and re-enable.
+// TODO(fxbug.dev/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingRemoveInUnbind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;

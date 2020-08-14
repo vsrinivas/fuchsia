@@ -1445,7 +1445,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             case CASE_IDENTIFIER(Token::Subkind::kXUnion):
               break;
             default:
-              // TODO(fxb/57409): Improve this error message.
+              // TODO(fxbug.dev/57409): Improve this error message.
               Fail(ErrCannotSpecifyResource, Peek());
           }
           break;
@@ -1460,7 +1460,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
           break;
         default:
-          // TODO(fxb/57409): Improve this error message.
+          // TODO(fxbug.dev/57409): Improve this error message.
           Fail(ErrCannotSpecifyStrict, Peek());
           return More;
       }

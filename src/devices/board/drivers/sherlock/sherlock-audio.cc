@@ -16,7 +16,7 @@
 #include "sherlock-gpios.h"
 #include "sherlock.h"
 
-// TODO(52506): Re-enable when 54011 is resolved.
+// TODO(fxbug.dev/52506): Re-enable when 54011 is resolved.
 //#define ENABLE_BT
 
 namespace sherlock {

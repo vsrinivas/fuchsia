@@ -32,7 +32,7 @@ Harvester::Harvester(zx_handle_t root_resource,
 void Harvester::GatherDeviceProperties() {
   FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
   gather_cpu_.GatherDeviceProperties();
-  // TODO(fxb/40872): re-enable once we need this data.
+  // TODO(fxbug.dev/40872): re-enable once we need this data.
   // gather_inspectable_.GatherDeviceProperties();
   // gather_introspection_.GatherDeviceProperties();
   gather_memory_.GatherDeviceProperties();
@@ -52,7 +52,7 @@ void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
   FX_VLOGS(1) << "Harvester::GatherSlowData";
   zx::time now = async::Now(dispatcher);
 
-  // TODO(fxb/40872): re-enable once we need this data.
+  // TODO(fxbug.dev/40872): re-enable once we need this data.
   // gather_inspectable_.PostUpdate(dispatcher, now, zx::sec(3));
   // gather_introspection_.PostUpdate(dispatcher, now, zx::sec(10));
 

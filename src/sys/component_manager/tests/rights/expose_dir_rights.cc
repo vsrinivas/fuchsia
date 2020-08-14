@@ -48,8 +48,8 @@ int main(int argc, char* argv[]) {
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    r_after_scoped_dir.NewRequest());
 
-  // TODO(fxb/37773): We can't use sys::ComponentContext/vfs::PseudoDir/vfs::RemoteDir here because
-  // of a bug in how they handle OPEN_FLAG_POSIX.
+  // TODO(fxbug.dev/37773): We can't use sys::ComponentContext/vfs::PseudoDir/vfs::RemoteDir here
+  // because of a bug in how they handle OPEN_FLAG_POSIX.
   svc::Outgoing outgoing(loop.dispatcher());
   outgoing.root_dir()->AddEntry("read_only",
                                 fbl::MakeRefCounted<fs::RemoteDir>(ro_dir.TakeChannel()));

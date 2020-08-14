@@ -2178,7 +2178,7 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel,
 
     scan_result.bss_capability.set_val(frame->capability_info_.val());
     scan_state_.opts->on_result_fn(scan_result);
-    // TODO(fxb/49350): Channel switch during scanning need to be supported.
+    // TODO(fxbug.dev/49350): Channel switch during scanning need to be supported.
   } else if (assoc_state_.state == AssocState::ASSOCIATED &&
              frame->bssid_ == assoc_state_.opts->bssid) {
     // if we're associated with this AP, start/restart the beacon watchdog

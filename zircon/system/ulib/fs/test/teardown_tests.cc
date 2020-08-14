@@ -56,7 +56,7 @@ class FdCountVnode : public fs::Vnode {
   int fd_count_;
 };
 
-// TODO(fxb/42589): Clean up the array-of-completions pattern.
+// TODO(fxbug.dev/42589): Clean up the array-of-completions pattern.
 
 class AsyncTearDownVnode : public FdCountVnode {
  public:

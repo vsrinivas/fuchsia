@@ -30,7 +30,7 @@ class ClosedStdout {
   }
   ~ClosedStdout() {
     // Restore stdout. Need to flush stdout to clear its buffer.
-    // TODO(fxb/39447): Remove this line once the bug is fixed.
+    // TODO(fxbug.dev/39447): Remove this line once the bug is fixed.
     fflush(stdout);
     dup2(orig_stdout_, fileno(stdout));
     close(orig_stdout_);

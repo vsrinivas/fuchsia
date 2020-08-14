@@ -201,7 +201,7 @@ void FilesystemTestWithFvm::BindFvm() {
   if (resp->result.is_err()) {
     status = resp->result.err();
   }
-  // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
+  // TODO(fxbug.dev/39460): Prevent ALREADY_BOUND from being an option
   if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
     ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
   }

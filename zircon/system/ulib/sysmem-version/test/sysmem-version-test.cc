@@ -186,7 +186,7 @@ void random(T* field) {
 
 template <>
 void random<v1::HeapType>(v1::HeapType* field) {
-  // TODO(fxb/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint64_t valid[] = {
       /*SYSTEM_RAM =*/0u,
       /*AMLOGIC_SECURE =*/1152921504606912512u,
@@ -201,7 +201,7 @@ void random<v1::HeapType>(v1::HeapType* field) {
 
 template <>
 void random<v1::PixelFormatType>(v1::PixelFormatType* field) {
-  // TODO(fxb/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
       /*R8G8B8A8 =*/1u,
@@ -226,7 +226,7 @@ void random<v1::PixelFormatType>(v1::PixelFormatType* field) {
 
 template <>
 void random<v1::ColorSpaceType>(v1::ColorSpaceType* field) {
-  // TODO(fxb/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*INVALID =*/0u,
       /*SRGB =*/1u,
@@ -246,7 +246,7 @@ void random<v1::ColorSpaceType>(v1::ColorSpaceType* field) {
 
 template <>
 void random<v1::CoherencyDomain>(v1::CoherencyDomain* field) {
-  // TODO(fxb/53067): Use generated-code array of valid values instead, when/if avaialable.
+  // TODO(fxbug.dev/53067): Use generated-code array of valid values instead, when/if avaialable.
   static constexpr uint32_t valid[] = {
       /*CPU =*/0u,
       /*RAM =*/1u,

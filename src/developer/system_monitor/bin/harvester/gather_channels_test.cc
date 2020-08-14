@@ -37,7 +37,7 @@ TEST_F(GatherChannelsTest, SmokeTest) {
   EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent("process"));
   EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent("peer"));
 
-  // TODO(fxb/54364): add channel information when dockyard supports multi
+  // TODO(fxbug.dev/54364): add channel information when dockyard supports multi
   // maps.
   // EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent("channel"));
 }

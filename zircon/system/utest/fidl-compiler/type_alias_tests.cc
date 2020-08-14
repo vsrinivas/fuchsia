@@ -419,8 +419,8 @@ struct TheStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
 
-  // TODO(fxb/35218): once recursive type handling is improved, the error message should be more
-  // granular and should be asserted here.
+  // TODO(fxbug.dev/35218): once recursive type handling is improved, the error message should be
+  // more granular and should be asserted here.
 }
 
 TEST(TypeAliasTests, invalid_compound_identifier) {

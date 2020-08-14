@@ -112,7 +112,7 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
 TEST_F(MediaButtonsListenerTest, MediaButtons) {
   // Post input injection in the future, "long enough" that the RegisterMediaButtonsListener will
   // have succeeded.
-  // TODO(fxb/41384): Make this more reliable by parking a callback on a response for
+  // TODO(fxbug.dev/41384): Make this more reliable by parking a callback on a response for
   // RegisterMediaButtonsListener.
   async::PostDelayedTask(
       dispatcher(),

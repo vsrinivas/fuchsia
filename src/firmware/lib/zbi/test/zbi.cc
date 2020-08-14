@@ -179,7 +179,7 @@ TEST(ZbiTests, ZbiTestInitNullBuffer) {
   ASSERT_EQ(zbi_init(nullptr, sizeof(zbi_header_t)), ZBI_RESULT_ERROR);
 }
 
-// TODO(fxb/52665): Consider pulling out the check logic into a common helper.
+// TODO(fxbug.dev/52665): Consider pulling out the check logic into a common helper.
 TEST(ZbiTests, ZbiTestCheckEmptyContainer) {
   zbi_header_t container = ZBI_CONTAINER_HEADER(0);
 

@@ -633,7 +633,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     assert(!args.handle_rights);
 
     if (!decl_->compiled) {
-      assert(!decl_->compiling && "TODO(fxb/35218): Improve support for recursive types.");
+      assert(!decl_->compiling && "TODO(fxbug.dev/35218): Improve support for recursive types.");
 
       if (!library_->CompileDecl(decl_)) {
         return false;
@@ -1629,7 +1629,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   // error type.
   SourceSpan method_name_span = method->identifier->span();
 
-  // TODO(fxb/8027): Join spans of response and error constructor for `result_name`.
+  // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_name = Name::CreateDerived(
       this, response_span,
       StringJoin({protocol_name.decl_name(), method_name_span.data(), "Result"}, "_"));

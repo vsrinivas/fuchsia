@@ -211,11 +211,11 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
 
       // Force some frames to split across packet boundary.
       //
-      // TODO(fxb/13483): Also cover more than one frame in a packet, and split headers.
+      // TODO(fxbug.dev/13483): Also cover more than one frame in a packet, and split headers.
       //
-      // TODO(fxb/13483): Enable testing frames split across packets once SW decode can do that, or
-      // have this be gated on whether capability was requested of decoder and try requesting this
-      // capability then fall back to not this capability.
+      // TODO(fxbug.dev/13483): Enable testing frames split across packets once SW decode can do
+      // that, or have this be gated on whether capability was requested of decoder and try
+      // requesting this capability then fall back to not this capability.
       (void)kMaxFrameBytesPerPacket;
       // bytes_to_copy = std::min(bytes_to_copy, kMaxFrameBytesPerPacket);
 
@@ -539,7 +539,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         // This is required for timestamp_ish values to transit the
         // Codec.
         //
-        // TODO(fxb/57706): We shouldn't need to promise this to have PTS(s) flow through.
+        // TODO(fxbug.dev/57706): We shouldn't need to promise this to have PTS(s) flow through.
         decoder_params.set_promise_separate_access_units_on_input(true);
         if (params.is_secure_output) {
           decoder_params.set_secure_output_mode(fuchsia::mediacodec::SecureMemoryMode::ON);

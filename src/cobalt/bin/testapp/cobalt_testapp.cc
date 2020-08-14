@@ -86,7 +86,7 @@ bool CobaltTestApp::RunTests() {
 }
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
-  // TODO(fxb/52750) We try each of these tests twice in case the failure
+  // TODO(fxbug.dev/52750): We try each of these tests twice in case the failure
   // reason is that the calendar date has changed mid-test.
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),

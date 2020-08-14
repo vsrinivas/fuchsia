@@ -66,8 +66,8 @@ void asan_remap_shadow_internal(volatile pt_entry_t* pdp, uintptr_t start, size_
 
   printf("KASAN remapping shadow for 0x%016lx (%zu bytes)\n", start, size);
 
-  // TODO(fxb/50371): When pmm_alloc_page allows getting high memory, use high pages where possible
-  // for page tables and asan shadow pages.
+  // TODO(fxbug.dev/50371): When pmm_alloc_page allows getting high memory, use high pages where
+  // possible for page tables and asan shadow pages.
   for (size_t i = pdp_map_start; i <= pdp_map_end; i++) {
     paddr_t new_pdp_entry = get_or_allocate_page_table(pdp, i, kasan_shadow_pd);
     pt_entry_t* pd = reinterpret_cast<pt_entry_t*>(paddr_to_physmap(new_pdp_entry));

@@ -988,7 +988,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   amlogic_canvas_protocol_t c;
   canvas.GetProto(&c);
 
-  // TODO(fxb/43822): Initialize clock.
+  // TODO(fxbug.dev/43822): Initialize clock.
   GenCtrl1::Get().FromValue(0).set_soft_reset(1).WriteTo(&*ge2d_mmio);
   GenCtrl1::Get().FromValue(0).set_soft_reset(0).WriteTo(&*ge2d_mmio);
   GenCtrl1::Get().FromValue(0).set_interrupt_on_idling(1).WriteTo(&*ge2d_mmio);

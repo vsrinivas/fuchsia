@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   constexpr int EXIT_CODE_GENERAL_ERROR = 1;
 
   // The wip number is incremented arbitrarily.
-  // TODO(fxb/44) replace wip number with real version number.
+  // TODO(fxbug.dev/44): replace wip number with real version number.
   constexpr char VERSION_OUTPUT[] =
       "System Monitor Harvester 20191211\n"
       "- memory_digest\n"
@@ -64,13 +64,13 @@ int main(int argc, char** argv) {
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.empty()) {
-      // TODO(fxb/30): Adhere to CLI tool requirements for --help.
+      // TODO(fxbug.dev/30): Adhere to CLI tool requirements for --help.
       std::cerr << "Please specify an IP:Port, such as localhost:50051"
                 << std::endl;
       exit(EXIT_CODE_GENERAL_ERROR);
     }
 
-    // TODO(fxb/32): This channel isn't authenticated
+    // TODO(fxbug.dev/32): This channel isn't authenticated
     // (InsecureChannelCredentials()).
     dockyard_proxy =
         std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(

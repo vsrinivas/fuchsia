@@ -56,7 +56,7 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo
                       {// See section 3.6 (MTCMOS Domains) of the functional specification document.
                        // Use 1.3V because the GPU uses this voltage as well and needs that to clock
                        // up to 600MHz.
-                       // TODO(fxb/35052) - Coordinate voltage between GPU and CPU.
+                       // TODO(fxbug.dev/35052): - Coordinate voltage between GPU and CPU.
                        .opp =
                            {
                                [0] = {.freq_hz = 598000000, .volt_uv = 1'300'000},

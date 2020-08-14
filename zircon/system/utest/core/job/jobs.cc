@@ -23,7 +23,7 @@ extern zx_handle_t root_job;
 // Job signal that is active when a job has no children (i.e., no child jobs and no child
 // processes).
 //
-// TODO(fxb/53986): This is a temporary signal that we don't want userspace using (yet?).
+// TODO(fxbug.dev/53986): This is a temporary signal that we don't want userspace using (yet?).
 // The kernel doesn't export it, but we declare it here to allow it to be tested.
 #define ZX_JOB_NO_CHILDREN  __ZX_OBJECT_SIGNAL_6
 

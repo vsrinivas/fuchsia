@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
       // This uses h264-multi, but sets a test hook flag that forces context switching to occur
       // every time context switching is possible.
       //
-      // TODO(fxb/13483): Plumb the ability to request special test flags via a different service to
+      // TODO(fxbug.dev/13483): Plumb the ability to request special test flags via a different service to
       // reduce which clients can set test flags.
       .mime_type = "video/h264-multi/test/force-context-save-restore",
   };

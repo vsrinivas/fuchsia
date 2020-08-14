@@ -496,7 +496,7 @@ static void ShiftRightAndInsert(H264Picture::Vector* v,
                                 scoped_refptr<H264Picture> pic) {
   // Security checks, do not disable in Debug mode.
   //
-  // TODO(fxb/13483): These need to not abort() - instead just failing the
+  // TODO(fxbug.dev/13483): These need to not abort() - instead just failing the
   // stream.  While we're at it, we should fix the comment just above.
   CHECK(from <= to);
   CHECK(to <= std::numeric_limits<int>::max() - 2);

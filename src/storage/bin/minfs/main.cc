@@ -50,9 +50,9 @@ using minfs::ServeLayout;
 // |fuchsia.io/DirectoryAdmin.Unmount| command.
 int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxb/34531): this currently supports both the old (data root only) and the new (outgoing
-  // directory) behaviors. once all clients are moved over to using the new behavior, delete the old
-  // one.
+  // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
+  // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
+  // delete the old one.
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
 
   if (outgoing_server.is_valid() && root_server.is_valid()) {

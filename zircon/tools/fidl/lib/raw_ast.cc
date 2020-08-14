@@ -50,7 +50,7 @@ void LiteralConstant::Accept(TreeVisitor* visitor) const {
 }
 
 void BinaryOperatorConstant::Accept(TreeVisitor* visitor) const {
-  // TODO(fxb/43758) Visit the operator as well.
+  // TODO(fxbug.dev/43758): Visit the operator as well.
   SourceElementMark sem(visitor, *this);
   visitor->OnConstant(left_operand);
   visitor->OnConstant(right_operand);

@@ -87,9 +87,8 @@ void SampleBundleBuilder::AddProcessChannels(
     for (size_t i = 0; i < actual; ++i) {
       auto entry = (*info)[i];
       if (entry.type == ZX_OBJ_TYPE_CHANNEL) {
-        // TODO(fxb/54364): add channel information when dockyard supports multi
-        // maps.
-        // AddKoidValue(koid, "channel", entry.koid);
+        // TODO(fxbug.dev/54364): add channel information when dockyard supports
+        // multi maps. AddKoidValue(koid, "channel", entry.koid);
         AddKoidValue(entry.koid, "type", dockyard::KoidType::CHANNEL);
         AddKoidValue(entry.koid, "process", koid);
         AddKoidValue(entry.koid, "peer", entry.related_koid);

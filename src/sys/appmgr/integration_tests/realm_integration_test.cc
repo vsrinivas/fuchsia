@@ -467,7 +467,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewCrashingProcess) {
                               command_argv[0],  // path
                               command_argv, process.reset_and_get_address()));
   auto koid = GetKoid(process);
-  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  // TODO(fxbug.dev/51382): Remove these logs. Added for debugging incase process never crashes.
   FX_LOGS(INFO) << "Waiting for process to die.";
   process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
   FX_LOGS(INFO) << "Process died.";
@@ -516,7 +516,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInCurrentEn
   fuchsia::testing::appmgr::CrashInducerPtr crash_srv;
   component_svc->Connect(crash_srv.NewRequest());
   crash_srv->Crash();
-  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  // TODO(fxbug.dev/51382): Remove these logs. Added for debugging incase process never crashes.
   FX_LOGS(INFO) << "Waiting for component to die.";
   RunLoopUntil([&] { return component_died; });
   FX_LOGS(INFO) << "Component died.";
@@ -564,7 +564,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInEnclosing
   fuchsia::testing::appmgr::CrashInducerPtr crash_srv;
   component_svc->Connect(crash_srv.NewRequest());
   crash_srv->Crash();
-  // TODO(fxb/51382): Remove these logs. Added for debugging incase process never crashes.
+  // TODO(fxbug.dev/51382): Remove these logs. Added for debugging incase process never crashes.
   FX_LOGS(INFO) << "Waiting for component to die.";
   RunLoopUntil([&] { return component_died; });
   FX_LOGS(INFO) << "Component died.";

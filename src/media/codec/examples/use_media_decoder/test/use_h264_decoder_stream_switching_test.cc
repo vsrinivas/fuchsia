@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
       .keep_stream_modulo = 4,
       .loop_stream_count = 65,
   };
-  // TODO(fxb/13483): The retries should not be necessary here.  These are presently needed to
+  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
   constexpr uint32_t kMaxRetryCount = 100;

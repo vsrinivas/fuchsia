@@ -46,7 +46,7 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
         static_cast<ZirconPlatformConnection*>(interface)->async_loop()->Quit();
       };
 
-  // TODO(fxb/48671): don't store an unowned handle
+  // TODO(fxbug.dev/48671): don't store an unowned handle
   server_endpoint_unowned_ = server_endpoint.get();
 
   llcpp::fuchsia::gpu::magma::Primary::Interface* interface = this;

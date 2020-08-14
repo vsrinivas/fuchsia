@@ -1799,7 +1799,7 @@ zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* 
     }
   }
 
-  // TODO(fxb/56253): Add MMIO_PTR to cast.
+  // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
   *addr_out = (void*)mapped_bars_[pci_bar].mmio.vaddr;
   *size_out = mapped_bars_[pci_bar].mmio.size;
   mapped_bars_[pci_bar].count++;
@@ -1978,7 +1978,7 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
 }
 
 void Controller::DdkSuspend(ddk::SuspendTxn txn) {
-  // TODO(fxb/43204): Implement the suspend hook based on suspendtxn
+  // TODO(fxbug.dev/43204): Implement the suspend hook based on suspendtxn
   if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
     uint32_t format, width, height, stride;
     // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -2012,7 +2012,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
     // Try to map the framebuffer and clear it. If not, oh well.
     mmio_buffer_t mmio;
     if (pci_map_bar_buffer(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
-      // TODO(fxb/56253): Add MMIO_PTR to cast.
+      // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
       memset((void*)mmio.vaddr, 0, fb_size);
       mmio_buffer_release(&mmio);
     }

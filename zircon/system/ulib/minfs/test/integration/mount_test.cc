@@ -69,7 +69,7 @@ class MountTestTemplate : public zxtest::Test {
       return;
     }
     // Unmount the filesystem, thereby terminating the minfs instance.
-    // TODO(fxb/34531): After deprecating the DirectoryAdmin interface, switch to unmount using the
+    // TODO(fxbug.dev/34531): After deprecating the DirectoryAdmin interface, switch to unmount using the
     // admin service found within the export directory.
     EXPECT_OK(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client_end())).status());
     unmounted_ = true;
@@ -174,7 +174,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   fbl::AutoCall close_dir([&]() { closedir(dir); });
   int count = 0;
   // Verify that there is exactly one entry called "root".
-  // TODO(fxb/34531): Adjust this test accordingly when the admin service is added.
+  // TODO(fxbug.dev/34531): Adjust this test accordingly when the admin service is added.
   while ((entry = readdir(dir)) != nullptr) {
     if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0)) {
       EXPECT_STR_EQ(entry->d_name, "root");

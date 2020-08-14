@@ -157,7 +157,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
     return;
   }
 
-  // TODO(fxb/36217): Do not clone once presentation stops needing input.
+  // TODO(fxbug.dev/36217): Do not clone once presentation stops needing input.
   fuchsia::ui::input::InputReport cloned_report;
   report.Clone(&cloned_report);
 

@@ -60,7 +60,7 @@ class BufferFactoryImpl : public dma_buffer::BufferFactory {
   zx_status_t CreateContiguous(const zx::bti& bti, size_t size, uint32_t alignment_log2,
                                std::unique_ptr<dma_buffer::ContiguousBuffer>* out) const override {
     if (size > ZX_PAGE_SIZE) {
-      // TODO(fxb/45011): We don't currently support contiguous buffers > 1 page.
+      // TODO(fxbug.dev/45011): We don't currently support contiguous buffers > 1 page.
       return ZX_ERR_NOT_SUPPORTED;
     }
     zx::vmo real_vmo;

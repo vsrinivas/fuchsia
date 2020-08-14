@@ -111,7 +111,7 @@ zx_status_t Msi::get_info(zx_handle_t /*handle*/, uint32_t topic, void* buffer, 
 
 }  // namespace
 
-// TODO(fxb/32978): Pull some of these structures out of their parent headers so that
+// TODO(fxbug.dev/32978): Pull some of these structures out of their parent headers so that
 // both the tests and the real implementations can use the same information.
 constexpr size_t MsiCapabilitySize = 24u;
 

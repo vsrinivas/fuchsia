@@ -375,7 +375,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                      independent_volume_control, std::move(pipeline_config), driver_gain_db)));
 }
 
-// TODO(fxb/57804): Remove support for old config format once it is no longer in use.
+// TODO(fxbug.dev/57804): Remove support for old config format once it is no longer in use.
 std::vector<ThermalConfig::Entry> ParseThermalPolicyEntriesFromOldFormatJsonObject(
     const rapidjson::Value& value) {
   FX_DCHECK(value.IsObject());

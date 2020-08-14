@@ -308,7 +308,7 @@ std::unique_ptr<MsdQcomConnection> MsdQcomDevice::Open(msd_client_id_t client_id
   auto address_space =
       std::make_unique<AddressSpace>(this, kClientGpuAddrSize + kSystemGpuAddrSize, iommu_);
 
-  // TODO(fxb/44003): map firmware and ringbuffers into the client address space.
+  // TODO(fxbug.dev/44003): map firmware and ringbuffers into the client address space.
   // Since we currently have one underlying GPU address space, those entities are visible to
   // the GPU because they are mapped at hardware init.
 

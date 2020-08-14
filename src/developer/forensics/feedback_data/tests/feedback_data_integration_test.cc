@@ -413,7 +413,7 @@ TEST_F(FeedbackDataIntegrationTest,
   EXPECT_THAT(snapshot.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
 }
 
-// TODO(50926): clean up once no clients calls it.
+// TODO(fxbug.dev/50926): clean up once no clients calls it.
 TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_SmokeTest) {
   // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();

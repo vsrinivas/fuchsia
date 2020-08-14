@@ -51,7 +51,7 @@ zx::process DuplicateProcess(const zx::process& process) {
   return ret;
 }
 
-// TODO(fxb/46803): The out/diagnostics directory propagation for runners includes a retry.
+// TODO(fxbug.dev/46803): The out/diagnostics directory propagation for runners includes a retry.
 // The reason of this is that flutter fills the out/ directory *after*
 // serving it. Therefore we need to watch that directory to notify.
 // Sadly the PseudoDir exposed in the SDK (and used by flutter) returns ZX_ERR_NOT_SUPPORTED on

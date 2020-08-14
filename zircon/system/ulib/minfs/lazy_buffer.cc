@@ -40,8 +40,8 @@ zx_status_t LazyBuffer::Read(ByteRange range, Reader* reader) {
 
 zx_status_t LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
                               BaseBufferView* view, const Writer& writer) {
-  // TODO(fxb/50606): If this or the transaction fails, this will leave memory in an indeterminate
-  // state. For now, this is no worse than it has been for some time.
+  // TODO(fxbug.dev/50606): If this or the transaction fails, this will leave memory in an
+  // indeterminate state. For now, this is no worse than it has been for some time.
   view->set_dirty(false);
   return EnumerateBlocks(
       view->GetByteRange(), buffer_.BlockSize(),

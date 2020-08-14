@@ -408,7 +408,7 @@ TEST_F(AssocTest, StatsQueryReqTest) {
   const uint8_t expected_antenna_index = 0;
   const uint8_t expected_snr_index = 60;
   const uint8_t expected_snr_num_frames = 50;
-  // TODO(fxb/29698) Test all bucket values when sim firmware fully supports wstats_counters.
+  // TODO(fxbug.dev/29698): Test all bucket values when sim firmware fully supports wstats_counters.
   // Sim firmware populates only SNR buckets, probably due to the discrepancies between the iovar
   // get handling between real and sim firmware (e.g. fxr/404141). When wstats_counters is fully
   // supported in sim firmware we can test for the expected noise floor, RSSI, and rate buckets.

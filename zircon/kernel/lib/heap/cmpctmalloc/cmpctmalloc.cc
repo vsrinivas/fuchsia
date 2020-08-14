@@ -1002,7 +1002,7 @@ NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
 
   LockGuard guard(TheHeapLock::Get());
 #if KERNEL_ASAN
-  // TODO(fxb/30033): Separately poison padding and the post-buffer redzone.
+  // TODO(fxbug.dev/30033): Separately poison padding and the post-buffer redzone.
   asan_poison_shadow(reinterpret_cast<uintptr_t>(unaligned), padded_size,
                      kAsanHeapLeftRedzoneMagic);
 #endif  // KERNEL_ASAN

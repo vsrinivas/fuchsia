@@ -199,7 +199,7 @@ zx_status_t IsolatedDevmgr::SetupExceptionLoop(async_dispatcher_t* dispatcher,
 }
 
 // Create and host a /svc directory for the devcoordinator process we're creating.
-// TODO(fxb/35991): IsolatedDevmgr and devmgr_launcher should be rewritten to make use of
+// TODO(fxbug.dev/35991): IsolatedDevmgr and devmgr_launcher should be rewritten to make use of
 // Components v2/Test Framework concepts as soon as those are ready enough. For now this has to be
 // manually kept in sync with devcoordinator's manifest in //src/sys/root/devcoordinator.cml
 // (although it already seems to be incomplete).

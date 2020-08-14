@@ -178,7 +178,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     // Note that arguments are comma-delimited.
-    // TODO(fxb/57400): migrate --runtime-config to --config.
+    // TODO(fxbug.dev/57400): migrate --runtime-config to --config.
     bootsvc_next =
         "bin/component_manager,"
         "fuchsia-boot:///#meta/root.cm,"

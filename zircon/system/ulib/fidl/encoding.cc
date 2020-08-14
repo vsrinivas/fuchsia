@@ -148,7 +148,7 @@ class FidlEncoder final
     }
 
     // Validate that we have a UTF8 string.
-    // TODO(fxb/52215): For strings, it would most likely be more efficient
+    // TODO(fxbug.dev/52215): For strings, it would most likely be more efficient
     // to validate and copy at the same time.
     if (unlikely(pointee_type == PointeeType::kString)) {
       auto status =

@@ -52,7 +52,7 @@
 //  search_pattern_ - HW only reads this
 //  parser_input_ - not used when secure)
 
-// TODO(fxb/41972): bti::release_quarantine() or zx_bti_release_quarantine() somewhere during
+// TODO(fxbug.dev/41972): bti::release_quarantine() or zx_bti_release_quarantine() somewhere during
 // startup, after HW is known idle, before we allocate anything from sysmem.
 
 namespace {
@@ -691,7 +691,7 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
   ZX_DEBUG_ASSERT(after_size);
   ZX_DEBUG_ASSERT(is_tee_available());
 
-  // TODO(fxb/44674): Remove this retry loop once this issue is resolved.
+  // TODO(fxbug.dev/44674): Remove this retry loop once this issue is resolved.
   constexpr uint32_t kRetryCount = 20;
   zx_status_t status = ZX_OK;
   for (uint32_t i = 0; i < kRetryCount; ++i) {
@@ -903,7 +903,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parser_ = std::make_unique<Parser>(this, std::move(parser_interrupt_handle_));
 
   if (is_tee_available()) {
-    // TODO(fxb/44674): Remove this retry loop once this issue is resolved.
+    // TODO(fxbug.dev/44674): Remove this retry loop once this issue is resolved.
     constexpr uint32_t kRetryCount = 10;
     for (uint32_t i = 0; i < kRetryCount; i++) {
       status = EnsureSecmemSessionIsConnected();
@@ -929,7 +929,7 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
   uint32_t firmware_size;
   firmware_->GetWholeBlob(&firmware_data, &firmware_size);
 
-  // TODO(fxb/44764): Remove retry when video_firmware crash is fixed.
+  // TODO(fxbug.dev/44764): Remove retry when video_firmware crash is fixed.
   zx_status_t status = ZX_OK;
   constexpr uint32_t kRetryCount = 10;
   for (uint32_t i = 0; i < kRetryCount; i++) {

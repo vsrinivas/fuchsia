@@ -60,7 +60,7 @@ constexpr char kSerial[] = "0123456789ABCDEF";
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
 // Statically assigned dummy MAC address.
-// TODO(fxb/34469): Provide real MAC address via bootloader or some other mechanism.
+// TODO(fxbug.dev/34469): Provide real MAC address via bootloader or some other mechanism.
 static const uint8_t eth_mac_address[] = {
     0x02, 0x98, 0x8f, 0x3c, 0xd2, 0xaa,
 };

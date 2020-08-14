@@ -33,7 +33,7 @@ const char* kGoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8c
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  // TODO(fxb/13483): The retries should not be necessary here.  These are presently needed to
+  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
   constexpr uint32_t kMaxRetryCount = 100;

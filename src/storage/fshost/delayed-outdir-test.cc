@@ -14,7 +14,7 @@
 #include <fs/managed_vfs.h>
 #include <zxtest/zxtest.h>
 
-// TODO(fxb/39588): delete this
+// TODO(fxbug.dev/39588): delete this
 TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Create a new DelayedOutdir, and initialize it with a new channel
   auto delayed_outdir = devmgr::DelayedOutdir();

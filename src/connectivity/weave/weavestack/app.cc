@@ -89,7 +89,7 @@ zx_status_t App::WaitForFd(int fd, uint32_t events) {
   return ZX_OK;
 }
 
-// TODO(fxb/47096): tracks the integration test.
+// TODO(fxbug.dev/47096): tracks the integration test.
 zx_status_t App::StartFdWaiters(void) {
   struct timeval sleep_time;
   memcpy(&sleep_time, &MAX_SELECT_SLEEP_TIME, sizeof(sleep_time));

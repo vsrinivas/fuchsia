@@ -314,7 +314,7 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
   }
 
   if (CurrentDayIndex(clock) != day_index) {
-    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // TODO(fxbug.dev/52750): The date has changed mid-test. We are currently unable to
     // deal with this so we fail this test and our caller may try again.
     FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
     return false;
@@ -372,7 +372,7 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
   }
 
   if (CurrentDayIndex(clock) != day_index) {
-    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // TODO(fxbug.dev/52750): The date has changed mid-test. We are currently unable to
     // deal with this so we fail this test and our caller may try again.
     FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
     return false;
@@ -424,7 +424,7 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
   }
 
   if (CurrentDayIndex(clock) != day_index) {
-    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // TODO(fxbug.dev/52750): The date has changed mid-test. We are currently unable to
     // deal with this so we fail this test and our caller may try again.
     FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
     return false;

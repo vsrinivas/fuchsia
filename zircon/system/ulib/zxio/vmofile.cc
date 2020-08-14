@@ -153,7 +153,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
 
     // COPY_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return
     // a handle with that right unless requested using VMO_FLAG_WRITE.
-    // TODO(fxb/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for
+    // TODO(fxbug.dev/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for
     // Vmofiles is a bit weird and inconsistent. See bug for more info.
     zx::vmo result;
     status = child_vmo.replace(rights, &result);

@@ -463,7 +463,7 @@ bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
   on_connection_handler_ = callback;
   server_thread_ = std::thread([this]() { RunGrpcServer(); });
   GT_LOG(INFO) << "Starting collecting from " << request.DeviceName();
-  // TODO(fxb/39): Connect to the device and start the harvester.
+  // TODO(fxbug.dev/39): Connect to the device and start the harvester.
   return server_thread_.joinable();
 }
 

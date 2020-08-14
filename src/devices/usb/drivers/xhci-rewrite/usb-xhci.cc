@@ -653,7 +653,7 @@ void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
     txn.Reply(ZX_ERR_BAD_STATE, 0);
     return;
   }
-  // TODO(fxb/42612) do different things based on the requested_state and suspend reason.
+  // TODO(fxbug.dev/42612): do different things based on the requested_state and suspend reason.
   // for now we shutdown the driver in preparation for mexec
   USBCMD::Get(cap_length_).ReadFrom(&mmio_.value()).set_ENABLE(0).WriteTo(&mmio_.value());
   while (!USBSTS::Get(cap_length_).ReadFrom(&mmio_.value()).HCHalted()) {
@@ -849,7 +849,7 @@ void UsbXhci::StartNormalTransaction(UsbRequestState* state) {
 }
 
 void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
-  // TODO(fxb/42611): Assign an interrupter dynamically from the pool
+  // TODO(fxbug.dev/42611): Assign an interrupter dynamically from the pool
   // Data stage
   size_t pending_len = state->context->request->request()->header.length;
   auto current_nop = state->info.nop.data();
@@ -1123,7 +1123,7 @@ void UsbXhci::ControlRequestAllocationPhase(UsbRequestState* state) {
 }
 
 void UsbXhci::ControlRequestStatusPhase(UsbRequestState* state) {
-  // TODO(fxb/42611): Assign an interrupter dynamically from the pool
+  // TODO(fxbug.dev/42611): Assign an interrupter dynamically from the pool
   state->interrupter = 0;
   bool status_in = true;
   // See table 4-7 in section 4.11.2.2

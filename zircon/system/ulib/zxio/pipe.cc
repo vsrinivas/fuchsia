@@ -18,7 +18,7 @@ static zx_status_t zxio_pipe_destroy(zxio_t* io) {
 
 static zx_status_t zxio_pipe_close(zxio_t* io) {
   auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
-  // TODO(fxb/45407): We should mark the handle as "detached", instead of closing
+  // TODO(fxbug.dev/45407): We should mark the handle as "detached", instead of closing
   // the handle with risks of race behavior.
   pipe->socket.reset();
   return ZX_OK;

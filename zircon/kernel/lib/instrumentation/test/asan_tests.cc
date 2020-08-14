@@ -282,7 +282,7 @@ UNITTEST_START_TESTCASE(kasan_tests)
 UNITTEST("small_poison", kasan_test_poison_small)
 UNITTEST("unaligned_poison", kasan_test_poison_unaligned_offsets)
 UNITTEST("malloc_unpoisons", kasan_test_malloc_poisons)
-// TODO(fxb/52129): Test is flaky. Fix and re-enable.
+// TODO(fxbug.dev/52129): Test is flaky. Fix and re-enable.
 // UNITTEST("free_poisons", kasan_test_free_poisons)
 UNITTEST("detects_buffer_overflows", kasan_test_detects_buffer_overflows)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)

@@ -358,7 +358,7 @@ zx_status_t Alc5663Device::InitializeDevice() {
 
   // Setup internal clocks and PLL.
   //
-  // TODO(fxb/35648): Allow this to be configured at runtime.
+  // TODO(fxbug.dev/35648): Allow this to be configured at runtime.
   status = SetUpDeviceClocks(&client_, /*sample_rate=*/kSampleRate,
                              /*bclk_frequency=*/(kSampleRate * kBitsPerChannel * kNumChannels));
   if (status != ZX_OK) {

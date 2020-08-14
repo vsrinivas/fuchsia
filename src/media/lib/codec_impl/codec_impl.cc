@@ -659,7 +659,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
       // reasonable behavior for the server if the server normally would detect
       // and report mid-stream input corruption errors without an
       // OnStreamFailed().
-      // TODO(fxb/43490): Cancel wait immediately on failure without waiting for
+      // TODO(fxbug.dev/43490): Cancel wait immediately on failure without waiting for
       // timeout.
       if (std::cv_status::timeout ==
           output_end_of_stream_seen_.wait_until(
@@ -3525,7 +3525,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     }
     stream_->SetFailureSeen();
     // avoid hang in FlushEndOfStreamAndCloseStream_StreamControl
-    // TODO(fxb/43490): Clean this up.
+    // TODO(fxbug.dev/43490): Clean this up.
     output_end_of_stream_seen_.notify_all();
 
     if (IsStreamErrorRecoverable(error)) {

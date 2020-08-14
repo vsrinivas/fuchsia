@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/44924): We should come up with a better way of testing client libraries,
+// TODO(fxbug.dev/44924): We should come up with a better way of testing client libraries,
 // rather than testing every client against every server. See issue for details.
 
 #include <fcntl.h>
@@ -50,7 +50,7 @@ class FdioTest : public testing::Test {
   static void SetUpTestSuite() {
     auto svc = StartTestHarness(component_context, harness_name, controller.NewRequest());
     auto default_service = sys::OpenServiceAt<fuchsia::io::test::Harness>(svc);
-    // TODO(fxb/33880): Add io2 tests when ready.
+    // TODO(fxbug.dev/33880): Add io2 tests when ready.
     v1_test_cases = default_service.v1().Connect().Bind();
   }
 

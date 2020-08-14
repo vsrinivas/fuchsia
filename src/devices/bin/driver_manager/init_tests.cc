@@ -263,7 +263,7 @@ TEST_F(InitTestCase, InitParentFail) {
   ASSERT_EQ(Device::State::kDead, device(child_index)->device->state());
 }
 
-// TODO(fxb/43370): these tests can be removed once init tasks can be enabled for all devices.
+// TODO(fxbug.dev/43370): these tests can be removed once init tasks can be enabled for all devices.
 TEST_F(InitTestCase, LegacyNoInit) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",

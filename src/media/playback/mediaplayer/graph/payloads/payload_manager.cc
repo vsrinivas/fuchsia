@@ -766,7 +766,7 @@ void PayloadManager::UpdateAllocators() {
             // We provision a VMO allocator, but only so we know how many buffers are in the
             // collection. This adds a third 'silent' participant in the collection, which is why
             // we created a third token.
-            // TODO(fxb/38243): Remove when we don't need to know the buffer count.
+            // TODO(fxbug.dev/38243): Remove when we don't need to know the buffer count.
             FX_CHECK(third_token);
             FX_CHECK(!input_.sysmem_token_for_mate_or_provisioning_);
             input_.sysmem_token_for_mate_or_provisioning_ = std::move(third_token);

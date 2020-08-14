@@ -107,7 +107,7 @@ std::string GetFtlTopologicalPath(std::string_view device_class_path, zx::durati
   if (root_at == std::string_view::npos) {
     return "";
   }
-  // TODO(fxb/39761): Remove when there is an alternative without this assumption.
+  // TODO(fxbug.dev/39761): Remove when there is an alternative without this assumption.
   // Assumption: Device rooted under '/dev'.
   watcher_args.topological_path.replace(0, strlen("/dev"), device_class_path.data(), root_at);
   return std::move(watcher_args.topological_path);

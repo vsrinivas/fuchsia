@@ -482,7 +482,7 @@ TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
   EXPECT_EQ(app_.screen_reader()->context()->locale_id(), "en-US");
 }
 
-// TODO(fxb/49924): Improve tests to cover what happens if services aren't available at
+// TODO(fxbug.dev/49924): Improve tests to cover what happens if services aren't available at
 // startup.
 
 }  // namespace

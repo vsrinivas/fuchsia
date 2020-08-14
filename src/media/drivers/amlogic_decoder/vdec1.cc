@@ -136,7 +136,7 @@ void Vdec1::PowerOn() {
 
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
-    // TODO(fxb/43520): Update for SM1.
+    // TODO(fxbug.dev/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc0);
     temp.WriteTo(mmio()->aobus);
@@ -168,7 +168,7 @@ void Vdec1::PowerOff() {
   }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
   {
-    // TODO(fxb/43520): Update for SM1.
+    // TODO(fxbug.dev/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() | 0xc0);
     temp.WriteTo(mmio()->aobus);

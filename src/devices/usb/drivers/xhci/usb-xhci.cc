@@ -180,7 +180,7 @@ static void xhci_shutdown(xhci_t* xhci) {
 }
 
 void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
-  // TODO(fxb/42612) do different things based on the requested_state and suspend reason.
+  // TODO(fxbug.dev/42612): do different things based on the requested_state and suspend reason.
   // for now we shutdown the driver in preparation for mexec
   xhci_shutdown(xhci_.get());
   txn.Reply(ZX_OK, 0);

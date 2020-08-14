@@ -54,7 +54,8 @@ bool IsNonZeroPowerOf2(T value) {
   return true;
 }
 
-// TODO(fxb/50590): It'd be nice if this could be a function template over FIDL scalar field types.
+// TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
+// types.
 #define FIELD_DEFAULT_1(builder_ptr_name, field_name)                                              \
   do {                                                                                             \
     auto builder_ptr = (builder_ptr_name);                                                         \
@@ -67,7 +68,8 @@ bool IsNonZeroPowerOf2(T value) {
     ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                              \
   } while (false)
 
-// TODO(fxb/50590): It'd be nice if this could be a function template over FIDL scalar field types.
+// TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
+// types.
 #define FIELD_DEFAULT_MAX(builder_ptr_name, field_name)                                           \
   do {                                                                                            \
     auto builder_ptr = (builder_ptr_name);                                                        \
@@ -81,7 +83,8 @@ bool IsNonZeroPowerOf2(T value) {
     ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                             \
   } while (false)
 
-// TODO(fxb/50590): It'd be nice if this could be a function template over FIDL scalar field types.
+// TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
+// types.
 #define FIELD_DEFAULT_ZERO(builder_ptr_name, field_name)                                           \
   do {                                                                                             \
     auto builder_ptr = (builder_ptr_name);                                                         \

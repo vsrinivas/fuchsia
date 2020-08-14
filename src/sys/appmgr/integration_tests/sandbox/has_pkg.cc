@@ -11,8 +11,8 @@ namespace fio = ::llcpp::fuchsia::io;
 TEST_F(NamespaceTest, HasPkg) {
   ExpectExists("/pkg");
 
-  // TODO(fxb/37858): pkgfs/thinfs do not properly support hierarchical directory rights so the
-  // StrictRights test fails on the directory, switch to that once fixed. The file test still
+  // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so
+  // the StrictRights test fails on the directory, switch to that once fixed. The file test still
   // should succeed, although it returns NOT_SUPPORTED instead of ACCESS_DENIED because of pkgfs
   // differences.
   ExpectPathSupportsRights("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);

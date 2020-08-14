@@ -125,7 +125,7 @@ void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
   msr->write_msr(0xC001'102D, value);
 
   // 1095: Potential Violation of Read Ordering In Lock Operation in SMT Mode
-  // TODO(fxb/37450): Do not apply this workaround if SMT is disabled.
+  // TODO(fxbug.dev/37450): Do not apply this workaround if SMT is disabled.
   value = msr->read_msr(0xc001'1020);
   value |= (1ull << 57);
   msr->write_msr(0xC001'1020, value);

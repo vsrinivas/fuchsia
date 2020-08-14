@@ -61,9 +61,9 @@ zx::resource AttemptToGetVmexResource() {
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxb/34531): this currently supports both the old (data root only) and the new (outgoing
-  // directory) behaviors. once all clients are moved over to using the new behavior, delete the old
-  // one.
+  // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
+  // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
+  // delete the old one.
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
   zx::channel diagnostics_dir = zx::channel(zx_take_startup_handle(FS_HANDLE_DIAGNOSTICS_DIR));
 

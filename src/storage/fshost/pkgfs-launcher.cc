@@ -240,7 +240,7 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
   DevmgrLauncher launcher(&fs_provider);
   status = launcher.LaunchWithLoader(
       *zx::job::default_job(), "pkgfs", std::move(executable), std::move(loader), argv, nullptr, -1,
-      /* TODO(fxb/32044) */ zx::resource(), &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1,
+      /* TODO(fxbug.dev/32044) */ zx::resource(), &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1,
       &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC);
   if (status != ZX_OK) {
     printf("fshost: failed to launch %s: %d (%s)\n", cmd, status, zx_status_get_string(status));

@@ -83,7 +83,7 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // TODO(fxb/43565): This generates the same ID for multiple instances of the same device. It
+  // TODO(fxbug.dev/43565): This generates the same ID for multiple instances of the same device. It
   // should be made unique by incorporating a truly unique value such as the bus ID.
   constexpr uint32_t kVendorShift = 16;
   PersistentDeviceId persistent_id =

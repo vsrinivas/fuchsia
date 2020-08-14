@@ -206,7 +206,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 // Create a file large enough that it needs to be fragmented when it is sent
 // to and received from the guest and then send it to and retrieve it from the
 // guest.
-// TODO(fxb/43569): Flaky.
+// TODO(fxbug.dev/43569): Flaky.
 TEST_F(GuestInteractionTest, DISABLED_GrpcPutGetTest) {
   CreateEnvironment();
   LaunchDebianGuest();

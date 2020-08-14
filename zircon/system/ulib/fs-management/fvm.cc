@@ -310,7 +310,7 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   fuchsia_hardware_block_partition_GUID instance_guid;
   memcpy(instance_guid.value, request->guid, BLOCK_GUID_LEN);
 
-  // TODO(fxb/52757): Add name_size to alloc_req_t.
+  // TODO(fxbug.dev/52757): Add name_size to alloc_req_t.
   //
   // Here, we rely on request->name being a C-style string terminated by \x00,
   // but no greater than BLOCK_NAME_LEN. Instead, we should add a name_size

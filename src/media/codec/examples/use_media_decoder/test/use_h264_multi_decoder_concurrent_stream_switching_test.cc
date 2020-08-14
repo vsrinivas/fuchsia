@@ -37,7 +37,7 @@ constexpr uint32_t kThreadCount = 2;
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  // TODO(fxb/13483): The retries should not be necessary here.  These are presently needed to
+  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
   constexpr uint32_t kMaxRetryCount = 100;

@@ -111,7 +111,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
               zx::channel old_remote;
               Vfs::UninstallRemoteLocked(vn, &old_remote);
               // Passing |zx::time::infinite_past()| results in a fire-and-forget call.
-              // TODO(fxb/42264): Add proper tracking of remote filesystem teardown.
+              // TODO(fxbug.dev/42264): Add proper tracking of remote filesystem teardown.
               Vfs::UnmountHandle(std::move(old_remote), zx::time::infinite_past());
             } else {
               return ZX_ERR_BAD_STATE;
