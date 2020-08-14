@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use ::fidl;
-
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 use futures::{FutureExt as _, TryStreamExt as _};
@@ -37,42 +35,6 @@ async fn set_interface_status_unknown_interface() -> Result {
         .await
         .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
 
-    Ok(())
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn inspect_objects() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let env = sandbox
-        .create_empty_environment("inspect_objects")
-        .context("failed to create environment")?;
-    let launcher = env.get_launcher().context("failed to create launcher")?;
-
-    let netstack = fuchsia_component::client::launch(
-        &launcher,
-        <Netstack2 as Netstack>::VERSION.get_url().to_string(),
-        None,
-    )
-    .context("failed to start netstack")?;
-
-    // TODO(fxbug.dev/4629): the launcher API lies and claims it connects you to "the" directory
-    // request, but it doesn't. It connects you to the "svc" directory under the directory request.
-    // That means that reading anything other than FIDL services isn't possible, and THAT means
-    // that this test is impossible.
-    if false {
-        for path in ["counters", "interfaces"].iter() {
-            let (client, server) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_inspect_deprecated::InspectMarker>()
-                    .context("failed to create proxy")?;
-
-            let path = format!("diagnostics/{}/inspect", path);
-            let () = netstack
-                .pass_to_named_service(&path, server.into_channel())
-                .with_context(|| format!("failed to connect to {}", path))?;
-
-            let _object = client.read_data().await.context("failed to call ReadData")?;
-        }
-    }
     Ok(())
 }
 

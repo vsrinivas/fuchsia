@@ -11,6 +11,7 @@ mod management;
 #[macro_use]
 mod environments;
 mod fidl;
+mod inspect;
 mod ipv6;
 mod routes;
 mod socket;

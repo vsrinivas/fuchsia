@@ -5,6 +5,7 @@
 #include "managed_environment.h"
 
 #include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
@@ -17,11 +18,15 @@
 
 namespace netemul {
 
+namespace {
 // Start the Log and LogSink service (the same component publishses both
 // services))
-static const char* kLogSinkServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-static const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-static const char* kLogServiceNoKLogOption = "--disable-klog";
+constexpr const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
+constexpr const char* kLogServiceNoKLogOption = "--disable-klog";
+constexpr const char* kLogServices[] = {fuchsia::logger::LogSink::Name_,
+                                        fuchsia::logger::Log::Name_,
+                                        fuchsia::diagnostics::ArchiveAccessor::Name_};
+}  // namespace
 
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
@@ -120,37 +125,24 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         }));
   }
 
-  // Inject LogSink service
-  services->AddServiceWithLaunchInfo(
-      kLogSinkServiceURL,
-      [this, disable_klog]() {
-        fuchsia::sys::LaunchInfo linfo;
-        linfo.url = kLogSinkServiceURL;
-        if (disable_klog) {
-          linfo.arguments.emplace({kLogServiceNoKLogOption});
-        }
-        linfo.out = loggers_->CreateLogger(kLogSinkServiceURL, false);
-        linfo.err = loggers_->CreateLogger(kLogSinkServiceURL, true);
-        loggers_->IncrementCounter();
-        return linfo;
-      },
-      fuchsia::logger::LogSink::Name_);
-
-  // Inject Log service
-  services->AddServiceWithLaunchInfo(
-      kLogServiceURL,
-      [this, disable_klog]() {
-        fuchsia::sys::LaunchInfo linfo;
-        linfo.url = kLogServiceURL;
-        if (disable_klog) {
-          linfo.arguments.emplace({kLogServiceNoKLogOption});
-        }
-        linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
-        linfo.err = loggers_->CreateLogger(kLogServiceURL, true);
-        loggers_->IncrementCounter();
-        return linfo;
-      },
-      fuchsia::logger::Log::Name_);
+  // Inject all services provided by LogService.
+  for (const auto* svc : kLogServices) {
+    // Inject Log service
+    services->AddServiceWithLaunchInfo(
+        kLogServiceURL,
+        [this, disable_klog]() {
+          fuchsia::sys::LaunchInfo linfo;
+          linfo.url = kLogServiceURL;
+          if (disable_klog) {
+            linfo.arguments.emplace({kLogServiceNoKLogOption});
+          }
+          linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
+          linfo.err = loggers_->CreateLogger(kLogServiceURL, true);
+          loggers_->IncrementCounter();
+          return linfo;
+        },
+        svc);
+  }
 
   // Allow sysinfo service
   services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);

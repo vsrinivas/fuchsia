@@ -29,6 +29,9 @@ use futures::stream::TryStreamExt as _;
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
+/// The default MTU used in in netemul endpoint configurations.
+pub const DEFAULT_MTU: u16 = 1500;
+
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     /// The backing [`EndpointBacking`] for this `Endpoint`.
@@ -179,7 +182,11 @@ impl TestSandbox {
     {
         self.create_endpoint_with(
             name,
-            netemul_network::EndpointConfig { mtu: 1500, mac: None, backing: E::NETEMUL_BACKING },
+            netemul_network::EndpointConfig {
+                mtu: DEFAULT_MTU,
+                mac: None,
+                backing: E::NETEMUL_BACKING,
+            },
         )
         .await
     }
