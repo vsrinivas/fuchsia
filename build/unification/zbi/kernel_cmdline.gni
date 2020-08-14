@@ -18,7 +18,7 @@ template("kernel_cmdline") {
   zbi_input(target_name) {
     type = "cmdline"
     args = []
-    foreach(args, invoker.args) {
+    foreach(arg, invoker.args) {
       args += [ "--entry=$arg" ]
     }
   }
