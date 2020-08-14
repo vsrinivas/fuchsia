@@ -11,7 +11,6 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_kernel as fstats;
-use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use log::*;
@@ -163,7 +162,7 @@ impl CpuStatsHandler {
         let per_cpu_stats =
             cpu_stats.per_cpu_stats.ok_or(format_err!("Received null per_cpu_stats"))?;
 
-        idle_stats.timestamp = Nanoseconds(fasync::Time::now().into_nanos());
+        idle_stats.timestamp = crate::utils::get_current_timestamp();
         for i in 0..cpu_stats.actual_num_cpus as usize {
             idle_stats.idle_times.push(Nanoseconds(
                 per_cpu_stats[i]
@@ -277,6 +276,7 @@ impl Node for CpuStatsHandler {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use fuchsia_async as fasync;
     use futures::TryStreamExt;
     use inspect::assert_inspect_tree;
 

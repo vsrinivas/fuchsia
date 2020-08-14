@@ -595,7 +595,7 @@ pub mod tests {
     fn test_shutdown_timeout() {
         // Need to use an Executor with fake time to test the timeout value
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
-        exec.set_fake_time(fasync::Time::from_nanos(0));
+        exec.set_fake_time(Seconds(0.0).into());
 
         // Arbitrary shutdown request to be used in the test
         let shutdown_request = ShutdownRequest::PowerOff;
@@ -628,7 +628,7 @@ pub mod tests {
         assert!(exec.run_until_stalled(&mut shutdown_future).is_pending());
 
         // Wake the timer and verify the timer was scheduled to fire at the expected time
-        assert_eq!(exec.wake_next_timer(), Some(fasync::Time::from_nanos(timeout.into_nanos())));
+        assert_eq!(exec.wake_next_timer(), Some(timeout.into()));
 
         // Run the future again. This time it should complete with an error (due to the timeout)
         assert_matches!(

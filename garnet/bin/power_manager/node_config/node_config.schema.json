@@ -359,6 +359,63 @@
           "config",
           "dependencies"
         ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "ThermalShutdown"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "system_shutdown_node": {
+                "type": "string"
+              },
+              "temperature_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "system_shutdown_node",
+              "temperature_handler_node"
+            ]
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "sensor_name": {
+                "type": "string"
+              },
+              "thermal_shutdown_temperature_c": {
+                "type": "number"
+              },
+              "poll_interval_s": {
+                "type": "number"
+              },
+              "filter_time_constant_s": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "sensor_name",
+              "thermal_shutdown_temperature_c",
+              "poll_interval_s",
+              "filter_time_constant_s"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
       }
     ]
   }

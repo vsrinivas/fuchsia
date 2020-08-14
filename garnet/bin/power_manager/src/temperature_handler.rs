@@ -6,7 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::types::Celsius;
+use crate::types::{Celsius, Nanoseconds, Seconds};
 use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -16,6 +16,7 @@ use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_zircon as zx;
 use serde_derive::Deserialize;
 use serde_json as json;
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -339,5 +340,137 @@ pub mod tests {
             }
         });
         let _ = TemperatureHandlerBuilder::new_from_json(json_data, &HashMap::new());
+    }
+}
+
+/// Contains both the raw and filtered temperature values returned from the TemperatureFilter
+/// `get_temperature` function.
+#[derive(PartialEq, Debug)]
+pub struct TemperatureReadings {
+    pub raw: Celsius,
+    pub filtered: Celsius,
+}
+
+/// Wrapper for reading and filtering temperature samples from a TemperatureHandler node.
+pub struct TemperatureFilter {
+    /// Filter time constant
+    time_constant: Seconds,
+
+    /// Previous sample temperature
+    prev_temperature: Cell<Option<Celsius>>,
+
+    /// Previous sample timestamp
+    prev_timestamp: Cell<Nanoseconds>,
+
+    /// TemperatureHandler node that is used to read temperature
+    temperature_handler: Rc<dyn Node>,
+}
+
+impl TemperatureFilter {
+    /// Constucts a new TemperatureFilter with the specified TemperatureHandler node and filter time
+    /// constant.
+    pub fn new(temperature_handler: Rc<dyn Node>, time_constant: Seconds) -> Self {
+        Self {
+            time_constant,
+            prev_temperature: Cell::new(None),
+            prev_timestamp: Cell::new(Nanoseconds(0)),
+            temperature_handler,
+        }
+    }
+
+    /// Reads a new temperature sample and returns a Temperature instance containing both the raw
+    /// and filtered temperature values.
+    pub async fn get_temperature(
+        &self,
+        timestamp: Nanoseconds,
+    ) -> Result<TemperatureReadings, Error> {
+        fuchsia_trace::duration!("power_manager", "TemperatureFilter::get_temperature");
+
+        let raw_temperature = self.read_temperature().await?;
+        let filtered_temperature = match self.prev_temperature.get() {
+            Some(prev_temperature) => Self::low_pass_filter(
+                raw_temperature,
+                prev_temperature,
+                (timestamp - self.prev_timestamp.get()).into(),
+                self.time_constant,
+            ),
+            None => raw_temperature,
+        };
+
+        self.prev_temperature.set(Some(filtered_temperature));
+        self.prev_timestamp.set(timestamp);
+
+        Ok(TemperatureReadings { raw: raw_temperature, filtered: filtered_temperature })
+    }
+
+    /// Queries the current temperature from the temperature handler node
+    async fn read_temperature(&self) -> Result<Celsius, Error> {
+        fuchsia_trace::duration!("power_manager", "TemperatureFilter::read_temperature");
+        match self.temperature_handler.handle_message(&Message::ReadTemperature).await {
+            Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
+            Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
+            Err(e) => Err(format_err!("ReadTemperature failed: {:?}", e)),
+        }
+    }
+
+    /// Filters the input temperature value using the specified previous temperature value `y_prev`,
+    /// `time_delta`, and `time_constant`.
+    fn low_pass_filter(
+        y: Celsius,
+        y_prev: Celsius,
+        time_delta: Seconds,
+        time_constant: Seconds,
+    ) -> Celsius {
+        Celsius(y_prev.0 + (time_delta.0 / time_constant.0) * (y.0 - y_prev.0))
+    }
+}
+
+#[cfg(test)]
+mod temperature_filter_tests {
+    use super::*;
+    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::{msg_eq, msg_ok_return};
+    use fuchsia_async as fasync;
+
+    /// Tests the low_pass_filter function for correctness.
+    #[test]
+    fn test_low_pass_filter() {
+        let y_0 = Celsius(0.0);
+        let y_1 = Celsius(10.0);
+        let time_delta = Seconds(1.0);
+        let time_constant = Seconds(10.0);
+        assert_eq!(
+            TemperatureFilter::low_pass_filter(y_1, y_0, time_delta, time_constant),
+            Celsius(1.0)
+        );
+    }
+
+    /// Tests that the TemperatureFilter `get_temperature` function queries the TemperatureHandler
+    /// node and returns the expected raw and filtered temperature values.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_temperature() {
+        let temperature_node = create_mock_node(
+            "Temperature",
+            vec![
+                (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(50.0)))),
+                (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(Celsius(80.0)))),
+            ],
+        );
+
+        // Create a TemperatureFilter instance using 5 seconds as the filter constant
+        let filter = TemperatureFilter::new(temperature_node, Seconds(5.0));
+
+        // The first reading should return identical raw/filtered values
+        assert_eq!(
+            filter.get_temperature(Nanoseconds(0)).await.unwrap(),
+            TemperatureReadings { raw: Celsius(50.0), filtered: Celsius(50.0) }
+        );
+
+        // The next reading should return the raw value (80C) along with the calculated filtered
+        // value for the given elapsed time (1 second)
+        assert_eq!(
+            filter.get_temperature(Seconds(1.0).into()).await.unwrap(),
+            TemperatureReadings { raw: Celsius(80.0), filtered: Celsius(56.0) }
+        );
     }
 }

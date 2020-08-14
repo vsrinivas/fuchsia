@@ -74,14 +74,27 @@ macro_rules! define_arithmetic {
 }
 define_arithmetic!(Seconds, Nanoseconds, Celsius, Watts);
 
-// Convert Seconds to and from Nanoseconds.
-impl Seconds {
-    pub fn from_nanos(nanos: i64) -> Seconds {
-        Seconds(nanos as f64 / 1e9)
+impl From<Nanoseconds> for Seconds {
+    fn from(nanos: Nanoseconds) -> Self {
+        Seconds(nanos.0 as f64 / 1e9)
     }
+}
 
-    pub fn into_nanos(self) -> i64 {
-        (self.0 * 1e9) as i64
+impl From<Seconds> for Nanoseconds {
+    fn from(seconds: Seconds) -> Self {
+        Nanoseconds((seconds.0 * 1e9) as i64)
+    }
+}
+
+impl From<Seconds> for fuchsia_zircon::Duration {
+    fn from(seconds: Seconds) -> fuchsia_zircon::Duration {
+        fuchsia_zircon::Duration::from_nanos(Nanoseconds::from(seconds).0)
+    }
+}
+
+impl From<Seconds> for fuchsia_async::Time {
+    fn from(seconds: Seconds) -> fuchsia_async::Time {
+        fuchsia_async::Time::from_nanos(Nanoseconds::from(seconds).0)
     }
 }
 

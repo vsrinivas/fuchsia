@@ -89,6 +89,7 @@ rustc_binary("bin") {
     "src/test/thermal_integration_tests.rs",
     "src/thermal_limiter.rs",
     "src/thermal_policy.rs",
+    "src/thermal_shutdown.rs",
     "src/types.rs",
     "src/utils.rs",
   ]

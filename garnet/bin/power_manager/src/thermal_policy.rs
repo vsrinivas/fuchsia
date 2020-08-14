@@ -7,6 +7,7 @@ use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
+use crate::temperature_handler::TemperatureFilter;
 use crate::thermal_limiter;
 use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
 use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
@@ -16,7 +17,6 @@ use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
@@ -138,17 +138,19 @@ impl<'a> ThermalPolicyBuilder<'a> {
         let thermal_metrics = self.thermal_metrics.unwrap_or(CobaltMetrics::new());
 
         let node = Rc::new(ThermalPolicy {
-            config: self.config,
             state: ThermalState {
+                temperature_filter: TemperatureFilter::new(
+                    self.config.temperature_node.clone(),
+                    self.config.policy_params.controller_params.filter_time_constant,
+                ),
                 prev_timestamp: Cell::new(Nanoseconds(0)),
                 max_time_delta: Cell::new(Seconds(0.0)),
-                prev_temperature: Cell::new(Celsius(0.0)),
                 error_integral: Cell::new(0.0),
-                state_initialized: Cell::new(false),
                 thermal_load: Cell::new(ThermalLoad(0)),
                 throttling_state: Cell::new(ThrottlingState::ThrottlingInactive),
                 throttle_end_deadline: Cell::new(None),
             },
+            config: self.config,
             inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string()),
             thermal_metrics: RefCell::new(thermal_metrics),
         });
@@ -240,20 +242,17 @@ pub struct ThermalControllerParams {
 
 /// State information that is used for calculations across controller iterations
 struct ThermalState {
+    /// Provides filtered temperature values according to the configured filter constant.
+    temperature_filter: TemperatureFilter,
+
     /// The time of the previous controller iteration
     prev_timestamp: Cell<Nanoseconds>,
 
     /// The largest observed time between controller iterations (may be used to detect hangs)
     max_time_delta: Cell<Seconds>,
 
-    /// The temperature reading from the previous controller iteration
-    prev_temperature: Cell<Celsius>,
-
     /// The integral error [degC * s] that is accumulated across controller iterations
     error_integral: Cell<f64>,
-
-    /// A flag to know if the rest of ThermalState has not been initialized yet
-    state_initialized: Cell<bool>,
 
     /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
     /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
@@ -285,9 +284,9 @@ impl ThermalPolicy {
     /// ThermalControllerParams.sample_interval. At each timer, `iterate_thermal_control` is called
     /// and any resulting errors are logged.
     fn start_periodic_thermal_loop(self: Rc<Self>) {
-        let mut periodic_timer = fasync::Interval::new(zx::Duration::from_nanos(
-            self.config.policy_params.controller_params.sample_interval.into_nanos(),
-        ));
+        let mut periodic_timer = fasync::Interval::new(
+            self.config.policy_params.controller_params.sample_interval.into(),
+        );
 
         fasync::Task::local(async move {
             while let Some(()) = periodic_timer.next().await {
@@ -322,22 +321,12 @@ impl ThermalPolicy {
     pub async fn iterate_thermal_control(&self) -> Result<(), Error> {
         fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
 
-        let raw_temperature = self.get_temperature().await?;
         let timestamp = get_current_timestamp();
-
-        // We should have run the iteration at least once before proceeding
-        if !self.state.state_initialized.get() {
-            self.state.prev_temperature.set(raw_temperature);
-            self.state.prev_timestamp.set(timestamp);
-            self.state.state_initialized.set(true);
-            self.inspect.state_initialized.set(1);
-            return Ok(());
-        }
-
         let time_delta = self.get_time_delta(timestamp);
-        let filtered_temperature = self.get_filtered_temperature(raw_temperature, time_delta);
+
+        let temperature = self.state.temperature_filter.get_temperature(timestamp).await?;
         let (error_proportional, error_integral) =
-            self.get_temperature_error(filtered_temperature, time_delta);
+            self.get_temperature_error(temperature.filtered, time_delta);
         let thermal_load = Self::calculate_thermal_load(
             error_integral,
             self.config.policy_params.controller_params.e_integral_min,
@@ -348,15 +337,15 @@ impl ThermalPolicy {
         self.log_thermal_iteration_metrics(
             timestamp,
             time_delta,
-            raw_temperature,
-            filtered_temperature,
+            temperature.raw,
+            temperature.filtered,
             error_integral,
             thermal_load,
             throttling_state,
         );
 
         // If the new temperature is above the critical threshold then shut down the system
-        let result = self.check_critical_temperature(timestamp, filtered_temperature).await;
+        let result = self.check_critical_temperature(timestamp, temperature.filtered).await;
         log_if_err!(result, "Error checking critical temperature");
         fuchsia_trace::instant!(
             "power_manager",
@@ -388,40 +377,16 @@ impl ThermalPolicy {
         Ok(())
     }
 
-    /// Queries the current temperature from the temperature handler node
-    async fn get_temperature(&self) -> Result<Celsius, Error> {
-        fuchsia_trace::duration!("power_manager", "ThermalPolicy::get_temperature");
-        match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
-            Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
-            Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
-            Err(e) => Err(format_err!("ReadTemperature failed: {:?}", e)),
-        }
-    }
-
     /// Gets the time delta from the previous call to this function using the provided timestamp.
     /// Logs the largest delta into Inspect.
     fn get_time_delta(&self, timestamp: Nanoseconds) -> Seconds {
-        let time_delta = Seconds::from_nanos(timestamp.0 - self.state.prev_timestamp.get().0);
-        if time_delta.0 > self.state.max_time_delta.get().0 {
+        let time_delta = (timestamp - self.state.prev_timestamp.get()).into();
+        if time_delta > self.state.max_time_delta.get().into() {
             self.state.max_time_delta.set(time_delta);
             self.inspect.max_time_delta.set(time_delta.0);
         }
         self.state.prev_timestamp.set(timestamp);
         time_delta
-    }
-
-    /// Calculates a filtered temperature using the provided input temperature and time delta, and
-    /// using the previous temperature from the recorded state. Updates the previous temperature
-    /// state with the new input temperature.
-    fn get_filtered_temperature(&self, raw_temperature: Celsius, time_delta: Seconds) -> Celsius {
-        let filtered_temperature = Celsius(low_pass_filter(
-            raw_temperature.0,
-            self.state.prev_temperature.get().0,
-            time_delta.0,
-            self.config.policy_params.controller_params.filter_time_constant.0,
-        ));
-        self.state.prev_temperature.set(filtered_temperature);
-        filtered_temperature
     }
 
     /// Calculates proportional error and integral error of temperature using the provided input
@@ -636,10 +601,9 @@ impl ThermalPolicy {
             // Begin the cooldown timer
             (ThrottlingState::ThrottlingActive, ThrottlingState::CooldownActive) => {
                 info!("End thermal mitigation");
-                self.state.throttle_end_deadline.set(Some(
-                    timestamp
-                        + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos()),
-                ));
+                self.state
+                    .throttle_end_deadline
+                    .set(Some(timestamp + self.config.policy_params.throttle_end_delay.into()));
             }
 
             // End the current throttling event and file a crash report
@@ -800,10 +764,6 @@ impl ThermalPolicy {
     }
 }
 
-fn low_pass_filter(y: f64, y_prev: f64, time_delta: f64, time_constant: f64) -> f64 {
-    y_prev + (time_delta / time_constant) * (y - y_prev)
-}
-
 #[async_trait(?Send)]
 impl Node for ThermalPolicy {
     fn name(&self) -> &'static str {
@@ -827,7 +787,6 @@ struct InspectData {
     temperature_raw: inspect::DoubleProperty,
     temperature_filtered: inspect::DoubleProperty,
     error_integral: inspect::DoubleProperty,
-    state_initialized: inspect::UintProperty,
     thermal_load: inspect::UintProperty,
     throttling_state: inspect::StringProperty,
     max_time_delta: inspect::DoubleProperty,
@@ -848,7 +807,6 @@ impl InspectData {
         let temperature_raw = state_node.create_double("temperature_raw (C)", 0.0);
         let temperature_filtered = state_node.create_double("temperature_filtered (C)", 0.0);
         let error_integral = state_node.create_double("error_integral", 0.0);
-        let state_initialized = state_node.create_uint("state_initialized", 0);
         let thermal_load = state_node.create_uint("thermal_load", 0);
         let throttling_state = state_node.create_string(
             "throttling_state",
@@ -872,7 +830,6 @@ impl InspectData {
             temperature_raw,
             temperature_filtered,
             error_integral,
-            state_initialized,
             thermal_load,
             throttling_state,
             throttle_history,
@@ -1193,16 +1150,6 @@ pub mod tests {
         }
     }
 
-    /// Tests the low_pass_filter function for correctness.
-    #[test]
-    fn test_low_pass_filter() {
-        let y_0 = 0.0;
-        let y_1 = 10.0;
-        let time_delta = 1.0;
-        let time_constant = 10.0;
-        assert_eq!(low_pass_filter(y_1, y_0, time_delta, time_constant), 1.0);
-    }
-
     /// Tests the calculate_thermal_load function for correctness.
     #[test]
     fn test_calculate_thermal_load() {
@@ -1253,29 +1200,9 @@ pub mod tests {
         };
         let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
 
-        assert_eq!(node.get_time_delta(Nanoseconds(Seconds(1.5).into_nanos())), Seconds(1.5));
-        assert_eq!(node.get_time_delta(Nanoseconds(Seconds(2.0).into_nanos())), Seconds(0.5));
+        assert_eq!(node.get_time_delta(Seconds(1.5).into()), Seconds(1.5));
+        assert_eq!(node.get_time_delta(Seconds(2.0).into()), Seconds(0.5));
         assert_eq!(node.state.max_time_delta.get(), Seconds(1.5));
-    }
-
-    /// Tests that the `get_filtered_temperature` function correctly calculates filtered
-    /// temperature.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_filtered_temperature() {
-        let mut policy_params = default_policy_params();
-        policy_params.controller_params.filter_time_constant = Seconds(10.0);
-        let thermal_config = ThermalConfig {
-            temperature_node: create_dummy_node(),
-            cpu_control_nodes: vec![create_dummy_node()],
-            sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
-            crash_report_handler: create_dummy_node(),
-            policy_params,
-        };
-        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
-
-        assert_eq!(node.get_filtered_temperature(Celsius(40.0), Seconds(1.0)), Celsius(4.0));
-        assert_eq!(node.get_filtered_temperature(Celsius(40.0), Seconds(1.0)), Celsius(7.6));
     }
 
     /// Tests that the `get_temperature_error` function correctly calculates proportional error and
@@ -1608,7 +1535,7 @@ pub mod tests {
     /// thermal_limit_result metrics after successful thermal mitigation.
     #[fasync::run_singlethreaded(test)]
     async fn test_cobalt_metrics_throttle_elapsed_time() {
-        let throttle_duration = Nanoseconds(1e9 as i64); // 1s
+        let throttle_duration = Nanoseconds::from(Seconds(1.0));
 
         // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
@@ -1826,7 +1753,7 @@ pub mod tests {
         assert_eq!(node.state.throttling_state.get(), ThrottlingState::CooldownActive);
         assert_eq!(
             node.state.throttle_end_deadline.get(),
-            Some(elapsed_time + Nanoseconds(throttle_end_delay.into_nanos()))
+            Some(elapsed_time + throttle_end_delay.into())
         );
 
         // Verify there were no dispatched Cobalt events because the cooldown timer is still running
@@ -1844,11 +1771,11 @@ pub mod tests {
         assert_eq!(node.state.throttling_state.get(), ThrottlingState::CooldownActive);
         assert_eq!(
             node.state.throttle_end_deadline.get(),
-            Some(elapsed_time + Nanoseconds(throttle_end_delay.into_nanos()))
+            Some(elapsed_time + throttle_end_delay.into())
         );
 
         // Cooldown timer expires
-        elapsed_time += Nanoseconds(throttle_end_delay.into_nanos());
+        elapsed_time += throttle_end_delay.into();
         let _ = node.update_throttling_state(elapsed_time, ThermalLoad(0)).await;
         assert_eq!(node.state.throttling_state.get(), ThrottlingState::ThrottlingInactive);
         assert_eq!(node.state.throttle_end_deadline.get(), None);

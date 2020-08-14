@@ -265,7 +265,7 @@ impl Simulator {
         assert!(active_time_per_core <= dt);
 
         let idle_time_per_core = dt - active_time_per_core;
-        self.idle_times.iter_mut().for_each(|x| *x += Nanoseconds(idle_time_per_core.into_nanos()));
+        self.idle_times.iter_mut().for_each(|x| *x += idle_time_per_core.into());
 
         num_operations_completed
     }
@@ -297,7 +297,7 @@ impl ThermalPolicyTest {
         }
         let time = Seconds(0.0);
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        executor.set_fake_time(fasync::Time::from_nanos(time.into_nanos()));
+        executor.set_fake_time(time.into());
 
         let cpu_params = sim_params.cpu_params.clone();
         let sim = Simulator::new(sim_params);
@@ -307,14 +307,6 @@ impl ThermalPolicyTest {
             futures::task::Poll::Ready(policy) => policy,
             _ => panic!("Failed to create ThermalPolicy"),
         };
-
-        // Run the thermal policy once to initialize. The future must be dropped to eliminate
-        // its borrow of `thermal_policy`.
-        let mut future = Box::pin(async {
-            thermal_policy.iterate_thermal_control().await.unwrap();
-        });
-        assert!(executor.run_until_stalled(&mut future).is_ready());
-        drop(future);
 
         Self { executor, time, sim, thermal_policy }
     }
@@ -374,7 +366,7 @@ impl ThermalPolicyTest {
 
         for _ in 0..n {
             self.time += dt;
-            self.executor.set_fake_time(fasync::Time::from_nanos(self.time.into_nanos()));
+            self.executor.set_fake_time(self.time.into());
             self.sim.borrow_mut().step(dt);
             // In the future below, the compiler would see `self.thermal_policy` as triggering
             // an immutable borrow of `self.executor`, which cannot occur within
