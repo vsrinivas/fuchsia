@@ -32,7 +32,7 @@ constexpr int kInputFileFrameCount = 300;
 
 const char* kGoldenSha256 = "1cc5002b6d68f34f601813c5bbed775eb1a1033a8109bdf2fed59160f2edc207";
 
-constexpr uint32_t kThreadCount = 2;
+constexpr uint32_t kThreadCount = 3;
 
 }  // namespace
 
@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
         }
         result[i] =
             use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
-                                  /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                  /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+                                   /*is_secure_output=*/false, /*is_secure_input=*/false,
+                                   /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
       });
     }
     go = true;
@@ -80,9 +80,10 @@ int main(int argc, char* argv[]) {
       continue;
     } else {
       if (try_ordinal != 0) {
-        LOGF("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u", try_ordinal);
+        LOGF("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u",
+             try_ordinal);
       }
-      LOGF("Both streams worked.  PASS");
+      LOGF("All streams worked.  PASS");
       return 0;
     }
     LOGF("WARNING - fxb/13483 - decode may have flaked - internally de-flaking (for now)");
