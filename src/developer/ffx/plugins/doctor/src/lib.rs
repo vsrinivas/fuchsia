@@ -366,7 +366,7 @@ mod test {
             move |req| async move {
                 match req {
                     RemoteControlRequest::IdentifyHost { responder: _ } => {
-                        task::sleep(DEFAULT_RETRY_DELAY.add(Duration::from_millis(10))).await;
+                        task::sleep(DEFAULT_RETRY_DELAY.add(Duration::from_millis(1000))).await;
                     }
                     _ => panic!("Unexpected request: {:?}", req),
                 }

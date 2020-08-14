@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // TODO(jwing): Create an actual issue template for this.
-pub const BUG_URL: &str = "https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=DeveloperExperience%3EWorkflow&cc=fuchsia-tools-eng@google.com";
+pub const BUG_URL: &str = "https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug";
 
 pub const SUCCESS: &str = "success";
 pub const FOUND: &str = "found";
