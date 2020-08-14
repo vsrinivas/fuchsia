@@ -97,6 +97,7 @@ class RxQueue {
 
   zx::port rx_watch_port_;
   fit::optional<thrd_t> rx_watch_thread_{};
+  std::atomic<bool> running_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RxQueue);
 };

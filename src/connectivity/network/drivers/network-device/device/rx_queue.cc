@@ -19,11 +19,9 @@ constexpr uint64_t kQuitWatchKey = 4;
 }  // namespace
 
 RxQueue::~RxQueue() {
-  // We tie rx_watch_port_ to the lifetime of the watch thread, and dispose of it alongside the
-  // thread in `RxQueue::JoinThread`. This assertion protects us from destruction paths where
-  // `RxQueue::JoinThread` is not called.
-  ZX_ASSERT_MSG(!rx_watch_port_.is_valid(),
-                "RxQueue destroyed without disposing of port and thread first.");
+  // running_ is tied to the lifetime of the watch thread, it's cleared in`RxQueue::JoinThread`.
+  // This assertion protects us from destruction paths where `RxQueue::JoinThread` is not called.
+  ZX_ASSERT_MSG(!running_, "RxQueue destroyed without disposing of port and thread first.");
 }
 
 zx_status_t RxQueue::Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* out) {
@@ -73,7 +71,7 @@ zx_status_t RxQueue::Create(DeviceInterface* parent, std::unique_ptr<RxQueue>* o
     return ZX_ERR_INTERNAL;
   }
   queue->rx_watch_thread_ = watch_thread;
-
+  queue->running_ = true;
   *out = std::move(queue);
   return ZX_OK;
 }
@@ -90,6 +88,9 @@ void RxQueue::TriggerRxWatch() {
 }
 
 void RxQueue::TriggerSessionChanged() {
+  if (!running_) {
+    return;
+  }
   zx_port_packet_t packet;
   packet.type = ZX_PKT_TYPE_USER;
   packet.key = kSessionSwitchKey;
@@ -110,6 +111,8 @@ void RxQueue::JoinThread() {
       LOGF_ERROR("network-device: RxQueue::JoinThread failed to send quit key: %s",
                  zx_status_get_string(status));
     }
+    // Mark the queue as not running anymore.
+    running_ = false;
     thrd_join(*rx_watch_thread_, nullptr);
     // Dispose of the port and the thread handle.
     rx_watch_port_.reset();
