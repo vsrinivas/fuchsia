@@ -18,6 +18,7 @@
 
 #include <gmock/gmock.h>
 
+#include "common.h"
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "local_roughtime_server.h"
@@ -45,33 +46,6 @@ using sys::testing::TestWithEnvironment;
 using time_server::FakeRtcDevice;
 using time_server::LocalRoughtimeServer;
 
-#define GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY                                                   \
-  0x3b, 0x6a, 0x27, 0xbc, 0xce, 0xb6, 0xa4, 0x2d, 0x62, 0xa3, 0xa8, 0xd0, 0x2a, 0x6f, 0x0d, 0x73, \
-      0x65, 0x32, 0x15, 0x77, 0x1d, 0xe2, 0x43, 0xa6, 0x3a, 0xc0, 0x48, 0xa1, 0x8b, 0x59, 0xda,   \
-      0x29
-
-// Ed25519 private key used by |simple_server|. The
-// private part consists of all zeros and so is only for use in this example.
-constexpr uint8_t kPrivateKey[roughtime::kPrivateKeyLength] = {
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY};
-
-// Same as the second half of the private key, but there's no sane way to avoid
-// duplicating this code without macros.
-constexpr uint8_t kPublicKey[roughtime::kPublicKeyLength] = {
-    GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY};
-
-#undef GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY
-
 constexpr char kNetworkTimePackage[] =
     "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx";
 
@@ -80,19 +54,6 @@ constexpr char kRtcServiceName[] = "fuchsia.hardware.rtc.Device";
 // C++ still doesn't support compile-time string concatenation. Keep this in
 // sync with kFakeDevPath and kRtcServiceName.
 constexpr char kFakeRtcDevicePath[] = "/fakedev/fuchsia.hardware.rtc.Device";
-
-// Copied from zircon/lib/fidl/array_to_string
-std::string to_hex_string(const uint8_t* data, size_t size) {
-  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
-  std::string ret;
-  ret.reserve(size * 2);
-  for (size_t i = 0; i < size; i++) {
-    unsigned char c = data[i];
-    ret.push_back(kHexadecimalCharacters[c >> 4]);
-    ret.push_back(kHexadecimalCharacters[c & 0xf]);
-  }
-  return ret;
-}
 
 // Integration tests for |Timezone|.
 class SystemTimeUpdaterTest : public TestWithEnvironment {
@@ -117,7 +78,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
   // local Roughtime server because it is going to outlive the test.
   std::unique_ptr<std::thread> LaunchLocalRoughtimeServer(uint16_t port_number) {
     auto local_roughtime_server =
-        LocalRoughtimeServer::MakeInstance(kPrivateKey, port_number, 1537485257118'000);
+        LocalRoughtimeServer::MakeInstance(kTestPrivateKey, port_number, 1537485257118'000);
     local_roughtime_server_ = local_roughtime_server.release();
     return std::make_unique<std::thread>(std::thread([&]() {
       local_roughtime_server_->Start();
@@ -132,28 +93,9 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
 
   fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateServiceForLocalServer(
       uint16_t port_number) {
-    // Note that the host must explicitly be "::1". "localhost" is
-    // misinterpreted as implying IPv4.
-    const std::string kClientConfigJson = StringPrintf(
-        R"(
-{
-  "servers":
-  [
-    {
-      "name": "Local",
-      "publicKey": "%s",
-      "addresses":
-        [
-          {
-            "address": "::1:%d"
-          }
-        ]
-    }
-  ]
-})",
-        to_hex_string(kPublicKey, roughtime::kPublicKeyLength).c_str(), port_number);
+    std::string config_json = local_client_config(port_number);
     std::string client_config_path;
-    temp_dir_.NewTempFileWithData(kClientConfigJson, &client_config_path);
+    temp_dir_.NewTempFileWithData(config_json, &client_config_path);
     return LaunchSystemTimeUpdateService(client_config_path.c_str());
   }
 
