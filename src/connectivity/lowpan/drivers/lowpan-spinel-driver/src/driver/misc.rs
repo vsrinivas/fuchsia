@@ -26,6 +26,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
         self.driver_state_change.trigger();
     }
 
+    /// Waits for all of the returned values from
+    /// previous calls to this method to go out of scope.
+    ///
+    /// This is used to ensure that certain API tasks
+    /// do not execute simultaneously.
+    pub(super) async fn wait_for_api_task_lock(&self) -> futures::lock::MutexGuard<'_, ()> {
+        self.exclusive_task_lock.lock().await
+    }
+
     /// Decorates the given future with error mapping,
     /// reset handling, and a standard timeout.
     pub(super) fn apply_standard_combinators<'a, F>(

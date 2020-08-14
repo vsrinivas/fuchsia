@@ -94,15 +94,20 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     async fn online_task(&self) -> Result<(), Error> {
         fx_log_info!("online_loop: Entered");
 
-        // Bring up the network interface.
-        self.frame_handler
-            .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), true).verify())
-            .await?;
+        {
+            // Wait for our turn.
+            let _lock = self.wait_for_api_task_lock().await;
 
-        // Bring up the mesh stack.
-        self.frame_handler
-            .send_request(CmdPropValueSet(PropNet::StackUp.into(), true).verify())
-            .await?;
+            // Bring up the network interface.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), true).verify())
+                .await?;
+
+            // Bring up the mesh stack.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::StackUp.into(), true).verify())
+                .await?;
+        }
 
         futures::future::pending().await
     }
@@ -116,25 +121,31 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     async fn offline_task(&self) -> Result<(), Error> {
         fx_log_info!("offline_loop: Entered");
 
-        // Bring down the mesh stack.
-        if let Err(err) = self
-            .frame_handler
-            .send_request(CmdPropValueSet(PropNet::StackUp.into(), false))
-            .await
-            .context("Setting PropNet::StackUp to False")
         {
-            fx_log_err!("Unable to set `PropNet::StackUp`: {:?}", err);
-        }
+            // Scope for the API task lock.
+            // Wait for our turn.
+            let _lock = self.wait_for_api_task_lock().await;
 
-        // Bring down the network interface.
-        if let Err(err) = self
-            .frame_handler
-            .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false))
-            .await
-            .context("Setting PropNet::InterfaceUp to False")
-        {
-            fx_log_err!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
-        }
+            // Bring down the mesh stack.
+            if let Err(err) = self
+                .frame_handler
+                .send_request(CmdPropValueSet(PropNet::StackUp.into(), false))
+                .await
+                .context("Setting PropNet::StackUp to False")
+            {
+                fx_log_err!("Unable to set `PropNet::StackUp`: {:?}", err);
+            }
+
+            // Bring down the network interface.
+            if let Err(err) = self
+                .frame_handler
+                .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false))
+                .await
+                .context("Setting PropNet::InterfaceUp to False")
+            {
+                fx_log_err!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
+            }
+        } // API task lock goes out of scope here
 
         futures::future::pending().await
     }

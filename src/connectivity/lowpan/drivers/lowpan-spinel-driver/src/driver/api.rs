@@ -38,6 +38,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
             None
         };
 
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock().await;
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -113,6 +116,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     async fn leave_network(&self) -> ZxResult<()> {
         fx_log_info!("Got leave command");
 
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock().await;
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -146,6 +152,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
         fx_log_info!("Got set active command: {:?}", enabled);
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock().await;
 
         let mut driver_state = self.driver_state.lock();
 
@@ -186,6 +195,11 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         use fidl_fuchsia_lowpan::ChannelInfo;
 
         fx_log_info!("Got get_supported_channels command");
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock().await;
+
+        traceln!("Got API task lock, waiting until we are ready.");
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
@@ -338,6 +352,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         // Cancel everyone with an outstanding command.
         self.frame_handler.clear();
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock().await;
 
         let task = async {
             if self.get_init_state().is_initialized() {

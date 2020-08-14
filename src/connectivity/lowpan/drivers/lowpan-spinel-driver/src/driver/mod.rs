@@ -64,6 +64,10 @@ pub struct SpinelDriver<DS> {
     /// Condition that fires whenever the device has been reset.
     ncp_did_reset: AsyncCondition,
 
+    /// A task lock for ensuring that mutually-exclusive API operations
+    /// don't step on each other.
+    exclusive_task_lock: futures::lock::Mutex<()>,
+
     did_vend_main_task: std::sync::atomic::AtomicBool,
 }
 
@@ -75,6 +79,7 @@ impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
             driver_state: parking_lot::Mutex::new(Default::default()),
             driver_state_change: AsyncCondition::new(),
             ncp_did_reset: AsyncCondition::new(),
+            exclusive_task_lock: Default::default(),
             did_vend_main_task: Default::default(),
         }
     }
