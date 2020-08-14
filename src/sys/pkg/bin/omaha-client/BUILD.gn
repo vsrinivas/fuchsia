@@ -48,7 +48,9 @@ rustc_binary("bin") {
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/bounded-node",
     "//src/sys/pkg/lib/event-queue",
+    "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
+    "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/lib/system-health-check",
     "//third_party/rust_crates:anyhow",
@@ -74,6 +76,7 @@ rustc_binary("bin") {
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 
   sources = [
+    "src/api_metrics.rs",
     "src/channel.rs",
     "src/cobalt.rs",
     "src/configuration.rs",

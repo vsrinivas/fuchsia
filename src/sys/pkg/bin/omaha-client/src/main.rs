@@ -11,6 +11,7 @@ use omaha_client::{state_machine::StateMachineBuilder, time::StandardTimeSource}
 use std::cell::RefCell;
 use std::rc::Rc;
 
+mod api_metrics;
 mod channel;
 mod cobalt;
 mod configuration;
@@ -49,6 +50,9 @@ fn main() -> Result<(), Error> {
 
         // Cobalt metrics
         let (metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
+        futures.push(cobalt_fut.boxed_local());
+
+        let (api_metrics_reporter, cobalt_fut) = api_metrics::CobaltApiMetricsReporter::new();
         futures.push(cobalt_fut.boxed_local());
 
         let mut fs = ServiceFs::new_local();
@@ -122,6 +126,7 @@ fn main() -> Result<(), Error> {
             apps_node,
             state_node,
             channel_configs,
+            Box::new(api_metrics_reporter),
         );
         let fidl = Rc::new(RefCell::new(fidl));
 

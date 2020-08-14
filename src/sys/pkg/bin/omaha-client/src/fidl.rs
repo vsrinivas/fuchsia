@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    api_metrics::{ApiEvent, ApiMetricsReporter},
     channel::ChannelConfigs,
     inspect::{AppsNode, StateNode},
 };
@@ -176,6 +177,8 @@ where
     monitor_queue: ControlHandle<StateNotifier, State>,
 
     support_sysconfig: bool,
+
+    metrics_reporter: Box<dyn ApiMetricsReporter>,
 }
 
 pub enum IncomingServices {
@@ -196,6 +199,7 @@ where
         apps_node: AppsNode,
         state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
+        metrics_reporter: Box<dyn ApiMetricsReporter>,
     ) -> Self {
         let state = State {
             manager_state: state_machine::State::Idle,
@@ -217,6 +221,7 @@ where
             state,
             monitor_queue,
             support_sysconfig,
+            metrics_reporter,
         }
     }
 
@@ -244,6 +249,8 @@ where
     ) -> Result<(), Error> {
         match stream {
             IncomingServices::Manager(mut stream) => {
+                server.borrow_mut().metrics_reporter.emit_event(ApiEvent::UpdateManagerConnection);
+
                 while let Some(request) =
                     stream.try_next().await.context("error receiving Manager request")?
                 {
@@ -276,6 +283,12 @@ where
         match request {
             ManagerRequest::CheckNow { options, monitor, responder } => {
                 let mut res = Self::handle_check_now(Rc::clone(&server), options, monitor).await;
+
+                server
+                    .borrow_mut()
+                    .metrics_reporter
+                    .emit_event(ApiEvent::UpdateManagerCheckNowResult(res));
+
                 responder.send(&mut res).context("error sending response")?;
             }
 
@@ -304,6 +317,12 @@ where
         match request {
             ChannelControlRequest::SetTarget { channel, responder } => {
                 info!("Received SetTarget request with {}", channel);
+
+                server
+                    .borrow_mut()
+                    .metrics_reporter
+                    .emit_event(ApiEvent::UpdateChannelControlSetTarget);
+
                 // TODO: Verify that channel is valid.
                 let app_set = server.borrow().app_set.clone();
                 if channel.is_empty() {
@@ -528,6 +547,7 @@ pub use stub::{
 mod stub {
     use super::*;
     use crate::{
+        api_metrics::StubApiMetricsReporter,
         configuration,
         inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
         observer::FuchsiaObserver,
@@ -683,6 +703,7 @@ mod stub {
                 apps_node,
                 state_node,
                 self.channel_configs,
+                Box::new(StubApiMetricsReporter),
             )));
             // Enable sysconfig in test for all devices because the underlying function is mocked.
             fidl.borrow_mut().support_sysconfig = true;
