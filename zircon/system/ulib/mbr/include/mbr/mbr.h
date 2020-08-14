@@ -20,12 +20,6 @@ static constexpr size_t kMbrNumPartitions = 4;
 static constexpr uint16_t kMbrBootSignature = 0xAA55;
 
 static constexpr uint8_t kPartitionTypeNone = 0x00;
-static constexpr uint8_t kPartitionTypeFat12 = 0x01;
-static constexpr uint8_t kPartitionTypeFat16 = 0x04;
-static constexpr uint8_t kPartitionTypeFat16B = 0x06;
-static constexpr uint8_t kPartitionTypeFat32 = 0x0B;
-static constexpr uint8_t kPartitionTypeFat32LBA = 0x0C;
-static constexpr uint8_t kPartitionTypeFat16LBA = 0x0E;
 static constexpr uint8_t kPartitionTypeFuchsiaData = 0xE9;
 static constexpr uint8_t kPartitionTypeFuchsiaSys = 0xEA;
 static constexpr uint8_t kPartitionTypeGptProtective = 0xEE;

@@ -184,14 +184,6 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 #define GPT_ZIRCON_R_NAME             "zircon_r"
 #define GPT_ZIRCON_ABR_TYPE_GUID      GPT_GUID(0x9b37fff6, 0x2e58, 0x466a, 0x983a, 0xf7926d0b04e0)
 
-// Microsoft basic data partition
-//
-// These partitions usually contain FAT filesystems. They are mounted by the fat
-// implementation at //src/storage/fuchsia-fatfs.
-// These partitions do not have an expected label.
-#define GPT_MICROSOFT_BASIC_DATA_TYPE_GUID \
-    GPT_GUID(0xebd0a0a2, 0xb9e5, 0x4433, 0x87c0, 0x68b6b72699c7)
-
 // clang-format on
 
 // == Legacy GPT partition definitions ==
@@ -448,7 +440,6 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
     0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4 \
 }
 #define GUID_LINUX_FILESYSTEM_DATA_NAME "linux-filesystem"
-
 // clang-format on
 
 #endif  // SYSROOT_ZIRCON_HW_GPT_H_
