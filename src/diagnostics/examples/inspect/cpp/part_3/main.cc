@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   // Create an inspector for this component.
   sys::ComponentInspector inspector(context.get());
 
-  // ComponentInspector has built-in health checking. Set it to "starting up" so bugreports show we
+  // ComponentInspector has built-in health checking. Set it to "starting up" so snapshots show we
   // may still be initializing.
   inspector.Health().StartingUp();
 

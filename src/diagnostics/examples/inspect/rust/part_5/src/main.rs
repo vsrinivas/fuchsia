@@ -24,7 +24,7 @@ async fn main() -> Result<(), Error> {
 
     component::inspector().serve(&mut fs)?;
 
-    // ComponentInspector has built-in health checking. Set it to "starting up" so bugreports show
+    // ComponentInspector has built-in health checking. Set it to "starting up" so snapshots show
     // we may still be initializing.
     component::health().set_starting_up();
 

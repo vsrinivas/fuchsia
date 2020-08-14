@@ -30,7 +30,7 @@ use {
 #[derive(Debug, StructOpt)]
 struct Options {
     #[structopt(short, long, help = "Inspect JSON file to read")]
-    bugreport: String,
+    snapshot: String,
 
     #[structopt(subcommand)]
     command: Command,
@@ -57,7 +57,7 @@ enum Command {
             help = "Apply selectors from the provided selector_file for only this component"
         )]
         component_name: Option<String>,
-        #[structopt(help = "The selector file to apply to the bugreport")]
+        #[structopt(help = "The selector file to apply to the snapshot")]
         selector_file: String,
     },
 }
@@ -183,7 +183,7 @@ fn filter_json_schema_by_selectors(
     mut schema: InspectData,
     selector_vec: &Vec<Arc<Selector>>,
 ) -> Option<InspectData> {
-    // A failure here implies a malformed bugreport. We want to panic.
+    // A failure here implies a malformed snapshot. We want to panic.
     let moniker = selectors::parse_path_to_moniker(&schema.moniker)
         .expect("Bugreport contained an unparsable path.");
 
@@ -484,7 +484,7 @@ fn interactive_apply(
 fn main() -> Result<(), Error> {
     let opts = Options::from_args();
 
-    let filename = &opts.bugreport;
+    let filename = &opts.snapshot;
 
     let data: Vec<InspectData> = serde_json::from_str(
         &read_to_string(filename).expect(&format!("Failed to read {} ", filename)),

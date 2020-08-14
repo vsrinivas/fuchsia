@@ -60,14 +60,14 @@ pub struct MetricState<'a> {
 }
 
 /// [Fetcher] is a source of values to feed into the calculations. It may contain data either
-/// from bugreport.zip files (e.g. inspect.json data that can be accessed via "select" entries)
+/// from snapshot.zip files (e.g. inspect.json data that can be accessed via "select" entries)
 /// or supplied in the specification of a trial.
 pub enum Fetcher<'a> {
     FileData(FileDataFetcher<'a>),
     TrialData(TrialDataFetcher<'a>),
 }
 
-/// [FileDataFetcher] contains fetchers for data in bugreport.zip files.
+/// [FileDataFetcher] contains fetchers for data in snapshot.zip files.
 #[derive(Clone)]
 pub struct FileDataFetcher<'a> {
     inspect: &'a InspectFetcher,
