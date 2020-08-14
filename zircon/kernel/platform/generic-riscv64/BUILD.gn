@@ -22,6 +22,7 @@ source_set("generic-riscv64") {
     "$zx/kernel/object",
     "$zx/kernel/vm",
     "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/zbitl",
   ]
 
   public_deps = [
