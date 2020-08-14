@@ -1131,8 +1131,6 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 // global thread list
 Thread* thread_id_to_thread_slow(zx_koid_t tid) TA_EXCL(thread_lock);
 
-static inline bool thread_lock_held() { return thread_lock.IsHeld(); }
-
 // AutoReschedDisable is an RAII helper for disabling rescheduling
 // using thread_resched_disable()/thread_resched_reenable().
 //

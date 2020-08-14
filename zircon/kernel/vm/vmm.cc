@@ -33,7 +33,7 @@
 // the older api.
 
 void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
-  DEBUG_ASSERT(thread_lock_held());
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   ArchVmAspace::ContextSwitch(oldspace ? &oldspace->arch_aspace() : nullptr,
                               newaspace ? &newaspace->arch_aspace() : nullptr);

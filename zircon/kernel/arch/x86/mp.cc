@@ -299,7 +299,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id) {
 }
 
 void arch_mp_reschedule(cpu_mask_t mask) {
-  DEBUG_ASSERT(thread_lock_held());
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   cpu_mask_t needs_ipi = 0;
   if (use_monitor) {
@@ -348,7 +348,7 @@ void arch_mp_reschedule(cpu_mask_t mask) {
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {
-  DEBUG_ASSERT(thread_lock_held());
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   if (use_monitor) {
     *x86_get_percpu()->monitor = idle;

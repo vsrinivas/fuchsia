@@ -53,7 +53,7 @@ void mp_prepare_current_cpu_idle_state(bool idle) { arch_prepare_current_cpu_idl
 void mp_reschedule(cpu_mask_t mask, uint flags) {
   // we must be holding the thread lock to access some of the cpu
   // state bitmaps and some arch_mp_reschedule implementations.
-  DEBUG_ASSERT(thread_lock_held());
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   const cpu_num_t local_cpu = arch_curr_cpu_num();
 

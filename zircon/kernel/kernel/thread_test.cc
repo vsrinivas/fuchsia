@@ -333,7 +333,7 @@ bool set_migrate_fn_test() {
         break;
     }
 
-    if (!thread_lock_held()) {
+    if (!thread_lock.IsHeld()) {
       UNITTEST_FAIL_TRACEF("Expected the thread lock to be held.");
       migrate_state.success = false;
     }
