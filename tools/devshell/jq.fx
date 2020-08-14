@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Other
-#### EXECUTABLE=${PREBUILT_3P_DIR}/jq/${HOST_PLATFORM}/jq
+#### EXECUTABLE=${PREBUILT_3P_DIR}/jq/${HOST_PLATFORM}/bin/jq
 ### jq is a utility for manipulating JSON on the command-line.
 ## usage: run `fx jq --help`
 ##
