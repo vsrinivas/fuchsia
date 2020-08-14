@@ -165,7 +165,7 @@ impl VolumeController {
         for stream in streams.iter() {
             self.stream_volume_controls.insert(
                 stream.stream_type.clone(),
-                StreamVolumeControl::create(&audio_service, stream.clone()),
+                StreamVolumeControl::create(&audio_service, stream.clone(), None).await,
             );
         }
 

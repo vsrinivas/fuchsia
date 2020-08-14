@@ -211,6 +211,7 @@ rustc_library("lib") {
     "src/tests/setting_handler_tests.rs",
     "src/tests/setting_proxy_tests.rs",
     "src/tests/setup_tests.rs",
+    "src/tests/stream_volume_tests.rs",
     "src/tests/test_failure_utils.rs",
     "src/tests/volume_change_earcons_tests.rs",
   ]

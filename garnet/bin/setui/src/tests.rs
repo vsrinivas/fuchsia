@@ -25,5 +25,6 @@ mod service_configuration_tests;
 mod setting_handler_tests;
 mod setting_proxy_tests;
 mod setup_tests;
+mod stream_volume_tests;
 mod test_failure_utils;
 mod volume_change_earcons_tests;
