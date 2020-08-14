@@ -132,6 +132,8 @@ pub struct InspectDiagnostics {
     initialization: TimeSet,
     /// The backstop time in nanoseconds.
     backstop: IValue<i64>,
+    /// The monotonic time at which the network became available, in nanoseconds.
+    network_available_monotonic: Option<IValue<i64>>,
     /// The details of the most recent update to the UTC zx::Clock.
     last_update: Option<ClockDetails>,
     /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
@@ -151,6 +153,7 @@ impl InspectDiagnostics {
         let mut diagnostics = InspectDiagnostics {
             initialization,
             backstop,
+            network_available_monotonic: None,
             last_update: None,
             clock: Arc::clone(&clock),
             node: node.clone_weak(),
@@ -170,6 +173,15 @@ impl InspectDiagnostics {
             .boxed()
         });
         diagnostics
+    }
+
+    /// Records the fact that network is now available.
+    pub fn network_available(&mut self) {
+        if self.network_available_monotonic.is_none() {
+            let mut monotonic = IValue::new(monotonic_time());
+            attempt_iattach!(monotonic, &self.node, "network_available_monotonic");
+            self.network_available_monotonic = Some(monotonic);
+        }
     }
 
     /// Records an update to the UTC zx::Clock
@@ -289,6 +301,9 @@ mod tests {
         let mut inspect_diagnostics =
             InspectDiagnostics::new(inspector.root(), Arc::clone(&dummy_clock));
 
+        // Record the time at which the network became available.
+        inspect_diagnostics.network_available();
+
         // Perform two updates to the clock. The inspect data should reflect the most recent.
         dummy_clock
             .update(
@@ -317,6 +332,7 @@ mod tests {
                     clock_utc: AnyProperty,
                 },
                 backstop: BACKSTOP_TIME,
+                network_available_monotonic: AnyProperty,
                 current: contains {
                     monotonic: AnyProperty,
                     kernel_utc: AnyProperty,

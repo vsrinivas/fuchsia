@@ -10,17 +10,19 @@ mod diagnostics;
 
 use {
     crate::diagnostics::{CobaltDiagnostics, InspectDiagnostics},
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     chrono::prelude::*,
-    fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet,
-    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_time as ftime,
+    fidl_fuchsia_deprecatedtimezone as ftz,
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
+    fidl_fuchsia_netstack::{self as fnetstack, NET_INTERFACE_FLAG_DHCP, NET_INTERFACE_FLAG_UP},
+    fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::{
         client::{launch, launcher},
         server::ServiceFs,
     },
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryStreamExt},
+    futures::{stream::FusedStream, StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
     parking_lot::Mutex,
     std::cmp,
@@ -95,6 +97,36 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
     }
 }
 
+// Returns true iff the supplied `NetInterface` appears to provide network connectivity, i.e. is up,
+// has DHCP, and has a non-zero IP address.
+fn network_available(net_interface: fnetstack::NetInterface) -> bool {
+    const REQUIRED_FLAGS: u32 = NET_INTERFACE_FLAG_UP | NET_INTERFACE_FLAG_DHCP;
+    let fnetstack::NetInterface { flags, addr, .. } = net_interface;
+    if (flags & REQUIRED_FLAGS) != REQUIRED_FLAGS {
+        return false;
+    }
+    match addr {
+        IpAddress::Ipv4(Ipv4Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
+        IpAddress::Ipv6(Ipv6Address { addr }) => addr.iter().copied().any(|octet| octet != 0),
+    }
+}
+
+/// Returns Ok once the netstack indicates Internet connectivity should be available.
+async fn wait_for_network_available(
+    mut netstack_events: fnetstack::NetstackEventStream,
+) -> Result<(), Error> {
+    while !netstack_events.is_terminated() {
+        if let Some(fnetstack::NetstackEvent::OnInterfacesChanged { interfaces }) =
+            netstack_events.try_next().await?
+        {
+            if interfaces.into_iter().any(network_available) {
+                return Ok(());
+            }
+        }
+    }
+    Err(anyhow!("Stream terminated"))
+}
+
 /// The top-level control loop for time synchronization.
 ///
 /// Checks for network connectivity before attempting any time updates.
@@ -120,30 +152,9 @@ async fn maintain_utc(
     }
 
     info!("waiting for network connectivity before attempting network time sync...");
-    let mut netstack_events = netstack_service.take_event_stream();
-    loop {
-        if let Ok(Some(fnetstack::NetstackEvent::OnInterfacesChanged { interfaces })) =
-            netstack_events.try_next().await
-        {
-            if interfaces.into_iter().any(|fnetstack::NetInterface { flags, addr, .. }| {
-                if flags & fnetstack::NET_INTERFACE_FLAG_UP == 0 {
-                    return false;
-                }
-                if flags & fnetstack::NET_INTERFACE_FLAG_DHCP == 0 {
-                    return false;
-                }
-                match addr {
-                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-                        addr.iter().copied().any(|octet| octet != 0)
-                    }
-                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-                        addr.iter().copied().any(|octet| octet != 0)
-                    }
-                }
-            }) {
-                break;
-            }
-        }
+    match wait_for_network_available(netstack_service.take_event_stream()).await {
+        Ok(_) => inspect.network_available(),
+        Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
     }
 
     for i in 0.. {
@@ -274,20 +285,51 @@ impl NotifyInner {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused)]
     use {
         super::*,
-        chrono::{offset::TimeZone, NaiveDate},
         fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload},
-        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        fuchsia_inspect::Inspector,
         fuchsia_zircon as zx,
         matches::assert_matches,
         std::{
             future::Future,
-            pin::Pin,
-            task::{Context, Poll, Waker},
+            task::{Context, Poll},
         },
     };
+
+    const EMPTY_IP_V4: IpAddress = IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] });
+    const VALID_IP_V4: IpAddress = IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 1, 1] });
+    const EMPTY_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [0; 16] });
+    const VALID_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [1; 16] });
+    const VALID_FLAGS: u32 = NET_INTERFACE_FLAG_UP | NET_INTERFACE_FLAG_DHCP;
+
+    fn create_interface(flags: u32, addr: IpAddress) -> fnetstack::NetInterface {
+        fnetstack::NetInterface {
+            id: 1,
+            flags,
+            features: 0,
+            configuration: 0,
+            name: "my little pony".to_string(),
+            addr,
+            netmask: IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] }),
+            broadaddr: IpAddress::Ipv4(Ipv4Address { addr: [0, 0, 0, 0] }),
+            ipv6addrs: vec![],
+            hwaddr: vec![],
+        }
+    }
+
+    fn create_netstack_event_service(
+        interface_sets: Vec<Vec<fnetstack::NetInterface>>,
+    ) -> fnetstack::NetstackProxy {
+        let (netstack_service, netstack_server) =
+            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
+        let (_, netstack_control) = netstack_server.into_stream_and_control_handle().unwrap();
+        for mut interface_set in interface_sets {
+            let () =
+                netstack_control.send_on_interfaces_changed(&mut interface_set.iter_mut()).unwrap();
+        }
+        netstack_service
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn single_client() {
@@ -308,28 +350,9 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let (time_service, mut time_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftz::TimeServiceMarker>().unwrap();
-        let (netstack_service, netstack_server) =
-            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
 
-        // the "network" the time sync server uses is de facto reachable here
-        let (_, netstack_control) = netstack_server.into_stream_and_control_handle().unwrap();
-        let () = netstack_control
-            .send_on_interfaces_changed(
-                &mut vec![fnetstack::NetInterface {
-                    id: 1,
-                    flags: fnetstack::NET_INTERFACE_FLAG_UP | fnetstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
-                    configuration: 0,
-                    name: "my little pony".to_string(),
-                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 1] }),
-                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
-                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
-                    ipv6addrs: vec![],
-                    hwaddr: vec![],
-                }]
-                .iter_mut(),
-            )
-            .unwrap();
+        let netstack_service =
+            create_netstack_event_service(vec![vec![create_interface(VALID_FLAGS, VALID_IP_V4)]]);
 
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
         let (mut allow_update, mut wait_for_update) = futures::channel::mpsc::channel(1);
@@ -414,6 +437,64 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000_000))).unwrap();
         let source = initial_utc_source(&clock);
         assert_matches!(source, ftime::UtcSource::External);
+    }
+
+    #[test]
+    fn network_availability() {
+        // All these combinations should not indicate an available network.
+        assert!(!network_available(create_interface(0, VALID_IP_V4)));
+        assert!(!network_available(create_interface(NET_INTERFACE_FLAG_UP, VALID_IP_V4)));
+        assert!(!network_available(create_interface(NET_INTERFACE_FLAG_DHCP, VALID_IP_V4)));
+        assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V4)));
+        assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V6)));
+        // But these should indicate an available network.
+        assert!(network_available(create_interface(VALID_FLAGS, VALID_IP_V4)));
+        assert!(network_available(create_interface(VALID_FLAGS, VALID_IP_V6)));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    #[should_panic]
+    async fn wait_for_network_available_timeout() {
+        // Create a server and send a first event
+        let (service, server) =
+            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
+        let mut interfaces = vec![create_interface(0, EMPTY_IP_V4)];
+        let (_, netstack_control) = server.into_stream_and_control_handle().unwrap();
+        netstack_control.send_on_interfaces_changed(&mut interfaces.iter_mut()).unwrap();
+        // Swallow the wait_for_network_available result, if it returns either a success or an error
+        // this method should complete successfully causing the test to fail.
+        let _ = wait_for_network_available(service.take_event_stream()).await;
+        // Send a second event before returning our future, this ensures wait_for_network_available
+        // cannot complete immediately so should result in the test stalling.
+        netstack_control.send_on_interfaces_changed(&mut interfaces.iter_mut()).unwrap();
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn wait_for_network_available_failure() {
+        // Create a server and then immediately close the channel
+        let (service, server) =
+            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
+        drop(server);
+        wait_for_network_available(service.take_event_stream())
+            .await
+            .expect_err("Wait for network available should have returned Err");
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn wait_for_network_available_success() {
+        // Send four events, which get successively better until the last is sufficient.
+        let netstack_service = create_netstack_event_service(vec![
+            vec![],
+            vec![create_interface(VALID_FLAGS, EMPTY_IP_V6)],
+            vec![create_interface(VALID_FLAGS, EMPTY_IP_V6), create_interface(0, VALID_IP_V4)],
+            vec![
+                create_interface(VALID_FLAGS, EMPTY_IP_V6),
+                create_interface(VALID_FLAGS, VALID_IP_V4),
+            ],
+        ]);
+        wait_for_network_available(netstack_service.take_event_stream())
+            .await
+            .expect("Wait for network available should have returned Ok");
     }
 
     #[test]
