@@ -31,7 +31,7 @@ Symbolization tools and debuggers find symbolic information this way.
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/.build-id"`
 
-From //public/gn/toolchain/c_toolchain.gni:19
+From //public/gn/toolchain/c_toolchain.gni:20
 
 ### build_id_format
 Build ID algorithm to use for Fuchsia-target code.  This does not apply
@@ -342,6 +342,17 @@ If true, produce a Breakpad symbol file for each binary.
 
 From //public/gn/toolchain/breakpad.gni:9
 
+### output_gsym
+Controls whether we should output GSYM files for Fuchsia binaries.
+
+**Current value for `target_cpu = `:** `false`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+
+**Overridden from the default:** `false`
+
+From //public/gn/toolchain/gsym.gni:10
+
 ### rustc_tool_dir
 Directory where the Rust toolchain binary ("rustc") is found.  If this is
 "", then the prebuilt rustc is used.  Using a system compiler is not
@@ -458,7 +469,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
 
 **Overridden from the default:** `false`
 
@@ -469,7 +480,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `false`
 
@@ -713,7 +724,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `[]`
 
@@ -732,7 +743,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `"zstd"`
 
@@ -764,7 +775,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `0`
 

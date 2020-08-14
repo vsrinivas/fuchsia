@@ -275,6 +275,13 @@ From //boards/x64.gni:13
 
 From //build/board.gni:11
 
+### board_recovery_bootfs_labels
+A list of binary labels to include in the recovery ZBI.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:30
+
 ### board_tools
 List of paths to board-specific tools to include in the build output.
 
@@ -576,13 +583,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7547d0aa874f550fb3d3e8a5365ec51da96cbd86/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b4724081350eff0a732a6be80dd9f6c5143fe259/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7547d0aa874f550fb3d3e8a5365ec51da96cbd86/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b4724081350eff0a732a6be80dd9f6c5143fe259/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -609,7 +616,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -617,14 +624,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -788,7 +795,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:705
+From //build/config/BUILDCONFIG.gn:708
 
 ### factory_mode
 factory_mode: enables/disables factory mode
@@ -852,7 +859,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -867,14 +874,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/906cf6b0647164a886ed7d043a8313ab7c375ab1/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/b1a3ecfb0bc8e179c6495e44dd2cdcba842448c0/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1383,7 +1390,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:630
+From //build/config/BUILDCONFIG.gn:633
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1729,6 +1736,13 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 From //build/config/BUILDCONFIG.gn:34
 
+### output_gsym
+Controls whether we should output GSYM files for Fuchsia binaries.
+
+**Current value (from the default):** `false`
+
+From //build/config/BUILDCONFIG.gn:37
+
 ### override_recovery_label
 TODO(comfoltey) remove obsolete label override_recovery_label
 
@@ -2048,7 +2062,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:935
+From //build/config/BUILDCONFIG.gn:938
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2057,7 +2071,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:940
+From //build/config/BUILDCONFIG.gn:943
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2091,7 +2105,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:751
+From //build/config/BUILDCONFIG.gn:754
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2327,7 +2341,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:105
+From //build/config/BUILDCONFIG.gn:108
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2355,7 +2369,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:725
+From //build/config/BUILDCONFIG.gn:728
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2659,6 +2673,7 @@ silently clobber the default value shown here.
   default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64", "//tools:all-hosts"]
   disable_kernel_pci = false
   goma_dir = "/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"
+  output_gsym = false
   use_ccache = false
   use_goma = false
   variants = []
