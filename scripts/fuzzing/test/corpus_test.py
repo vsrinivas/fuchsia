@@ -34,8 +34,7 @@ class CorpusTest(TestCaseWithFuzzer):
         # Fuzzer is running
         corpus_element = os.path.join(local_path, 'element')
         self.host.touch(corpus_element)
-        self.set_running(
-            self.fuzzer.package, self.fuzzer.executable, duration=10)
+        self.set_running(self.fuzzer.executable_url, duration=10)
         self.assertError(
             lambda: self.corpus.add_from_host(local_path),
             'fake-package1/fake-target1 is running and must be stopped first.')

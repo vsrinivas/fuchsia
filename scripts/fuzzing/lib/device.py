@@ -36,7 +36,7 @@ class Device(object):
         self._ssh_config_options = []
         self._ssh_verbosity = 0
         self._reachable = None
-        self._pids = None
+        self._urls = None
 
     @property
     def buildenv(self):
@@ -159,41 +159,35 @@ class Device(object):
 
         return process
 
-    def getpid(self, package, executable, refresh=False):
-        """Returns a process ID for a packaged executable if running, or -1.
+    def has_cs_info(self, url, refresh=False):
+        """Returns whether a component given by a URL is running.
 
            Relative to the duration of most "fx fuzz" commands, the SSH
            invocation to get component status is fairly expensive. Most
            prcoesses won't meaningfully change during or command (or will only
            change as a result of it). Thus, it makes sense to generally cache
-           the PID results. This can lead to small degree of inaccuracy, e.g.
+           the `cs info` results. This can lead to small degree of inaccuracy, e.g.
            "fx fuzz check" reporting a fuzzer as "RUNNING" when it stops
            between the command invocation and the display of results. This is
            unlikely (and inconseuqential) enough in normal operation to be
            deemed acceptable.
 
            If an accurate status is needed, e.g. as part of a long-lived command
-           like Fuzzer.monitor(), "refresh" can be set to True to re0run the SSH
+           like Fuzzer.monitor(), "refresh" can be set to True to re-run the SSH
            command.
         """
         if not self.reachable:
-            return -1
-        if self._pids == None or refresh:
-            self._pids = {}
-            out = self.ssh(['cs']).check_output()
-            pat = re.compile(
-                r'  (?P<executable>.*)\.cmx\[(?P<pid>\d+)\]: ' +
-                r'fuchsia-pkg://fuchsia.com/(?P<package>.*)#meta/(?P=executable).cmx'
-            )
+            return False
+        if self._urls == None or refresh:
+            self._urls = []
+            out = self.ssh(['cs', 'info']).check_output()
+            pat = re.compile(r'^- URL: (?P<url>.*)')
             for line in str(out).split('\n'):
-                match = re.match(pat, line)
+                match = pat.match(line)
                 if not match:
                     continue
-                groupdict = match.groupdict()
-                nametuple = (groupdict['package'], groupdict['executable'])
-                pid = int(groupdict['pid'])
-                self._pids[nametuple] = pid
-        return self._pids.get((package, executable), -1)
+                self._urls.append(match.group('url'))
+        return url in self._urls
 
     def isfile(self, pathname):
         """Returns true for files that exist on the device."""

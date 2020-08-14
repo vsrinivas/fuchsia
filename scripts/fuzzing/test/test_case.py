@@ -69,7 +69,6 @@ class TestCaseWithFactory(TestCaseWithIO):
     def setUp(self):
         super(TestCaseWithFactory, self).setUp()
         self._factory = None
-        self._next_pid = 10000
 
     # Unit test context, as aliases to the Factory.
 
@@ -119,7 +118,14 @@ class TestCaseWithFactory(TestCaseWithIO):
         return self.parser.parse_args(args)
 
     def set_outputs(
-            self, args, outputs, start=None, end=None, returncode=None, reset=True, ssh=False):
+            self,
+            args,
+            outputs,
+            start=None,
+            end=None,
+            returncode=None,
+            reset=True,
+            ssh=False):
         """Sets what will be returned from the stdout and return code of a fake
         process.
 
@@ -131,27 +137,22 @@ class TestCaseWithFactory(TestCaseWithIO):
         process = self.get_process(args, ssh=ssh)
         if reset:
             process.clear()
-        process.schedule('\n'.join(outputs), start=start, end=end, returncode=returncode)
+        process.schedule(
+            '\n'.join(outputs), start=start, end=end, returncode=returncode)
 
-    def set_running(self, package, executable, refresh=True, duration=None):
+    def set_running(self, url, refresh=True, duration=None):
         """Marks a packaged executable as running on device.
 
-        If refresh is True, this will cause the device to refresh its PIDs.
-        If a duration is provided, the package executable will stop running
+        If refresh is True, this will cause the device to refresh its URLs.
+        If a duration is provided, the component will stop running
         after the given duration.
         """
-        pid = self._next_pid
-        self._next_pid += 1
-
-        cmd = ['cs']
-        output = '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
-            executable, pid, package, executable)
-
+        cmd = ['cs info']
+        output = '- URL: {}'.format(url)
         end = None if not duration else self.host.elapsed + duration
         self.set_outputs(cmd, [output], end=end, reset=False, ssh=True)
-
-        self.device.getpid(package, executable, refresh)
-        return pid
+        if refresh:
+            self.device.has_cs_info(url, refresh)
 
     def touch_on_device(
             self, pathname, start=None, end=None, reset=False, size=1000):

@@ -63,7 +63,6 @@ class Fuzzer(object):
         self._ns = Namespace(self)
         self._corpus = Corpus(self)
         self._dictionary = Dictionary(self)
-        self._pid = None
         self._options = {'artifact_prefix': self.ns.data()}
         self._libfuzzer_opts = {}
         self._libfuzzer_inputs = []
@@ -210,7 +209,8 @@ class Fuzzer(object):
         # Exit code 2 means "pkg in tuf repo but not on disk", which is not an
         # error for us (see sys/args.rs in pkgctl)
         if p.returncode not in (0, 2):
-            raise subprocess.CalledProcessError(p.returncode, ' '.join(cmd), output=out)
+            raise subprocess.CalledProcessError(
+                p.returncode, ' '.join(cmd), output=out)
 
         match = re.search(r'Package on disk: yes \(path=(.*)\)', str(out))
         if not match:
@@ -238,11 +238,9 @@ class Fuzzer(object):
     def is_running(self, refresh=False):
         """Checks the device and returns whether the fuzzer is running.
 
-           See the note about "refresh" on Device.getpid().
+           See the note about "refresh" on Device.has_cs_info().
         """
-        self._pid = self.device.getpid(
-            self.package, self.executable, refresh=refresh)
-        return self._pid > 0
+        return self.device.has_cs_info(self.executable_url, refresh=refresh)
 
     def require_stopped(self):
         """Raise an exception if the fuzzer is running."""
@@ -407,7 +405,7 @@ class Fuzzer(object):
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
         if self.is_running():
-            self.device.ssh(['kill', str(self._pid)]).check_call()
+            self.device.ssh(['killall', self.executable + '.cmx']).check_call()
 
     def repro(self):
         """Runs the fuzzer with test input artifacts.

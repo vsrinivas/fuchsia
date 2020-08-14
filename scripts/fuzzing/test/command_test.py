@@ -90,7 +90,8 @@ class CommandTest(TestCaseWithFuzzer):
         )
 
         # Name provided, not installed
-        fuzzer = self.create_fuzzer('fake-package2/fake-target1', resolve=False)
+        fuzzer1 = self.create_fuzzer(
+            'fake-package2/fake-target1', resolve=False)
         args = self.parse_args('check', 'fake-package2/fake-target1')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
@@ -99,8 +100,11 @@ class CommandTest(TestCaseWithFuzzer):
         )
 
         # No name, some running
-        self.set_running('fake-package1', 'fake-target1')
-        self.set_running('fake-package1', 'fake-target3')
+        fuzzer1 = self.create_fuzzer('fake-package1/fake-target1')
+        fuzzer2 = self.create_fuzzer('fake-package1/fake-target2')
+        fuzzer3 = self.create_fuzzer('fake-package1/fake-target3')
+        self.set_running(fuzzer1.executable_url)
+        self.set_running(fuzzer3.executable_url)
         args = self.parse_args('check')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
@@ -151,7 +155,7 @@ class CommandTest(TestCaseWithFuzzer):
         self.assertLogged('{} is already stopped.'.format(self.fuzzer))
 
         # Running
-        self.set_running(self.fuzzer.package, self.fuzzer.executable)
+        self.set_running(self.fuzzer.executable_url)
         args = self.parse_args('stop', str(self.fuzzer))
         command.stop_fuzzer(args, self.factory)
         self.assertLogged('Stopping {}.'.format(self.fuzzer))

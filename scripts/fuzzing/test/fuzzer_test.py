@@ -43,7 +43,10 @@ class FuzzerTest(TestCaseWithFuzzer):
         package_path = '/pkgfs/versions/deadbeef'
 
         self.set_outputs(
-            status_cmd, ['Package on disk: no'], end=10.0, ssh=True, returncode=2)
+            status_cmd, ['Package on disk: no'],
+            end=10.0,
+            ssh=True,
+            returncode=2)
         self.set_outputs(
             status_cmd, ['Package on disk: yes (path={})'.format(package_path)],
             start=10.0,
@@ -72,11 +75,11 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.assertFalse(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        self.set_running(fuzzer1.package, fuzzer1.executable, duration=5)
+        self.set_running(fuzzer1.executable_url, duration=5)
         self.assertTrue(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        self.set_running(fuzzer2.package, fuzzer2.executable, duration=5)
+        self.set_running(fuzzer2.executable_url, duration=5)
         self.assertTrue(fuzzer1.is_running())
         self.assertTrue(fuzzer2.is_running())
 
@@ -91,8 +94,7 @@ class FuzzerTest(TestCaseWithFuzzer):
     def test_require_stopped(self):
         self.fuzzer.require_stopped()
 
-        self.set_running(
-            self.fuzzer.package, self.fuzzer.executable, duration=10)
+        self.set_running(self.fuzzer.executable_url, duration=10)
         self.assertError(
             lambda: self.fuzzer.require_stopped(),
             'fake-package1/fake-target1 is running and must be stopped first.')
@@ -136,7 +138,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_start_already_running(self):
         self.create_fuzzer('start', 'fake-package1/fake-target1')
-        self.set_running(self.fuzzer.package, self.fuzzer.executable)
+        self.set_running(self.fuzzer.executable_url)
         self.assertError(
             lambda: self.fuzzer.start(),
             'fake-package1/fake-target1 is running and must be stopped first.')
@@ -353,8 +355,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_monitor(self):
         self.create_fuzzer('start', 'fake-package1/fake-target2')
-        self.set_running(
-            self.fuzzer.package, self.fuzzer.executable, duration=15)
+        self.set_running(self.fuzzer.executable_url, duration=15)
 
         # Make the file that scp grabs
         self.host.mkdir(self.fuzzer.output)
@@ -401,10 +402,9 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.fuzzer.stop()
         self.assertFalse(self.fuzzer.is_running())
 
-        self.set_running(self.fuzzer.package, self.fuzzer.executable)
-        pid = self.device.getpid(self.fuzzer.package, self.fuzzer.executable)
+        self.set_running(self.fuzzer.executable_url)
         self.fuzzer.stop()
-        self.assertSsh('kill', str(pid))
+        self.assertSsh('killall', self.fuzzer.executable + '.cmx')
 
     def test_repro(self):
         # Globs should work, but only if they match files
@@ -424,8 +424,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.host.touch('crash-deadbeef')
         self.host.touch('crash-deadfa11')
         self.host.touch('oom-feedface')
-        self.set_running(
-            self.fuzzer.package, self.fuzzer.executable, duration=60)
+        self.set_running(self.fuzzer.executable_url, duration=60)
         self.assertError(
             lambda: self.fuzzer.repro(),
             'fake-package1/fake-target2 is running and must be stopped first.')
@@ -443,8 +442,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         )
 
     def test_analyze(self):
-        self.set_running(
-            self.fuzzer.package, self.fuzzer.executable, duration=10)
+        self.set_running(self.fuzzer.executable_url, duration=10)
         with self.assertRaises(SystemExit):
             self.fuzzer.analyze()
         self.host.sleep(10)

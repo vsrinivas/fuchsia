@@ -105,45 +105,34 @@ class DeviceTest(TestCaseWithFactory):
         self.device.ssh(cmd).check_call()
         self.assertSsh(*cmd)
 
-    def test_getpid(self):
-        http_pid = self.set_running('http', 'http')
-        target1_pid = self.set_running(
-            'fake-package1', 'fake-target1', duration=10)
-        target2_pid = self.set_running(
-            'fake-package1', 'fake-target2', duration=10)
-        long_pid = self.set_running(
-            'fake-package2', 'an-extremely-verbose-target-name')
+    def test_has_cs_info(self):
+        url1 = 'fuchsia-pkg://fuchsia.com/http#meta/http.cmx'
+        url2 = 'fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx'
+        url3 = 'fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx'
+        url4 = 'fuchsia-pkg://fuchsia.com/an-extremely-verbose-target-package#meta/an-extremely-verbose-target-executable.cmx'
 
-        # PIDs are retrieved for all packaged executables.
-        self.assertEqual(self.device.getpid('http', 'http'), http_pid)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1'), target1_pid)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target2'), target2_pid)
-        self.assertEqual(
-            self.device.getpid(
-                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
+        self.set_running(url1)
+        self.set_running(url2, duration=10)
+        self.set_running(url3, duration=10)
+        self.set_running(url4)
 
-        # PIDs are cached until refresh.
+        # Can check various URLs
+        self.assertTrue(self.device.has_cs_info(url1))
+        self.assertTrue(self.device.has_cs_info(url2))
+        self.assertTrue(self.device.has_cs_info(url3))
+        self.assertTrue(self.device.has_cs_info(url4))
+
+        # URLs are cached until refresh.
         self.host.sleep(10)
-        self.assertEqual(self.device.getpid('http', 'http'), http_pid)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1'), target1_pid)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target2'), target2_pid)
-        self.assertEqual(
-            self.device.getpid(
-                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
+        self.assertTrue(self.device.has_cs_info(url1))
+        self.assertTrue(self.device.has_cs_info(url2))
+        self.assertTrue(self.device.has_cs_info(url3))
+        self.assertTrue(self.device.has_cs_info(url4))
 
-        self.assertEqual(
-            self.device.getpid('http', 'http', refresh=True), http_pid)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1'), -1)
-        self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target2'), -1)
-        self.assertEqual(
-            self.device.getpid(
-                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
+        self.assertTrue(self.device.has_cs_info(url1, refresh=True))
+        self.assertFalse(self.device.has_cs_info(url2))
+        self.assertFalse(self.device.has_cs_info(url3))
+        self.assertTrue(self.device.has_cs_info(url4))
 
     def test_isfile(self):
         some_file = 'path-to-some-file'
