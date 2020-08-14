@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.security.resource.Vmex"
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/deprecated_loader_service_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.security.resource.Vmex"
+        ]
+    }
+}

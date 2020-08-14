@@ -18,6 +18,7 @@ group("tests") {
     "factory:tests",
     "fs-management-tests:tests",
     "fs_test:tests",
+    "fshost:tests",
     "fuchsia-fatfs:tests",
     "host_fs_test:tests",
     "lib:tests",

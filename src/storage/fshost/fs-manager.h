@@ -19,29 +19,26 @@
 #include <iterator>
 
 #include <fs/vfs.h>
-#include <loader-service/loader-service.h>
+
+#include "src/lib/loader_service/loader_service.h"
 
 // Used for fshost signals.
-#include "admin-server.h"
 #include "delayed-outdir.h"
 #include "fdio.h"
 #include "fshost-boot-args.h"
 #include "inspect-manager.h"
-#include "lifecycle.h"
 #include "metrics.h"
 #include "registry.h"
 
 namespace devmgr {
 
-class AdminServer;
-
 // FsManager owns multiple sub-filesystems, managing them within a top-level
 // in-memory filesystem.
 class FsManager {
  public:
-  static zx_status_t Create(loader_service_t* loader_svc, zx::channel dir_request,
-                            zx::channel lifecycle_request, FsHostMetrics metrics,
-                            std::unique_ptr<FsManager>* out);
+  static zx_status_t Create(std::shared_ptr<loader::LoaderServiceBase> loader,
+                            zx::channel dir_request, zx::channel lifecycle_request,
+                            FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
 
   ~FsManager();
 
@@ -89,7 +86,8 @@ class FsManager {
 
  private:
   FsManager(FsHostMetrics metrics);
-  zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
+  zx_status_t SetupOutgoingDirectory(zx::channel dir_request,
+                                     std::shared_ptr<loader::LoaderServiceBase> loader);
   zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
   zx_status_t Initialize();
 

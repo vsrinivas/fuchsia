@@ -6,8 +6,11 @@
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/ldsvc/c/fidl.h>
 #include <getopt.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
@@ -27,14 +30,16 @@
 #include <fbl/unique_fd.h>
 #include <fs/remote_dir.h>
 #include <fs/service.h>
-#include <loader-service/loader-service.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
+#include "src/storage/fshost/deprecated-loader-service.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace devmgr {
 namespace {
@@ -128,25 +133,6 @@ int RamctlWatcher(void* arg) {
   return 0;
 }
 
-// Setup the loader service to be used by all processes spawned by devmgr.
-// TODO(fxbug.dev/34633): this loader service is deprecated and should be deleted.
-loader_service_t* setup_loader_service() {
-  loader_service_t* svc;
-  zx_status_t status = loader_service_create_fs(nullptr, &svc);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to create loader service %d\n", status);
-  }
-  auto defer = fit::defer([svc] { loader_service_release(svc); });
-  zx_handle_t fshost_loader;
-  status = loader_service_connect(svc, &fshost_loader);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to connect to loader service: %d\n", status);
-    return nullptr;
-  }
-  zx_handle_close(dl_set_loader_service(fshost_loader));
-  return svc;
-}
-
 // Initialize the fshost namespace.
 //
 // |fs_root_client| is mapped to "/fs", and represents the filesystem of devmgr.
@@ -220,19 +206,42 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Setup the devmgr loader service.
-  loader_service_t* loader_svc = devmgr::setup_loader_service();
-  if (loader_svc == nullptr) {
-    return ZX_ERR_INTERNAL;
+  // Setup the fshost loader service, which can load libraries from either /system/lib or /boot/lib.
+  // TODO(fxb/34633): This loader is DEPRECATED and should be deleted. Do not add new usages.
+  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx_status_t status = loader_loop.StartThread("fshost-loader");
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: failed to start loader thread: %s\n", zx_status_get_string(status));
+    return status;
   }
+  fbl::unique_fd root_fd;
+  status = fdio_open_fd(
+      "/", fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+      root_fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: failed to open namespace root: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  auto loader = DeprecatedBootSystemLoaderService::Create(loader_loop.dispatcher(),
+                                                          std::move(root_fd), "fshost");
+
+  // Replace default loader service with a connection to our own.
+  // TODO(bryanhenry): This is unnecessary and will be removed in a subsequent change. Left in to
+  // minimize behavior differences per change.
+  auto conn = loader->Connect();
+  if (conn.is_error()) {
+    fprintf(stderr, "fshost: failed to create loader connection: %s\n", conn.status_string());
+    return conn.status_value();
+  }
+  zx_handle_close(dl_set_loader_service(std::move(conn).value().release()));
 
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
   std::unique_ptr<devmgr::FsManager> fs_manager;
-  zx_status_t status =
-      devmgr::FsManager::Create(loader_svc, std::move(dir_request), std::move(lifecycle_request),
-                                devmgr::MakeMetrics(), &fs_manager);
+  status =
+      devmgr::FsManager::Create(std::move(loader), std::move(dir_request),
+                                std::move(lifecycle_request), devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
     printf("fshost: Cannot create FsManager: %s\n", zx_status_get_string(status));
     return status;

@@ -35,9 +35,11 @@
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 
+#include "admin-server.h"
 #include "block-watcher.h"
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
+#include "lifecycle.h"
 #include "metrics.h"
 
 #define ZXDEBUG 0
@@ -68,16 +70,16 @@ FsManager::~FsManager() {
   global_loop_->Shutdown();
 }
 
-zx_status_t FsManager::Create(loader_service_t* loader_svc, zx::channel dir_request,
-                              zx::channel lifecycle_request, FsHostMetrics metrics,
-                              std::unique_ptr<FsManager>* out) {
+zx_status_t FsManager::Create(std::shared_ptr<loader::LoaderServiceBase> loader,
+                              zx::channel dir_request, zx::channel lifecycle_request,
+                              FsHostMetrics metrics, std::unique_ptr<FsManager>* out) {
   auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
     return status;
   }
   if (dir_request.is_valid()) {
-    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), loader_svc);
+    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), loader);
     if (status != ZX_OK) {
       return status;
     }
@@ -100,7 +102,7 @@ zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
 zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
-                                              loader_service_t* loader_svc) {
+                                              std::shared_ptr<loader::LoaderServiceBase> loader) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // TODO: fshost exposes two separate service directories, one here and one in
@@ -115,15 +117,14 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   // name matches the protocol name. This is an implementation of
   // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
   // this implementation comes from fshost.
-  svc_dir->AddEntry("fuchsia.fshost.Loader",
-                    fbl::MakeRefCounted<fs::Service>([loader_svc](zx::channel chan) {
-                      zx_status_t status = loader_service_attach(loader_svc, chan.release());
-                      if (status != ZX_OK) {
-                        fprintf(stderr, "fshost: failed to attach loader service: %s\n",
-                                zx_status_get_string(status));
-                      }
-                      return status;
-                    }));
+  svc_dir->AddEntry(
+      "fuchsia.fshost.Loader", fbl::MakeRefCounted<fs::Service>([loader](zx::channel chan) {
+        auto status = loader->Bind(std::move(chan));
+        if (status.is_error()) {
+          fprintf(stderr, "fshost: failed to attach loader service: %s\n", status.status_string());
+        }
+        return status.status_value();
+      }));
   svc_dir->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
                     AdminServer::Create(this, global_loop_->dispatcher()));
 

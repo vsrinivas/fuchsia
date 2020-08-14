@@ -4,6 +4,12 @@
 
 import("//build/test.gni")
 import("//build/unification/zbi/component_manifest_resources.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":deprecated-loader-service-test" ]
+}
 
 source_set("launcher") {
   visibility = [ ":*" ]
@@ -21,6 +27,7 @@ source_set("fshost-registry") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "admin-server.cc",
+    "deprecated-loader-service.cc",
     "fs-manager.cc",
     "lifecycle.cc",
     "registry.cc",
@@ -33,6 +40,7 @@ source_set("fshost-registry") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/loader_service",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -44,6 +52,7 @@ source_set("fshost-registry") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/files",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -161,6 +170,7 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_c",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/cobalt-client",
@@ -204,6 +214,25 @@ test("fshost-test") {
 
   # TODO(46432): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+# This is a separate test executable because loader_service_test_fixture uses gtest, but other
+# tests here use zxtest.
+executable("deprecated_loader_service_test") {
+  testonly = true
+  sources = [ "deprecated-loader-service-test.cc" ]
+  deps = [
+    ":block-watcher",
+    ":fshost-registry",
+    "//src/lib/loader_service:loader_service_test_fixture",
+  ]
+}
+
+# Note that, unlike the other fshost tests, this test runs as a component. Eventually this can
+# become a single package of fshost tests with multiple test components.
+fuchsia_unittest_package("deprecated-loader-service-test") {
+  manifest = "meta/deprecated-loader-service-test.cmx"
+  deps = [ ":deprecated_loader_service_test" ]
 }
 
 test("fshost-inspect-test") {
