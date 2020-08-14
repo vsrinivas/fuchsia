@@ -109,5 +109,31 @@ TEST_F(FlutterSemanticsTests, HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
+// Loads ally-demo flutter app and validates triggering actions
+TEST_F(FlutterSemanticsTests, PerformAction) {
+  auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+
+  // Verify the counter is currently at 0
+  auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 0 times");
+  EXPECT_TRUE(node);
+
+  // Trigger the button's default action
+  node = FindNodeWithLabel(root, view_ref_koid(), "Blue");
+  ASSERT_TRUE(node);
+  bool callback_handled = PerformAccessibilityAction(
+      view_ref_koid(), node->node_id(), fuchsia::accessibility::semantics::Action::DEFAULT);
+  EXPECT_TRUE(callback_handled);
+
+  // Verify the counter is now at 1
+  // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
+  // more clearly written as waiting for notification of an update then checking the tree.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, root] {
+        auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 1 time");
+        return node != nullptr;
+      },
+      kTimeout));
+}
+
 }  // namespace
 }  // namespace accessibility_test
