@@ -5,6 +5,7 @@
 #include "rndis_function.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/sync/completion.h>
 
 #include <ddktl/protocol/usb/function.h>
 #include <zxtest/zxtest.h>
@@ -12,18 +13,6 @@
 class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_protocol> {
  public:
   FakeFunction() : protocol_({.ops = &usb_function_protocol_ops_, .ctx = this}) {}
-
-  void CompleteAllRequests() {
-    if (!pending_in_requests_.is_empty()) {
-      pending_in_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
-    }
-    if (!pending_out_requests_.is_empty()) {
-      pending_out_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
-    }
-    if (!pending_notification_requests_.is_empty()) {
-      pending_notification_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
-    }
-  }
 
   zx_status_t UsbFunctionSetInterface(const usb_function_interface_protocol_t* interface) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -95,7 +84,28 @@ class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_pro
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t UsbFunctionCancelAll(uint8_t ep_address) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t UsbFunctionCancelAll(uint8_t ep_address) {
+    switch (ep_address) {
+      case kBulkOutEndpoint:
+        if (!pending_out_requests_.is_empty()) {
+          pending_out_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+        break;
+      case kBulkInEndpoint:
+        if (!pending_in_requests_.is_empty()) {
+          pending_in_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+        break;
+      case kNotificationEndpoint:
+        if (!pending_notification_requests_.is_empty()) {
+          pending_notification_requests_.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+        break;
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+  }
 
   const usb_function_protocol_t* Protocol() const { return &protocol_; }
 
@@ -129,17 +139,21 @@ class FakeEthernetInterface : public ddk::EthernetIfcProtocol<FakeEthernetInterf
 
   void EthernetIfcStatus(uint32_t status) { last_status_ = status; }
 
-  void EthernetIfcRecv(const void* data, size_t size, uint32_t flags) { packets_received_ += 1; }
+  void EthernetIfcRecv(const void* data, size_t size, uint32_t flags) {
+    sync_completion_signal(&packet_received_sync_);
+  }
 
   const ethernet_ifc_protocol_t* Protocol() const { return &protocol_; }
   std::optional<uint32_t> LastStatus() const { return last_status_; }
 
-  size_t PacketsReceived() const { return packets_received_; }
+  zx_status_t WaitUntilPacketReceived() {
+    return sync_completion_wait_deadline(&packet_received_sync_, zx::time::infinite().get());
+  }
 
  private:
   ethernet_ifc_protocol_t protocol_;
   std::optional<uint32_t> last_status_;
-  size_t packets_received_;
+  sync_completion_t packet_received_sync_;
 };
 
 class RndisFunctionTest : public zxtest::Test {
@@ -163,7 +177,6 @@ class RndisFunctionTest : public zxtest::Test {
   void TearDown() override {
     auto device = device_.release();
     device->DdkAsyncRemove();
-    function_.CompleteAllRequests();
     ASSERT_OK(ddk_->WaitUntilRemove());
     device->DdkRelease();
     EXPECT_TRUE(ddk_->Ok());
@@ -210,7 +223,7 @@ class RndisFunctionTest : public zxtest::Test {
   void QueryOid(uint32_t oid, void* data, size_t length, size_t* actual) {
     rndis_query query{
         .msg_type = RNDIS_QUERY_MSG,
-        .msg_length = static_cast<uint32_t>(sizeof(rndis_query) + length),
+        .msg_length = static_cast<uint32_t>(sizeof(rndis_query)),
         .request_id = 42,
         .oid = oid,
         .info_buffer_length = 0,
@@ -236,27 +249,31 @@ class RndisFunctionTest : public zxtest::Test {
     *actual = response->info_buffer_length;
   }
 
-  void SetOid(uint32_t oid, void* data, size_t length) {
+  void SetPacketFilter() {
     struct Payload {
       rndis_set header;
       uint8_t data[RNDIS_SET_INFO_BUFFER_LENGTH];
     } __PACKED;
     Payload set = {};
 
+    uint32_t filter = 0;
     set.header.msg_type = RNDIS_SET_MSG;
-    set.header.msg_length = static_cast<uint32_t>(sizeof(rndis_set) + length);
+    set.header.msg_length = static_cast<uint32_t>(sizeof(rndis_set) + sizeof(filter));
     set.header.request_id = 42;
-    set.header.oid = oid;
-    set.header.info_buffer_length = static_cast<uint32_t>(length);
+    set.header.oid = OID_GEN_CURRENT_PACKET_FILTER;
+    set.header.info_buffer_length = static_cast<uint32_t>(sizeof(filter));
     set.header.info_buffer_offset = sizeof(rndis_set) - offsetof(rndis_set, request_id);
-    if (data != nullptr) {
-      memcpy(&set.data, data, length);
-    }
+    memcpy(&set.data, &filter, sizeof(filter));
     WriteCommand(&set, sizeof(set));
+
+    rndis_indicate_status status;
+    ReadResponse(&status, sizeof(status));
+    EXPECT_EQ(status.msg_type, RNDIS_INDICATE_STATUS_MSG);
+    EXPECT_EQ(status.msg_length, sizeof(rndis_indicate_status));
+    EXPECT_EQ(status.status, RNDIS_STATUS_MEDIA_CONNECT);
 
     rndis_set_complete response;
     ReadResponse(&response, sizeof(response));
-
     ASSERT_EQ(response.msg_type, RNDIS_SET_CMPLT);
     ASSERT_GE(response.msg_length, sizeof(rndis_set_complete));
     ASSERT_GE(response.request_id, 42);
@@ -318,8 +335,7 @@ TEST_F(RndisFunctionTest, EthernetStartStop) {
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
 
   // Set a packet filter to put the device online.
-  uint32_t filter = 0;
-  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  SetPacketFilter();
   EXPECT_TRUE(ifc_.LastStatus().has_value());
   EXPECT_EQ(ifc_.LastStatus().value(), ETHERNET_STATUS_ONLINE);
 
@@ -377,8 +393,7 @@ TEST_F(RndisFunctionTest, Send) {
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
 
-  uint32_t filter = 0;
-  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  SetPacketFilter();
 
   ethernet_info_t info;
   status = device_->EthernetImplQuery(/*options=*/0, &info);
@@ -444,29 +459,38 @@ TEST_F(RndisFunctionTest, Send) {
   // Drain the queue.
   function_.pending_in_requests_.CompleteAll(ZX_OK, 0);
 
-  // We should be able to queue packets again.
-  {
+  // We should be able to queue packets again, however usb requests are added back to the pool on
+  // another thread so we should loop until at least one request has completed. We delay each
+  // iteration with an exponential backoff to be polite.
+  zx_status_t result;
+  zx::duration delay = zx::msec(1);
+  size_t attempts = 0;
+  do {
     auto buffer = eth::Operation<>::Alloc(info.netbuf_size);
     char data[] = "abcd";
     buffer->operation()->data_buffer = &data;
     buffer->operation()->data_size = sizeof(data);
 
-    zx_status_t result;
     device_->EthernetImplQueueTx(/*options=*/0, buffer->take(),
                                  [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
                                    eth::Operation<> buffer(netbuf, kNetbufSize);
                                    *reinterpret_cast<zx_status_t*>(cookie) = status;
                                  },
                                  &result);
-    EXPECT_EQ(result, ZX_OK);
-  }
+    if (result != ZX_OK) {
+      attempts += 1;
+    }
+    zx::nanosleep(zx::deadline_after(delay));
+    delay = std::min(delay * 2, zx::sec(1));
+  } while (result == ZX_ERR_SHOULD_WAIT);
+  EXPECT_EQ(result, ZX_OK);
 
   QueryOid(OID_GEN_RCV_OK, &transmit_ok, sizeof(transmit_ok), &actual);
   QueryOid(OID_GEN_RCV_ERROR, &transmit_errors, sizeof(transmit_errors), &actual);
   QueryOid(OID_GEN_RCV_NO_BUFFER, &transmit_no_buffer, sizeof(transmit_no_buffer), &actual);
   EXPECT_EQ(transmit_ok, 9);
   EXPECT_EQ(transmit_errors, 0);
-  EXPECT_EQ(transmit_no_buffer, 1);
+  EXPECT_EQ(transmit_no_buffer, 1 + attempts);
 }
 
 TEST_F(RndisFunctionTest, Receive) {
@@ -474,8 +498,7 @@ TEST_F(RndisFunctionTest, Receive) {
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
 
-  uint32_t filter = 0;
-  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  SetPacketFilter();
 
   struct Payload {
     rndis_packet_header header;
@@ -496,7 +519,7 @@ TEST_F(RndisFunctionTest, Receive) {
 
   request->Complete(ZX_OK, sizeof(payload));
 
-  EXPECT_EQ(ifc_.PacketsReceived(), 1);
+  EXPECT_OK(ifc_.WaitUntilPacketReceived());
 }
 
 TEST_F(RndisFunctionTest, KeepAliveMessage) {
@@ -526,8 +549,7 @@ TEST_F(RndisFunctionTest, Halt) {
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
 
   // Set a packet filter to put the device online.
-  uint32_t filter = 0;
-  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  SetPacketFilter();
   EXPECT_TRUE(ifc_.LastStatus().has_value());
   EXPECT_EQ(ifc_.LastStatus().value(), ETHERNET_STATUS_ONLINE);
 
@@ -554,8 +576,7 @@ TEST_F(RndisFunctionTest, Reset) {
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
 
   // Set a packet filter to put the device online.
-  uint32_t filter = 0;
-  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  SetPacketFilter();
   EXPECT_TRUE(ifc_.LastStatus().has_value());
   EXPECT_EQ(ifc_.LastStatus().value(), ETHERNET_STATUS_ONLINE);
 

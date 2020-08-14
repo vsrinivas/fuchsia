@@ -26,8 +26,8 @@ void RndisFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buf
   *out_descriptors_actual = UsbFunctionInterfaceGetDescriptorsSize();
 }
 
-std::optional<std::vector<uint8_t>> RndisFunction::QueryOidLocked(uint32_t oid, void* input,
-                                                                  size_t length) {
+std::optional<std::vector<uint8_t>> RndisFunction::QueryOid(uint32_t oid, void* input,
+                                                            size_t length) {
   zxlogf(INFO, "Query OID %x", oid);
   std::optional<std::vector<uint8_t>> response;
   switch (oid) {
@@ -170,7 +170,6 @@ std::optional<std::vector<uint8_t>> RndisFunction::QueryOidLocked(uint32_t oid, 
       break;
     }
     case OID_GEN_RCV_OK: {
-      zxlogf(ERROR, "RCV OK with %u.", transmit_ok_);
       static_assert(sizeof(transmit_ok_) == sizeof(uint32_t));
       response.emplace(
           std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&transmit_ok_),
@@ -212,18 +211,30 @@ std::optional<std::vector<uint8_t>> RndisFunction::QueryOidLocked(uint32_t oid, 
 zx_status_t RndisFunction::SetOid(uint32_t oid, const uint8_t* buffer, size_t length) {
   switch (oid) {
     case OID_GEN_CURRENT_PACKET_FILTER: {
-      fbl::AutoLock lock(&lock_);
-      rndis_ready_ = true;
-      if (ifc_.is_valid()) {
-        ifc_.Status(ETHERNET_STATUS_ONLINE);
+      bool indicate_status = false;
+      {
+        fbl::AutoLock lock(&lock_);
+        rndis_ready_ = true;
+        if (ifc_.is_valid()) {
+          ifc_.Status(ETHERNET_STATUS_ONLINE);
+          // Call IndicateConnectionStatus outside the lock.
+          indicate_status = true;
+        }
+
+        std::optional<usb::Request<>> pending_request;
+        size_t request_length = usb::Request<>::RequestSize(usb_request_size_);
+        while ((pending_request = free_read_pool_.Get(request_length))) {
+          pending_requests_++;
+          function_.RequestQueue(pending_request->take(), &read_request_complete_);
+        }
       }
 
-      std::optional<usb::Request<>> pending_request;
-      size_t request_length = usb::Request<>::RequestSize(usb_request_size_);
-      while ((pending_request = free_read_pool_.Get(request_length))) {
-        function_.RequestQueue(pending_request->take(), &read_request_complete_);
+      if (indicate_status) {
+        zxlogf(ERROR, "IndidcateStatus from SetOid");
+        IndicateConnectionStatus(true);
+      } else {
+        zxlogf(ERROR, "No IndidcateStatus from SetOid");
       }
-
       return ZX_OK;
     }
     case OID_802_3_MULTICAST_LIST: {
@@ -394,8 +405,7 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
       }
 
       auto query = static_cast<const rndis_query*>(buffer);
-      fbl::AutoLock lock(&lock_);
-      auto oid_response = QueryOidLocked(query->oid, nullptr, 0);
+      auto oid_response = QueryOid(query->oid, nullptr, 0);
       response.emplace(QueryResponse(query->request_id, oid_response));
       break;
     }
@@ -660,8 +670,6 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
                                         void* cookie) {
   eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
 
-  fbl::AutoLock lock(&lock_);
-
   size_t length = op.operation()->data_size;
   if (length > kMtu - sizeof(rndis_packet_header)) {
     op.Complete(ZX_ERR_INVALID_ARGS);
@@ -669,6 +677,7 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
     return;
   }
 
+  fbl::AutoLock lock(&lock_);
   if (!Online()) {
     op.Complete(ZX_ERR_SHOULD_WAIT);
     return;
@@ -676,13 +685,13 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
 
   std::optional<usb::Request<>> request;
   request = free_write_pool_.Get(usb::Request<>::RequestSize(usb_request_size_));
-
   if (!request) {
     zxlogf(DEBUG, "No available TX requests");
     op.Complete(ZX_ERR_SHOULD_WAIT);
     transmit_no_buffer_ += 1;
     return;
   }
+  pending_requests_++;
 
   rndis_packet_header header{};
   header.msg_type = RNDIS_PACKET_MSG;
@@ -696,6 +705,8 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
     zxlogf(ERROR, "Failed to copy TX header: %zd", copied);
     op.Complete(ZX_ERR_INTERNAL);
     transmit_errors_ += 1;
+    free_write_pool_.Add(*std::move(request));
+    pending_requests_--;
     return;
   }
   offset += copied;
@@ -705,6 +716,8 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
     zxlogf(ERROR, "Failed to copy TX data: %zd", copied);
     op.Complete(ZX_ERR_INTERNAL);
     transmit_errors_ += 1;
+    free_write_pool_.Add(*std::move(request));
+    pending_requests_--;
     return;
   }
   request->request()->header.length = sizeof(header) + length;
@@ -781,8 +794,15 @@ void RndisFunction::ReceiveLocked(usb::Request<>& request) {
 void RndisFunction::ReadComplete(usb_request_t* usb_request) {
   fbl::AutoLock lock(&lock_);
   usb::Request<> request(usb_request, usb_request_size_);
-
   if (usb_request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+    pending_requests_--;
+    if (shutting_down_) {
+      request.Release();
+      if (pending_requests_ == 0) {
+        ShutdownComplete();
+      }
+      return;
+    }
     free_read_pool_.Add(std::move(request));
     return;
   }
@@ -798,6 +818,14 @@ void RndisFunction::ReadComplete(usb_request_t* usb_request) {
   if (Online()) {
     function_.RequestQueue(request.take(), &read_request_complete_);
   } else {
+    if (shutting_down_) {
+      request.Release();
+      pending_requests_--;
+      if (pending_requests_ == 0) {
+        ShutdownComplete();
+      }
+      return;
+    }
     free_read_pool_.Add(std::move(request));
   }
 }
@@ -805,11 +833,11 @@ void RndisFunction::ReadComplete(usb_request_t* usb_request) {
 void RndisFunction::NotifyLocked() {
   std::optional<usb::Request<>> request;
   request = free_notify_pool_.Get(usb::Request<>::RequestSize(usb_request_size_));
-
   if (!request) {
     zxlogf(ERROR, "No notify request available");
     return;
   }
+  pending_requests_++;
 
   rndis_notification notification{
       .notification = htole32(1),
@@ -819,10 +847,11 @@ void RndisFunction::NotifyLocked() {
   ssize_t copied = request->CopyTo(&notification, sizeof(notification), 0);
   if (copied < 0) {
     zxlogf(ERROR, "Failed to copy notification");
+    pending_requests_--;
+    free_notify_pool_.Add(*std::move(request));
     return;
   }
   request->request()->header.length = sizeof(notification);
-
   function_.RequestQueue(request->take(), &notification_request_complete_);
 }
 
@@ -851,14 +880,30 @@ void RndisFunction::IndicateConnectionStatus(bool connected) {
 }
 
 void RndisFunction::WriteComplete(usb_request_t* usb_request) {
-  fbl::AutoLock lock(&lock_);
   usb::Request<> request(usb_request, usb_request_size_);
+  fbl::AutoLock lock(&lock_);
+  pending_requests_--;
+  if (shutting_down_) {
+    request.Release();
+    if (pending_requests_ == 0) {
+      ShutdownComplete();
+    }
+    return;
+  }
   free_write_pool_.Add(std::move(request));
 }
 
 void RndisFunction::NotificationComplete(usb_request_t* usb_request) {
-  fbl::AutoLock lock(&lock_);
   usb::Request<> request(usb_request, usb_request_size_);
+  fbl::AutoLock lock(&lock_);
+  pending_requests_--;
+  if (shutting_down_) {
+    request.Release();
+    if (pending_requests_ == 0) {
+      ShutdownComplete();
+    }
+    return;
+  }
   free_notify_pool_.Add(std::move(request));
 }
 
@@ -1016,6 +1061,7 @@ zx_status_t RndisFunction::Bind() {
 
   usb_request_size_ = function_.GetRequestSize();
 
+  fbl::AutoLock lock(&lock_);
   for (size_t i = 0; i < kRequestPoolSize; i++) {
     std::optional<usb::Request<>> request;
     status = usb::Request<>::Alloc(&request, kNotificationMaxPacketSize, NotificationAddress(),
@@ -1049,12 +1095,19 @@ zx_status_t RndisFunction::Bind() {
     free_write_pool_.Add(*std::move(request));
   }
 
+  status = loop_.StartThread("rndis-function");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to start thread: %s", zx_status_get_string(status));
+    return status;
+  }
+
   status = DdkAdd("rndis-function");
   if (status != ZX_OK) {
     return status;
   }
 
   function_.SetInterface(this, &usb_function_interface_protocol_ops_);
+
   return ZX_OK;
 }
 
@@ -1064,38 +1117,46 @@ void RndisFunction::Shutdown() {
   function_.CancelAll(BulkOutAddress());
   function_.CancelAll(NotificationAddress());
 
-  // This is necessary for suspend to ensure that the requests are unpinned.
   free_notify_pool_.Release();
   free_read_pool_.Release();
   free_write_pool_.Release();
 
+  shutting_down_ = true;
   ifc_.clear();
+
+  if (pending_requests_ == 0) {
+    ShutdownComplete();
+  } else {
+    zxlogf(ERROR, "Shutdown with %zd pending", pending_requests_);
+  }
+}
+
+void RndisFunction::ShutdownComplete() {
+  ZX_DEBUG_ASSERT(pending_requests_ == 0);
+
+  if (shutdown_callback_.has_value()) {
+    (*shutdown_callback_)();
+  } else {
+    zxlogf(WARNING, "ShutdownComplete called but there was no shutdown callback");
+  }
 }
 
 void RndisFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
-  if (cancelled_) {
+  if (shutdown_callback_.has_value()) {
     txn.Reply();
     return;
   }
-  cancelled_ = true;
-  cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
-    Shutdown();
-    unbind_txn.Reply();
-  });
+  shutdown_callback_.emplace([unbind_txn = std::move(txn)]() mutable { unbind_txn.Reply(); });
+  Shutdown();
 }
 
 void RndisFunction::DdkSuspend(ddk::SuspendTxn txn) {
-  cancelled_ = true;
-  cancel_thread_ = std::thread([this, suspend_txn = std::move(txn)]() mutable {
-    Shutdown();
-    suspend_txn.Reply(ZX_OK, 0);
-  });
+  shutdown_callback_.emplace(
+      [suspend_txn = std::move(txn)]() mutable { suspend_txn.Reply(ZX_OK, 0); });
+  Shutdown();
 }
 
-void RndisFunction::DdkRelease() {
-  cancel_thread_.detach();
-  delete this;
-}
+void RndisFunction::DdkRelease() { delete this; }
 
 zx_status_t RndisFunction::Create(void* ctx, zx_device_t* parent) {
   auto device = std::make_unique<RndisFunction>(parent);

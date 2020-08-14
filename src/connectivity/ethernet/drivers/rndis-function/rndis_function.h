@@ -5,6 +5,11 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_FUNCTION_RNDIS_FUNCTION_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_FUNCTION_RNDIS_FUNCTION_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/operation/ethernet.h>
 #include <zircon/hw/usb/cdc.h>
 
@@ -31,7 +36,10 @@ class RndisFunction : public RndisFunctionType,
                       public ddk::UsbFunctionInterfaceProtocol<RndisFunction>,
                       public ddk::EthernetImplProtocol<RndisFunction, ddk::base_protocol> {
  public:
-  explicit RndisFunction(zx_device_t* parent) : RndisFunctionType(parent), function_(parent) {}
+  explicit RndisFunction(zx_device_t* parent)
+      : RndisFunctionType(parent),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        function_(parent) {}
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -64,11 +72,11 @@ class RndisFunction : public RndisFunctionType,
   zx_status_t Halt();
   void Reset();
 
-  std::optional<std::vector<uint8_t>> QueryOidLocked(uint32_t oid, void* input, size_t length)
-      __TA_REQUIRES(lock_);
+  std::optional<std::vector<uint8_t>> QueryOid(uint32_t oid, void* input, size_t length);
   zx_status_t SetOid(uint32_t oid, const uint8_t* input, size_t length);
 
   void Shutdown();
+  void ShutdownComplete() __TA_REQUIRES(lock_);
 
   void ReadComplete(usb_request_t* request);
   void WriteComplete(usb_request_t* request);
@@ -76,7 +84,6 @@ class RndisFunction : public RndisFunctionType,
 
   void ReceiveLocked(usb::Request<>& request) __TA_REQUIRES(lock_);
   void NotifyLocked() __TA_REQUIRES(lock_);
-
   void IndicateConnectionStatus(bool connected);
 
   uint8_t NotificationAddress() { return descriptors_.notification_ep.bEndpointAddress; }
@@ -94,35 +101,41 @@ class RndisFunction : public RndisFunctionType,
   static constexpr uint16_t kVendorDriverVersionMajor = 1;
   static constexpr uint16_t kVendorDriverVersionMinor = 0;
 
+  async::Loop loop_;
+
   ddk::EthernetIfcProtocolClient ifc_ __TA_GUARDED(lock_);
   ddk::UsbFunctionProtocolClient function_;
   size_t usb_request_size_;
 
   fbl::Mutex lock_;
   bool rndis_ready_ __TA_GUARDED(lock_) = false;
+  bool shutting_down_ __TA_GUARDED(lock_) = false;
   uint32_t link_speed_ __TA_GUARDED(lock_) = 0;
   std::array<uint8_t, ETH_MAC_SIZE> mac_addr_;
 
   // Stats.
-  uint32_t transmit_ok_ __TA_GUARDED(lock_) = 0;
-  uint32_t receive_ok_ __TA_GUARDED(lock_) = 0;
-  uint32_t transmit_errors_ __TA_GUARDED(lock_) = 0;
-  uint32_t receive_errors_ __TA_GUARDED(lock_) = 0;
-  uint32_t transmit_no_buffer_ __TA_GUARDED(lock_) = 0;
+  std::atomic<uint32_t> transmit_ok_ = 0;
+  std::atomic<uint32_t> receive_ok_ = 0;
+  std::atomic<uint32_t> transmit_errors_ = 0;
+  std::atomic<uint32_t> receive_errors_ = 0;
+  std::atomic<uint32_t> transmit_no_buffer_ = 0;
 
   std::queue<std::vector<uint8_t>> control_responses_ __TA_GUARDED(lock_);
 
-  usb::RequestPool<> free_notify_pool_;
-  usb::RequestPool<> free_read_pool_;
-  usb::RequestPool<> free_write_pool_;
+  usb::RequestPool<> free_notify_pool_ __TA_GUARDED(lock_);
+  usb::RequestPool<> free_read_pool_ __TA_GUARDED(lock_);
+  usb::RequestPool<> free_write_pool_ __TA_GUARDED(lock_);
 
-  bool cancelled_ = false;
-  std::thread cancel_thread_;
+  size_t pending_requests_ __TA_GUARDED(lock_) = 0;
+
+  std::optional<fit::function<void()>> shutdown_callback_;
 
   usb_request_complete_t read_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
-            reinterpret_cast<RndisFunction*>(ctx)->ReadComplete(request);
+            auto rndis = reinterpret_cast<RndisFunction*>(ctx);
+            async::PostTask(rndis->loop_.dispatcher(),
+                            [rndis, request]() { rndis->ReadComplete(request); });
           },
       .ctx = this,
   };
@@ -130,7 +143,9 @@ class RndisFunction : public RndisFunctionType,
   usb_request_complete_t write_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
-            reinterpret_cast<RndisFunction*>(ctx)->WriteComplete(request);
+            auto rndis = reinterpret_cast<RndisFunction*>(ctx);
+            async::PostTask(rndis->loop_.dispatcher(),
+                            [rndis, request]() { rndis->WriteComplete(request); });
           },
       .ctx = this,
   };
@@ -138,7 +153,9 @@ class RndisFunction : public RndisFunctionType,
   usb_request_complete_t notification_request_complete_ = {
       .callback =
           [](void* ctx, usb_request_t* request) {
-            reinterpret_cast<RndisFunction*>(ctx)->NotificationComplete(request);
+            auto rndis = reinterpret_cast<RndisFunction*>(ctx);
+            async::PostTask(rndis->loop_.dispatcher(),
+                            [rndis, request]() { rndis->NotificationComplete(request); });
           },
       .ctx = this,
   };
