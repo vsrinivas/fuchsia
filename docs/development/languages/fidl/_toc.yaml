@@ -34,8 +34,6 @@ toc:
     path: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
   - title: "Rust"
     path: /docs/development/languages/fidl/tutorials/tutorial-rust.md
-  - title: "Dart"
-    path: /docs/development/languages/fidl/tutorials/tutorial-dart.md
   - title: "Go"
     path: /docs/development/languages/fidl/tutorials/tutorial-go.md
   - title: "C"

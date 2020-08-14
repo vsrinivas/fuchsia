@@ -477,7 +477,8 @@ and all events are implemented by returning a Stream with a single
 `UnimplementedError` event.
 
 <!-- xrefs -->
-[dart-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-dart.md
+<!-- TODO: reenable after updated tutorial lands -->
+<!-- [dart-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-dart.md -->
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
