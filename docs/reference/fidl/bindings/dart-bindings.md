@@ -158,7 +158,7 @@ As well as the following variables:
 
 * `factory LocationType(int v)`: Factory constructor that returns the
   corresponding `LocationType` static const variable (`museum`, `airport`, or
-  `restaurant`) if the input matches one of the discriminants, or `null`
+  `restaurant`) if the input matches one of the discriminants, or throws
   otherwise.
 * `static LocationType $valueOf(String name)`: Look up a string name in the
   `$valuesMap`.
