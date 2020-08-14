@@ -4,6 +4,20 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+# 1 shadow byte covers 2^3 bytes.
+asan_mapping_scale = 3
+
+# asan_mapping_offset is obtained by substracting KERNEL_VA_BASE >> 3
+# from the place where we intend to put the asan shadow. This has the effect
+# of leaving the region from [0, KERNEL_VA_BASE) unmapped in the shadow, and
+# our mapped shadow covers everything from
+# [KERNEL_VA_BASE, KERNEL_VA_BASE+KERNEL_VA_SIZE)
+#
+# This is used by the compiler to calculate the location in the shadow
+# of a memory address by doing:
+# shadow_addr = asan_mapping_offset + (address >> asan_mapping_scale)
+asan_mapping_offset = "0xdffffff000000000"
+
 _asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
 _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
 is_asan = toolchain.configs + _asan_config - _asan_config != toolchain.configs
@@ -50,7 +64,10 @@ if (is_asan) {
       configs -= [ _sancov_config ]
     }
 
-    configs += [ "$zx/public/gn/config:frame_pointers" ]
+    configs += [
+      ":kasan-defines",
+      "$zx/public/gn/config:frame_pointers",
+    ]
     sources = [
       "asan-init.cc",
       "asan-poisoning.cc",
@@ -62,4 +79,37 @@ if (is_asan) {
       "..:headers",
     ]
   }
+}
+
+config("kasan-defines") {
+  defines = [
+    "ASAN_MAPPING_SCALE=$asan_mapping_scale",
+    "ASAN_MAPPING_OFFSET=${asan_mapping_offset}UL",
+  ]
+}
+
+config("kasan") {
+  configs = [ ":kasan-defines" ]
+  cflags = [
+    # This tells the instrumentation to treat user-defined operator
+    # new[] like the standard one and check that the array cookie is
+    # not clobbered.  fbl::AllocChecker new[] is the only user-defined
+    # operator new[] in the kernel, and it just wraps the normal
+    # allocation semantics.
+    "-fsanitize-address-poison-custom-array-cookie",
+
+    # TODO(30033): Disable poisoning around stack allocations until later.
+    "-mllvm",
+    "-asan-stack=0",
+
+    # TODO(30033): Disable poisoning around globals until later.
+    "-mllvm",
+    "-asan-globals=0",
+
+    "-mllvm",
+    "-asan-mapping-scale=$asan_mapping_scale",
+
+    "-mllvm",
+    "-asan-mapping-offset=$asan_mapping_offset",
+  ]
 }

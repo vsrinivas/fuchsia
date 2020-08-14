@@ -17,6 +17,13 @@
 
 #ifdef __x86_64__
 
+inline constexpr size_t kAsanShift = ASAN_MAPPING_SCALE;
+inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
+static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
+
+inline constexpr size_t kAsanGranularity = (1 << kAsanShift);
+inline constexpr size_t kAsanGranularityMask = kAsanGranularity - 1;
+
 extern ktl::atomic<bool> g_asan_initialized;
 
 // The redzone is an area of poisoned bytes added at the end of memory allocations. This allows
@@ -32,8 +39,6 @@ inline constexpr size_t kHeapRightRedzoneSize = 16;
 
 // Any value in the shadow equal to or above this value is poisoned.
 inline constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
-
-static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
 
 // The current implementation of asan only checks accesses within the physmap.
 inline constexpr vaddr_t kAsanStartAddress = PHYSMAP_BASE;
@@ -52,7 +57,7 @@ static inline uint8_t* addr2shadow(uintptr_t address) {
 
 // Checks the validity of an entire region. This function panics and prints an
 // error message if any part of [address, address+bytes) is poisoned.
-void asan_check(uintptr_t address, size_t bytes, void* caller);
+void asan_check(uintptr_t address, size_t bytes, bool is_write, void* caller);
 
 // Checks whether the two memory ranges defined by [offseta, offseta+lena) and
 // [offsetb, offsetb + lenb) overlap. This function panics and prints an error message if

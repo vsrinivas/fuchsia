@@ -31,23 +31,23 @@ void* __asan_memcpy(void* dst, const void* src, size_t n) {
   auto srcptr = reinterpret_cast<uintptr_t>(src);
 
   asan_check_memory_overlap(dstptr, n, srcptr, n);
-  asan_check(srcptr, n, __builtin_return_address(0));
-  asan_check(dstptr, n, __builtin_return_address(0));
+  asan_check(srcptr, n, /*is_write=*/false, __builtin_return_address(0));
+  asan_check(dstptr, n, /*is_write=*/true, __builtin_return_address(0));
   return __unsanitized_memcpy(dst, src, n);
 }
 
 void* __asan_memset(void* dst, int c, size_t n) {
   if (n == 0)
     return dst;
-  asan_check(reinterpret_cast<uintptr_t>(dst), n, __builtin_return_address(0));
+  asan_check(reinterpret_cast<uintptr_t>(dst), n, /*is_write=*/true, __builtin_return_address(0));
   return __unsanitized_memset(dst, c, n);
 }
 
 void* __asan_memmove(void* dst, const void* src, size_t n) {
   if (n == 0)
     return dst;
-  asan_check(reinterpret_cast<uintptr_t>(src), n, __builtin_return_address(0));
-  asan_check(reinterpret_cast<uintptr_t>(dst), n, __builtin_return_address(0));
+  asan_check(reinterpret_cast<uintptr_t>(src), n, /*is_write=*/false, __builtin_return_address(0));
+  asan_check(reinterpret_cast<uintptr_t>(dst), n, /*is_write=*/true, __builtin_return_address(0));
   return __unsanitized_memmove(dst, src, n);
 }
 
@@ -86,10 +86,16 @@ ASAN_SET_SHADOW_XX(f8)
 // This is the same macro used in compiler-rt/lib/asan/asan_rtl.cc,
 // where it makes use of the is_write argument.  The list of invocations
 // of this macro below is taken verbatim from that file.
-#define ASAN_REPORT_ERROR(type, is_write, size)                                 \
-  PANIC_STUB(void __asan_report_##type##size(uintptr_t addr))                   \
-  PANIC_STUB(void __asan_report_exp_##type##size(uintptr_t addr, uint32_t exp)) \
-  PANIC_STUB(void __asan_report_##type##size##_noabort(uintptr_t addr))
+#define ASAN_REPORT_ERROR(type, is_write, size)                       \
+  void __asan_report_##type##size(uintptr_t addr) {                   \
+    asan_check(addr, size, is_write, __builtin_return_address(0));    \
+  }                                                                   \
+  void __asan_report_exp_##type##size(uintptr_t addr, uint32_t exp) { \
+    asan_check(addr, size, is_write, __builtin_return_address(0));    \
+  }                                                                   \
+  void __asan_report_##type##size##_noabort(uintptr_t addr) {         \
+    asan_check(addr, size, is_write, __builtin_return_address(0));    \
+  }
 
 ASAN_REPORT_ERROR(load, false, 1)
 ASAN_REPORT_ERROR(load, false, 2)
@@ -102,13 +108,24 @@ ASAN_REPORT_ERROR(store, true, 4)
 ASAN_REPORT_ERROR(store, true, 8)
 ASAN_REPORT_ERROR(store, true, 16)
 
-PANIC_STUB(void __asan_report_load_n(uintptr_t addr, size_t size))
-PANIC_STUB(void __asan_report_load_n_noabort(uintptr_t addr, size_t size))
-PANIC_STUB(void __asan_report_exp_load_n(uintptr_t addr, size_t size, uint32_t exp))
-
-PANIC_STUB(void __asan_report_store_n(uintptr_t addr, size_t size))
-PANIC_STUB(void __asan_report_store_n_noabort(uintptr_t addr, size_t size))
-PANIC_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size, uint32_t exp))
+void __asan_report_load_n(uintptr_t addr, size_t size) {
+  asan_check(addr, size, /*is_write=*/false, __builtin_return_address(0));
+}
+void __asan_report_load_n_noabort(uintptr_t addr, size_t size) {
+  asan_check(addr, size, /*is_write=*/false, __builtin_return_address(0));
+}
+void __asan_report_exp_load_n(uintptr_t addr, size_t size, uint32_t exp) {
+  asan_check(addr, size, /*is_write=*/false, __builtin_return_address(0));
+}
+void __asan_report_store_n(uintptr_t addr, size_t size) {
+  asan_check(addr, size, /*is_write=*/true, __builtin_return_address(0));
+}
+void __asan_report_store_n_noabort(uintptr_t addr, size_t size) {
+  asan_check(addr, size, /*is_write=*/true, __builtin_return_address(0));
+}
+void __asan_report_exp_store_n(uintptr_t addr, size_t size) {
+  asan_check(addr, size, /*is_write=*/true, __builtin_return_address(0));
+}
 
 // These are called when not using the inline instrumentation that calls the
 // ASAN_REPORT_ERROR functions for poisoned accesses.  Instead, calls to these
@@ -116,21 +133,21 @@ PANIC_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size, uint32_t 
 // poison check.
 
 void __asan_loadN(uintptr_t addr, size_t size) {
-  asan_check(addr, size, __builtin_return_address(0));
+  asan_check(addr, size, /*is_write=*/false, __builtin_return_address(0));
 }
 void __asan_storeN(uintptr_t addr, size_t size) {
-  asan_check(addr, size, __builtin_return_address(0));
+  asan_check(addr, size, /*is_write=*/true, __builtin_return_address(0));
 }
 
 // This is the same macro used in compiler-rt/lib/asan/asan_rtl.cc,
 // where it makes use of the is_write argument.  The list of invocations
 // of this macro below is taken verbatim from that file.
-#define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)      \
-  void __asan_##type##size(uintptr_t addr) {                   \
-    asan_check(addr, size, __builtin_return_address(0));       \
-  }                                                            \
-  void __asan_exp_##type##size(uintptr_t addr, uint32_t exp) { \
-    asan_check(addr, size, __builtin_return_address(0));       \
+#define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)          \
+  void __asan_##type##size(uintptr_t addr) {                       \
+    asan_check(addr, size, is_write, __builtin_return_address(0)); \
+  }                                                                \
+  void __asan_exp_##type##size(uintptr_t addr, uint32_t exp) {     \
+    asan_check(addr, size, is_write, __builtin_return_address(0)); \
   }
 
 ASAN_MEMORY_ACCESS_CALLBACK(load, false, 1)

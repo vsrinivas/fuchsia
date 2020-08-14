@@ -11,10 +11,13 @@
 #ifndef ZIRCON_KERNEL_LIB_INSTRUMENTATION_INCLUDE_LIB_INSTRUMENTATION_ASAN_H_
 #define ZIRCON_KERNEL_LIB_INSTRUMENTATION_INCLUDE_LIB_INSTRUMENTATION_ASAN_H_
 
+#include <arch/kernel_aspace.h>
+#include <zircon/compiler.h>
+
 #ifdef __x86_64__
 
 #define X86_KERNEL_KASAN_PDP_ENTRIES (64)
-#define KASAN_SHADOW_OFFSET (0xffffffe000000000UL)
+#define KASAN_SHADOW_OFFSET (ASAN_MAPPING_OFFSET + (KERNEL_ASPACE_BASE >> ASAN_MAPPING_SCALE))
 
 #endif  // __x86_64__
 
@@ -31,11 +34,6 @@
 
 #include <arch/kernel_aspace.h>
 #include <ktl/array.h>
-
-#ifdef __x86_64__
-inline constexpr size_t kAsanShift = 3;
-inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
-#endif  // __x86_64__
 
 // ASAN dynamic poison interface - allows caller to "poison" or "unpoison" a region of kernel
 // virtual addresses. Accesses to poisoned memory are invalid and may cause a fault or asan

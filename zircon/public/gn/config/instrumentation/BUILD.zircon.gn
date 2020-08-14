@@ -55,29 +55,7 @@ config("asan") {
   cflags = compiler_flags
   ldflags = compiler_flags
   if (is_kernel) {
-    cflags += [
-      # This tells the instrumentation to treat user-defined operator
-      # new[] like the standard one and check that the array cookie is
-      # not clobbered.  fbl::AllocChecker new[] is the only user-defined
-      # operator new[] in the kernel, and it just wraps the normal
-      # allocation semantics.
-      "-fsanitize-address-poison-custom-array-cookie",
-
-      # TODO(30033): Disable poisoning around stack allocations until later.
-      "-mllvm",
-      "-asan-stack=0",
-
-      # TODO(30033): Disable poisoning around globals until later.
-      "-mllvm",
-      "-asan-globals=0",
-
-      # Disable all inline instrumentation because it wants to use the
-      # userland shadow layout with fixed zero address.
-      # TODO(30033): Ideally, we'd use inline instrumentation configured
-      # for the kernel's shadow layout.
-      "-mllvm",
-      "-asan-instrumentation-with-call-threshold=0",
-    ]
+    configs = [ "$zx/kernel/lib/instrumentation/asan:kasan" ]
   }
 }
 

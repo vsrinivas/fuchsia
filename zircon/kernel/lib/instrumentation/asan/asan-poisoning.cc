@@ -19,9 +19,6 @@
 
 ktl::atomic<bool> g_asan_initialized;
 
-constexpr size_t kAsanGranularity = (1 << kAsanShift);
-constexpr size_t kAsanGranularityMask = kAsanGranularity - 1;
-
 namespace {
 
 // Checks if an entire memory region is all zeroes.
@@ -40,7 +37,7 @@ bool is_mem_zero(ktl::span<const uint8_t> region) {
 // Example:
 // (Shadow address)        (shadow map contents)
 //
-// KASAN detected an error: ptr={{{data:0xffffff8043251830}}}, size=0x4, caller:
+// KASAN detected a write error: ptr={{{data:0xffffff8043251830}}}, size=0x4, caller:
 // {{{pc:0xffffffff001d9371}}} Shadow memory state around the buggy address 0xffffffe00864a306:
 // 0xffffffe00864a2f0: 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa
 // 0xffffffe00864a2f8: 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa
@@ -49,12 +46,13 @@ bool is_mem_zero(ktl::span<const uint8_t> region) {
 // 0xffffffe00864a308: 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa
 // 0xffffffe00864a310: 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa 0xfa
 // page 0xffffff807f475f30: address 0x43251000 state heap flags 0
-void print_error_shadow(uintptr_t address, size_t bytes, void* caller, uintptr_t poisoned_addr) {
+void print_error_shadow(uintptr_t address, size_t bytes, bool is_write, void* caller,
+                        uintptr_t poisoned_addr) {
   const uintptr_t shadow = reinterpret_cast<uintptr_t>(addr2shadow(address));
 
   dprintf(CRITICAL,
-          "\nKASAN detected an error: ptr={{{data:%#lx}}}, size=%#zx, caller: {{{pc:%p}}}\n",
-          address, bytes, caller);
+          "\nKASAN detected a %s error: ptr={{{data:%#lx}}}, size=%#zx, caller: {{{pc:%p}}}\n",
+          !is_write ? "read" : "write", address, bytes, caller);
 
   // TODO(fxbug.dev/30033): Decode the shadow value into 'use-after-free'/redzone/page free/etc.
   printf("Shadow memory state around the buggy address %#lx:\n", shadow);
@@ -163,14 +161,14 @@ uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size) {
   panic("Unreachable code\n");
 }
 
-void asan_check(uintptr_t address, size_t bytes, void* caller) {
+void asan_check(uintptr_t address, size_t bytes, bool is_write, void* caller) {
   // TODO(fxbug.dev/30033): Inline the fast path for constant-size checks.
   const uintptr_t poisoned_addr = asan_region_is_poisoned(address, bytes);
   if (!poisoned_addr) {
     return;
   }
   platform_panic_start();
-  print_error_shadow(address, bytes, caller, poisoned_addr);
+  print_error_shadow(address, bytes, is_write, caller, poisoned_addr);
   panic("kasan\n");
 }
 

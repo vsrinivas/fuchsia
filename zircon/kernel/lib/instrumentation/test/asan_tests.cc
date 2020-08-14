@@ -22,10 +22,10 @@
 #include <vm/vm_address_region.h>
 
 #if __has_feature(address_sanitizer)
-namespace {
 
-constexpr size_t kAsanShift = 3;
-constexpr size_t kAsanGranularity = (1 << kAsanShift);
+#include "../asan/asan-internal.h"
+
+namespace {
 
 static inline uint8_t* test_addr2shadow(uintptr_t address) {
   uint8_t* const kasan_shadow_map = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
