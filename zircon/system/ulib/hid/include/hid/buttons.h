@@ -19,12 +19,14 @@ typedef struct buttons_input_rpt {
   uint8_t volume_up : 1;
   uint8_t volume_down : 1;
   uint8_t reset : 1;
-  uint8_t padding : 5;
+  uint8_t camera_access_disabled : 1;
+  uint8_t padding : 4;
 #else
-  uint8_t padding : 5;
+  uint8_t padding : 4;
   uint8_t volume_up : 1;
   uint8_t volume_down : 1;
   uint8_t reset : 1;
+  uint8_t camera_access_disabled : 1;
 #endif
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   uint8_t mute : 1;

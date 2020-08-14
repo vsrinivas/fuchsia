@@ -31,9 +31,11 @@ static const buttons_gpio_config_t gpios_direct[] = {
 static const buttons_button_config_t buttons_multiple[] = {
     {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
     {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_MUTE, 1, 0, 0},
+    {BUTTONS_TYPE_DIRECT, BUTTONS_ID_CAM_MUTE, 2, 0, 0},
 };
 
 static const buttons_gpio_config_t gpios_multiple[] = {
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
     {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
     {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
 };
@@ -593,6 +595,7 @@ TEST(HidButtonsTest, Notify1) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[1]
@@ -601,6 +604,7 @@ TEST(HidButtonsTest, Notify1) {
       .ExpectRead(ZX_OK, 0);                         // Still not pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[0]
@@ -609,6 +613,7 @@ TEST(HidButtonsTest, Notify1) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
 
   {  // Scoping for Client
     zx::channel client_end, server_end;
@@ -685,6 +690,7 @@ TEST(HidButtonsTest, Notify2) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[1]
@@ -693,6 +699,7 @@ TEST(HidButtonsTest, Notify2) {
       .ExpectRead(ZX_OK, 0);                         // Still not pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[1]
@@ -701,6 +708,7 @@ TEST(HidButtonsTest, Notify2) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[0]
@@ -709,6 +717,7 @@ TEST(HidButtonsTest, Notify2) {
       .ExpectRead(ZX_OK, 0);                         // Still not pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
 
   // Reconfigure Polarity due to interrupt.
   mock_gpios[0]
@@ -717,6 +726,7 @@ TEST(HidButtonsTest, Notify2) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
   mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
   mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
 
   {  // Scoping for Client 2
     // Client 2
@@ -913,6 +923,67 @@ TEST(HidButtonsTest, DuplicateReports) {
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_gpios[1].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_gpios[2].VerifyAndClear());
+}
+
+TEST(HidButtonsTest, CamMute) {
+  ddk::MockGpio mock_gpios[countof(gpios_multiple)];
+  HidButtonsDeviceTest device(mock_gpios, countof(mock_gpios), TestType::kTestNotify);
+  zx::interrupt irqs[countof(gpios_multiple)];
+  for (size_t i = 0; i < countof(gpios_multiple); ++i) {
+    zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irqs[i]);
+    device.SetupGpio(std::move(irqs[i]), i);
+  }
+
+  EXPECT_OK(device.BindTest());
+
+  hidbus_ifc_protocol_ops_t ops = {};
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+    buttons_input_rpt_t report_volume_up = {};
+    report_volume_up.rpt_id = 1;
+    report_volume_up.camera_access_disabled = 1;
+    ASSERT_BYTES_EQ(buffer, &report_volume_up, size);
+    EXPECT_EQ(size, sizeof(report_volume_up));
+  };
+  hidbus_ifc_protocol_t protocol = {};
+  protocol.ops = &ops;
+  EXPECT_OK(device.HidbusStart(&protocol));
+
+  mock_gpios[2]
+      .ExpectRead(ZX_OK, 1)                         // On.
+      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW)  // Turn the polarity.
+      .ExpectRead(ZX_OK, 1);                        // Still on, ok to continue.
+  mock_gpios[0].ExpectRead(ZX_OK, 0);               // Read value to prepare report.
+  mock_gpios[1].ExpectRead(ZX_OK, 0);               // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
+  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.DebounceWait();
+
+  device.HidbusStop();
+
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+    buttons_input_rpt_t report_volume_up = {};
+    report_volume_up.rpt_id = 1;
+    report_volume_up.camera_access_disabled = 0;
+    ASSERT_BYTES_EQ(buffer, &report_volume_up, size);
+    EXPECT_EQ(size, sizeof(report_volume_up));
+  };
+  protocol.ops = &ops;
+  EXPECT_OK(device.HidbusStart(&protocol));
+
+  mock_gpios[2]
+      .ExpectRead(ZX_OK, 0)                          // Off.
+      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_HIGH)  // Turn the polarity.
+      .ExpectRead(ZX_OK, 0);                         // Still off, ok to continue.
+  mock_gpios[0].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  mock_gpios[1].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  mock_gpios[2].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
+  device.FakeInterrupt(ButtonType::CAM_MUTE);
+  device.DebounceWait();
+
+  device.ShutDownTest();
+  for (auto& mock_gpio : mock_gpios) {
+    mock_gpio.VerifyAndClear();
+  }
 }
 
 }  // namespace buttons

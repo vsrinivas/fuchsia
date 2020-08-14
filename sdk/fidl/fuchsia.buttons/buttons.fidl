@@ -11,7 +11,11 @@ enum ButtonType : uint8 {
     VOLUME_DOWN = 1;
     RESET = 2;
     MUTE = 3;
-    MAX = 4;
+    PLAY_PAUSE = 4;
+    KEY_A = 5;
+    KEY_M = 6;
+    CAM_MUTE = 7;
+    MAX = 8;
 };
 
 /// Protocol for other devices to get the state of buttons and register for

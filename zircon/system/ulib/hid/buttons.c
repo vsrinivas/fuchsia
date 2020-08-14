@@ -18,12 +18,13 @@ static const uint8_t buttons_report_desc[] = {
     HID_USAGE(0xE9), // Volume Up
     HID_USAGE(0xEA), // Volume Down
     HID_USAGE(0x31), // Reset
+    HID_USAGE(0x77), // Camera access disabled
     HID_LOGICAL_MIN(0),
     HID_LOGICAL_MAX(1),
     HID_REPORT_SIZE(1),
-    HID_REPORT_COUNT(3),
+    HID_REPORT_COUNT(4),
     HID_INPUT(HID_Data_Var_Abs),
-    HID_REPORT_SIZE(5), // Padding
+    HID_REPORT_SIZE(4), // Padding
     HID_REPORT_COUNT(1),
     HID_INPUT(HID_Const_Arr_Abs),
 
@@ -66,6 +67,9 @@ void fill_button_in_report(uint8_t id, bool value, buttons_input_rpt_t* rpt) {
       break;
     case BUTTONS_ID_MIC_MUTE:
       rpt->mute = value;
+      break;
+    case BUTTONS_ID_CAM_MUTE:
+      rpt->camera_access_disabled = value;
       break;
   }
 }

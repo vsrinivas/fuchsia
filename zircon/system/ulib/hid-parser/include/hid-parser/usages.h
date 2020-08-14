@@ -224,6 +224,10 @@ enum class Consumer : uint32_t {
   kSnapshot = 0x65,
   kStill = 0x66,
 
+  kCameraAccessEnabled = 0x76,
+  kCameraAccessDisabled = 0x77,
+  kCameraAccessToggle = 0x78,
+
   kSelection = 0x80,
   kAssignSelection = 0x81,
   kModeStep = 0x82,

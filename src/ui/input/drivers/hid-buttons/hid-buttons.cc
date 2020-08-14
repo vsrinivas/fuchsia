@@ -32,7 +32,8 @@ namespace buttons {
 
 bool input_reports_are_equal(const buttons_input_rpt_t& lhs, const buttons_input_rpt_t& rhs) {
   return (lhs.rpt_id == rhs.rpt_id && lhs.volume_up == rhs.volume_up &&
-          lhs.volume_down == rhs.volume_down && lhs.reset == rhs.reset && lhs.mute == rhs.mute);
+          lhs.volume_down == rhs.volume_down && lhs.reset == rhs.reset && lhs.mute == rhs.mute &&
+          lhs.camera_access_disabled == rhs.camera_access_disabled);
 }
 
 void HidButtonsDevice::Notify(uint32_t type) {
