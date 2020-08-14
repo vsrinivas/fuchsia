@@ -77,6 +77,10 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
         }
 #endif  // MDNS_TRACE
 
+        // We'll send messages when we're done processing this inbound message, so don't respond
+        // to |FlushSentItems| in the interim. 
+        defer_flush_ = true;
+
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
           // the question or if the sender's port isn't 5353.
@@ -106,6 +110,8 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
           agent->EndOfMessage();
         }
         DALLOW_AGENT_REMOVAL();
+
+        defer_flush_ = false;
 
         SendMessages();
       });
@@ -350,6 +356,17 @@ void Mdns::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
   SendMessages();
 }
 
+void Mdns::FlushSentItems() {
+  if (defer_flush_) {
+    // |SendMessages| will be called soon, so we don't want to call it now. This allows agents
+    // to call |FlushSentItems| synchronous with inbound message processing and posted task
+    // execution without unnecessarily fragmenting outgoing messages.
+    return;
+  }
+
+  SendMessages();
+}
+
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
     agents_.emplace(agent);
@@ -425,11 +442,17 @@ void Mdns::PostTask() {
 
         zx::time now = this->now();
 
+        // We'll send messages when we're done running ready tasks, so don't respond to
+        // |FlushSentItems| in the interim. 
+        defer_flush_ = true;
+
         while (!task_queue_.empty() && task_queue_.top().time_ <= now) {
           fit::closure task = std::move(task_queue_.top().task_);
           task_queue_.pop();
           task();
         }
+
+        defer_flush_ = false;
 
         SendMessages();
 

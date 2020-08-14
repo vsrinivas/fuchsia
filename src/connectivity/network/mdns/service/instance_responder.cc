@@ -191,6 +191,10 @@ void InstanceResponder::GetAndSendPublication(bool query, const std::string& sub
       [this, query, subtype, reply_address](std::unique_ptr<Mdns::Publication> publication) {
         if (publication) {
           SendPublication(*publication, subtype, reply_address);
+          // Make sure messages get sent immediately if this callback happens asynchronously
+          // with respect to |ReceiveQuestion| or posted task execution.
+          FlushSentItems();
+
           // A V4 multicast reply address indicates V4 and V6 multicast.
           if (query && reply_address.socket_address() == addresses().v4_multicast()) {
             throttle_state_by_subtype_[subtype] = now();

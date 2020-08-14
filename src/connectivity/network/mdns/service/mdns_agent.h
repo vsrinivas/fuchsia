@@ -22,6 +22,26 @@ namespace mdns {
 enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
 
 // Base class for objects that drive mDNS question and record traffic.
+//
+// Agents that have been 'started' receive all inbound questions and resource records via their
+// |ReceiveQuestion| and |ReceiveResource| methods. When the agent host receives an inbound
+// message, it calls those methods for each question and resource in the message. When that's
+// done, the host calls |EndOfMessage| on each agent.
+//
+// Agents may call any of the protected 'Send' methods (|SendQuestion|, |SendResource| and
+// |SendAddresses|) at any time. The host accumulates the questions and resources and sends
+// them in messages. Typically, agents don't have to worry about sending messages. Messages
+// are sent for accumulated questions and resources:
+//
+// 1) after |Start| is called on any agent,
+// 2) after an inbound message is processed and all agents have gotten their |EndOfMessage| calls,
+// 3) after an agent is removed (in case it wants to say goodbye),
+// 4) after the completion of any task posted using |PostTaskForTime|.
+//
+// If an agent wants a message sent asynchronously with respect to agent start, inbound message
+// arrival, agent removal and posted tasks, the agent should call |FlushSentItems|. Calling
+// |FlushSentItems| synchronously with those operations isn't harmful.
+//
 class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  public:
   class Host {
@@ -54,6 +74,9 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
     // Removes the specified agent.
     virtual void RemoveAgent(std::shared_ptr<MdnsAgent> agent) = 0;
+
+    // Flushes sent questions and resources by sending the appropriate messages.
+    virtual void FlushSentItems() = 0;
   };
 
   virtual ~MdnsAgent() {}
@@ -127,6 +150,12 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) const {
     host_->SendAddresses(section, reply_address);
   }
+
+  // Flushes sent questions and resources by sending the appropriate messages. This method is only
+  // needed when questions or resources need to be sent asynchronously with respect to |Start|,
+  // |ReceiveQuestion|, |ReceiveResource|, |EndOfMessage|, |Quit| or a task posted using
+  // |PostTaskForTime|. See the discussion at the top of the file.
+  void FlushSentItems() { host_->FlushSentItems(); }
 
   // Registers the resource for renewal. Before the resource's TTL expires,
   // an attempt will be made to renew the resource by issuing queries for it.

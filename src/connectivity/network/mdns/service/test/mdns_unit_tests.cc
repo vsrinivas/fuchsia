@@ -97,6 +97,16 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     return resource;
   }
 
+  // Simulates the receipt of a typical query for PTR resources.
+  void ReceiveQuery() {
+    auto message = std::make_unique<DnsMessage>();
+    auto ptr_question = std::make_shared<DnsQuestion>(kServiceName, DnsType::kPtr);
+    message->questions_.push_back(ptr_question);
+    message->UpdateCounts();
+
+    ReceiveMessage(std::move(message), kReplyAddress);
+  }
+
   // Simulates the receipt of a typical query response (with PTR, SRC and A resources).
   void ReceiveQueryResponse() {
     auto message = std::make_unique<DnsMessage>();
@@ -181,6 +191,27 @@ class Publisher : public Mdns::Publisher {
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     callback(nullptr);
   }
+};
+
+class AsyncPublisher : public Mdns::Publisher {
+ public:
+  AsyncPublisher() {}
+
+  // Mdns::Publisher implementation.
+  void ReportSuccess(bool success) override {}
+
+  void GetPublication(bool query, const std::string& subtype,
+                      const std::vector<inet::SocketAddress>& source_addresses,
+                      fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
+    get_publication_callback_ = std::move(callback);
+  }
+
+  fit::function<void(std::unique_ptr<Mdns::Publication>)> get_publication_callback() {
+    return std::move(get_publication_callback_);
+  }
+
+ private:
+  fit::function<void(std::unique_ptr<Mdns::Publication>)> get_publication_callback_;
 };
 
 // Tests a subscription.
@@ -287,6 +318,33 @@ TEST_F(MdnsUnitTests, UnpublishDuringProbe) {
   EXPECT_FALSE(get_and_clear_send_message_called());
 
   // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests async SendMessage functionality.
+TEST_F(MdnsUnitTests, AsyncSendMessage) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  AsyncPublisher publisher;
+
+  // Publish should work the first time.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher));
+
+  // The publisher should get a |GetPublication| call immediately as part of initial announcement.
+  auto callback = publisher.get_publication_callback();
+  EXPECT_TRUE(callback);
+  (void)get_and_clear_send_message_called();
+
+  // We should see |SendMessage| happening immediately after the callback, which ensures that
+  // asynchronous callbacks produce immediate results (fxb/58141).
+  callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
+  EXPECT_TRUE(get_and_clear_send_message_called());
+
+  // Clean up.
+  publisher.Unpublish();
   under_test().Stop();
   RunLoopUntilIdle();
 }

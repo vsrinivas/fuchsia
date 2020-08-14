@@ -62,6 +62,12 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
   // Expects that the agent has called |RemoveAgent| to remove itself.
   void ExpectRemoveAgentCall() { EXPECT_TRUE(remove_agent_called_); }
 
+  // Expects that the agent has not called |FlushSentItems|.
+  void ExpectNoFlushSentItemsCall() { EXPECT_FALSE(flush_sent_items_called_); }
+
+  // Expects that the agent has called |FlushSentItems|.
+  void ExpectFlushSentItemsCall() { EXPECT_TRUE(flush_sent_items_called_); }
+
   // Expects that nothing else has happened. Subclasses can override this to ensure that nothing
   // specific to a particular agent type has happened. Overrides should call this implementation.
   virtual void ExpectNoOther();
@@ -118,6 +124,8 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
 
   void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
+  void FlushSentItems() override;
+
   const MdnsAgent* agent_;
   std::shared_ptr<DnsResource> address_placeholder_ =
       std::make_shared<DnsResource>(kHostFullName, DnsType::kA);
@@ -130,6 +138,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
       outbound_messages_by_reply_address_;
   std::queue<RenewCall> renew_calls_;
   bool remove_agent_called_ = false;
+  bool flush_sent_items_called_ = false;
 };
 
 }  // namespace test

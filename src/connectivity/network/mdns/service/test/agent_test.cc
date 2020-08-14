@@ -111,6 +111,10 @@ void AgentTest::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
   remove_agent_called_ = true;
 }
 
+void AgentTest::FlushSentItems() {
+  flush_sent_items_called_ = true;
+}
+
 void AgentTest::AdvanceTo(zx::time time) {
   EXPECT_LE(now_, time);
   now_ = time;

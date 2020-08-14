@@ -339,6 +339,8 @@ class Mdns : public MdnsAgent::Host {
 
   void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
+  void FlushSentItems() override;
+
   // Adds an agent and, if |started_|, starts it.
   void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
@@ -385,6 +387,7 @@ class Mdns : public MdnsAgent::Host {
 #endif  // MDNS_TRACE
   std::shared_ptr<ResourceRenewer> resource_renewer_;
   bool prohibit_agent_removal_ = false;
+  bool defer_flush_ = false;
 
 #ifdef NDEBUG
 #define DPROHIBIT_AGENT_REMOVAL() ((void)0)
