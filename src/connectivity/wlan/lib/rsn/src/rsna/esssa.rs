@@ -12,14 +12,14 @@ use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
-use anyhow::format_err;
+use anyhow::{bail, format_err};
 use eapol;
 use log::{error, info};
 use std::collections::HashSet;
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum Pmksa {
     Initialized { method: auth::Method },
     Established { pmk: Vec<u8>, method: auth::Method },
@@ -141,7 +141,7 @@ impl Gtksa {
 /// Each association should spawn one ESSSA instance only.
 /// The security association correctly tracks and handles replays for robustness and
 /// prevents key re-installation to mitigate attacks such as described in KRACK.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub(crate) struct EssSa {
     // Determines the device's role (Supplicant or Authenticator).
     role: Role,
@@ -188,6 +188,7 @@ impl EssSa {
         let pmk = match self.pmksa.as_ref() {
             Pmksa::Initialized { method } => match method {
                 auth::Method::Psk(psk) => psk.to_vec(),
+                auth::Method::Sae { .. } => bail!("SAE ESSSA not yet supported"),
             },
             _ => return Err(format_err!("cannot initiate PMK more than once")),
         };

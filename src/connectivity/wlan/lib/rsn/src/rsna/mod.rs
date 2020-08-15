@@ -5,10 +5,12 @@
 use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::Key;
 use crate::keywrap::{self, keywrap_algorithm};
+
 use crate::Error;
 use crate::ProtectionInfo;
 use anyhow::ensure;
 use eapol;
+use fidl_fuchsia_wlan_mlme::SaeFrame;
 use wlan_common::ie::rsn::{
     akm::Akm,
     cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP},
@@ -453,11 +455,21 @@ pub enum SecAssocStatus {
     EssSaEstablished,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum AuthStatus {
+    Success,
+    Rejected,
+    InternalError,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum SecAssocUpdate {
     TxEapolKeyFrame(eapol::KeyFrameBuf),
     Key(Key),
     Status(SecAssocStatus),
+    // These values are used to handle SAE exchanges.
+    TxSaeFrame(SaeFrame),
+    SaeAuthStatus(AuthStatus),
 }
 
 pub type UpdateSink = Vec<SecAssocUpdate>;

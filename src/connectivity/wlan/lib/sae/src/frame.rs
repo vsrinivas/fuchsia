@@ -48,7 +48,7 @@ fn get_scalar_and_element_len_bytes(group_id: u16) -> Result<(usize, usize), Err
 
 pub fn parse<'a>(frame: &'a AuthFrameRx) -> Result<ParseSuccess<'a>, Error> {
     // IEEE 802.11 9.3.3.12 Table 9-36 specifies all SAE auth frame formats.
-    match (frame.seq, frame.status_code) {
+    match (frame.seq, frame.result_code) {
         (1, ResultCode::Success) => parse_commit(frame.body).map(ParseSuccess::Commit),
         (1, ResultCode::AntiCloggingTokenRequired) => {
             parse_token(frame.body).map(ParseSuccess::AntiCloggingToken)
@@ -104,7 +104,7 @@ pub fn write_commit(group_id: u16, scalar: &[u8], element: &[u8], token: &[u8]) 
     body.append_bytes(scalar);
     body.append_bytes(element);
     body.append_bytes(token);
-    AuthFrameTx { seq: 1, status_code: ResultCode::Success, body }
+    AuthFrameTx { seq: 1, result_code: ResultCode::Success, body }
 }
 
 pub fn write_token(group_id: u16, token: &[u8]) -> AuthFrameTx {
@@ -112,7 +112,7 @@ pub fn write_token(group_id: u16, token: &[u8]) -> AuthFrameTx {
     body.reserve(2 + token.len());
     body.append_value(&group_id);
     body.append_bytes(token);
-    AuthFrameTx { seq: 1, status_code: ResultCode::AntiCloggingTokenRequired, body }
+    AuthFrameTx { seq: 1, result_code: ResultCode::AntiCloggingTokenRequired, body }
 }
 
 pub fn write_confirm(send_confirm: u16, confirm: &[u8]) -> AuthFrameTx {
@@ -120,7 +120,7 @@ pub fn write_confirm(send_confirm: u16, confirm: &[u8]) -> AuthFrameTx {
     body.reserve(2 + confirm.len());
     body.append_value(&send_confirm);
     body.append_bytes(confirm);
-    AuthFrameTx { seq: 2, status_code: ResultCode::Success, body }
+    AuthFrameTx { seq: 2, result_code: ResultCode::Success, body }
 }
 
 #[cfg(test)]
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn test_parse_commit() {
         let commit_msg =
-            AuthFrameRx { seq: 1, status_code: ResultCode::Success, body: ECC_COMMIT_BODY };
+            AuthFrameRx { seq: 1, result_code: ResultCode::Success, body: ECC_COMMIT_BODY };
         let parse_result = parse(&commit_msg);
         let commit = assert_variant!(parse_result, Ok(ParseSuccess::Commit(commit)) => commit);
         assert_eq!(commit.group_id, 19);
@@ -170,7 +170,7 @@ mod tests {
     fn commit_with_token() {
         let mut body = ECC_COMMIT_BODY.to_vec();
         body.append(&mut vec![0x4; 8]);
-        let commit_msg = AuthFrameRx { seq: 1, status_code: ResultCode::Success, body: &body[..] };
+        let commit_msg = AuthFrameRx { seq: 1, result_code: ResultCode::Success, body: &body[..] };
         let parse_result = parse(&commit_msg);
         let commit = assert_variant!(parse_result, Ok(ParseSuccess::Commit(commit)) => commit);
         assert_eq!(commit.group_id, 19);
@@ -184,7 +184,7 @@ mod tests {
     fn unknown_group_id_commit() {
         let mut body = ECC_COMMIT_BODY.to_vec();
         body[0] = 0xff; // not a real group
-        let commit_msg = AuthFrameRx { seq: 1, status_code: ResultCode::Success, body: &body[..] };
+        let commit_msg = AuthFrameRx { seq: 1, result_code: ResultCode::Success, body: &body[..] };
         assert_variant!(parse(&commit_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Unsupported SAE group ID: 255"))
         });
@@ -193,12 +193,12 @@ mod tests {
     #[test]
     fn truncated_commit() {
         let commit_msg =
-            AuthFrameRx { seq: 1, status_code: ResultCode::Success, body: &ECC_COMMIT_BODY[..20] };
+            AuthFrameRx { seq: 1, result_code: ResultCode::Success, body: &ECC_COMMIT_BODY[..20] };
         assert_variant!(parse(&commit_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Buffer truncated"))
         });
 
-        let commit_msg = AuthFrameRx { seq: 1, status_code: ResultCode::Success, body: &[] };
+        let commit_msg = AuthFrameRx { seq: 1, result_code: ResultCode::Success, body: &[] };
         assert_variant!(parse(&commit_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Failed to read group ID"))
         });
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn test_parse_confirm() {
         let confirm_msg =
-            AuthFrameRx { seq: 2, status_code: ResultCode::Success, body: ECC_CONFIRM_BODY };
+            AuthFrameRx { seq: 2, result_code: ResultCode::Success, body: ECC_CONFIRM_BODY };
         let parse_result = parse(&confirm_msg);
         let confirm = assert_variant!(parse_result, Ok(ParseSuccess::Confirm(confirm)) => confirm);
         assert_eq!(confirm.send_confirm, 1);
@@ -217,12 +217,12 @@ mod tests {
     #[test]
     fn truncated_confirm() {
         let confirm_msg =
-            AuthFrameRx { seq: 2, status_code: ResultCode::Success, body: &ECC_CONFIRM_BODY[..20] };
+            AuthFrameRx { seq: 2, result_code: ResultCode::Success, body: &ECC_CONFIRM_BODY[..20] };
         assert_variant!(parse(&confirm_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Buffer truncated"))
         });
 
-        let confirm_msg = AuthFrameRx { seq: 2, status_code: ResultCode::Success, body: &[] };
+        let confirm_msg = AuthFrameRx { seq: 2, result_code: ResultCode::Success, body: &[] };
         assert_variant!(parse(&confirm_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Failed to read send confirm"))
         });
@@ -232,7 +232,7 @@ mod tests {
     fn padded_confirm() {
         let mut body = ECC_CONFIRM_BODY.to_vec();
         body.push(0xff);
-        let confirm_msg = AuthFrameRx { seq: 2, status_code: ResultCode::Success, body: &body[..] };
+        let confirm_msg = AuthFrameRx { seq: 2, result_code: ResultCode::Success, body: &body[..] };
         assert_variant!(parse(&confirm_msg), Err(e) => {
             assert!(format!("{:?}", e).contains("Buffer too long"))
         });
@@ -242,7 +242,7 @@ mod tests {
     fn test_parse_anticlogging_token_required() {
         let act_required = AuthFrameRx {
             seq: 1,
-            status_code: ResultCode::AntiCloggingTokenRequired,
+            result_code: ResultCode::AntiCloggingTokenRequired,
             body: ECC_ACT_REQUIRED_BODY,
         };
         let parse_result = parse(&act_required);
@@ -255,7 +255,7 @@ mod tests {
     fn truncated_anticlogging_token() {
         let act_required = AuthFrameRx {
             seq: 1,
-            status_code: ResultCode::AntiCloggingTokenRequired,
+            result_code: ResultCode::AntiCloggingTokenRequired,
             body: &[19, 00],
         };
         assert_variant!(parse(&act_required), Err(e) => {
@@ -263,13 +263,13 @@ mod tests {
         });
 
         let act_required =
-            AuthFrameRx { seq: 1, status_code: ResultCode::AntiCloggingTokenRequired, body: &[19] };
+            AuthFrameRx { seq: 1, result_code: ResultCode::AntiCloggingTokenRequired, body: &[19] };
         assert_variant!(parse(&act_required), Err(e) => {
             assert!(format!("{:?}", e).contains("Failed to read group ID"))
         });
 
         let act_required =
-            AuthFrameRx { seq: 1, status_code: ResultCode::AntiCloggingTokenRequired, body: &[] };
+            AuthFrameRx { seq: 1, result_code: ResultCode::AntiCloggingTokenRequired, body: &[] };
         assert_variant!(parse(&act_required), Err(e) => {
             assert!(format!("{:?}", e).contains("Failed to read group ID"))
         });
@@ -279,7 +279,7 @@ mod tests {
     fn test_write_commit() {
         let auth_frame = write_commit(19, &[1u8; 32], &[2u8; 64], &[]);
         assert_eq!(auth_frame.seq, 1);
-        assert_eq!(auth_frame.status_code, ResultCode::Success);
+        assert_eq!(auth_frame.result_code, ResultCode::Success);
         assert_eq!(&auth_frame.body[..], ECC_COMMIT_BODY);
     }
 
@@ -287,7 +287,7 @@ mod tests {
     fn test_write_commit_with_token() {
         let auth_frame = write_commit(19, &[1u8; 32], &[2u8; 64], &[4u8; 8]);
         assert_eq!(auth_frame.seq, 1);
-        assert_eq!(auth_frame.status_code, ResultCode::Success);
+        assert_eq!(auth_frame.result_code, ResultCode::Success);
         let mut expected_body = ECC_COMMIT_BODY.to_vec();
         expected_body.append(&mut vec![4u8; 8]);
         assert_eq!(&auth_frame.body[..], &expected_body[..]);
@@ -297,7 +297,7 @@ mod tests {
     fn test_write_confirm() {
         let auth_frame = write_confirm(1, &[3u8; 32]);
         assert_eq!(auth_frame.seq, 2);
-        assert_eq!(auth_frame.status_code, ResultCode::Success);
+        assert_eq!(auth_frame.result_code, ResultCode::Success);
         assert_eq!(&auth_frame.body[..], ECC_CONFIRM_BODY);
     }
 
@@ -305,7 +305,7 @@ mod tests {
     fn test_write_anticlogging_token() {
         let auth_frame = write_token(19, &[4u8; 8]);
         assert_eq!(auth_frame.seq, 1);
-        assert_eq!(auth_frame.status_code, ResultCode::AntiCloggingTokenRequired);
+        assert_eq!(auth_frame.result_code, ResultCode::AntiCloggingTokenRequired);
         assert_eq!(&auth_frame.body[..], ECC_ACT_REQUIRED_BODY);
     }
 }

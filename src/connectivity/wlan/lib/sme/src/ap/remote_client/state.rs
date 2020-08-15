@@ -389,6 +389,7 @@ impl RsnaLinkState {
                     }
                     _ => (),
                 },
+                update => error!("Unhandled association update: {:?}", update),
             }
         }
     }

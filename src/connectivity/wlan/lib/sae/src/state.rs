@@ -363,7 +363,7 @@ impl<E> SaeConfirmed<E> {
             self.rc = confirm_msg.send_confirm;
             // We use u16::max_value() where IEEE specifies 2^16 - 1.
             self.sc = u16::max_value();
-            sink.push(SaeUpdate::Complete(self.key.clone()));
+            sink.push(SaeUpdate::Success(self.key.clone()));
             Ok(FrameResult::Proceed(()))
         } else {
             Ok(FrameResult::Drop)

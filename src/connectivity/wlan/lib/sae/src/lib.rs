@@ -12,16 +12,21 @@ mod ecc;
 mod frame;
 mod state;
 
+pub use frame::{CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
     fidl_fuchsia_wlan_mlme::AuthenticateResultCodes as ResultCode,
-    frame::{CommitMsg, ConfirmMsg},
     log::warn,
     mundane::{hash::Digest, hmac},
     wlan_common::ie::rsn::akm::{self, Akm},
     wlan_common::mac::MacAddr,
 };
+
+/// IEEE Std 802.11-2016, 12.4.4.1
+/// Elliptic curve group 19 is the default supported group -- all SAE peers must support it, and in
+/// practice it is generally used.
+pub const DEFAULT_GROUP_ID: u16 = 19;
 
 /// Maximum number of incorrect frames sent before SAE fails.
 const DOT11_RSNA_SAE_SYNC: u16 = 30;
@@ -62,16 +67,16 @@ impl From<Error> for RejectReason {
 
 #[derive(Debug)]
 pub struct AuthFrameRx<'a> {
-    seq: u16,
-    status_code: ResultCode,
-    body: &'a [u8],
+    pub seq: u16,
+    pub result_code: ResultCode,
+    pub body: &'a [u8],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AuthFrameTx {
-    seq: u16,
-    status_code: ResultCode,
-    body: Vec<u8>,
+    pub seq: u16,
+    pub result_code: ResultCode,
+    pub body: Vec<u8>,
 }
 
 /// An update generated to progress an SAE handshake. These updates should generally be converted
@@ -81,7 +86,7 @@ pub enum SaeUpdate {
     /// Send an auth frame to the peer.
     SendFrame(AuthFrameTx),
     /// Indicates the handshake is complete. The handshake should *not* be deleted at this point.
-    Complete(Key),
+    Success(Key),
     /// Indicates that the handshake has failed and must be aborted or restarted.
     Reject(RejectReason),
     /// Request the user of the library to set or reset a timeout. If this timeout expires, it
@@ -143,8 +148,7 @@ pub fn new_sae_handshake(
     };
     let params = internal::SaeParameters { h, cn, password, sta_a_mac: mac, sta_b_mac: peer_mac };
     match group_id {
-        19 => {
-            // Elliptic curve group 19 is the default supported group.
+        DEFAULT_GROUP_ID => {
             let group_constructor = Box::new(|| {
                 ecc::Group::new(EcGroupId::P256).map(|group| {
                     Box::new(group)
@@ -362,7 +366,7 @@ mod tests {
     struct ConfirmRx<'a>(AuthFrameRx<'a>);
 
     fn to_rx(frame: &AuthFrameTx) -> AuthFrameRx {
-        AuthFrameRx { seq: frame.seq, status_code: frame.status_code, body: &frame.body[..] }
+        AuthFrameRx { seq: frame.seq, result_code: frame.result_code, body: &frame.body[..] }
     }
 
     impl CommitTx {
@@ -457,7 +461,7 @@ mod tests {
             assert_eq!(sink.len(), 3);
             assert_variant!(sink.remove(0), SaeUpdate::CancelTimeout(Timeout::Retransmission));
             assert_variant!(sink.remove(0), SaeUpdate::ResetTimeout(Timeout::KeyExpiration));
-            assert_variant!(sink.remove(0), SaeUpdate::Complete(key) => key)
+            assert_variant!(sink.remove(0), SaeUpdate::Success(key) => key)
         }
     }
 

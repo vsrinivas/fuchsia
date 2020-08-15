@@ -38,7 +38,7 @@ pub use crate::rsna::NegotiatedProtection;
 
 use zerocopy::ByteSlice;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Supplicant {
     esssa: EssSa,
 }
@@ -112,7 +112,7 @@ impl Supplicant {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Authenticator {
     esssa: EssSa,
 }

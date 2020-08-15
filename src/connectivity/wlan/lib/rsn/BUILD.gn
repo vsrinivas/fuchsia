@@ -16,6 +16,7 @@ rustc_library("wlan-rsn") {
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
+    "//src/connectivity/wlan/lib/sae:wlan-sae",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//src/lib/mundane",
     "//src/lib/zerocopy",
