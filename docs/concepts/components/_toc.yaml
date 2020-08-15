@@ -22,6 +22,8 @@ toc:
     path: /docs/concepts/components/topology.md
   - title: "Monikers"
     path: /docs/concepts/components/monikers.md
+  - title: "The difference between components and processes"
+    path: /docs/concepts/components/components_and_processes.md
   - title: "Realms"
     path: /docs/concepts/components/realms.md
   - title: "Environments"

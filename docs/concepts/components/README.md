@@ -24,6 +24,8 @@ the transition to the new architecture is complete.
 - [Realms](realms.md): Sub-trees of the component instance topology.
 - [Monikers](monikers.md): Identifiers for component instances based on
   the component topology.
+- [The difference between components and processes](components_and_processes.md):
+  The relationship between components and processes.
 
 ## Developing components
 
