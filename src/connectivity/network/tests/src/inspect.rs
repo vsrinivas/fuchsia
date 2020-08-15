@@ -172,7 +172,7 @@ async fn inspect_nic() -> Result {
                     .collect::<std::collections::HashMap<_, _>>();
                 // Find the loopback interface.
                 let loopback = if let Some((id, _)) = interfaces_by_id.iter().find(|(_, iface)| {
-                    iface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK != 0
+                    iface.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
                 }) {
                     *id
                 } else {

@@ -910,7 +910,7 @@ mod tests {
             id: port,
             flags: if enabled { netstack::NET_INTERFACE_FLAG_UP } else { 0 }
                 | if dhcp { netstack::NET_INTERFACE_FLAG_DHCP } else { 0 },
-            features: 0,
+            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
             configuration: 0,
             name: port.to_string(),
             addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),

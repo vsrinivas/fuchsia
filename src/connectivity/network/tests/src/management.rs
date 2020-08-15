@@ -47,7 +47,7 @@ pub(crate) async fn wait_for_non_loopback_interface_up<
             future::ok(interfaces.into_iter().find_map(
                 |netstack::NetInterface { id, features, flags, name, .. }| {
                     // Ignore the loopback device.
-                    if features & eth::INFO_FEATURE_LOOPBACK == 0
+                    if !features.contains(eth::Features::Loopback)
                         && flags & netstack::NET_INTERFACE_FLAG_UP != 0
                         && exclude_ids.map_or(true, |x| !x.contains(&id))
                     {

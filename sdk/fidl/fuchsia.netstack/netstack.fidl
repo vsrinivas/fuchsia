@@ -44,7 +44,7 @@ struct InterfaceConfig {
 struct NetInterface {
     uint32 id;
     uint32 flags;
-    uint32 features;
+    fuchsia.hardware.ethernet.Features features;
     uint32 configuration;
     fuchsia.posix.socket.interface_name name;
     /// addr is one of the interface's IPv4 addresses, even if the interface
@@ -74,7 +74,7 @@ struct NetInterface {
 struct NetInterface2 {
     uint32 id;
     uint32 flags;
-    uint32 features;
+    fuchsia.hardware.ethernet.Features features;
     uint32 configuration;
     uint32 metric;
     fuchsia.posix.socket.interface_name name;

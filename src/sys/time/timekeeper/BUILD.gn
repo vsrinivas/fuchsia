@@ -44,7 +44,10 @@ rustc_binary("bin") {
     "src/main.rs",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+  ]
 }
 
 fuchsia_component("service") {

@@ -307,7 +307,7 @@ mod tests {
         fnetstack::NetInterface {
             id: 1,
             flags,
-            features: 0,
+            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
             configuration: 0,
             name: "my little pony".to_string(),
             addr,

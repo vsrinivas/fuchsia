@@ -1528,7 +1528,7 @@ mod tests {
                 interfaces: vec![fnetstack::NetInterface {
                     id: INTERFACE_ID,
                     flags,
-                    features: 0,
+                    features: feth::Features::empty(),
                     configuration: 0,
                     name: "test".to_string(),
                     addr: fidl_ip!(0.0.0.0),

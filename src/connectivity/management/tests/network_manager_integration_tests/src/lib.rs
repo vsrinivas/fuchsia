@@ -198,11 +198,10 @@ async fn add_ethernet_device(
         .find(|interface| interface.id == id)
         .ok_or(anyhow::format_err!("failed to find added ethernet device"))
         .unwrap();
-    let features = fidl_fuchsia_hardware_ethernet::Features::from_bits_truncate(interface.features);
     assert!(
-        !features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+        !interface.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
         "unexpected interface features: ({:b}).contains({:b})",
-        features,
+        interface.features,
         fidl_fuchsia_hardware_ethernet::Features::Loopback
     );
     assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);

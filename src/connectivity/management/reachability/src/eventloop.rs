@@ -140,7 +140,7 @@ mod tests {
         netstack::NetInterface {
             id: port,
             flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-            features: 0,
+            features: fidl_fuchsia_hardware_ethernet::Features::empty(),
             configuration: 0,
             name: port.to_string(),
             addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),

@@ -1227,7 +1227,7 @@ mod tests {
                 netstack::NetInterface {
                     id: 5,
                     flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -1255,7 +1255,7 @@ mod tests {
                 netstack::NetInterface {
                     id: 5,
                     flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -1285,7 +1285,7 @@ mod tests {
                 netstack::NetInterface {
                     id: 5,
                     flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -1323,7 +1323,7 @@ mod tests {
                 netstack::NetInterface {
                     id: 5,
                     flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
@@ -1361,7 +1361,7 @@ mod tests {
                 netstack::NetInterface {
                     id: 5,
                     flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-                    features: 0,
+                    features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
