@@ -100,7 +100,7 @@ struct SharedData {
       {.buffer_id = 10, .offset = 11, .length = 12}, {.buffer_id = 13, .offset = 14, .length = 15}};
   std::vector<uint64_t> test_semaphores = {{1000, 1001, 1010, 1011, 1012}};
   magma_system_command_buffer test_command_buffer = {
-      .num_resources = 2,
+      .resource_count = 2,
       .wait_semaphore_count = 2,
       .signal_semaphore_count = 3,
   };
@@ -215,7 +215,7 @@ class TestPlatformConnection {
   }
 
   void TestExecuteCommandBufferWithResources() {
-    ASSERT_EQ(shared_data.test_command_buffer.num_resources, shared_data.test_resources.size());
+    ASSERT_EQ(shared_data.test_command_buffer.resource_count, shared_data.test_resources.size());
     ASSERT_EQ(shared_data.test_command_buffer.wait_semaphore_count +
                   shared_data.test_command_buffer.signal_semaphore_count,
               shared_data.test_semaphores.size());

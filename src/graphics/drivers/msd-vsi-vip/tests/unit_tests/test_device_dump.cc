@@ -262,9 +262,9 @@ TEST_F(TestDeviceDump, DumpCommandBufferMultipleResources) {
   }
 
   auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+      .resource_count = kResourcesCount,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = 0,
-      .num_resources = kResourcesCount,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = 0,
   });

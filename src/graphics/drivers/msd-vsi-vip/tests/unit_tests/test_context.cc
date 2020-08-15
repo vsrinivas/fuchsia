@@ -41,9 +41,9 @@ class BatchData {
   // Returns a new batch created from the BatchData.
   std::unique_ptr<MappedBatch> CreateBatch(std::shared_ptr<MsdVsiContext> context) {
     auto command_buffer = magma_system_command_buffer{
+        .resource_count = static_cast<uint32_t>(resources_.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources_.size()),
         .wait_semaphore_count = 0,
         .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores_.size()),
     };

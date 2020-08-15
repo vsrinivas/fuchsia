@@ -73,7 +73,7 @@ class CommandBuffer : public MappedBatch {
     return command_buffer_->batch_buffer_resource_index;
   }
 
-  uint32_t num_resources() const { return command_buffer_->num_resources; }
+  uint32_t num_resources() const { return command_buffer_->resource_count; }
 
   uint32_t wait_semaphore_count() const { return command_buffer_->wait_semaphore_count; }
 

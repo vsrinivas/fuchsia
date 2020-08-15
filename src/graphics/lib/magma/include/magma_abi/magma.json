@@ -533,7 +533,7 @@
           {
             "name": "resources",
             "type": "struct magma_system_exec_resource*",
-            "description": "An array of |command_buffer->num_resources| resources associated with the command buffer."
+            "description": "An array of |command_buffer->resource_count| resources associated with the command buffer."
           },
           {
             "name": "semaphore_ids",

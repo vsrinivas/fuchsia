@@ -108,9 +108,9 @@ void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
     uint32_t context_id, magma_system_command_buffer* command_buffer,
     magma_system_exec_resource* resources, uint64_t* semaphores) {
   std::vector<magma_system_exec_resource> resource_array;
-  resource_array.reserve(command_buffer->num_resources);
+  resource_array.reserve(command_buffer->resource_count);
 
-  for (uint32_t i = 0; i < command_buffer->num_resources; i++) {
+  for (uint32_t i = 0; i < command_buffer->resource_count; i++) {
     resource_array.push_back(resources[i]);
   }
 

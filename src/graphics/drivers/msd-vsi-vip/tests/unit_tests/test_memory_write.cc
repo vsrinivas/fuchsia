@@ -119,9 +119,9 @@ class TestMsdVsiDevice : public drm_test_info {
   bool SubmitCommandBuffer(TestMsdVsiDevice::EtnaBuffer* etna_buf, uint32_t length,
                            std::shared_ptr<magma::PlatformSemaphore> signal) {
     auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+        .resource_count = 1,
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = 1,
         .wait_semaphore_count = 0,
         .signal_semaphore_count = 1,
     });

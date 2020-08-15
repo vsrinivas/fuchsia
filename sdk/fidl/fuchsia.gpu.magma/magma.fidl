@@ -60,8 +60,10 @@ struct Resource {
 };
 
 struct CommandBuffer {
+    /// Index of the resource containing instructions to start the command buffer.
     uint32 batch_buffer_resource_index;
-    uint32 batch_start_offset;
+    /// Starting offset within the resource.
+    uint64 batch_start_offset;
 };
 
 /// Performance counter pools contain byte ranges of buffers. Whenever a performance counter dump is

@@ -496,9 +496,9 @@ TEST_F(TestExec, BatchHasTooManyResources) {
                                              &buffer));
 
   auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+      .resource_count = 3,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = buffer_desc.batch_offset,
-      .num_resources = 3,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = 0,
   });

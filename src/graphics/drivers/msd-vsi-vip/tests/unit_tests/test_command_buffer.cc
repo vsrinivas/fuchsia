@@ -50,9 +50,9 @@ void TestCommandBuffer::CreateAndPrepareBatch(
     std::optional<CommandBuffer::ExecResource> context_state_buffer,
     std::unique_ptr<CommandBuffer>* out_batch) {
   auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+      .resource_count = 1,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = batch_offset,
-      .num_resources = 1,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = signal ? 1 : 0u,
   });
@@ -60,7 +60,7 @@ void TestCommandBuffer::CreateAndPrepareBatch(
   resources.emplace_back(
       CommandBuffer::ExecResource{.buffer = buffer, .offset = 0, .length = data_size});
   if (context_state_buffer.has_value()) {
-    command_buffer->num_resources++;
+    command_buffer->resource_count++;
     resources.emplace_back(context_state_buffer.value());
   }
 

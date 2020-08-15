@@ -77,9 +77,9 @@ TEST(TestCommandBuffer, InitializeResources) {
 
   {
     magma_system_command_buffer magma_command_buffer = {
+        .resource_count = static_cast<uint32_t>(resources.size()) - 1,
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources.size()) - 1,
         .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
         .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
     };
@@ -93,9 +93,9 @@ TEST(TestCommandBuffer, InitializeResources) {
 
   {
     magma_system_command_buffer magma_command_buffer = {
+        .resource_count = static_cast<uint32_t>(resources.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources.size()),
         .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()) - 1,
         .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
     };
@@ -109,9 +109,9 @@ TEST(TestCommandBuffer, InitializeResources) {
 
   {
     magma_system_command_buffer magma_command_buffer = {
+        .resource_count = static_cast<uint32_t>(resources.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources.size()),
         .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
         .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()) - 1,
     };
@@ -125,9 +125,9 @@ TEST(TestCommandBuffer, InitializeResources) {
 
   {
     magma_system_command_buffer magma_command_buffer = {
+        .resource_count = static_cast<uint32_t>(resources.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources.size()),
         .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
         .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
     };
@@ -165,9 +165,9 @@ TEST(TestCommandBuffer, PrepareForExecution) {
   signal_semaphores.push_back(magma::PlatformSemaphore::Create());
 
   magma_system_command_buffer magma_command_buffer = {
+      .resource_count = static_cast<uint32_t>(resources.size()),
       .batch_buffer_resource_index = 0,
       .batch_start_offset = 0,
-      .num_resources = static_cast<uint32_t>(resources.size()),
       .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
       .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
   };

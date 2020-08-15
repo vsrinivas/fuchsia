@@ -26,11 +26,6 @@ source_set("command_buffer_helper") {
   sources = [ "command_buffer_helper.h" ]
 
   deps = [ "$magma_build_root/src/sys_driver" ]
-
-  # TODO(46937): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  # Add to public_configs since the UB is found in a public header.
-  public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("test_device_helper") {

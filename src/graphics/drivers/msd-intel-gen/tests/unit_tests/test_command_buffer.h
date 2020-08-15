@@ -28,8 +28,8 @@ class TestCommandBuffer {
         new CommandBuffer(context, std::make_unique<magma_system_command_buffer>(*cmd_buf_ptr)));
 
     std::vector<CommandBuffer::ExecResource> resources;
-    resources.reserve(cmd_buf_ptr->num_resources);
-    for (uint32_t i = 0; i < cmd_buf_ptr->num_resources; i++) {
+    resources.reserve(cmd_buf_ptr->resource_count);
+    for (uint32_t i = 0; i < cmd_buf_ptr->resource_count; i++) {
       resources.emplace_back(CommandBuffer::ExecResource{buffers[i], exec_resources_ptr[i].offset,
                                                          exec_resources_ptr[i].length});
     }

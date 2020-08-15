@@ -177,7 +177,7 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
   virt_command_buffer.command_buffer =
       reinterpret_cast<decltype(virt_command_buffer.command_buffer)>(command_buffer);
   virt_command_buffer.resource_size =
-      sizeof(magma_system_exec_resource) * command_buffer->num_resources;
+      sizeof(magma_system_exec_resource) * command_buffer->resource_count;
   virt_command_buffer.resources =
       reinterpret_cast<decltype(virt_command_buffer.resources)>(resources);
   virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +

@@ -178,9 +178,9 @@ class TestContext {
       ASSERT_TRUE(command_buffer_content->platform_buffer()->MapCpu(
           reinterpret_cast<void**>(&command_buffer_desc)));
 
+      command_buffer_desc->resource_count = 0;
       command_buffer_desc->batch_buffer_resource_index = 0;
       command_buffer_desc->batch_start_offset = 0;
-      command_buffer_desc->num_resources = 0;
       command_buffer_desc->wait_semaphore_count = 0;
       command_buffer_desc->signal_semaphore_count = 0;
 

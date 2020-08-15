@@ -163,9 +163,9 @@ class MagmaExecuteMsdVsi : public testing::Test {
     resources.push_back(command_stream->etna_buffer->resource_);
 
     magma_system_command_buffer command_buffer = {
+        .resource_count = static_cast<uint32_t>(resources.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
-        .num_resources = static_cast<uint32_t>(resources.size()),
         .wait_semaphore_count = 0,
         .signal_semaphore_count = 1};
 

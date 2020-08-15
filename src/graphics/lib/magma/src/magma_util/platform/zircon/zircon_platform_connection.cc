@@ -213,10 +213,11 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
   FlowControl();
 
   auto command_buffer = std::make_unique<magma_system_command_buffer>();
+
   *command_buffer = {
+      .resource_count = static_cast<uint32_t>(fidl_resources.count()),
       .batch_buffer_resource_index = fidl_command_buffer.batch_buffer_resource_index,
       .batch_start_offset = fidl_command_buffer.batch_start_offset,
-      .num_resources = static_cast<uint32_t>(fidl_resources.count()),
       .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.count()),
       .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.count()),
   };

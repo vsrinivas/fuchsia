@@ -214,7 +214,7 @@ zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
   auto command_buffer = reinterpret_cast<magma_system_command_buffer*>(
       const_cast<virtio_magma_execute_command_buffer_with_resources_ctrl_t*>(request) + 1);
   auto exec_resources = reinterpret_cast<magma_system_exec_resource*>(command_buffer + 1);
-  auto semaphore_ids = reinterpret_cast<uint64_t*>(exec_resources + command_buffer->num_resources);
+  auto semaphore_ids = reinterpret_cast<uint64_t*>(exec_resources + command_buffer->resource_count);
 
   virtio_magma_execute_command_buffer_with_resources_ctrl_t request_dupe;
   memcpy(&request_dupe, request, sizeof(request_dupe));

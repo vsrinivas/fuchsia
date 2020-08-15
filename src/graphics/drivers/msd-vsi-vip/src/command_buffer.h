@@ -25,11 +25,11 @@ class CommandBuffer : public magma::CommandBuffer<MsdVsiContext, GpuMapping> {
       std::shared_ptr<MsdVsiContext> context, msd_client_id_t client_id,
       std::unique_ptr<magma_system_command_buffer> cmd_buf, std::vector<ExecResource> resources,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores) {
-    if (cmd_buf->num_resources > kMaxAllowedResources) {
-      return DRETP(nullptr, "Invalid num_resources, only 1 additional context state is supported");
+    if (cmd_buf->resource_count > kMaxAllowedResources) {
+      return DRETP(nullptr, "Invalid resource count, only 1 additional context state is supported");
     }
     std::optional<uint32_t> context_state_buffer_resource_index;
-    if (cmd_buf->num_resources == 2) {
+    if (cmd_buf->resource_count == 2) {
       context_state_buffer_resource_index = cmd_buf->batch_buffer_resource_index == 0 ? 1 : 0;
     }
     auto command_buffer = std::make_unique<CommandBuffer>(context, client_id, std::move(cmd_buf),

@@ -133,9 +133,9 @@ class CommandBufferHelper {
     DASSERT(success);
     DASSERT(buffer_data_);
 
+    abi_cmd_buf()->resource_count = kNumResources;
     abi_cmd_buf()->batch_buffer_resource_index = 0;
     abi_cmd_buf()->batch_start_offset = 0;
-    abi_cmd_buf()->num_resources = kNumResources;
     abi_cmd_buf()->wait_semaphore_count = kWaitSemaphoreCount;
     abi_cmd_buf()->signal_semaphore_count = kSignalSemaphoreCount;
 

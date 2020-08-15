@@ -99,7 +99,7 @@ class TestConnection : public magma::TestDeviceBase {
                          uint64_t batch_buffer_length) {
     command_buffer->batch_buffer_resource_index = 0;
     command_buffer->batch_start_offset = 0;
-    command_buffer->num_resources = 1;
+    command_buffer->resource_count = 1;
     command_buffer->wait_semaphore_count = 0;
     command_buffer->signal_semaphore_count = 0;
 

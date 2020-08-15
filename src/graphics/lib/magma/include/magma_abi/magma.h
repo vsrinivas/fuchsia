@@ -281,7 +281,7 @@ magma_status_t magma_import(
 /// \param connection An open connection.
 /// \param context_id A valid context ID.
 /// \param command_buffer A pointer to the command buffer to execute.
-/// \param resources An array of |command_buffer->num_resources| resources associated with the
+/// \param resources An array of |command_buffer->resource_count| resources associated with the
 ///        command buffer.
 /// \param semaphore_ids An array of semaphore ids; first should be
 ///        |command_buffer->wait_semaphore_count| wait semaphores followed by

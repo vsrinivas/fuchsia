@@ -21,19 +21,20 @@ magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
 
   // used to keep resources in scope until msd_context_execute_command_buffer returns
   std::vector<std::shared_ptr<MagmaSystemBuffer>> system_resources;
-  system_resources.reserve(cmd_buf->num_resources);
+  system_resources.reserve(cmd_buf->resource_count);
 
   // the resources to be sent to the MSD driver
   auto msd_resources = std::vector<msd_buffer_t*>();
-  msd_resources.reserve(cmd_buf->num_resources);
+  msd_resources.reserve(cmd_buf->resource_count);
 
   // validate batch buffer index
-  if (cmd_buf->num_resources > 0 && cmd_buf->batch_buffer_resource_index >= cmd_buf->num_resources)
+  if (cmd_buf->resource_count > 0 &&
+      cmd_buf->batch_buffer_resource_index >= cmd_buf->resource_count)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                     "ExecuteCommandBuffer: batch buffer resource index invalid");
 
   // validate exec resources
-  for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+  for (uint32_t i = 0; i < cmd_buf->resource_count; i++) {
     uint64_t id = resources[i].buffer_id;
 
     auto buf = owner_->LookupBufferForContext(id);
@@ -52,7 +53,7 @@ magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
     if (i == cmd_buf->batch_buffer_resource_index) {
       // validate batch start
       if (cmd_buf->batch_start_offset >= buf->size())
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "invalid batch start offset 0x%x",
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "invalid batch start offset 0x%lx",
                         cmd_buf->batch_start_offset);
     }
   }

@@ -875,7 +875,7 @@ class TestConnectionWithContext : public TestConnection {
   void ExecuteCommandBufferWithResources(uint32_t resource_count) {
     ASSERT_TRUE(connection());
 
-    magma_system_command_buffer command_buffer = {.num_resources = resource_count};
+    magma_system_command_buffer command_buffer = {.resource_count = resource_count};
     magma_system_exec_resource resources[resource_count];
 
     memset(resources, 0, sizeof(magma_system_exec_resource) * resource_count);
@@ -889,7 +889,7 @@ class TestConnectionWithContext : public TestConnection {
   void ExecuteCommandBufferNoResources() {
     ASSERT_TRUE(connection());
 
-    magma_system_command_buffer command_buffer = {.num_resources = 0};
+    magma_system_command_buffer command_buffer = {.resource_count = 0};
     magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
                                                 nullptr /* resources */, nullptr);
   }

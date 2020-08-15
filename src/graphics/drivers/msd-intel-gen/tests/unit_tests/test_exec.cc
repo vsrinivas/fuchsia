@@ -82,7 +82,7 @@ class TestExec {
       auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
-      cmd_buf->num_resources = 1;
+      cmd_buf->resource_count = 1;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
@@ -155,7 +155,7 @@ class TestExec {
       auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
-      cmd_buf->num_resources = 2;
+      cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
@@ -224,7 +224,7 @@ class TestExec {
       auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
-      cmd_buf->num_resources = 2;
+      cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);

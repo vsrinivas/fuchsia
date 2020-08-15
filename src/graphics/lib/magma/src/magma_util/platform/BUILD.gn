@@ -190,11 +190,6 @@ source_set("connection_client_header") {
     "$magma_build_root/src/magma_util:status",
     "//src/graphics/lib/magma/include:magma_abi",
   ]
-
-  # TODO(46937): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  # Add to public_configs since the UB is found in a public header.
-  public_configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("connection_client") {

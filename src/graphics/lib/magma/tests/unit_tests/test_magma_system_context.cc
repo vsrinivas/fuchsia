@@ -11,7 +11,7 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_Normal) {
   auto cmd_buf = CommandBufferHelper::Create();
   EXPECT_TRUE(cmd_buf->Execute());
 
-  auto num_resources = cmd_buf->abi_cmd_buf()->num_resources;
+  auto num_resources = cmd_buf->abi_cmd_buf()->resource_count;
   auto system_resources = cmd_buf->resources();
   auto submitted_msd_resources =
       MsdMockContext::cast(cmd_buf->ctx())->last_submitted_exec_resources();

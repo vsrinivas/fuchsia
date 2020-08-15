@@ -504,9 +504,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
         .batch_start_offset = command_buffer->batch_start_offset};
 
     std::vector<llcpp::fuchsia::gpu::magma::Resource> fidl_resources;
-    fidl_resources.reserve(command_buffer->num_resources);
+    fidl_resources.reserve(command_buffer->resource_count);
 
-    for (uint32_t i = 0; i < command_buffer->num_resources; i++) {
+    for (uint32_t i = 0; i < command_buffer->resource_count; i++) {
       fidl_resources.push_back({.buffer = resources[i].buffer_id,
                                 .offset = resources[i].offset,
                                 .length = resources[i].length});

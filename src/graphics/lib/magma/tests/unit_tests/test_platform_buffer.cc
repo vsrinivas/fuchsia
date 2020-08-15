@@ -505,8 +505,7 @@ class TestPlatformBuffer {
 
     void* virt_addr = nullptr;
     EXPECT_TRUE(buffer->MapCpu(&virt_addr));
-    EXPECT_EQ(kValue,
-              *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) + kOffset));
+    EXPECT_EQ(0, memcmp(&kValue, reinterpret_cast<uint8_t*>(virt_addr) + kOffset, sizeof(kValue)));
 
     std::unique_ptr<magma::PlatformBuffer> wc_buffer =
         magma::PlatformBuffer::Create(magma::page_size(), "test-wc");

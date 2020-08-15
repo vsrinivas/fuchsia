@@ -26,8 +26,8 @@ std::unique_ptr<MappedBatch> MsdVsiContext::CreateBatch(std::shared_ptr<MsdVsiCo
                                                         msd_semaphore_t** msd_wait_semaphores,
                                                         msd_semaphore_t** msd_signal_semaphores) {
   std::vector<CommandBuffer::ExecResource> resources;
-  resources.reserve(cmd_buf->num_resources);
-  for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+  resources.reserve(cmd_buf->resource_count);
+  for (uint32_t i = 0; i < cmd_buf->resource_count; i++) {
     resources.emplace_back(CommandBuffer::ExecResource{MsdVsiAbiBuffer::cast(msd_buffers[i])->ptr(),
                                                        exec_resources[i].offset,
                                                        exec_resources[i].length});
