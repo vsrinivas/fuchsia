@@ -67,7 +67,7 @@ TEST_F(ActivityReporterTest, AddAndRemove) {
   EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::MEDIA}));
 
   add_callback("WatchRenderActivity AfterDisconnectMedia");
-  UnbindRenderer(r2);
+  Unbind(r2);
   ExpectCallback();
   EXPECT_THAT(active_usages, UnorderedElementsAre());
 }

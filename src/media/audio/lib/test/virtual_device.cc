@@ -19,7 +19,8 @@ size_t virtual_input_next_inspect_id = 0;   // ids start at 0
 template <class Iface>
 VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                                     const audio_stream_unique_id_t& device_id, Format format,
-                                    size_t frame_count, size_t inspect_id)
+                                    size_t frame_count, size_t inspect_id,
+                                    DevicePlugProperties* plug_properties)
     : format_(format),
       frame_count_(frame_count),
       inspect_id_(inspect_id),
@@ -31,6 +32,11 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
   std::array<uint8_t, 16> device_id_array;
   std::copy(std::begin(device_id.data), std::end(device_id.data), std::begin(device_id_array));
   device_->SetUniqueId(device_id_array);
+
+  if (plug_properties) {
+    device_->SetPlugProperties(plug_properties->plug_change_time.get(), plug_properties->plugged,
+                               plug_properties->hardwired, plug_properties->can_notify);
+  }
 
   if (!AudioSampleFormatToDriverSampleFormat(format_.sample_format(), &driver_format_)) {
     FX_CHECK(false) << "Failed to convert Fmt 0x" << std::hex

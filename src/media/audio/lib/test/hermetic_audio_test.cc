@@ -120,14 +120,15 @@ void HermeticAudioTest::TearDown() {
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
-    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
-    size_t frame_count) {
+    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format, size_t frame_count,
+    DevicePlugProperties* plug_properties) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
-  auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(
-      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count);
+  auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(static_cast<TestFixture*>(this),
+                                                           environment_.get(), device_id, format,
+                                                           frame_count, plug_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].output = std::move(ptr);
@@ -159,14 +160,15 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
-    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
-    size_t frame_count) {
+    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format, size_t frame_count,
+    DevicePlugProperties* plug_properties) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
-  auto ptr = std::make_unique<VirtualInput<SampleFormat>>(
-      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count);
+  auto ptr = std::make_unique<VirtualInput<SampleFormat>>(static_cast<TestFixture*>(this),
+                                                          environment_.get(), device_id, format,
+                                                          frame_count, plug_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].input = std::move(ptr);
@@ -227,7 +229,25 @@ UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapture
   return out;
 }
 
-void HermeticAudioTest::UnbindRenderer(RendererShimImpl* renderer) {
+void HermeticAudioTest::Unbind(VirtualInputImpl* device) {
+  auto it = std::find_if(devices_.begin(), devices_.end(),
+                         [device](const auto& it) { return it.second.input.get() == device; });
+  FX_CHECK(it != devices_.end());
+
+  device->virtual_device().Unbind();
+  devices_.erase(it);
+}
+
+void HermeticAudioTest::Unbind(VirtualOutputImpl* device) {
+  auto it = std::find_if(devices_.begin(), devices_.end(),
+                         [device](const auto& it) { return it.second.output.get() == device; });
+  FX_CHECK(it != devices_.end());
+
+  device->virtual_device().Unbind();
+  devices_.erase(it);
+}
+
+void HermeticAudioTest::Unbind(RendererShimImpl* renderer) {
   auto it = std::find_if(
       renderers_.begin(), renderers_.end(),
       [renderer](const std::unique_ptr<RendererShimImpl>& p) { return p.get() == renderer; });
@@ -237,7 +257,7 @@ void HermeticAudioTest::UnbindRenderer(RendererShimImpl* renderer) {
   renderers_.erase(it);
 }
 
-void HermeticAudioTest::UnbindCapturer(CapturerShimImpl* capturer) {
+void HermeticAudioTest::Unbind(CapturerShimImpl* capturer) {
   auto it = std::find_if(
       capturers_.begin(), capturers_.end(),
       [capturer](const std::unique_ptr<CapturerShimImpl>& p) { return p.get() == capturer; });
@@ -261,6 +281,7 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
       if (devices_[id].info != std::nullopt) {
         ADD_FAILURE() << "Duplicate arrival of input device " << id;
       }
+      devices_[id].input->set_token(info.token_id);
     } else {
       if (!devices_[id].output) {
         ADD_FAILURE() << "Unexpected arrival of output device " << id << ", no such device exists";
@@ -268,6 +289,7 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
       if (devices_[id].info != std::nullopt) {
         ADD_FAILURE() << "Duplicate arrival of output device " << id;
       }
+      devices_[id].output->set_token(info.token_id);
     }
     token_to_unique_id_[info.token_id] = id;
     devices_[id].info = info;
@@ -397,18 +419,18 @@ void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
 }
 
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T)                                                                           \
-  template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(const audio_stream_unique_id_t&, \
-                                                                TypedFormat<T>, size_t);         \
-  template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(const audio_stream_unique_id_t&,   \
-                                                              TypedFormat<T>, size_t);           \
-  template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(                      \
-      TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage);                                 \
-  template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(                      \
-      TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);                       \
-  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(            \
-      TypedFormat<T>, size_t, bool);                                                             \
-  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(            \
+#define INSTANTIATE(T)                                                                 \
+  template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(                       \
+      const audio_stream_unique_id_t&, TypedFormat<T>, size_t, DevicePlugProperties*); \
+  template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(                         \
+      const audio_stream_unique_id_t&, TypedFormat<T>, size_t, DevicePlugProperties*); \
+  template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(            \
+      TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage);                       \
+  template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(            \
+      TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);             \
+  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(  \
+      TypedFormat<T>, size_t, bool);                                                   \
+  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(  \
       TypedFormat<T>, size_t, bool);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)

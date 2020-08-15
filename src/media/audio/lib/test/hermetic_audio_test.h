@@ -51,11 +51,13 @@ class HermeticAudioTest : public TestFixture {
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualOutput<SampleFormat>* CreateOutput(const audio_stream_unique_id_t& device_id,
-                                            TypedFormat<SampleFormat> format, size_t frame_count);
+                                            TypedFormat<SampleFormat> format, size_t frame_count,
+                                            DevicePlugProperties* plug_properties = nullptr);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualInput<SampleFormat>* CreateInput(const audio_stream_unique_id_t& device_id,
-                                          TypedFormat<SampleFormat> format, size_t frame_count);
+                                          TypedFormat<SampleFormat> format, size_t frame_count,
+                                          DevicePlugProperties* plug_properties = nullptr);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(
@@ -77,16 +79,20 @@ class HermeticAudioTest : public TestFixture {
                                                                  size_t frame_count,
                                                                  bool wait_for_creation = true);
 
-  // Unbind and forget about the given renderer/capturer.
-  void UnbindRenderer(RendererShimImpl* renderer);
-  void UnbindCapturer(CapturerShimImpl* capturer);
+  // Unbind and forget about the given object.
+  void Unbind(VirtualOutputImpl* device);
+  void Unbind(VirtualInputImpl* device);
+  void Unbind(RendererShimImpl* renderer);
+  void Unbind(CapturerShimImpl* capturer);
 
   // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
   fuchsia::media::AudioDeviceEnumeratorPtr TakeOwnershipOfAudioDeviceEnumerator();
 
-  // TODO(49807): make this private; this is currently used by fidl tests
+  // Direct access to FIDL channels. Using these objects directly may not play well with this class.
+  // These are provided for special cases only.
   fuchsia::media::AudioCorePtr audio_core_;
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
  private:
   static std::unique_ptr<HermeticAudioEnvironment> environment_;
@@ -99,8 +105,8 @@ class HermeticAudioTest : public TestFixture {
                              const ExpectedInspectProperties& expected);
 
   struct DeviceInfo {
-    std::unique_ptr<VirtualDevice<fuchsia::virtualaudio::Output>> output;
-    std::unique_ptr<VirtualDevice<fuchsia::virtualaudio::Input>> input;
+    std::unique_ptr<VirtualOutputImpl> output;
+    std::unique_ptr<VirtualInputImpl> input;
     std::optional<fuchsia::media::AudioDeviceInfo> info;
     bool is_removed = false;
     bool is_default = false;
@@ -111,7 +117,6 @@ class HermeticAudioTest : public TestFixture {
   std::vector<std::unique_ptr<CapturerShimImpl>> capturers_;
   std::vector<std::unique_ptr<RendererShimImpl>> renderers_;
 
-  fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 
   bool disallow_underflows_ = false;

@@ -58,6 +58,11 @@ audio_core_api_test_component("audio-capturer-pipeline-test") {
   executable_deps = [ "//sdk/lib/media/audio/cpp" ]
 }
 
+audio_core_api_test_component("audio-device-enumerator-test") {
+  source = "audio_device_enumerator_test.cc"
+  executable_deps = [ "//src/media/audio/audio_core/testing" ]
+}
+
 audio_core_api_test_component("audio-policy-pipeline-test") {
   source = "audio_policy_pipeline_test.cc"
   executable_deps = [ "//src/lib/fxl" ]
@@ -117,6 +122,7 @@ fuchsia_test_package("audio-core-api-tests") {
   test_components = [
     ":activity-reporter-test",
     ":audio-capturer-test",
+    ":audio-device-enumerator-test",
     ":audio-renderer-test",
     ":audio-tuner-test",
     ":gain-control-test",
@@ -125,6 +131,11 @@ fuchsia_test_package("audio-core-api-tests") {
     ":usage-reporter-test",
     ":volume-control-test",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]
 }
 
