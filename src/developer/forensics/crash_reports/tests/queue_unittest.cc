@@ -611,6 +611,36 @@ TEST_F(QueueTest, Check_Cobalt) {
               }));
 }
 
+TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
+  // Two reports. The first one fails its first upload attempt. The second one succeeds on its first
+  // try and triggers the successful re-upload of the first report.
+  SetUpQueue({
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadSuccessful,
+  });
+  ApplyQueueOps({
+      QueueOps::SetStateToUpload,
+      QueueOps::AddNewReport,
+      QueueOps::AddNewReport,
+  });
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  // Two reports were eventually uploaded.
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  // The first report required two tries.
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
+                  // The second report only needed one try.
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
+}
+
 }  // namespace
 }  // namespace crash_reports
 }  // namespace forensics
