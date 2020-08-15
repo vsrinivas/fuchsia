@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/board.gni")
 import("//build/compiled_action.gni")
 import("//build/config.gni")
 import("//build/config/fuchsia/zircon.gni")
@@ -15,9 +14,7 @@ import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
-import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/generated_resource.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/zbi_input.gni")
@@ -42,9 +39,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     however they may contribute to the config-data and shell-commands meta
 #     packages.
 #
-#   bootfs_labels (optional)
-#     [list of labels] If present, this list contains the objects installed
-#     on the bootfs partition of the generated ZBI.
+#   bootfs_labels (required)
+#     [list of labels] The objects installed on the bootfs partition of the
+#     generated ZBI.
 #
 #   netboot (default: false)
 #     [boolean] Whether the generated ZBI should contain the entire system.
@@ -76,6 +73,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   output_name (optional; default: target_name.zbi)
 #     [string] The name of the final system ZBI file.
 template("assemble_system") {
+  assert(defined(invoker.base_packages), "Need to define base_packages")
+  assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
+
   base_packages = invoker.base_packages
   cache_packages = []
   universe_packages = []
@@ -179,10 +179,6 @@ template("assemble_system") {
 
     bootfs_manifest = boot_manifest
     bootfs_zircon_groups = "all"
-    bootfs_allowlist = []
-    if (defined(invoker.bootfs_allowlist)) {
-      bootfs_allowlist = invoker.bootfs_allowlist
-    }
 
     deps = [
       ":${image_name}_pkgsvr_index",
@@ -433,20 +429,13 @@ template("assemble_system") {
 
     testonly = true
     deps = [
-      ":${image_name}_cmdline",
-      ":${image_name}_devmgr_config",
-      ":${image_name}_system_image.manifest",
-      ":${image_name}_ta",
-      ":${image_name}_zxcrypt_config",
-      "//build/unification/zbi:kernel",
-    ]
-
-    if (defined(invoker.bootfs_labels)) {
-      deps += invoker.bootfs_labels
-    } else {
-      deps +=
-          product_bootfs_labels + board_bootfs_labels + common_image_contents
-    }
+             ":${image_name}_cmdline",
+             ":${image_name}_devmgr_config",
+             ":${image_name}_system_image.manifest",
+             ":${image_name}_ta",
+             ":${image_name}_zxcrypt_config",
+             "//build/unification/zbi:kernel",
+           ] + invoker.bootfs_labels
 
     if (netboot) {
       deps += [ ":${image_name}_fvm.blk_ramdisk" ]
