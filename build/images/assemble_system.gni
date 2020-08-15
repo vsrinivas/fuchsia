@@ -10,7 +10,6 @@ import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
-import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
@@ -53,10 +52,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 #   sysmgr_golden, sysmgr_golden_warn (optional, default: false)
 #     [path, boolean] Passed directly to the config_package template, see //build/config.gni.
-#
-#   ta_uuids (default: [])
-#     [list of strings] UUIDs of Trusted Applications to include in the system
-#     image.
 #
 #   cmdline (optional)
 #     [list of strings] Kernel command line text.
@@ -384,21 +379,6 @@ template("assemble_system") {
     }
   }
 
-  ta_deps = []
-  if (defined(invoker.ta_uuids)) {
-    foreach(ta_uuid, invoker.ta_uuids) {
-      resource("${image_name}_ta_$ta_uuid") {
-        sources = [ "${ta_path}/${ta_uuid}${ta_src_suffix}" ]
-        outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
-      }
-
-      ta_deps += [ ":${image_name}_ta_$ta_uuid" ]
-    }
-  }
-  group("${image_name}_ta") {
-    deps = ta_deps
-  }
-
   migrated_zbi(image_name) {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
@@ -432,7 +412,6 @@ template("assemble_system") {
              ":${image_name}_cmdline",
              ":${image_name}_devmgr_config",
              ":${image_name}_system_image.manifest",
-             ":${image_name}_ta",
              ":${image_name}_zxcrypt_config",
              "//build/unification/zbi:kernel",
            ] + invoker.bootfs_labels

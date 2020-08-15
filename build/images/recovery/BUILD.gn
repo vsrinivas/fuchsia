@@ -4,7 +4,6 @@
 
 import("//build/board.gni")
 import("//build/images/assemble_system.gni")
-import("//build/images/ta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/unification/images/common_image_contents.gni")
@@ -82,7 +81,6 @@ assemble_system("recovery-eng") {
   bootfs_labels = common_image_contents + board_recovery_bootfs_labels
   bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
-  ta_uuids = recovery_ta_uuids
   sysmgr_golden = "sysmgr-eng-golden.json"
 }
 
@@ -99,7 +97,6 @@ assemble_system("recovery-fdr") {
   bootfs_labels = common_image_contents + board_recovery_bootfs_labels
   bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
 
-  ta_uuids = recovery_ta_uuids
   sysmgr_golden = "sysmgr-fdr-golden.json"
 }
 
