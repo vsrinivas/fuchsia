@@ -88,7 +88,8 @@ error_bringing_snapshot=
 tempfile="/tmp/__snapshot_temp"
 output_file="${output_dir}/snapshot.zip"
 # Obtain the snapshot and store it in a temporary location.
-fx-command-run shell snapshot "${@}" > "${output_file}"
+# TODO(50926): switch to "snapshot" when fxr/416328 is in most images.
+fx-command-run shell bugreport "${@}" > "${output_file}"
 if [ "$?" -ne 0 ]; then
   fx-error "Could not obtain snapshot from target."
   error_bringing_snapshot=true
