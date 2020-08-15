@@ -8,6 +8,8 @@ board_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
 
 board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
 
+board_recovery_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+
 board_package_labels = [
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
