@@ -55,11 +55,18 @@ class BlockDeviceHarness : public zxtest::Test {
     ASSERT_OK(fdio_ns_bind(ns, "/fs", client.release()));
     manager_->WatchExit();
 
+    // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
+    // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.
+    int pkg_fd = open("/pkg", O_DIRECTORY | O_RDONLY);
+    ASSERT_GE(pkg_fd, 0);
+    ASSERT_OK(fdio_ns_bind_fd(ns, "/boot", pkg_fd));
+
     devmgr_launcher::Args args;
     args.disable_block_watcher = true;
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
     fbl::unique_fd ctl;
     ASSERT_EQ(
@@ -74,6 +81,7 @@ class BlockDeviceHarness : public zxtest::Test {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     fdio_ns_unbind(ns, "/fs");
+    fdio_ns_unbind(ns, "/boot");
   }
 
   void CreateRamdisk(bool use_guid = false) {

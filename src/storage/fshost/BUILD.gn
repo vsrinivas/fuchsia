@@ -5,10 +5,11 @@
 import("//build/test.gni")
 import("//build/unification/zbi/component_manifest_resources.gni")
 import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":deprecated-loader-service-test" ]
+  deps = [ ":fshost-tests" ]
 }
 
 source_set("launcher") {
@@ -182,16 +183,7 @@ executable("fshost") {
   ]
 }
 
-test("fshost-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+test("fshost_test") {
   sources = [
     "delayed-outdir-test.cc",
     "fshost-boot-args-test.cc",
@@ -216,10 +208,14 @@ test("fshost-test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+fuchsia_unittest_component("fshost-test") {
+  executable_path = "test/fshost_test"
+  deps = [ ":fshost_test" ]
+}
+
 # This is a separate test executable because loader_service_test_fixture uses gtest, but other
 # tests here use zxtest.
-executable("deprecated_loader_service_test") {
-  testonly = true
+test("deprecated_loader_service_test") {
   sources = [ "deprecated-loader-service-test.cc" ]
   deps = [
     ":block-watcher",
@@ -228,23 +224,12 @@ executable("deprecated_loader_service_test") {
   ]
 }
 
-# Note that, unlike the other fshost tests, this test runs as a component. Eventually this can
-# become a single package of fshost tests with multiple test components.
-fuchsia_unittest_package("deprecated-loader-service-test") {
+fuchsia_unittest_component("deprecated-loader-service-test") {
   manifest = "meta/deprecated-loader-service-test.cmx"
   deps = [ ":deprecated_loader_service_test" ]
 }
 
-test("fshost-inspect-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+test("fshost_inspect_test") {
   sources = [ "inspect-manager-test.cc" ]
   deps = [
     ":inspect",
@@ -256,16 +241,12 @@ test("fshost-inspect-test") {
   ]
 }
 
-test("fshost-metrics-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+fuchsia_unittest_component("fshost-inspect-test") {
+  executable_path = "test/fshost_inspect_test"
+  deps = [ ":fshost_inspect_test" ]
+}
+
+test("fshost_metrics_test") {
   sources = [ "metrics-test.cc" ]
   deps = [
     ":metrics",
@@ -279,16 +260,12 @@ test("fshost-metrics-test") {
   ]
 }
 
-test("block-watcher-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+fuchsia_unittest_component("fshost-metrics-test") {
+  executable_path = "test/fshost_metrics_test"
+  deps = [ ":fshost_metrics_test" ]
+}
+
+test("block_watcher_test") {
   sources = [
     "block-device-test.cc",
     "block-watcher-test.cc",
@@ -307,6 +284,28 @@ test("block-watcher-test") {
     "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
+  ]
+}
+
+isolated_devmgr_unittest_component("block-watcher-test") {
+  executable_path = "test/block_watcher_test"
+  deps = [
+    ":block_watcher_test",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+fuchsia_test_package("fshost-tests") {
+  test_components = [
+    ":block-watcher-test",
+    ":deprecated-loader-service-test",
+    ":fshost-test",
+    ":fshost-inspect-test",
+    ":fshost-metrics-test",
   ]
 }
 
