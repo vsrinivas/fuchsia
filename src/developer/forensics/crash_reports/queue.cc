@@ -5,6 +5,7 @@
 #include "src/developer/forensics/crash_reports/queue.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
@@ -51,8 +52,23 @@ bool Queue::Contains(const Store::Uid& uuid) const {
 }
 
 bool Queue::Add(Report report) {
-  // TODO(fxbug.dev/57293): Attempt up upload the report before putting it in the store.
-  // InspectManager will need to be altered to support recording metrics on reports without an id.
+  // Process all pending reports after Add has completed. The processing is done asynchronously so
+  // that the crash report filer is not blocked.
+  auto process_all = fit::defer([this] {
+    if (const auto status = PostTask(dispatcher_, [this] { ProcessAll(); }); status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Error posting task to process reports after adding new report";
+    }
+  });
+
+  // Attempt to upload a report before putting it in the store.
+  std::string server_report_id;
+  if (state_ == State::Upload) {
+    info_.RecordUploadAttemptNumber(1u);
+    if (Upload(report, &server_report_id)) {
+      info_.MarkReportAsUploaded(server_report_id, 1u);
+      return true;
+    }
+  }
 
   std::vector<Store::Uid> garbage_collected_reports;
   std::optional<Store::Uid> local_report_id =
@@ -66,12 +82,11 @@ bool Queue::Add(Report report) {
     return false;
   }
 
-  pending_reports_.push_back(local_report_id.value());
-
-  // We do the processing asynchronously as we don't want to block the caller.
-  if (const auto status = PostTask(dispatcher_, [this] { ProcessAll(); }); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error posting task to process reports after adding new report";
+  // Early upload that failed.
+  if (state_ == State::Upload) {
+    upload_attempts_[local_report_id.value()]++;
   }
+  pending_reports_.push_back(local_report_id.value());
 
   return true;
 }
@@ -99,7 +114,7 @@ bool Queue::Upload(const Store::Uid& local_report_id) {
   info_.RecordUploadAttemptNumber(upload_attempts_[local_report_id]);
 
   std::string server_report_id;
-  if (crash_server_->MakeRequest(report.value(), &server_report_id)) {
+  if (Upload(report.value(), &server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
                   << server_report_id;
     info_.MarkReportAsUploaded(server_report_id, upload_attempts_[local_report_id]);
@@ -109,6 +124,16 @@ bool Queue::Upload(const Store::Uid& local_report_id) {
   }
 
   FX_LOGS(ERROR) << "Error uploading local report " << std::to_string(local_report_id);
+
+  return false;
+}
+
+bool Queue::Upload(const Report& report, std::string* server_report_id) {
+  if (crash_server_->MakeRequest(report, server_report_id)) {
+    FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
+                  << *server_report_id;
+    return true;
+  }
 
   return false;
 }
@@ -150,11 +175,11 @@ size_t Queue::ArchiveAll() {
 }
 
 // The queue is inheritly conservative with uploading crash reports meaning that a report that is
-// forbidden from being uploaded will never be uploaded while crash reports that are permitted to be
-// uploaded may later be considered to be forbidden. This is due to the fact that when uploads are
-// disabled all reports are immediately archived after having been added to the queue, thus we never
-// have to worry that a report that shouldn't be uploaded ends up being uploaded when the upload
-// policy changes.
+// forbidden from being uploaded will never be uploaded while crash reports that are permitted to
+// be uploaded may later be considered to be forbidden. This is due to the fact that when uploads
+// are disabled all reports are immediately archived after having been added to the queue, thus we
+// never have to worry that a report that shouldn't be uploaded ends up being uploaded when the
+// upload policy changes.
 void Queue::OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy) {
   switch (upload_policy) {
     case UploadPolicy::DISABLED:

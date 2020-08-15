@@ -304,7 +304,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OneGarb
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload) {
+TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
   SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({
       QueueOps::SetStateToUpload,
@@ -314,10 +314,39 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload) {
   CheckAnnotationsOnServer();
   CheckAttachmentKeysOnServer();
   EXPECT_TRUE(queue_->IsEmpty());
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
 }
 
-TEST_F(QueueTest, Check_NotIsEmptyQueue_OnFailedUpload) {
-  SetUpQueue({kUploadFailed});
+TEST_F(QueueTest, Check_EarlyUploadFails_ReattemptSucceeds) {
+  SetUpQueue({kUploadFailed, kUploadSuccessful});
+  ApplyQueueOps({
+      QueueOps::SetStateToUpload,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
+              }));
+}
+
+TEST_F(QueueTest, Check_EarlyUploadFails_ReattemptFails) {
+  SetUpQueue({kUploadFailed, kUploadFailed});
   ApplyQueueOps({
       QueueOps::SetStateToUpload,
       QueueOps::AddNewReport,
@@ -474,10 +503,12 @@ TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
 TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
   // Setup crash report upload outcome
   SetUpQueue({
-      // First crash report: automatic upload fails, succeed when the network becomes reachable.
+      // First crash report: automatic upload fails (no early upload as upload not enabled at
+      // first), succeed when the network becomes reachable.
       kUploadFailed,
       kUploadSuccessful,
-      // Second crash report: automatic upload fails, succeed when then network becomes reachable.
+      // Second crash report: automatic upload fails (no early upload as upload not enabled at
+      // first), succeed when then network becomes reachable.
       kUploadFailed,
       kUploadSuccessful,
   });
@@ -496,7 +527,9 @@ TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
   // Second crash report: Insert a new crash report that fails to upload at first,
   // and then check that it gets uploaded when the network becomes reachable again.
   ApplyQueueOps({
+      QueueOps::SetStateToLeaveAsPending,
       QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
   });
   ASSERT_FALSE(queue_->IsEmpty());
   network_reachability_provider_->TriggerOnNetworkReachable(false);

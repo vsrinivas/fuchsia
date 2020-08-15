@@ -70,6 +70,11 @@ class Queue {
   // Returns false if the report needs to be processed again.
   bool Upload(const Store::Uid& local_report_id);
 
+  // Make a request to the crash server to attempt to upload a report.
+  //
+  // Returns false if the upload failed.
+  bool Upload(const Report& report, std::string* server_report_id);
+
   void GarbageCollect(const Store::Uid& local_report_id);
 
   // Callback to update |state_| on upload policy changes.

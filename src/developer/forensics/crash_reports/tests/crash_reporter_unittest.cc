@@ -752,7 +752,7 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
-      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed})));
+      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed, kUploadFailed})));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
