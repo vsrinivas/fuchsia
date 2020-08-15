@@ -86,6 +86,9 @@ __EXPORT
 zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
                  LaunchCallback cb) {
   switch (df) {
+    case DISK_FORMAT_FACTORYFS:
+      return FsckNativeFs(device_path, options, cb,
+                          fs_management::GetBinaryPath("factoryfs").c_str());
     case DISK_FORMAT_MINFS:
       return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("minfs").c_str());
     case DISK_FORMAT_FAT:

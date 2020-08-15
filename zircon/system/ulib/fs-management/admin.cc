@@ -37,7 +37,6 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
                           OutgoingDirectory outgoing_directory) {
   zx_status_t status;
   constexpr size_t kNumHandles = 2;
-
   std::array<zx_handle_t, kNumHandles> handles = {device.release(),
                                                   outgoing_directory.server.release()};
   std::array<uint32_t, kNumHandles> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST};
@@ -135,6 +134,9 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& 
       // the path.
       return InitNativeFs("/pkg/bin/fatfs", std::move(device), options,
                           std::move(outgoing_directory));
+    case DISK_FORMAT_FACTORYFS:
+      return InitNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), std::move(device),
+                          options, std::move(outgoing_directory));
     default:
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }

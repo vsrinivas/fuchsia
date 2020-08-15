@@ -53,5 +53,6 @@ typedef struct {
 #define VFS_TYPE_BLOBFS 0x9e694d21ul
 #define VFS_TYPE_MINFS 0x6e694d21ul
 #define VFS_TYPE_MEMFS 0x3e694d21ul
+#define VFS_TYPE_FACTORYFS 0x1e694d21ul
 
 #endif  // SYSROOT_ZIRCON_DEVICE_VFS_H_

@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":factoryfs-unit" ]
+}
+
+test("factoryfs-unit") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+  if (configs + fdio_config - fdio_config != configs) {
+    configs -= fdio_config
+  }
+  sources = [
+    "unit/create-tests.cc",
+    "unit/format-test.cc",
+    "unit/fsck-test.cc",
+    "unit/utils.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/factoryfs",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test_support",
+    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
+  ]
+}

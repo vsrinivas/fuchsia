@@ -28,6 +28,7 @@ struct {
     {"blobfs", DISK_FORMAT_BLOBFS},
     {"minfs", DISK_FORMAT_MINFS},
     {"fat", DISK_FORMAT_FAT},
+    {"factoryfs", DISK_FORMAT_FACTORYFS},
 };
 
 int usage(void) {

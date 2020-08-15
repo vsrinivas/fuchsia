@@ -14,6 +14,7 @@
 #define PATH_INSTALL "/install"
 #define PATH_SYSTEM "/system"
 #define PATH_BLOB "/blob"
+#define PATH_FACTORY "/factory"
 #define PATH_VOLUME "/volume"
 #define PATH_DEV_BLOCK "/dev/class/block"
 

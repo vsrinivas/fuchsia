@@ -118,6 +118,25 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
   return ZX_OK;
 }
 
+zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
+                                              const mount_options_t& options) {
+  if (factory_mounted_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  // TODO(54525): The Inspect API has not been connected for FactoryFs yet.
+  zx::channel diagnostics_dir;
+
+  zx_status_t status = MountFilesystem(PATH_FACTORY, "/boot/bin/factoryfs", options,
+                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  factory_mounted_ = true;
+  return ZX_OK;
+}
+
 zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_options_t& options) {
   if (blob_mounted_) {
     return ZX_ERR_ALREADY_BOUND;

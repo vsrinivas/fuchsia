@@ -96,7 +96,7 @@ class FsManager {
   zx::event event_;
 
   static constexpr const char* kMountPoints[] = {"/bin",     "/data", "/volume", "/system",
-                                                 "/install", "/blob", "/pkgfs"};
+                                                 "/install", "/blob", "/pkgfs",  "/factory"};
   fbl::RefPtr<fs::Vnode> mount_nodes[std::size(kMountPoints)];
 
   // The Root VFS manages the following filesystems:

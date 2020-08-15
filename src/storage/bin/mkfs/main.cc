@@ -31,6 +31,7 @@ struct {
     {"blobfs", DISK_FORMAT_BLOBFS},
     {"minfs", DISK_FORMAT_MINFS},
     {"fat", DISK_FORMAT_FAT},
+    {"factoryfs", DISK_FORMAT_FACTORYFS},
 };
 
 int usage(void) {
@@ -116,11 +117,9 @@ int main(int argc, char** argv) {
   if ((r = parse_args(argc, argv, &options, &df, &devicepath))) {
     return r;
   }
-
   if (options.verbose) {
     printf("fs_mkfs: Formatting device [%s]\n", devicepath);
   }
-
   if ((r = mkfs(devicepath, df, launch_stdio_sync, &options)) < 0) {
     fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
   }

@@ -50,6 +50,10 @@ class FilesystemMounter {
   // Fails if already mounted.
   zx_status_t MountBlob(zx::channel block_device_client, const mount_options_t& options);
 
+  // Attempts to mount a block device to "/factory".
+  // Fails if already mounted.
+  zx_status_t MountFactoryFs(zx::channel block_device_client, const mount_options_t& options);
+
   // Attempts to mount pkgfs if all preconditions have been met:
   // - Pkgfs has not previously been mounted
   // - Blobfs has been mounted
@@ -66,6 +70,7 @@ class FilesystemMounter {
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
   bool PkgfsMounted() const { return pkgfs_mounted_; }
+  bool FactoryMounted() const { return factory_mounted_; }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without
@@ -88,6 +93,7 @@ class FilesystemMounter {
   bool install_mounted_ = false;
   bool blob_mounted_ = false;
   bool pkgfs_mounted_ = false;
+  bool factory_mounted_ = false;
 };
 
 }  // namespace devmgr

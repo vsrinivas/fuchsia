@@ -61,6 +61,12 @@
             rights: [ "rw*" ],
         },
         {
+            directory: "/fs/factory",
+            from: "self",
+            as: "/factory",
+            rights: [ "r*" ],
+        },
+        {
             directory: "/fs/data",
             from: "self",
             as: "/minfs",

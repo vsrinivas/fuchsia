@@ -235,6 +235,10 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_BLOBFS;
   }
 
+  if (!memcmp(data, factoryfs_magic, sizeof(factoryfs_magic))) {
+    return DISK_FORMAT_FACTORYFS;
+  }
+
   if ((data[510] == 0x55 && data[511] == 0xAA)) {
     if ((data[38] == 0x29 || data[66] == 0x29)) {
       // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.

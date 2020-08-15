@@ -241,6 +241,12 @@ zx_status_t BlockDevice::CheckFilesystem() {
       fprintf(stderr, "fshost: Skipping blobfs consistency checker.\n");
       return ZX_OK;
     }
+
+    case DISK_FORMAT_FACTORYFS: {
+      fprintf(stderr, "fshost: Skipping factory consistency checker.\n");
+      return ZX_OK;
+    }
+
     case DISK_FORMAT_MINFS: {
       zx::ticks before = zx::ticks::now();
       auto timer = fbl::MakeAutoCall([before]() {
@@ -302,6 +308,10 @@ zx_status_t BlockDevice::FormatFilesystem() {
       fprintf(stderr, "fshost: Not formatting blobfs.\n");
       return ZX_ERR_NOT_SUPPORTED;
     }
+    case DISK_FORMAT_FACTORYFS: {
+      fprintf(stderr, "fshost: Not formatting factoryfs.\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
     case DISK_FORMAT_MINFS: {
       fprintf(stderr, "fshost: Formatting minfs.\n");
       uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
@@ -343,6 +353,19 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
 
   switch (format_) {
+    case DISK_FORMAT_FACTORYFS: {
+      fprintf(stderr, "fshost: BlockDevice::MountFilesystem(factoryfs)\n");
+      mount_options_t options = default_mount_options;
+      options.enable_journal = false;
+      options.collect_metrics = false;
+      options.readonly = true;
+
+      zx_status_t status = mounter_->MountFactoryFs(std::move(block_device), options);
+      if (status != ZX_OK) {
+        printf("fshost: Failed to mount factoryfs partition: %s.\n", zx_status_get_string(status));
+      }
+      return status;
+    }
     case DISK_FORMAT_BLOBFS: {
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(blobfs)\n");
       mount_options_t options = default_mount_options;
@@ -461,6 +484,17 @@ zx_status_t BlockDeviceInterface::Add() {
         return status;
       }
       return ZX_OK;
+    }
+    case DISK_FORMAT_FACTORYFS: {
+      const uint8_t expected_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
+      if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      if ((status = CheckFilesystem()) != ZX_OK) {
+        return status;
+      }
+
+      return MountFilesystem();
     }
     default:
       // If the disk format is unknown but we know it should be the data

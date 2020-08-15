@@ -60,6 +60,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlobAndData) {
 enum class FilesystemType {
   kBlobfs,
   kMinfs,
+  kFactoryfs,
 };
 
 class TestMounter : public FilesystemMounter {
@@ -93,6 +94,10 @@ class TestMounter : public FilesystemMounter {
         EXPECT_EQ(fs_flags, FS_SVC);
         EXPECT_EQ(len, 2);
         break;
+      case FilesystemType::kFactoryfs:
+        EXPECT_STR_EQ(argv[0], "/boot/bin/factoryfs");
+        EXPECT_EQ(fs_flags, FS_SVC);
+        break;
       default:
         ADD_FAILURE("Unexpected filesystem type");
     }
@@ -111,6 +116,8 @@ class TestMounter : public FilesystemMounter {
       case FilesystemType::kMinfs:
         server = &minfs_server_;
         break;
+      case FilesystemType::kFactoryfs:
+        server = &factoryfs_server_;
       default:
         ADD_FAILURE("Unexpected filesystem type");
     }
@@ -125,6 +132,7 @@ class TestMounter : public FilesystemMounter {
   FilesystemType expected_filesystem_ = FilesystemType::kBlobfs;
   zx::channel blobfs_server_;
   zx::channel minfs_server_;
+  zx::channel factoryfs_server_;
 };
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {

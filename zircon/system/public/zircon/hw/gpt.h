@@ -304,7 +304,7 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
     0xe8, 0x11,                                    \
     0xa1, 0x5b, 0x48, 0x0f, 0xcf, 0x35, 0xf8, 0xe6 \
 }
-#define GUID_FACTORY_CONFIG_NAME "factory"
+#define GUID_FACTORY_CONFIG_NAME "factory-config"
 
 #define GUID_BOOTLOADER_STRING "5ECE94FE-4C86-11E8-A15B-480FCF35F8E6"
 #define GUID_BOOTLOADER_VALUE {                    \

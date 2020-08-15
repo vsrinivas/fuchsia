@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+zx_library("factoryfs") {
+  sdk = "source"
+  sdk_headers = [
+    "factoryfs/directory.h",
+    "factoryfs/directory_entry.h",
+    "factoryfs/factoryfs.h",
+    "factoryfs/file.h",
+    "factoryfs/format.h",
+    "factoryfs/mkfs.h",
+    "factoryfs/mount.h",
+    "factoryfs/superblock.h",
+    "factoryfs/runner.h",
+    "factoryfs/query.h",
+  ]
+  host = false
+  static = true
+  sources = [
+    "directory.cc",
+    "directory_entry.cc",
+    "factoryfs.cc",
+    "file.cc",
+    "format.cc",
+    "fsck.cc",
+    "mount.cc",
+    "query.cc",
+    "runner.cc",
+    "superblock.cc",
+  ]
+  public_deps = [
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/storage/buffer",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}

@@ -112,6 +112,7 @@ const uint64 MAX_FS_NAME_LENGTH = 32;
 /// This enum should be flexible, to accommodate future additions.
 enum FsType : uint32 {
     BLOBFS = 0x9e694d21;
+    FACTORYFS = 0x1e694d21;
     MINFS = 0x6e694d21;
     MEMFS = 0x3e694d21;
 };

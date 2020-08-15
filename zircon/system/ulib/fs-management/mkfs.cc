@@ -31,7 +31,7 @@
 namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
-                         const mkfs_options_t* options) {
+                         const mkfs_options_t* options, bool support_fvm) {
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
   if (!device_fd) {
@@ -49,11 +49,16 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   if (options->verbose) {
     argv.push_back("-v");
   }
+
   fbl::StringBuffer<20> fvm_data_slices;
-  if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
-    argv.push_back("--fvm_data_slices");
-    fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
-    argv.push_back(fvm_data_slices.c_str());
+  // TODO(manalib) restructure this code to do something more sensible instead of
+  // support_fvm bool.
+  if (support_fvm) {
+    if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
+      argv.push_back("--fvm_data_slices");
+      fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
+      argv.push_back(fvm_data_slices.c_str());
+    }
   }
   argv.push_back("mkfs");
   argv.push_back(nullptr);
@@ -85,12 +90,17 @@ __EXPORT
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {
   switch (df) {
+    case DISK_FORMAT_FACTORYFS:
+      return MkfsNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), device_path, cb,
+                          options, false);
     case DISK_FORMAT_MINFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("minfs").c_str(), device_path, cb, options);
+      return MkfsNativeFs(fs_management::GetBinaryPath("minfs").c_str(), device_path, cb, options,
+                          true);
     case DISK_FORMAT_FAT:
       return MkfsFat(device_path, cb, options);
     case DISK_FORMAT_BLOBFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options);
+      return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options,
+                          true);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
