@@ -77,12 +77,25 @@ zx_status_t PwmDevice::PwmGetConfig(pwm_config_t* out_config) {
 }
 
 zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) {
+  if (id_.protect) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
   return pwm_.SetConfig(id_.id, config);
 }
 
-zx_status_t PwmDevice::PwmEnable() { return pwm_.Enable(id_.id); }
+zx_status_t PwmDevice::PwmEnable() {
+  if (id_.protect) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return pwm_.Enable(id_.id);
+}
 
-zx_status_t PwmDevice::PwmDisable() { return pwm_.Disable(id_.id); }
+zx_status_t PwmDevice::PwmDisable() {
+  if (id_.protect) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return pwm_.Disable(id_.id);
+}
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};

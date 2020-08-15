@@ -7,6 +7,7 @@
 #include <lib/device-protocol/pdev.h>
 
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-a113/a113-pwm.h>
 #include <soc/aml-s905d2/s905d2-pwm.h>
@@ -62,6 +63,9 @@ zx_status_t AmlPwm::PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (ids_[idx].protect) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
   return CopyConfig(out_config, &configs_[idx]);
 }
 
@@ -70,6 +74,9 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
   Mode mode = static_cast<Mode>(mode_cfg->mode);
   if (idx > 1 || mode >= UNKNOWN) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (ids_[idx].protect) {
+    return ZX_ERR_ACCESS_DENIED;
   }
 
   zx_status_t status;
@@ -166,6 +173,9 @@ zx_status_t AmlPwm::PwmImplEnable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (ids_[idx].protect) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
   zx_status_t status = ZX_OK;
   if (enabled_[idx] || ((status = EnableClock(idx, true)) == ZX_OK)) {
     enabled_[idx] = true;
@@ -176,6 +186,9 @@ zx_status_t AmlPwm::PwmImplEnable(uint32_t idx) {
 zx_status_t AmlPwm::PwmImplDisable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (ids_[idx].protect) {
+    return ZX_ERR_ACCESS_DENIED;
   }
   zx_status_t status = ZX_OK;
   if (!enabled_[idx] || ((status = EnableClock(idx, false)) == ZX_OK)) {
@@ -401,13 +414,36 @@ zx_status_t AmlPwmDevice::Create(void* ctx, zx_device_t* parent) {
 zx_status_t AmlPwmDevice::Init(zx_device_t* parent) {
   zx_status_t status = ZX_OK;
 
+  size_t metadata_size;
+  status = device_get_metadata_size(parent, DEVICE_METADATA_PWM_IDS, &metadata_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __FILE__, status);
+    return status;
+  }
+  auto pwm_count = metadata_size / sizeof(pwm_id_t);
+  ZX_DEBUG_ASSERT((metadata_size % sizeof(pwm_id_t)) == 0);
+
+  auto pwm_ids = std::make_unique<pwm_id_t[]>(pwm_count);
+
+  size_t actual;
+  status =
+      device_get_metadata(parent, DEVICE_METADATA_PWM_IDS, pwm_ids.get(), metadata_size, &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __FILE__, status);
+    return status;
+  }
+  if (actual != metadata_size) {
+    zxlogf(ERROR, "%s: device_get_metadata size error %d", __FILE__, status);
+    return ZX_ERR_INTERNAL;
+  }
+
   ddk::PDev pdev(parent);
   for (uint32_t i = 0;; i++) {
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
       break;
     }
-    pwms_.push_back(std::make_unique<AmlPwm>(*std::move(mmio)));
+    pwms_.push_back(std::make_unique<AmlPwm>(*std::move(mmio), pwm_ids[2 * i], pwm_ids[2 * i + 1]));
     pwms_.back()->Init();
   }
 

@@ -11,6 +11,7 @@
 #include <array>
 #include <vector>
 
+#include <ddk/metadata/pwm.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/pwm.h>
@@ -27,18 +28,22 @@ using AmlPwmDeviceType = ddk::Device<AmlPwmDevice, ddk::UnbindableNew>;
 
 class AmlPwm {
  public:
-  explicit AmlPwm(ddk::MmioBuffer mmio) : enabled_{false, false}, mmio_(std::move(mmio)) {}
+  explicit AmlPwm(ddk::MmioBuffer mmio, pwm_id_t id1, pwm_id_t id2)
+      : ids_{id1, id2}, enabled_{false, false}, mmio_(std::move(mmio)) {}
 
   void Init() {
-    mode_configs_[0].mode = OFF;
-    mode_configs_[0].regular = {};
-    configs_[0] = {false, 0, 0.0, &mode_configs_[0], sizeof(mode_config)};
-    SetMode(0, OFF);
-
-    mode_configs_[1].mode = OFF;
-    mode_configs_[1].regular = {};
-    configs_[1] = {false, 0, 0.0, &mode_configs_[1], sizeof(mode_config)};
-    SetMode(1, OFF);
+    if (!ids_[0].protect) {
+      mode_configs_[0].mode = OFF;
+      mode_configs_[0].regular = {};
+      configs_[0] = {false, 0, 0.0, &mode_configs_[0], sizeof(mode_config)};
+      SetMode(0, OFF);
+    }
+    if (!ids_[1].protect) {
+      mode_configs_[1].mode = OFF;
+      mode_configs_[1].regular = {};
+      configs_[1] = {false, 0, 0.0, &mode_configs_[1], sizeof(mode_config)};
+      SetMode(1, OFF);
+    }
   }
 
   zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);
@@ -64,6 +69,7 @@ class AmlPwm {
   zx_status_t SetDSSetting(uint32_t idx, uint16_t val);
   zx_status_t SetTimers(uint32_t idx, uint8_t timer1, uint8_t timer2);
 
+  std::array<pwm_id_t, 2> ids_;
   std::array<bool, 2> enabled_;
   std::array<pwm_config_t, 2> configs_;
   std::array<mode_config, 2> mode_configs_;
@@ -88,16 +94,16 @@ class AmlPwmDevice : public AmlPwmDeviceType,
   // For unit testing
   explicit AmlPwmDevice() : AmlPwmDeviceType(nullptr) {}
   zx_status_t Init(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1, ddk::MmioBuffer mmio2,
-                   ddk::MmioBuffer mmio3, ddk::MmioBuffer mmio4) {
-    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio0)));
+                   ddk::MmioBuffer mmio3, ddk::MmioBuffer mmio4, std::vector<pwm_id_t> ids) {
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio0), ids.at(0), ids.at(1)));
     pwms_.back()->Init();
-    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio1)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio1), ids.at(2), ids.at(3)));
     pwms_.back()->Init();
-    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio2)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio2), ids.at(4), ids.at(5)));
     pwms_.back()->Init();
-    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio3)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio3), ids.at(6), ids.at(7)));
     pwms_.back()->Init();
-    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio4)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio4), ids.at(8), ids.at(9)));
     pwms_.back()->Init();
 
     return ZX_OK;

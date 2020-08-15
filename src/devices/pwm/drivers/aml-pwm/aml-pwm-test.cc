@@ -4,6 +4,9 @@
 
 #include "aml-pwm.h"
 
+#include <vector>
+#include <ddk/metadata/pwm.h>
+
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <fbl/alloc_checker.h>
@@ -22,7 +25,7 @@ class FakeAmlPwmDevice : public AmlPwmDevice {
  public:
   static std::unique_ptr<FakeAmlPwmDevice> Create(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1,
                                                   ddk::MmioBuffer mmio2, ddk::MmioBuffer mmio3,
-                                                  ddk::MmioBuffer mmio4) {
+                                                  ddk::MmioBuffer mmio4, std::vector<pwm_id_t> ids) {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlPwmDevice>(&ac);
     if (!ac.check()) {
@@ -30,7 +33,7 @@ class FakeAmlPwmDevice : public AmlPwmDevice {
       return nullptr;
     }
     device->Init(std::move(mmio0), std::move(mmio1), std::move(mmio2), std::move(mmio3),
-                 std::move(mmio4));
+                 std::move(mmio4), ids);
 
     return device;
   }
@@ -102,7 +105,6 @@ class AmlPwmDeviceTest : public zxtest::Test {
     (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
     (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
     (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
@@ -114,8 +116,10 @@ class AmlPwmDeviceTest : public zxtest::Test {
     ddk::MmioBuffer mmio2(mock_mmio2_->GetMmioBuffer());
     ddk::MmioBuffer mmio3(mock_mmio3_->GetMmioBuffer());
     ddk::MmioBuffer mmio4(mock_mmio4_->GetMmioBuffer());
+    // Protect channel 3 for protect tests
+    std::vector<pwm_id_t> ids = {{0}, {1}, {2}, {3, true}, {4}, {5}, {6}, {7}, {8}, {9}};
     pwm_ = FakeAmlPwmDevice::Create(std::move(mmio0), std::move(mmio1), std::move(mmio2),
-                                    std::move(mmio3), std::move(mmio4));
+                                    std::move(mmio3), std::move(mmio4), ids);
     ASSERT_NOT_NULL(pwm_);
   }
 
@@ -142,6 +146,21 @@ class AmlPwmDeviceTest : public zxtest::Test {
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_mmio3_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_mmio4_;
 };
+
+TEST_F(AmlPwmDeviceTest, ProtectTest) {
+  mode_config mode_cfg{
+      .mode = 100,
+      .regular = {},
+  };
+  pwm_config cfg{
+      .polarity = false,
+      .period_ns = 1250,
+      .duty_cycle = 100.0,
+      .mode_config_buffer = &mode_cfg,
+      .mode_config_size = sizeof(mode_cfg),
+  };
+  EXPECT_NOT_OK(pwm_->PwmImplSetConfig(3, &cfg));
+}
 
 TEST_F(AmlPwmDeviceTest, GetConfigTest) {
   mode_config mode_cfg{
