@@ -261,7 +261,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/arm64.gni:13
+From //boards/arm64.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -269,7 +269,7 @@ From //build/board.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/x64.gni:13
+From //boards/x64.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -278,7 +278,19 @@ From //build/board.gni:11
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
 
-**Current value (from the default):** `[]`
+**Current value for `target_cpu = "arm64"`:** `["//src/security/policy/zxcrypt:null"]`
+
+From //boards/arm64.gni:13
+
+**Overridden from the default:** `[]`
+
+From //build/board.gni:30
+
+**Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
+
+From //boards/x64.gni:13
+
+**Overridden from the default:** `[]`
 
 From //build/board.gni:30
 
@@ -324,15 +336,6 @@ required by this board. See also zedboot_cmdline_args in
 **Current value (from the default):** `[]`
 
 From //build/board.gni:24
-
-### bootfs_allowlist_recovery
-List of binaries to include in the bootfs manifest for recovery. This
-overrides the option set by `bootfs_zircon_groups` so that only the requested
-binaries are included in the final image.
-
-**Current value (from the default):** `[]`
-
-From //build/images/recovery/recovery_args.gni:9
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -1548,7 +1551,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:24
+From //boards/arm64.gni:26
 
 **Overridden from the default:** `"0"`
 
@@ -1556,7 +1559,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:25
+From //boards/x64.gni:27
 
 **Overridden from the default:** `"0"`
 
@@ -1583,7 +1586,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:25
+From //boards/arm64.gni:27
 
 **Overridden from the default:** `"0"`
 
@@ -1591,7 +1594,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:26
+From //boards/x64.gni:28
 
 **Overridden from the default:** `"0"`
 
@@ -1862,13 +1865,6 @@ Path to file to use for recovery logo
 **Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.png"`
 
 From //src/recovery/system/system_recovery_args.gni:7
-
-### recovery_ta_uuids
-UUID of TAs to include in the Recovery build.
-
-**Current value (from the default):** `[]`
-
-From //build/images/ta.gni:13
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -2214,29 +2210,6 @@ Used by syz-ci to build with own syz-executor source.
 **Current value (from the default):** `"//third_party/syzkaller"`
 
 From //src/testing/fuzzing/syzkaller/BUILD.gn:11
-
-### ta_dest_suffix
-File name suffix of TA images deployed on bootfs. Usually it is ".ta".
-The TA image file names are "$ta_uuid$ta_dest_suffix".
-
-**Current value (from the default):** `""`
-
-From //build/images/ta.gni:21
-
-### ta_path
-Source absolute path to the prebuilt TA images.
-
-**Current value (from the default):** `""`
-
-From //build/images/ta.gni:10
-
-### ta_src_suffix
-File name suffix of prebuilt TA images. ".ta.prod" and ".ta.dev" are
-usually used. The TA image file names are "$ta_uuid$ta_src_suffix".
-
-**Current value (from the default):** `""`
-
-From //build/images/ta.gni:17
 
 ### target_cpu
 
