@@ -27,7 +27,6 @@ use {
     fidl_fuchsia_update_channel::ProviderRequestStream,
     fidl_fuchsia_update_channelcontrol::ChannelControlRequestStream,
     fidl_fuchsia_update_ext::{CheckOptions, Initiator},
-    forced_fdr::perform_fdr_if_necessary,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
@@ -119,8 +118,6 @@ async fn main() -> Result<(), Error> {
         }
         .boxed(),
     );
-
-    futures.push(perform_fdr_if_necessary().boxed());
 
     futures.push(check_and_set_system_health().boxed());
 

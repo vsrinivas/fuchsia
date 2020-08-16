@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/factory_reset_trigger"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.update.channel.Provider"
+        ]
+    }
+}

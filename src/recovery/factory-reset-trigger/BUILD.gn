@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "factory-reset-trigger"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/lib/forced-fdr",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("factory-reset-trigger-cmp") {
+  deps = [ ":bin" ]
+  manifest = "meta/factory-reset-trigger.cmx"
+  component_name = "factory-reset-trigger"
+}
+
+fuchsia_package("factory-reset-trigger") {
+  deps = [
+    ":config",
+    ":factory-reset-trigger-cmp",
+  ]
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [ "factory-reset-trigger.config" ]
+  sources = [ "sysmgr.config" ]
+}

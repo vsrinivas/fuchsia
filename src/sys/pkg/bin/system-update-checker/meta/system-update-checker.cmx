@@ -24,9 +24,7 @@
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
-            "fuchsia.recovery.FactoryReset",
-            "fuchsia.sys.Launcher",
-            "fuchsia.update.channel.Provider"
+            "fuchsia.sys.Launcher"
         ]
     }
 }
