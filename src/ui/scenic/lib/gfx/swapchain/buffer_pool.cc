@@ -29,8 +29,8 @@ namespace {
 
 // Highest priority format first.
 const vk::Format kPreferredImageFormats[] = {
-    vk::Format::eB8G8R8A8Srgb,
     vk::Format::eR8G8B8A8Srgb,
+    vk::Format::eB8G8R8A8Srgb,
 };
 
 }  // namespace
@@ -43,6 +43,7 @@ BufferPool& BufferPool::operator=(BufferPool&& rhs) {
   buffers_ = std::move(rhs.buffers_);
   used_ = std::move(rhs.used_);
   image_config_ = rhs.image_config_;
+  image_format_ = rhs.image_format_;
   return *this;
 }
 
