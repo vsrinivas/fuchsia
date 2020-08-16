@@ -5,17 +5,14 @@
 #ifndef SRC_STORAGE_FSHOST_FSHOST_BOOT_ARGS_H_
 #define SRC_STORAGE_FSHOST_FSHOST_BOOT_ARGS_H_
 
-#include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <lib/zx/status.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <map>
+#include <optional>
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
@@ -24,129 +21,40 @@ namespace devmgr {
 
 class FshostBootArgs {
  public:
-  FshostBootArgs() : boot_args_(nullptr) {
-    zx::channel remote, local;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      // This service might be missing if we're running in a test environment. Log
-      // the error and continue.
-      fprintf(stderr,
-              "fshost: failed to get boot arguments (%s), assuming test "
-              "environment and continuing\n",
-              zx_status_get_string(status));
-      return;
-    }
-    auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
-    status = fdio_service_connect(path.data(), remote.release());
-    if (status != ZX_OK) {
-      // This service might be missing if we're running in a test environment. Log
-      // the error and continue.
-      fprintf(stderr,
-              "fshost: failed to get boot arguments (%s), assuming test "
-              "environment and continuing\n",
-              zx_status_get_string(status));
-      return;
-    }
-    boot_args_ = std::make_unique<llcpp::fuchsia::boot::Arguments::SyncClient>(std::move(local));
-    InitParams();
-  }
+  // Create an FshostBootArgs object by attempting to connect to fuchsia.boot.Arguments through the
+  // namespace. If the service connection fails, this creates an object that returns default values.
+  // TODO: This probably shouldn't automatically fall back to defaults just to accomodate test
+  // environments. The test environment should provide the services fshost needs, faking if needed.
+  static FshostBootArgs Create();
 
   bool netboot() { return netsvc_netboot_ || zircon_system_disable_automount_; }
-
   bool check_filesystems() { return zircon_system_filesystem_check_; }
-
   bool wait_for_data() { return zircon_system_wait_for_data_; }
-
   bool blobfs_enable_userpager() { return blobfs_userpager_; }
 
-  std::unique_ptr<std::string> pkgfs_file_with_prefix_and_name(const char* prefix,
-                                                               const char* name) {
-    char key[256];
-    int len = snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s", prefix, name);
-    if (len >= (int)sizeof(key)) {
-      printf("fshost: failed to format pkgfs file boot argument key\n");
-      return nullptr;
-    }
-    if (!boot_args_) {
-      return nullptr;
-    }
-    auto ret = boot_args_->GetString(fidl::StringView{key, (uint64_t)len});
-    if (!ret.ok()) {
-      return nullptr;
-    }
-
-    return std::make_unique<std::string>(ret->value.data(), ret->value.size());
-  }
-
-  std::unique_ptr<std::string> pkgfs_cmd() {
-    if (!boot_args_)
-      return nullptr;
-    auto ret = boot_args_->GetString(fidl::StringView{"zircon.system.pkgfs.cmd"});
-    if (!ret.ok() || ret->value.is_null()) {
-      return nullptr;
-    }
-
-    return std::make_unique<std::string>(ret->value.data(), ret->value.size());
-  }
+  zx::status<std::string> pkgfs_cmd();
+  zx::status<std::string> pkgfs_file_with_prefix_and_name(std::string prefix, std::string name);
 
   // Returns the write compression algorithm to pass to blobfs (via the --compression flag).
-  // If nullptr, no value should be passed.
-  const char* blobfs_write_compression_algorithm() const {
-    if (!blobfs_write_compression_algorithm_) {
-      return nullptr;
-    }
-    return blobfs_write_compression_algorithm_->c_str();
+  std::optional<std::string> blobfs_write_compression_algorithm() const {
+    return blobfs_write_compression_algorithm_;
   }
 
  protected:
   // Protected constructor for FshostBootArgs that allows injecting a
   // different BootArgs member, for use in unit tests.
-  explicit FshostBootArgs(std::unique_ptr<llcpp::fuchsia::boot::Arguments::SyncClient>&& boot_args)
-      : boot_args_(std::move(boot_args)) {
-    InitParams();
-  }
+  explicit FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args);
 
  private:
-  std::unique_ptr<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args_;
+  zx::status<std::string> GetStringArgument(std::string key);
+
+  std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args_;
   bool netsvc_netboot_ = false;
   bool zircon_system_disable_automount_ = false;
   bool zircon_system_filesystem_check_ = false;
   bool zircon_system_wait_for_data_ = true;
   bool blobfs_userpager_ = false;
   std::optional<std::string> blobfs_write_compression_algorithm_ = std::nullopt;
-
-  void InitParams() {
-    llcpp::fuchsia::boot::BoolPair defaults[] = {
-        {fidl::StringView{"netsvc.netboot"}, false},
-        {fidl::StringView{"zircon.system.disable-automount"}, false},
-        {fidl::StringView{"zircon.system.filesystem-check"}, false},
-        {fidl::StringView{"zircon.system.wait-for-data"}, true},
-        {fidl::StringView{"blobfs.userpager"}, false},
-    };
-
-    auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
-    if (!ret.ok()) {
-      fprintf(stderr, "fshost: failed to get parameters: %s", ret.error());
-      return;
-    }
-
-    netsvc_netboot_ = ret->values[0];
-    zircon_system_disable_automount_ = ret->values[1];
-    zircon_system_filesystem_check_ = ret->values[2];
-    zircon_system_wait_for_data_ = ret->values[3];
-    blobfs_userpager_ = ret->values[4];
-
-    auto algorithm = boot_args_->GetString(fidl::StringView{"blobfs.write-compression-algorithm"});
-    if (!algorithm.ok()) {
-      fprintf(stderr, "fshost: failed to get parameters: %s", algorithm.error());
-      return;
-    }
-
-    if (!algorithm->value.is_null()) {
-      blobfs_write_compression_algorithm_ =
-          std::string(algorithm->value.data(), algorithm->value.size());
-    }
-  }
 };
 
 }  // namespace devmgr

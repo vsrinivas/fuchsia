@@ -30,6 +30,7 @@ source_set("fshost-registry") {
     "admin-server.cc",
     "deprecated-loader-service.cc",
     "fs-manager.cc",
+    "fshost-boot-args.cc",
     "lifecycle.cc",
     "registry.cc",
     "registry_vnode.cc",

@@ -50,7 +50,8 @@ FsManager::FsManager(FsHostMetrics metrics)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
-      metrics_(std::move(metrics)) {
+      metrics_(std::move(metrics)),
+      boot_args_(FshostBootArgs::Create()) {
   ZX_ASSERT(global_root_ == nullptr);
 }
 

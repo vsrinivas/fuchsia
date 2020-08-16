@@ -94,12 +94,12 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
 zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* name,
                                   zx_handle_t* vmo) {
   const ldsvc_ctx_t* ldsvc_ctx = static_cast<ldsvc_ctx_t*>(ctx);
-  auto blobp = ldsvc_ctx->boot_args->pkgfs_file_with_prefix_and_name(prefix, name);
-  if (blobp == nullptr) {
+  auto blob_status = ldsvc_ctx->boot_args->pkgfs_file_with_prefix_and_name(prefix, name);
+  if (blob_status.is_error()) {
     printf("fshost: failed to find pkgfs file ID in boot arguments \"%s%s\"\n", prefix, name);
     return ZX_ERR_NOT_FOUND;
   }
-  const char* blob = blobp->data();
+  const char* blob = blob_status.value().c_str();
 
   int fd;
   zx_status_t status = fdio_open_fd_at(ldsvc_ctx->blobfs_root_fd.get(), blob,
@@ -182,12 +182,12 @@ zx_status_t pkgfs_ldsvc_start(std::unique_ptr<ldsvc_ctx_t> ldsvc_ctx, zx::channe
 
 bool pkgfs_launch(FilesystemMounter* filesystems) {
   // Get the pkgfs.cmd boot argument
-  auto cmdp = filesystems->boot_args()->pkgfs_cmd();
-  if (cmdp == nullptr) {
+  auto cmd_status = filesystems->boot_args()->pkgfs_cmd();
+  if (cmd_status.is_error()) {
     printf("fshost: unable to launch pkgfs, missing \"zircon.system.pkgfs.cmd\" boot argument\n");
     return false;
   }
-  const char* cmd = cmdp->data();
+  const char* cmd = cmd_status.value().c_str();
 
   fbl::unique_fd fs_blob_fd(open("/fs/blob", O_RDONLY | O_DIRECTORY));
   if (!fs_blob_fd) {
@@ -240,8 +240,8 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
   DevmgrLauncher launcher(&fs_provider);
   status = launcher.LaunchWithLoader(
       *zx::job::default_job(), "pkgfs", std::move(executable), std::move(loader), argv, nullptr, -1,
-      /* TODO(fxbug.dev/32044) */ zx::resource(), &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1,
-      &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC);
+      /* TODO(fxbug.dev/32044) */ zx::resource(), &raw_h1, (const uint32_t[]){PA_HND(PA_USER0, 0)},
+      1, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC);
   if (status != ZX_OK) {
     printf("fshost: failed to launch %s: %d (%s)\n", cmd, status, zx_status_get_string(status));
     return false;

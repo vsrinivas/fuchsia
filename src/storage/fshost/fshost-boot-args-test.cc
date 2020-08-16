@@ -19,38 +19,44 @@
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-// Create a subclass to access the protected test-only constructor on
-// FshostBootArgs.
+// Create a subclass to access the protected test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public devmgr::FshostBootArgs {
  public:
-  explicit FshostBootArgsForTest(
-      std::unique_ptr<llcpp::fuchsia::boot::Arguments::SyncClient>&& boot_args)
+  explicit FshostBootArgsForTest(llcpp::fuchsia::boot::Arguments::SyncClient boot_args)
       : FshostBootArgs(std::move(boot_args)) {}
 };
 
-std::unique_ptr<FshostBootArgsForTest> CreateFshostBootArgs(async_dispatcher_t* dispatcher,
-                                                            mock_boot_arguments::Server& server) {
-  std::unique_ptr<llcpp::fuchsia::boot::Arguments::SyncClient> client =
-      std::make_unique<llcpp::fuchsia::boot::Arguments::SyncClient>(zx::channel());
-  server.CreateClient(dispatcher, client.get());
-  return std::make_unique<FshostBootArgsForTest>(std::move(client));
+class FshostBootArgsTest : public zxtest::Test {
+ public:
+  FshostBootArgsTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+  void CreateFshostBootArgs(std::map<std::string, std::string> config) {
+    boot_args_server_ = mock_boot_arguments::Server{std::move(config)};
+    llcpp::fuchsia::boot::Arguments::SyncClient client;
+    boot_args_server_.CreateClient(loop_.dispatcher(), &client);
+
+    ASSERT_OK(loop_.StartThread());
+    boot_args_ = std::make_unique<FshostBootArgsForTest>(std::move(client));
+  }
+
+  FshostBootArgsForTest& boot_args() { return *boot_args_; }
+
+ private:
+  async::Loop loop_;
+  mock_boot_arguments::Server boot_args_server_;
+  std::unique_ptr<FshostBootArgsForTest> boot_args_;
+};
+
+TEST_F(FshostBootArgsTest, GetDefaultBools) {
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
+
+  EXPECT_EQ(false, boot_args().netboot());
+  EXPECT_EQ(false, boot_args().check_filesystems());
+  EXPECT_EQ(true, boot_args().wait_for_data());
+  EXPECT_EQ(false, boot_args().blobfs_enable_userpager());
 }
 
-TEST(FshostBootArgsTest, GetDefaultBools) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-  auto server = mock_boot_arguments::Server{{}};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
-
-  ASSERT_EQ(false, boot_args->netboot());
-  ASSERT_EQ(false, boot_args->check_filesystems());
-  ASSERT_EQ(true, boot_args->wait_for_data());
-  ASSERT_EQ(false, boot_args->blobfs_enable_userpager());
-}
-
-TEST(FshostBootArgsTest, GetNonDefaultBools) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
   std::map<std::string, std::string> config = {
       {"netsvc.netboot", ""},
       {"zircon.system.disable-automount", ""},
@@ -58,59 +64,45 @@ TEST(FshostBootArgsTest, GetNonDefaultBools) {
       {"zircon.system.wait-for-data", "false"},
       {"blobfs.userpager", ""},
   };
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  ASSERT_EQ(true, boot_args->netboot());
-  ASSERT_EQ(true, boot_args->check_filesystems());
-  ASSERT_EQ(false, boot_args->wait_for_data());
-  ASSERT_EQ(true, boot_args->blobfs_enable_userpager());
+  EXPECT_EQ(true, boot_args().netboot());
+  EXPECT_EQ(true, boot_args().check_filesystems());
+  EXPECT_EQ(false, boot_args().wait_for_data());
+  EXPECT_EQ(true, boot_args().blobfs_enable_userpager());
 }
 
-TEST(FshostBootArgsTest, GetPkgfsFile) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+TEST_F(FshostBootArgsTest, GetPkgfsFile) {
   std::map<std::string, std::string> config = {
       {"zircon.system.pkgfs.file.foobar", "aaa"},
       {"zircon.system.pkgfs.file.foobaz", "bbb"},
       {"zircon.system.pkgfs.file.111", "ccc"},
       {"zircon.system.pkgfs.file.222", "ddd"},
   };
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  ASSERT_STR_EQ("aaa", *boot_args->pkgfs_file_with_prefix_and_name("foo", "bar"));
-  ASSERT_STR_EQ("bbb", *boot_args->pkgfs_file_with_prefix_and_name("foo", "baz"));
-  ASSERT_STR_EQ("ccc", *boot_args->pkgfs_file_with_prefix_and_name("111", ""));
-  ASSERT_STR_EQ("ddd", *boot_args->pkgfs_file_with_prefix_and_name("", "222"));
+  EXPECT_EQ("aaa", boot_args().pkgfs_file_with_prefix_and_name("foo", "bar"));
+  EXPECT_EQ("bbb", boot_args().pkgfs_file_with_prefix_and_name("foo", "baz"));
+  EXPECT_EQ("ccc", boot_args().pkgfs_file_with_prefix_and_name("111", ""));
+  EXPECT_EQ("ddd", boot_args().pkgfs_file_with_prefix_and_name("", "222"));
 }
 
-TEST(FshostBootArgsTest, GetPkgfsCmd) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+TEST_F(FshostBootArgsTest, GetPkgfsCmd) {
   std::map<std::string, std::string> config = {{"zircon.system.pkgfs.cmd", "foobar"}};
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  ASSERT_STR_EQ("foobar", *boot_args->pkgfs_cmd());
+  EXPECT_EQ("foobar", boot_args().pkgfs_cmd());
 }
 
-TEST(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
   std::map<std::string, std::string> config = {{"blobfs.write-compression-algorithm", "ZSTD"}};
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  ASSERT_STR_EQ("ZSTD", boot_args->blobfs_write_compression_algorithm());
+  EXPECT_EQ("ZSTD", boot_args().blobfs_write_compression_algorithm());
 }
 
-TEST(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-  std::map<std::string, std::string> config = {{}};
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
+TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
 
-  ASSERT_EQ(nullptr, boot_args->blobfs_write_compression_algorithm());
+  EXPECT_EQ(std::nullopt, boot_args().blobfs_write_compression_algorithm());
 }

@@ -373,8 +373,10 @@ zx_status_t BlockDevice::MountFilesystem() {
       options.collect_metrics = true;
       if (mounter_->boot_args()) {
         options.enable_pager = mounter_->boot_args()->blobfs_enable_userpager();
-        options.write_compression_algorithm =
-            mounter_->boot_args()->blobfs_write_compression_algorithm();
+        auto algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
+        if (algorithm) {
+          options.write_compression_algorithm = algorithm->c_str();
+        }
       }
       zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
       if (status != ZX_OK) {
