@@ -3,9 +3,6 @@
         "binary": "bin/camera-factory"
     },
     "sandbox": {
-        "dev": [
-            "class/isp"
-        ],
         "features": [
             "isolated-persistent-storage"
         ],

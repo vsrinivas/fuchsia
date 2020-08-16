@@ -51,13 +51,6 @@ protocol Controller {
     ///                 `ZX_ERR_UNAVAILABLE` if there are no active streams to display from.
     ///                 `ZX_ERR_NOT_SUPPORTED` if the DUT does not have a screen.
     DisplayToScreen(uint32 stream_index) -> (zx.status s);
-
-    // ISP
-
-    /// Retrieve a channel to the ISP.
-    ///
-    /// + request `isp_req` The request to bind to the ISP interface.
-    BindIspChannel(request<Isp> isp_req);
 };
 
 /// This interface provides access to factory-only functionality in the ISP driver.

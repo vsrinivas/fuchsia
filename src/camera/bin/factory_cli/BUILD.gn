@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+name = "camera-factory-cli"
+
+executable("bin") {
+  output_name = name
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/camera/bin/factory:fuchsia.factory.camera",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+package("${name}") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = name
+    },
+  ]
+
+  meta = [
+    {
+      path = "${name}.cmx"
+      dest = "${name}.cmx"
+    },
+  ]
+}

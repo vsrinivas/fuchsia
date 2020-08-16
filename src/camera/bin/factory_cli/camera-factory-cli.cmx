@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/camera-factory-cli"
+    },
+    "sandbox": {
+        "dev": [
+            "class/isp"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.factory.camera.Controller",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

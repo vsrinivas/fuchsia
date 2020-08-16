@@ -14,11 +14,7 @@ executable("bin") {
   defines = [ camera_debug_define ]
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-  ]
+  deps = [ ":lib" ]
 }
 
 source_set("lib") {

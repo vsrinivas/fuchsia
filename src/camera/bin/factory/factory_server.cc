@@ -14,58 +14,44 @@
 
 namespace camera {
 
-namespace {
-const char* kDevicePath = "/dev/class/isp/000";
-}  // namespace
-
-FactoryServer::FactoryServer() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+FactoryServer::FactoryServer()
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), controller_binding_(this) {}
 
 FactoryServer::~FactoryServer() {
   loop_.RunUntilIdle();
-  if (isp_) {
-    isp_.Unbind();
-  }
+  controller_binding_.Unbind();
+  streamer_ = nullptr;
   loop_.Quit();
   loop_.JoinThreads();
 }
 
 fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
-    std::unique_ptr<Streamer> streamer, fit::closure stop_callback) {
+    fuchsia::sysmem::AllocatorHandle allocator, fuchsia::camera3::DeviceWatcherHandle watcher,
+    fit::closure stop_callback) {
   auto server = std::make_unique<FactoryServer>();
 
   server->stop_callback_ = std::move(stop_callback);
 
-  int result = open(kDevicePath, O_RDONLY);
-  if (result < 0) {
-    FX_LOGS(ERROR) << "Error opening device at " << kDevicePath;
-    return fit::error(ZX_ERR_IO);
-  }
-  fbl::unique_fd fd;
-  fd.reset(result);
-
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get handle for device at " << kDevicePath;
-    return fit::error(ZX_ERR_UNAVAILABLE);
-  }
-
-  server->isp_.Bind(std::move(channel), server->loop_.dispatcher());
-
   // Start a thread and begin processing messages.
-  status = server->loop_.StartThread("camera-factory Loop");
+  zx_status_t status = server->loop_.StartThread("camera-factory Loop");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
 
-  server->streamer_ = std::move(streamer);
+  auto streamer_result =
+      Streamer::Create(std::move(allocator), std::move(watcher), std::move(stop_callback));
+  if (streamer_result.is_error()) {
+    FX_PLOGS(ERROR, streamer_result.error()) << "Failed to create Streamer.";
+    return streamer_result.take_error_result();
+  }
+  server->streamer_ = streamer_result.take_value();
 
   // Create the WebUI
   auto webui_result = WebUI::Create(server.get());
   if (webui_result.is_error()) {
     FX_PLOGS(ERROR, webui_result.error()) << "Failed to create WebUI.";
-    return fit::error(status);
+    return webui_result.take_error_result();
   }
   server->webui_ = webui_result.take_value();
   constexpr uint32_t kPortNumber = 52224;
@@ -74,46 +60,18 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
   return fit::ok(std::move(server));
 }
 
-void FactoryServer::GetOtpData() {
-  isp_->GetOtpData([](zx_status_t get_otp_status, size_t byte_count, zx::vmo otp_data) {
-    if (get_otp_status != ZX_OK) {
-      return;
-    }
-    uint8_t buf[byte_count];
-    otp_data.read(buf, 0, byte_count);
-    for (auto byte : buf) {
-      std::cout << byte;
-    }
-  });
+fidl::InterfaceRequestHandler<fuchsia::factory::camera::Controller> FactoryServer::GetHandler() {
+  return fit::bind_member(this, &FactoryServer::OnNewRequest);
 }
 
-void FactoryServer::GetSensorTemperature() {
-  isp_->GetSensorTemperature([](zx_status_t get_sensor_temperature_status, int32_t temperature) {
-    if (get_sensor_temperature_status != ZX_OK) {
-      return;
-    }
-    FX_LOGS(INFO) << temperature;
-  });
-}
+void FactoryServer::OnNewRequest(
+    fidl::InterfaceRequest<fuchsia::factory::camera::Controller> request) {
+  if (controller_binding_.is_bound()) {
+    request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
 
-void FactoryServer::SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp) {
-  isp_->SetAWBMode(mode, temp, []() { return; });
-}
-
-void FactoryServer::SetAEMode(fuchsia::factory::camera::ExposureMode mode) {
-  isp_->SetAEMode(mode, []() { return; });
-}
-
-void FactoryServer::SetExposure(float integration_time, float analog_gain, float digital_gain) {
-  isp_->SetExposure(integration_time, analog_gain, digital_gain, []() { return; });
-}
-
-void FactoryServer::SetSensorMode(uint32_t mode) {
-  isp_->SetSensorMode(mode, []() { return; });
-}
-
-void FactoryServer::SetTestPatternMode(uint16_t mode) {
-  isp_->SetTestPatternMode(mode, []() { return; });
+  controller_binding_.Bind(std::move(request), loop_.dispatcher());
 }
 
 void FactoryServer::Capture() {
@@ -142,8 +100,6 @@ void FactoryServer::RequestCaptureData(uint32_t stream, CaptureResponse callback
       });
 }
 
-void FactoryServer::SetIspBypassMode(bool on) {
-  isp_->SetBypassMode(on, []() { return; });
-}
+void FactoryServer::SetIspBypassMode(bool on) {}
 
 }  // namespace camera

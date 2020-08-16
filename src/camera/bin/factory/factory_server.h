@@ -9,6 +9,7 @@
 #include <fuchsia/factory/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/binding.h>
 
 #include "src/camera/bin/factory/streamer.h"
 #include "src/camera/bin/factory/web_ui.h"
@@ -31,7 +32,11 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
   // Returns:
   //  A FactoryServer object which provides an interface to the factory API.
   static fit::result<std::unique_ptr<FactoryServer>, zx_status_t> Create(
-      std::unique_ptr<Streamer> streamer, fit::closure stop_callback = nullptr);
+      fuchsia::sysmem::AllocatorHandle allocator, fuchsia::camera3::DeviceWatcherHandle watcher,
+      fit::closure stop_callback = nullptr);
+
+  // Returns the class request handler.
+  fidl::InterfaceRequestHandler<fuchsia::factory::camera::Controller> GetHandler();
 
   // Getters
   bool streaming() const { return streaming_; }
@@ -50,12 +55,14 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
   void Capture();
 
  private:
+  // Requests a new camera-factory Controller.
+  void OnNewRequest(fidl::InterfaceRequest<fuchsia::factory::camera::Controller> request);
+
   // |fuchsia.camera.factory.Controller|
   void StartStreaming() override {}
   void StopStreaming() override {}
   void CaptureFrames(uint32_t amount, std::string dir_path, CaptureFramesCallback cb) override {}
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
-  void BindIspChannel(fidl::InterfaceRequest<fuchsia::factory::camera::Isp> isp_req) override {}
 
   // |WebUIControl|
   void RequestCaptureData(uint32_t stream_index, CaptureResponse callback) override;
@@ -63,7 +70,7 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
 
   async::Loop loop_;
   fit::closure stop_callback_;
-  fuchsia::factory::camera::IspPtr isp_;
+  fidl::Binding<fuchsia::factory::camera::Controller> controller_binding_;
   std::unique_ptr<Streamer> streamer_;
   std::unique_ptr<WebUI> webui_;
   bool streaming_ = false;
