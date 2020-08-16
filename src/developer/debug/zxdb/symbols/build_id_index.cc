@@ -249,7 +249,10 @@ void BuildIDIndex::LoadSymbolIndexFile(const std::string& file_name) {
       AddBuildIdDir(symbol_path, build_dir);
     } else if (std::filesystem::exists(symbol_path, ec)) {
       AddIdsTxt(symbol_path, build_dir);
-    } else {
+    } else if (build_dir.empty() || !std::filesystem::exists(build_dir, ec)) {
+      // Purge is needed only when
+      // 1) build_dir is not provided and symbol_path doesn't exist.
+      // 2) build_dir is provided and it doesn't exist.
       need_purge = true;
     }
   }

@@ -151,7 +151,12 @@ bool SymbolIndex::Remove(std::string symbol_path) {
 std::vector<SymbolIndex::Entry> SymbolIndex::Purge() {
   auto purge_begin = std::remove_if(entries_.begin(), entries_.end(), [](Entry e) {
     std::error_code err;
-    return !std::filesystem::exists(e.symbol_path, err);
+    // If the build_dir exists but symbol_path doesn't, we would assume that the symbol_path is
+    // not generated yet and keep it in the index.
+    if (!e.build_dir.empty())
+      return !std::filesystem::exists(e.build_dir, err);
+    else
+      return !std::filesystem::exists(e.symbol_path, err);
   });
   std::vector<Entry> result(purge_begin, entries_.end());
   entries_.erase(purge_begin, entries_.end());

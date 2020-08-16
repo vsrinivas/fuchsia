@@ -64,13 +64,14 @@ TEST(SymbolIndexTest, Purge) {
   SymbolIndex symbol_index;
 
   ASSERT_TRUE(symbol_index.Add("/"));
-  ASSERT_TRUE(symbol_index.Add("/should/never/exist"));
-  ASSERT_EQ(symbol_index.entries().size(), 2UL);
+  ASSERT_TRUE(symbol_index.Add("/should/never/exist/1", "/"));
+  ASSERT_TRUE(symbol_index.Add("/should/never/exist/2"));
+  ASSERT_EQ(symbol_index.entries().size(), 3UL);
 
   auto purge_result = symbol_index.Purge();
   ASSERT_EQ(purge_result.size(), 1UL) << "Should purged 1 entry";
-  ASSERT_EQ(purge_result[0].symbol_path, "/should/never/exist");
-  ASSERT_EQ(symbol_index.entries().size(), 1UL);
+  ASSERT_EQ(purge_result[0].symbol_path, "/should/never/exist/2");
+  ASSERT_EQ(symbol_index.entries().size(), 2UL);
 }
 
 TEST(SymbolIndexTest, LoadAndSave) {
