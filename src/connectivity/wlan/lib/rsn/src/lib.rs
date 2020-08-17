@@ -27,6 +27,7 @@ use crate::key::exchange::{
 };
 use crate::rsna::esssa::EssSa;
 use crate::rsna::{Role, UpdateSink};
+use fidl_fuchsia_wlan_mlme::SaeFrame;
 use std::sync::{Arc, Mutex};
 use wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe};
 
@@ -54,7 +55,7 @@ impl Supplicant {
     /// WPA personal supplicant which supports 4-Way- and Group-Key Handshakes.
     pub fn new_wpa_personal(
         nonce_rdr: Arc<nonce::NonceReader>,
-        psk: psk::Psk,
+        auth_cfg: auth::Config,
         s_addr: [u8; 6],
         s_protection: ProtectionInfo,
         a_addr: [u8; 6],
@@ -68,7 +69,7 @@ impl Supplicant {
         let esssa = EssSa::new(
             Role::Supplicant,
             negotiated_protection,
-            auth::Config::ComputedPsk(psk),
+            auth_cfg,
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant,
                 s_addr,
@@ -109,6 +110,21 @@ impl Supplicant {
         frame: eapol::Frame<B>,
     ) -> Result<(), anyhow::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
+    }
+
+    pub fn on_sae_handshake_ind(
+        &mut self,
+        update_sink: &mut UpdateSink,
+    ) -> Result<(), anyhow::Error> {
+        self.esssa.on_sae_handshake_ind(update_sink)
+    }
+
+    pub fn on_sae_frame_rx(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        frame: SaeFrame,
+    ) -> Result<(), anyhow::Error> {
+        self.esssa.on_sae_frame_rx(update_sink, frame)
     }
 }
 

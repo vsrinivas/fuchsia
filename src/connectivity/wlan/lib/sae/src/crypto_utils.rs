@@ -7,7 +7,7 @@ use {mundane::hash::Digest, mundane::hmac::HmacSha256};
 // IEEE Std 802.11-2016, 12.7.1.7.2
 // KDF-Hash-Length with Hash set to SHA256.
 #[allow(unused)]
-pub(crate) fn kdf_sha256(k: &[u8], label: &str, context: &[u8], bits: u16) -> Vec<u8> {
+pub fn kdf_sha256(k: &[u8], label: &str, context: &[u8], bits: u16) -> Vec<u8> {
     let iterations: u16 = (bits + 255) / 256;
     let mut result = Vec::with_capacity((iterations * 256 / 8) as usize);
     for i in 1u16..=iterations {

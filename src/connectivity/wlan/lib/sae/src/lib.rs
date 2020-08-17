@@ -12,6 +12,7 @@ mod ecc;
 mod frame;
 mod state;
 
+pub use crypto_utils::kdf_sha256;
 pub use frame::{CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},

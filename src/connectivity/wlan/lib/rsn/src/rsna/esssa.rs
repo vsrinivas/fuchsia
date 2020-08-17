@@ -12,8 +12,9 @@ use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
-use anyhow::{bail, format_err};
+use anyhow::format_err;
 use eapol;
+use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::{error, info};
 use std::collections::HashSet;
 use wlan_statemachine::StateMachine;
@@ -184,20 +185,25 @@ impl EssSa {
         self.reset();
         info!("establishing ESSSA...");
 
-        // PSK allows deriving the PMK without exchanging
-        let pmk = match self.pmksa.as_ref() {
-            Pmksa::Initialized { method } => match method {
-                auth::Method::Psk(psk) => psk.to_vec(),
-                auth::Method::Sae { .. } => bail!("SAE ESSSA not yet supported"),
+        match self.pmksa.as_ref() {
+            Pmksa::Initialized { method } => match method.clone() {
+                // PSK allows deriving the PMK without a handshake.
+                auth::Method::Psk(psk) => {
+                    let psk = psk.to_vec();
+                    self.on_key_confirmed(update_sink, Key::Pmk(psk))
+                }
+                // SAE defers deriving the PMK until after the handshake.
+                auth::Method::Sae { pmk, .. } => match pmk {
+                    Some(key) => {
+                        let pmk = key.pmk.to_vec();
+                        self.on_key_confirmed(update_sink, Key::Pmk(pmk))
+                    }
+                    // Defer key to SAE.
+                    None => Ok(()),
+                },
             },
-            _ => return Err(format_err!("cannot initiate PMK more than once")),
-        };
-        self.on_key_confirmed(update_sink, Key::Pmk(pmk))?;
-
-        // TODO(hahnr): Support 802.1X authentication if STA is Authenticator and authentication
-        // method is not PSK.
-
-        Ok(())
+            _ => Err(format_err!("cannot initiate PMK more than once")),
+        }
     }
 
     pub fn reset(&mut self) {
@@ -299,6 +305,27 @@ impl EssSa {
             _ => {}
         };
         Ok(())
+    }
+
+    pub fn on_sae_handshake_ind(
+        &mut self,
+        update_sink: &mut UpdateSink,
+    ) -> Result<(), anyhow::Error> {
+        let auth_method = match &mut *self.pmksa {
+            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
+        };
+        auth_method.on_sae_handshake_ind(update_sink)
+    }
+
+    pub fn on_sae_frame_rx(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        frame: SaeFrame,
+    ) -> Result<(), anyhow::Error> {
+        let auth_method = match &mut *self.pmksa {
+            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
+        };
+        auth_method.on_sae_frame_rx(update_sink, frame)
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(

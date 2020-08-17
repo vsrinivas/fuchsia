@@ -49,6 +49,32 @@ pub fn wpa2_psk_ccmp_rsne_with_caps(caps: RsnCapabilities) -> Rsne {
     a_rsne
 }
 
+pub fn wpa3_mixed_psk_ccmp_rsne() -> Rsne {
+    Rsne {
+        version: 1,
+        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
+        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
+        akm_suites: vec![make_akm(akm::SAE), make_akm(akm::PSK)],
+        rsn_capabilities: Some(RsnCapabilities(0).with_mgmt_frame_protection_cap(true)),
+        ..Default::default()
+    }
+}
+
+pub fn wpa3_psk_ccmp_rsne() -> Rsne {
+    Rsne {
+        version: 1,
+        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
+        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
+        akm_suites: vec![make_akm(akm::SAE)],
+        rsn_capabilities: Some(
+            RsnCapabilities(0)
+                .with_mgmt_frame_protection_cap(true)
+                .with_mgmt_frame_protection_req(true),
+        ),
+        ..Default::default()
+    }
+}
+
 pub fn make_wpa1_ie() -> WpaIe {
     WpaIe {
         multicast_cipher: make_cipher(cipher::TKIP),

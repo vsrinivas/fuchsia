@@ -22,7 +22,7 @@ use {
         event::Event,
         info::InfoReporter,
         protection::Protection,
-        rsn::get_rsna,
+        rsn::{get_wpa2_rsna, get_wpa3_rsna},
         scan::{DiscoveryScan, JoinScan, ScanScheduler},
         state::{ClientState, ConnectCommand},
         wpa::get_legacy_wpa_association,
@@ -346,6 +346,7 @@ impl super::Station for ClientSme {
                             Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
                                 match get_protection(
                                     &self.context.device_info,
+                                    &self.cfg,
                                     &token.credential,
                                     &best_bss,
                                 ) {
@@ -506,6 +507,7 @@ fn report_connect_finished(
 
 pub fn get_protection(
     device_info: &DeviceInfo,
+    client_config: &ClientConfig,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, CredentialErrorMessage> {
@@ -527,10 +529,21 @@ pub fn get_protection(
                 CredentialErrorMessage(format!("failed to get protection for legacy WPA: {}", e))
             })
         }
+        // If WPA3 is supported, we will only treat Wpa2/Wpa3 transition APs as WPA3.
+        wlan_common::bss::Protection::Wpa3Personal
+        | wlan_common::bss::Protection::Wpa2Wpa3Personal
+            if client_config.wpa3_supported =>
+        {
+            get_wpa3_rsna(device_info, credential, bss).map_err(|e| {
+                CredentialErrorMessage(format!("failed to get protection for WPA3: {}", e))
+            })
+        }
         wlan_common::bss::Protection::Wpa1Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Personal
-        | wlan_common::bss::Protection::Wpa2Wpa3Personal => get_rsna(device_info, credential, bss)
-            .map_err(|e| CredentialErrorMessage(e.to_string())),
+        | wlan_common::bss::Protection::Wpa2Wpa3Personal => {
+            get_wpa2_rsna(device_info, credential, bss)
+                .map_err(|e| CredentialErrorMessage(e.to_string()))
+        }
         wlan_common::bss::Protection::Unknown => {
             Err(CredentialErrorMessage("unknown protection type for targeted SSID".to_string()))
         }
@@ -548,13 +561,14 @@ mod tests {
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use maplit::hashmap;
-    use wlan_common::{assert_variant, bss::Standard, RadioConfig};
+    use wlan_common::{assert_variant, bss::Standard, ie::rsn::akm, RadioConfig};
 
     use super::info::DiscoveryStats;
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
         expect_stream_empty, fake_bss_with_bssid, fake_bss_with_rates,
         fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
+        fake_wpa3_bss_description, fake_wpa3_mixed_bss_description,
     };
 
     use crate::test_utils;
@@ -575,64 +589,105 @@ mod tests {
     #[test]
     fn test_get_protection() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
+        let client_config = Default::default();
 
         // Open network without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
-        let protection = get_protection(&dev_info, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Open));
 
         // Open network with credentials:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_unprotected_bss_description(b"unprotected".to_vec());
-        get_protection(&dev_info, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("unprotected network cannot use password");
 
         // RSN with user entered password:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_protected_bss_description(b"rsn".to_vec());
-        let protection = get_protection(&dev_info, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN with user entered PSK:
         let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
         let bss = fake_protected_bss_description(b"rsn".to_vec());
-        let protection = get_protection(&dev_info, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_protected_bss_description(b"rsn".to_vec());
-        get_protection(&dev_info, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("protected network requires password");
     }
 
     #[test]
     fn test_get_protection_wep() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
+        let client_config = ClientConfig::from_config(SmeConfig::default().with_wep(), false);
 
         // WEP-40 with credentials:
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
         let bss = fake_wep_bss_description(b"wep40".to_vec());
-        let protection = get_protection(&dev_info, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP-104 with credentials:
         let credential = fidl_sme::Credential::Password(b"superinsecure".to_vec());
         let bss = fake_wep_bss_description(b"wep104".to_vec());
-        let protection = get_protection(&dev_info, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_wep_bss_description(b"wep".to_vec());
-        get_protection(&dev_info, &credential, &bss).expect_err("WEP network not supported");
+        get_protection(&dev_info, &client_config, &credential, &bss)
+            .expect_err("WEP network not supported");
 
         // WEP with invalid credentials:
         let credential = fidl_sme::Credential::Password(b"wep".to_vec());
         let bss = fake_wep_bss_description(b"wep".to_vec());
-        get_protection(&dev_info, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss)
             .expect_err("expected error for invalid WEP credentials");
+    }
+
+    #[test]
+    fn test_get_protection_sae() {
+        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
+        let mut client_config = ClientConfig::from_config(SmeConfig::default(), true);
+
+        // WPA3, supported
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_wpa3_bss_description(b"rsn".to_vec());
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
+            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
+        });
+
+        // WPA2/3, supported
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_wpa3_mixed_bss_description(b"rsn".to_vec());
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
+            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
+        });
+
+        client_config.wpa3_supported = false;
+
+        // WPA3, unsupported
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_wpa3_bss_description(b"rsn".to_vec());
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        assert_variant!(protection, Err(_));
+
+        // WPA2/3, WPA3 unsupported, downgrade to WPA2
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss = fake_wpa3_mixed_bss_description(b"rsn".to_vec());
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
+            assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
+        });
     }
 
     #[test]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::rsn::{is_rsn_compatible, is_wpa3_rsn_compatible},
+    super::rsn::{is_wpa2_rsn_compatible, is_wpa3_rsn_compatible},
     crate::{Config, Ssid},
     fidl_fuchsia_wlan_mlme::BssDescription,
     std::{cmp::Ordering, collections::HashSet},
@@ -16,7 +16,7 @@ use {
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ClientConfig {
     cfg: Config,
-    wpa3_supported: bool,
+    pub wpa3_supported: bool,
 }
 
 impl ClientConfig {
@@ -89,7 +89,7 @@ impl ClientConfig {
             | Protection::Wpa2Personal
             | Protection::Wpa2Wpa3Personal => match bss.rsne.as_ref() {
                 Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
-                    Ok((_, a_rsne)) => is_rsn_compatible(&a_rsne),
+                    Ok((_, a_rsne)) => is_wpa2_rsn_compatible(&a_rsne),
                     _ => false,
                 },
                 _ => false,

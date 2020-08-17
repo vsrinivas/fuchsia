@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::auth;
 use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::exchange::{compute_mic, compute_mic_from_buf};
@@ -65,7 +66,7 @@ pub fn get_supplicant() -> Supplicant {
         .expect("error computing PSK");
     Supplicant::new_wpa_personal(
         nonce_rdr,
-        psk,
+        auth::Config::ComputedPsk(psk),
         test_util::S_ADDR,
         ProtectionInfo::Rsne(test_util::get_s_rsne()),
         test_util::A_ADDR,

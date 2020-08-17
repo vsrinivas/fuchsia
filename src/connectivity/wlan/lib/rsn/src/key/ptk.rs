@@ -6,7 +6,11 @@ use crate::crypto_utils::prf;
 use crate::Error;
 use anyhow::ensure;
 use std::cmp::{max, min};
-use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
+use wlan_common::ie::rsn::{
+    akm::{self, Akm},
+    cipher::Cipher,
+};
+use wlan_sae::kdf_sha256;
 
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
 /// KCK, and TK, used for EAPOL frame protection, integrity check and unicast frame protection
@@ -60,8 +64,13 @@ impl Ptk {
         data[12..44].copy_from_slice(&min(anonce, snonce)[..]);
         data[44..].copy_from_slice(&max(anonce, snonce)[..]);
 
-        // Use PRF to derive the PTK from the PMK while grants access to the KEK, KCK and TK.
-        let ptk_bytes = prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?;
+        // IEEE 802.11-2016, 12.7.1.2
+        // Derive the PTK from the PMK, providing access to the KEK, KCK and TK.
+        let ptk_bytes = match akm.suite_type {
+            // IEEE 802.11-2016 does not specify this PRF for SAE, but in practice it is used.
+            akm::SAE => kdf_sha256(pmk, "Pairwise key expansion", &data, prf_bits as u16),
+            _ => prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?,
+        };
         let ptk = Ptk {
             ptk: ptk_bytes,
             kck_len: (kck_bits / 8) as usize,

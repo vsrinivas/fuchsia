@@ -63,7 +63,8 @@ impl NegotiatedProtection {
     }
 
     pub fn keywrap_algorithm(&self) -> Result<Box<dyn keywrap::Algorithm>, Error> {
-        keywrap_algorithm(self.key_descriptor_version()).ok_or(Error::UnknownKeywrapAlgorithm)
+        keywrap_algorithm(self.key_descriptor_version(), &self.akm)
+            .ok_or(Error::UnknownKeywrapAlgorithm)
     }
 
     /// Validates that this RSNE contains only one of each cipher type and one AKM, and produces

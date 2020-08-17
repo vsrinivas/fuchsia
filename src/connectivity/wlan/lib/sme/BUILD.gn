@@ -21,6 +21,7 @@ rustc_library("wlan-sme") {
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
+    "//src/connectivity/wlan/lib/sae:wlan-sae",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//src/connectivity/wlan/lib/wep_deprecated",
     "//src/lib/diagnostics/inspect/contrib/rust",

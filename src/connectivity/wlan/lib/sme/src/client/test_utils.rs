@@ -97,6 +97,16 @@ pub fn fake_protected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
 }
 
+pub fn fake_wpa3_mixed_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
+    let a_rsne = test_utils::wpa3_mixed_psk_ccmp_rsne();
+    fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
+}
+
+pub fn fake_wpa3_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
+    let a_rsne = test_utils::wpa3_psk_ccmp_rsne();
+    fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
+}
+
 pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {
     let bss = fake_bss_description(vec![], None);
     fidl_mlme::BssDescription {
@@ -289,6 +299,17 @@ impl Supplicant for MockSupplicant {
                 update_sink.extend(updates.drain(..));
             })
             .map_err(|e| format_err!("{:?}", e))
+    }
+
+    fn on_sae_handshake_ind(&mut self, _update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+        unimplemented!()
+    }
+    fn on_sae_frame_rx(
+        &mut self,
+        _update_sink: &mut UpdateSink,
+        _frame: fidl_mlme::SaeFrame,
+    ) -> Result<(), anyhow::Error> {
+        unimplemented!()
     }
 }
 

@@ -22,6 +22,7 @@ use {
         timer::EventId,
         MlmeRequest,
     },
+    anyhow::bail,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent},
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
@@ -34,10 +35,14 @@ use {
         bss::BssDescriptionExt,
         channel::Channel,
         format::MacFmt,
-        ie::{self, rsn::cipher},
+        ie::{
+            self,
+            rsn::{akm, cipher},
+        },
         mac::Bssid,
         RadioConfig,
     },
+    wlan_rsn::rsna::{AuthStatus, SecAssocUpdate, UpdateSink},
     wlan_statemachine::*,
     zerocopy::AsBytes,
 };
@@ -166,10 +171,17 @@ impl Joining {
                         ),
                     ));
                 } else {
+                    let auth_type = match &self.cmd.protection {
+                        Protection::Rsna(rsna) => match rsna.negotiated_protection.akm.suite_type {
+                            akm::SAE => fidl_mlme::AuthenticationTypes::Sae,
+                            _ => fidl_mlme::AuthenticationTypes::OpenSystem,
+                        },
+                        _ => fidl_mlme::AuthenticationTypes::OpenSystem,
+                    };
                     context.mlme_sink.send(MlmeRequest::Authenticate(
                         fidl_mlme::AuthenticateRequest {
                             peer_sta_address: self.cmd.bss.bssid.clone(),
-                            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                            auth_type,
                             auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
                         },
                     ));
@@ -262,6 +274,41 @@ impl Authenticating {
             locally_initiated: ind.locally_initiated,
         });
         Idle { cfg: self.cfg }
+    }
+
+    // Sae management functions
+
+    fn on_sae_handshake_ind(
+        &mut self,
+        ind: fidl_mlme::SaeHandshakeIndication,
+        context: &mut Context,
+    ) -> Result<(), anyhow::Error> {
+        let supplicant = match &mut self.cmd.protection {
+            Protection::Rsna(rsna) => &mut rsna.supplicant,
+            _ => bail!("Unexpected SAE handshake indication"),
+        };
+
+        let mut updates = UpdateSink::default();
+        supplicant.on_sae_handshake_ind(&mut updates)?;
+        process_sae_updates(updates, ind.peer_sta_address, context);
+        Ok(())
+    }
+
+    fn on_sae_frame_rx(
+        &mut self,
+        frame: fidl_mlme::SaeFrame,
+        context: &mut Context,
+    ) -> Result<(), anyhow::Error> {
+        let peer_sta_address = frame.peer_sta_address.clone();
+        let supplicant = match &mut self.cmd.protection {
+            Protection::Rsna(rsna) => &mut rsna.supplicant,
+            _ => bail!("Unexpected SAE frame recieved"),
+        };
+
+        let mut updates = UpdateSink::default();
+        supplicant.on_sae_frame_rx(&mut updates, frame)?;
+        process_sae_updates(updates, peer_sta_address, context);
+        Ok(())
     }
 }
 
@@ -583,6 +630,20 @@ impl ClientState {
                         Err(idle) => transition.to(idle).into(),
                     }
                 }
+                MlmeEvent::OnSaeHandshakeInd { ind } => {
+                    let (transition, mut authenticating) = state.release_data();
+                    if let Err(e) = authenticating.on_sae_handshake_ind(ind, context) {
+                        error!("Failed to process SaeHandshakeInd: {:?}", e);
+                    }
+                    transition.to(authenticating).into()
+                }
+                MlmeEvent::OnSaeFrameRx { frame } => {
+                    let (transition, mut authenticating) = state.release_data();
+                    if let Err(e) = authenticating.on_sae_frame_rx(frame, context) {
+                        error!("Failed to process SaeFrameRx: {:?}", e);
+                    }
+                    transition.to(authenticating).into()
+                }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, authenticating) = state.release_data();
                     let idle =
@@ -832,6 +893,27 @@ impl ClientState {
     }
 }
 
+fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: &mut Context) {
+    for update in updates {
+        match update {
+            SecAssocUpdate::TxSaeFrame(frame) => {
+                context.mlme_sink.send(MlmeRequest::SaeFrameTx(frame));
+            }
+            SecAssocUpdate::SaeAuthStatus(status) => context.mlme_sink.send(
+                MlmeRequest::SaeHandshakeResp(fidl_mlme::SaeHandshakeResponse {
+                    peer_sta_address,
+                    result_code: match status {
+                        AuthStatus::Success => fidl_mlme::AuthenticateResultCodes::Success,
+                        AuthStatus::Rejected => fidl_mlme::AuthenticateResultCodes::Refused,
+                        AuthStatus::InternalError => fidl_mlme::AuthenticateResultCodes::Refused,
+                    },
+                }),
+            ),
+            _ => (),
+        }
+    }
+}
+
 fn log_state_change(
     start_state: &str,
     new_state: &ClientState,
@@ -974,11 +1056,11 @@ mod tests {
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities, RadioConfig};
+    use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
-        key::exchange::Key,
-        rsna::{SecAssocStatus, SecAssocUpdate},
+        rsna::{SecAssocUpdate, UpdateSink},
+        NegotiatedProtection,
     };
-    use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,

@@ -5,6 +5,7 @@
 mod aes;
 mod rc4;
 
+use wlan_common::ie::rsn::akm;
 use {aes::NistAes, anyhow::Error, rc4::Rc4};
 
 /// An arbitrary algorithm used to encrypt the key data field of an EAPoL keyframe.
@@ -17,10 +18,14 @@ pub trait Algorithm {
 }
 
 /// IEEE Std 802.11-2016, 12.7.2 b.1)
-pub fn keywrap_algorithm(key_descriptor_version: u16) -> Option<Box<dyn Algorithm>> {
+pub fn keywrap_algorithm(
+    key_descriptor_version: u16,
+    akm: &akm::Akm,
+) -> Option<Box<dyn Algorithm>> {
     match key_descriptor_version {
         1 => Some(Box::new(Rc4)),
         2 => Some(Box::new(NistAes)),
+        0 if akm.suite_type == akm::SAE => Some(Box::new(NistAes)),
         _ => None,
     }
 }
