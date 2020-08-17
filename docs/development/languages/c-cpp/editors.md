@@ -75,8 +75,8 @@ You may also benefit from enabling background indexing and clang-tidy using the 
 
 ```
 "clangd.arguments": [
-    "-clang-tidy",
-    "-background-index"
+    "--clang-tidy",
+    "--background-index"
 ]
 ```
 
