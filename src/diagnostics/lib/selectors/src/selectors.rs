@@ -36,7 +36,10 @@ pub static GLOB_REGEX_EQUIVALENT: &str = ".+";
 
 // Wildcards will match anything except for an unescaped slash, since their match
 // only extends to a single moniker "node".
-pub static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])+"#;
+//
+// It is OK for a wildcard to match nothing when appearing as a pattern match.
+// For example, "hello*" matches both "hello world" and "hello".
+pub static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])*"#;
 
 // Extract moniker from component path.
 // For example, for path "/hub/c/archivist.cmx" this function will return "archivist.cmx".
@@ -1190,24 +1193,33 @@ mod tests {
             (r#"ab*/echo.cmx:*:*"#, vec!["abcde", "echo.cmx"]),
             (r#"*/ab*/echo.cmx:*:*"#, vec!["123", "abcde", "echo.cmx"]),
             (r#"a\/\*/echo.cmx:*:*"#, vec!["a/*", "echo.cmx"]),
+            (r#"echo.cmx*:*:*"#, vec!["echo.cmx"]),
+            (r#"a/echo*.cmx:*:*"#, vec!["a", "echo1.cmx"]),
+            (r#"a/echo*.cmx:*:*"#, vec!["a", "echo.cmx"]),
+            (r#"ab*/echo.cmx:*:*"#, vec!["ab", "echo.cmx"]),
         ];
 
         for (selector, moniker) in passing_test_cases {
             let parsed_selector = Arc::new(parse_selector(selector).unwrap());
-            assert!(match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap());
+            assert!(
+                match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
+                format!("Selector {:?} failed to match {:?}", selector, moniker)
+            );
         }
 
         // Note: We provide the full selector syntax but this test is only validating it
         // against the provided moniker
         let failing_test_cases = vec![
-            (r#"echo.cmx*:*:*"#, vec!["echo.cmx"]),
+            (r#"*:*:*"#, vec!["a", "echo.cmx"]),
             (r#"*/echo.cmx:*:*"#, vec!["123", "abc", "echo.cmx"]),
-            (r#"ab*/echo.cmx:*:*"#, vec!["ab", "echo.cmx"]),
         ];
 
         for (selector, moniker) in failing_test_cases {
             let parsed_selector = Arc::new(parse_selector(selector).unwrap());
-            assert!(!match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap());
+            assert!(
+                !match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
+                format!("Selector {:?} matched {:?}, but was expected to fail", selector, moniker)
+            );
         }
     }
 
