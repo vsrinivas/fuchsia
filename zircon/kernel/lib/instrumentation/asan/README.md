@@ -36,6 +36,10 @@ memory in the physmap as "unpoisoned", allowing any data accesses to the region.
 Kernel ASAN is similar to userspace ASAN but has unique bootstrap and memory
 allocation requirements.
 
+Note that any function that performs memory accesses outside of the kernel
+virtual address space has to be annotated with NO_ASAN, otherwise those
+accesses will result in a system crash.
+
 # Implementation
 
 ## Early Boot Setup

@@ -29,6 +29,7 @@
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
+#include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
 #include <lib/zbi/zbi-cpp.h>
 #include <mexec.h>
@@ -336,7 +337,8 @@ static fbl::RefPtr<VmAspace> efi_aspace;
 // to avoid excessive pressure on efi variable storage
 #define MAX_EFI_CRASHLOG_LEN 4096
 
-static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
+// This function accesses the efi_aspace which isn't mapped in the ASAN shadow.
+NO_ASAN static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
   if (!efi_aspace || (log == NULL)) {
     return;
   }
