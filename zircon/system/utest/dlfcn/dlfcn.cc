@@ -4,8 +4,10 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/io.h>
-#include <stdatomic.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -14,9 +16,9 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <ldmsg/ldmsg.h>
-#include <loader-service/loader-service.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/loader_service/loader_service.h"
 
 #if __has_feature(address_sanitizer)
 #if __has_feature(undefined_behavior_sanitizer)
@@ -87,45 +89,38 @@ TEST(DlfcnTests, dlopen_vmo_test) {
 #define TEST_NAME "foobar"
 #define TEST_ACTUAL_NAME LIBPREFIX TEST_SONAME
 
-static atomic_bool my_loader_service_ok = false;
-static atomic_int my_loader_service_calls = 0;
-
-static zx_status_t my_load_object(void* ctx, const char* name, zx_handle_t* out) {
-  ++my_loader_service_calls;
-
-  int cmp = strcmp(name, TEST_NAME);
-  EXPECT_EQ(cmp, 0, "called with unexpected name");
-  if (cmp != 0) {
-    printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
-    return ZX_HANDLE_INVALID;
+class TestLoaderService : public loader::LoaderServiceBase {
+ public:
+  static std::shared_ptr<TestLoaderService> Create(async_dispatcher_t* dispatcher) {
+    // Can't use make_shared because constructor is private
+    return std::shared_ptr<TestLoaderService>(new TestLoaderService(dispatcher));
   }
 
-  zx_handle_t vmo = ZX_HANDLE_INVALID;
-  zx_status_t status = load_vmo((char*)ctx, &vmo);
-  EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_NE(vmo, ZX_HANDLE_INVALID, "load_vmo");
-  if (status < 0) {
-    return status;
+  int load_object_calls() { return load_object_calls_; }
+  int load_object_success() { return load_object_success_; }
+
+ private:
+  TestLoaderService(async_dispatcher_t* dispatcher) : LoaderServiceBase(dispatcher, "dlfcn_test") {}
+
+  virtual zx::status<zx::vmo> LoadObjectImpl(std::string name) override {
+    ++load_object_calls_;
+
+    if (name != TEST_NAME) {
+      printf("loader saw \"%s\", expected \"%s\"", name.c_str(), TEST_NAME);
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+
+    zx::vmo vmo;
+    zx_status_t status = load_vmo(TEST_ACTUAL_NAME, vmo.reset_and_get_address());
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    ++load_object_success_;
+    return zx::ok(std::move(vmo));
   }
 
-  my_loader_service_ok = true;
-  *out = vmo;
-  return ZX_OK;
-}
-
-static zx_status_t my_load_abspath(void* ctx, const char* name, zx_handle_t* vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t my_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
-  zx_handle_close(vmo);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static loader_service_ops_t my_loader_ops = {
-    .load_object = my_load_object,
-    .load_abspath = my_load_abspath,
-    .publish_data_sink = my_publish_data_sink,
+  int load_object_calls_ = 0;
+  int load_object_success_ = 0;
 };
 
 static void show_dlerror(void) { printf("dlerror: %s\n", dlerror()); }
@@ -138,16 +133,14 @@ TEST(DlfcnTests, loader_service_test) {
     show_dlerror();
 
   // Spin up our test service.
-  loader_service_t* svc = NULL;
-  zx_status_t status = loader_service_create(NULL, &my_loader_ops, (void*)TEST_ACTUAL_NAME, &svc);
-  EXPECT_EQ(status, ZX_OK, "loader_service_create");
-
-  zx_handle_t my_service = ZX_HANDLE_INVALID;
-  status = loader_service_connect(svc, &my_service);
-  EXPECT_EQ(status, ZX_OK, "loader_service_connect");
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+  auto loader = TestLoaderService::Create(loop.dispatcher());
+  auto loader_conn = loader->Connect();
+  ASSERT_OK(loader_conn.status_value());
 
   // Install the service.
-  zx_handle_t old = dl_set_loader_service(my_service);
+  zx_handle_t old = dl_set_loader_service(loader_conn.value().release());
   EXPECT_NE(old, ZX_HANDLE_INVALID, "dl_set_loader_service");
 
   // Now to a lookup that should go through our service.  It
@@ -155,13 +148,12 @@ TEST(DlfcnTests, loader_service_test) {
   // SONAME matches an existing library, and just return it.
   void* via_service = dlopen(TEST_NAME, RTLD_LOCAL);
 
-  EXPECT_EQ((int)my_loader_service_calls, 1, "loader-service not called exactly once");
-
   EXPECT_NOT_NULL(via_service, "dlopen via service");
-  if (via_service == NULL)
+  if (via_service == NULL) {
     show_dlerror();
-
-  EXPECT_TRUE(my_loader_service_ok, "loader service thread not happy");
+  }
+  EXPECT_EQ(loader->load_object_calls(), 1, "loader-service not called exactly once");
+  EXPECT_EQ(loader->load_object_success(), 1, "loader service call didn't succeed");
 
   // It should not just have succeeded, but gotten the very
   // same handle as the by-name lookup.
@@ -179,11 +171,7 @@ TEST(DlfcnTests, loader_service_test) {
 
   // Put things back to how they were.
   zx_handle_t old2 = dl_set_loader_service(old);
-  EXPECT_EQ(old2, my_service, "unexpected previous service handle");
   zx_handle_close(old2);
-
-  // Clean up.
-  EXPECT_EQ(loader_service_release(svc), ZX_OK, "loader_service_release");
 }
 
 TEST(DlfcnTests, clone_test) {
@@ -199,7 +187,7 @@ void test_global_function(void) {}
 
 TEST(DlfcnTests, dladdr_unexported_test) {
   Dl_info info;
-  ASSERT_NE(dladdr(&test_global_function, &info), 0, "dladdr failed");
+  ASSERT_NE(dladdr((void*)&test_global_function, &info), 0, "dladdr failed");
 
   // This symbol is not exported to .dynsym, so it won't be found.
   EXPECT_NULL(info.dli_sname, "unexpected symbol name");
@@ -215,7 +203,7 @@ TEST(DlfcnTests, dso_no_note_test) {
   void* sym = dlsym(obj, "dummy");
   EXPECT_NOT_NULL(sym, "%s", dlerror());
 
-  (*(void(*)(void))(uintptr_t)(sym))();
+  (*(void (*)(void))(uintptr_t)(sym))();
 
   EXPECT_EQ(dlclose(obj), 0, "%s", dlerror());
 }

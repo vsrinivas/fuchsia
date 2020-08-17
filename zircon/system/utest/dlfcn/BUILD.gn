@@ -2,31 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/test.gni")
 
 test("dlfcn") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "dlfcn.c" ]
+  sources = [ "dlfcn.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/loader_service",
     "//zircon/public/lib/async",
     "//zircon/public/lib/elfload",
-    "//zircon/public/lib/ldmsg",
+    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/loader-service",
   ]
 
   data_deps = [ ":test-dso-no-note" ]
