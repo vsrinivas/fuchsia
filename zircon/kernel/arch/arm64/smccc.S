@@ -26,6 +26,10 @@
 // the frame pointer (x29) is also stored on the stack.  Returns x0-x3, x6.
 // To preserve the kernel's invariants beyond APPCS64, the percpu_ptr and
 // shadow_call_sp registers are also saved and restored.
+//
+// WARNING: Preemption must be disabled by the caller to prevent the thread
+// from migrating in between saving and restoring percpu_ptr/shadow_call_sp.
+
 
 .macro smccc_call insn
     push_regs percpu_ptr, shadow_call_sp
@@ -40,14 +44,14 @@
     SPECULATION_POSTFENCE
 .endm
 
-// arm_smccc_result_t arm_smccc_smc(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,
-//                                  uint64_t x4, uint64_t x5, uint64_t x6, uint32_t w7);
-FUNCTION(arm_smccc_smc)
+// arm_smccc_result_t arm_smccc_smc_internal(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,
+//                                           uint64_t x4, uint64_t x5, uint64_t x6, uint32_t w7);
+FUNCTION(arm_smccc_smc_internal)
     smccc_call smc
-END_FUNCTION(arm_smccc_smc)
+END_FUNCTION(arm_smccc_smc_internal)
 
-// arm_smccc_result_t arm_smccc_hvc(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,
-//                                  uint64_t x4, uint64_t x5, uint64_t x6, uint32_t w7);
-FUNCTION(arm_smccc_hvc)
+// arm_smccc_result_t arm_smccc_hvc_internal(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,
+//                                           uint64_t x4, uint64_t x5, uint64_t x6, uint32_t w7);
+FUNCTION(arm_smccc_hvc_internal)
     smccc_call hvc
-END_FUNCTION(arm_smccc_hvc)
+END_FUNCTION(arm_smccc_hvc_internal)

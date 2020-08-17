@@ -170,12 +170,12 @@ mark_lr_sp_inaccessible
 // All normal C code in the kernel expects the invariants that the fixed
 // registers assigned to the percpu_ptr and the shadow-call-stack pointer have
 // the correct values for the current CPU and kernel thread.  When an exception
-// happens in the kernel, these are already in place and don't need to be
-// reloaded.  (In fact, it would be disastrous to reload the shadow-call-stack
-// pointer because the correct value to reflect the interrupted thread's kernel
-// call stack exists only in the register!)  But when an exception happens in a
-// lower EL (i.e. user mode), these registers must be reloaded from the struct
-// arch_thread accessible via TPIDR_EL1 before reaching any C functions.
+// happens in the kernel, only percpu_ptr needs to be reloaded. (In fact, it
+// would be disastrous to reload the shadow-call-stack pointer because the
+// correct value to reflect the interrupted thread's kernel call stack exists
+// only in the register!) But when an exception happens in a lower EL (i.e. user
+// mode), these registers must be reloaded from the struct arch_thread
+// accessible via TPIDR_EL1 before reaching any C functions.
 .macro restore_fixed_regs temp
     mrs \temp, tpidr_el1
 #if __has_feature(shadow_call_stack)
@@ -186,6 +186,14 @@ mark_lr_sp_inaccessible
 #else
     ldr percpu_ptr, [\temp, #CURRENT_PERCPU_PTR_OFFSET]
 #endif
+.endm
+
+// EL1-to-EL1 exceptions require reloading percpu_ptr, as SMCCC does not
+// preserve this fixed register and an exception may pend during an SMC/HVC
+// call, leaving the register value unpredictable as the handler is entered.
+.macro restore_percpu_ptr temp
+    mrs \temp, tpidr_el1
+    ldr percpu_ptr, [\temp, #CURRENT_PERCPU_PTR_OFFSET]
 .endm
 
 // The shadow-call-stack pointer (x18) is saved/restored in struct arch_thread
@@ -220,6 +228,8 @@ mark_lr_sp_inaccessible
     mov x1, #\exception_flags
 .if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
     restore_fixed_regs x9
+.else
+    restore_percpu_ptr x9
 .endif
     bl  arm64_irq
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
@@ -240,6 +250,8 @@ mark_lr_sp_inaccessible
     lsr x11, x9, #26              // shift esr right 26 bits to get ec
     cmp x11, #0x15                // check for 64-bit syscall
     beq arm64_syscall_dispatcher  // and jump to syscall handler
+.else
+    restore_percpu_ptr x11
 .endif
     // Prepare the default sync_exception args
     mov w2, w9
@@ -291,6 +303,7 @@ END_FUNCTION(arm64_el1_irq_current_el_SPx)
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SPx)
     start_isr_func_cfi
     regsave
+    restore_percpu_ptr x9
     mov x0, sp
     bl  platform_fiq
     b  arm64_exc_shared_restore
