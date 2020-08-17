@@ -31,3 +31,11 @@ use_vbmeta = true
 avb_key = "//zircon/third_party/tools/android/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =
     "//zircon/third_party/tools/android/avb/test/data/atx_metadata.bin"
+
+zircon_a_partition = "zircon-a"
+zircon_b_partition = "zircon-b"
+zircon_r_partition = "zircon-r"
+vbmeta_a_partition = "vbmeta_a"
+vbmeta_b_partition = "vbmeta_b"
+vbmeta_r_partition = "vbmeta_r"
+active_partition = "a"

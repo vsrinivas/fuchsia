@@ -23,7 +23,7 @@ usage() {
 
 pave=false
 partition=$ZIRCONA
-device=
+device=$(get-device-name)
 while [[ $# -ge 1 ]]; do
   case "$1" in
   -h|--help)
@@ -45,6 +45,39 @@ while [[ $# -ge 1 ]]; do
   shift
 done
 
+# Process devices in gigaboot.
+gb_device_ip=
+num_gb_devices=0
+while read line; do
+  # Split line into IP and nodename.
+  elements=($line)
+  if [[ ! -z "${device}" ]]; then
+    if [[ "${elements[1]}" == "${device}" ]]; then
+      gb_device_ip=${elements[0]}
+      num_gb_devices=1
+      break
+    fi
+  else
+    let num_gb_devices=$num_gb_devices+1
+    gb_device_ip=${elements[0]}
+  fi
+done < <(fx-device-finder list -netboot -ipv6 -full)
+
+if [[ $num_gb_devices > 1 ]]; then
+  echo "More than one device detected, please provide -s <device>"
+  usage
+  exit 1
+fi
+
+if [[ ! -z "${gb_device_ip}" ]]; then
+  "${FUCHSIA_BUILD_DIR}/flash.sh" "-s" "udp:${gb_device_ip}"
+  if "${pave}"; then
+    fx-command-exec pave -1
+  fi
+  exit
+fi
+
+# Process traditional fastboot over USB.
 num_devices=$(fastboot devices | wc -l)
 if [[ "${num_devices}" -lt 1 ]]; then
   echo "Please place device into fastboot mode!"
