@@ -4,7 +4,10 @@
 
 target_cpu = "x64"
 
-board_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+board_bootfs_labels = [
+  "//boards/kernel_cmdline:toulouse",
+  "//src/security/policy/zxcrypt:null",
+]
 
 board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
 
@@ -25,9 +28,7 @@ board_package_labels = [
 # device.
 # In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
 # to the left-most ethernet port.
-_toulouse_cmdline_args = [
+board_zedboot_cmdline_args = [
   "kernel.serial=legacy",
   "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
 ]
-board_kernel_cmdline_args = _toulouse_cmdline_args
-board_zedboot_cmdline_args = _toulouse_cmdline_args

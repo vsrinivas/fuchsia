@@ -13,11 +13,6 @@ declare_args() {
   # A list of binary labels to include in the ZBI.
   board_bootfs_labels = []
 
-  # List of kernel command line this board to bake into the boot image that are
-  # required by this board. See also kernel_cmdline_args in
-  # //build/images/BUILD.gn
-  board_kernel_cmdline_args = []
-
   # List of kernel command line arguments to bake into the zedboot image that are
   # required by this board. See also zedboot_cmdline_args in
   # //build/images/zedboot/BUILD.gn

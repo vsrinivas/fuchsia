@@ -19,40 +19,4 @@
 
 import("x64.gni")
 
-board_kernel_cmdline_args = [
-  # Disable Intel Turbo Boost. Turbo Boost provides a significant speed-up to
-  # many workloads, but — because CPU frequencies vary based on previous work,
-  # work in other cores, system temperature, etc — makes performance of systems
-  # less predictable. We prefer stability in our performance comparison
-  # benchmarks.
-  "kernel.x86.turbo=false",
-
-  # Set the Intel HWP performance profile to be "stable", trying to keep the
-  # CPU clock rate stable. With turbo boost disabled, this has only a small
-  # effect, but helps ensure that wake ups from idle are fixed.
-  "kernel.x86.hwp_policy=stable-performance",
-
-  # Disable hyper-threading. Hyper-threading reduces predictability of
-  # benchmarks, because the performance of a thread is significantly affected
-  # by other threads on the core.
-  "kernel.smp.ht=false",
-
-  # Disable spectre mitigations. Spectre mitigations have significant
-  # performance impact, but are currently only carried out on a subset of the
-  # NUC fleet. This means that different devices have significantly different
-  # performance characteristics, meaning that benchmark results vary
-  # significantly based on the device running it.
-  #
-  # TODO(fxb/33161): Ideally, we should load microcode during Zircon boot,
-  # which should bring all devices to the same patch level, removing the
-  # performance differences when spectre mitigations are in place.
-  "kernel.x86.disable_spec_mitigations=true",
-
-  # Disable page scanning in all its forms. Page scanning is intended to
-  # provide a memory benefit to final systems, but the operation of the scanner
-  # and its unpredictable de-duplication or eviction  of memory in use by
-  # benchmarks could cause noticable variation.
-  "kernel.page-scanner.start-at-boot=false",
-  "kernel.page-scanner.zero-page-scans-per-second=0",
-  "kernel.page-scanner.enable-user-pager-eviction=false",
-]
+board_bootfs_labels += [ "//boards/kernel_cmdline:x64-reduced-perf-variation" ]

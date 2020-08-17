@@ -5,5 +5,5 @@
 import("//boards/arm64.gni")
 
 # serial console
+board_bootfs_labels += [ "//boards/kernel_cmdline:vs680" ]
 board_zedboot_cmdline_args = [ "kernel.bypass-debuglog=true" ]
-board_kernel_cmdline_args = [ "kernel.bypass-debuglog=true" ]
