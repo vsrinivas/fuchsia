@@ -264,6 +264,9 @@ TEST(ZxTestCase, DurationConstruction) {
   ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
   ASSERT_EQ(zx::duration(-1).get(), -1);
   ASSERT_EQ(zx::duration(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
+#if __cplusplus >= 201703L
+  ASSERT_EQ(zx::duration(timespec{123, 456}).get(), ZX_SEC(123) + ZX_NSEC(456));
+#endif
 }
 
 TEST(ZxTestCase, DurationConversions) {
@@ -282,6 +285,12 @@ TEST(ZxTestCase, DurationConversions) {
   ASSERT_EQ(zx::min(10).to_mins(), 10);
   ASSERT_EQ(zx::hour(10).get(), ZX_HOUR(10));
   ASSERT_EQ(zx::hour(10).to_hours(), 10);
+
+#if __cplusplus >= 201703L
+  const timespec ts = zx::duration(timespec{123, 456}).to_timespec();
+  ASSERT_EQ(ts.tv_sec, 123);
+  ASSERT_EQ(ts.tv_nsec, 456);
+#endif
 
   ASSERT_EQ((zx::time() + zx::usec(19)).get(), ZX_USEC(19));
   ASSERT_EQ((zx::usec(19) + zx::time()).get(), ZX_USEC(19));

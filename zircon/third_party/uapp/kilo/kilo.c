@@ -57,7 +57,10 @@
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 
-static time_t time(void* arg) {
+time_t time(time_t *t) {
+    if (t) {
+        *t = 0;
+    }
     return 0;
 }
 

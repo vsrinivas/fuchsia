@@ -9,16 +9,20 @@
 
 #include <stddef.h>
 
+// <zircon/time.h> uses these when __has_include(<time.h>).
+typedef long int time_t;
+struct timespec {
+  time_t tv_sec;
+  long int tv_nsec;
+};
+
 // The kernel doesn't want this file but some libc++ headers we need
 // wind up including it and they need these declarations.
 
 #ifdef __cplusplus
 
-using time_t = long int;
 using clock_t = long int;
 struct tm {};
-struct timespec {};
-
 char* asctime(tm*) noexcept;
 clock_t clock() noexcept;
 char* ctime(const time_t*) noexcept;

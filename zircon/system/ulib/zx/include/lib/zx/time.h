@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
+#include <ctime>
 #include <limits>
 
 namespace zx {
@@ -19,6 +20,11 @@ class duration final {
   constexpr duration() = default;
 
   explicit constexpr duration(zx_duration_t value) : value_(value) {}
+
+#if __cplusplus >= 201703L
+  explicit constexpr duration(std::timespec ts)
+      : value_(zx_time_add_duration(ZX_SEC(ts.tv_sec), ZX_NSEC(ts.tv_nsec))) {}
+#endif
 
   static constexpr duration infinite() { return duration(ZX_TIME_INFINITE); }
 
@@ -89,6 +95,10 @@ class duration final {
   constexpr int64_t to_mins() const { return value_ / ZX_MIN(1); }
 
   constexpr int64_t to_hours() const { return value_ / ZX_HOUR(1); }
+
+#if __cplusplus >= 201703L
+  constexpr std::timespec to_timespec() const { return zx_timespec_from_duration(value_); }
+#endif
 
  private:
   zx_duration_t value_ = 0;

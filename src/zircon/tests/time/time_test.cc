@@ -125,6 +125,8 @@ TEST(TimeTest, DurationFrom) {
   EXPECT_EQ(zx_duration_from_min(153722868), ZX_TIME_INFINITE);
   EXPECT_EQ(zx_duration_from_hour(2562047), 9223369200000000000);
   EXPECT_EQ(zx_duration_from_hour(2562048), ZX_TIME_INFINITE);
+  EXPECT_EQ(zx_duration_from_timespec({9223372036, 1}), 9223372036000000001);
+  EXPECT_EQ(zx_duration_from_timespec({9223372036, 900000000}), ZX_TIME_INFINITE);
 
   // underflow saturates to ZX_TIME_INFINITE_PAST
   EXPECT_EQ(zx_duration_from_nsec(INT64_MIN), ZX_TIME_INFINITE_PAST);
@@ -138,6 +140,8 @@ TEST(TimeTest, DurationFrom) {
   EXPECT_EQ(zx_duration_from_min(-153722868), ZX_TIME_INFINITE_PAST);
   EXPECT_EQ(zx_duration_from_hour(-2562047), -9223369200000000000);
   EXPECT_EQ(zx_duration_from_hour(-2562048), ZX_TIME_INFINITE_PAST);
+  EXPECT_EQ(zx_duration_from_timespec({9223372036, 1}), 9223372036000000001);
+  EXPECT_EQ(zx_duration_from_timespec({-9223372036, -900000000}), ZX_TIME_INFINITE_PAST);
 
   // Verify that when the argument is a constexpr the function can evaluated at compile time.
   static_assert(zx_duration_from_nsec(1) == 1);
@@ -146,6 +150,7 @@ TEST(TimeTest, DurationFrom) {
   static_assert(zx_duration_from_sec(1) == 1000000000);
   static_assert(zx_duration_from_min(1) == 60000000000);
   static_assert(zx_duration_from_hour(1) == 3600000000000);
+  static_assert(zx_duration_from_timespec({123, 456}) == 123000000456);
 }
 
 // See that we can use the conversion macros as constexpr initializers.
