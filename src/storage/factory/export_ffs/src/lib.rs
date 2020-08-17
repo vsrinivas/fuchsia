@@ -216,7 +216,8 @@ impl DirectoryEntry {
         //     data_off: u32,
 
         //     /// Pathname of the file, a UTF-8 string. It must not begin with a '/', but it may
-        //     /// contain '/' separators. Name has a trailing \0 and is 4-byte aligned.
+        //     /// contain '/' separators. The string is not null-terminated. The end of the struct
+        //     /// must be padded to align on a 4 byte boundary.
         //     name: [u8; self.name_len]
         // }
 
@@ -289,11 +290,7 @@ async fn get_entries(dir: &fio::DirectoryProxy) -> Result<Vec<DirectoryEntry>, E
             bail!("failed to get attributes of file {}", ent.name);
         }
 
-        // the name of the entry needs to be null-terminated
-        let mut name = ent.name.as_bytes().to_vec();
-        name.push(0);
-
-        entries.push(DirectoryEntry { name, data });
+        entries.push(DirectoryEntry { name: ent.name.as_bytes().to_vec(), data });
     }
 
     Ok(entries)
@@ -489,8 +486,8 @@ mod tests {
         assert_eq!(
             entries,
             vec![
-                DirectoryEntry { name: b"a\0".to_vec(), data: b"a content".to_vec() },
-                DirectoryEntry { name: b"b/c\0".to_vec(), data: b"c content".to_vec() },
+                DirectoryEntry { name: b"a".to_vec(), data: b"a content".to_vec() },
+                DirectoryEntry { name: b"b/c".to_vec(), data: b"c content".to_vec() },
             ],
         );
     }
