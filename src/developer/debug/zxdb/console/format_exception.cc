@@ -244,13 +244,15 @@ std::string ExceptionRecordToString(debug_ipc::Arch arch,
   if (!record.valid)
     return "No exception information";
 
+  std::string suffix =
+      (record.strategy == debug_ipc::ExceptionStrategy::kSecondChance) ? " (second chance)" : "";
   switch (arch) {
     case debug_ipc::Arch::kUnknown:
       return "Unknown architecture";
     case debug_ipc::Arch::kX64:
-      return X64ExceptionRecordToString(record);
+      return X64ExceptionRecordToString(record) + suffix;
     case debug_ipc::Arch::kArm64:
-      return Arm64ExceptionRecordToString(record);
+      return Arm64ExceptionRecordToString(record) + suffix;
   }
   FX_NOTREACHED();
   return std::string();
