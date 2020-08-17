@@ -45,6 +45,11 @@ bool Deserialize(MessageReader* reader, ExceptionType* type);
 void Serialize(ExceptionStrategy strategy, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, ExceptionStrategy* strategy);
 
+void Serialize(UpdateGlobalSettingsRequest::UpdateExceptionStrategy strategy,
+               MessageWriter* writer);
+bool Deserialize(MessageReader* reader,
+                 UpdateGlobalSettingsRequest::UpdateExceptionStrategy* strategy);
+
 // Will call Serialize for each element in the vector.
 template <typename T>
 inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {

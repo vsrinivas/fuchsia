@@ -494,8 +494,8 @@ void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableReque
 
 void DebugAgent::OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
                                         debug_ipc::UpdateGlobalSettingsReply* reply) {
-  if (request.exception_strategy.type != debug_ipc::ExceptionType::kNone) {
-    exception_strategies_[request.exception_strategy.type] = request.exception_strategy.value;
+  for (const auto& update : request.exception_strategies) {
+    exception_strategies_[update.type] = update.value;
   }
 }
 

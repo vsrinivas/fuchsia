@@ -599,8 +599,7 @@ bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t*
 void WriteRequest(const UpdateGlobalSettingsRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kUpdateGlobalSettings, transaction_id);
-  Serialize(request.exception_strategy.type, writer);
-  Serialize(request.exception_strategy.value, writer);
+  Serialize(request.exception_strategies, writer);
 }
 
 bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t* transaction_id) {

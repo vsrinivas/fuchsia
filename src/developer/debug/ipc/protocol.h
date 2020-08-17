@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 29;
+constexpr uint32_t kProtocolVersion = 30;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -356,7 +356,7 @@ struct UpdateGlobalSettingsRequest {
     ExceptionStrategy value = ExceptionStrategy::kNone;
   };
 
-  UpdateExceptionStrategy exception_strategy;
+  std::vector<UpdateExceptionStrategy> exception_strategies;
 };
 
 struct UpdateGlobalSettingsReply {

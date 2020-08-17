@@ -559,13 +559,21 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
   // updated.
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
             harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kPageFault));
 
   {
     const debug_ipc::UpdateGlobalSettingsRequest request = {
-        .exception_strategy =
+        .exception_strategies =
             {
-                .type = debug_ipc::ExceptionType::kGeneral,
-                .value = debug_ipc::ExceptionStrategy::kSecondChance,
+                {
+                    .type = debug_ipc::ExceptionType::kGeneral,
+                    .value = debug_ipc::ExceptionStrategy::kSecondChance,
+                },
+                {
+                    .type = debug_ipc::ExceptionType::kPageFault,
+                    .value = debug_ipc::ExceptionStrategy::kSecondChance,
+                },
             },
     };
     debug_ipc::UpdateGlobalSettingsReply reply;
@@ -575,13 +583,17 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
             harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kPageFault));
 
   {
     const debug_ipc::UpdateGlobalSettingsRequest request = {
-        .exception_strategy =
+        .exception_strategies =
             {
-                .type = debug_ipc::ExceptionType::kGeneral,
-                .value = debug_ipc::ExceptionStrategy::kFirstChance,
+                {
+                    .type = debug_ipc::ExceptionType::kGeneral,
+                    .value = debug_ipc::ExceptionStrategy::kFirstChance,
+                },
             },
     };
     debug_ipc::UpdateGlobalSettingsReply reply;
@@ -591,6 +603,8 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
             harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kPageFault));
 }
 
 }  // namespace debug_agent

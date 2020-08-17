@@ -504,10 +504,7 @@ bool ReadRequest(MessageReader* reader, UpdateGlobalSettingsRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-
-  Deserialize(reader, &request->exception_strategy.type);
-  Deserialize(reader, &request->exception_strategy.value);
-  return true;
+  return Deserialize(reader, &request->exception_strategies);
 }
 
 void WriteReply(const UpdateGlobalSettingsReply& reply, uint32_t transaction_id,

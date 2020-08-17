@@ -6,6 +6,8 @@
 
 namespace debug_ipc {
 
+using UpdateExceptionStrategy = UpdateGlobalSettingsRequest::UpdateExceptionStrategy;
+
 void Serialize(const std::string& s, MessageWriter* writer) { writer->WriteString(s); }
 
 bool Deserialize(MessageReader* reader, std::string* s) { return reader->ReadString(s); }
@@ -81,6 +83,18 @@ bool Deserialize(MessageReader* reader, ExceptionStrategy* strategy) {
   }
   *strategy = static_cast<ExceptionStrategy>(strategy32);
   return true;
+}
+
+void Serialize(UpdateExceptionStrategy update, MessageWriter* writer) {
+  Serialize(update.type, writer);
+  Serialize(update.value, writer);
+}
+
+bool Deserialize(MessageReader* reader, UpdateExceptionStrategy* update) {
+  if (!Deserialize(reader, &update->type)) {
+    return false;
+  }
+  return Deserialize(reader, &update->value);
 }
 
 }  // namespace debug_ipc

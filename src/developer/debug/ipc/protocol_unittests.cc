@@ -784,15 +784,25 @@ TEST(Protocol, LoadInfoHandleTableReply) {
 
 TEST(Protocol, UpdateGlobalSettingsRequest) {
   UpdateGlobalSettingsRequest initial;
-  initial.exception_strategy = {
-      .type = ExceptionType::kPageFault,
-      .value = ExceptionStrategy::kSecondChance,
+  initial.exception_strategies = {
+      {
+          .type = ExceptionType::kPageFault,
+          .value = ExceptionStrategy::kSecondChance,
+      },
+      {
+          .type = ExceptionType::kUnalignedAccess,
+          .value = ExceptionStrategy::kFirstChance,
+      },
   };
 
   UpdateGlobalSettingsRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.exception_strategy.type, second.exception_strategy.type);
-  EXPECT_EQ(initial.exception_strategy.value, second.exception_strategy.value);
+  ASSERT_EQ(initial.exception_strategies.size(), 2u);
+  ASSERT_EQ(initial.exception_strategies.size(), second.exception_strategies.size());
+  EXPECT_EQ(initial.exception_strategies[0].type, second.exception_strategies[0].type);
+  EXPECT_EQ(initial.exception_strategies[0].value, second.exception_strategies[0].value);
+  EXPECT_EQ(initial.exception_strategies[1].type, second.exception_strategies[1].type);
+  EXPECT_EQ(initial.exception_strategies[1].value, second.exception_strategies[1].value);
 }
 
 TEST(Protocol, UpdateGlobalSettingsReply) {

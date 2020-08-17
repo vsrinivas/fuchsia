@@ -151,10 +151,12 @@ TEST(DebuggedThread, OnException) {
   // Update policy so that general exceptions are handled initially as
   // second-chance.
   const debug_ipc::UpdateGlobalSettingsRequest request = {
-      .exception_strategy =
+      .exception_strategies =
           {
-              .type = debug_ipc::ExceptionType::kGeneral,
-              .value = debug_ipc::ExceptionStrategy::kSecondChance,
+              {
+                  .type = debug_ipc::ExceptionType::kGeneral,
+                  .value = debug_ipc::ExceptionStrategy::kSecondChance,
+              },
           },
   };
   debug_ipc::UpdateGlobalSettingsReply reply;
