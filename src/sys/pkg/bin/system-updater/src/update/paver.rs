@@ -30,11 +30,12 @@ enum WriteAssetError {
 
 async fn paver_write_firmware(
     data_sink: &DataSinkProxy,
+    configuration: Configuration,
     subtype: &str,
     mut buffer: Buffer,
 ) -> Result<(), Error> {
     let res = data_sink
-        .write_firmware(subtype, &mut buffer)
+        .write_firmware(configuration, subtype, &mut buffer)
         .await
         .context("while performing write_firmware call")?;
 
@@ -42,7 +43,7 @@ async fn paver_write_firmware(
         WriteFirmwareResult::Status(status) => {
             Status::ok(status).context("firmware failed to write")?;
         }
-        WriteFirmwareResult::UnsupportedType(_) => {
+        WriteFirmwareResult::Unsupported(_) => {
             fx_log_info!("skipping unsupported firmware type: {}", subtype);
         }
     }
@@ -74,7 +75,7 @@ pub async fn paver_read_asset(
 
 #[derive(Debug, PartialEq, Eq)]
 enum ImageTarget<'a> {
-    Firmware { subtype: &'a str },
+    Firmware { subtype: &'a str, configuration: TargetConfiguration },
     Asset { asset: Asset, configuration: TargetConfiguration },
 }
 
@@ -102,7 +103,10 @@ fn classify_image(
         "bootloader" | "firmware" => {
             // Keep support for update packages still using the older "bootloader" file, which is
             // handled identically to "firmware" but without subtype support.
-            ImageTarget::Firmware { subtype: image.subtype().unwrap_or("") }
+            ImageTarget::Firmware {
+                subtype: image.subtype().unwrap_or(""),
+                configuration: inactive_config.to_target_configuration(),
+            }
         }
         _ => bail!("unrecognized image: {}", image.name()),
     };
@@ -166,6 +170,33 @@ async fn write_asset_to_configurations(
     Ok(())
 }
 
+async fn write_firmware_to_configurations(
+    data_sink: &DataSinkProxy,
+    configuration: TargetConfiguration,
+    subtype: &str,
+    payload: Payload<'_>,
+) -> Result<(), Error> {
+    match configuration {
+        TargetConfiguration::Single(configuration) => {
+            // Devices supports ABR and/or a specific configuration (ex. Recovery) was requested.
+            paver_write_firmware(data_sink, configuration, subtype, payload.buffer).await?;
+        }
+        TargetConfiguration::AB => {
+            // For device that does not support ABR. There will only be one single
+            // partition for that firmware. The configuration parameter should be Configuration::A.
+            paver_write_firmware(data_sink, Configuration::A, subtype, payload.clone_buffer()?)
+                .await?;
+            // Similar to asset, we also write Configuration::B to be forwards compatible with
+            // devices that will eventually support ABR. For device that does not support A/B, it
+            // will log/report WriteFirmwareResult::Unsupported and the paving  will be
+            // skipped.
+            paver_write_firmware(data_sink, Configuration::B, subtype, payload.buffer).await?;
+        }
+    }
+
+    Ok(())
+}
+
 async fn write_image_buffer(
     data_sink: &DataSinkProxy,
     buffer: Buffer,
@@ -176,8 +207,8 @@ async fn write_image_buffer(
     let payload = Payload { display_name: image.filename(), buffer };
 
     match target {
-        ImageTarget::Firmware { subtype } => {
-            paver_write_firmware(data_sink, subtype, payload.buffer).await?;
+        ImageTarget::Firmware { subtype, configuration } => {
+            write_firmware_to_configurations(data_sink, configuration, subtype, payload).await?;
         }
         ImageTarget::Asset { asset, configuration } => {
             write_asset_to_configurations(data_sink, configuration, asset, payload).await?;
@@ -437,7 +468,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware contents"),
             &Image::new("bootloader"),
-            InactiveConfiguration::A, // Configuration is ignored for firmware
+            InactiveConfiguration::A,
         )
         .await
         .unwrap();
@@ -446,7 +477,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware_foo contents"),
             &Image::join("firmware", "foo"),
-            InactiveConfiguration::NotSupported,
+            InactiveConfiguration::B,
         )
         .await
         .unwrap();
@@ -455,10 +486,12 @@ mod tests {
             paver.take_events(),
             vec![
                 PaverEvent::WriteFirmware {
+                    configuration: Configuration::A,
                     firmware_type: "".to_owned(),
                     payload: b"firmware contents".to_vec()
                 },
                 PaverEvent::WriteFirmware {
+                    configuration: Configuration::B,
                     firmware_type: "foo".to_owned(),
                     payload: b"firmware_foo contents".to_vec()
                 }
@@ -471,7 +504,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .firmware_hook(|event| match event {
-                    PaverEvent::WriteFirmware { .. } => WriteFirmwareResult::UnsupportedType(true),
+                    PaverEvent::WriteFirmware { .. } => WriteFirmwareResult::Unsupported(true),
                     _ => panic!("Unexpected event: {:?}", event),
                 })
                 .build(),
@@ -482,7 +515,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware of the future!"),
             &Image::join("firmware", "unknown"),
-            InactiveConfiguration::NotSupported,
+            InactiveConfiguration::A,
         )
         .await
         .unwrap();
@@ -490,6 +523,7 @@ mod tests {
         assert_eq!(
             paver.take_events(),
             vec![PaverEvent::WriteFirmware {
+                configuration: Configuration::A,
                 firmware_type: "unknown".to_owned(),
                 payload: b"firmware of the future!".to_vec()
             },]
@@ -515,7 +549,7 @@ mod tests {
                 &data_sink,
                 make_buffer("oops"),
                 &Image::join("firmware", "error"),
-                InactiveConfiguration::NotSupported,
+                InactiveConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("firmware failed to write")
@@ -524,6 +558,7 @@ mod tests {
         assert_eq!(
             paver.take_events(),
             vec![PaverEvent::WriteFirmware {
+                configuration: Configuration::A,
                 firmware_type: "error".to_owned(),
                 payload: b"oops".to_vec()
             }]
@@ -673,10 +708,12 @@ mod tests {
             paver.take_events(),
             vec![
                 PaverEvent::WriteFirmware {
+                    configuration: Configuration::B,
                     firmware_type: "".to_owned(),
                     payload: b"bootloader buffer".to_vec()
                 },
                 PaverEvent::WriteFirmware {
+                    configuration: Configuration::B,
                     firmware_type: "".to_owned(),
                     payload: b"firmware buffer".to_vec()
                 },
@@ -826,6 +863,37 @@ mod abr_not_supported_tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn write_image_buffer_writes_firmware_to_both_configs() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let data_sink = paver.spawn_data_sink_service();
+
+        write_image_buffer(
+            &data_sink,
+            make_buffer("firmware contents"),
+            &Image::new("firmware"),
+            InactiveConfiguration::NotSupported,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::WriteFirmware {
+                    configuration: Configuration::A,
+                    firmware_type: "".to_owned(),
+                    payload: b"firmware contents".to_vec()
+                },
+                PaverEvent::WriteFirmware {
+                    configuration: Configuration::B,
+                    firmware_type: "".to_owned(),
+                    payload: b"firmware contents".to_vec()
+                },
+            ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn write_image_buffer_forwards_config_a_error() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
@@ -899,6 +967,48 @@ mod abr_not_supported_tests {
                     configuration: Configuration::B,
                     asset: Asset::Kernel,
                     payload: b"zbi.signed contents".to_vec()
+                },
+            ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn write_image_buffer_write_firmware_ignores_unsupported_config_b() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .firmware_hook(|event| match event {
+                    PaverEvent::WriteFirmware {
+                        configuration: Configuration::B,
+                        firmware_type: _,
+                        payload: _,
+                    } => WriteFirmwareResult::Unsupported(true),
+                    _ => WriteFirmwareResult::Status(Status::OK.into_raw()),
+                })
+                .build(),
+        );
+        let data_sink = paver.spawn_data_sink_service();
+
+        write_image_buffer(
+            &data_sink,
+            make_buffer("firmware contents"),
+            &Image::new("firmware"),
+            InactiveConfiguration::NotSupported,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::WriteFirmware {
+                    configuration: Configuration::A,
+                    firmware_type: "".to_owned(),
+                    payload: b"firmware contents".to_vec()
+                },
+                PaverEvent::WriteFirmware {
+                    configuration: Configuration::B,
+                    firmware_type: "".to_owned(),
+                    payload: b"firmware contents".to_vec()
                 },
             ]
         );

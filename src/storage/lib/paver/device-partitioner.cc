@@ -45,11 +45,21 @@ const PartitionInfo* GetPartitionInfo(Partition partition) {
   static std::unordered_map<Partition, PartitionInfo> map = {
       // TODO(fxbug.dev/52708): add support for bootloader A/B/R once we have devices
       // ready for it. For now just default to bootloader_a.
-      {Partition::kBootloader, PartitionInfo{.name = GPT_BOOTLOADER_A_NAME,
-                                             .type = GPT_BOOTLOADER_ABR_TYPE_GUID,
-                                             .legacy_name = GUID_EFI_NAME,
-                                             .legacy_type = GUID_BOOTLOADER_VALUE,
-                                             .debug_name = "Bootloader"}},
+      {Partition::kBootloaderA, PartitionInfo{.name = GPT_BOOTLOADER_A_NAME,
+                                              .type = GPT_BOOTLOADER_ABR_TYPE_GUID,
+                                              .legacy_name = GUID_EFI_NAME,
+                                              .legacy_type = GUID_BOOTLOADER_VALUE,
+                                              .debug_name = "Bootloader A"}},
+      {Partition::kBootloaderB, PartitionInfo{.name = GPT_BOOTLOADER_B_NAME,
+                                              .type = GPT_BOOTLOADER_ABR_TYPE_GUID,
+                                              .legacy_name = GUID_EFI_NAME,
+                                              .legacy_type = GUID_BOOTLOADER_VALUE,
+                                              .debug_name = "Bootloader B"}},
+      {Partition::kBootloaderR, PartitionInfo{.name = GPT_BOOTLOADER_R_NAME,
+                                              .type = GPT_BOOTLOADER_ABR_TYPE_GUID,
+                                              .legacy_name = GUID_EFI_NAME,
+                                              .legacy_type = GUID_BOOTLOADER_VALUE,
+                                              .debug_name = "Bootloader R"}},
 
       {Partition::kZirconA, PartitionInfo{.name = GPT_ZIRCON_A_NAME,
                                           .type = GPT_ZIRCON_ABR_TYPE_GUID,
@@ -188,7 +198,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> FixedDevicePartitioner::Initializ
 }
 
 bool FixedDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloaderA),
                                            PartitionSpec(paver::Partition::kZirconA),
                                            PartitionSpec(paver::Partition::kZirconB),
                                            PartitionSpec(paver::Partition::kZirconR),

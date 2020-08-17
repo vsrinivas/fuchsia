@@ -194,8 +194,8 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
 // It's easier to provide the two images separately since on Astro they live
 // in different partitions, rather than having to split a combined image.
 bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
-                                           PartitionSpec(paver::Partition::kBootloader, "bl2"),
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloaderA),
+                                           PartitionSpec(paver::Partition::kBootloaderA, "bl2"),
                                            PartitionSpec(paver::Partition::kZirconA),
                                            PartitionSpec(paver::Partition::kZirconB),
                                            PartitionSpec(paver::Partition::kZirconR),
@@ -228,7 +228,7 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
   }
 
   switch (spec.partition) {
-    case Partition::kBootloader: {
+    case Partition::kBootloaderA: {
       if (spec.content_type.empty()) {
         // Default type = TPL.
         Uuid tpl_type = GUID_BOOTLOADER_VALUE;

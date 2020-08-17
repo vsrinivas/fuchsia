@@ -1127,22 +1127,61 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   }
 }
 
-TEST_F(PaverServiceSkipBlockTest, WriteFirmware) {
+constexpr ::llcpp::fuchsia::paver::Configuration kAllConfigs[] = {
+    ::llcpp::fuchsia::paver::Configuration::A,
+    ::llcpp::fuchsia::paver::Configuration::B,
+    ::llcpp::fuchsia::paver::Configuration::RECOVERY,
+};
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(
+      kAllConfigs[0], fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
+  WriteData(kBootloaderFirstBlock, 4 * kPagesPerBlock, 0xff);
 }
 
-TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2) {
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigBRUnsupported) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  for (size_t i = 1; i < 3; i++) {
+    ::llcpp::fuchsia::mem::Buffer payload;
+    CreatePayload(4 * kPagesPerBlock, &payload);
+    auto result = data_sink_->WriteFirmware(
+        kAllConfigs[i], fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_unsupported());
+    ASSERT_TRUE(result->result.unsupported());
+  }
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
+  // BL2 special handling: we should always leave the first 4096 bytes intact.
+  constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
+  constexpr size_t kBl2SkipLength = 4096;
+
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+
+  WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(kBl2ImagePages, &payload);
+  auto result = data_sink_->WriteFirmware(kAllConfigs[0], fidl::unowned_str(kFirmwareTypeBl2),
+                                          std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_status());
+  ASSERT_OK(result->result.status());
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigBRUnsupported) {
   // BL2 special handling: we should always leave the first 4096 bytes intact.
   constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
   constexpr size_t kBl2SkipLength = 4096;
@@ -1150,33 +1189,33 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
 
-  ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(kBl2ImagePages, &payload);
-
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
-  ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_status());
-  ASSERT_OK(result->result.status());
-
-  AssertContents(kBl2StartByte, kBl2SkipLength, 0xC6);
-  ValidateWrittenBytes(kBl2StartByte + kBl2SkipLength, kBl2ImageSize);
+  for (size_t i = 1; i < 3; i++) {
+    ::llcpp::fuchsia::mem::Buffer payload;
+    CreatePayload(kBl2ImagePages, &payload);
+    auto result = data_sink_->WriteFirmware(kAllConfigs[i], fidl::unowned_str(kFirmwareTypeBl2),
+                                            std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_unsupported());
+    ASSERT_TRUE(result->result.unsupported());
+  }
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
-
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeUnsupported), std::move(payload));
-  ASSERT_OK(result.status());
-  ASSERT_TRUE(result->result.is_unsupported_type());
-  ASSERT_TRUE(result->result.unsupported_type());
-  ValidateUnwritten(kBootloaderFirstBlock, 4);
-  ValidateUnwritten(kBl2FirstBlock, 1);
+  for (auto config : kAllConfigs) {
+    ::llcpp::fuchsia::mem::Buffer payload;
+    CreatePayload(4 * kPagesPerBlock, &payload);
+    auto result = data_sink_->WriteFirmware(config, fidl::unowned_str(kFirmwareTypeUnsupported),
+                                            std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_unsupported());
+    ASSERT_TRUE(result->result.unsupported());
+    ValidateUnwritten(kBootloaderFirstBlock, 4);
+    ValidateUnwritten(kBl2FirstBlock, 1);
+  }
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
@@ -1186,12 +1225,11 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   info.partition_map.partitions[1].hidden = true;
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand(info));
 
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
-
-  ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
+  auto result = data_sink_->WriteFirmware(
+      kAllConfigs[0], fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_NOT_OK(result->result.status());

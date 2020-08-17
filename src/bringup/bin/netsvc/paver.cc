@@ -197,8 +197,32 @@ int Paver::StreamBuffer() {
   return 0;
 }
 
-zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
-                              ::llcpp::fuchsia::mem::Buffer buffer) {
+namespace {
+
+using WriteFirmwareResult = ::llcpp::fuchsia::paver::DataSink::ResultOf::WriteFirmware;
+
+zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const char* firmware_type) {
+  if (!res.ok()) {
+    return res.status();
+  } else if (res->result.is_status()) {
+    return res->result.status();
+  } else if (res->result.is_unsupported()) {
+    // Log a message but just skip this, we want to keep going so that we
+    // can add new firmware types in the future without breaking older
+    // paver versions.
+    printf("netsvc: skipping unsupported firmware type '%s'\n", firmware_type);
+    return ZX_OK;
+  } else {
+    // We must have added another union field but forgot to update this code.
+    fprintf(stderr, "netsvc: unknown WriteFirmware result\n");
+    return ZX_ERR_INTERNAL;
+  }
+}
+
+}  // namespace
+
+zx_status_t Paver::WriteABImage(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
+                                ::llcpp::fuchsia::mem::Buffer buffer) {
   zx::channel boot_manager_chan, remote;
   auto status = zx::channel::create(0, &boot_manager_chan, &remote);
   if (status != ZX_OK) {
@@ -224,6 +248,7 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
       boot_manager.reset();
     }
   }
+
   // Make sure to mark the configuration we are about to pave as no longer bootable.
   if (boot_manager && configuration_ != ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
     auto result = boot_manager->SetConfigurationUnbootable(configuration_);
@@ -233,17 +258,25 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
       return status;
     }
   }
-  {
+  if (command_ == Command::kAsset) {
     auto result = data_sink.WriteAsset(configuration_, asset_, std::move(buffer));
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to write asset.\n");
       return status;
     }
+  } else if (command_ == Command::kFirmware) {
+    auto result = data_sink.WriteFirmware(configuration_,
+                                          fidl::StringView(firmware_type_, strlen(firmware_type_)),
+                                          std::move(buffer));
+    if (auto status = ProcessWriteFirmwareResult(result, firmware_type_); status != ZX_OK) {
+      return status;
+    }
   }
   // Set configuration A/B as default.
   // We assume that verified boot metadata asset will only be written after the kernel asset.
   if (!boot_manager || configuration_ == ::llcpp::fuchsia::paver::Configuration::RECOVERY ||
+      command_ == Command::kFirmware ||
       asset_ != ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA) {
     if (boot_manager) {
       auto res = boot_manager->Flush();
@@ -474,28 +507,10 @@ int Paver::MonitorBuffer() {
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
-    case Command::kFirmware: {
-      auto res = data_sink.WriteFirmware(fidl::StringView(firmware_type_, strlen(firmware_type_)),
-                                         std::move(buffer));
-      if (!res.ok()) {
-        status = res.status();
-      } else if (res->result.is_status()) {
-        status = res->result.status();
-      } else if (res->result.is_unsupported_type()) {
-        // Log a message but just skip this, we want to keep going so that we
-        // can add new firmware types in the future without breaking older
-        // paver versions.
-        printf("netsvc: skipping unsupported firmware type '%s'\n", firmware_type_);
-        status = ZX_OK;
-      } else {
-        // We must have added another union field but forgot to update this code.
-        fprintf(stderr, "netsvc: unknown WriteFirmware result\n");
-        status = ZX_ERR_INTERNAL;
-      }
-      break;
-    }
+    case Command::kFirmware:
+      [[fallthrough]];
     case Command::kAsset:
-      status = WriteAsset(std::move(data_sink), std::move(buffer));
+      status = WriteABImage(std::move(data_sink), std::move(buffer));
       break;
     default:
       result = TFTP_ERR_INTERNAL;
@@ -520,6 +535,43 @@ std::optional<std::string_view> WithoutPrefix(std::string_view string, std::stri
 
 }  // namespace
 
+tftp_status Paver::ProcessAsFirmwareImage(std::string_view host_filename) {
+  struct {
+    const char* prefix;
+    const char* config_suffix;
+    ::llcpp::fuchsia::paver::Configuration config;
+  } matches[] = {
+      {NB_FIRMWARE_HOST_FILENAME_PREFIX, "", ::llcpp::fuchsia::paver::Configuration::A},
+      {NB_FIRMWAREA_HOST_FILENAME_PREFIX, "-A", ::llcpp::fuchsia::paver::Configuration::A},
+      {NB_FIRMWAREB_HOST_FILENAME_PREFIX, "-B", ::llcpp::fuchsia::paver::Configuration::B},
+      {NB_FIRMWARER_HOST_FILENAME_PREFIX, "-R", ::llcpp::fuchsia::paver::Configuration::RECOVERY},
+  };
+
+  for (auto& match : matches) {
+    auto type = WithoutPrefix(host_filename, match.prefix);
+    if (!type.has_value()) {
+      continue;
+    }
+
+    printf("netsvc: Running FIRMWARE%s Paver (firmware type '%.*s')\n", match.config_suffix,
+           static_cast<int>(type->size()), type->data());
+
+    if (type->length() >= sizeof(firmware_type_)) {
+      fprintf(stderr, "netsvc: Firmware type '%.*s' is too long (max %zu)\n",
+              static_cast<int>(type->size()), type->data(), sizeof(firmware_type_) - 1);
+      return TFTP_ERR_INVALID_ARGS;
+    }
+
+    memcpy(firmware_type_, type->data(), type->length());
+    firmware_type_[type->length()] = '\0';
+    configuration_ = match.config;
+    command_ = Command::kFirmware;
+    return TFTP_NO_ERROR;
+  }
+
+  return TFTP_ERR_NOT_FOUND;
+}
+
 tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   // Skip past the NB_IMAGE_PREFIX prefix.
   std::string_view host_filename;
@@ -541,19 +593,12 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
     // until we don't use it anymore.
     printf("netsvc: Running BOOTLOADER Paver (firmware type '')\n");
     command_ = Command::kFirmware;
+    configuration_ = ::llcpp::fuchsia::paver::Configuration::A;
     firmware_type_[0] = '\0';
-  } else if (auto type = WithoutPrefix(host_filename, NB_FIRMWARE_HOST_FILENAME_PREFIX);
-             type.has_value()) {
-    printf("netsvc: Running FIRMWARE Paver (firmware type '%.*s')\n",
-           static_cast<int>(type->size()), type->data());
-    if (type->length() >= sizeof(firmware_type_)) {
-      fprintf(stderr, "netsvc: Firmware type '%.*s' is too long (max %zu)\n",
-              static_cast<int>(type->size()), type->data(), sizeof(firmware_type_) - 1);
-      return TFTP_ERR_INVALID_ARGS;
+  } else if (auto status = ProcessAsFirmwareImage(host_filename); status != TFTP_ERR_NOT_FOUND) {
+    if (status != TFTP_NO_ERROR) {
+      return status;
     }
-    command_ = Command::kFirmware;
-    memcpy(firmware_type_, type->data(), type->length());
-    firmware_type_[type->length()] = '\0';
   } else if (host_filename == NB_ZIRCONA_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-A Paver\n");
     command_ = Command::kAsset;

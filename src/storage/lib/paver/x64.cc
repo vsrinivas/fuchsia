@@ -51,7 +51,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
 }
 
 bool EfiDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloaderA),
                                            PartitionSpec(paver::Partition::kZirconA),
                                            PartitionSpec(paver::Partition::kZirconB),
                                            PartitionSpec(paver::Partition::kZirconR),
@@ -81,7 +81,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
   // EfiDevicePartitionerTests.InitPartitionTables test.
   size_t minimum_size_bytes = 0;
   switch (spec.partition) {
-    case Partition::kBootloader:
+    case Partition::kBootloaderA:
       minimum_size_bytes = 16 * kMebibyte;
       break;
     case Partition::kZirconA:
@@ -129,7 +129,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition
   }
 
   switch (spec.partition) {
-    case Partition::kBootloader: {
+    case Partition::kBootloaderA: {
       const auto filter = [](const gpt_partition_t& part) {
         return FilterByTypeAndName(part, GUID_EFI_VALUE, GUID_EFI_NAME) ||
                // TODO: Remove support after July 9th 2021.
@@ -184,9 +184,9 @@ zx::status<> EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
 zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
   const std::array<Partition, 9> partitions_to_add{
-      Partition::kBootloader, Partition::kZirconA, Partition::kZirconB,
-      Partition::kZirconR,    Partition::kVbMetaA, Partition::kVbMetaB,
-      Partition::kVbMetaR,    Partition::kAbrMeta, Partition::kFuchsiaVolumeManager,
+      Partition::kBootloaderA, Partition::kZirconA, Partition::kZirconB,
+      Partition::kZirconR,     Partition::kVbMetaA, Partition::kVbMetaB,
+      Partition::kVbMetaR,     Partition::kAbrMeta, Partition::kFuchsiaVolumeManager,
   };
 
   // Wipe partitions.
@@ -199,7 +199,7 @@ zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
         continue;
       }
       // If we are wiping any non-bootloader partition, we are done.
-      if (partition != Partition::kBootloader) {
+      if (partition != Partition::kBootloaderA) {
         return true;
       }
       // If we are wiping the bootloader partition, only do so if it is the

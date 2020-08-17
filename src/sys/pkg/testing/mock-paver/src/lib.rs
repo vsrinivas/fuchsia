@@ -33,7 +33,7 @@ fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {
 pub enum PaverEvent {
     ReadAsset { configuration: paver::Configuration, asset: paver::Asset },
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
-    WriteFirmware { firmware_type: String, payload: Vec<u8> },
+    WriteFirmware { configuration: paver::Configuration, firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
     SetActiveConfigurationHealthy,
     SetConfigurationActive { configuration: paver::Configuration },
@@ -196,12 +196,13 @@ impl MockPaverService {
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::DataSinkRequest::WriteFirmware {
+                    configuration,
                     type_: firmware_type,
                     mut payload,
                     responder,
                 } => {
                     let payload = verify_and_read_buffer(&mut payload);
-                    let event = PaverEvent::WriteFirmware { firmware_type, payload };
+                    let event = PaverEvent::WriteFirmware { configuration, firmware_type, payload };
                     let mut result = (*self.firmware_hook)(&event);
                     self.push_event(event);
                     responder.send(&mut result).expect("paver response to send");

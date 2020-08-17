@@ -31,7 +31,7 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 
 zx::status<Uuid> GptPartitionType(Partition type) {
   switch (type) {
-    case Partition::kBootloader:
+    case Partition::kBootloaderA:
       return zx::ok(Uuid(GUID_EFI_VALUE));
     case Partition::kZirconA:
       return zx::ok(Uuid(GUID_ZIRCON_A_VALUE));

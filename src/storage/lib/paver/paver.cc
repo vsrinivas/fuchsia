@@ -462,7 +462,7 @@ WriteFirmwareResult CreateWriteFirmwareResult(
   if (std::holds_alternative<zx_status_t>(*variant)) {
     result.set_status(fidl::unowned_ptr(&std::get<zx_status_t>(*variant)));
   } else {
-    result.set_unsupported_type(fidl::unowned_ptr(&std::get<fidl::aligned<bool>>(*variant)));
+    result.set_unsupported(fidl::unowned_ptr(&std::get<fidl::aligned<bool>>(*variant)));
   }
   return result;
 }
@@ -484,6 +484,10 @@ void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _com
 
 void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
                            UseBlockDeviceCompleter::Sync _completer) {
+  UseBlockDevice(std::move(block_device), std::move(dynamic_data_sink));
+}
+
+void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -519,9 +523,10 @@ void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
   }
 }
 
-void DataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+void DataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
+                             fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                              WriteFirmwareCompleter::Sync completer) {
-  auto variant = sink_.WriteFirmware(std::move(type), std::move(payload));
+  auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
@@ -571,16 +576,28 @@ zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
 }
 
 std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
-    fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload) {
-  // Currently all our supported firmware lives in Partition::kBootloader.
-  PartitionSpec spec(Partition::kBootloader, std::string_view(type.data(), type.size()));
+    Configuration configuration, fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload) {
+  // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
+  Partition part_type;
+  switch (configuration) {
+    case Configuration::A:
+      part_type = Partition::kBootloaderA;
+      break;
+    case Configuration::B:
+      part_type = Partition::kBootloaderB;
+      break;
+    case Configuration::RECOVERY:
+      part_type = Partition::kBootloaderR;
+      break;
+  }
+  PartitionSpec spec = PartitionSpec(part_type, std::string_view(type.data(), type.size()));
 
-  if (!partitioner_->SupportsPartition(spec)) {
-    // unsupported_type = true.
-    return fidl::aligned<bool>(true);
+  if (partitioner_->SupportsPartition(spec)) {
+    return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec).status_value();
   }
 
-  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec).status_value();
+  // unsupported_type = true.
+  return fidl::aligned<bool>(true);
 }
 
 zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
@@ -595,7 +612,7 @@ zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
 // Deprecated in favor of WriteFirmware().
 // TODO(fxbug.dev/45606): move clients off this function and delete it.
 zx::status<> DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
-  PartitionSpec spec(Partition::kBootloader);
+  PartitionSpec spec(Partition::kBootloaderA);
 
   if (!partitioner_->SupportsPartition(spec)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -826,9 +843,10 @@ void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configura
   }
 }
 
-void DynamicDataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+void DynamicDataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
+                                    fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                                     WriteFirmwareCompleter::Sync completer) {
-  auto variant = sink_.WriteFirmware(std::move(type), std::move(payload));
+  auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 

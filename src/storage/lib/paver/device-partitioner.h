@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
 #define SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
 
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <stdbool.h>
@@ -30,7 +31,9 @@ enum class PartitionScheme { kNew, kLegacy };
 
 enum class Partition {
   kUnknown,
-  kBootloader,
+  kBootloaderA,
+  kBootloaderB,
+  kBootloaderR,
   kZirconA,
   kZirconB,
   kZirconR,

@@ -94,6 +94,15 @@ void ValidateCommandTrace(const std::vector<Command>& actual,
   }
 }
 
+void ValidateLastCommandTrace(const std::vector<Command>& actual,
+                              const std::vector<Command>& expected) {
+  ASSERT_GE(actual.size(), expected.size());
+  for (size_t i = 0; i < expected.size(); i++) {
+    EXPECT_EQ(actual[actual.size() - expected.size() + i], expected[i],
+              "Command #%zu different from expected", i);
+  }
+}
+
 TEST_F(PaverTest, WriteCompleteSingle) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
@@ -104,7 +113,8 @@ TEST_F(PaverTest, WriteCompleteSingle) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
 }
 
 TEST_F(PaverTest, WriteCompleteManySmallWrites) {
@@ -144,6 +154,21 @@ TEST_F(PaverTest, CloseChannelBetweenWrites) {
   ASSERT_EQ(paver_.exit_code(), ZX_ERR_PEER_CLOSED);
 }
 
+TEST_F(PaverTest, WriteFirmwareA) {
+  size_t size = sizeof(kFakeData);
+  const char* file_name = NB_IMAGE_PREFIX NB_FIRMWAREA_HOST_FILENAME_PREFIX "tpl";
+  fake_svc_.fake_paver().set_expected_payload_size(size);
+  ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(kFakeData));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
+}
+
 TEST_F(PaverTest, WriteZirconA) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
@@ -170,6 +195,56 @@ TEST_F(PaverTest, WriteVbMetaA) {
 
   ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
                        {Command::kInitializeAbr, Command::kWriteAsset});
+}
+
+TEST_F(PaverTest, WriteFirmwareABWithABRSupported) {
+  fake_svc_.fake_paver().set_supported_firmware_type("tpl");
+  const char* file_names[] = {
+      NB_IMAGE_PREFIX NB_FIRMWAREA_HOST_FILENAME_PREFIX "tpl",
+      NB_IMAGE_PREFIX NB_FIRMWAREB_HOST_FILENAME_PREFIX "tpl",
+  };
+
+  size_t size = sizeof(kFakeData);
+
+  for (auto file_name : file_names) {
+    fake_svc_.fake_paver().set_abr_supported(true);
+    fake_svc_.fake_paver().set_expected_payload_size(size);
+    ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+    ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+    ASSERT_EQ(size, sizeof(kFakeData));
+    paver_.Close();
+    Wait();
+    ASSERT_OK(paver_.exit_code());
+    ValidateLastCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                             {
+                                 Command::kInitializeAbr,
+                                 Command::kQueryActiveConfiguration,
+                                 Command::kSetConfigurationUnbootable,
+                                 Command::kWriteFirmware,
+                                 Command::kBootManagerFlush,
+                             });
+  }
+}
+
+TEST_F(PaverTest, WriteFirmwareRWithABRSupported) {
+  fake_svc_.fake_paver().set_supported_firmware_type("tpl");
+  const char* file_name = NB_IMAGE_PREFIX NB_FIRMWARER_HOST_FILENAME_PREFIX "tpl";
+  size_t size = sizeof(kFakeData);
+  fake_svc_.fake_paver().set_abr_supported(true);
+  fake_svc_.fake_paver().set_expected_payload_size(size);
+  ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(kFakeData));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ValidateLastCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                           {
+                               Command::kInitializeAbr,
+                               Command::kQueryActiveConfiguration,
+                               Command::kWriteFirmware,
+                               Command::kBootManagerFlush,
+                           });
 }
 
 TEST_F(PaverTest, WriteZirconAWithABRSupported) {
@@ -416,7 +491,8 @@ TEST_F(PaverTest, WriteFirmwareNoType) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "");
 }
 
@@ -432,7 +508,8 @@ TEST_F(PaverTest, WriteFirmwareSupportedType) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "foo");
 }
 
@@ -449,7 +526,8 @@ TEST_F(PaverTest, WriteFirmwareUnsupportedType) {
   // This should still return OK so that we just skip unknown firmware types.
   ASSERT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "bar");
 }
 
@@ -466,7 +544,8 @@ TEST_F(PaverTest, WriteFirmwareFailure) {
   // This should not return OK since an actual error occurred.
   ASSERT_NOT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
 }
 
 TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
@@ -482,7 +561,8 @@ TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), type);
 }
 
@@ -511,7 +591,8 @@ TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
   ASSERT_OK(paver_.exit_code());
 
   // Legacy BOOTLOADER file should use WriteFirmare() FIDL with empty type.
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "");
 }
 

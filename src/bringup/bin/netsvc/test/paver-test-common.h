@@ -204,7 +204,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.Reply(status);
   }
 
-  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
+                     ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override {
     using ::llcpp::fuchsia::paver::WriteFirmwareResult;
     AppendCommand(Command::kWriteFirmware);
@@ -216,7 +217,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
       completer.Reply(WriteFirmwareResult::WithStatus(fidl::unowned_ptr(&status)));
     } else {
       fidl::aligned<bool> unsupported = true;
-      completer.Reply(WriteFirmwareResult::WithUnsupportedType(fidl::unowned_ptr(&unsupported)));
+      completer.Reply(WriteFirmwareResult::WithUnsupported(fidl::unowned_ptr(&unsupported)));
     }
   }
 

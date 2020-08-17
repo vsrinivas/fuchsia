@@ -29,6 +29,8 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
                       UseBlockDeviceCompleter::Sync completer) override;
 
+  void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink);
+
   void FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync completer) override;
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
@@ -69,7 +71,8 @@ class DataSinkImpl {
   // Once unions do support owned memory we can just return
   // WriteBootloaderResult directly here.
   std::variant<zx_status_t, fidl::aligned<bool>> WriteFirmware(
-      fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload);
+      ::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
+      ::llcpp::fuchsia::mem::Buffer payload);
 
   zx::status<> WriteVolumes(zx::channel payload_stream);
 
@@ -106,7 +109,8 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
-  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
+                     ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
@@ -154,7 +158,8 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)).status_value());
   }
 
-  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+  void WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration, fidl::StringView type,
+                     ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override;
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {

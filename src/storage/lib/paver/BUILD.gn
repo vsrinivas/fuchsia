@@ -33,7 +33,6 @@ source_set("paver-core") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/security/zxcrypt:zxcrypt-fdio",
@@ -47,6 +46,7 @@ source_set("paver-core") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/lib/uuid",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

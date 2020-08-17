@@ -288,9 +288,17 @@ void EnsurePartitionsMatch(const gpt::GptDevice* gpt,
 constexpr paver::Partition kUnknownPartition = static_cast<paver::Partition>(1000);
 
 TEST(PartitionName, Bootloader) {
-  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloader, paver::PartitionScheme::kNew),
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderA, paver::PartitionScheme::kNew),
                 GPT_BOOTLOADER_A_NAME);
-  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloader, paver::PartitionScheme::kLegacy),
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderB, paver::PartitionScheme::kNew),
+                GPT_BOOTLOADER_B_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderR, paver::PartitionScheme::kNew),
+                GPT_BOOTLOADER_R_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderA, paver::PartitionScheme::kLegacy),
+                GUID_EFI_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderB, paver::PartitionScheme::kLegacy),
+                GUID_EFI_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloaderR, paver::PartitionScheme::kLegacy),
                 GUID_EFI_NAME);
 }
 
@@ -640,7 +648,7 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
   auto partitioner = CreatePartitioner(std::move(gpt_fd));
   ASSERT_OK(partitioner);
-  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader)));
+  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
 }
 
 TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
@@ -714,7 +722,7 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   // Check that we found the correct bootloader partition.
-  auto status2 = partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader));
+  auto status2 = partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA));
   EXPECT_OK(status2);
 
   auto status3 = status2->GetPartitionSize();
@@ -731,7 +739,7 @@ TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -859,7 +867,7 @@ TEST_F(CrosDevicePartitionerTests, SupportsPartition) {
 
   // Unsupported partition type.
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kUnknown)));
-  EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaA)));
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaB)));
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaR)));
@@ -1067,7 +1075,7 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(status);
   auto& partitioner = status.value();
 
-  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloader)));
+  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloaderA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconB)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1094,7 +1102,7 @@ TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
       devmgr_.devfs_root().duplicate(), zx::channel(), paver::Arch::kArm64, context);
   ASSERT_NE(partitioner.get(), nullptr);
 
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1109,7 +1117,7 @@ TEST_F(FixedDevicePartitionerTests, SupportsPartitionTest) {
   ASSERT_OK(status);
   auto& partitioner = status.value();
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1277,7 +1285,7 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
 
   // No boot0/boot1 yet, we shouldn't be able to find the bootloader.
   ASSERT_NOT_OK(
-      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader, "skip_metadata")));
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "skip_metadata")));
 
   std::unique_ptr<BlockDevice> boot0_dev, boot1_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * kBlockSize, kBoot0Type, &boot0_dev));
@@ -1285,7 +1293,7 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
 
   // Now it should succeed.
   ASSERT_OK(
-      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader, "skip_metadata")));
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "skip_metadata")));
 }
 
 TEST_F(SherlockPartitionerTests, SupportsPartition) {
@@ -1298,7 +1306,7 @@ TEST_F(SherlockPartitionerTests, SupportsPartition) {
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
   EXPECT_TRUE(partitioner->SupportsPartition(
-      PartitionSpec(paver::Partition::kBootloader, "skip_metadata")));
+      PartitionSpec(paver::Partition::kBootloaderA, "skip_metadata")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1432,7 +1440,9 @@ TEST_F(LuisPartitionerTests, FindPartition) {
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
   // Make sure we can find the important partitions.
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderR)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1467,7 +1477,9 @@ TEST_F(LuisPartitionerTests, SupportsPartition) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderB)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderR)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1546,7 +1558,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloader)));
+  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloaderA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconB)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1568,7 +1580,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader, "bl2")));
+  ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "bl2")));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1589,8 +1601,8 @@ TEST(AstroPartitionerTests, SupportsPartition) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader, "bl2")));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA, "bl2")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1606,7 +1618,7 @@ TEST(AstroPartitionerTests, SupportsPartition) {
 
   // Unsupported content type.
   EXPECT_FALSE(
-      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader, "unknown")));
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA, "unknown")));
   EXPECT_FALSE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
 }
@@ -1642,7 +1654,7 @@ TEST(AstroPartitionerTests, BootloaderTplTest) {
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
   ASSERT_NO_FATAL_FAILURES(
-      WritePartition(partitioner.get(), PartitionSpec(paver::Partition::kBootloader), "abcd1234"));
+      WritePartition(partitioner.get(), PartitionSpec(paver::Partition::kBootloaderA), "abcd1234"));
 
   const uint8_t* tpl_partition = PartitionStart(device->mapper(), kNandInfo, GUID_BOOTLOADER_VALUE);
   ASSERT_NOT_NULL(tpl_partition);
@@ -1660,7 +1672,7 @@ TEST(AstroPartitionerTests, BootloaderBl2Test) {
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
   ASSERT_NO_FATAL_FAILURES(WritePartition(
-      partitioner.get(), PartitionSpec(paver::Partition::kBootloader, "bl2"), "123xyz"));
+      partitioner.get(), PartitionSpec(paver::Partition::kBootloaderA, "bl2"), "123xyz"));
 
   const uint8_t* bl2_partition = PartitionStart(device->mapper(), kNandInfo, GUID_BL2_VALUE);
   ASSERT_NOT_NULL(bl2_partition);
@@ -1721,7 +1733,7 @@ TEST_F(As370PartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloader)));
+  ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloaderA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconB)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1746,7 +1758,7 @@ TEST_F(As370PartitionerTests, SupportsPartition) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
-  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));

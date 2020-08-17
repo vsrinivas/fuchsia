@@ -40,6 +40,7 @@ async fn writes_bootloader() {
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
                 payload: b"new bootloader".to_vec()
             }),
@@ -92,6 +93,7 @@ async fn writes_firmware() {
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
                 payload: b"fake firmware".to_vec()
             }),
@@ -132,7 +134,9 @@ async fn writes_multiple_firmware_types() {
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
     interactions[8..10].sort_by_key(|event| {
-        if let Paver(PaverEvent::WriteFirmware { firmware_type, payload: _ }) = event {
+        if let Paver(PaverEvent::WriteFirmware { configuration: _, firmware_type, payload: _ }) =
+            event
+        {
             return firmware_type.clone();
         } else {
             panic!("Not a WriteFirmware event: {:?}", event);
@@ -157,10 +161,12 @@ async fn writes_multiple_firmware_types() {
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
                 firmware_type: "a".to_string(),
                 payload: b"fake firmware A".to_vec()
             }),
             Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
                 firmware_type: "b".to_string(),
                 payload: b"fake firmware B".to_vec()
             }),
@@ -181,7 +187,7 @@ async fn writes_multiple_firmware_types() {
 async fn skips_unsupported_firmware_type() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder.firmware_hook(|_| paver::WriteFirmwareResult::UnsupportedType(true))
+            builder.firmware_hook(|_| paver::WriteFirmwareResult::Unsupported(true))
         })
         .oneshot(true)
         .build();
@@ -219,6 +225,7 @@ async fn skips_unsupported_firmware_type() {
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
                 payload: b"fake firmware".to_vec(),
             }),

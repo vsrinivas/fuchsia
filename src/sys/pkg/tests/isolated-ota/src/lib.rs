@@ -441,10 +441,12 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
+                configuration: Configuration::B,
                 firmware_type: "".to_owned(),
                 payload: "This is a bootloader upgrade".as_bytes().to_vec(),
             },
             PaverEvent::WriteFirmware {
+                configuration: Configuration::B,
                 firmware_type: "test".to_owned(),
                 payload: "This is the test firmware".as_bytes().to_vec(),
             },
@@ -682,10 +684,12 @@ pub async fn test_omaha_works() -> Result<(), Error> {
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
+                configuration: Configuration::B,
                 firmware_type: "".to_owned(),
                 payload: "This is a bootloader upgrade".as_bytes().to_vec(),
             },
             PaverEvent::WriteFirmware {
+                configuration: Configuration::B,
                 firmware_type: "test".to_owned(),
                 payload: "This is the test firmware".as_bytes().to_vec(),
             },

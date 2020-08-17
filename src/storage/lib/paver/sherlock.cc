@@ -67,7 +67,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
 // implementations which properly skip the metadata section will write it.
 bool SherlockPartitioner::SupportsPartition(const PartitionSpec& spec) const {
   const PartitionSpec supported_specs[] = {
-      PartitionSpec(paver::Partition::kBootloader, "skip_metadata"),
+      PartitionSpec(paver::Partition::kBootloaderA, "skip_metadata"),
       PartitionSpec(paver::Partition::kZirconA),
       PartitionSpec(paver::Partition::kZirconB),
       PartitionSpec(paver::Partition::kZirconR),
@@ -102,7 +102,7 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
   Uuid type;
 
   switch (spec.partition) {
-    case Partition::kBootloader: {
+    case Partition::kBootloaderA: {
       auto boot0_part = OpenBlockPartition(gpt_->devfs_root(), std::nullopt,
                                            Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
       if (boot0_part.is_error()) {
@@ -154,9 +154,7 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const auto filter = [&type](const gpt_partition_t& part) {
-    return type == Uuid(part.type);
-  };
+  const auto filter = [&type](const gpt_partition_t& part) { return type == Uuid(part.type); };
   auto status = gpt_->FindPartition(std::move(filter));
   if (status.is_error()) {
     return status.take_error();

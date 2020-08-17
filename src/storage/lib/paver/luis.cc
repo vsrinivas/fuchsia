@@ -41,7 +41,9 @@ zx::status<std::unique_ptr<DevicePartitioner>> LuisPartitioner::Initialize(
 
 bool LuisPartitioner::SupportsPartition(const PartitionSpec& spec) const {
   const PartitionSpec supported_specs[] = {
-      PartitionSpec(paver::Partition::kBootloader),
+      PartitionSpec(paver::Partition::kBootloaderA),
+      PartitionSpec(paver::Partition::kBootloaderB),
+      PartitionSpec(paver::Partition::kBootloaderR),
       PartitionSpec(paver::Partition::kZirconA),
       PartitionSpec(paver::Partition::kZirconB),
       PartitionSpec(paver::Partition::kZirconR),
@@ -78,8 +80,14 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
 
   switch (spec.partition) {
     // TODO(zyecheng): update to handle bootloader A/B once http://fxb/52708 lands.
-    case Partition::kBootloader:
+    case Partition::kBootloaderA:
       part_name = GPT_BOOTLOADER_A_NAME;
+      break;
+    case Partition::kBootloaderB:
+      part_name = GPT_BOOTLOADER_B_NAME;
+      break;
+    case Partition::kBootloaderR:
+      part_name = GPT_BOOTLOADER_R_NAME;
       break;
     case Partition::kZirconA:
       part_name = GPT_ZIRCON_A_NAME;

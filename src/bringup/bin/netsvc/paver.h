@@ -72,8 +72,8 @@ class Paver : public PaverInterface {
 
   uint8_t* buffer() { return static_cast<uint8_t*>(buffer_mapper_.start()); }
 
-  zx_status_t WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
-                         ::llcpp::fuchsia::mem::Buffer buffer);
+  zx_status_t WriteABImage(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
+                           ::llcpp::fuchsia::mem::Buffer buffer);
 
   zx_status_t OpenDataSink(
       ::llcpp::fuchsia::mem::Buffer buffer,
@@ -87,6 +87,8 @@ class Paver : public PaverInterface {
 
   // Monitors the vmo progress, and calls into paver service once finished.
   int MonitorBuffer();
+
+  tftp_status ProcessAsFirmwareImage(std::string_view host_filename);
 
   std::atomic<bool> in_progress_ = false;
   std::atomic<zx_status_t> exit_code_ = ZX_OK;
@@ -105,17 +107,13 @@ class Paver : public PaverInterface {
 
   std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> paver_svc_;
 
-  union {
-    // Only valid when command == Command::kAsset.
-    struct {
-      ::llcpp::fuchsia::paver::Configuration configuration_;
-      ::llcpp::fuchsia::paver::Asset asset_;
-    };
-    // Only valid when command == Command::kDataFile.
-    char path_[PATH_MAX];
-    // Only valid when command == Command::kFirmware.
-    char firmware_type_[NB_FIRMWARE_TYPE_MAX_LENGTH + 1];
-  };
+  ::llcpp::fuchsia::paver::Configuration configuration_;
+  // Only meaningful when command == Command::kAsset.
+  ::llcpp::fuchsia::paver::Asset asset_;
+  // Only meaningful when command == Command::kDataFile.
+  char path_[PATH_MAX];
+  // Only meaningful when command == Command::kFirmware.
+  char firmware_type_[NB_FIRMWARE_TYPE_MAX_LENGTH + 1];
 
   // Buffer used for stashing data from tftp until it can be written out to the paver.
   fzl::ResizeableVmoMapper buffer_mapper_;

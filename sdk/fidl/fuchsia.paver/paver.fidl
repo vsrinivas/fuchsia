@@ -56,12 +56,13 @@ union WriteFirmwareResult {
     /// The result status if a write was attempted.
     1: zx.status status;
 
-    /// True if a write was not attempted due to unsupported content type.
+    /// True if a write was not attempted due to unsupported firmware. This could
+    /// be either unsupported content type or unsupported A/B configuration.
     ///
     /// Callers must not treat this as a fatal error, but instead ignore it and
     /// continue to update the device. This is important to be able to add new
     /// items to an update package without breaking updates on older devices.
-    2: bool unsupported_type;
+    2: bool unsupported;
 };
 
 /// Protocol for streaming the FVM payload.
@@ -101,6 +102,10 @@ protocol Paver {
     FindBootManager(request<BootManager> boot_manager);
 };
 
+/// Protocol for reading and writing boot partitions.
+///
+/// A note on DataSink.Flush() (and BootManager.Flush() coming after):
+///
 /// Some platforms may implement the Flush() fidl interface of DataSink/BootManager. For these
 /// platforms, the update of some system images and A/B configuration is not persisted to storage
 /// immediately and only buffered internally when the write fidl interfaces return. The data is
@@ -115,8 +120,6 @@ protocol Paver {
 /// before new system images.
 /// DataSink.Write[...]() --> DataSink.Flush() --> BootManager.Set[...]() --> BootManager.Flush()
 /// DataSink.Write[...]() --> BootManager.Set[...]() --> DataSink.Flush() --> BootManager.Flush()
-///
-/// Protocol for reading and writing boot partitions.
 protocol DataSink {
     /// Reads partition corresponding to `configuration` and `asset` into a
     /// vmo and returns it.
@@ -136,6 +139,9 @@ protocol DataSink {
 
     /// Writes firmware data from `payload`.
     ///
+    /// `configuration` represents the A/B/R configuration. For platforms that do not support
+    /// firmware A/B/R, the parameter will be ignored by the underlying device-specific logic .
+    ///
     /// `type` is a device-specific string identifying the payload contents,
     /// used to select the proper paving logic. For example, a device with
     /// multiple bootloader stages might send them as separate calls to
@@ -145,7 +151,8 @@ protocol DataSink {
     /// `payload` may need to be resized to the partition size, so the provided
     /// vmo must have been created with `ZX_VMO_RESIZABLE` or must be a child
     /// VMO that was created with `ZX_VMO_CHILD_RESIZABLE`.
-    WriteFirmware(string:256 type, fuchsia.mem.Buffer payload) -> (WriteFirmwareResult result);
+    WriteFirmware(Configuration configuration, string:256 type, fuchsia.mem.Buffer payload)
+        -> (WriteFirmwareResult result);
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.

@@ -26,7 +26,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> As370Partitioner::Initialize(
 
 bool As370Partitioner::SupportsPartition(const PartitionSpec& spec) const {
   const PartitionSpec supported_specs[] = {
-      PartitionSpec(paver::Partition::kBootloader), PartitionSpec(paver::Partition::kZirconA),
+      PartitionSpec(paver::Partition::kBootloaderA), PartitionSpec(paver::Partition::kZirconA),
       PartitionSpec(paver::Partition::kZirconB), PartitionSpec(paver::Partition::kZirconR),
       PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
 
@@ -53,7 +53,7 @@ zx::status<std::unique_ptr<PartitionClient>> As370Partitioner::FindPartition(
   }
 
   switch (spec.partition) {
-    case Partition::kBootloader:
+    case Partition::kBootloaderA:
       return skip_block_->FindPartition(GUID_BOOTLOADER_VALUE);
     case Partition::kZirconA:
       return skip_block_->FindPartition(GUID_ZIRCON_A_VALUE);
