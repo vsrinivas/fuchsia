@@ -1,0 +1,44 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Automated tests for https://fuchsia.googlesource.com/fargo/
+#
+# Usage: fargo-test
+#
+#   Returns: Error status if the build isn't properly configured for
+#   fargo testing or if the test fails.
+
+bail()
+{
+	echo "$1" 1>&2
+	exit 1
+}
+
+# pull in the standard fx shell variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../tools/devshell/lib/vars.sh || exit $?
+
+# use the fx script from this tree, don't rely on PATH
+FX="$FUCHSIA_DIR/scripts/fx"
+
+# use the prebuilt fargo
+FARGO="$PREBUILT_3P_DIR/fargo/$HOST_PLATFORM/fargo"
+if [[ ! -f "$FARGO" ]]
+then
+    bail "Error: can't find prebuilt fargo at $FARGO"
+fi
+
+# make sure the build is configured with a Carnelian sample
+"$FX" list-packages | grep "spinning-square-rs"  >/dev/null 2>&1 || bail "Error: Could not find \
+the spinning square example in the package list. Please make sure you have '--with //src/lib/ui/\
+carnelian:examples' in your 'fx set'"
+
+# Use gen-cargo to create a link in the current directory to the current directory
+"$FX" gen-cargo //src/lib/ui/carnelian || bail "Error: could not use fx gen-cargo"
+
+# Set the current directory to Carnelian
+cd "$FUCHSIA_DIR/src/lib/ui/carnelian" || bail "Error: could not set the current directory to carnelian"
+
+# Run fargo check, which is quick and if it works there's a good chance the rest of fargo will work
+"$FARGO" check --example spinning_square || bail "Error: fargo check failed"
