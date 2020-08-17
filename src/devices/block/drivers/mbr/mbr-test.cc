@@ -49,4 +49,30 @@ TEST(MbrTest, Parse) {
   EXPECT_EQ(mbr.boot_signature, kMbrBootSignature);
 }
 
+TEST(MbrTest, ParseFat) {
+  Mbr mbr;
+  EXPECT_OK(mbr::Parse(kFatMbr, sizeof(kFatMbr), &mbr));
+
+  MbrPartitionEntry partition;
+  memcpy(&partition, &mbr.partitions[0], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeFat12);
+  EXPECT_EQ(partition.start_sector_lba, 2048);
+  EXPECT_EQ(partition.num_sectors, 20480);
+
+  memcpy(&partition, &mbr.partitions[1], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeFat32);
+  EXPECT_EQ(partition.start_sector_lba, 22528);
+  EXPECT_EQ(partition.num_sectors, 20480);
+
+  memcpy(&partition, &mbr.partitions[2], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeFat16B);
+  EXPECT_EQ(partition.start_sector_lba, 43008);
+  EXPECT_EQ(partition.num_sectors, 20480);
+
+  memcpy(&partition, &mbr.partitions[3], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeNone);
+
+  EXPECT_EQ(mbr.boot_signature, kMbrBootSignature);
+}
+
 }  // namespace mbr

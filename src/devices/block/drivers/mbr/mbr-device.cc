@@ -12,6 +12,7 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
+#include <zircon/hw/gpt.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
@@ -41,10 +42,12 @@ namespace {
 // a mapping from partition type to type GUID.
 const uint8_t kDataGuid[GPT_GUID_LEN] = GUID_DATA_VALUE;
 const uint8_t kSysGuid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+const uint8_t kMicrosoftDataGuid[GPT_GUID_LEN] = GPT_MICROSOFT_BASIC_DATA_TYPE_GUID;
 
 const uint8_t kSupportedPartitionTypes[] = {
-    mbr::kPartitionTypeFuchsiaData,
-    mbr::kPartitionTypeFuchsiaSys,
+    mbr::kPartitionTypeFuchsiaData, mbr::kPartitionTypeFuchsiaSys, mbr::kPartitionTypeFat12,
+    mbr::kPartitionTypeFat16,       mbr::kPartitionTypeFat16B,     mbr::kPartitionTypeFat16LBA,
+    mbr::kPartitionTypeFat32,       mbr::kPartitionTypeFat32LBA,
 };
 
 constexpr uint32_t DivRoundUp(uint32_t n, uint32_t d) { return (n + (d - 1)) / d; }
@@ -168,6 +171,15 @@ zx_status_t MbrDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_g
     }
     case kPartitionTypeFuchsiaSys: {
       memcpy(out_guid, kSysGuid, BLOCK_GUID_LEN);
+      return ZX_OK;
+    }
+    case kPartitionTypeFat12:
+    case kPartitionTypeFat16:
+    case kPartitionTypeFat16B:
+    case kPartitionTypeFat16LBA:
+    case kPartitionTypeFat32:
+    case kPartitionTypeFat32LBA: {
+      memcpy(out_guid, kMicrosoftDataGuid, BLOCK_GUID_LEN);
       return ZX_OK;
     }
     default: {
