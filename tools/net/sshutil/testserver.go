@@ -17,6 +17,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -45,6 +46,10 @@ type sshServer struct {
 	// onNewChannel is a callback that gets called when the server receives a
 	// new out-of-band request.
 	onRequest func(*ssh.Request)
+
+	// wg tracks all the current goroutines that are able to serve connections,
+	// or launch new goroutines that themselves are able to serve connections.
+	wg sync.WaitGroup
 }
 
 // start launches the server and sets the server's address. It launches a
@@ -58,7 +63,11 @@ func (s *sshServer) start() error {
 	}
 	s.addr = listener.Addr()
 
+	// This goroutine is capable of launching new server goroutines, so the
+	// server can't be considered shut down if this goroutine is still running.
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		defer func() {
 			if err := listener.Close(); err != nil {
 				log.Panicf("failed to close listener: %v", err)
@@ -91,7 +100,12 @@ func (s *sshServer) start() error {
 				if err != nil {
 					log.Panicf("testserver connection error: %v\n", err)
 				}
-				go s.serveConnection(conn, incomingChannels, incomingRequests)
+
+				s.wg.Add(1)
+				go func() {
+					defer s.wg.Done()
+					s.serveConnection(conn, incomingChannels, incomingRequests)
+				}()
 			}
 		}
 	}()
@@ -107,6 +121,9 @@ func (s *sshServer) stop() {
 	default:
 		close(s.stopping)
 	}
+	// Block until we know that no new handshakes can occur, and that any
+	// existing connections can no longer be served.
+	s.wg.Wait()
 }
 
 func (s *sshServer) serveConnection(
