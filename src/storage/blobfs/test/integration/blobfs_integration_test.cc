@@ -9,6 +9,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -1636,43 +1637,48 @@ TEST_F(BlobfsTestWithFvm, VmoCloneWatchingTest) {
   ASSERT_NO_FAILURES(RunVmoCloneWatchingTest(environment_->ramdisk()));
 }
 
-void TakeSnapshot(zx_handle_t diagnostics_dir,
-                  fit::result<inspect::Hierarchy>& hierarchy_or_error) {
-  // Connect to the inspect service
-  fuchsia::inspect::TreePtr tree;
-  async::Loop tree_loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(tree_loop.StartThread("inspect-treeptr"));
+fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
+                                             async::Executor* executor) {
+  std::condition_variable cv;
+  std::mutex m;
+  bool done = false;
+  fit::result<inspect::Hierarchy> hierarchy_or_error;
 
-  // The default dispatcher must be set for inspect::ReadFromTree().
-  // TODO(fxbug.dev/57223): Pass in a dispatcher to the inspect library instead
-  // of setting the default dispatcher.
-  async_dispatcher_t* old_dispatcher = async_get_default_dispatcher();
-  async_set_default_dispatcher(tree_loop.dispatcher());
+  executor->schedule_task(
+      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
+        {
+          std::unique_lock<std::mutex> lock(m);
+          hierarchy_or_error = std::move(result);
+          done = true;
+        }
+        cv.notify_all();
+      }));
 
-  ASSERT_OK(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
-                                    tree.NewRequest().TakeChannel().release()));
+  std::unique_lock<std::mutex> lock(m);
+  cv.wait(lock, [&done]() { return done; });
 
-  // Read in a snapshot of the tree
-  auto read = inspect::ReadFromTree(std::move(tree));
-  fit::single_threaded_executor exec;
-  exec.schedule_task(read.then(
-      [&](fit::result<inspect::Hierarchy>& res) { hierarchy_or_error = std::move(res); }));
-  exec.run();
-
-  // Restore the old dispatcher
-  async_set_default_dispatcher(old_dispatcher);
+  return hierarchy_or_error;
 }
 
 TEST_F(FdioTest, AllocateIncrementsMetricTest) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("allocate-increments-metric-thread");
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+  async::Executor executor(dispatcher);
+
   // Take a snapshot of the inspect tree
-  fit::result<inspect::Hierarchy> hierarchy_or_error;
-  ASSERT_NO_FAILURES(TakeSnapshot(diagnostics_dir(), hierarchy_or_error));
-  auto hierarchy = std::move(hierarchy_or_error.value());
+  fuchsia::inspect::TreePtr tree_before;
+  ASSERT_OK(fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
+                                    tree_before.NewRequest(dispatcher).TakeChannel().release()));
+  fit::result<inspect::Hierarchy> hierarchy_or_error =
+      TakeSnapshot(std::move(tree_before), &executor);
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
+  inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
 
   // Verify that no blobs are created
-  auto allocation_stats = hierarchy.GetByPath({"allocation_stats"});
+  const inspect::Hierarchy* allocation_stats = hierarchy.GetByPath({"allocation_stats"});
   ASSERT_NOT_NULL(allocation_stats);
-  auto blobs_created =
+  const inspect::UintPropertyValue* blobs_created =
       allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
   ASSERT_NOT_NULL(blobs_created);
   ASSERT_EQ(blobs_created->value(), 0);
@@ -1687,7 +1693,11 @@ TEST_F(FdioTest, AllocateIncrementsMetricTest) {
             "Failed to write Data");
 
   // Take a snapshot of the inspect tree
-  ASSERT_NO_FAILURES(TakeSnapshot(diagnostics_dir(), hierarchy_or_error));
+  fuchsia::inspect::TreePtr tree_after;
+  ASSERT_OK(fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
+                                    tree_after.NewRequest(dispatcher).TakeChannel().release()));
+  hierarchy_or_error = TakeSnapshot(std::move(tree_after), &executor);
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
   hierarchy = std::move(hierarchy_or_error.value());
 
   // Verify that blobs created count is incremented
