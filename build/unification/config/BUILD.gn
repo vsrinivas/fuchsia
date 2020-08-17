@@ -17,6 +17,4 @@ config("zircon-migrated") {
     "-Wconversion",
     "-Wno-sign-conversion",
   ]
-
-  defines = [ "ZX_ASSERT_LEVEL=2" ]
 }
