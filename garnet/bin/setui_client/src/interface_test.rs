@@ -684,8 +684,8 @@ async fn validate_dnd(
 
 async fn validate_light_set() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
-    const LIGHT_VAL_1: u8 = 20;
-    const LIGHT_VAL_2: u8 = 42;
+    const LIGHT_VAL_1: f64 = 0.2;
+    const LIGHT_VAL_2: f64 = 0.42;
 
     let env = create_service!(Services::Light,
         LightRequest::SetLightGroupValues { name, state, responder } => {
@@ -717,8 +717,8 @@ async fn validate_light_watch() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
     const ENABLED: bool = false;
     const LIGHT_TYPE: LightType = LightType::Simple;
-    const LIGHT_VAL_1: u8 = 20;
-    const LIGHT_VAL_2: u8 = 42;
+    const LIGHT_VAL_1: f64 = 0.2;
+    const LIGHT_VAL_2: f64 = 0.42;
 
     let env = create_service!(Services::Light,
         LightRequest::WatchLightGroups { responder } => {
@@ -773,8 +773,8 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
     const ENABLED: bool = false;
     const LIGHT_TYPE: LightType = LightType::Simple;
-    const LIGHT_VAL_1: u8 = 20;
-    const LIGHT_VAL_2: u8 = 42;
+    const LIGHT_VAL_1: f64 = 0.2;
+    const LIGHT_VAL_2: f64 = 0.42;
 
     let env = create_service!(Services::Light,
         LightRequest::WatchLightGroup { name, responder } => {

@@ -38,7 +38,7 @@ class GpioLight : public GpioLightType,
   void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer);
   void GetCurrentBrightnessValue(uint32_t index,
                                  GetCurrentBrightnessValueCompleter::Sync completer);
-  void SetBrightnessValue(uint32_t index, uint8_t value,
+  void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync completer);
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer);
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
@@ -59,7 +59,7 @@ class GpioLight : public GpioLightType,
                                       GetGroupCurrentBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
   }
-  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
   }

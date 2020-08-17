@@ -41,17 +41,17 @@ class LightDevice {
   Capability GetCapability() const {
     return pwm_.has_value() ? Capability::BRIGHTNESS : Capability::SIMPLE;
   }
-  uint8_t GetCurrentSimpleValue() const { return value_; }
+  bool GetCurrentSimpleValue() const { return (value_ != 0); }
   zx_status_t SetSimpleValue(bool value);
-  uint8_t GetCurrentBrightnessValue() const { return value_; }
-  zx_status_t SetBrightnessValue(uint8_t value);
+  double GetCurrentBrightnessValue() const { return value_; }
+  zx_status_t SetBrightnessValue(double value);
 
  private:
   std::string name_;
   ddk::GpioProtocolClient gpio_;
   std::optional<ddk::PwmProtocolClient> pwm_;
 
-  uint8_t value_ = 0;
+  double value_ = 0;
 };
 
 class AmlLight : public AmlLightType,
@@ -74,7 +74,7 @@ class AmlLight : public AmlLightType,
   void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer);
   void GetCurrentBrightnessValue(uint32_t index,
                                  GetCurrentBrightnessValueCompleter::Sync completer);
-  void SetBrightnessValue(uint32_t index, uint8_t value,
+  void SetBrightnessValue(uint32_t index, double value,
                           SetBrightnessValueCompleter::Sync completer);
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer);
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer);
@@ -94,7 +94,7 @@ class AmlLight : public AmlLightType,
                                       GetGroupCurrentBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
-  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
                                SetGroupBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }

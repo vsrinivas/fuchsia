@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <cmath>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
@@ -18,9 +20,9 @@ namespace aml_light {
 
 namespace {
 
-constexpr uint8_t kMaxBrightness = 255;
-constexpr uint8_t kMinBrightness = 0;
-constexpr uint32_t kPwmPeriodNs = 1250;
+constexpr double kMaxBrightness = 1.0;
+constexpr double kMinBrightness = 0.0;
+constexpr uint32_t kPwmPeriodNs = 170625;
 
 }  // namespace
 
@@ -48,9 +50,12 @@ zx_status_t LightDevice::SetSimpleValue(bool value) {
   return ZX_OK;
 }
 
-zx_status_t LightDevice::SetBrightnessValue(uint8_t value) {
+zx_status_t LightDevice::SetBrightnessValue(double value) {
   if (!pwm_.has_value()) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((value > kMaxBrightness) || (value < kMinBrightness) || std::isnan(value)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status = ZX_OK;
@@ -127,7 +132,7 @@ void AmlLight::GetCurrentBrightnessValue(uint32_t index,
   }
 }
 
-void AmlLight::SetBrightnessValue(uint32_t index, uint8_t value,
+void AmlLight::SetBrightnessValue(uint32_t index, double value,
                                   SetBrightnessValueCompleter::Sync completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);

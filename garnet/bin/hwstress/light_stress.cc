@@ -36,7 +36,7 @@ zx::status<> LightErrorToZxStatus(fuchsia::hardware::light::LightError error) {
 }
 
 zx::status<> SetLightBrightness(const fuchsia::hardware::light::LightSyncPtr& light,
-                                uint32_t light_num, uint8_t brightness) {
+                                uint32_t light_num, double brightness) {
   fuchsia::hardware::light::Light_SetBrightnessValue_Result result;
   light->SetBrightnessValue(light_num, brightness, &result);
   if (result.is_err()) {
@@ -53,11 +53,11 @@ bool operator==(const LightInfo& a, const LightInfo& b) {
 bool operator!=(const LightInfo& a, const LightInfo& b) { return !(a == b); }
 
 zx::status<> TurnOnLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
-  return SetLightBrightness(light, light_num, /*brightness=*/UINT8_MAX);
+  return SetLightBrightness(light, light_num, /*brightness=*/1.0);
 }
 
 zx::status<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
-  return SetLightBrightness(light, light_num, /*brightness=*/0);
+  return SetLightBrightness(light, light_num, /*brightness=*/0.0);
 }
 
 zx::status<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::LightSyncPtr& light) {

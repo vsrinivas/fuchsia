@@ -20,7 +20,7 @@ use std::sync::Arc;
 pub struct HardwareLightService {
     pub light_info: Arc<Mutex<HashMap<u32, Info>>>,
     pub simple_values: Arc<Mutex<HashMap<u32, bool>>>,
-    pub brightness_values: Arc<Mutex<HashMap<u32, u8>>>,
+    pub brightness_values: Arc<Mutex<HashMap<u32, f64>>>,
     pub rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
 }
 

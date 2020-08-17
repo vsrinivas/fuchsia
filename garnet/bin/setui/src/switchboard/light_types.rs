@@ -111,7 +111,7 @@ impl From<LightState> for fidl_fuchsia_settings::LightState {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum LightValue {
-    Brightness(u8),
+    Brightness(f64),
     Rgb(ColorRgb),
     Simple(bool),
 }
