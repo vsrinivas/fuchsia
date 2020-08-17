@@ -39,15 +39,9 @@ zx_status_t StartFilesystem(zx_handle_t device_handle, zx::channel* out_data_roo
   };
 
   // launch the filesystem process
-  zx::channel export_root;
   auto status = fs_init(device_handle, DISK_FORMAT_BLOBFS, &init_options,
-                        export_root.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // extract the handle to the root of the filesystem from the export root
-  return fs_root_handle(export_root.get(), out_data_root->reset_and_get_address());
+                        out_data_root->reset_and_get_address());
+  return status;
 }
 
 // This function is borrowed from isolated_devmgr.
@@ -70,9 +64,10 @@ zx::status<ramdisk_client_t*> CreateRamDisk(int block_size, int block_count) {
 }
 
 int main(int argc, char** argv) {
-  // ramdisk is approximately 600MB
+  // TODO(xbhatnag): Parameterize these values.
+  // ramdisk is approximately 50MB
   uint64_t device_block_size = 512;
-  uint64_t device_block_count = 131'072 * 10;
+  uint64_t device_block_count = 108'544;
   uint64_t fvm_slice_size = 1'048'576;
 
   FX_LOGS(INFO) << "Creating ramdisk...";
@@ -102,7 +97,7 @@ int main(int argc, char** argv) {
   }
 
   FX_LOGS(INFO) << "Connecting to FVM block device...";
-  zx::channel local, remote, blobfs_root;
+  zx::channel local, remote, blobfs_export_dir;
   status = zx::channel::create(0, &local, &remote);
   fdio_service_connect(fvm_device_path.c_str(), remote.release());
   if (status != ZX_OK) {
@@ -111,7 +106,7 @@ int main(int argc, char** argv) {
   }
 
   FX_LOGS(INFO) << "Starting blobfs process...";
-  status = StartFilesystem(local.release(), &blobfs_root);
+  status = StartFilesystem(local.release(), &blobfs_export_dir);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not start filesystem : " << zx_status_get_string(status);
     return -1;
@@ -123,7 +118,8 @@ int main(int argc, char** argv) {
   FX_LOGS(INFO) << "Creating outgoing dir...";
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  outgoing_dir->AddEntry("blobfs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(blobfs_root)));
+  outgoing_dir->AddEntry("blobfs",
+                         fbl::MakeRefCounted<fs::RemoteDir>(std::move(blobfs_export_dir)));
   outgoing_vfs.ServeDirectory(outgoing_dir, std::move(dir_request));
 
   FX_LOGS(INFO) << "Starting outgoing dir loop...";

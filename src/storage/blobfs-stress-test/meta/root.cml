@@ -5,8 +5,8 @@
             url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
         },
         {
-            name: "blobfs-mounter",
-            url: "fuchsia-pkg://fuchsia.com/blobfs-stress-test#meta/blobfs-mounter.cm",
+            name: "mounter",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-stress-test#meta/mounter.cm",
             startup: "eager",
         },
     ],
@@ -24,14 +24,14 @@
             ],
             from: "parent",
             to: [
-                "#blobfs-mounter",
                 "#isolated_devmgr",
+                "#mounter",
             ],
         },
         {
             directory: "/dev",
             from: "#isolated_devmgr",
-            to: [ "#blobfs-mounter" ],
+            to: [ "#mounter" ],
         },
     ],
 }

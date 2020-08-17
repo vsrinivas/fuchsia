@@ -2,30 +2,55 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_test("blobfs-stress-test-bin") {
-  name = "blobfs_stress_test_runner"
+rustc_library("blobfs-stress-test-lib") {
   edition = "2018"
-  source_root = "runner.rs"
+  source_root = "lib/mod.rs"
+
   deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",  # for initialization
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
+    "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",  # for recording messages
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_core",
   ]
 
-  sources = [ "runner.rs" ]
+  sources = [
+    "lib/blob.rs",
+    "lib/mod.rs",
+    "lib/state.rs",
+    "lib/utils.rs",
+  ]
 }
 
-executable("blobfs-mounter") {
+rustc_test("blobfs-stress-test-bin") {
+  name = "blobfs_stress_test"
+  edition = "2018"
+  source_root = "tests.rs"
+  deps = [
+    ":blobfs-stress-test-lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",  # for initialization
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",  # for recording messages
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rand_core",
+  ]
+
+  sources = [ "tests.rs" ]
+}
+
+executable("mounter") {
   testonly = true
-  sources = [ "blobfs-mounter.cc" ]
+  sources = [ "mounter.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
@@ -45,8 +70,8 @@ executable("blobfs-mounter") {
 
 test_package("blobfs-stress-test") {
   deps = [
-    ":blobfs-mounter",
     ":blobfs-stress-test-bin",
+    ":mounter",
     "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
     "//src/storage/bin/blobfs:blobfs",
     "//src/sys/component_manager:bin",
@@ -63,9 +88,8 @@ test_package("blobfs-stress-test") {
       dest = "root.cm"
     },
     {
-      path = rebase_path(
-              "//src/storage/blobfs-stress-test/meta/blobfs-mounter.cml")
-      dest = "blobfs-mounter.cm"
+      path = rebase_path("//src/storage/blobfs-stress-test/meta/mounter.cml")
+      dest = "mounter.cm"
     },
   ]
 
@@ -77,13 +101,16 @@ test_package("blobfs-stress-test") {
       name = "blobfs"
     },
     {
-      name = "blobfs-mounter"
+      name = "mounter"
     },
   ]
 
   tests = [
     {
-      name = "blobfs_stress_test_runner"
+      name = "blobfs_stress_test"
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

@@ -89,10 +89,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/blobfs-stress-test#meta/blobfs_stress_test_runner.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/brightness_manager_tests#meta/brightness_manager_test.cmx",
          "max_severity": "ERROR"
       },

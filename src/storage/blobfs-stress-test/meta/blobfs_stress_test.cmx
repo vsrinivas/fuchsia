@@ -1,11 +1,10 @@
 {
     "program": {
-        "binary": "test/blobfs_stress_test_runner"
+        "binary": "test/blobfs_stress_test"
     },
     "sandbox": {
         "features": [
-            "hub",
-            "isolated-temp"
+            "hub"
         ],
         "services": [
             "fuchsia.boot.Arguments",
