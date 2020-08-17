@@ -241,20 +241,8 @@ class VmPageList final {
 
   // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
-  zx_status_t ForEveryPage(F per_page_func) {
-    return ForEveryPage(this, per_page_func);
-  }
-
-  // walk the page tree, calling the passed in function on every tree node.
-  template <typename F>
   zx_status_t ForEveryPage(F per_page_func) const {
     return ForEveryPage(this, per_page_func);
-  }
-
-  // walk the page tree, calling the passed in function on every tree node.
-  template <typename F>
-  zx_status_t ForEveryPageInRange(F per_page_func, uint64_t start_offset, uint64_t end_offset) {
-    return ForEveryPageInRange(this, per_page_func, start_offset, end_offset);
   }
 
   // walk the page tree, calling the passed in function on every tree node.
@@ -262,14 +250,6 @@ class VmPageList final {
   zx_status_t ForEveryPageInRange(F per_page_func, uint64_t start_offset,
                                   uint64_t end_offset) const {
     return ForEveryPageInRange(this, per_page_func, start_offset, end_offset);
-  }
-
-  // walk the page tree, calling |per_page_func| on every page/marker and |per_gap_func| on every
-  // gap.
-  template <typename PAGE_FUNC, typename GAP_FUNC>
-  zx_status_t ForEveryPageAndGapInRange(PAGE_FUNC per_page_func, GAP_FUNC per_gap_func,
-                                        uint64_t start_offset, uint64_t end_offset) {
-    return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
   }
 
   // walk the page tree, calling |per_page_func| on every page/marker and |per_gap_func| on every
@@ -310,7 +290,7 @@ class VmPageList final {
     };
 
     // walk the tree in order, freeing all the pages on every node
-    ForEveryPage(per_page_func);
+    ForEveryPage(this, per_page_func);
 
     // empty the tree
     list_.clear();
