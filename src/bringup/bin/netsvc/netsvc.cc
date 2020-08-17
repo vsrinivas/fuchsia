@@ -126,6 +126,8 @@ int main(int argc, char** argv) {
     printf("netsvc: will not advertise\n");
   }
 
+  bool did_print_start = false;
+
   for (;;) {
     if (netifc_open(interface) != 0) {
       printf("netsvc: fatal error initializing network\n");
@@ -135,8 +137,6 @@ int main(int argc, char** argv) {
     if (g_netbootloader) {
       printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
     }
-
-    printf("netsvc: start\n");
 
     zx_time_t advertise_next_timeout = ZX_TIME_INFINITE;
     if (g_netbootloader && should_advertise) {
@@ -158,6 +158,14 @@ int main(int argc, char** argv) {
         netboot_advertise(g_nodename);
         advertise_next_timeout = zx_deadline_after(ZX_SEC(1));
       }
+
+      if (!did_print_start) {
+        // This print needs to happen after the first advertisement so that the
+        // tests can rely on connecting once they see it.
+        printf("netsvc: start\n");
+        did_print_start = true;
+      }
+
       if (now > debuglog_next_timeout()) {
         debuglog_timeout_expired();
       }
