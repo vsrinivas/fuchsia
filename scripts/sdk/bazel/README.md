@@ -2,6 +2,19 @@
 
 The Bazel SDK frontend produces a [Bazel](https://bazel.build/) workspace.
 
+> **This Bazel SDK is not meant for public use!**
+
+This Bazel SDK is used to verify that the core Integrator's Developer Kit (IDK)
+is not biased towards any particular build system. However, this code is not
+actively maintained, so it may break when used with future versions of its
+dependencies.
+
+If you are looking for an SDK to use, check out the
+[GN SDK](https://fuchsia.dev/fuchsia-src/development/sdk/gn), or consider
+building your own using the
+[IDK](https://fuchsia.dev/fuchsia-src/development/sdk).
+
+
 ## Directory structure
 
 - `generate.py`: the script that generates the SDK;
