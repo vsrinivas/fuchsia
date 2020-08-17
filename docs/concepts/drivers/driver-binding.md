@@ -163,6 +163,82 @@ bind_rules("bind") {
 
 For more details, refer to [//build/bind/bind.gni](/build/bind/bind.gni).
 
+## Testing
+The bind compiler supports a data-driven unit test framework for bind rules that allows you to
+test your bind rules in isolation from the driver. A test case for a bind program consists of a
+device specification and an expected result, i.e. bind or abort. Test cases are passed to the bind
+compiler in the form of JSON specification files and the compiler executes each test case by
+running the debugger.
+
+The JSON specification must be a list of test case objects, where each object contains:
+
+ - `name` A string for the name of the test case.
+ - `expected` The expected result. Must be `“match”` or `“abort”`.
+ - `device` A list of string key value pairs describing the properties of a device. This is
+   similar to the debugger's [device specifications](#device-specification).
+
+### Example
+
+This is an example test case, the full set of tests is at `//tools/bindc/examples/test.json`. This
+case checks that the bind rules match a device with the listed properties, i.e. an Intel USB audio
+device.
+
+```
+[
+  {
+    "name": "Intel",
+    "expected": "match",
+    "device": {
+      "deprecated.BIND_PROTOCOL": "deprecated.usb.BIND_PROTOCOL.DEVICE",
+      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
+      "deprecated.BIND_USB_CLASS": "deprecated.usb.BIND_USB_CLASS.AUDIO"
+    }
+  }
+]
+```
+
+### Build
+
+Define a test build target like so
+
+```
+bind_test("bind_test") {
+  rules = <bind rules filename>
+  tests = <test specification filename>
+  deps = [ <list of bind library targets> ]
+}
+```
+
+Alternatively, you can simply add a `tests` argument to your existing `bind_rules` to generate a
+test target. It’s name will be the original target’s name plus `_test`. For example, the following
+would generate `example_bind_test`.
+
+```
+bind_rules("example_test") {
+  rules = "gizmo.bind"
+  output = “gizmo_bind.h”
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/deprecated.usb" ]
+}
+```
+
+### Run
+
+If you have defined a build target for your test then you can run the tests as usual with fx test.
+
+```
+fx test example_bind_test
+```
+
+Otherwise you can run the bind tool directly. For example:
+
+```
+fx bindc test \
+  tools/bindc/examples/gizmo.bind \
+  --test-spec tools/bindc/examples/tests.json \
+  --include src/devices/bind/deprecated.usb/deprecated.usb.bind
+```
+
 ## Bind libraries {#bind-libraries}
 
 A bind library defines a set of properties that drivers may assign to their children. Also,
@@ -337,7 +413,7 @@ the device to run the bind program against.
 Note: The `--debug` and `--output` options are mutually exclusive, so the C
 header file will not be generated when running the compiler in debug mode.
 
-#### Device specification file
+#### Device specification file {#device-specification}
 
 The debugger takes a file specifying the device to run the bind program against.
 This specification is simply a list of key-value pairs describing the properties
