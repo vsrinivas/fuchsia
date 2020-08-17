@@ -40,7 +40,6 @@ common_test_contents = [
   "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
   "//src/ui/backlight/tests:backlight-test",
   "//src/bringup/bin/bootsvc/test:bootsvc-unit-test",
-  "//src/bringup/bin/console:console-test",
   "//src/bringup/bin/netsvc:netsvc-stress-test",
   "//src/bringup/bin/netsvc:netsvc-test",
   "//src/bringup/bin/ptysvc:ptysvc-test",

@@ -7,6 +7,7 @@ import("//build/unification/images/common_test_contents.gni")
 group("tests") {
   testonly = true
   deps = [
+    "//src/bringup/bin/console:bootfs-test",
     "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.
     "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",  # HW-required.
