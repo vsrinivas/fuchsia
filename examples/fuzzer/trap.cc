@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 /* A simple fuzzer that finds a trivial crash via a __builtin_trap. */
 #include <stdint.h>
 #include <stddef.h>

@@ -44,7 +44,9 @@
     "LICENSE",
     "License",
     "README",
-    "NOTICE"
+    "NOTICE",
+    "copying",
+    "COPYING"
   ],
   "goldenLicenses": "golden",
   "licensePatternDir": "tools/check-licenses/golden/patterns",
