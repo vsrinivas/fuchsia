@@ -27,6 +27,7 @@ dart_test("package_manager_test") {
     "//third_party/dart-pkg/pub/quiver",
     "//third_party/dart-pkg/pub/test",
   ]
+
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
   args = [ "--data-dir=" + rebase_path(_shared_out_dir) ]
 
@@ -40,16 +41,19 @@ dart_test("package_manager_test") {
 
 if (is_host) {
   host_test_data("runtime_deps") {
+    metadata = {
+      package_barrier = []
+    }
     sources = [
-      "$_shared_out_dir/obj/garnet/examples/components/component_hello_world/meta.far",
-      "$_shared_out_dir/obj/garnet/examples/components/component_hello_world/package_manifest.json",
+      "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/meta.far",
+      "$_shared_out_dir/obj/src/tests/end_to_end/package_manager/components/cts-package-manager-sample-component/package_manifest.json",
       "$host_tools_dir/pm",
     ]
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
     deps = [
-      "//garnet/examples/components:component_hello_world($default_toolchain)",
       "//garnet/packages/tools:sl4f",  # Required to run tests locally.
       "//src/sys/pkg/bin/pm:host($host_toolchain)",
+      "//src/tests/end_to_end/package_manager/components:cts-package-manager-sample-component($default_toolchain)",
     ]
   }
 }
@@ -57,5 +61,8 @@ if (is_host) {
 group("tests") {
   testonly = true
 
-  deps = [ ":package_manager_test($host_toolchain)" ]
+  deps = [
+    ":package_manager_test($host_toolchain)",
+    "//garnet/packages/tools:sl4f",
+  ]
 }

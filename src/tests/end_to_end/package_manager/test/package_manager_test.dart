@@ -53,6 +53,7 @@ void main() {
     Optional<String> originalRewriteRule;
     Set<String> originalRepos;
     PackageManagerRepo repoServer;
+    String testPackageName = 'cts-package-manager-sample-component';
 
     setUp(() async {
       repoServer = await PackageManagerRepo.initRepo(sl4fDriver, pmPath, log);
@@ -86,8 +87,7 @@ void main() {
       // amberctl rm_src -n <name>
       // pkgctl repo
       // pm serve -repo=<path> -l :<port>
-      await repoServer
-          .setupServe('component_hello_world-0.far', manifestPath, []);
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
@@ -98,7 +98,7 @@ void main() {
 
       expect(curlResponse.exitCode, 0);
       final curlOutput = curlResponse.stdout.toString();
-      expect(curlOutput.contains('component_hello_world/0'), isTrue);
+      expect(curlOutput.contains('$testPackageName/0'), isTrue);
 
       // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
       // guaranteed. Record what the rule list is before we begin, and confirm that is
@@ -179,7 +179,7 @@ void main() {
       // Previously covered:
       // amberctl add_src -n <path> -f http://<host>:<port>/config.json
       await repoServer
-          .setupServe('component_hello_world-0.far', manifestPath, ['-q']);
+          .setupServe('$testPackageName-0.far', manifestPath, ['-q']);
       final optionalPort = repoServer.getServePort();
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
@@ -190,7 +190,7 @@ void main() {
 
       expect(curlResponse.exitCode, 0);
       final curlOutput = curlResponse.stdout.toString();
-      expect(curlOutput.contains('component_hello_world/0'), isTrue);
+      expect(curlOutput.contains('$testPackageName/0'), isTrue);
 
       await repoServer.amberctlAddSrcNF(
           'Adding the new repository as an update source with http://$hostAddress:$port',
@@ -223,8 +223,7 @@ void main() {
       // Previously covered:
       // pm serve -repo=<path> -l :<port>
       // pkgctl repo
-      await repoServer
-          .setupServe('component_hello_world-0.far', manifestPath, []);
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
@@ -264,7 +263,7 @@ void main() {
       //
       // Newly covered:
       // pm serve -repo=<path> -l :<port> -f <path to export port number>
-      await repoServer.setupRepo('component_hello_world-0.far', manifestPath);
+      await repoServer.setupRepo('$testPackageName-0.far', manifestPath);
       final portFilePath = path.join(repoServer.getRepoPath(), 'port_file.txt');
 
       await repoServer.pmServeRepoLExtra(['-f', '$portFilePath']);
@@ -293,8 +292,7 @@ void main() {
       // Previously covered:
       // pkgctl repo
       // pm serve -repo=<path> -l :<port>
-      await repoServer
-          .setupServe('component_hello_world-0.far', manifestPath, []);
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;

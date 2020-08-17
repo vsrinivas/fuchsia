@@ -114,6 +114,7 @@ Future<String> createPkgManifestFile(
   final manifestPath = '$workingDirectory/pkg.manifest';
   File newManifest = File(manifestPath);
   var writer = newManifest.openWrite();
+
   final manifestParsed =
       json.decode(await File(manifestJsonPath).readAsString());
   manifestParsed['blobs'].forEach((blob) {
@@ -128,7 +129,6 @@ Future<String> createPkgManifestFile(
   File metaPackage = File(metaPackagePath);
   await metaPackage.writeAsString(r'{"name":"pkg-resolver","version":"0"}');
   writer.write('meta/package=${metaPackage.absolute.path}');
-
   await writer.close();
   return manifestPath;
 }
