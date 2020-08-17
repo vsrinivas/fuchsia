@@ -12,6 +12,7 @@
 
 #define PATH_DATA "/data"
 #define PATH_INSTALL "/install"
+#define PATH_DURABLE "/durable"
 #define PATH_SYSTEM "/system"
 #define PATH_BLOB "/blob"
 #define PATH_FACTORY "/factory"

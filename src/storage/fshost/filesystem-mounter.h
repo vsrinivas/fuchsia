@@ -42,6 +42,10 @@ class FilesystemMounter {
   // Fails if already mounted.
   zx_status_t MountData(zx::channel block_device_client, const mount_options_t& options);
 
+  // Attempts to mount a block device to "/durable".
+  // Fails if already mounted.
+  zx_status_t MountDurable(zx::channel block_device_client, const mount_options_t& options);
+
   // Attempts to mount a block device to "/install".
   // Fails if already mounted.
   zx_status_t MountInstall(zx::channel block_device_client, const mount_options_t& options);
@@ -90,6 +94,7 @@ class FilesystemMounter {
   std::unique_ptr<FsManager> fshost_;
   const BlockWatcherOptions options_;
   bool data_mounted_ = false;
+  bool durable_mounted_ = false;
   bool install_mounted_ = false;
   bool blob_mounted_ = false;
   bool pkgfs_mounted_ = false;

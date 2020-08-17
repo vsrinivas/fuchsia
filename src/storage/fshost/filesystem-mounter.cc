@@ -22,7 +22,8 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
   return launcher.Launch(*zx::job::default_job(), argv[0], argv, nullptr, -1,
-                         /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr, fs_flags);
+                         /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr,
+                         fs_flags);
 }
 
 zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const char* binary,
@@ -129,11 +130,30 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
 
   zx_status_t status = MountFilesystem(PATH_FACTORY, "/boot/bin/factoryfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);
+
   if (status != ZX_OK) {
     return status;
   }
 
   factory_mounted_ = true;
+  return ZX_OK;
+}
+
+zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
+                                            const mount_options_t& options) {
+  if (durable_mounted_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  // TODO(54525): The Inspect API has not been connected for durable partition yet.
+  zx::channel diagnostics_dir;
+  zx_status_t status = MountFilesystem(PATH_DURABLE, "/boot/bin/minfs", options,
+                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  durable_mounted_ = true;
   return ZX_OK;
 }
 

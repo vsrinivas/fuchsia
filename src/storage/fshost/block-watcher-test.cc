@@ -470,6 +470,76 @@ TEST(AddDeviceTestCase, AddUnknownFormatZxcryptDevice) {
   EXPECT_FALSE(device.formatted_filesystem);
 }
 
+// Durable partition tests
+// Tests adding minfs on durable partition with a valid type GUID and valid metadata.
+TEST(AddDeviceTestCase, AddValidDurableDevice) {
+  class DurableDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  DurableDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding minfs backed durable partition with a valid type GUID and invalid metadata.
+// Observe that the filesystem reformats itself.
+TEST(AddDeviceTestCase, AddInvalidDurableDevice) {
+  class DurableDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_MINFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  DurableDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_TRUE(device.formatted);
+  EXPECT_TRUE(device.mounted);
+}
+
 // Tests adding a boot partition device with unknown format can be added with
 // the correct driver.
 TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {

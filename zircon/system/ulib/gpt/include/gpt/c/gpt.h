@@ -38,6 +38,9 @@ bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
 // determines whether guid is install guid
 bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
 
+// determines whether guid is durable guid
+bool gpt_is_durable_guid(uint8_t* guid, ssize_t len);
+
 // determines whether guid is efi guid
 bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
 

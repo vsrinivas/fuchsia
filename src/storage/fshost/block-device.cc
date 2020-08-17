@@ -75,6 +75,8 @@ zx_status_t MountMinfs(FilesystemMounter* mounter, zx::channel block_device,
   } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
     options->readonly = true;
     return mounter->MountInstall(std::move(block_device), *options);
+  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
+    return mounter->MountDurable(std::move(block_device), *options);
   }
   printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
   return ZX_ERR_WRONG_TYPE;
@@ -470,8 +472,10 @@ zx_status_t BlockDeviceInterface::Add() {
     case DISK_FORMAT_MINFS: {
       printf("fshost: mounting minfs\n");
 
-      const uint8_t expected_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-      if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
+      const uint8_t expected_data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+      const uint8_t expected_durable_guid[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
+      if (((memcmp(guid.value, expected_data_guid, GPT_GUID_LEN)) &&
+           (memcmp(guid.value, expected_durable_guid, GPT_GUID_LEN)))) {
         return ZX_ERR_INVALID_ARGS;
       }
 
