@@ -599,7 +599,7 @@ mod test {
         std::net::{Ipv4Addr, Ipv6Addr},
     };
 
-    fn clone_target(t: &Target) -> Target {
+    async fn clone_target(t: &Target) -> Target {
         let inner = Arc::new(TargetInner::clone(&t.inner));
         Target::from_inner(inner)
     }
@@ -662,7 +662,7 @@ mod test {
         let tc = TargetCollection::new();
         let nodename = String::from("what");
         let t = Target::new_with_time(&nodename, fake_now());
-        tc.merge_insert(clone_target(&t)).await;
+        tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(&tc.get(nodename.clone().into()).await.unwrap(), &t);
         match tc.get("oihaoih".into()).await {
             Some(_) => panic!("string lookup should return Nobne"),
@@ -682,8 +682,8 @@ mod test {
         ));
         t1.addrs_insert((a1.clone(), 1).into()).await;
         t2.addrs_insert((a2.clone(), 1).into()).await;
-        tc.merge_insert(clone_target(&t2)).await;
-        tc.merge_insert(clone_target(&t1)).await;
+        tc.merge_insert(clone_target(&t2).await).await;
+        tc.merge_insert(clone_target(&t1).await).await;
         let merged_target = tc.get(nodename.clone().into()).await.unwrap();
         assert_ne!(&merged_target, &t1);
         assert_ne!(&merged_target, &t2);
@@ -806,7 +806,7 @@ mod test {
         );
         let t = Target::from_rcs_connection(conn).await.unwrap();
         let tc = TargetCollection::new();
-        tc.merge_insert(clone_target(&t)).await;
+        tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get(ID.into()).await.unwrap(), t);
     }
 
@@ -816,7 +816,7 @@ mod test {
         let t = Target::new("foo");
         t.addrs_insert(addr.clone()).await;
         let tc = TargetCollection::new();
-        tc.merge_insert(clone_target(&t)).await;
+        tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get(addr.into()).await.unwrap(), t);
         assert_eq!(tc.get("192.168.0.1".into()).await.unwrap(), t);
         assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
@@ -825,7 +825,7 @@ mod test {
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
         let t = Target::new("fooberdoober");
         t.addrs_insert(addr.clone()).await;
-        tc.merge_insert(clone_target(&t)).await;
+        tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
         assert_eq!(tc.get(addr.clone().into()).await.unwrap(), t);
         assert_eq!(tc.get("fooberdoober".into()).await.unwrap(), t);

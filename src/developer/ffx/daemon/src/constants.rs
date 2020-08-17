@@ -6,21 +6,35 @@ use std::time::Duration;
 pub(crate) const DAEMON: &str = "daemon";
 
 #[cfg(not(test))]
-pub(crate) const SOCKET: &str = "/tmp/ascendd";
+pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd";
 
 #[cfg(test)]
-pub(crate) const SOCKET: &str = "/tmp/ascendd_for_testing_only";
+pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd_for_testing_only";
 
-pub(crate) const MAX_RETRY_COUNT: u32 = 30;
+pub(crate) const DEFAULT_MAX_RETRY_COUNT: u64 = 30;
 
 // Delay between retry attempts to find the RCS.
-pub const RETRY_DELAY: Duration = Duration::from_millis(200);
+pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 
 // The amount of time when awaiting an event (target up, RCS connect, etc)
 // before giving up. This may need to be split up into specific timeouts for
 // specific events.
-pub const EVENT_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const DEFAULT_EVENT_TIMEOUT_SEC: u64 = 10;
 
 // Config keys
-pub const SSH_PRIV: &str = "ssh.priv";
-pub const SSH_PORT: &str = "ssh.port";
+pub(crate) const SSH_PRIV: &str = "ssh.priv";
+pub(crate) const SSH_PORT: &str = "ssh.port";
+pub(crate) const OVERNET_MAX_RETRY_COUNT: &str = "overnet.max_retry_count";
+pub(crate) const EVENTS_TIMEOUT_SECONDS: &str = "events.timeout_secs";
+#[cfg(not(test))]
+pub(crate) const OVERNET_SOCKET: &str = "overnet.socket";
+
+#[cfg(not(test))]
+pub(crate) async fn get_socket() -> String {
+    ffx_config::get!(str, OVERNET_SOCKET, DEFAULT_SOCKET).await
+}
+
+#[cfg(test)]
+pub(crate) async fn get_socket() -> String {
+    DEFAULT_SOCKET.to_string()
+}

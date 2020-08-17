@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{DAEMON, MAX_RETRY_COUNT, SOCKET},
+    crate::constants::{get_socket, DAEMON, DEFAULT_MAX_RETRY_COUNT, OVERNET_MAX_RETRY_COUNT},
     crate::daemon::Daemon,
     anyhow::{bail, Context, Result},
+    ffx_config::get,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{
@@ -47,7 +48,8 @@ pub async fn find_and_connect() -> Result<DaemonProxy> {
     let svc = hoist::connect_as_service_consumer()?;
     // Sometimes list_peers doesn't properly report the published services - retry a few times
     // but don't loop indefinitely.
-    for _ in 0..MAX_RETRY_COUNT {
+    let max_retry_count = get!(number, OVERNET_MAX_RETRY_COUNT, DEFAULT_MAX_RETRY_COUNT).await;
+    for _ in 0..max_retry_count {
         let peers = svc.list_peers().await?;
         for mut peer in peers {
             if peer.description.services.is_none() {
@@ -121,17 +123,18 @@ async fn exec_server(daemon: Daemon) -> Result<()> {
 ////////////////////////////////////////////////////////////////////////////////
 // start
 
-pub fn is_daemon_running() -> bool {
+pub async fn is_daemon_running() -> bool {
     // Try to connect directly to the socket. This will fail if nothing is listening on the other side
     // (even if the path exists).
-    match std::os::unix::net::UnixStream::connect(SOCKET) {
+    let socket = get_socket().await;
+    match std::os::unix::net::UnixStream::connect(socket) {
         Ok(_) => true,
         Err(_) => false,
     }
 }
 
 pub async fn start() -> Result<()> {
-    if is_daemon_running() {
+    if is_daemon_running().await {
         return Ok(());
     }
     futures::try_join!(onet::run_ascendd(), exec_server(Daemon::new().await?))?;

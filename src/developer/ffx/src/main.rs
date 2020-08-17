@@ -17,7 +17,7 @@ mod constants;
 mod logger;
 
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    if !is_daemon_running() {
+    if !is_daemon_running().await {
         spawn_daemon().await?;
     }
     find_and_connect().await

@@ -1,4 +1,8 @@
 {
+  "overnet": {
+    "socket": "/tmp/ascendd",
+    "max_retry_count": 30
+  },
   "ssh": {
     "port": "$FUCHSIA_SSH_PORT",
     "priv": [
@@ -9,5 +13,8 @@
       "$FUCHSIA_DIR/.ssh/authorized_keys",
       "$HOME/.ssh/id_rsa.pub"
     ]
+  },
+  "events": {
+    "timeout_secs": 10
   }
 }

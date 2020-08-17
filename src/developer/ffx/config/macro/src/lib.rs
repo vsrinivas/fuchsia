@@ -53,6 +53,14 @@ macro_rules! get {
     (file_str, $key:expr) => {{
         ffx_config::try_get_config_file_str($key, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
+    (number, $key:expr, $default:expr) => {{
+        ffx_config::get_config_number(
+            $key,
+            $default,
+            ffx_config::ffx_cmd!(),
+            ffx_config::ffx_env!(),
+        )
+    }};
     (number, $key:expr) => {{
         ffx_config::try_get_config_number($key, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};

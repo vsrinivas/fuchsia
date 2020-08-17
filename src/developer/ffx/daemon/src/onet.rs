@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{self, SOCKET},
+    crate::constants::{get_socket, RETRY_DELAY},
     crate::ssh::build_ssh_command,
     crate::target::{TargetAddr, TargetAddrFetcher},
     anyhow::{anyhow, Context, Result},
@@ -144,7 +144,7 @@ impl HostPipeConnection {
     pub fn new(
         target: Weak<impl TargetAddrFetcher + Sized + 'static>,
     ) -> impl Future<Output = Result<(), String>> + Send {
-        HostPipeConnection::new_with_cmd(target, HostPipeChild::new, constants::RETRY_DELAY)
+        HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
     fn new_with_cmd<F>(
@@ -176,7 +176,7 @@ impl HostPipeConnection {
 pub async fn run_ascendd() -> Result<()> {
     log::info!("Starting ascendd");
     ascendd_lib::run_ascendd(
-        ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() },
+        ascendd_lib::Opt { sockpath: Some(get_socket().await), ..Default::default() },
         // TODO: this just prints serial output to stdout - ffx probably wants to take a more
         // nuanced approach here.
         Box::new(async_std::io::stdout()),

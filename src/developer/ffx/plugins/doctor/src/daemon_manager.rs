@@ -15,7 +15,7 @@ pub(crate) trait DaemonManager {
     // Kills any running daemons. Returns a bool indicating whether any daemons were killed.
     fn kill_all(&self) -> Result<bool>;
 
-    fn is_running(&self) -> bool;
+    async fn is_running(&self) -> bool;
 
     async fn spawn(&self) -> Result<()>;
 
@@ -32,8 +32,8 @@ impl DaemonManager for DefaultDaemonManager {
         return Ok(status.success());
     }
 
-    fn is_running(&self) -> bool {
-        return is_daemon_running();
+    async fn is_running(&self) -> bool {
+        is_daemon_running().await
     }
 
     async fn spawn(&self) -> Result<()> {

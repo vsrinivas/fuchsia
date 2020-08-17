@@ -51,7 +51,7 @@ async fn doctor<W: Write>(
         }
 
         print_status_line(writer, DAEMON_RUNNING_CHECK);
-        if !daemon_manager.is_running() {
+        if !daemon_manager.is_running().await {
             writeln!(writer, "{}", NONE_RUNNING).unwrap();
             print_status_line(writer, KILLING_ZOMBIE_DAEMONS);
 
@@ -282,7 +282,7 @@ mod test {
             state.kill_results.remove(0)
         }
 
-        fn is_running(&self) -> bool {
+        async fn is_running(&self) -> bool {
             let mut state = self.state_manager.lock().unwrap();
             assert!(!state.daemons_running_results.is_empty(), "too many calls to is_running");
             state.daemons_running_results.remove(0)

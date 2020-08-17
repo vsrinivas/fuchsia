@@ -104,6 +104,18 @@ pub async fn get_config_bool(name: &str, default: bool, ffx: Ffx, env: Result<St
         })
 }
 
+pub async fn get_config_number(name: &str, default: u64, ffx: Ffx, env: Result<String>) -> u64 {
+    get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
+        .await
+        .unwrap_or(Some(Value::Number(serde_json::Number::from(default))))
+        .map_or(default, |v| {
+            v.as_u64().unwrap_or(match v {
+                Value::String(s) => s.parse().unwrap_or(default),
+                _ => default,
+            })
+        })
+}
+
 pub async fn try_get_config_number(
     name: &str,
     ffx: Ffx,

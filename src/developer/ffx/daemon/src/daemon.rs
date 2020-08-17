@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{EVENT_TIMEOUT, SOCKET},
+    crate::constants::{get_socket, DEFAULT_EVENT_TIMEOUT_SEC, EVENTS_TIMEOUT_SECONDS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
@@ -11,6 +11,7 @@ use {
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
+    ffx_config::get,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
@@ -256,9 +257,12 @@ impl Daemon {
                         return Ok(());
                     }
                 };
+                let event_timeout = Duration::from_secs(
+                    get!(number, EVENTS_TIMEOUT_SECONDS, DEFAULT_EVENT_TIMEOUT_SEC).await,
+                );
                 match target
                     .events
-                    .wait_for(Some(EVENT_TIMEOUT), |e| e == TargetEvent::RcsActivated)
+                    .wait_for(Some(event_timeout), |e| e == TargetEvent::RcsActivated)
                     .await
                 {
                     Ok(()) => (),
@@ -292,7 +296,7 @@ impl Daemon {
 
                 task::sleep(std::time::Duration::from_millis(10)).await;
 
-                match std::fs::remove_file(SOCKET) {
+                match std::fs::remove_file(get_socket().await) {
                     Ok(()) => {}
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
@@ -535,8 +539,9 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
-        if std::path::Path::new(SOCKET).is_file() {
-            std::fs::remove_file(SOCKET).unwrap();
+        let socket = get_socket().await;
+        if std::path::Path::new(&socket).is_file() {
+            std::fs::remove_file(&socket).unwrap();
         }
 
         let mut _ctrl = spawn_daemon_server_with_fake_target("florp", stream).await;
@@ -544,7 +549,7 @@ mod test {
 
         assert!(r);
 
-        assert!(!std::path::Path::new(SOCKET).is_file());
+        assert!(!std::path::Path::new(&socket).is_file());
 
         Ok(())
     }
