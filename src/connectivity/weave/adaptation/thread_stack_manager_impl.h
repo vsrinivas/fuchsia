@@ -15,7 +15,7 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
   // the implementation methods provided by this class.
   friend class ThreadStackManager;
 
-  // Allow the singleton accessors to access the instance
+  // Allow the singleton accessors to access the instance.
   friend ThreadStackManager& ::nl::Weave::DeviceLayer::ThreadStackMgr();
   friend ThreadStackManagerImpl& ::nl::Weave::DeviceLayer::ThreadStackMgrImpl();
 

@@ -32,14 +32,14 @@ using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 ThreadStackManagerImpl ThreadStackManagerImpl::sInstance;
 
 WEAVE_ERROR ThreadStackManagerImpl::_InitThreadStack() {
-  // See note at top to explain these SyncPtrs
+  // See note at top to explain these SyncPtrs.
   LookupSyncPtr lookup;
   Lookup_LookupDevice_Result result;
   Protocols protocols;
   std::vector<std::string> interface_names;
   zx_status_t status;
 
-  // Access the LoWPAN service
+  // Access the LoWPAN service.
   status = PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(lookup.NewRequest());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to fuchsia.lowpan.device.Lookup: "
@@ -47,21 +47,21 @@ WEAVE_ERROR ThreadStackManagerImpl::_InitThreadStack() {
     return status;
   }
 
-  // Retrieve LoWPAN interface names
+  // Retrieve LoWPAN interface names.
   status = lookup->GetDevices(&interface_names);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to retrieve LoWPAN interface names: " << zx_status_get_string(status);
     return status;
   }
 
-  // Check returned interfaces for Thread support
+  // Check returned interfaces for Thread support.
   bool found_device = false;
   for (auto& name : interface_names) {
     std::vector<std::string> net_types;
 
     protocols.set_device(device_.NewRequest());
 
-    // Look up the device by interface name
+    // Look up the device by interface name.
     status = lookup->LookupDevice(name, std::move(protocols), &result);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to lookup device: " << zx_status_get_string(status);
@@ -73,7 +73,7 @@ WEAVE_ERROR ThreadStackManagerImpl::_InitThreadStack() {
       continue;
     }
 
-    // Check if the device supports Thread
+    // Check if the device supports Thread.
     status = device_->GetSupportedNetworkTypes(&net_types);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to request supported network types from device \"" << name
@@ -83,7 +83,7 @@ WEAVE_ERROR ThreadStackManagerImpl::_InitThreadStack() {
 
     for (auto& net_type : net_types) {
       if (net_type == fuchsia::lowpan::NET_TYPE_THREAD_1_X) {
-        // Found a Thread device
+        // Found a Thread device.
         interface_name_ = name;
         found_device = true;
         break;
@@ -117,12 +117,12 @@ bool ThreadStackManagerImpl::_IsThreadEnabled() {
   DeviceState device_state;
   zx_status_t status;
 
-  // Get the device state
+  // Get the device state.
   status = GetDeviceState(&device_state);
   if (status != ZX_OK)
     return false;
 
-  // Determine whether Thread is enabled
+  // Determine whether Thread is enabled.
   switch (device_state.connectivity_state()) {
     case ConnectivityState::OFFLINE:
     case ConnectivityState::ATTACHING:
@@ -136,7 +136,7 @@ bool ThreadStackManagerImpl::_IsThreadEnabled() {
 }
 
 WEAVE_ERROR ThreadStackManagerImpl::_SetThreadEnabled(bool val) {
-  // Enable or disable the device
+  // Enable or disable the device.
   zx_status_t status = device_->SetActive(val);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to " << (val ? "enable" : "disable")
@@ -155,7 +155,7 @@ bool ThreadStackManagerImpl::_IsThreadAttached() {
   DeviceState device_state;
   zx_status_t status;
 
-  // Get the device state
+  // Get the device state.
   status = GetDeviceState(&device_state);
   if (status != ZX_OK)
     return false;
@@ -201,13 +201,13 @@ zx_status_t ThreadStackManagerImpl::GetDeviceState(DeviceState* device_state) {
   DeviceSyncPtr device;
   zx_status_t status;
 
-  // Get device pointer
+  // Get device pointer.
   status = GetProtocols(std::move(Protocols().set_device(device.NewRequest())));
   if (status != ZX_OK) {
     return status;
   }
 
-  // Grab device state
+  // Grab device state.
   status = device->WatchDeviceState(device_state);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not get LoWPAN device state: " << zx_status_get_string(status);
@@ -218,12 +218,12 @@ zx_status_t ThreadStackManagerImpl::GetDeviceState(DeviceState* device_state) {
 }
 
 zx_status_t ThreadStackManagerImpl::GetProtocols(Protocols protocols) {
-  // See note at top to explain these SyncPtrs
+  // See note at top to explain these SyncPtrs.
   LookupSyncPtr lookup;
   Lookup_LookupDevice_Result result;
   zx_status_t status;
 
-  // Access the LoWPAN service
+  // Access the LoWPAN service.
   status = PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(lookup.NewRequest());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to fuchsia.lowpan.device.Lookup: "
@@ -231,7 +231,7 @@ zx_status_t ThreadStackManagerImpl::GetProtocols(Protocols protocols) {
     return status;
   }
 
-  // Look up the device by interface name
+  // Look up the device by interface name.
   status = lookup->LookupDevice(interface_name_, std::move(protocols), &result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to lookup device: " << zx_status_get_string(status);

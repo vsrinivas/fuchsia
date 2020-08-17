@@ -41,7 +41,7 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
  public:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  // Fidl interfaces
+  // Fidl interfaces.
 
   void GetSupportedNetworkTypes(GetSupportedNetworkTypesCallback callback) override {
     callback({fuchsia::lowpan::NET_TYPE_THREAD_1_X});
@@ -60,7 +60,7 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
     callback();
   }
 
-  // Accessors/mutators for testing
+  // Accessors/mutators for testing.
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
@@ -154,23 +154,23 @@ class ThreadStackManagerTest : public WeaveTestFixture {
 };
 
 TEST_F(ThreadStackManagerTest, IsEnabled) {
-  // Confirm initial INACTIVE => false
+  // Confirm initial INACTIVE => false.
   EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadEnabled());
-  // Set to active but offline and confirm
+  // Set to active but offline and confirm.
   fake_lookup_.device().set_connectivity_state(ConnectivityState::OFFLINE);
   EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadEnabled());
-  // Set to ready but inactive and confirm
+  // Set to ready but inactive and confirm.
   fake_lookup_.device().set_connectivity_state(ConnectivityState::READY);
   EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadEnabled());
-  // Set to attached, and confirm
+  // Set to attached, and confirm.
   fake_lookup_.device().set_connectivity_state(ConnectivityState::ATTACHED);
   EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadEnabled());
 }
 
 TEST_F(ThreadStackManagerTest, SetEnabled) {
-  // Sanity check starting state
+  // Sanity check starting state.
   ASSERT_EQ(fake_lookup_.device().connectivity_state(), ConnectivityState::INACTIVE);
-  // Alternate enabling/disabling and confirming the current state
+  // Alternate enabling/disabling and confirming the current state.
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(true), WEAVE_NO_ERROR);
   EXPECT_EQ(fake_lookup_.device().connectivity_state(), ConnectivityState::OFFLINE);
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(false), WEAVE_NO_ERROR);
@@ -178,9 +178,9 @@ TEST_F(ThreadStackManagerTest, SetEnabled) {
 }
 
 TEST_F(ThreadStackManagerTest, IsAttached) {
-  // Confirm initial INACTIVE => false
+  // Confirm initial INACTIVE => false.
   EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadAttached());
-  // Set to attached and confirm
+  // Set to attached and confirm.
   fake_lookup_.device().set_connectivity_state(ConnectivityState::ATTACHED);
   EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadAttached());
 }
