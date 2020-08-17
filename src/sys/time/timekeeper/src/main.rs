@@ -7,6 +7,7 @@
 //! `timekeeper` is responsible for external time synchronization in Fuchsia.
 
 mod diagnostics;
+mod rtc;
 
 use {
     crate::diagnostics::{CobaltDiagnostics, InspectDiagnostics},
