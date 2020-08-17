@@ -189,16 +189,24 @@ zx_status_t Sherlock::AudioInit() {
     return status;
   }
 
-  // TDM pin assignments.
+  // TDM pin configuration.
+  constexpr uint64_t ua_strength_level1 = 2500;
+
   gpio_impl_.SetAltFunction(T931_GPIOZ(7), T931_GPIOZ_7_TDMC_SCLK_FN);
+  gpio_impl_.SetDriveStrength(T931_GPIOZ(7), ua_strength_level1, nullptr);
+
   gpio_impl_.SetAltFunction(T931_GPIOZ(6), T931_GPIOZ_6_TDMC_FS_FN);
+  gpio_impl_.SetDriveStrength(T931_GPIOZ(6), ua_strength_level1, nullptr);
+
   gpio_impl_.SetAltFunction(T931_GPIOZ(2), T931_GPIOZ_2_TDMC_D0_FN);
   if (is_sherlock) {
     gpio_impl_.SetAltFunction(T931_GPIOZ(3), T931_GPIOZ_3_TDMC_D1_FN);
   } else {
     gpio_impl_.SetAltFunction(T931_GPIOZ(3), 0);
   }
+
   gpio_impl_.SetAltFunction(T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
+  gpio_impl_.SetDriveStrength(T931_GPIOAO(9), ua_strength_level1, nullptr);
 
 #ifdef ENABLE_BT
   // PCM pin assignments.
