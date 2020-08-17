@@ -68,6 +68,7 @@ executable("decryptor_adapter_tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/lib/codec_impl",

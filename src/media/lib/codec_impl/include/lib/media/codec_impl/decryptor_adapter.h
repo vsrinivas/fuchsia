@@ -8,6 +8,7 @@
 #include <fuchsia/media/drm/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 
 #include <array>
@@ -21,6 +22,9 @@
 class DecryptorAdapter : public CodecAdapter {
  public:
   explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
+  explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                            inspect::Node inspect_node);
+
   ~DecryptorAdapter() = default;
 
   // CodecAdapter implementations
@@ -107,6 +111,27 @@ class DecryptorAdapter : public CodecAdapter {
   bool is_secure() const { return secure_mode_; }
 
  private:
+  struct InspectProperties {
+    struct PortProperties {
+      PortProperties(inspect::Node& parent, const std::string& port_name);
+
+      inspect::Node node;
+
+      inspect::UintProperty buffer_count;
+      inspect::UintProperty packet_count;
+    };
+
+    explicit InspectProperties(inspect::Node node);
+
+    inspect::Node node;
+
+    inspect::BoolProperty secure_mode;
+    inspect::StringProperty scheme;
+    inspect::ByteVectorProperty key_id;
+    std::optional<PortProperties> input;
+    std::optional<PortProperties> output;
+  };
+
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
   void PostToInputProcessingThread(fit::closure to_run);
   void QueueInputItem(CodecInputItem input_item);
@@ -115,6 +140,7 @@ class DecryptorAdapter : public CodecAdapter {
   bool UpdateEncryptionParams(const fuchsia::media::EncryptedFormat& encrypted_format);
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
 
+  std::optional<InspectProperties> inspect_properties_;
   EncryptionParams encryption_params_;
   bool secure_mode_ = false;
 

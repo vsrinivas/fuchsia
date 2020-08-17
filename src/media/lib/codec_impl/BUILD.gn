@@ -54,6 +54,7 @@ source_set("codec_impl") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/thread-safe-deleter",
   ]
   public_configs = [ ":codec_impl_include_config" ]

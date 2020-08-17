@@ -74,6 +74,26 @@ DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_a
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
 
+DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                                   inspect::Node inspect_node)
+    : CodecAdapter(lock, codec_adapter_events),
+      inspect_properties_(std::move(inspect_node)),
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  ZX_DEBUG_ASSERT(codec_adapter_events);
+}
+
+DecryptorAdapter::InspectProperties::InspectProperties(inspect::Node temp_node)
+    : node(std::move(temp_node)),
+      secure_mode(node.CreateBool("secure_mode", false)),
+      scheme(node.CreateString("scheme", "")),
+      key_id(node.CreateByteVector("key_id", {})) {}
+
+DecryptorAdapter::InspectProperties::PortProperties::PortProperties(inspect::Node& parent,
+                                                                    const std::string& port_name)
+    : node(parent.CreateChild(port_name)),
+      buffer_count(node.CreateUint("buffer_count", 0)),
+      packet_count(node.CreateUint("packet_count", 0)) {}
+
 bool DecryptorAdapter::IsCoreCodecRequiringOutputConfigForFormatDetection() { return true; }
 
 bool DecryptorAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) {
@@ -109,6 +129,9 @@ void DecryptorAdapter::CoreCodecSetSecureMemoryMode(
       events_->onCoreCodecFailCodec("Unexpected output SecureMemoryMode (maybe DYNAMIC?)");
     }
     secure_mode_ = (secure_memory_mode == fuchsia::mediacodec::SecureMemoryMode::ON);
+    if (inspect_properties_) {
+      inspect_properties_->secure_mode.Set(secure_mode_);
+    }
   }
 }
 
@@ -186,6 +209,16 @@ void DecryptorAdapter::CoreCodecSetBufferCollectionInfo(
       return;
     }
   }
+
+  if (inspect_properties_) {
+    if (port == kInputPort) {
+      inspect_properties_->input =
+          InspectProperties::PortProperties(inspect_properties_->node, "input_port");
+    } else {  // port == kOutputPort
+      inspect_properties_->output =
+          InspectProperties::PortProperties(inspect_properties_->node, "output_port");
+    }
+  }
 }
 
 void DecryptorAdapter::CoreCodecStartStream() {
@@ -250,6 +283,14 @@ void DecryptorAdapter::CoreCodecStopStream() {
 }
 
 void DecryptorAdapter::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
+  if (inspect_properties_) {
+    if (port == kInputPort) {
+      inspect_properties_->input->buffer_count.Add(1);
+    } else if (port == kOutputPort) {
+      inspect_properties_->output->buffer_count.Add(1);
+    }
+  }
+
   if (port == kOutputPort) {
     all_output_buffers_.push_back(buffer);
   }
@@ -257,6 +298,14 @@ void DecryptorAdapter::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buf
 
 void DecryptorAdapter::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
+  if (inspect_properties_) {
+    if (port == kInputPort) {
+      inspect_properties_->input->packet_count.Set(packets.size());
+    } else if (port == kOutputPort) {
+      inspect_properties_->output->packet_count.Set(packets.size());
+    }
+  }
+
   if (port != kOutputPort) {
     return;
   }
@@ -301,6 +350,10 @@ void DecryptorAdapter::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     // There shouldn't be any queued input at this point, but if there is any,
     // fail here even in a release build.
     ZX_ASSERT(input_queue_.empty());
+
+    if (inspect_properties_) {
+      inspect_properties_->input = std::nullopt;
+    }
   } else {
     ZX_DEBUG_ASSERT(port == kOutputPort);
 
@@ -308,6 +361,10 @@ void DecryptorAdapter::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     all_output_buffers_.clear();
     free_output_buffers_.Reset();
     free_output_packets_.Reset();
+
+    if (inspect_properties_) {
+      inspect_properties_->output = std::nullopt;
+    }
   }
 }
 
@@ -543,9 +600,15 @@ bool DecryptorAdapter::UpdateEncryptionParams(
     const fuchsia::media::EncryptedFormat& encrypted_format) {
   if (encrypted_format.has_scheme()) {
     encryption_params_.scheme = encrypted_format.scheme();
+    if (inspect_properties_) {
+      inspect_properties_->scheme.Set(encryption_params_.scheme);
+    }
   }
   if (encrypted_format.has_key_id()) {
     encryption_params_.key_id = encrypted_format.key_id();
+    if (inspect_properties_) {
+      inspect_properties_->key_id.Set(encryption_params_.key_id);
+    }
   }
   if (encrypted_format.has_init_vector()) {
     encryption_params_.init_vector = encrypted_format.init_vector();

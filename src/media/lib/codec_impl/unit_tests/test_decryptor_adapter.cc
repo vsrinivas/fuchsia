@@ -7,8 +7,11 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -94,8 +97,9 @@ const std::map<std::string, std::string> kServices = {
 
 class FakeDecryptorAdapter : public DecryptorAdapter {
  public:
-  explicit FakeDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : DecryptorAdapter(lock, codec_adapter_events) {}
+  explicit FakeDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                                inspect::Node node)
+      : DecryptorAdapter(lock, codec_adapter_events, std::move(node)) {}
 
   void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
   bool has_keys() const { return has_keys_; }
@@ -118,8 +122,9 @@ class FakeDecryptorAdapter : public DecryptorAdapter {
 
 class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
  public:
-  explicit ClearTextDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events) {}
+  explicit ClearTextDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                                     inspect::Node node)
+      : FakeDecryptorAdapter(lock, codec_adapter_events, std::move(node)) {}
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
@@ -146,8 +151,9 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
 
 class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
  public:
-  explicit FakeSecureDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events) {}
+  explicit FakeSecureDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
+                                      inspect::Node node)
+      : FakeDecryptorAdapter(lock, codec_adapter_events, std::move(node)) {}
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
@@ -217,7 +223,8 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     codec_impl_ =
         std::make_unique<CodecImpl>(std::move(allocator), nullptr, dispatcher(), thrd_current(),
                                     CreateDecryptorParams(is_secure), decryptor_.NewRequest());
-    auto adapter = std::make_unique<DecryptorAdapterT>(codec_impl_->lock(), codec_impl_.get());
+    auto adapter = std::make_unique<DecryptorAdapterT>(
+        codec_impl_->lock(), codec_impl_.get(), inspector_.GetRoot().CreateChild("decryptor"));
     // Grab a non-owning reference to the adapter for test manipulation.
     decryptor_adapter_ = adapter.get();
     codec_impl_->SetCoreCodecAdapter(std::move(adapter));
@@ -424,6 +431,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   }
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  inspect::Inspector inspector_;
   fuchsia::media::StreamProcessorPtr decryptor_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   std::unique_ptr<CodecImpl> codec_impl_;
@@ -590,6 +598,71 @@ TEST_F(ClearDecryptorAdapterTest, DecryptorClosesBuffersCleanly) {
 
   // ClearText decryptor just copies data across, and only one input packet was sent.
   EXPECT_EQ(output_data_[0], input_data_[0]);
+}
+
+TEST_F(ClearDecryptorAdapterTest, InspectValues) {
+  ConnectDecryptor(false);
+  decryptor_adapter_->set_has_keys(true);
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
+  AssertNoChannelErrors();
+  ASSERT_TRUE(input_buffer_info_);
+
+  ConfigureInputPackets();
+
+  const std::string kScheme = "clear";
+  const std::vector<uint8_t> kKeyId = {0xde, 0xad, 0xbe, 0xef};
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails(kScheme, kKeyId, {}));
+
+  // Queue a single input packet to trigger output buffer allocation.
+  ASSERT_TRUE(HasFreePackets());
+  decryptor_->QueueInputPacket(CreateInputPacket(*input_iter_++));
+
+  // Wait until the output collection has been allocated.
+  RunLoopUntil([this]() { return output_buffer_info_.has_value(); });
+
+  async::Executor executor(dispatcher());
+  fit::result<inspect::Hierarchy> hierarchy;
+  executor.schedule_task(
+      inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& result) {
+        hierarchy = std::move(result);
+      }));
+  RunLoopUntil([&]() { return !hierarchy.is_pending(); });
+  ASSERT_TRUE(hierarchy.is_ok());
+
+  auto* decryptor_hierarchy = hierarchy.value().GetByPath({"decryptor"});
+  ASSERT_TRUE(decryptor_hierarchy);
+
+  auto* secure_property =
+      decryptor_hierarchy->node().get_property<inspect::BoolPropertyValue>("secure_mode");
+  ASSERT_TRUE(secure_property);
+  EXPECT_FALSE(secure_property->value());
+
+  auto* scheme_property =
+      decryptor_hierarchy->node().get_property<inspect::StringPropertyValue>("scheme");
+  ASSERT_TRUE(scheme_property);
+  EXPECT_EQ(scheme_property->value(), kScheme);
+
+  auto* key_id_property =
+      decryptor_hierarchy->node().get_property<inspect::ByteVectorPropertyValue>("key_id");
+  ASSERT_TRUE(key_id_property);
+  EXPECT_EQ(key_id_property->value(), kKeyId);
+
+  auto port_validator = [&](const std::string& port) {
+    auto* port_hierarchy = decryptor_hierarchy->GetByPath({port});
+    ASSERT_TRUE(port_hierarchy);
+    auto* buffer_count_property =
+        port_hierarchy->node().get_property<inspect::UintPropertyValue>("buffer_count");
+    ASSERT_TRUE(buffer_count_property);
+    EXPECT_GT(buffer_count_property->value(), 0u);
+    auto* packet_count_property =
+        port_hierarchy->node().get_property<inspect::UintPropertyValue>("packet_count");
+    ASSERT_TRUE(packet_count_property);
+    EXPECT_GT(packet_count_property->value(), 0u);
+  };
+
+  port_validator("input_port");
+  port_validator("output_port");
 }
 
 class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecryptorAdapter> {};
