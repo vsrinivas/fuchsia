@@ -21,7 +21,7 @@ const (
 	TypeText    TokenType = "TEXT"    // Catch-all type
 	TypeDot     TokenType = "DOT"     // '.'
 	TypeNewline TokenType = "NEWLINE" // '\n'
-	TypeEOF     TokenType = "EOF"     // Psuedo token to signal the end of input.
+	TypeEOF     TokenType = "EOF"     // Pseudo token to signal the end of input.
 	TypeSpace   TokenType = "SPACE"   // A whitespace character
 	TypeDash    TokenType = "DASH"    // '-'
 )
@@ -104,7 +104,7 @@ func (l *lexer) lexeme() lexeme {
 	return lexeme(l.input[l.pos : l.pos+1][0])
 }
 
-// LexAny is the lexer start state. It's job is to put the lexer into the proper state
+// LexAny is the lexer start state. Its job is to put the lexer into the proper state
 // according to the next input rune. Other states should return to this state after
 // emitting their lexemes. They should also not consume runes using l.next() immediately
 // before entering this state.

@@ -43,7 +43,7 @@ func (d *Document) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-// Format renders this document as thought it were a TAP output stream.
+// Format renders this document as though it were a TAP output stream.
 func (d *Document) format() string {
 	output := new(bytes.Buffer)
 	output.WriteString(fmt.Sprintf("TAP version %d\n", d.Version))

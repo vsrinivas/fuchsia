@@ -16,7 +16,7 @@ import (
 
 // Parse parses the given input string into a Document. The input is allowed to contain
 // garbage lines; The parser will skip them and parse as much of the input as possible.
-// The only execption is that the first line of input must be a TAP version header of the
+// The only exception is that the first line of input must be a TAP version header of the
 // form "TAP version XXX".
 func Parse(input []byte) (*Document, error) {
 	output := make(chan *Document)

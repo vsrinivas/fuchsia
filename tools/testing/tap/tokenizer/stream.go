@@ -48,7 +48,7 @@ func (s *TokenStream) Raw() *TokenStream {
 	return &TokenStream{iter: s.iter.Raw()}
 }
 
-// Eat consumes the next token from the stream iff it's type matches typ.  If the types
+// Eat consumes the next token from the stream iff its type matches typ. If the types
 // are different, an error is returned.
 func (s *TokenStream) Eat(typ TokenType) error {
 	token := s.iter.Peek()
@@ -61,7 +61,7 @@ func (s *TokenStream) Eat(typ TokenType) error {
 
 // ConcatUntil concatenates the values of the next tokens in this stream as long as their
 // types are not anyOf. TypeEOF is implied and need not be specified. Returns the
-// contatenated output with outer spaces trimmed.
+// concatenated output with outer spaces trimmed.
 func (s *TokenStream) ConcatUntil(anyOf ...TokenType) string {
 	var values string
 	stopAtType := map[TokenType]struct{}{TypeEOF: {}}
