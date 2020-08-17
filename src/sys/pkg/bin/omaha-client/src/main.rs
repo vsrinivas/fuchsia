@@ -110,8 +110,7 @@ fn main() -> Result<(), Error> {
         .await;
 
         // Notify Cobalt current channel
-        let notify_cobalt =
-            channel_source == ChannelSource::VbMeta || channel_source == ChannelSource::SysConfig;
+        let notify_cobalt = channel_source == ChannelSource::VbMeta;
         if notify_cobalt {
             futures.push(
                 cobalt::notify_cobalt_current_software_distribution(app_set.clone()).boxed_local(),

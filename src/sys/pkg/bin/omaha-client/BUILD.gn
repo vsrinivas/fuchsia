@@ -24,7 +24,6 @@ rustc_binary("bin") {
 
   deps = [
     ":mos_metrics_registry_rustlib",
-    "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
@@ -71,9 +70,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pretty_assertions",
   ]
-
-  non_rust_deps =
-      [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 
   sources = [
     "src/api_metrics.rs",

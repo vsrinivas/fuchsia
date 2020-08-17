@@ -35,27 +35,6 @@ use omaha_client::{
 };
 use std::cell::RefCell;
 use std::rc::Rc;
-use sysconfig_client::{channel::OtaUpdateChannelConfig, SysconfigPartition};
-
-#[cfg(not(test))]
-use sysconfig_client::channel::write_channel_config;
-
-#[cfg(test)]
-fn write_channel_config(config: &OtaUpdateChannelConfig) -> Result<(), Error> {
-    assert_eq!(config.channel_name(), "target-channel");
-    assert_eq!(config.tuf_config_name(), "target-channel-repo");
-    Ok(())
-}
-
-#[cfg(not(test))]
-use sysconfig_client::write_partition;
-
-#[cfg(test)]
-fn write_partition(partition: SysconfigPartition, data: &[u8]) -> Result<(), Error> {
-    assert_eq!(partition, SysconfigPartition::Config);
-    assert_eq!(data, &[] as &[u8]);
-    Ok(())
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct State {
@@ -176,8 +155,6 @@ where
 
     monitor_queue: ControlHandle<StateNotifier, State>,
 
-    support_sysconfig: bool,
-
     metrics_reporter: Box<dyn ApiMetricsReporter>,
 }
 
@@ -209,8 +186,6 @@ where
         state_node.set(&state);
         let (monitor_queue_fut, monitor_queue) = EventQueue::new();
         fasync::Task::local(monitor_queue_fut).detach();
-        let support_sysconfig =
-            std::fs::read_to_string("/config/build-info/board").ok().as_deref() == Some("astro");
         FidlServer {
             state_machine_control,
             storage_ref,
@@ -220,7 +195,6 @@ where
             channel_configs,
             state,
             monitor_queue,
-            support_sysconfig,
             metrics_reporter,
         }
     }
@@ -326,15 +300,6 @@ where
                 // TODO: Verify that channel is valid.
                 let app_set = server.borrow().app_set.clone();
                 if channel.is_empty() {
-                    // TODO: Remove this when fxb/36608 is fixed.
-                    if server.borrow().support_sysconfig {
-                        warn!(
-                            "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
-                        );
-                        write_partition(SysconfigPartition::Config, &[])?;
-                    } else {
-                        warn!("sysconfig not supported.");
-                    }
                     let default_channel_cfg = match &server.borrow().channel_configs {
                         Some(cfgs) => cfgs.get_default_channel(),
                         None => None,
@@ -356,23 +321,13 @@ where
                         Some(cfgs) => cfgs.get_channel(&channel),
                         None => None,
                     };
-                    let (tuf_repo, appid) = match channel_cfg {
-                        Some(cfg) => (cfg.repo.clone(), cfg.appid.clone()),
-                        None => {
-                            error!(
-                                "Channel {} not found in known channels, using channel name as \
-                                 TUF repo name.",
-                                &channel
-                            );
-                            (channel.clone(), None)
-                        }
-                    };
-                    if server.support_sysconfig {
-                        let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
-                        write_channel_config(&config)?;
-                    } else {
-                        info!("sysconfig not supported.");
+                    if channel_cfg.is_none() {
+                        warn!("Channel {} not found in known channels", &channel);
                     }
+                    let appid = match channel_cfg {
+                        Some(cfg) => cfg.appid.clone(),
+                        None => None,
+                    };
 
                     let storage_ref = Rc::clone(&server.storage_ref);
                     // Don't borrow server across await.
@@ -705,8 +660,6 @@ mod stub {
                 self.channel_configs,
                 Box::new(StubApiMetricsReporter),
             )));
-            // Enable sysconfig in test for all devices because the underlying function is mocked.
-            fidl.borrow_mut().support_sysconfig = true;
 
             let schedule_node = ScheduleNode::new(root.create_child("schedule"));
             let protocol_state_node = ProtocolStateNode::new(root.create_child("protocol_state"));

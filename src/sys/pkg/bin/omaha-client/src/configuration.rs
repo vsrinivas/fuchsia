@@ -5,7 +5,7 @@
 use crate::channel::ChannelConfigs;
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
-use log::{error, info, warn};
+use log::{error, warn};
 use omaha_client::{
     common::{App, AppSet, Version},
     configuration::{Config, Updater},
@@ -14,17 +14,10 @@ use omaha_client::{
 use std::fs;
 use std::io;
 
-#[cfg(not(test))]
-use sysconfig_client::channel::read_channel_config;
-
-#[cfg(test)]
-use sysconfig_mock::read_channel_config;
-
 /// The source of the channel configuration.
 #[derive(Debug, Eq, PartialEq)]
 pub enum ChannelSource {
     MinFS,
-    SysConfig,
     Default,
     VbMeta,
 }
@@ -40,19 +33,12 @@ pub async fn get_app_set(
     let channel_source = if channel.is_some() {
         ChannelSource::VbMeta
     } else {
-        let sysconfig_channel_config = read_channel_config();
-        info!("Channel configuration in sysconfig: {:?}", sysconfig_channel_config);
-        channel = sysconfig_channel_config.map(|config| config.channel_name().to_string()).ok();
+        channel = channel_configs.as_ref().and_then(|configs| configs.default_channel.clone());
         if channel.is_some() {
-            ChannelSource::SysConfig
+            ChannelSource::Default
         } else {
-            channel = channel_configs.as_ref().and_then(|configs| configs.default_channel.clone());
-            if channel.is_some() {
-                ChannelSource::Default
-            } else {
-                // Channel will be loaded from `Storage` by state machine.
-                ChannelSource::MinFS
-            }
+            // Channel will be loaded from `Storage` by state machine.
+            ChannelSource::MinFS
         }
     };
     // If no appid in vbmeta, look up the appid of the channel from channel configs.
@@ -147,27 +133,6 @@ async fn get_service_url_from_vbmeta_impl(proxy: ArgumentsProxy) -> Result<Optio
 }
 
 #[cfg(test)]
-mod sysconfig_mock {
-    use std::cell::RefCell;
-    use sysconfig_client::channel::{ChannelConfigError, OtaUpdateChannelConfig};
-
-    thread_local! {
-        static MOCK_RESULT: RefCell<Result<OtaUpdateChannelConfig, ChannelConfigError>> =
-            RefCell::new(Err(ChannelConfigError::Magic(0)));
-    }
-
-    pub(super) fn read_channel_config() -> Result<OtaUpdateChannelConfig, ChannelConfigError> {
-        MOCK_RESULT.with(|result| result.replace(Err(ChannelConfigError::Magic(0))))
-    }
-
-    pub(super) fn set_read_channel_config_result(
-        new_result: Result<OtaUpdateChannelConfig, ChannelConfigError>,
-    ) {
-        MOCK_RESULT.with(|result| *result.borrow_mut() = new_result);
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use crate::channel::ChannelConfig;
@@ -175,7 +140,6 @@ mod tests {
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
-    use sysconfig_client::channel::OtaUpdateChannelConfig;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_config() {
@@ -235,34 +199,6 @@ mod tests {
         )
         .await;
         assert_eq!(channel_source, ChannelSource::Default);
-        let apps = app_set.to_vec().await;
-        assert_eq!(apps.len(), 1);
-        assert_eq!(apps[0].id, "some-appid");
-        assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
-        assert_eq!(apps[0].cohort.name, Some("some-channel".to_string()));
-        assert_eq!(apps[0].cohort.hint, Some("some-channel".to_string()));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_app_set_appid_from_channel_configs_sysconfig() {
-        sysconfig_mock::set_read_channel_config_result(OtaUpdateChannelConfig::new(
-            "some-channel",
-            "some-repo",
-        ));
-        let (app_set, channel_source) = get_app_set(
-            "1.2.3.4",
-            &Some(ChannelConfigs {
-                default_channel: Some("some-other-channel".to_string()),
-                known_channels: vec![
-                    ChannelConfig::new("no-appid-channel"),
-                    ChannelConfig::with_appid("wrong-channel", "wrong-appid"),
-                    ChannelConfig::with_appid("some-channel", "some-appid"),
-                    ChannelConfig::with_appid("some-other-channel", "some-other-appid"),
-                ],
-            }),
-        )
-        .await;
-        assert_eq!(channel_source, ChannelSource::SysConfig);
         let apps = app_set.to_vec().await;
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "some-appid");
