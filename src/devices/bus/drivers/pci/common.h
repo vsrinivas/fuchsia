@@ -137,7 +137,7 @@
 constexpr bool PCI_HAS_IO_ADDR_SPACE = true;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_MASK = 0xFFFF;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_SIZE = 0x10000;
-#else   // non-x86
+#else  // non-x86
 constexpr bool PCI_HAS_IO_ADDR_SPACE = false;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_MASK = 0xFFFFFFFF;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_SIZE = 0x100000000;

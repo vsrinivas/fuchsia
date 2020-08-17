@@ -1,0 +1,55 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.pci;
+
+// At the time of writing, a Device is 571 bytes.
+const uint32 MAX_DEVICES = 64;
+const uint32 MAX_CAPABILITIES = 32;
+const uint32 MAX_EXT_CAPABILITIES = 32;
+
+// Per the PCI specification.
+const uint32 BASE_CONFIG_SIZE = 256;
+const uint32 BASE_ADDRESS_COUNT = 6;
+
+struct HostBridgeInfo {
+    uint8 start_bus_number;
+    uint8 end_bus_number;
+    uint16 segment_group;
+};
+
+struct BaseAddress {
+    uint64 address;
+    uint64 size;
+    bool is_memory;
+    bool is_prefetchable;
+    bool is_64bit;
+    uint8 id;
+};
+
+struct Capability {
+    uint8 id;
+    uint8 offset;
+};
+
+struct ExtendedCapability {
+    uint16 id;
+    uint16 offset;
+};
+
+struct Device {
+    vector<BaseAddress>:BASE_ADDRESS_COUNT base_addresses;
+    vector<Capability>:MAX_CAPABILITIES capabilities;
+    vector<ExtendedCapability>:MAX_EXT_CAPABILITIES ext_capabilities;
+    bytes:BASE_CONFIG_SIZE config;
+    uint8 bus_id;
+    uint8 device_id;
+    uint8 function_id;
+};
+
+[Discoverable]
+protocol Bus {
+    GetHostBridgeInfo() -> (HostBridgeInfo info);
+    GetDevices() -> (vector<Device>:MAX_DEVICES devices);
+};

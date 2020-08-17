@@ -30,11 +30,13 @@ source_set("user_pci") {
     "device_caps.cc",
     "device_irqs.cc",
     "device_protocol.cc",
+    "service.cc",
     "upstream_node.cc",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

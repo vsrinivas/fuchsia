@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
+#include <fuchsia/hardware/pci/llcpp/fidl.h>
 #include <lib/zx/msi.h>
 #include <zircon/compiler.h>
 
@@ -13,6 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
@@ -34,10 +36,11 @@ struct BusScanEntry {
 
 using DeviceTree =
     fbl::WAVLTree<pci_bdf_t, fbl::RefPtr<pci::Device>, pci::Device::KeyTraitsSortByBdf>;
+namespace PciFidl = llcpp::fuchsia::hardware::pci;
 
 class Bus;
-using PciBusType = ddk::Device<Bus>;
-class Bus : public PciBusType, public BusDeviceInterface {
+using PciBusType = ddk::Device<Bus, ddk::Messageable>;
+class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceInterface {
  public:
   static zx_status_t Create(zx_device_t* parent);
   void DdkRelease();
@@ -63,6 +66,11 @@ class Bus : public PciBusType, public BusDeviceInterface {
     fbl::AutoLock devices_lock(&devices_lock_);
     return pciroot().GetBti(device->packed_addr(), index, bti);
   }
+
+  // All methods related to the fuchsia.hardware.pci service.
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  virtual void GetDevices(GetDevicesCompleter::Sync completer) final;
+  virtual void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync completer) final;
 
  private:
   // Our constructor exists to fulfill the mixin constructors
