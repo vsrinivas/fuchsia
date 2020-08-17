@@ -168,7 +168,6 @@ struct magma_system_exec_resource {
 
 // A batch buffer to be executed plus the resources required to execute it
 // Ensure 8 byte alignment for semaphores and resources that may follow in a stream.
-#define MAGMA_TEMP_USE_RESOURCE_COUNT 1  // TODO(fxb/46937) - remove
 struct magma_system_command_buffer {
   uint32_t resource_count;
   uint32_t batch_buffer_resource_index;  // resource index of the batch buffer to execute
