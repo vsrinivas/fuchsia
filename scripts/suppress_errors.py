@@ -28,11 +28,13 @@ def main():
         "a given compiler error")
     parser.add_argument("--error", required=True, help="Compiler error marker")
     parser.add_argument("--config", required=True, help="Config to add")
+    parser.add_argument("--comment", help="Comment to add before config")
     parser.add_argument(
         "--zircon", help="//zircon build (ZN)", action="store_true")
     args = parser.parse_args()
     error = args.error
     config = args.config
+    comment = args.comment
     zircon = args.zircon
 
     # Harvest all compilation errors
@@ -115,6 +117,11 @@ def main():
         start_configs_inline = re.compile('configs \+?= \[ "')
         start_configs = re.compile("configs \+?= \[")
 
+        def print_config():
+            if comment:
+                print('#', comment)
+            print('"' + config + '",')
+
         for line in fileinput.FileInput(build_file, inplace=True):
             curly_brace_depth += line.count("{") - line.count("}")
             assert curly_brace_depth >= 0
@@ -132,7 +139,9 @@ def main():
                 pass
             elif curly_brace_depth == target_end_depth:
                 # Last chance to print config before exiting
-                print('configs += [ "' + config + '" ]')
+                print('configs += [')
+                print_config()
+                print(']')
                 config_printed = True
                 in_target = False
             elif start_configs_inline.match(line) and config in line:
@@ -146,7 +155,7 @@ def main():
                 in_configs = False
                 config_printed = True
             elif in_configs and line.strip() == "]":
-                print('"' + config + '",')
+                print_config()
                 in_configs = False
                 config_printed = True
             print(line, end="")
