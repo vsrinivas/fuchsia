@@ -24,11 +24,20 @@ class Decoder final {
     return reinterpret_cast<T*>(message_.bytes().data() + offset);
   }
 
-  size_t GetOffset(void* ptr);
-  size_t GetOffset(uintptr_t ptr);
+  size_t GetOffset(void* ptr) { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
+  size_t GetOffset(uintptr_t ptr) {
+    // The |ptr| value comes from the message buffer, which we've already
+    // validated. That means it should correspond to a valid offset within the
+    // message.
+    return ptr - reinterpret_cast<uintptr_t>(message_.bytes().data());
+  }
 
 #ifdef __Fuchsia__
-  void DecodeHandle(zx::object_base* value, size_t offset);
+  void DecodeHandle(zx::object_base* value, size_t offset) {
+    zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
+    value->reset(*handle);
+    *handle = ZX_HANDLE_INVALID;
+  }
 #endif
 
  private:
