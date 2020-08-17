@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "bt-a2dp-source-integration-tests" ]
+  deps = [
+    "bt-a2dp-source-integration-tests",
+    "bt-avrcp-integration-tests",
+  ]
 }

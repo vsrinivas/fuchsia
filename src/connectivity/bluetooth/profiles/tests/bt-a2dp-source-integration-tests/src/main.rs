@@ -14,7 +14,7 @@ use {
 };
 
 /// Make the SDP definition for an A2DP sink service.
-pub fn a2dp_sink_service_definition() -> ServiceDefinition {
+fn a2dp_sink_service_definition() -> ServiceDefinition {
     ServiceDefinition {
         service_class_uuids: Some(vec![Uuid::new16(0x110B).into()]), // Audio Sink UUID
         protocol_descriptor_list: Some(vec![
@@ -45,7 +45,6 @@ async fn test_a2dp_source_service_advertisement() -> Result<(), Error> {
     // Create MockPeer #1 to be driven by the test.
     let id1 = PeerId(1);
     let mock_peer1 = test_harness.register_peer(id1).await?;
-    // let profile_proxy1 = mock_peer1.register_profile_proxy().await?;
 
     // Peer #1 adds a search for Audio Sources in the piconet.
     let mut results_requests = mock_peer1
@@ -75,7 +74,6 @@ async fn test_a2dp_source_search_and_connect() -> Result<(), Error> {
     // MockPeer #1 is driven by the test.
     let id1 = PeerId(10);
     let mut mock_peer1 = test_harness.register_peer(id1).await?;
-    // let profile_proxy1 = mock_peer1.register_profile_proxy().await?;
 
     // Peer #1 advertises an Audio Sink service.
     let service_defs = vec![a2dp_sink_service_definition()];
