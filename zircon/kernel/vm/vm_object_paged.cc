@@ -365,24 +365,25 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
   }
 
   uint32_t count = 0;
-  page_list_.ForEveryPage([&count, &free_list, reclaim, this](auto& p, uint64_t off) {
-    // Pinned pages cannot be decommitted so do not consider them.
-    if (p.IsPage() && p.Page()->object.pin_count == 0 && IsZeroPage(p.Page())) {
-      count++;
-      if (reclaim) {
-        // Need to remove all mappings (include read) ones to this range before we remove the
-        // page.
-        AssertHeld(this->lock_);
-        RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
-        vm_page_t* page = p.ReleasePage();
-        pmm_page_queues()->Remove(page);
-        DEBUG_ASSERT(!list_in_list(&page->queue_node));
-        list_add_tail(&free_list, &page->queue_node);
-        p = VmPageOrMarker::Marker();
-      }
-    }
-    return ZX_ERR_NEXT;
-  });
+  page_list_.RemovePages(
+      [&count, &free_list, reclaim, this](VmPageOrMarker* p, uint64_t off) {
+        // Pinned pages cannot be decommitted so do not consider them.
+        if (p->IsPage() && p->Page()->object.pin_count == 0 && IsZeroPage(p->Page())) {
+          count++;
+          if (reclaim) {
+            // Need to remove all mappings (include read) ones to this range before we remove the
+            // page.
+            AssertHeld(this->lock_);
+            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+            vm_page_t* page = p->ReleasePage();
+            pmm_page_queues()->Remove(page);
+            DEBUG_ASSERT(!list_in_list(&page->queue_node));
+            list_add_tail(&free_list, &page->queue_node);
+            *p = VmPageOrMarker::Marker();
+          }
+        }
+      },
+      0, UINT64_MAX);
   // Release the guard so we can free any pages.
   guard.Release();
   pmm_free(&free_list);
@@ -3190,7 +3191,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3222,7 +3223,7 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
