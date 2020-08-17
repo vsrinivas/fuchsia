@@ -57,18 +57,20 @@ use std::mem;
 mod error;
 pub use error::Error;
 
+mod name;
+
 mod read;
-pub use crate::read::{EntryReader, Reader};
+pub use read::{EntryReader, Reader};
 
 mod write;
 pub use write::write;
 
-const MAGIC_INDEX_VALUE: [u8; 8] = [0xc8, 0xbf, 0x0b, 0x48, 0xad, 0xab, 0xc5, 0x11];
+pub const MAGIC_INDEX_VALUE: [u8; 8] = [0xc8, 0xbf, 0x0b, 0x48, 0xad, 0xab, 0xc5, 0x11];
 
-type ChunkType = u64;
+pub type ChunkType = [u8; 8];
 
-const DIR_CHUNK: ChunkType = 0x2d_2d_2d_2d_2d_52_49_44; // "DIR-----"
-const DIR_NAMES_CHUNK: ChunkType = 0x53_45_4d_41_4e_52_49_44; // "DIRNAMES"
+pub const DIR_CHUNK_TYPE: ChunkType = *b"DIR-----";
+pub const DIR_NAMES_CHUNK_TYPE: ChunkType = *b"DIRNAMES";
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Copy, Clone)]
 #[repr(C)]
@@ -190,7 +192,7 @@ pub(crate) mod tests {
     #[test]
     fn test_serialize_deserialize_index_entry() {
         let mut target = Cursor::new(Vec::new());
-        let index_entry = IndexEntry { chunk_type: DIR_CHUNK as u64, offset: 999, length: 444 };
+        let index_entry = IndexEntry { chunk_type: DIR_CHUNK_TYPE, offset: 999, length: 444 };
         serialize_into(&mut target, &index_entry).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_ENTRY_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();

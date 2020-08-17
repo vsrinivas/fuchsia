@@ -4,12 +4,14 @@
 
 use {
     crate::{
-        align, DirectoryEntry, Error, Index, IndexEntry, CONTENT_ALIGNMENT, DIRECTORY_ENTRY_LEN,
-        DIR_CHUNK, DIR_NAMES_CHUNK, INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
+        align, name::validate_name, DirectoryEntry, Error, Index, IndexEntry, CONTENT_ALIGNMENT,
+        DIRECTORY_ENTRY_LEN, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE, INDEX_ENTRY_LEN, INDEX_LEN,
+        MAGIC_INDEX_VALUE,
     },
     bincode::serialize_into,
     std::{
         collections::BTreeMap,
+        convert::TryInto as _,
         io::{copy, Read, Write},
     },
 };
@@ -39,12 +41,13 @@ pub fn write(
     let mut directory_entries = vec![];
     for (destination_name, (size, _)) in &path_content_map {
         let destination_name = destination_name.as_ref();
-        if destination_name.len() > u16::max_value() as usize {
-            return Err(Error::NameTooLong(destination_name.len()));
-        }
+        validate_name(destination_name.as_bytes())?;
         directory_entries.push(DirectoryEntry {
             name_offset: path_data.len() as u32,
-            name_length: destination_name.len() as u16,
+            name_length: destination_name
+                .len()
+                .try_into()
+                .map_err(|_| Error::NameTooLong(destination_name.len()))?,
             reserved: 0,
             data_offset: 0,
             data_length: *size,
@@ -56,13 +59,13 @@ pub fn write(
     let index = Index { magic: MAGIC_INDEX_VALUE, length: 2 * INDEX_ENTRY_LEN as u64 };
 
     let dir_index = IndexEntry {
-        chunk_type: DIR_CHUNK as u64,
+        chunk_type: DIR_CHUNK_TYPE,
         offset: INDEX_LEN + INDEX_ENTRY_LEN * 2,
         length: directory_entries.len() as u64 * DIRECTORY_ENTRY_LEN,
     };
 
     let name_index = IndexEntry {
-        chunk_type: DIR_NAMES_CHUNK as u64,
+        chunk_type: DIR_NAMES_CHUNK_TYPE,
         offset: dir_index.offset + dir_index.length,
         length: align(path_data.len() as u64, 8),
     };
@@ -115,6 +118,7 @@ mod tests {
         super::*,
         crate::tests::example_archive,
         itertools::assert_equal,
+        matches::assert_matches,
         std::{
             collections::BTreeMap,
             io::{Cursor, Read},
@@ -122,7 +126,7 @@ mod tests {
     };
 
     #[test]
-    fn test_write() {
+    fn creates_example_archive() {
         let a_contents = "a\n".as_bytes();
         let b_contents = "b\n".as_bytes();
         let dirc_contents = "dir/c\n".as_bytes();
@@ -137,5 +141,28 @@ mod tests {
         let target_ref = target.get_ref();
         assert_equal(target_ref, &example_archive);
         assert_eq!(*target_ref, example_archive);
+    }
+
+    #[test]
+    fn validates_name() {
+        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
+        path_content_map.insert(".", (0, Box::new("".as_bytes())));
+        let mut target = Cursor::new(Vec::new());
+        assert_matches!(
+            write(&mut target, path_content_map),
+            Err(Error::NameContainsDotSegment(_))
+        );
+    }
+
+    #[test]
+    fn validates_name_length() {
+        let name = String::from_utf8(vec![b'a'; 2usize.pow(16)]).unwrap();
+        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
+        path_content_map.insert(&name, (0, Box::new("".as_bytes())));
+        let mut target = Cursor::new(Vec::new());
+        assert_matches!(
+            write(&mut target, path_content_map),
+            Err(Error::NameTooLong(len)) if len == 2usize.pow(16)
+        );
     }
 }

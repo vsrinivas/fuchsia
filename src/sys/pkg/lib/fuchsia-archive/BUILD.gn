@@ -16,24 +16,88 @@ rustc_library("fuchsia-archive") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
-
+  test_deps = [ "//third_party/rust_crates:matches" ]
   sources = [
     "src/error.rs",
     "src/lib.rs",
+    "src/name.rs",
     "src/read.rs",
     "src/write.rs",
   ]
 }
 
+rustc_test("reject-invalid-fars-test") {
+  source_root = "tests/reject_invalid_fars.rs"
+  edition = "2018"
+  deps = [
+    ":fuchsia-archive",
+    "//third_party/rust_crates:matches",
+  ]
+
+  sources = [ "tests/reject_invalid_fars.rs" ]
+}
+
 unittest_package("fuchsia-archive-tests") {
-  deps = [ ":fuchsia-archive_test" ]
+  deps = [
+    ":fuchsia-archive_test",
+    ":reject-invalid-fars-test",
+    "//src/sys/pkg/testing/invalid-fars:generate-invalid-fars",
+  ]
 
   tests = [
     {
       name = "fuchsia_archive_lib_test"
       environments = basic_envs
     },
+    {
+      name = "reject_invalid_fars_test"
+      environments = basic_envs
+    },
   ]
+
+  resources = []
+  foreach(filename,
+          [
+            "invalid-magic-bytes.far",
+            "index-entries-length-not-a-multiple-of-24-bytes.far",
+            "directory-names-index-entry-before-directory-index-entry.far",
+            "two-directory-index-entries.far",
+            "two-directory-names-index-entries.far",
+            "no-directory-index-entry.far",
+            "no-directory-names-index-entry.far",
+            "directory-chunk-length-not-a-multiple-of-32-bytes.far",
+            "directory-chunk-not-tightly-packed.far",
+            "path-data-offset-too-large.far",
+            "path-data-length-too-large.far",
+            "directory-entries-not-sorted.far",
+            "directory-entries-with-same-name.far",
+            "directory-names-chunk-length-not-a-multiple-of-8-bytes.far",
+            "directory-names-chunk-not-tightly-packed.far",
+            "directory-names-chunk-before-directory-chunk.far",
+            "directory-names-chunk-overlaps-directory-chunk.far",
+            "zero-length-name.far",
+            "name-with-null-character.far",
+            "name-with-leading-slash.far",
+            "name-with-trailing-slash.far",
+            "name-with-empty-segment.far",
+            "name-with-dot-segment.far",
+            "name-with-dot-dot-segment.far",
+            "content-chunk-starts-early.far",
+            "content-chunk-starts-late.far",
+            "second-content-chunk-starts-early.far",
+            "second-content-chunk-starts-late.far",
+            "content-chunk-not-zero-padded.far",
+            "content-chunk-overlap.far",
+            "content-chunk-not-tightly-packed.far",
+            "content-chunk-offset-past-end-of-file.far",
+          ]) {
+    resources += [
+      {
+        path = "$root_gen_dir/invalid-fars/$filename"
+        dest = "$filename"
+      },
+    ]
+  }
 }
 
 group("tests") {
