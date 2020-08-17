@@ -204,7 +204,12 @@ async fn add_ethernet_device(
         interface.features,
         fidl_fuchsia_hardware_ethernet::Features::Loopback
     );
-    assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
+    assert!(
+        !interface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
+        "unexpected interface flags: ({:b}).contains({:b})",
+        interface.flags,
+        fidl_fuchsia_netstack::Flags::Up
+    );
     Ok(())
 }
 

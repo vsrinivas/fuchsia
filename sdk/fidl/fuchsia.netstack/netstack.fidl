@@ -40,10 +40,28 @@ struct InterfaceConfig {
     uint32 metric;
 };
 
+/// Flags describe an interface's runtime configuration.
+bits Flags : uint32 {
+    /// Set if the interface is up.
+    UP = 0x01;
+    // Set if DHCP is enabled on the interface.
+    DHCP = 0x02;
+};
+
+// TODO(https://crbug.com/1099393): Remove this alias.
+//
+// N.B. this is not defined in terms of |Flags.UP| because that results in
+// non-compiling generated C++.
+//
+// fidling/gen/sdk/fidl/fuchsia.netstack/fuchsia/netstack/cpp/fidl.h:520:20: error: cannot initialize a variable of type 'const uint32_t' (aka 'const unsigned int') with an rvalue of type 'fuchsia::netstack::Flags'
+// constexpr uint32_t NetInterfaceFlagUp = Flags::UP;
+//                    ^                    ~~~~~~~~~
+const uint32 NetInterfaceFlagUp = 0x01;
+
 /// https://linux.die.net/man/7/netdevice
 struct NetInterface {
     uint32 id;
-    uint32 flags;
+    Flags flags;
     fuchsia.hardware.ethernet.Features features;
     uint32 configuration;
     fuchsia.posix.socket.interface_name name;
@@ -73,7 +91,7 @@ struct NetInterface {
 // netstack.fidl.
 struct NetInterface2 {
     uint32 id;
-    uint32 flags;
+    Flags flags;
     fuchsia.hardware.ethernet.Features features;
     uint32 configuration;
     uint32 metric;
@@ -98,10 +116,6 @@ struct NetInterface2 {
     vector<fuchsia.net.Subnet>:MAX ipv6addrs;
     bytes hwaddr;
 };
-
-/// Flags for NetInterface.flags.
-const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
-const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 
 struct RouteTableEntry {
     fuchsia.net.IpAddress destination;

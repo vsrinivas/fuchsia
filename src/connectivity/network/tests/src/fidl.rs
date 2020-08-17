@@ -80,7 +80,12 @@ async fn add_ethernet_device() -> Result {
         interface.features,
         fidl_fuchsia_hardware_ethernet::Features::Loopback
     );
-    assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
+    assert!(
+        !interface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
+        "unexpected interface flags: ({:b}).contains({:b})",
+        interface.flags,
+        fidl_fuchsia_netstack::Flags::Up
+    );
     Ok::<(), anyhow::Error>(())
 }
 
@@ -520,7 +525,7 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
                 |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
                     futures::future::ready(interfaces.into_iter().any(|iface| {
                         iface.id == id as u32
-                            && iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                            && iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
                     }))
                 },
             )
@@ -602,7 +607,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
                 |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
                     futures::future::ready(interfaces.into_iter().any(|iface| {
                         iface.id == id as u32
-                            && iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                            && iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
                     }))
                 },
             )
@@ -735,7 +740,7 @@ async fn test_interfaces_changed_race() -> Result {
                     if let Some(iface) = interfaces.iter().find(|i| u64::from(i.id) == id) {
                         (
                             true,
-                            iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0,
+                            iface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
                             iface.addr == ADDR,
                         )
                     } else {

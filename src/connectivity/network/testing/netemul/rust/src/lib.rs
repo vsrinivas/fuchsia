@@ -298,7 +298,7 @@ impl<'a> TestEnvironment<'a> {
                     interfaces
                         .iter()
                         .find(|iface| iface.id as u64 == iface_id)
-                        .map(|iface| iface.flags & netstack::NET_INTERFACE_FLAG_UP != 0)
+                        .map(|iface| iface.flags.contains(netstack::Flags::Up))
                         .unwrap_or(false),
                 )
             })

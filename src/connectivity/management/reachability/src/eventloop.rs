@@ -139,7 +139,7 @@ mod tests {
     fn net_interface(port: u32, addr: [u8; 4]) -> netstack::NetInterface {
         netstack::NetInterface {
             id: port,
-            flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+            flags: netstack::Flags::Up | netstack::Flags::Dhcp,
             features: fidl_fuchsia_hardware_ethernet::Features::empty(),
             configuration: 0,
             name: port.to_string(),

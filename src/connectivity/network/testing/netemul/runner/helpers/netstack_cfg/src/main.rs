@@ -141,8 +141,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .try_filter_map(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
             if let Some(iface) = interfaces.iter().find(|iface| iface.name == opt.endpoint) {
                 if !opt.skip_up_check {
-                    if iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP == 0
-                    {
+                    if !iface.flags.contains(fidl_fuchsia_netstack::Flags::Up) {
                         fx_log_info!("Found interface, but it's down. waiting.");
                         return futures::future::ok(None);
                     }

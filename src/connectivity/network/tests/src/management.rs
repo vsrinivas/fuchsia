@@ -48,7 +48,7 @@ pub(crate) async fn wait_for_non_loopback_interface_up<
                 |netstack::NetInterface { id, features, flags, name, .. }| {
                     // Ignore the loopback device.
                     if !features.contains(eth::Features::Loopback)
-                        && flags & netstack::NET_INTERFACE_FLAG_UP != 0
+                        && flags.contains(netstack::Flags::Up)
                         && exclude_ids.map_or(true, |x| !x.contains(&id))
                     {
                         Some((id, name))
@@ -334,8 +334,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
                 future::ok(interfaces.into_iter().find_map(
                     |netstack::NetInterface { id, name, addr, flags, .. }| {
-                        if addr == INTERFACE_ADDR.into_ext()
-                            && flags & netstack::NET_INTERFACE_FLAG_UP != 0
+                        if addr == INTERFACE_ADDR.into_ext() && flags.contains(netstack::Flags::Up)
                         {
                             Some((id, name))
                         } else {
@@ -427,7 +426,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                 if interfaces.iter().any(
                     |netstack::NetInterface { id, addr, netmask, broadaddr, flags, .. }| {
                         id != &wlan_ap_id
-                            && flags & netstack::NET_INTERFACE_FLAG_UP != 0
+                            && flags.contains(netstack::Flags::Up)
                             && netmask == &NETWORK_MASK.into_ext()
                             && broadaddr == &BROADCAST_ADDR.into_ext()
                             && match addr {

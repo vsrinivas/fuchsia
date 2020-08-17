@@ -743,7 +743,7 @@ impl<'a> NetCfg<'a> {
         watchers: &mut DnsServerWatchers<'_>,
     ) -> Result<(), errors::Error> {
         let fnetstack::NetInterface { id, flags, name, ipv6addrs, .. } = interface;
-        let up = flags & fnetstack::NET_INTERFACE_FLAG_UP != 0;
+        let up = flags.contains(fnetstack::Flags::Up);
 
         let state = match self.interface_states.get_mut(&From::from(*id)) {
             Some(s) => s,
@@ -1523,7 +1523,7 @@ mod tests {
             up: bool,
             ipv6addrs: Vec<fnet::Subnet>,
         ) -> Result<(), anyhow::Error> {
-            let flags = if up { fnetstack::NET_INTERFACE_FLAG_UP } else { 0 };
+            let flags = if up { fnetstack::Flags::Up } else { fnetstack::Flags::empty() };
             let event = fnetstack::NetstackEvent::OnInterfacesChanged {
                 interfaces: vec![fnetstack::NetInterface {
                     id: INTERFACE_ID,

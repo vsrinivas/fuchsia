@@ -70,7 +70,7 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
 		fmt.Printf("\tinet6 addr: %s/%d Scope:Link\n", netAddrToString(addr.Addr), addr.PrefixLen)
 	}
 	fmt.Printf("\tmetric:%d\n", iface.Metric)
-	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
+	fmt.Printf("\t%s\n", iface.Flags)
 }
 
 func (a *netstackClientApp) setStatus(iface netstack.NetInterface2, up bool) {
@@ -318,13 +318,6 @@ func hwAddrToString(hwaddr []uint8) string {
 
 func netAddrToString(addr netfidl.IpAddress) string {
 	return fidlconv.ToTCPIPAddress(addr).String()
-}
-
-func flagsToString(flags uint32) string {
-	if flags&netstack.NetInterfaceFlagUp != 0 {
-		return "UP"
-	}
-	return "DOWN"
 }
 
 func toIpAddress(addr net.IP) netfidl.IpAddress {

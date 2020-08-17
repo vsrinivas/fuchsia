@@ -93,7 +93,8 @@ void MdnsTransceiver::InterfacesChanged(std::vector<fuchsia::netstack::NetInterf
   for (const auto& if_info : interfaces) {
     inet::IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
-    if ((if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0 || address.is_loopback()) {
+    if ((if_info.flags & fuchsia::netstack::Flags::UP) != fuchsia::netstack::Flags::UP ||
+        address.is_loopback()) {
       continue;
     }
 

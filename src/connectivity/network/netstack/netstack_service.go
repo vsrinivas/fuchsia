@@ -73,13 +73,13 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 			}
 		}
 
-		var flags uint32
+		var flags netstack.Flags
 		ifs.mu.Lock()
 		if ifs.IsUpLocked() {
-			flags |= netstack.NetInterfaceFlagUp
+			flags |= netstack.FlagsUp
 		}
 		if ifs.mu.dhcp.enabled {
-			flags |= netstack.NetInterfaceFlagDhcp
+			flags |= netstack.FlagsDhcp
 		}
 		metric := uint32(ifs.mu.metric)
 		ifs.mu.Unlock()

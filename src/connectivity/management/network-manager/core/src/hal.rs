@@ -257,7 +257,7 @@ fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
 
 impl From<&netstack::NetInterface> for Interface {
     fn from(iface: &netstack::NetInterface) -> Self {
-        let dhcp = iface.flags & netstack::NET_INTERFACE_FLAG_DHCP != 0;
+        let dhcp = iface.flags.contains(netstack::Flags::Dhcp);
         let addr = valid_unicast_address_or_none(LifIpAddr {
             address: to_ip_addr(iface.addr),
             prefix: subnet_mask_to_prefix_length(iface.netmask),
@@ -274,7 +274,7 @@ impl From<&netstack::NetInterface> for Interface {
                 }
             }),
             ipv6_addr: iface.ipv6addrs.iter().map(|a| LifIpAddr::from(a)).collect(),
-            enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
+            enabled: iface.flags.contains(netstack::Flags::Up),
             state: InterfaceState::Unknown,
             dhcp_client_enabled: dhcp,
         }
@@ -1226,7 +1226,7 @@ mod tests {
                 "ipv4 /24",
                 netstack::NetInterface {
                     id: 5,
-                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
                     features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
@@ -1254,7 +1254,7 @@ mod tests {
                 "ipv4 /25",
                 netstack::NetInterface {
                     id: 5,
-                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
                     features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
@@ -1284,7 +1284,7 @@ mod tests {
                 "ipv6 /64",
                 netstack::NetInterface {
                     id: 5,
-                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
                     features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
@@ -1322,7 +1322,7 @@ mod tests {
                 "ipv6 /72",
                 netstack::NetInterface {
                     id: 5,
-                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
                     features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),
@@ -1360,7 +1360,7 @@ mod tests {
                 "2 ipv6 /64",
                 netstack::NetInterface {
                     id: 5,
-                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    flags: netstack::Flags::Up | netstack::Flags::Dhcp,
                     features: fidl_fuchsia_hardware_ethernet::Features::empty(),
                     configuration: 0,
                     name: "test_if".to_string(),

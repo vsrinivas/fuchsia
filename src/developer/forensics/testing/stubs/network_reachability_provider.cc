@@ -15,7 +15,7 @@ void NetworkReachabilityProvider::TriggerOnNetworkReachable(const bool reachable
   std::vector<fuchsia::netstack::NetInterface> interfaces;
   if (reachable) {
     interfaces.emplace_back(fuchsia::netstack::NetInterface{
-        .flags = fuchsia::netstack::NetInterfaceFlagUp | fuchsia::netstack::NetInterfaceFlagDhcp,
+        .flags = fuchsia::netstack::Flags::UP | fuchsia::netstack::Flags::DHCP,
         .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address{
             .addr = {1},
         }),

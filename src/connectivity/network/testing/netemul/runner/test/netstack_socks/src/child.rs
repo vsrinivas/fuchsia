@@ -113,7 +113,7 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             match iface {
                 None => futures::future::ok(None),
                 Some(a) => {
-                    if a.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0 {
+                    if a.flags.contains(fidl_fuchsia_netstack::Flags::Up) {
                         futures::future::ok(Some((a.id, a.hwaddr.clone())))
                     } else {
                         println!("Found interface, but it's down. waiting.");

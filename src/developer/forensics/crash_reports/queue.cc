@@ -222,10 +222,10 @@ void Queue::ProcessAllOnNetworkReachable() {
   });
 
   auto isReachable = [](const fuchsia::netstack::NetInterface& interface) {
-    if ((interface.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0) {
+    if ((interface.flags & fuchsia::netstack::Flags::UP) != fuchsia::netstack::Flags::UP) {
       return false;
     }
-    if ((interface.flags & fuchsia::netstack::NetInterfaceFlagDhcp) == 0) {
+    if ((interface.flags & fuchsia::netstack::Flags::DHCP) != fuchsia::netstack::Flags::DHCP) {
       return false;
     }
     auto isZero = [](const uint8_t octet) { return octet == 0; };

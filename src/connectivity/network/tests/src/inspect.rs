@@ -185,7 +185,7 @@ async fn inspect_nic() -> Result {
                     .map(|iface| {
                         // eth endpoint is up, has assigned IPv4 and IPv6
                         // addresses.
-                        iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                        iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
                             && iface.addr != fidl_ip!(0.0.0.0)
                             && iface.ipv6addrs.len() != 0
                     })

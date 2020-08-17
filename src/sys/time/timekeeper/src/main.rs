@@ -15,8 +15,7 @@ use {
     chrono::prelude::*,
     fidl_fuchsia_deprecatedtimezone as ftz,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
-    fidl_fuchsia_netstack::{self as fnetstack, NET_INTERFACE_FLAG_DHCP, NET_INTERFACE_FLAG_UP},
-    fidl_fuchsia_time as ftime,
+    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::{
         client::{launch, launcher},
@@ -98,12 +97,18 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
     }
 }
 
+// TODO(https://github.com/bitflags/bitflags/issues/180): replace this function with normal BitOr.
+const fn const_bitor(left: fnetstack::Flags, right: fnetstack::Flags) -> fnetstack::Flags {
+    fnetstack::Flags::from_bits_truncate(left.bits() | right.bits())
+}
+
 // Returns true iff the supplied `NetInterface` appears to provide network connectivity, i.e. is up,
 // has DHCP, and has a non-zero IP address.
 fn network_available(net_interface: fnetstack::NetInterface) -> bool {
-    const REQUIRED_FLAGS: u32 = NET_INTERFACE_FLAG_UP | NET_INTERFACE_FLAG_DHCP;
+    const REQUIRED_FLAGS: fnetstack::Flags =
+        const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp);
     let fnetstack::NetInterface { flags, addr, .. } = net_interface;
-    if (flags & REQUIRED_FLAGS) != REQUIRED_FLAGS {
+    if !flags.contains(REQUIRED_FLAGS) {
         return false;
     }
     match addr {
@@ -302,9 +307,9 @@ mod tests {
     const VALID_IP_V4: IpAddress = IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 1, 1] });
     const EMPTY_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [0; 16] });
     const VALID_IP_V6: IpAddress = IpAddress::Ipv6(Ipv6Address { addr: [1; 16] });
-    const VALID_FLAGS: u32 = NET_INTERFACE_FLAG_UP | NET_INTERFACE_FLAG_DHCP;
+    const VALID_FLAGS: fnetstack::Flags = const_bitor(fnetstack::Flags::Up, fnetstack::Flags::Dhcp);
 
-    fn create_interface(flags: u32, addr: IpAddress) -> fnetstack::NetInterface {
+    fn create_interface(flags: fnetstack::Flags, addr: IpAddress) -> fnetstack::NetInterface {
         fnetstack::NetInterface {
             id: 1,
             flags,
@@ -443,9 +448,9 @@ mod tests {
     #[test]
     fn network_availability() {
         // All these combinations should not indicate an available network.
-        assert!(!network_available(create_interface(0, VALID_IP_V4)));
-        assert!(!network_available(create_interface(NET_INTERFACE_FLAG_UP, VALID_IP_V4)));
-        assert!(!network_available(create_interface(NET_INTERFACE_FLAG_DHCP, VALID_IP_V4)));
+        assert!(!network_available(create_interface(fnetstack::Flags::empty(), VALID_IP_V4)));
+        assert!(!network_available(create_interface(fnetstack::Flags::Up, VALID_IP_V4)));
+        assert!(!network_available(create_interface(fnetstack::Flags::Dhcp, VALID_IP_V4)));
         assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V4)));
         assert!(!network_available(create_interface(VALID_FLAGS, EMPTY_IP_V6)));
         // But these should indicate an available network.
@@ -459,7 +464,7 @@ mod tests {
         // Create a server and send a first event
         let (service, server) =
             fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
-        let mut interfaces = vec![create_interface(0, EMPTY_IP_V4)];
+        let mut interfaces = vec![create_interface(fnetstack::Flags::empty(), EMPTY_IP_V4)];
         let (_, netstack_control) = server.into_stream_and_control_handle().unwrap();
         netstack_control.send_on_interfaces_changed(&mut interfaces.iter_mut()).unwrap();
         // Swallow the wait_for_network_available result, if it returns either a success or an error
@@ -487,7 +492,10 @@ mod tests {
         let netstack_service = create_netstack_event_service(vec![
             vec![],
             vec![create_interface(VALID_FLAGS, EMPTY_IP_V6)],
-            vec![create_interface(VALID_FLAGS, EMPTY_IP_V6), create_interface(0, VALID_IP_V4)],
+            vec![
+                create_interface(VALID_FLAGS, EMPTY_IP_V6),
+                create_interface(fnetstack::Flags::empty(), VALID_IP_V4),
+            ],
             vec![
                 create_interface(VALID_FLAGS, EMPTY_IP_V6),
                 create_interface(VALID_FLAGS, VALID_IP_V4),

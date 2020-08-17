@@ -906,10 +906,16 @@ mod tests {
         dhcp: bool,
         enabled: bool,
     ) -> netstack::NetInterface {
+        let mut flags = netstack::Flags::empty();
+        if enabled {
+            flags |= netstack::Flags::Up;
+        }
+        if dhcp {
+            flags |= netstack::Flags::Dhcp;
+        }
         netstack::NetInterface {
             id: port,
-            flags: if enabled { netstack::NET_INTERFACE_FLAG_UP } else { 0 }
-                | if dhcp { netstack::NET_INTERFACE_FLAG_DHCP } else { 0 },
+            flags,
             features: fidl_fuchsia_hardware_ethernet::Features::empty(),
             configuration: 0,
             name: port.to_string(),

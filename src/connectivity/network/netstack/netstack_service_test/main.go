@@ -69,17 +69,10 @@ func (a *testApp) OnInterfacesChanged(ifaces []netstack.NetInterface) error {
 }
 
 func printIface(iface netstack.NetInterface) {
-	fmt.Printf("%s: addr=%s [%s]\n", iface.Name, netAddrToString(iface.Addr), flagsToString(iface.Flags))
+	fmt.Printf("%s: addr=%s [%s]\n", iface.Name, netAddrToString(iface.Addr), iface.Flags)
 }
 
 // TODO(tamird): this exact function exists in ifconfig.
 func netAddrToString(addr net.IpAddress) string {
 	return fidlconv.ToTCPIPAddress(addr).String()
-}
-
-func flagsToString(flags uint32) string {
-	if flags&netstack.NetInterfaceFlagUp != 0 {
-		return "UP"
-	}
-	return "DOWN"
 }
