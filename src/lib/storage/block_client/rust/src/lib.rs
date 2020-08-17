@@ -28,7 +28,7 @@ const TEMP_VMO_SIZE: usize = 65536;
 
 const BLOCKIO_READ: u32 = 1;
 const BLOCKIO_WRITE: u32 = 2;
-const _BLOCKIO_FLUSH: u32 = 3;
+const BLOCKIO_FLUSH: u32 = 3;
 const _BLOCKIO_TRIM: u32 = 4;
 const BLOCKIO_CLOSE_VMO: u32 = 5;
 
@@ -45,6 +45,7 @@ struct BlockFifoRequest {
 }
 
 #[repr(C)]
+#[derive(Default)]
 struct BlockFifoResponse {
     status: i32,
     request_id: u32,
@@ -267,8 +268,7 @@ impl RemoteBlockDevice {
             vmoid: vmo_id.into_id(),
             ..Default::default()
         })
-        .await?;
-        Ok(())
+        .await
     }
 
     fn to_blocks(&self, bytes: u64) -> Result<u64, Error> {
@@ -390,6 +390,16 @@ impl RemoteBlockDevice {
         Ok(())
     }
 
+    // Flush all data
+    pub async fn flush(&self) -> Result<(), Error> {
+        self.send(BlockFifoRequest {
+            op_code: BLOCKIO_FLUSH,
+            vmoid: BLOCK_VMOID_INVALID,
+            ..Default::default()
+        })
+        .await
+    }
+
     pub fn block_size(&self) -> u32 {
         self.block_size
     }
@@ -475,11 +485,14 @@ impl Future for FifoPoller {
 #[cfg(test)]
 mod tests {
     use {
-        super::{BufferSlice, MutableBufferSlice, RemoteBlockDevice},
+        super::{
+            BlockFifoRequest, BlockFifoResponse, BufferSlice, MutableBufferSlice, RemoteBlockDevice,
+        },
         fidl_fuchsia_hardware_block::{self as block, BlockRequest},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
+        fuchsia_zircon as zx,
         futures::{
-            future::TryFutureExt,
+            future::{AbortHandle, Abortable, TryFutureExt},
             join,
             stream::{futures_unordered::FuturesUnordered, StreamExt},
         },
@@ -506,6 +519,16 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_against_ram_disk() {
         let (_ramdisk, remote_block_device) = make_ramdisk();
+
+        let stats_before = remote_block_device
+            .device
+            .lock()
+            .unwrap()
+            .get_stats(false, zx::Time::INFINITE)
+            .expect("get_stats failed");
+        assert_eq!(stats_before.0, zx::Status::OK.into_raw());
+        let stats_before = stats_before.1.expect("Processing get_stats result failed");
+
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         vmo.write(b"hello", 5).expect("vmo.write failed");
         let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
@@ -521,6 +544,97 @@ mod tests {
         vmo.read(&mut buf, 1029).expect("vmo.read failed");
         assert_eq!(&buf, b"hello");
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
+
+        // check that the stats are what we expect them to be
+        let stats_after = remote_block_device
+            .device
+            .lock()
+            .unwrap()
+            .get_stats(false, zx::Time::INFINITE)
+            .expect("get_stats failed");
+        assert_eq!(stats_after.0, zx::Status::OK.into_raw());
+        let stats_after = stats_after.1.expect("Processing get_stats result failed");
+        // write stats
+        assert_eq!(
+            stats_before.write.success.total_calls + 1,
+            stats_after.write.success.total_calls
+        );
+        assert_eq!(
+            stats_before.write.success.bytes_transferred + 1024,
+            stats_after.write.success.bytes_transferred
+        );
+        assert_eq!(stats_before.write.failure.total_calls, stats_after.write.failure.total_calls);
+        // read stats
+        assert_eq!(stats_before.read.success.total_calls + 1, stats_after.read.success.total_calls);
+        assert_eq!(
+            stats_before.read.success.bytes_transferred + 2048,
+            stats_after.read.success.bytes_transferred
+        );
+        assert_eq!(stats_before.read.failure.total_calls, stats_after.read.failure.total_calls);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_against_ram_disk_with_flush() {
+        let (_ramdisk, remote_block_device) = make_ramdisk();
+
+        let stats_before = remote_block_device
+            .device
+            .lock()
+            .unwrap()
+            .get_stats(false, zx::Time::INFINITE)
+            .expect("get_stats failed");
+        assert_eq!(stats_before.0, zx::Status::OK.into_raw());
+        let stats_before = stats_before.1.expect("Processing get_stats result failed");
+
+        let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
+        vmo.write(b"hello", 5).expect("vmo.write failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        remote_block_device
+            .write_at(BufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 0)
+            .await
+            .expect("write_at failed");
+        remote_block_device.flush().await.expect("flush failed");
+        remote_block_device
+            .read_at(MutableBufferSlice::new_with_vmo_id(&vmo_id, 1024, 2048), 0)
+            .await
+            .expect("read_at failed");
+        let mut buf: [u8; 5] = Default::default();
+        vmo.read(&mut buf, 1029).expect("vmo.read failed");
+        assert_eq!(&buf, b"hello");
+        remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
+
+        // check that the stats are what we expect them to be
+        let stats_after = remote_block_device
+            .device
+            .lock()
+            .unwrap()
+            .get_stats(false, zx::Time::INFINITE)
+            .expect("get_stats failed");
+        assert_eq!(stats_after.0, zx::Status::OK.into_raw());
+        let stats_after = stats_after.1.expect("Processing get_stats result failed");
+        // write stats
+        assert_eq!(
+            stats_before.write.success.total_calls + 1,
+            stats_after.write.success.total_calls
+        );
+        assert_eq!(
+            stats_before.write.success.bytes_transferred + 1024,
+            stats_after.write.success.bytes_transferred
+        );
+        assert_eq!(stats_before.write.failure.total_calls, stats_after.write.failure.total_calls);
+        // flush stats
+        assert_eq!(
+            stats_before.flush.success.total_calls + 1,
+            stats_after.flush.success.total_calls
+        );
+        assert_eq!(stats_before.flush.failure.total_calls, stats_after.flush.failure.total_calls);
+        // read stats
+        assert_eq!(stats_before.read.success.total_calls + 1, stats_after.read.success.total_calls);
+        assert_eq!(
+            stats_before.read.success.bytes_transferred + 2048,
+            stats_after.read.success.bytes_transferred
+        );
+        assert_eq!(stats_before.read.failure.total_calls, stats_after.read.failure.total_calls);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -633,55 +747,169 @@ mod tests {
         );
     }
 
+    // Implements dummy server which can be used by test cases to verify whether
+    // channel messages and fifo operations are being received - by using set_channel_handler or
+    // set_fifo_hander respectively
+    struct FakeBlockServer<'a> {
+        server_channel: Option<zx::Channel>,
+        channel_handler: Box<dyn Fn(&BlockRequest) -> bool + 'a>,
+        fifo_handler: Box<dyn Fn(BlockFifoRequest) -> BlockFifoResponse + 'a>,
+    }
+
+    impl<'a> FakeBlockServer<'a> {
+        // Creates a new FakeBlockServer given a channel to listen on.
+        //
+        // 'channel_handler' and 'fifo_handler' closures allow for customizing the way how the server
+        // handles requests received from channel or the fifo respectfully.
+        //
+        // 'channel_handler' receives a message before it is handled by the default implementation
+        // and can return 'true' to indicate all processing is done and no further processing of
+        // that message is required
+        //
+        // 'fifo_handler' takes as input a BlockFifoRequest and produces a response which the
+        // FakeBlockServer will send over the fifo.
+        fn new(
+            server_channel: zx::Channel,
+            channel_handler: impl Fn(&BlockRequest) -> bool + 'a,
+            fifo_handler: impl Fn(BlockFifoRequest) -> BlockFifoResponse + 'a,
+        ) -> FakeBlockServer<'a> {
+            FakeBlockServer {
+                server_channel: Some(server_channel),
+                channel_handler: Box::new(channel_handler),
+                fifo_handler: Box::new(fifo_handler),
+            }
+        }
+
+        // Runs the server
+        async fn run(&mut self) {
+            let server = fidl::endpoints::ServerEnd::<block::BlockMarker>::new(
+                self.server_channel.take().unwrap(),
+            );
+
+            // Set up a mock server.
+            let (server_fifo, client_fifo) =
+                zx::Fifo::create(16, std::mem::size_of::<BlockFifoRequest>())
+                    .expect("Fifo::create failed");
+            let maybe_server_fifo = std::sync::Mutex::new(Some(client_fifo));
+
+            let (fifo_future_abort, fifo_future_abort_registration) = AbortHandle::new_pair();
+            let fifo_future = Abortable::new(
+                async {
+                    let fifo = fasync::Fifo::from_fifo(server_fifo).expect("from_fifo failed");
+                    while let Some(request) = fifo.read_entry().await.expect("read_entry failed") {
+                        let response = self.fifo_handler.as_ref()(request);
+                        fifo.write_entries(std::slice::from_ref(&response))
+                            .await
+                            .expect("write_entries failed");
+                    }
+                },
+                fifo_future_abort_registration,
+            );
+
+            let channel_future = async {
+                server
+                    .into_stream()
+                    .expect("into_stream failed")
+                    .for_each(|request| async {
+                        let request = request.expect("unexpected fidl error");
+
+                        // Give a chance for the test to register and potentially handle the event
+                        if self.channel_handler.as_ref()(&request) {
+                            return;
+                        }
+
+                        match request {
+                            BlockRequest::GetInfo { responder } => {
+                                let mut block_info = block::BlockInfo {
+                                    block_count: 1024,
+                                    block_size: 512,
+                                    max_transfer_size: 1024 * 1024,
+                                    flags: 0,
+                                    reserved: 0,
+                                };
+                                responder
+                                    .send(zx::sys::ZX_OK, Some(&mut block_info))
+                                    .expect("send failed");
+                            }
+                            BlockRequest::GetFifo { responder } => {
+                                responder
+                                    .send(zx::sys::ZX_OK, maybe_server_fifo.lock().unwrap().take())
+                                    .expect("send failed");
+                            }
+                            BlockRequest::AttachVmo { vmo: _, responder } => {
+                                let mut vmo_id = block::VmoId { id: 1 };
+                                responder
+                                    .send(zx::sys::ZX_OK, Some(&mut vmo_id))
+                                    .expect("send failed");
+                            }
+                            BlockRequest::CloseFifo { responder } => {
+                                fifo_future_abort.abort();
+                                responder.send(zx::sys::ZX_OK).expect("send failed");
+                            }
+                            _ => panic!("Unexpected message"),
+                        }
+                    })
+                    .await;
+            };
+
+            let _result = join!(fifo_future, channel_future);
+            //_result can be Err(Aborted) since FifoClose calls .abort but that's expected
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_block_fifo_close_is_called() {
-        let (client, server) = zx::Channel::create().expect("Channel::create failed");
-        let server = fidl::endpoints::ServerEnd::<block::BlockMarker>::new(server);
         let close_called = std::sync::Mutex::new(false);
+        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+
         // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
         // client and we are using a single threaded executor.
-        std::thread::spawn(|| {
+        std::thread::spawn(move || {
+            let _remote_block_device =
+                RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
             // The drop here should cause CloseFifo to be sent.
-            RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
         });
-        // Now set up a mock server.
-        let (_client_fifo, server_fifo) =
-            zx::Fifo::create(16, std::mem::size_of::<super::BlockFifoRequest>())
-                .expect("Fifo::create failed");
-        let maybe_server_fifo = std::sync::Mutex::new(Some(server_fifo));
-        server
-            .into_stream()
-            .expect("into_stream failed")
-            .for_each(|request| async {
-                match request.expect("unexpected fidl error") {
-                    BlockRequest::GetInfo { responder } => {
-                        let mut block_info = block::BlockInfo {
-                            block_count: 1024,
-                            block_size: 512,
-                            max_transfer_size: 1024 * 1024,
-                            flags: 0,
-                            reserved: 0,
-                        };
-                        responder.send(zx::sys::ZX_OK, Some(&mut block_info)).expect("send failed");
-                    }
-                    BlockRequest::GetFifo { responder } => {
-                        responder
-                            .send(zx::sys::ZX_OK, maybe_server_fifo.lock().unwrap().take())
-                            .expect("send failed");
-                    }
-                    BlockRequest::AttachVmo { vmo: _, responder } => {
-                        let mut vmo_id = block::VmoId { id: 1 };
-                        responder.send(zx::sys::ZX_OK, Some(&mut vmo_id)).expect("send failed");
-                    }
-                    BlockRequest::CloseFifo { responder } => {
-                        *close_called.lock().unwrap() = true;
-                        responder.send(zx::sys::ZX_OK).expect("send failed");
-                    }
-                    _ => panic!("Unexpected message"),
-                }
-            })
-            .await;
+
+        let channel_handler = |request: &BlockRequest| -> bool {
+            if let BlockRequest::CloseFifo { .. } = request {
+                *close_called.lock().unwrap() = true;
+            }
+            false
+        };
+        let mut fake_server = FakeBlockServer::new(server, channel_handler, |_| unreachable!());
+        fake_server.run().await;
+
         // After the server has finished running, we can check to see that close was called.
         assert!(*close_called.lock().unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_block_flush_is_called() {
+        let flush_called = std::sync::Mutex::new(false);
+        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+
+        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
+        // client and we are using a single threaded executor.
+        std::thread::spawn(move || {
+            let remote_block_device =
+                RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
+            futures::executor::block_on(remote_block_device.flush())
+                .expect("RemoteBlockDevice::flush failed");
+        });
+
+        let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
+            *flush_called.lock().unwrap() = true;
+            assert_eq!(request.op_code, super::BLOCKIO_FLUSH);
+            BlockFifoResponse {
+                status: zx::Status::OK.into_raw(),
+                request_id: request.request_id,
+                ..Default::default()
+            }
+        };
+        let mut fake_server = FakeBlockServer::new(server, |_| false, fifo_handler);
+        fake_server.run().await;
+
+        // After the server has finished running, we can check to see that close was called.
+        assert!(*flush_called.lock().unwrap());
     }
 }

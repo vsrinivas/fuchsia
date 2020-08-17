@@ -29,7 +29,7 @@ pub struct Stats {
     cache_hits: u64,
 }
 
-/// Wraps RemoveBlockDevice providing a simple LRU cache and trait implementations for
+/// Wraps RemoteBlockDevice providing a simple LRU cache and trait implementations for
 /// std::io::{Read, Seek, Write}. This is unlikely to be performant; the implementation is single
 /// threaded. The cache works by dividing up a VMO into BLOCK_COUNT blocks of BLOCK_SIZE bytes, and
 /// maintaining mappings from device offsets to offsets in the VMO.
@@ -187,6 +187,12 @@ impl Cache {
     /// Returns statistics.
     pub fn stats(&self) -> &Stats {
         &self.stats
+    }
+
+    /// Returns a reference to the underlying device
+    /// Can be used for additional control, like instructing the device to flush any written data
+    pub fn device(&self) -> &RemoteBlockDevice {
+        &self.device
     }
 }
 
