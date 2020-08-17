@@ -26,6 +26,8 @@ if (is_host) {
     ]
 
     sources = [
+      "code_generator/code_generator.cc",
+      "code_generator/test_generator.cc",
       "comparator.cc",
       "decoder.cc",
       "event.cc",

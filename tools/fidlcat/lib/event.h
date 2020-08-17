@@ -272,6 +272,9 @@ class Event {
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
 
+  // Method to downcast an event
+  virtual OutputEvent* AsOutputEvent() { return nullptr; }
+
   // Write the content of the event into a protobuf event.
   virtual void Write(proto::Event* dst) const = 0;
 
@@ -428,6 +431,8 @@ class OutputEvent final : public SyscallEvent {
 
   int64_t returned_value() const { return returned_value_; }
   const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
+
+  OutputEvent* AsOutputEvent() override { return this; }
 
   void Write(proto::Event* dst) const override;
 

@@ -265,6 +265,36 @@ void main(List<String> arguments) {
           instance.stdout,
           equals(
               'Writing tests on disk (session id: e2e, process name: echo_client_cpp)\n'
+              '1412899975 zx_channel_write fuchsia.io/Directory.Open\n'
+              '1416045099 zx_channel_write fuchsia.io/Directory.Open\n'
+              '1428628083 zx_channel_write fidl.examples.echo/Echo.EchoString\n'
+              '1428628083 zx_channel_read fidl.examples.echo/Echo.EchoString\n'
+              '1430725227 zx_channel_write fuchsia.io/Directory.Open\n'
+              '1435967747 zx_channel_write fuchsia.io/Node.OnOpen\n'
+              '1457988959 zx_channel_write fuchsia.sys/Launcher.CreateComponent\n'
+              '1466376519 zx_channel_read fuchsia.sys/ComponentController.OnDirectoryReady\n'
+              '1492595047 zx_channel_read fuchsia.io/Node.Clone\n'
+              ''),
+          reason: instance.additionalResult);
+    });
+
+    test('Test --with=generate-tests (server crashing)', () async {
+      final String echoCrashProto = Platform.script
+          .resolve('runtime_deps/echo_sync_crash.proto')
+          .toFilePath();
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
+          ['--with=generate-tests=e2e', '--from=$echoCrashProto']);
+
+      expect(
+          instance.stdout,
+          equals(
+              'Writing tests on disk (session id: e2e, process name: echo_client_cpp_synchronous)\n'
+              '1150113659 zx_channel_write fuchsia.sys/Launcher.CreateComponent\n'
+              '2223856655 zx_channel_write fuchsia.io/Directory.Open\n'
+              '2224905275 zx_channel_write fuchsia.io/Directory.Open\n'
+              '2243779711 zx_channel_write fuchsia.io/Directory.Open\n'
+              '2674743383 zx_channel_call (crashed) fidl.examples.echo/Echo.EchoString\n'
               ''),
           reason: instance.additionalResult);
     });

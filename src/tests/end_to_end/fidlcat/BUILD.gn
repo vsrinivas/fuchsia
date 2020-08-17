@@ -79,6 +79,7 @@ if (is_host) {
       "${target_gen_dir}/echo_client_cpp.debug",
       "//src/tests/end_to_end/fidlcat/echo.proto",
       "//src/tests/end_to_end/fidlcat/echo_client.proto",
+      "//src/tests/end_to_end/fidlcat/echo_sync_crash.proto",
     ]
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]

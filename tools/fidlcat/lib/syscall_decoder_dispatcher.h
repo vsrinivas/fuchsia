@@ -1747,6 +1747,8 @@ class SyscallDecoderDispatcher {
   bool needs_to_save_events() const { return needs_to_save_events_; }
   void set_needs_to_save_events() { needs_to_save_events_ = true; }
 
+  const std::vector<std::shared_ptr<Event>>& decoded_events() const { return decoded_events_; }
+
   Syscall* SearchSyscall(const std::string& name) const {
     auto result = syscalls_.find(name);
     if (result == syscalls_.end()) {

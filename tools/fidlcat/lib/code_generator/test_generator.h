@@ -11,17 +11,14 @@ namespace fidlcat {
 
 class TestGenerator : public CodeGenerator {
  public:
-  TestGenerator(std::string process_name, std::string session_id)
-      : CodeGenerator(), process_name_(process_name), session_id_(session_id) {}
+  TestGenerator(SyscallDecoderDispatcher* dispatcher, std::string session_id)
+      : CodeGenerator(), dispatcher_(dispatcher), session_id_(session_id) {}
 
-  void GenerateTests() {
-    std::cout << "Writing tests on disk"
-              << " (session id: " << session_id_ << ", process name: " << process_name_ << ")\n";
-  }
+  void GenerateTests();
 
  private:
-  std::string process_name_;
-  std::string session_id_;
+  SyscallDecoderDispatcher* const dispatcher_;
+  const std::string session_id_;
 };
 
 }  // namespace fidlcat

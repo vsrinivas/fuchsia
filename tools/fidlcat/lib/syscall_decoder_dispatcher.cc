@@ -796,12 +796,7 @@ std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
 }
 
 void SyscallDisplayDispatcher::GenerateTests(std::string session_id) {
-  if (processes().size() != 1) {
-    std::cout << "Error: Cannot generate tests for more than one process.\n";
-    return;
-  }
-
-  auto test_generator = TestGenerator(processes().begin()->second->name(), session_id);
+  auto test_generator = TestGenerator(this, session_id);
   test_generator.GenerateTests();
 }
 
