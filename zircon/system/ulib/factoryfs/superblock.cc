@@ -20,35 +20,19 @@
 namespace factoryfs {
 
 namespace {
-// Dumps the content of superblock to |out|. Does nothing if |out| is nullptr.
-void DumpSuperblock(const Superblock& info, FILE* out) {
-  if (out == nullptr) {
-    return;
-  }
 
-  fprintf(out,
-          "info.magic: %" PRIu64
-          "\n"
-          "info.major_version: %" PRIu32
-          "\n"
-          "info.minor_version: %" PRIu32
-          "\n"
-          "info.flags: %" PRIu32
-          "\n"
-          "info.data_blocks: %" PRIu32
-          "\n"
-          "info.directory_size: %" PRIu32
-          "\n"
-          "info.directory_entries: %" PRIu32
-          "\n"
-          "info.block_size: %" PRIu32
-          "\n"
-          "info.directory_ent_blocks: %" PRIu32
-          "\n"
-          "info.directory_ent_start_block: %" PRIu32 "\n",
-          info.magic, info.major_version, info.minor_version, info.flags, info.data_blocks,
-          info.directory_size, info.directory_entries, info.block_size, info.directory_ent_blocks,
-          info.directory_ent_start_block);
+// Dumps the content of superblock.
+void DumpSuperblock(const Superblock& info) {
+  FS_TRACE_DEBUG("factoryfs: magic:  %10lu\n", info.magic);
+  FS_TRACE_DEBUG("factoryfs: major version:  %10u\n", info.major_version);
+  FS_TRACE_DEBUG("factoryfs: minor version:  %10u\n", info.minor_version);
+  FS_TRACE_DEBUG("factoryfs: flags:  %10u\n", info.flags);
+  FS_TRACE_DEBUG("factoryfs: data blocks:  %10u\n", info.data_blocks);
+  FS_TRACE_DEBUG("factoryfs: directory size:  %10u\n", info.directory_size);
+  FS_TRACE_DEBUG("factoryfs: directory entries:  %10u\n", info.directory_entries);
+  FS_TRACE_DEBUG("factoryfs: block size  @ %10u\n", info.info.block_size);
+  FS_TRACE_DEBUG("factoryfs: num directory entry blocks  %10u\n", info.directory_ent_blocks);
+  FS_TRACE_DEBUG("factoryfs: directory entry start block @ %10u\n", info.directory_ent_start_block);
 }
 
 }  // namespace
@@ -62,31 +46,31 @@ zx_status_t CheckSuperblock(const Superblock* info) {
   if (info->major_version != kFactoryfsMajorVersion) {
     FS_TRACE_ERROR("factoryfs: FS Version: %08x. Driver version: %08x\n", info->major_version,
                    kFactoryfsMajorVersion);
-    DumpSuperblock(*info, stderr);
+    DumpSuperblock(*info);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   if (info->major_version != kFactoryfsMajorVersion) {
     FS_TRACE_ERROR("factoryfs: FS Major Version: %08x. Driver version: %08x\n", info->major_version,
                    kFactoryfsMajorVersion);
-    DumpSuperblock(*info, stderr);
+    DumpSuperblock(*info);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   if (info->minor_version != kFactoryfsMinorVersion) {
     FS_TRACE_ERROR("factoryfs: FS Minor Version: %08x. Driver version: %08x\n", info->major_version,
                    kFactoryfsMinorVersion);
-    DumpSuperblock(*info, stderr);
+    DumpSuperblock(*info);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   if (info->block_size != kFactoryfsBlockSize) {
     FS_TRACE_ERROR("factoryfs: bsz %u unsupported\n", info->block_size);
-    DumpSuperblock(*info, stderr);
+    DumpSuperblock(*info);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
-  DumpSuperblock(*info, stderr);
-  FS_TRACE_INFO("Checksuperblock success\n");
+  DumpSuperblock(*info);
+  FS_TRACE_DEBUG("Checksuperblock success\n");
   return ZX_OK;
 }
 
