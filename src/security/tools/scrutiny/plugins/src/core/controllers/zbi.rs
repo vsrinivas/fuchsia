@@ -15,7 +15,8 @@ pub struct BootfsPathsController {}
 impl DataController for BootfsPathsController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
         if let Some(zbi) = &*model.zbi().read().unwrap() {
-            let paths = zbi.bootfs.keys().cloned().collect::<Vec<String>>();
+            let mut paths = zbi.bootfs.keys().cloned().collect::<Vec<String>>();
+            paths.sort();
             Ok(serde_json::to_value(paths)?)
         } else {
             let empty: Vec<String> = vec![];
@@ -33,6 +34,24 @@ impl DataController for ZbiCmdlineController {
             Ok(serde_json::to_value(zbi.cmdline.clone())?)
         } else {
             Ok(serde_json::to_value("")?)
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct ZbiSectionsController {}
+
+impl DataController for ZbiSectionsController {
+    fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
+        if let Some(zbi) = &*model.zbi().read().unwrap() {
+            let mut sections = vec![];
+            for section in zbi.sections.iter() {
+                sections.push(section.section_type.clone());
+            }
+            Ok(serde_json::to_value(sections)?)
+        } else {
+            let empty: Vec<String> = vec![];
+            Ok(serde_json::to_value(empty)?)
         }
     }
 }
@@ -67,8 +86,8 @@ mod tests {
         let zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "foo".to_string() };
         *model.zbi().write().unwrap() = Some(zbi);
         let controller = ZbiCmdlineController::default();
-        let cmdline: String = serde_json::from_value(controller.query(model, json!("")).unwrap()).unwrap();
+        let cmdline: String =
+            serde_json::from_value(controller.query(model, json!("")).unwrap()).unwrap();
         assert_eq!(cmdline, "foo".to_string());
     }
-
 }

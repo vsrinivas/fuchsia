@@ -7,14 +7,14 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ShellError {
     #[error("expected command none provided")]
-    EmptyCommand {},
+    EmptyCommand,
     #[error("unescaped json string: {}", provided)]
-    UnescapedJsonString{ provided: String },
+    UnescapedJsonString { provided: String },
 }
 
 impl ShellError {
     pub fn empty_command() -> ShellError {
-        ShellError::EmptyCommand {}
+        ShellError::EmptyCommand
     }
 
     pub fn unescaped_json_string(provided: impl Into<String>) -> ShellError {

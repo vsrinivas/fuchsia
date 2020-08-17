@@ -12,8 +12,11 @@ if (!is_fuchsia) {
     edition = "2018"
     visibility = [ "//src/security/tools/scrutiny/*" ]
     deps = [
+      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//src/lib/fidl/rust/fidl",
       "//src/security/tools/scrutiny/framework",
       "//src/security/tools/scrutiny/utils",
+      "//src/sys/lib/cm_fidl_validator",
       "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
@@ -31,24 +34,24 @@ if (!is_fuchsia) {
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
-      "src/components/artifact.rs",
-      "src/components/controllers/blob_controllers.rs",
-      "src/components/controllers/component_controllers.rs",
-      "src/components/controllers/mod.rs",
-      "src/components/controllers/package_controllers.rs",
-      "src/components/controllers/route_controllers.rs",
-      "src/components/controllers/zbi_controllers.rs",
-      "src/components/graph.rs",
-      "src/components/jsons.rs",
-      "src/components/mod.rs",
-      "src/components/package_getter.rs",
-      "src/components/package_reader.rs",
-      "src/components/types.rs",
-      "src/components/util.rs",
-      "src/health.rs",
+      "src/core/artifact.rs",
+      "src/core/controllers/blob.rs",
+      "src/core/controllers/component.rs",
+      "src/core/controllers/mod.rs",
+      "src/core/controllers/package.rs",
+      "src/core/controllers/route.rs",
+      "src/core/controllers/zbi.rs",
+      "src/core/core.rs",
+      "src/core/jsons.rs",
+      "src/core/mod.rs",
+      "src/core/package_collector.rs",
+      "src/core/package_getter.rs",
+      "src/core/package_reader.rs",
+      "src/core/types.rs",
+      "src/core/util.rs",
+      "src/engine.rs",
       "src/lib.rs",
-      "src/management.rs",
-      "src/search.rs",
+      "src/model.rs",
     ]
   }
 }

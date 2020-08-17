@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        logo,
-        shell::Shell,
-    },
+    crate::{logo, shell::Shell},
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,
@@ -70,8 +67,7 @@ impl ScrutinyApp {
             Arc::clone(&scheduler),
             Arc::clone(&dispatcher),
         )));
-        let shell =
-            Shell::new(Arc::clone(&manager), Arc::clone(&scheduler), Arc::clone(&dispatcher));
+        let shell = Shell::new(Arc::clone(&manager), Arc::clone(&dispatcher));
         Ok(Self { manager, dispatcher, scheduler, visualizer, shell, args })
     }
 
@@ -154,6 +150,8 @@ impl ScrutinyApp {
         self.scheduler.lock().unwrap().schedule()?;
 
         if let Some(command) = self.args.value_of("command") {
+            // Spin lock on the schedulers to finish.
+            while !self.scheduler.lock().unwrap().all_idle() {}
             self.shell.execute(command.to_string());
         } else {
             if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {

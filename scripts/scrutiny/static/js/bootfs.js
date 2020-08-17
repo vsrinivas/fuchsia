@@ -9,7 +9,7 @@ class BootfsView {
 
   async init() {
     console.log('[Bootfs] - Loading all files');
-    this.bootfs = await post_request(location.origin + '/api/bootfs', null);
+    this.bootfs = await post_request(location.origin + '/api/zbi/bootfs', null);
     this.bootfs.sort();
   }
 

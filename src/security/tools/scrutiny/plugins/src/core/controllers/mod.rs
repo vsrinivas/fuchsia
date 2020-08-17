@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod blob_controllers;
-pub mod component_controllers;
-pub mod package_controllers;
-pub mod route_controllers;
-pub mod zbi_controllers;
+pub mod blob;
+pub mod component;
+pub mod package;
+pub mod route;
+pub mod zbi;

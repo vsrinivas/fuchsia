@@ -238,15 +238,20 @@ pub struct ComponentInstance {
     pub component_id: i32,
 }
 
+/// Defines the manifest data in terms of the component framework version it
+/// represents.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub enum ManifestData {
+    Version1(String),
+    Version2(String),
+}
 /// Defines a component manifest. The `component_id` maps 1:1 to
 /// `component.id` indexes. This is stored in a different table as most queries
 /// don't need the raw manifest.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     pub component_id: i32,
-    pub manifest: String,
-    // uses should not be persisted to backing key-value store, it is primarily
-    // used to build routes.
+    pub manifest: ManifestData,
     pub uses: Vec<String>,
 }
 

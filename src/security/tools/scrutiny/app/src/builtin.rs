@@ -6,12 +6,8 @@ use std::collections::VecDeque;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Builtin {
-    PluginList,
-    PluginControllers,
-    PluginCollectors,
     PluginLoad,
     PluginUnload,
-    PluginSchedule,
     Clear,
     Exit,
     Help,
@@ -34,12 +30,8 @@ impl BuiltinCommand {
         let args: Vec<String> = tokens.iter().map(|s| s.to_string()).collect();
 
         match program {
-            "plugin.list" => Some(Self { program: Builtin::PluginList, args }),
-            "plugin.controllers" => Some(Self { program: Builtin::PluginControllers, args }),
-            "plugin.collectors" => Some(Self { program: Builtin::PluginCollectors, args }),
             "plugin.load" => Some(Self { program: Builtin::PluginLoad, args }),
             "plugin.unload" => Some(Self { program: Builtin::PluginUnload, args }),
-            "plugin.schedule" => Some(Self { program: Builtin::PluginSchedule, args }),
             "clear" => Some(Self { program: Builtin::Clear, args }),
             "exit" => Some(Self { program: Builtin::Exit, args }),
             "help" => Some(Self { program: Builtin::Help, args }),
@@ -54,12 +46,8 @@ Scrutiny:
   A Security auditing framework and toolset.
 
 Builtin Commands:
-  plugin.list        - Lists all registered plugins and their state.
-  plugin.controllers - Lists all controllers and their state.
-  plugin.collectors  - Lists all collectors and their state.
   plugin.load        - Loads a registered plugin.
   plugin.unload      - Unloads a loaded plugin.
-  plugin.schedule    - Schedules all the loaded collectors to run.
   clear              - Clears the screen.
   exit               - Exits the program.
   help               - Prints this help message.
@@ -74,21 +62,8 @@ mod tests {
 
     #[test]
     fn test_builtin_parse() {
-        assert_eq!(BuiltinCommand::parse("plugin.list").unwrap().program, Builtin::PluginList);
-        assert_eq!(
-            BuiltinCommand::parse("plugin.controllers").unwrap().program,
-            Builtin::PluginControllers
-        );
-        assert_eq!(
-            BuiltinCommand::parse("plugin.collectors").unwrap().program,
-            Builtin::PluginCollectors
-        );
         assert_eq!(BuiltinCommand::parse("plugin.load").unwrap().program, Builtin::PluginLoad);
         assert_eq!(BuiltinCommand::parse("plugin.unload").unwrap().program, Builtin::PluginUnload);
-        assert_eq!(
-            BuiltinCommand::parse("plugin.schedule").unwrap().program,
-            Builtin::PluginSchedule
-        );
         assert_eq!(BuiltinCommand::parse("clear").unwrap().program, Builtin::Clear);
         assert_eq!(BuiltinCommand::parse("exit").unwrap().program, Builtin::Exit);
         assert_eq!(BuiltinCommand::parse("help").unwrap().program, Builtin::Help);
@@ -98,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_builtin_args() {
-        assert_eq!(BuiltinCommand::parse("plugin.list foo").unwrap().args, vec!["foo"]);
-        assert_eq!(BuiltinCommand::parse("plugin.list foo bar").unwrap().args, vec!["foo", "bar"]);
+        assert_eq!(BuiltinCommand::parse("plugin.load foo").unwrap().args, vec!["foo"]);
+        assert_eq!(BuiltinCommand::parse("plugin.load foo bar").unwrap().args, vec!["foo", "bar"]);
     }
 }

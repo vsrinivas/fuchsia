@@ -4,15 +4,15 @@
 
 use {
     super::{
-        error::ShellError,
         builtin::{Builtin, BuiltinCommand},
+        error::ShellError,
     },
+    anyhow::{Error, Result},
     log::info,
     scrutiny::engine::{
         dispatcher::{ControllerDispatcher, DispatcherError},
         manager::{PluginManager, PluginState},
         plugin::PluginDescriptor,
-        scheduler::CollectorScheduler,
     },
     serde_json::{self, json, Value},
     std::collections::VecDeque,
@@ -20,12 +20,10 @@ use {
     std::process,
     std::sync::{Arc, Mutex, RwLock},
     termion::{self, clear, color, cursor, style},
-    anyhow::{Error, Result},
 };
 
 pub struct Shell {
     manager: Arc<Mutex<PluginManager>>,
-    scheduler: Arc<Mutex<CollectorScheduler>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
     history: VecDeque<String>,
 }
@@ -33,10 +31,9 @@ pub struct Shell {
 impl Shell {
     pub fn new(
         manager: Arc<Mutex<PluginManager>>,
-        scheduler: Arc<Mutex<CollectorScheduler>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
     ) -> Self {
-        Self { manager, scheduler, dispatcher, history: VecDeque::with_capacity(2048) }
+        Self { manager, dispatcher, history: VecDeque::with_capacity(2048) }
     }
 
     fn prompt(&mut self) -> Option<String> {
@@ -59,53 +56,6 @@ impl Shell {
     fn builtin(&mut self, command: String) -> bool {
         if let Some(builtin) = BuiltinCommand::parse(command) {
             match builtin.program {
-                Builtin::PluginList => {
-                    let plugins = self.manager.lock().unwrap().plugins();
-                    println!("Scrutiny Plugins: ");
-                    for plugin in plugins.iter() {
-                        let state = self.manager.lock().unwrap().state(plugin).unwrap();
-                        println!("  {} - {}", plugin, state);
-                    }
-                }
-                Builtin::PluginControllers => {
-                    if builtin.args.len() != 1 {
-                        println!("Error: Provide a single plugin argument.");
-                        return true;
-                    }
-                    let desc = PluginDescriptor::new(builtin.args.first().unwrap());
-                    let result = self.manager.lock().unwrap().instance_id(&desc);
-                    if let Err(e) = result {
-                        println!("Error: {}", e);
-                    } else {
-                        let instance_id = result.unwrap();
-                        let controllers = self.dispatcher.read().unwrap().controllers(instance_id);
-                        println!("{} Controllers:", desc);
-                        for controller in controllers.iter() {
-                            println!("  {}", controller);
-                        }
-                    }
-                }
-                Builtin::PluginCollectors => {
-                    if builtin.args.len() != 1 {
-                        println!("Error: Provide a single plugin argument.");
-                        return true;
-                    }
-                    let desc = PluginDescriptor::new(builtin.args.first().unwrap());
-                    let result = self.manager.lock().unwrap().instance_id(&desc);
-                    if let Err(e) = result {
-                        println!("Error: {}", e);
-                    } else {
-                        let instance_id = result.unwrap();
-                        let scheduler_guard = self.scheduler.lock().unwrap();
-                        let collectors = scheduler_guard.collectors(instance_id);
-
-                        println!("{} Collectors:", desc);
-                        for (handle, name) in collectors.iter() {
-                            let state = scheduler_guard.state(handle).unwrap();
-                            println!("  {} - {}", name, state);
-                        }
-                    }
-                }
                 Builtin::PluginLoad => {
                     if builtin.args.len() != 1 {
                         println!("Error: Provide a single plugin to load.");
@@ -126,18 +76,6 @@ impl Shell {
                         println!("Error: {}", e);
                     }
                 }
-                Builtin::PluginSchedule => {
-                    let scheduler = self.scheduler.lock().unwrap();
-                    let collectors = scheduler.collectors_all();
-                    if let Err(e) = scheduler.schedule() {
-                        println!("Error: {}", e);
-                    } else {
-                        println!("Scheduling:");
-                        for (_handle, name) in collectors {
-                            println!("  {}", name);
-                        }
-                    }
-                }
                 Builtin::Help => {
                     BuiltinCommand::usage();
                     println!("\nPlugin Commands:\n");
@@ -147,8 +85,9 @@ impl Shell {
                         let state = manager.state(plugin).unwrap();
                         if state == PluginState::Loaded {
                             let instance_id = manager.instance_id(plugin).unwrap();
-                            let controllers =
+                            let mut controllers =
                                 self.dispatcher.read().unwrap().controllers(instance_id);
+                            controllers.sort();
                             println!("{} Commands:", plugin);
                             for controller in controllers.iter() {
                                 let command = str::replace(&controller, "/api/", "");
@@ -226,6 +165,11 @@ impl Shell {
     fn plugin(&mut self, command: String) -> bool {
         let command_result = Self::parse_command(command);
         if let Err(err) = command_result {
+            if let Some(shell_error) = err.downcast_ref::<ShellError>() {
+                if let ShellError::EmptyCommand = shell_error {
+                    return true;
+                }
+            }
             println!("Error: {}", err);
             return true;
         }

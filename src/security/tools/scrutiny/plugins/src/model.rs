@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Result,
+    regex::Regex,
     scrutiny::{
-        plugin, collectors, controllers,
+        collectors, controllers,
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
         model::controller::DataController,
         model::model::*,
+        plugin,
     },
-    anyhow::Result,
-    regex::Regex,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::Arc,
@@ -56,8 +57,10 @@ impl DataController for ManifestSearchController {
         let manifest_re = Regex::new(&request.manifest)?;
         let manifests = model.manifests().read().unwrap();
         for manifest in manifests.iter() {
-            if manifest_re.is_match(&manifest.manifest) {
-                response.push(manifest.clone());
+            if let ManifestData::Version1(data) = &manifest.manifest {
+                if manifest_re.is_match(&data) {
+                    response.push(manifest.clone());
+                }
             }
         }
         Ok(json!(response))
@@ -114,7 +117,7 @@ impl DataController for RouteSearchController {
 }
 
 plugin!(
-    ModelSearchPlugin,
+    ModelPlugin,
     PluginHooks::new(
         collectors! {},
         controllers! {
@@ -124,16 +127,12 @@ plugin!(
             "/search/routes" => RouteSearchController::default(),
         }
     ),
-    vec![PluginDescriptor::new("ComponentGraphPlugin")]
+    vec![PluginDescriptor::new("CorePlugin")]
 );
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        tempfile::tempdir,
-        std::collections::HashMap,
-    };
+    use {super::*, std::collections::HashMap, tempfile::tempdir};
 
     fn data_model() -> Arc<DataModel> {
         let store_dir = tempdir().unwrap();
@@ -149,12 +148,16 @@ mod tests {
             id: 0,
             url: "foo".to_string(),
             version: 0,
-            inferred: false
+            inferred: false,
         });
         let request_one = ComponentSearchRequest { url: "foo".to_string() };
         let request_two = ComponentSearchRequest { url: "bar".to_string() };
-        let response_one : Vec::<Component> = serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap()).unwrap();
-        let response_two : Vec::<Component> = serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap()).unwrap();
+        let response_one: Vec<Component> =
+            serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
+                .unwrap();
+        let response_two: Vec<Component> =
+            serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
+                .unwrap();
         assert_eq!(response_one.len(), 1);
         assert_eq!(response_two.len(), 0);
     }
@@ -165,13 +168,17 @@ mod tests {
         let search = ManifestSearchController::default();
         model.manifests().write().unwrap().push(Manifest {
             component_id: 0,
-            manifest: "foo".to_string(),
+            manifest: ManifestData::Version1("foo".to_string()),
             uses: vec![],
         });
         let request_one = ManifestSearchRequest { manifest: "foo".to_string() };
         let request_two = ManifestSearchRequest { manifest: "bar".to_string() };
-        let response_one : Vec::<Manifest> = serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap()).unwrap();
-        let response_two : Vec::<Manifest> = serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap()).unwrap();
+        let response_one: Vec<Manifest> =
+            serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
+                .unwrap();
+        let response_two: Vec<Manifest> =
+            serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
+                .unwrap();
         assert_eq!(response_one.len(), 1);
         assert_eq!(response_two.len(), 0);
     }
@@ -189,8 +196,12 @@ mod tests {
         });
         let request_one = PackageSearchRequest { files: "foo".to_string() };
         let request_two = PackageSearchRequest { files: "bar".to_string() };
-        let response_one : Vec::<Package> = serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap()).unwrap();
-        let response_two : Vec::<Package> = serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap()).unwrap();
+        let response_one: Vec<Package> =
+            serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
+                .unwrap();
+        let response_two: Vec<Package> =
+            serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
+                .unwrap();
         assert_eq!(response_one.len(), 1);
         assert_eq!(response_two.len(), 0);
     }
@@ -208,8 +219,12 @@ mod tests {
         });
         let request_one = RouteSearchRequest { service_name: "foo".to_string() };
         let request_two = RouteSearchRequest { service_name: "bar".to_string() };
-        let response_one : Vec::<Route> = serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap()).unwrap();
-        let response_two : Vec::<Route> = serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap()).unwrap();
+        let response_one: Vec<Route> =
+            serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
+                .unwrap();
+        let response_two: Vec<Route> =
+            serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
+                .unwrap();
         assert_eq!(response_one.len(), 1);
         assert_eq!(response_two.len(), 0);
     }

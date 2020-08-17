@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::{model::controller::DataController, model::model::DataModel},
     anyhow::Result,
+    scrutiny::{model::controller::DataController, model::model::DataModel},
     serde_json::{self, value::Value},
     std::sync::Arc,
 };
@@ -14,8 +14,9 @@ pub struct PackagesGraphController {}
 
 impl DataController for PackagesGraphController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        let packages = model.packages().read().unwrap();
-        Ok(serde_json::to_value(packages.clone())?)
+        let mut packages = model.packages().read().unwrap().clone();
+        packages.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
+        Ok(serde_json::to_value(packages)?)
     }
 }
 

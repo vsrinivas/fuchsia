@@ -72,7 +72,7 @@ impl CollectorInstance {
                         let mut state = collector_state.lock().unwrap();
                         *state = CollectorState::Idle;
                         if let Err(e) = model.flush() {
-                            error!("Store failed to flush results after colletion {}", e);
+                            error!("Store failed to flush results after collection {}", e);
                         }
                     }
                 }
@@ -89,6 +89,12 @@ impl CollectorInstance {
     /// Sends a message to the collector instance worker to run this collector.
     /// If the worker is currently busy this message will be queued.
     pub fn run(&self, model: Arc<DataModel>) {
+        // Set the collector state to running as soon as possible in a
+        // synchronous setting.
+        let mut state = self.state.lock().unwrap();
+        if *state != CollectorState::Terminated {
+            *state = CollectorState::Running;
+        }
         self.sender.send(CollectorMessage::Collect(model)).unwrap();
     }
 }
@@ -175,6 +181,17 @@ impl CollectorScheduler {
         Ok(())
     }
 
+    /// Returns true if all collectors are currently idle. This function is not
+    /// thread safe.
+    pub fn all_idle(&self) -> bool {
+        for (_, instance) in self.collectors.iter() {
+            if *instance.state.lock().unwrap() == CollectorState::Running {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /// Retrieve the collector state of a particular collector.
     pub fn state(&self, handle: &CollectorHandle) -> Option<CollectorState> {
         if let Some(collector) = self.collectors.get(handle) {
@@ -229,6 +246,15 @@ mod tests {
         let handle = scheduler.add(instance_id.clone(), "foo", collector.clone());
         let state = scheduler.state(&handle).unwrap();
         assert_eq!(state, CollectorState::Idle);
+    }
+
+    #[test]
+    fn test_idle_all() {
+        let mut scheduler = create_scheduler();
+        let collector = Arc::new(MockCollector::default());
+        let instance_id = Uuid::new_v4();
+        scheduler.add(instance_id.clone(), "foo", collector.clone());
+        assert_eq!(scheduler.all_idle(), true);
     }
 
     #[test]

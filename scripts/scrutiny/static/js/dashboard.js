@@ -28,17 +28,16 @@ class DashboardView {
 
   async collectData() {
     try {
-      await post_request(location.origin + '/api/health/status', null);
+      await post_request(location.origin + '/api/engine/health/status', null);
       this.connected = true;
     } catch {
       this.connected = false;
       return;
     }
-    this.plugins = await post_request(location.origin + '/api/management/plugin/list', null);
-    this.model = await post_request(location.origin + '/api/management/model/stats', null);
-    this.collectors = await post_request(location.origin + '/api/management/collector/list', null);
-    this.controllers =
-        await post_request(location.origin + '/api/management/controller/list', null);
+    this.plugins = await post_request(location.origin + '/api/engine/plugin/list', null);
+    this.model = await post_request(location.origin + '/api/engine/model/stats', null);
+    this.collectors = await post_request(location.origin + '/api/engine/collector/list', null);
+    this.controllers = await post_request(location.origin + '/api/engine/controller/list', null);
   }
 
   async refresh() {
@@ -59,7 +58,7 @@ class DashboardView {
 
   async scheduleCollector() {
     console.log('[Dashboard] - Collectors Scheduled');
-    await post_request(location.origin + '/api/management/collector/schedule', null);
+    await post_request(location.origin + '/api/engine/collector/schedule', null);
   }
 
   async setPluginList() {

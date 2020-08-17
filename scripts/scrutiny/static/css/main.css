@@ -170,7 +170,7 @@ table, th, td {
 .tile-body-scrollable {
   overflow: hidden;
   overflow-y: scroll;
-  max-height: 500px;
+  max-height: 450px;
 }
 
 .tile-body-scrollable::-webkit-scrollbar {

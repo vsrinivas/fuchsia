@@ -4,8 +4,9 @@
 
 mod artifact;
 mod controllers;
-pub mod graph;
+pub mod core;
 mod jsons;
+mod package_collector;
 mod package_getter;
 mod package_reader;
 mod types;

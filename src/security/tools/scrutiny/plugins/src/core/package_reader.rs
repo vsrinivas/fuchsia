@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::components::{jsons::*, package_getter::*, types::*, util},
+    crate::core::{jsons::*, package_getter::*, types::*, util},
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     std::collections::HashMap,
@@ -13,7 +13,8 @@ use {
 };
 
 // Constants/Statics
-pub const CM_EXTENSIONS: &[&str] = &[".cmx"];
+pub const CF_V1_EXT: &str = ".cmx";
+pub const CF_V2_EXT: &str = ".cm";
 
 /// Trait that defines functions for the retrieval of the bytes that define package definitions.
 /// Used primarily to allow for nicer testing via mocking out the backing `fx serve` instance.
@@ -64,7 +65,7 @@ impl PackageReader for PackageServerReader {
 
         let mut pkg_def = PackageDefinition {
             url: util::to_package_url(pkg_name)?,
-            typ: PackageType::PACKAGE,
+            typ: PackageType::Package,
             merkle: String::from(merkle), // FIXME: Do we need to copy? Or maybe we can just move it here?
             contents: HashMap::new(), // How do I do this better? Maybe I need to change PackageDefinition into a builder pattern
             cms: HashMap::new(),
@@ -73,7 +74,8 @@ impl PackageReader for PackageServerReader {
         // Find any parseable files from the archive.
         // Create a separate list of file names to read to avoid borrow checker
         // issues while iterating through the list.
-        let mut cm_files: Vec<String> = Vec::new();
+        let mut cf_v1_files: Vec<String> = Vec::new();
+        let mut cf_v2_files: Vec<String> = Vec::new();
         let mut contains_meta_contents = false;
         for item in far.list() {
             if item == "meta/contents" {
@@ -81,10 +83,11 @@ impl PackageReader for PackageServerReader {
             } else if item == "meta/package" {
                 // TODO: Figure out if this is ever used
             } else {
-                for ext in CM_EXTENSIONS {
-                    if item.starts_with("meta/") && item.ends_with(ext) {
-                        cm_files.push(String::from(item));
-                    }
+                if item.starts_with("meta/") && item.ends_with(CF_V1_EXT) {
+                    cf_v1_files.push(String::from(item));
+                }
+                if item.starts_with("meta/") && item.ends_with(CF_V2_EXT) {
+                    cf_v2_files.push(String::from(item));
                 }
             }
         }
@@ -96,13 +99,19 @@ impl PackageReader for PackageServerReader {
         }
 
         // Read the parseable files from the far archive and parse into json structs.
-        for cm_file in cm_files {
-            let item_b = far.read_file(&cm_file)?;
+        for cmx_file in cf_v1_files {
+            let item_b = far.read_file(&cmx_file)?;
             let item_json = str::from_utf8(&item_b)?;
             let cmx: CmxJson = serde_json::from_str(item_json)?;
-            pkg_def.cms.insert(cm_file, CmxDefinition::from(cmx));
+            pkg_def.cms.insert(cmx_file, ComponentManifest::from(cmx));
         }
 
+        // CV2 files are encoded with persistent FIDL and have a different
+        // decoding structure.
+        for cm_file in cf_v2_files {
+            let decl_bytes = far.read_file(&cm_file)?;
+            pkg_def.cms.insert(cm_file, ComponentManifest::from(decl_bytes));
+        }
         Ok(pkg_def)
     }
 
@@ -197,7 +206,7 @@ mod tests {
         assert_eq!(result.contents["c"], "d");
         assert_eq!(result.contents["1"], "2");
         assert_eq!(result.cms.len(), 2);
-        if let Some(sb) = &result.cms["meta/foo.cmx"].sandbox {
+        if let ComponentManifest::Version1(sb) = &result.cms["meta/foo.cmx"] {
             if let Some(services) = &sb.services {
                 assert_eq!(services[0], "service_one");
                 assert_eq!(services[1], "service_two");
@@ -208,7 +217,7 @@ mod tests {
             panic!("Expected results sandbox to be Some()");
         }
 
-        if let Some(sb) = &result.cms["meta/bar.cmx"].sandbox {
+        if let ComponentManifest::Version1(sb) = &result.cms["meta/bar.cmx"] {
             if let Some(services) = &sb.services {
                 assert_eq!(services[0], "aries");
                 assert_eq!(services[1], "taurus");

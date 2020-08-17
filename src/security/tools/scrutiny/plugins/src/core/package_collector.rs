@@ -3,29 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::components::{
-        artifact::ArtifactGetter,
-        controllers::component_controllers::*,
-        controllers::{
-            blob_controllers::*, package_controllers::*, route_controllers::*, zbi_controllers::*,
-        },
-        package_getter::PackageGetter,
-        package_reader::*,
-        types::*,
-        util,
+    crate::core::{
+        artifact::ArtifactGetter, package_getter::PackageGetter, package_reader::*, types::*, util,
     },
     anyhow::{anyhow, Result},
+    cm_fidl_validator,
+    fidl::encoding::decode_persistent,
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
     regex::Regex,
     scrutiny::{
-        collectors, controllers,
-        engine::hook::PluginHooks,
-        engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
-        model::controller::DataController,
-        model::model::{Component, DataModel, Manifest, Package, Route, Zbi, ZbiType},
-        plugin,
+        model::model::{
+            Component, DataModel, Manifest, ManifestData, Package, Route, Zbi, ZbiType,
+        },
     },
     scrutiny_utils::{bootfs::*, zbi::*},
     std::collections::HashMap,
@@ -42,36 +33,12 @@ lazy_static! {
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 pub const REPOSITORY_PATH: &str = "out/default/amber-files/repository";
 
-plugin!(
-    ComponentGraphPlugin,
-    PluginHooks::new(
-        collectors! {
-            "PackageDataCollector" => PackageDataCollector::new().unwrap(),
-        },
-        controllers! {
-            "/components" => ComponentsGraphController::default(),
-            "/component/id" => ComponentIdGraphController::default(),
-            "/component/from_uri" => ComponentFromUriGraphController::default(),
-            "/component/uses" => ComponentUsesGraphController::default(),
-            "/component/used" => ComponentUsedGraphController::default(),
-            "/component/raw_manifest" => RawManifestGraphController::default(),
-            "/component/manifest/sandbox" => ComponentSandboxGraphController::default(),
-            "/packages" => PackagesGraphController::default(),
-            "/routes" => RoutesGraphController::default(),
-            "/bootfs" => BootfsPathsController::default(),
-            "/blob" => BlobController::new(),
-            "/zbi/cmdline" => ZbiCmdlineController::default(),
-        }
-    ),
-    vec![]
-);
-
 pub struct PackageDataCollector {
     package_reader: Box<dyn PackageReader>,
 }
 
 impl PackageDataCollector {
-    fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let fuchsia_dir = env::var("FUCHSIA_DIR")?;
         if fuchsia_dir.len() == 0 {
             return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
@@ -108,13 +75,13 @@ impl PackageDataCollector {
         for package in builtins.packages {
             let mut pkg_def = PackageDefinition {
                 url: util::to_package_url(&package.url)?,
-                typ: PackageType::BUILTIN,
+                typ: PackageType::Builtin,
                 merkle: String::from("0"),
                 contents: HashMap::new(),
                 cms: HashMap::new(),
             };
 
-            pkg_def.cms.insert(String::from(""), CmxDefinition::from(package.manifest));
+            pkg_def.cms.insert(String::from(""), ComponentManifest::from(package.manifest));
             packages.push(pkg_def);
         }
 
@@ -274,8 +241,45 @@ impl PackageDataCollector {
                 }
             }
 
+            // Extract V1 and V2 components from the packages.
             for (path, cm) in &pkg.cms {
-                if path.starts_with("meta/") && path.ends_with(".cmx") {
+                // Component Framework Version 2.
+                if path.starts_with("meta/") && path.ends_with(".cm") {
+                    idx += 1;
+                    let url = format!("{}#{}", pkg.url, path);
+                    components.insert(
+                        url.clone(),
+                        Component { id: idx, url: url.clone(), version: 2, inferred: false },
+                    );
+
+                    let cf2_manifest = {
+                        if let ComponentManifest::Version2(decl_bytes) = &cm {
+                            let uses = Vec::new();
+                            let base64_bytes = base64::encode(&decl_bytes);
+
+                            if let Ok(cm_decl) = decode_persistent(&decl_bytes) {
+                                if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
+                                    warn!("Invalid cm {} {}", url, err);
+                                }
+                            } else {
+                                warn!("cm failed to be decoded {}", url);
+                            }
+                            Manifest {
+                                component_id: idx,
+                                manifest: ManifestData::Version2(base64_bytes),
+                                uses,
+                            }
+                        } else {
+                            Manifest {
+                                component_id: idx,
+                                manifest: ManifestData::Version2(String::from("")),
+                                uses: Vec::new(),
+                            }
+                        }
+                    };
+                    manifests.push(cf2_manifest);
+                // Component Framework Version 1.
+                } else if path.starts_with("meta/") && path.ends_with(".cmx") {
                     idx += 1;
                     let url = format!("{}#{}", pkg.url, path);
                     components.insert(
@@ -283,11 +287,11 @@ impl PackageDataCollector {
                         Component { id: idx, url: url.clone(), version: 1, inferred: false },
                     );
 
-                    let mani = {
-                        if let Some(sandbox) = &cm.sandbox {
+                    let cf1_manifest = {
+                        if let ComponentManifest::Version1(sandbox) = &cm {
                             Manifest {
                                 component_id: idx,
-                                manifest: serde_json::to_string(&sandbox)?,
+                                manifest: ManifestData::Version1(serde_json::to_string(&sandbox)?),
                                 uses: {
                                     match sandbox.services.as_ref() {
                                         Some(svcs) => svcs.clone(),
@@ -298,12 +302,43 @@ impl PackageDataCollector {
                         } else {
                             Manifest {
                                 component_id: idx,
-                                manifest: String::from(""),
+                                manifest: ManifestData::Version1(String::from("")),
                                 uses: Vec::new(),
                             }
                         }
                     };
-                    manifests.push(mani);
+                    manifests.push(cf1_manifest);
+                }
+            }
+        }
+
+        // Extract ZBI V2 components.
+        if let Some(zbi) = &zbi {
+            for (file_name, file_data) in zbi.bootfs.iter() {
+                if file_name.ends_with(".cm") {
+                    info!("Extracting bootfs manifest: {}", file_name);
+                    let base64_bytes = base64::encode(&file_data);
+                    if let Ok(cm_decl) = decode_persistent(&file_data) {
+                        if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
+                            warn!("Invalid bootfs cm {} {}", file_name, err);
+                            continue;
+                        }
+                        // Add the components directly from the ZBI.
+                        idx += 1;
+                        let url = format!("fuchsia-boot:///#{}", file_name);
+                        components.insert(
+                            url.clone(),
+                            Component { id: idx, url: url.clone(), version: 2, inferred: false },
+                        );
+                        manifests.push(Manifest {
+                            component_id: idx,
+                            manifest: ManifestData::Version2(base64_bytes),
+                            uses: Vec::new(),
+                        });
+                    } else {
+                        warn!("Bootfs cm failed to be decoded {}", file_name);
+                        continue;
+                    }
                 }
             }
         }
@@ -423,7 +458,7 @@ impl DataCollector for PackageDataCollector {
 // building logic.
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::components::jsons::*, std::sync::RwLock, tempfile::tempdir};
+    use {super::*, crate::core::jsons::*, std::sync::RwLock, tempfile::tempdir};
 
     struct MockPackageReader {
         targets: RwLock<Vec<TargetsJson>>,
@@ -511,8 +546,8 @@ mod tests {
         }
     }
 
-    fn create_test_sandbox(uses: Vec<String>) -> SandboxDefinition {
-        SandboxDefinition {
+    fn create_test_sandbox(uses: Vec<String>) -> ComponentV1Manifest {
+        ComponentV1Manifest {
             dev: None,
             services: Some(uses),
             system: None,
@@ -521,23 +556,26 @@ mod tests {
         }
     }
 
+    /// Create component manifest v1 (cmx) entries.
     fn create_test_cmx_map(
-        entries: Vec<(String, SandboxDefinition)>,
-    ) -> HashMap<String, CmxDefinition> {
-        entries
-            .into_iter()
-            .map(|entry| (entry.0, CmxDefinition { sandbox: Some(entry.1) }))
-            .collect()
+        entries: Vec<(String, ComponentV1Manifest)>,
+    ) -> HashMap<String, ComponentManifest> {
+        entries.into_iter().map(|entry| (entry.0, ComponentManifest::Version1(entry.1))).collect()
+    }
+
+    /// Create component manifest v2 (cm) entries.
+    fn create_test_cm_map(entries: Vec<(String, Vec<u8>)>) -> HashMap<String, ComponentManifest> {
+        entries.into_iter().map(|entry| (entry.0, ComponentManifest::Version2(entry.1))).collect()
     }
 
     fn create_test_package_with_cms(
         url: String,
-        cms: HashMap<String, CmxDefinition>,
+        cms: HashMap<String, ComponentManifest>,
     ) -> PackageDefinition {
         PackageDefinition {
             url: url,
             merkle: String::from("0"),
-            typ: PackageType::PACKAGE,
+            typ: PackageType::Package,
             contents: HashMap::new(),
             cms: cms,
         }
@@ -550,7 +588,7 @@ mod tests {
         PackageDefinition {
             url: url,
             merkle: String::from("0"),
-            typ: PackageType::PACKAGE,
+            typ: PackageType::Package,
             contents: contents,
             cms: HashMap::new(),
         }
@@ -834,6 +872,26 @@ mod tests {
     }
 
     #[test]
+    fn test_build_model_with_cm() {
+        let cms = create_test_cm_map(vec![("meta/foo.cm".to_string(), vec![])]);
+        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let served = vec![pkg];
+
+        let builtins = Vec::new();
+        let services = HashMap::new();
+
+        let (components, packages, manifests, routes, zbi) =
+            PackageDataCollector::build_model(served, builtins, services).unwrap();
+
+        assert_eq!(1, components.len());
+        assert_eq!(components["fuchsia-pkg://fuchsia.com/foo#meta/foo.cm"].version, 2);
+        assert_eq!(1, manifests.len());
+        assert_eq!(0, routes.len());
+        assert_eq!(1, packages.len());
+        assert_eq!(None, zbi);
+    }
+
+    #[test]
     fn test_build_model_with_duplicate_inferred_services_reuses_inferred_service() {
         // Create two test packages that depend on the same inferred service
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.service")]);
@@ -924,12 +982,12 @@ mod tests {
             let mut manis = model.manifests().write().unwrap();
             manis.push(scrutiny::model::model::Manifest {
                 component_id: 1,
-                manifest: String::from("test.component.manifest"),
+                manifest: ManifestData::Version1(String::from("test.component.manifest")),
                 uses: vec![String::from("test.service")],
             });
             manis.push(scrutiny::model::model::Manifest {
                 component_id: 2,
-                manifest: String::from("foo.bar.manifest"),
+                manifest: ManifestData::Version1(String::from("foo.bar.manifest")),
                 uses: Vec::new(),
             });
 

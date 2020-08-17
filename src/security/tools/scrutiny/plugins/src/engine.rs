@@ -22,33 +22,34 @@ use {
     std::sync::{Arc, Mutex, RwLock},
 };
 
-/// The `ManagementPlugin` allows introspection into the Scrutiny engine
+/// The `EnginePlugin` allows introspection into the Scrutiny engine
 /// through a plugin. This allows users to inspect the abstracted state of
 /// the system such as seeing what collectors, controllers and plugins are
 /// active. It also allows the user to reschedule collector tasks, disable and
 /// enable plugins etc.
-pub struct ManagementPlugin {
+pub struct EnginePlugin {
     desc: PluginDescriptor,
     hooks: PluginHooks,
     deps: Vec<PluginDescriptor>,
 }
 
-impl ManagementPlugin {
+impl EnginePlugin {
     pub fn new(
         scheduler: Arc<Mutex<CollectorScheduler>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
         manager: Arc<Mutex<PluginManager>>,
     ) -> Self {
         Self {
-            desc: PluginDescriptor::new("ManagementPlugin".to_string()),
+            desc: PluginDescriptor::new("EnginePlugin".to_string()),
             hooks: PluginHooks::new(
                 collectors! {},
                 controllers! {
-                    "/management/plugin/list" => PluginListController::new(manager),
-                    "/management/model/stats" => ModelStatsController::default(),
-                    "/management/collector/list" => CollectorListController::new(scheduler.clone()),
-                    "/management/controller/list" => ControllerListController::new(dispatcher),
-                    "/management/collector/schedule" => CollectorSchedulerController::new(scheduler.clone()),
+                    "/engine/health/status" => HealthController::default(),
+                    "/engine/plugin/list" => PluginListController::new(manager),
+                    "/engine/model/stats" => ModelStatsController::default(),
+                    "/engine/collector/list" => CollectorListController::new(scheduler.clone()),
+                    "/engine/controller/list" => ControllerListController::new(dispatcher),
+                    "/engine/collector/schedule" => CollectorSchedulerController::new(scheduler.clone()),
                 },
             ),
             deps: vec![],
@@ -56,7 +57,7 @@ impl ManagementPlugin {
     }
 }
 
-impl Plugin for ManagementPlugin {
+impl Plugin for EnginePlugin {
     fn descriptor(&self) -> &PluginDescriptor {
         &self.desc
     }
@@ -65,6 +66,17 @@ impl Plugin for ManagementPlugin {
     }
     fn hooks(&mut self) -> &PluginHooks {
         &self.hooks
+    }
+}
+
+#[derive(Default)]
+pub struct HealthController {}
+
+/// The `HealthController` simply returns a ping. This is used to determine if
+/// the service is alive and operating.
+impl DataController for HealthController {
+    fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
+        Ok(json!({"status" : "ok"}))
     }
 }
 
@@ -94,6 +106,7 @@ impl DataController for PluginListController {
             let state = manager.state(plugin_desc).unwrap();
             plugins.push(PluginListEntry { name: format!("{}", plugin_desc), state });
         }
+        plugins.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
         return Ok(json!(plugins));
     }
 }
@@ -161,6 +174,7 @@ impl DataController for CollectorListController {
             let state = scheduler.state(&handle).unwrap();
             collectors.push(CollectorListEntry { name, state });
         }
+        collectors.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
         Ok(json!(collectors))
     }
 }

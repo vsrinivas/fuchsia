@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::{model::controller::DataController, model::model::DataModel},
     anyhow::{Error, Result},
+    scrutiny::{
+        model::controller::DataController,
+        model::model::{DataModel, ManifestData},
+    },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
@@ -16,8 +19,9 @@ pub struct ComponentsGraphController {}
 
 impl DataController for ComponentsGraphController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        let components = model.components().read().unwrap();
-        Ok(serde_json::to_value(components.clone())?)
+        let mut components = model.components().read().unwrap().clone();
+        components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
+        Ok(serde_json::to_value(components)?)
     }
 }
 
@@ -112,7 +116,12 @@ impl DataController for RawManifestGraphController {
         let manifests = model.manifests().read().unwrap();
         for manifest in manifests.iter() {
             if manifest.component_id as i64 == component_id {
-                return Ok(serde_json::to_value(manifest.manifest.clone())?);
+                if let ManifestData::Version1(data) = &manifest.manifest {
+                    return Ok(serde_json::to_value(data.clone())?);
+                }
+                if let ManifestData::Version2(data) = &manifest.manifest {
+                    return Ok(serde_json::to_value(data.clone())?);
+                }
             }
         }
 
@@ -148,7 +157,11 @@ mod tests {
     }
 
     fn make_manifest(id: i32, manifest: &str) -> Manifest {
-        Manifest { component_id: id, manifest: manifest.to_string(), uses: vec![] }
+        Manifest {
+            component_id: id,
+            manifest: ManifestData::Version1(manifest.to_string()),
+            uses: vec![],
+        }
     }
 
     #[test]

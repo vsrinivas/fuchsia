@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::{model::controller::DataController, model::model::DataModel},
     anyhow::{Error, Result},
+    scrutiny::{model::controller::DataController, model::model::DataModel},
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},

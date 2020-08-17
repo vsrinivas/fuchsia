@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::components::{artifact::ArtifactGetter, package_getter::PackageGetter},
+    crate::core::{artifact::ArtifactGetter, package_getter::PackageGetter},
     anyhow::{anyhow, Result},
     scrutiny::{model::controller::DataController, model::model::DataModel},
     serde::{Deserialize, Serialize},
