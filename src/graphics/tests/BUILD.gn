@@ -21,6 +21,9 @@ group("hw_tests") {
 
   deps = [
     ":vulkan-tests",
+    "../examples/vkprimer",
+    "../examples/vkprimer/cmd-buf-benchmark",
+    "../examples/vkprimer/transaction-elimination-test",
     "benchmark",
     "vkvalidation:test-vk-validation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",

@@ -22,6 +22,10 @@ class VulkanCommandBuffers {
                        const VulkanFramebuffer &framebuffer, const vk::Extent2D &extent,
                        const vk::RenderPass &render_pass, const vk::Pipeline &graphics_pipeline);
 
+  void set_image_for_foreign_transition(vk::Image image) { image_for_foreign_transition_ = image; }
+
+  void set_queue_family(uint32_t queue_family) { queue_family_ = queue_family; }
+
   bool Init();
   const std::vector<vk::UniqueCommandBuffer> &command_buffers() const;
 
@@ -42,6 +46,8 @@ class VulkanCommandBuffers {
   };
   std::unique_ptr<InitParams> params_;
   std::vector<vk::UniqueCommandBuffer> command_buffers_;
+  vk::Image image_for_foreign_transition_;
+  uint32_t queue_family_{};
 };
 
 #endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_COMMAND_BUFFERS_H_

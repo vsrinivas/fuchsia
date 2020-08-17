@@ -22,7 +22,7 @@ bool VulkanRenderPass::Init() {
     color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
   }
   color_attachment.format = image_format_;
-  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+  color_attachment.initialLayout = initial_layout_;
   color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   color_attachment.samples = vk::SampleCountFlagBits::e1;
   color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;

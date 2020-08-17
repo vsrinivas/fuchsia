@@ -15,6 +15,8 @@ class VulkanRenderPass {
   VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device, const vk::Format &image_format,
                    bool offscreen);
 
+  void set_initial_layout(vk::ImageLayout initial_layout) { initial_layout_ = initial_layout; }
+
   bool Init();
   const vk::UniqueRenderPass &render_pass() const { return render_pass_; }
 
@@ -26,6 +28,7 @@ class VulkanRenderPass {
   const vk::Format image_format_;
   bool offscreen_;
   vk::UniqueRenderPass render_pass_;
+  vk::ImageLayout initial_layout_ = vk::ImageLayout::eUndefined;
 };
 
 #endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_RENDER_PASS_H_

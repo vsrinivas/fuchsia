@@ -74,7 +74,40 @@ bool VulkanCommandBuffers::Init() {
     command_buffer->draw(3 /* vertexCount */, 1 /* instanceCount */, 0 /* firstVertex */,
                          0 /* firstInstance */);
     command_buffer->endRenderPass();
+    if (image_for_foreign_transition_) {
+      vk::ImageMemoryBarrier barrier;
+      barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+          .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setSrcQueueFamilyIndex(queue_family_)
+          .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
+          .setSubresourceRange(vk::ImageSubresourceRange()
+                                   .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                   .setLevelCount(1)
+                                   .setLayerCount(1))
+          .setImage(image_for_foreign_transition_);
 
+      command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
+                                      vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {},
+                                      {barrier});
+
+      // This barrier should transition it back
+      vk::ImageMemoryBarrier barrier2;
+      barrier2.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+          .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
+          .setDstQueueFamilyIndex(queue_family_)
+          .setSubresourceRange(vk::ImageSubresourceRange()
+                                   .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                   .setLevelCount(1)
+                                   .setLayerCount(1))
+          .setImage(image_for_foreign_transition_);
+
+      command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
+                                      vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {},
+                                      {barrier2});
+    }
     command_buffer->end();
   }
 

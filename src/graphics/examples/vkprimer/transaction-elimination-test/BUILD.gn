@@ -1,0 +1,72 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//src/graphics/examples/vkprimer/common/common.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+test_package("transaction-elimination-test") {
+  tests = [
+    {
+      name = "transaction-elimination-test"
+      environments = magma_libvulkan_arm_hardware_envs
+    },
+  ]
+  deps = [ ":bin" ]
+
+  resources = [
+    {
+      path = "../common/shaders/vert.spv"
+      dest = "shaders/vert.spv"
+    },
+    {
+      path = "../common/shaders/frag.spv"
+      dest = "shaders/frag.spv"
+    },
+  ]
+
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+  resources +=
+      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "transaction-elimination-test"
+  sources = common_sources
+
+  sources += [
+    "../fuchsia/vulkan_surface.cc",
+    "../fuchsia/vulkan_surface.h",
+    "main.cc",
+  ]
+
+  include_dirs = [ "//src/graphics/examples/vkprimer/common" ]
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
+    "//third_party/github.com/ARM-software/HWCPipe:mali_profiler",
+    "//third_party/googletest:gtest",
+  ]
+
+  include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]
+
+  # Disable ShadowCallStack, since there seem to be some issues with the call
+  # stack after exceptions are caught.
+  # TODO(fxb/41627): Re-enable.
+  cflags = [ "-fno-sanitize=shadow-call-stack" ]
+
+  # HWCPipe uses exceptions to report errors, so they must be left enabled.
+  configs -= [ "//build/config:no_exceptions" ]
+}

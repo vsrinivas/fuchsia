@@ -31,6 +31,8 @@ bool VulkanLogicalDevice::Init() {
   queue_info.queueFamilyIndex = indices[0];
   queue_info.pQueuePriorities = &queue_priority;
 
+  queue_family_index_ = indices[0];
+
   std::vector<const char *> exts;
   VulkanPhysicalDevice::AppendRequiredPhysDeviceExts(&exts);
 

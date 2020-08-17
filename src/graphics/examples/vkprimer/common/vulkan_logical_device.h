@@ -20,6 +20,7 @@ class VulkanLogicalDevice {
   bool Init();
   const vk::UniqueDevice &device() const;
   vk::Queue queue() const;
+  uint32_t queue_family_index() const { return queue_family_index_; }
 
  private:
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(VulkanLogicalDevice);
@@ -33,6 +34,8 @@ class VulkanLogicalDevice {
 
   // Queue with support for both drawing and presentation.
   vk::Queue queue_;
+
+  uint32_t queue_family_index_{};
 
   vk::UniqueDevice device_;
 };
