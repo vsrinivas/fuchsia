@@ -15,5 +15,8 @@ group("hci") {
 
 group("tests") {
   testonly = true
-  deps = [ "vendor:tests" ]
+  deps = [
+    "intel:tests",
+    "vendor:tests",
+  ]
 }

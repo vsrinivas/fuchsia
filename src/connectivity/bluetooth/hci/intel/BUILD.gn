@@ -7,13 +7,19 @@ import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
-bind_rules("bind") {
+bind_rules("bt_hci_intel_bind") {
   rules = "bt_hci_intel.bind"
   output = "bt_hci_intel-bind.h"
+  tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/deprecated.bluetooth",
     "//src/devices/bind/deprecated.usb",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt_hci_intel_bind_test" ]
 }
 
 driver_module("driver") {
@@ -31,7 +37,7 @@ driver_module("driver") {
   ]
 
   deps = [
-    ":bind",
+    ":bt_hci_intel_bind",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/connectivity/bluetooth/core/bt-host/gap",
