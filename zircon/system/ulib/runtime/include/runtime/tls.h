@@ -14,9 +14,17 @@ __BEGIN_CDECLS
 static inline void* zxr_tp_get(void);
 static inline void zxr_tp_set(zx_handle_t self, void* tp);
 
+// These are used in very early and low-level places where most kinds
+// of instrumentation are not safe.
+#ifdef __clang__
+#define ZXR_NO_SANITIZERS __attribute__((no_sanitize("all")))
+#else
+#define ZXR_NO_SANITIZERS
+#endif
+
 #if defined(__aarch64__)
 
-__NO_SAFESTACK static inline void* zxr_tp_get(void) {
+ZXR_NO_SANITIZERS static inline void* zxr_tp_get(void) {
   // This just emits "mrs %[reg], tpidr_el0", but the compiler
   // knows what exactly it's doing (unlike an asm).  So it can
   // e.g. CSE it with another implicit thread-pointer fetch it
@@ -24,13 +32,13 @@ __NO_SAFESTACK static inline void* zxr_tp_get(void) {
   return __builtin_thread_pointer();
 }
 
-__NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
+ZXR_NO_SANITIZERS static inline void zxr_tp_set(zx_handle_t self, void* tp) {
   __asm__ volatile("msr tpidr_el0, %0" : : "r"(tp));
 }
 
 #elif defined(__x86_64__)
 
-__NO_SAFESTACK static inline void* zxr_tp_get(void) {
+ZXR_NO_SANITIZERS static inline void* zxr_tp_get(void) {
 // This fetches %fs:0, but the compiler knows what it's doing.
 // LLVM knows that in the Fuchsia ABI %fs:0 always stores the
 // %fs.base address, and its optimizer will see through this
@@ -57,7 +65,7 @@ __NO_SAFESTACK static inline void* zxr_tp_get(void) {
 #endif
 }
 
-__NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
+ZXR_NO_SANITIZERS static inline void zxr_tp_set(zx_handle_t self, void* tp) {
   zx_status_t status =
       _zx_object_set_property(self, ZX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
   if (status != ZX_OK)

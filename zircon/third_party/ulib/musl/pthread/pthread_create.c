@@ -15,7 +15,7 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
-__NO_SAFESTACK static inline pthread_t prestart(void* arg) {
+__NO_SAFESTACK NO_ASAN static inline pthread_t prestart(void* arg) {
   pthread_t self = arg;
 #ifdef __aarch64__
   // Initialize the shadow call stack pointer, which grows up.
@@ -26,12 +26,12 @@ __NO_SAFESTACK static inline pthread_t prestart(void* arg) {
   return self;
 }
 
-__NO_RETURN __NO_SAFESTACK static void start_pthread(void* arg) {
+__NO_RETURN __NO_SAFESTACK NO_ASAN static void start_pthread(void* arg) {
   pthread_t self = prestart(arg);
   __pthread_exit(self->start(self->start_arg));
 }
 
-__NO_RETURN __NO_SAFESTACK static void start_c11(void* arg) {
+__NO_RETURN __NO_SAFESTACK NO_ASAN static void start_c11(void* arg) {
   pthread_t self = prestart(arg);
   int (*start)(void*) = (int (*)(void*))(uintptr_t)self->start;
   __pthread_exit((void*)(intptr_t)start(self->start_arg));
