@@ -145,13 +145,10 @@ void TestBase::AddDevice(int dir_fd, const std::string& name) {
   stream_config_ =
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(std::move(channel)).Bind();
   if (!stream_config_.is_bound()) {
-    FX_LOGS(ERROR) << "Failed to get stream channel";
-    FAIL();
+    ADD_FAILURE() << "Failed to get stream channel";
   }
-  stream_config_.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Test failed with error: " << status;
-    FAIL();
-  });
+  stream_config_.set_error_handler(
+      [](zx_status_t status) { ADD_FAILURE() << "Stream config channel error " << status; });
 
   stream_config_ready_ = true;
 }

@@ -39,8 +39,21 @@ class AdminTest : public TestBase {
   void RequestRingBuffer();
   void RequestRingBufferProperties();
   void RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifications_per_ring);
+
+  // Register for a position notification; in each notification handler, we increment counts,
+  // validate the timestamp and position info received, and register for the next notification.
+  void SetPositionNotification();
+  // Set a position notification handler that automatically FAILs if invoked. This is used when we
+  // definitely should not receive any position notifications.
+  void SetFailingPositionNotification();
+  // Register a position notification that does NOT in turn register for the next one. Used to break
+  // the ongoing chain of position notification callbacks, once a testcase is complete.
+  void ClearPositionNotification();
+
   void RequestStart();
   void RequestStop();
+  //
+  void RequestStopAndExpectNoPositionNotifications();
 
   void ExpectPositionNotifyCount(uint32_t count);
   void ExpectNoPositionNotifications();
@@ -67,7 +80,12 @@ class AdminTest : public TestBase {
   fuchsia::hardware::audio::PcmFormat pcm_format_;
   bool format_is_set_ = false;
   uint16_t frame_size_ = 0;
+
+  // Position notifications are single hanging-get notifications. This bool indicates whether our
+  // notification handler should automatically register for the next one.
+  bool watch_for_next_position_notification_ = false;
   uint32_t position_notification_count_ = 0;
+  uint64_t running_position_ = 0;
 };
 
 }  // namespace media::audio::drivers::test
