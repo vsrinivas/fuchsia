@@ -89,6 +89,10 @@
             name: "dhcpd",
             url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm",
         },
+        {
+            name: "fatfs-mounter",
+            url: "fuchsia-pkg://fuchsia.com/fuchsia-fatfs#meta/fatfs-mounter.cm",
+        },
     ],
     capabilities: [
         {
@@ -171,6 +175,19 @@
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
             from: "#debug_serial",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.fat.Admin",
+                "fuchsia.fat.Query",
+            ],
+            from: "#fatfs-mounter",
+            to: [ "#appmgr" ],
+        },
+        {
+            directory: "fatfs",
+            from: "#fatfs-mounter",
             to: [ "#appmgr" ],
         },
         {
@@ -328,6 +345,7 @@
                 "#debug_serial",
                 "#detect",
                 "#dhcpd",
+                "#fatfs-mounter",
                 "#font_provider",
                 "#last_reboot",
                 "#log-stats",
@@ -526,7 +544,17 @@
         {
             directory: "dev",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: [
+                "#appmgr",
+                "#fatfs-mounter",
+            ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev_class_block",
+            to: [ "#fatfs-mounter" ],
+            subdir: "class/block",
         },
         {
             directory: "durable",

@@ -385,6 +385,14 @@
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
             path: "/svc_for_sys/fuchsia.input.injection.InputDeviceRegistry",
         },
+        {
+            protocol: "fuchsia.fat.Query",
+            path: "/svc_for_sys/fuchsia.fat.Query",
+        },
+        {
+            protocol: "fuchsia.fat.Admin",
+            path: "/svc_for_sys/fuchsia.fat.Admin",
+        },
 
         // These services are used by appmgr directly
         {
