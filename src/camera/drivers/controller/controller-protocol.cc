@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "controller-protocol.h"
+#include "src/camera/drivers/controller/controller-protocol.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
-#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
 namespace camera {

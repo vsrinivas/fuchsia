@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "graph_utils.h"
+#include "src/camera/drivers/controller/graph_utils.h"
 
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "lib/fit/result.h"
-#include "lib/zx/vmo.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/lib/fsl/handles/object_info.h"
 

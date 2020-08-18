@@ -6,15 +6,12 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_GDC_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <zircon/assert.h>
 
 #include <ddktl/protocol/gdc.h>
 
+#include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/processing_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
-#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
-#include "src/camera/lib/format_conversion/format_conversion.h"
 
 // |GdcNode| represents a |ProcessNode| which would talk to the
 // GDC driver.

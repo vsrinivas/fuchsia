@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "memory_allocation.h"
+#include "src/camera/drivers/controller/memory_allocation.h"
 
 #include <lib/syslog/global.h>
+#include <lib/trace/event.h>
 #include <zircon/errors.h>
 
-#include <ddk/trace/event.h>
-
-#include "fuchsia/sysmem/cpp/fidl.h"
 namespace camera {
 
 constexpr auto kTag = "camera_controller";

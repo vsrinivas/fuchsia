@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "output_node.h"
+#include "src/camera/drivers/controller/output_node.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <ddk/trace/event.h>
-
-#include "stream_protocol.h"
+#include "src/camera/drivers/controller/stream_protocol.h"
 
 namespace camera {
 

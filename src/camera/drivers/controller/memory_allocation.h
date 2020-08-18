@@ -7,8 +7,6 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 
-#include <ddktl/protocol/sysmem.h>
-
 namespace camera {
 
 class ControllerMemoryAllocator {

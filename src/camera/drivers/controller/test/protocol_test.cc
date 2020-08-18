@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
@@ -12,20 +13,19 @@
 
 #include <utility>
 
-#include <fbl/auto_call.h>
-
-#include "constants.h"
-#include "fake_gdc.h"
-#include "fake_ge2d.h"
-#include "fake_isp.h"
-#include "lib/async-loop/default.h"
-#include "lib/async/cpp/task.h"
-#include "lib/fit/result.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/gdc_node.h"
+#include "src/camera/drivers/controller/ge2d_node.h"
 #include "src/camera/drivers/controller/graph_utils.h"
+#include "src/camera/drivers/controller/input_node.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
+#include "src/camera/drivers/controller/output_node.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
+#include "src/camera/drivers/controller/test/constants.h"
+#include "src/camera/drivers/controller/test/fake_gdc.h"
+#include "src/camera/drivers/controller/test/fake_ge2d.h"
+#include "src/camera/drivers/controller/test/fake_isp.h"
 
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class.
 namespace camera {

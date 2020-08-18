@@ -3,20 +3,16 @@
 // found in the LICENSE file.
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <fbl/auto_call.h>
-
-#include "fake_gdc.h"
-#include "fake_isp.h"
-#include "lib/async-loop/default.h"
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/configs/sherlock/video_conferencing_config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
+#include "src/camera/drivers/controller/test/fake_gdc.h"
+#include "src/camera/drivers/controller/test/fake_isp.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 

@@ -6,12 +6,10 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_OUTPUT_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <zircon/assert.h>
 
-#include "processing_node.h"
-#include "stream_pipeline_info.h"
-#include "stream_protocol.h"
+#include "src/camera/drivers/controller/processing_node.h"
+#include "src/camera/drivers/controller/stream_pipeline_info.h"
+#include "src/camera/drivers/controller/stream_protocol.h"
 
 // |OutputNode| represents a |ProcessNode| of NodeType |kOutputStream|.
 // This node handles the communication with the clients.

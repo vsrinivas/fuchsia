@@ -2,46 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cipd.gni")
-import("//build/package.gni")
-import("//build/test.gni")
-
 executable("test") {
   output_name = "configs_test"
   testonly = true
   sources = [ "configs_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/banjo/ddk.protocol.gdc",
-    "//sdk/banjo/ddk.protocol.isp",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/fidl/fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller/configs/sherlock:controller-configs",
-    "//src/camera/drivers/test_utils",
-    "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
-    "//src/devices/lib/driver",
-    "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/camera/drivers/controller/test:constants",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/image-format",
-    "//zircon/system/ulib/syslog",
   ]
 
   # Increase the default stack size from 256 KB because creating the configs can take up a very

@@ -8,10 +8,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ddk/protocol/isp.h>
 #include <ddk/trace/event.h>
 
-#include "ddk/protocol/isp.h"
 #include "src/camera/drivers/controller/graph_utils.h"
+#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
+#include "src/camera/lib/format_conversion/format_conversion.h"
 
 namespace camera {
 

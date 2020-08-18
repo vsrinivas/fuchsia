@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "pipeline_manager.h"
+#include "src/camera/drivers/controller/pipeline_manager.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
-#include "graph_utils.h"
+#include "src/camera/drivers/controller/gdc_node.h"
+#include "src/camera/drivers/controller/ge2d_node.h"
+#include "src/camera/drivers/controller/graph_utils.h"
+#include "src/camera/drivers/controller/input_node.h"
 
 namespace camera {
 

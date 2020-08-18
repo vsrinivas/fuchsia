@@ -6,22 +6,17 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_STREAM_PROTOCOL_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
 #include <zircon/compiler.h>
 
-#include <queue>
-#include <unordered_set>
-
 #include <ddktl/protocol/isp.h>
-#include <fbl/mutex.h>
 
 #include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {
 
 class ProcessNode;
+
 // Server-side implementation of a stream.
 class StreamImpl : public fuchsia::camera2::Stream {
  public:

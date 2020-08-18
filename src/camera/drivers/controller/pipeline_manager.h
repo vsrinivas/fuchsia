@@ -6,22 +6,15 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_PIPELINE_MANAGER_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 #include <unordered_map>
 #include <vector>
 
-#include "fbl/macros.h"
-#include "lib/async/cpp/task.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
-#include "src/camera/drivers/controller/gdc_node.h"
-#include "src/camera/drivers/controller/ge2d_node.h"
-#include "src/camera/drivers/controller/input_node.h"
+#include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/output_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
-#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
-#include "src/camera/lib/format_conversion/format_conversion.h"
 
 namespace camera {
 

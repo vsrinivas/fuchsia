@@ -4,10 +4,9 @@
 
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_PROCESSING_NODE_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_PROCESSING_NODE_H_
+
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <zircon/assert.h>
 
 #include <queue>
@@ -16,10 +15,9 @@
 #include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
+#include <fbl/macros.h>
 
-#include "fbl/macros.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
-#include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {

@@ -7,7 +7,6 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <ddktl/protocol/gdc.h>

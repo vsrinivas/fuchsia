@@ -3,8 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/cipd.gni")
-import("//build/package.gni")
 import("//build/test.gni")
+
+source_set("constants") {
+  testonly = true
+  sources = [ "constants.h" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
+  ]
+}
 
 executable("test") {
   output_name = "controller-test"
@@ -12,18 +20,20 @@ executable("test") {
   sources = [
     "allocator_test.cc",
     "device_test.cc",
+    "fake_gdc.h",
+    "fake_ge2d.h",
+    "fake_isp.h",
+    "fake_sysmem.h",
     "protocol_test.cc",
   ]
   deps = [
+    ":constants",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/test_utils",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/async-testing",
   ]
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]

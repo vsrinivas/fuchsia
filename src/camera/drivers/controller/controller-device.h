@@ -29,10 +29,8 @@
 #include <ddktl/protocol/ge2d.h>
 #include <ddktl/protocol/isp.h>
 #include <ddktl/protocol/sysmem.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 
-#include "controller-protocol.h"
+#include "src/camera/drivers/controller/controller-protocol.h"
 
 namespace camera {
 

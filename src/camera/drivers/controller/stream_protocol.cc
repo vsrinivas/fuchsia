@@ -10,7 +10,6 @@
 #include <utility>
 
 #include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/processing_node.h"

@@ -5,16 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_ISP_STREAM_PROTOCOL_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_ISP_STREAM_PROTOCOL_H_
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/task.h>
-#include <lib/fidl/cpp/binding.h>
-#include <zircon/compiler.h>
-
-#include <queue>
-#include <unordered_set>
+#include <zircon/assert.h>
 
 #include <ddktl/protocol/isp.h>
-#include <fbl/mutex.h>
 
 namespace camera {
 

@@ -4,8 +4,6 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include <fbl/auto_call.h>
-
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"

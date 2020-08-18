@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "controller-device.h"
+#include "src/camera/drivers/controller/controller-device.h"
 
-#include <lib/fidl/cpp/binding.h>
-#include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
-#include <zircon/assert.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 

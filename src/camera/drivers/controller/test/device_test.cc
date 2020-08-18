@@ -4,16 +4,14 @@
 
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <ddktl/protocol/sysmem.h>
-#include <fbl/auto_call.h>
 
-#include "constants.h"
-#include "fake_sysmem.h"
 #include "src/camera/drivers/controller/controller-device.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/test/constants.h"
+#include "src/camera/drivers/controller/test/fake_sysmem.h"
 
 namespace camera {
 namespace {
