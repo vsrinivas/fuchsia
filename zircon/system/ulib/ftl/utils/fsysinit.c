@@ -31,8 +31,9 @@ void SetFsErrCode(int error) { g_fs_error = error; }
 
 int FtlInit(void) {
   FileSysSem = semCreate("fsys sem", 1, OS_FIFO);
-  if (FileSysSem == NULL)
+  if (FileSysSem == NULL) {
     return -1;
+  }
 
   return 0;
 }

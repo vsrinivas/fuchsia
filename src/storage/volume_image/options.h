@@ -38,6 +38,12 @@ struct CompressionOptions {
   std::unordered_map<std::string, uint64_t> options;
 };
 
+// Supported options for |AddressMap::options|.
+enum class AddressMapOption : uint64_t {
+  kUnknown = 0,
+  kFill = 1,
+};
+
 // Template specialization provided in options.cc where the stringified version of the enums are
 // defined.
 template <typename OptionEnum>

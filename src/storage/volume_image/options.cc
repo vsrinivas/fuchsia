@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/options.h"
 
 #include <cstdlib>
+#include <string>
 
 namespace storage::volume_image {
 
@@ -37,6 +38,16 @@ std::string EnumAsString(Option option) {
       return "OPTION_NONE";
     case Option::kEmpty:
       return "OPTION_EMPTY";
+  }
+}
+
+template <>
+std::string EnumAsString(AddressMapOption option) {
+  switch (option) {
+    case AddressMapOption::kFill:
+      return "ADDRESS_MAP_OPTION_FILL";
+    default:
+      return "ADDRESS_MAP_OPTION_UNKNOWN";
   }
 }
 
@@ -76,6 +87,17 @@ fit::result<Option, std::string> StringAsEnum(std::string_view option) {
     std::string error = "Unknown option type(";
     error.append(option).append(").\n");
     return fit::error(std::move(error));
+  }
+
+  return fit::ok(string_to_option.at(option));
+}
+
+template <>
+fit::result<AddressMapOption, std::string> StringAsEnum(std::string_view option) {
+  static const std::unordered_map<std::string_view, AddressMapOption> string_to_option = {
+      {"ADDRESS_MAP_OPTION_FILL", AddressMapOption::kFill}};
+  if (string_to_option.find(option) == string_to_option.end()) {
+    return fit::error("Unknown AddressMapOption type(" + std::string(option) + ").\n");
   }
 
   return fit::ok(string_to_option.at(option));

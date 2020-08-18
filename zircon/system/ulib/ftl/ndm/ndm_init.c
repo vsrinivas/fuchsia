@@ -9,9 +9,9 @@
 
 // Count number of bits set to 1 in a byte/32 bit value
 #define ONES_UI8(b) (NumberOnes[(b) >> 4] + NumberOnes[(b)&0xF])
-#define ONES_UI32(w)                                   \
-  (ONES_UI8(((ui8*)&w)[0]) + ONES_UI8(((ui8*)&w)[1]) + \
-   ONES_UI8(((ui8*)&w)[2]) + ONES_UI8(((ui8*)&w)[3]))
+#define ONES_UI32(w)                                                             \
+  (ONES_UI8(((ui8*)&w)[0]) + ONES_UI8(((ui8*)&w)[1]) + ONES_UI8(((ui8*)&w)[2]) + \
+   ONES_UI8(((ui8*)&w)[3]))
 
 // Global Variable Declarations
 CircLink NdmDevs;

@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <semaphore.h>
 #include <stdio.h>
-
+#include <string.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 
 #include "kernel.h"
@@ -36,7 +38,6 @@ SEM semCreate(const char name[8], int init_count, int mode) {
     delete semp;
     return NULL;
   }
-
   return reinterpret_cast<SEM>(semp);
 }
 

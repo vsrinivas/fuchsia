@@ -1,0 +1,91 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("raw-nand-options") {
+  public = [ "options.h" ]
+}
+
+source_set("raw-nand-image-utils") {
+  public = [ "raw_nand_image_utils.h" ]
+  public_deps = [
+    ":raw-nand-options",
+    "//src/storage/volume_image/utils:io-interfaces",
+  ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("ftl-image-internal") {
+  sources = [ "ftl_image_internal.cc" ]
+  public = [ "ftl_image_internal.h" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [ ":raw-nand-image-utils" ]
+}
+
+source_set("ftl-image") {
+  sources = [ "ftl_image.cc" ]
+  public = [ "ftl_image.h" ]
+  public_deps = [
+    ":raw-nand-options",
+    "//src/storage/volume_image:partition",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [
+    ":ftl-image-internal",
+    ":raw-nand-image-utils",
+    "//src/storage/volume_image/utils:block-utils",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+source_set("ftl-test") {
+  testonly = true
+  sources = [
+    "ftl_image_internal_test.cc",
+    "ftl_image_test.cc",
+    "raw_nand_image_utils_test.cc",
+  ]
+
+  deps = [
+    ":ftl-image",
+    ":ftl-image-internal",
+    ":raw-nand-image-utils",
+    "//src/storage/volume_image/utils:block-utils",
+    "//src/storage/volume_image/utils:fd-io",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("ftl-integration-test") {
+  testonly = true
+  sources = [ "ftl_image_integration_test.cc" ]
+
+  deps = [
+    ":ftl-image",
+    ":ftl-image-internal",
+    ":raw-nand-image-utils",
+    "//src/storage/volume_image/utils:block-utils",
+    "//src/storage/volume_image/utils:fd-io",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/ftl",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ftl-test" ]
+}
+
+group("integration-tests") {
+  testonly = true
+  deps = [ ":ftl-integration-test" ]
+}

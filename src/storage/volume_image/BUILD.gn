@@ -70,11 +70,18 @@ source_set("volume-descriptor-test") {
 }
 
 test_package("storage-volume-image-tests") {
-  deps = [ ":storage-volume-image-test" ]
+  deps = [
+    ":storage-volume-image-integration-test",
+    ":storage-volume-image-test",
+  ]
 
   tests = [
     {
       name = "storage-volume-image-test"
+      environments = basic_envs
+    },
+    {
+      name = "storage-volume-image-integration-test"
       environments = basic_envs
     },
   ]
@@ -101,6 +108,7 @@ test_package("storage-volume-image-tests") {
 test("storage-volume-image-test") {
   deps = [
     ":volume-descriptor-test",
+    "ftl:tests",
     "fvm:tests",
     "serialization:tests",
     "utils:tests",
@@ -112,9 +120,21 @@ test("storage-volume-image-test") {
   }
 }
 
+test("storage-volume-image-integration-test") {
+  deps = [
+    "ftl:integration-tests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//sdk/lib/fdio" ]
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":storage-volume-image-integration-test($host_toolchain)",
     ":storage-volume-image-test($host_toolchain)",
     ":storage-volume-image-tests",
   ]

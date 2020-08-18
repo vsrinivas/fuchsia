@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/storage-volume-image-integration-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
