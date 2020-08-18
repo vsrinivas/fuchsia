@@ -29,7 +29,6 @@ pub enum Error {
     MissingRights(String),
     Parse { err: String, location: Option<Location>, filename: Option<String> },
     Validate { schema_name: Option<String>, err: String, filename: Option<String> },
-    ValidateFidl(anyhow::Error),
     Internal(String),
     Utf8(Utf8Error),
 }
@@ -119,7 +118,6 @@ impl fmt::Display for Error {
                     write!(f, "{}", err)
                 }
             }
-            Error::ValidateFidl(err) => write!(f, "FIDL validation failed: {}", err),
             Error::Internal(err) => write!(f, "Internal error: {}", err),
             Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
         }
@@ -162,7 +160,6 @@ impl From<fidl::Error> for Error {
 impl From<cm_json::Error> for Error {
     fn from(err: cm_json::Error) -> Self {
         match err {
-            cm_json::Error::InvalidArgs(str) => Error::InvalidArgs(str),
             cm_json::Error::Io(err) => Error::Io(err),
             cm_json::Error::Parse { err, location, filename } => {
                 Error::Parse { err, location: location.map(|loc| loc.into()), filename }
@@ -170,9 +167,6 @@ impl From<cm_json::Error> for Error {
             cm_json::Error::Validate { schema_name, err, filename } => {
                 Error::Validate { schema_name, err, filename }
             }
-            cm_json::Error::ValidateFidl(err) => Error::ValidateFidl(err),
-            cm_json::Error::Internal(str) => Error::Internal(str),
-            cm_json::Error::Utf8(err) => Error::Utf8(err),
         }
     }
 }

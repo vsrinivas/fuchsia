@@ -14,23 +14,19 @@ rustc_library("cm_json") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//src/sys/lib/cm_types",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:url",
   ]
 
   non_rust_deps = [ ":cmx_schema_json" ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
-
-  sources = [
-    "src/cm.rs",
-    "src/lib.rs",
+  test_deps = [
+    "//src/sys/lib/cm_types",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
   ]
+
+  sources = [ "src/lib.rs" ]
 
   inputs = [ "cmx_schema.json" ]
 }

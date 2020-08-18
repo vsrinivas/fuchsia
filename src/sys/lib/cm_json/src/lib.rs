@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow,
-    cm_types::ParseError,
     serde_json,
     serde_json::Value,
     std::borrow::Cow,
@@ -13,10 +11,7 @@ use {
     std::fs::File,
     std::io::{self, Read},
     std::path::Path,
-    std::str::Utf8Error,
 };
-
-pub mod cm;
 
 #[derive(Debug)]
 pub struct JsonSchema<'a> {
@@ -58,22 +53,14 @@ pub struct Location {
 /// Enum type that can represent any error encountered by a cmx operation.
 #[derive(Debug)]
 pub enum Error {
-    InvalidArgs(String),
     Io(io::Error),
     Parse { err: String, location: Option<Location>, filename: Option<String> },
     Validate { schema_name: Option<String>, err: String, filename: Option<String> },
-    ValidateFidl(anyhow::Error),
-    Internal(String),
-    Utf8(Utf8Error),
 }
 
 impl error::Error for Error {}
 
 impl Error {
-    pub fn invalid_args(err: impl Into<String>) -> Self {
-        Self::InvalidArgs(err.into())
-    }
-
     pub fn parse(
         err: impl fmt::Display,
         location: Option<Location>,
@@ -89,28 +76,11 @@ impl Error {
     pub fn validate(err: impl fmt::Display) -> Self {
         Self::Validate { schema_name: None, err: err.to_string(), filename: None }
     }
-
-    pub fn validate_schema(schema: &JsonSchema<'_>, err: impl Into<String>) -> Self {
-        Self::Validate {
-            schema_name: Some(schema.name.to_string()),
-            err: err.into(),
-            filename: None,
-        }
-    }
-
-    pub fn validate_fidl(err: impl Into<anyhow::Error>) -> Self {
-        Self::ValidateFidl(err.into())
-    }
-
-    pub fn internal(err: impl Into<String>) -> Self {
-        Self::Internal(err.into())
-    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            Error::InvalidArgs(err) => write!(f, "Invalid args: {}", err),
             Error::Io(err) => write!(f, "IO error: {}", err),
             Error::Parse { err, location, filename } => {
                 let mut prefix = String::new();
@@ -145,9 +115,6 @@ impl fmt::Display for Error {
                     write!(f, "{}", err)
                 }
             }
-            Error::ValidateFidl(err) => write!(f, "FIDL validation failed: {}", err),
-            Error::Internal(err) => write!(f, "Internal error: {}", err),
-            Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
         }
     }
 }
@@ -155,12 +122,6 @@ impl fmt::Display for Error {
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
         Error::Io(err)
-    }
-}
-
-impl From<Utf8Error> for Error {
-    fn from(err: Utf8Error) -> Self {
-        Error::Utf8(err)
     }
 }
 
@@ -178,18 +139,6 @@ impl From<serde_json::Error> for Error {
         }
     }
 }
-
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Self {
-        match err {
-            ParseError::InvalidValue => Self::internal("invalid value"),
-            ParseError::InvalidLength => Self::internal("invalid length"),
-            ParseError::NotAName => Self::internal("not a name"),
-            ParseError::NotAPath => Self::internal("not a path"),
-        }
-    }
-}
-
 pub fn from_json_str(json: &str, filename: &Path) -> Result<Value, Error> {
     serde_json::from_str(json).map_err(|e| {
         Error::parse(
@@ -204,11 +153,12 @@ pub fn from_json_str(json: &str, filename: &Path) -> Result<Value, Error> {
 mod tests {
     use super::*;
     use anyhow::format_err;
+    use cm_types;
     use matches::assert_matches;
 
     #[test]
     fn test_parse_error() {
-        let result = serde_json::from_str::<cm::Name>("foo").map_err(Error::from);
+        let result = serde_json::from_str::<cm_types::Name>("foo").map_err(Error::from);
         assert_matches!(result, Err(Error::Parse { .. }));
 
         let result = Error::parse(format_err!("oops"), None, None);
@@ -234,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_validation_error() {
-        let result = serde_json::from_str::<cm::Name>("\"foo$\"").map_err(Error::from);
+        let result = serde_json::from_str::<cm_types::Name>("\"foo$\"").map_err(Error::from);
         assert_matches!(result, Err(Error::Validate { .. }));
 
         let mut result = Error::validate(format_err!("oops"));
