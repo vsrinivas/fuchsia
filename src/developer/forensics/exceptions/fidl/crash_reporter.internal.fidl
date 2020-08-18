@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.exception.internal;
+
+using zx;
+
+/// Internal protocol that allows exceptions.cmx to build crash reports and send them to the system
+/// crash reporter in an isolated process.
+protocol CrashReporter {
+    /// A CrashReporter needs at minimum the name and koid of the crashed process to build a valid
+    /// crash report. If the exception from the crashed process is provided, it will be used as
+    /// well.
+    Send(string:128 crashed_process_name, zx.koid crashed_process_koid,
+         zx.handle:EXCEPTION? exception) -> ();
+};
