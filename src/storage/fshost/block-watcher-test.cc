@@ -650,6 +650,74 @@ TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
   EXPECT_FALSE(volume.formatted);
 }
 
+// Tests adding factoryfs with a valid type GUID, but invalid metadata.
+TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  FactoryfsDevice device;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
+}
+
+// Tests adding factoryfs with a valid type GUID and valid metadata.
+TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      const uint8_t expected[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
+      memcpy(out_guid->value, expected, sizeof(expected));
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  FactoryfsDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_TRUE(device.mounted);
+}
+
 class BlockWatcherTest : public zxtest::Test {
  protected:
   BlockWatcherTest() {
