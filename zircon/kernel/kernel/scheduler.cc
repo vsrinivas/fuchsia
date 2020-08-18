@@ -20,7 +20,6 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <algorithm>
 #include <new>
 
 #include <ffl/string.h>
@@ -562,8 +561,8 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
 cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"find_target: cpu,avail"_stringref};
 
-  const cpu_num_t last_cpu = thread->scheduler_state().last_cpu_;
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+  const cpu_num_t current_cpu = arch_curr_cpu_num();
+  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
 
   // Determine the set of CPUs the thread is allowed to run on.
@@ -593,28 +592,8 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   }  // deadline threads will follow the old path for now.
 #endif
 
-  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->scheduler_state().last_cpu_);
-  const cpu_mask_t idle_mask = mp_get_idle_mask();
-
-  cpu_num_t target_cpu;
-  Scheduler* target_queue;
-
-  // Select an initial target.
-  if (last_cpu_mask & available_mask && (!idle_mask || last_cpu_mask & idle_mask)) {
-    target_cpu = last_cpu;
-  } else if (current_cpu_mask & available_mask) {
-    target_cpu = arch_curr_cpu_num();
-  } else {
-    target_cpu = lowest_cpu_set(available_mask);
-  }
-
-  target_queue = Get(target_cpu);
-
-  // See if there is a better target in the set of available CPUs.
-  // TODO(eieio): Replace this with a search in order of increasing cache
-  // distance from the initial target cpu when topology information is available.
-  // TODO(eieio): Add some sort of threshold to terminate search when a
-  // sufficiently unloaded target is found.
+  const cpu_num_t last_cpu = thread->scheduler_state().last_cpu_;
+  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
 
   const bool is_fair = IsFairThread(thread);
   const auto compare = [is_fair](Scheduler* const queue_a,
@@ -636,21 +615,35 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
     return queue->predicted_deadline_utilization() == 0 && queue->predicted_queue_time_ns() == 0;
   };
 
-  cpu_mask_t remaining_mask = available_mask & ~cpu_num_to_mask(target_cpu);
-  while (remaining_mask != 0 && !is_idle(target_queue)) {
-    const cpu_num_t candidate_cpu = lowest_cpu_set(remaining_mask);
+  // Find the best target CPU starting at the last CPU the task ran on, if any.
+  const cpu_num_t starting_cpu = last_cpu != INVALID_CPU ? last_cpu : current_cpu;
+  const CpuSearchSet& search_set = percpu::Get(starting_cpu).search_set;
+
+  cpu_num_t target_cpu = INVALID_CPU;
+  Scheduler* target_queue = nullptr;
+
+  for (const auto& entry : search_set.const_iterator()) {
+    const cpu_num_t candidate_cpu = entry.cpu;
+    const bool candidate_available = available_mask & cpu_num_to_mask(candidate_cpu);
     Scheduler* const candidate_queue = Get(candidate_cpu);
 
-    if (compare(candidate_queue, target_queue)) {
+    if (candidate_available &&
+        (target_queue == nullptr || compare(candidate_queue, target_queue))) {
       target_cpu = candidate_cpu;
       target_queue = candidate_queue;
-    }
 
-    remaining_mask &= ~cpu_num_to_mask(candidate_cpu);
+      // Stop searching at the first idle CPU.
+      // TODO(eieio): Use the load threshold instead.
+      if (is_idle(target_queue)) {
+        break;
+      }
+    }
   }
 
+  DEBUG_ASSERT(target_cpu != INVALID_CPU);
+
   SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name(), target_cpu);
-  trace.End(target_cpu, remaining_mask);
+  trace.End(last_cpu, target_cpu);
 
   bool delay_migration = last_cpu != target_cpu && last_cpu != INVALID_CPU &&
                          thread->has_migrate_fn() && (active_mask & last_cpu_mask) != 0;
