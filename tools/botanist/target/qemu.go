@@ -340,7 +340,6 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setctty: true,
 			Setsid:  true,
-			Ctty:    int(t.ptm.Fd()),
 		}
 	} else {
 		cmd.Stdout = io.MultiWriter(&outputSink, os.Stdout)
