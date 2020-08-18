@@ -41,9 +41,9 @@ class PipelineConfig {
     std::vector<RenderUsage> input_streams;
     std::vector<Effect> effects;
     std::vector<MixGroup> inputs;
-    bool loopback;
-    uint32_t output_rate;
-    uint16_t output_channels;
+    bool loopback = false;
+    uint32_t output_rate = kDefaultMixGroupRate;
+    uint16_t output_channels = kDefaultMixGroupChannels;
   };
 
   static PipelineConfig Default(uint32_t frame_rate = kDefaultMixGroupRate,

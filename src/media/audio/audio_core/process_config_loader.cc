@@ -366,7 +366,14 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     }
     pipeline_config = PipelineConfig(std::move(root));
   } else {
-    pipeline_config = PipelineConfig::Default();
+    // If no pipeline is specified, we'll use a single mix stage.
+    pipeline_config.mutable_root().name = "default";
+    pipeline_config.mutable_root().loopback = supports_loopback;
+    for (const auto& stream_usage : supported_stream_types) {
+      if (stream_usage.is_render_usage()) {
+        pipeline_config.mutable_root().input_streams.emplace_back(stream_usage.render_usage());
+      }
+    }
   }
 
   return fit::ok(std::make_pair(

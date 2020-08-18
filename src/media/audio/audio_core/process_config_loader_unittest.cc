@@ -1053,5 +1053,112 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithNewFormatThermalPolicy) {
   EXPECT_EQ("{\"value\":\"config 0 trip point 2\"}", entries[2].state_transitions()[0].config());
 }
 
+TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": [
+          "capture:loopback",
+          "render:media"
+        ]
+      },
+      {
+        "device_id": "*",
+        "supported_stream_types": [
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent"
+        ]
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+
+  const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok());
+
+  auto& config = result.value().device_config().output_device_profile(expected_id);
+  EXPECT_TRUE(config.pipeline_config().root().loopback);
+  EXPECT_TRUE(config.pipeline_config().root().effects.empty());
+  EXPECT_TRUE(config.pipeline_config().root().inputs.empty());
+  EXPECT_EQ(PipelineConfig::kDefaultMixGroupRate, config.pipeline_config().root().output_rate);
+  EXPECT_EQ(PipelineConfig::kDefaultMixGroupChannels,
+            config.pipeline_config().root().output_channels);
+  ASSERT_EQ(1u, config.pipeline_config().root().input_streams.size());
+  EXPECT_EQ(RenderUsage::MEDIA, config.pipeline_config().root().input_streams[0]);
+}
+
+TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithNoSupportedStreamTypes) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": []
+      },
+      {
+        "device_id": "*",
+        "supported_stream_types": [
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent"
+        ]
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+
+  const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok());
+
+  auto& config = result.value().device_config().output_device_profile(expected_id);
+  for (const auto& render_usage : kRenderUsages) {
+    EXPECT_FALSE(config.supports_usage(render_usage));
+  }
+  EXPECT_FALSE(config.pipeline_config().root().loopback);
+  EXPECT_TRUE(config.pipeline_config().root().input_streams.empty());
+  EXPECT_TRUE(config.pipeline_config().root().effects.empty());
+  EXPECT_TRUE(config.pipeline_config().root().inputs.empty());
+  EXPECT_EQ(PipelineConfig::kDefaultMixGroupRate, config.pipeline_config().root().output_rate);
+  EXPECT_EQ(PipelineConfig::kDefaultMixGroupChannels,
+            config.pipeline_config().root().output_channels);
+}
+
 }  // namespace
 }  // namespace media::audio
