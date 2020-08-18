@@ -10,6 +10,7 @@ ffx_plugin("ffx_component") {
   with_unit_tests = true
   plugin_deps = [
     "knock:ffx_knock",
+    "list:ffx_component_list",
     "run:ffx_component_run",
     "select:ffx_select",
     "//src/sys/run_test_suite/ffx:ffx_test",
@@ -24,6 +25,7 @@ group("tests") {
   deps = [
     ":ffx_component_tests",
     "knock:ffx_knock_tests",
+    "list:ffx_component_list_tests",
     "run:ffx_component_run_tests",
     "select:ffx_select_tests",
   ]

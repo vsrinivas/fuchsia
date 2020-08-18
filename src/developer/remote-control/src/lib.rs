@@ -50,6 +50,16 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::Select { selector, responder } => {
                     responder.send(&mut self.clone().select(selector).await)?;
                 }
+                rcs::RemoteControlRequest::OpenHub { server, responder } => {
+                    responder.send(
+                        &mut io_util::connect_in_namespace(
+                            HUB_ROOT,
+                            server.into_channel(),
+                            io::OPEN_RIGHT_READABLE,
+                        )
+                        .map_err(|i| i.into_raw()),
+                    )?;
+                }
             }
         }
         Ok(())
