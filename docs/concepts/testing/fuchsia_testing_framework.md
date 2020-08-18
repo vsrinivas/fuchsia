@@ -39,7 +39,7 @@ report results. This differs from [Components v1](#glossary-components-v1),
 where test results are reported through stdout and exit codes. Most commonly, a
 test will not implement the `fuchsia.test.Suite` protocol from scratch, but
 would instead use a *test runner* that integrates a language-native testing
-library with the protocol. The the does this by declaring it uses the
+library with the protocol. The test component does this by declaring it uses the
 appropriate test runner in the [test driver][test-roles]'s manifest. For
 example, for a C++ gtest, the test driver's manifest would contain the
 following:
