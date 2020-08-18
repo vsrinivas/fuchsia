@@ -11,6 +11,7 @@ group("lib") {
     "logging",
     "simple-codec",
     "test",
+    "timeline",
     "wav",
   ]
 }
@@ -24,6 +25,7 @@ group("tests") {
     "format:tests",
     "simple-audio-stream:tests",
     "simple-codec:tests",
+    "timeline:tests",
     "wav:tests",
   ]
 }
