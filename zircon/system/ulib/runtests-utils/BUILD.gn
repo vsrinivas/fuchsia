@@ -39,7 +39,6 @@ zx_library("runtests-utils") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/unittest",
   ]
   if (is_fuchsia) {
     sources += [

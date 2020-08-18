@@ -18,7 +18,6 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
-#include <unittest/unittest.h>
 
 namespace runtests {
 namespace {
@@ -57,12 +56,6 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "options:                                                 \n"
           "       -h: See this message                              \n"
           "       -d: Dry run, just print test file names and exit  \n"
-          "       -S: Turn ON  Small tests   (on by default)  [1]   \n"
-          "       -s: Turn OFF Small tests                    [1]   \n"
-          "       -M: Turn ON  Medium tests  (on by default)  [1]   \n"
-          "       -m: Turn OFF Medium tests                   [1]   \n"
-          "       -L: Turn ON  Large tests   (off by default) [1]   \n"
-          "       -l: Turn OFF Large tests                    [1]   \n"
           "       -i: Per-test timeout in seconds.            [2]   \n"
           "       -r: Repeat the test suite this many times         \n"
           "  --names: Filter tests found in the default directory   \n"
@@ -99,7 +92,6 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
 int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
                         const fbl::StringPiece syslog_file_name) {
-  unsigned int test_types = TEST_DEFAULT;
   bool use_default_globs = false;
   fbl::Vector<fbl::String> basename_whitelist;
   fbl::Vector<fbl::String> test_args;
@@ -155,24 +147,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
 
     switch (arg.data()[1]) {
-      case 's':
-        test_types &= ~TEST_SMALL;
-        break;
-      case 'm':
-        test_types &= ~TEST_MEDIUM;
-        break;
-      case 'l':
-        test_types &= ~TEST_LARGE;
-        break;
-      case 'S':
-        test_types |= TEST_SMALL;
-        break;
-      case 'M':
-        test_types |= TEST_MEDIUM;
-        break;
-      case 'L':
-        test_types |= TEST_LARGE;
-        break;
       case 'h':
         return Usage(argv[0], default_test_dirs);
       case 'r': {
@@ -214,25 +188,15 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
   }
 
-  // Configure the types of tests which are meant to be executed by putting
-  // it in an environment variable. Test executables can consume this environment
-  // variable and process it as they would like.
-  char test_opt[32];
-  snprintf(test_opt, sizeof(test_opt), "%u", test_types);
-  if (setenv(TEST_ENV_NAME, test_opt, 1) != 0) {
-    fprintf(stderr, "Error: Could not set %s environment variable\n", TEST_ENV_NAME);
-    return EXIT_FAILURE;
-  }
-
   if (use_default_globs) {
-    const int err = DiscoverTestsInDirGlobs(default_test_dirs, kIgnoreDirName,
-                                            basename_whitelist, &test_paths);
+    const int err =
+        DiscoverTestsInDirGlobs(default_test_dirs, kIgnoreDirName, basename_whitelist, &test_paths);
     if (err) {
       fprintf(stderr, "Failed to find tests in dirs: %s\n", strerror(err));
       return EXIT_FAILURE;
     }
   }
-  
+
   if (test_paths.is_empty()) {
     fprintf(stderr, "No tests found or specified.\n");
     return EXIT_FAILURE;
@@ -261,9 +225,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
                 kOutputFileName, &failed_count, &results)) {
     return EXIT_FAILURE;
   }
-
-  // It's not catastrophic if we can't unset it; we're just trying to clean up
-  unsetenv(TEST_ENV_NAME);
 
   if (output_dir != nullptr) {
     char summary_path[PATH_MAX];
