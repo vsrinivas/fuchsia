@@ -3,9 +3,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### common methods for metrics collection
-### this script assumes that vars.sh has already been sourced, since it
-### depends on FUCHSIA_DIR being defined correctly.
+# Common methods for metrics collection.
+#
+# Note: For non-shell programs, use metrics_custom_report.sh instead.
+#
+# Report events to the metrics collector from `fx`, the `fx metrics`, and the
+# rare subcommand that has special metrics needs.
+#
+# How to use it: This file is sourced in //scripts/fx for tracking command
+# execution and in //tools/devshell/metrics for managing the metrics collection
+# settings. Developers of shell-based subcommands can source this file in their
+# subcommand if they need custom event tracking, but only the method
+# track-subcommand-custom-event can be used in this context.
+#
+# This script assumes that vars.sh has already been sourced, since it
+# depends on FUCHSIA_DIR being defined correctly.
 
 _METRICS_GA_PROPERTY_ID="UA-127897021-6"
 _METRICS_TRACK_ALL_ARGS=( "emu" "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )

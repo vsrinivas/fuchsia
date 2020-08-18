@@ -261,10 +261,10 @@ declare -r start_time="$SECONDS"
 "${command_path}" "$@"
 declare -r retval=$?
 declare -r end_time="$SECONDS"
-declare -r ellapsed_time=$(( 1000 * (end_time - start_time) )) # milliseconds
+declare -r elapsed_time=$(( 1000 * (end_time - start_time) )) # milliseconds
 
 if [ -z "${iterative}" ]; then
-  track-command-finished "${ellapsed_time}" "${retval}" "${command_name}" "$@" &
+  track-command-finished "${elapsed_time}" "${retval}" "${command_name}" "$@" &
   exit ${retval}
 elif which inotifywait >/dev/null; then
   monitor_source_changes() {
