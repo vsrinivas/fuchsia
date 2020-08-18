@@ -60,6 +60,13 @@ void AssertEqual(uint64_t expected, uint64_t actual) {
              expected, expected, actual, actual);
 }
 
+// Workload interface.
+class Workload {
+ public:
+  virtual ~Workload() = default;
+  virtual void DoWork() = 0;
+};
+
 //
 // The actual workloads.
 //
@@ -69,24 +76,30 @@ void AssertEqual(uint64_t expected, uint64_t actual) {
 // |memset| tends to be highly optimised for using all available memory
 // bandwidth. We use a small enough buffer size to avoid spilling out
 // of L1 cache.
-void MemsetWorkload(WorkIndicator indicator) {
-  constexpr int kBufferSize = 8192;
-  auto memory = std::make_unique<uint8_t[]>(kBufferSize);
-  do {
-    memset(memory.get(), 0xaa, kBufferSize);
-    HideMemoryFromCompiler(memory.get());
-    memset(memory.get(), 0x55, kBufferSize);
-    HideMemoryFromCompiler(memory.get());
-  } while (!indicator.ShouldStop());
-}
+class MemsetWorkload final : public Workload {
+ public:
+  MemsetWorkload() : memory_(std::make_unique<uint8_t[]>(kBufferSize)) {}
+
+  void DoWork() final {
+    memset(memory_.get(), 0xaa, kBufferSize);
+    HideMemoryFromCompiler(memory_.get());
+    memset(memory_.get(), 0x55, kBufferSize);
+    HideMemoryFromCompiler(memory_.get());
+  }
+
+ private:
+  std::unique_ptr<uint8_t[]> memory_;
+  static constexpr int kBufferSize = 8192;
+};
 
 // Calculate the trigonometric identity sin(x)**2 + cos(x)**2 == 1
 // in a tight loop.
 //
 // Exercises floating point operations on the CPU, though mostly within
 // the |sin| and |cos| functions.
-void SinCosWorkload(WorkIndicator indicator) {
-  do {
+class SinCosWorkload final : public Workload {
+ public:
+  void DoWork() final {
     constexpr int kIterations = 10000;
     double result = 0;
 
@@ -102,8 +115,8 @@ void SinCosWorkload(WorkIndicator indicator) {
     }
 
     AssertEqual(kIterations, result, DBL_EPSILON * kIterations);
-  } while (!indicator.ShouldStop());
-}
+  }
+};
 
 // Calculate the n'th Fibonacci number using inefficient recursion.
 uint64_t Fibonacci(uint64_t n) {
@@ -115,41 +128,38 @@ uint64_t Fibonacci(uint64_t n) {
 // Calculate the Fibonacci sequence using recursion.
 //
 // Exercises call/return control flow.
-void FibonacciWorkload(WorkIndicator indicator) {
-  do {
+class FibonacciWorkload final : public Workload {
+ public:
+  void DoWork() final {
     uint64_t result = Fibonacci(HideFromCompiler(30));
     AssertEqual(832040, result);
-  } while (!indicator.ShouldStop());
-}
+  }
+};
 
 // Perform a 16*16 matrix multiplication using floats.
 //
 // Exercises floating point operations.
-void MatrixMultiplicationWorkload(WorkIndicator indicator) {
-  constexpr int kSize = 16;
-  struct Matrix {
-    float m[kSize][kSize];
-  };
+class MatrixMultiplicationWorkload final : public Workload {
+ public:
+  MatrixMultiplicationWorkload() {
+    // Create a permutation matrix.
+    for (int i = 0; i < kSize; i++) {
+      permutation_.m[i][kSize - i - 1] = 1.0;
+    }
 
-  // Create a matrix that permutes the input matrix columns.
-  Matrix p = {};
-  for (int i = 0; i < kSize; i++) {
-    p.m[i][kSize - i - 1] = 1.0;
-  }
-
-  // Create an initial random matrix.
-  std::mt19937_64 generator{};
-  std::uniform_real_distribution<> dist(-1.0, 1.0);
-  Matrix initial = {};
-  for (int x = 0; x < kSize; x++) {
-    for (int y = 0; y < kSize; y++) {
-      initial.m[x][y] = dist(generator);
+    // Create a random matrix.
+    std::mt19937_64 generator{};
+    std::uniform_real_distribution<> dist(-1.0, 1.0);
+    for (int x = 0; x < kSize; x++) {
+      for (int y = 0; y < kSize; y++) {
+        random_.m[x][y] = dist(generator);
+      }
     }
   }
 
-  do {
+  void DoWork() final {
     // Multiply it 1000 times.
-    Matrix active = initial;
+    Matrix active = random_;
     for (int n = 0; n < 1'000; n++) {
       // Naïve matrix multiplication algorithm.
       Matrix prev = active;
@@ -157,27 +167,36 @@ void MatrixMultiplicationWorkload(WorkIndicator indicator) {
         for (int y = 0; y < kSize; y++) {
           float r = 0;
           for (int i = 0; i < kSize; i++) {
-            r += prev.m[i][y] * p.m[x][i];
+            r += prev.m[i][y] * permutation_.m[x][i];
           }
           active.m[x][y] = r;
         }
       }
     }
 
-    // Ensure the final result matches our initial matrix.
+    // Ensure the final result matches our random_ matrix.
     for (int x = 0; x < kSize; x++) {
       for (int y = 0; y < kSize; y++) {
-        AssertEqual(active.m[x][y], initial.m[x][y], /*epsilon=*/0.0);
+        AssertEqual(active.m[x][y], random_.m[x][y], /*epsilon=*/0.0);
       }
     }
-  } while (!indicator.ShouldStop());
-}
+  }
+
+ private:
+  static constexpr int kSize = 16;
+  struct Matrix {
+    float m[kSize][kSize];
+  };
+  Matrix permutation_{};
+  Matrix random_{};
+};
 
 // Run the Mersenne Twister random number generator algorithm.
 //
 // This exercises integer bitwise operation and multiplication.
-void MersenneTwisterWorkload(WorkIndicator indicator) {
-  do {
+class MersenneTwisterWorkload final : public Workload {
+ public:
+  void DoWork() final {
     std::mt19937_64 generator{};
 
     // Iterate the generator.
@@ -190,17 +209,48 @@ void MersenneTwisterWorkload(WorkIndicator indicator) {
     // The C++11 standard states that the 10,000th consecutive
     // invocation of the mt19937_64 should be the following value.
     AssertEqual(v, 0x8a85'92f5'817e'd872);
-  } while (!indicator.ShouldStop());
+  }
+};
+
+// Run a mixed of the other workloads.
+class MixedWorkload final : public Workload {
+ public:
+  void DoWork() final {
+    fibonacci_.DoWork();
+    matrix_.DoWork();
+    memset_.DoWork();
+    mersenee_.DoWork();
+    trigonometry_.DoWork();
+  }
+
+ private:
+  FibonacciWorkload fibonacci_;
+  MatrixMultiplicationWorkload matrix_;
+  MemsetWorkload memset_;
+  MersenneTwisterWorkload mersenee_;
+  SinCosWorkload trigonometry_;
+};
+
+// Convert the given Workload into a CpuWorkload.
+template <typename W>
+auto IterateWorkload() -> auto {
+  return [](WorkIndicator indicator) {
+    W workload{};
+    do {
+      workload.DoWork();
+    } while (!indicator.ShouldStop());
+  };
 }
 
 }  // namespace
 
 std::vector<CpuWorkload> GetCpuWorkloads() {
-  return std::vector<CpuWorkload>{{"fibonacci", FibonacciWorkload},
-                                  {"matrix", MatrixMultiplicationWorkload},
-                                  {"memset", MemsetWorkload},
-                                  {"mersenne", MersenneTwisterWorkload},
-                                  {"trigonometry", SinCosWorkload}};
+  return std::vector<CpuWorkload>{{"fibonacci", IterateWorkload<FibonacciWorkload>()},
+                                  {"matrix", IterateWorkload<MatrixMultiplicationWorkload>()},
+                                  {"memset", IterateWorkload<MemsetWorkload>()},
+                                  {"mersenne", IterateWorkload<MersenneTwisterWorkload>()},
+                                  {"trigonometry", IterateWorkload<SinCosWorkload>()},
+                                  {"mixed", IterateWorkload<MixedWorkload>()}};
 }
 
 }  // namespace hwstress
