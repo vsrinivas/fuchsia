@@ -16,9 +16,10 @@ func TestMassTestFailureCheck(t *testing.T) {
 	var c FailureModeCheck = MassTestFailureCheck{MaxFailed: 3}
 	summary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{
-			{Result: runtests.TestFailure},
-			{Result: runtests.TestFailure},
-			{Result: runtests.TestFailure},
+			{Name: "test 1", Result: runtests.TestFailure},
+			{Name: "test 1", Result: runtests.TestFailure},
+			{Name: "test 2", Result: runtests.TestFailure},
+			{Name: "test 3", Result: runtests.TestFailure},
 		},
 	}
 	to := TestingOutputs{
@@ -27,7 +28,7 @@ func TestMassTestFailureCheck(t *testing.T) {
 	if c.Check(&to) {
 		t.Errorf("MassTestFailureCheck.Check() returned true with only 3 failed tests, expected false")
 	}
-	summary.Tests = append(summary.Tests, runtests.TestDetails{Result: runtests.TestFailure})
+	summary.Tests = append(summary.Tests, runtests.TestDetails{Name: "test 4", Result: runtests.TestFailure})
 	if !c.Check(&to) {
 		t.Errorf("MassTestFailureCheck.Check() returned false with 4 failed tests, expected true")
 	}

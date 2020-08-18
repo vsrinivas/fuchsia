@@ -15,11 +15,11 @@ type MassTestFailureCheck struct {
 }
 
 func (c MassTestFailureCheck) Check(to *TestingOutputs) bool {
-	numFailed := 0
+	failedTests := make(map[string]bool)
 	for _, test := range to.TestSummary.Tests {
-		if test.Result == runtests.TestFailure {
-			numFailed++
-			if numFailed > c.MaxFailed {
+		if _, ok := failedTests[test.Name]; !ok && test.Result == runtests.TestFailure {
+			failedTests[test.Name] = true
+			if len(failedTests) > c.MaxFailed {
 				return true
 			}
 		}
