@@ -309,6 +309,8 @@ bool DebuggedProcess::RegisterDebugState() {
     }
   }
 
+  module_list_.Update(process_handle(), dl_debug_addr_);
+
   return true;
 }
 
@@ -318,17 +320,11 @@ DebuggedProcess::SpecialBreakpointResult DebuggedProcess::HandleSpecialBreakpoin
   // ProcessBreakpoint object) before we've seen the dl_debug_addr_.
   if (!dl_debug_addr_ && !optional_bp) {
     if (RegisterDebugState()) {
-      // Register our state and continue transparently.
-      if (module_list_.Update(process_handle(), dl_debug_addr_)) {
-        // The initial loader breakpoint will happen very early in the process startup so it
-        // will be single threaded. Since the one thread is already stopped, we can skip suspending
-        // the threads and just notify the client, keeping the calling one suspended.
-        SendModuleNotification();
-        return SpecialBreakpointResult::kKeepSuspended;
-      }
-
-      // Modules haven't changed, resume.
-      return SpecialBreakpointResult::kContinue;
+      // The initial loader breakpoint will happen very early in the process startup so it
+      // will be single threaded. Since the one thread is already stopped, we can skip suspending
+      // the threads and just notify the client, keeping the calling one suspended.
+      SendModuleNotification();
+      return SpecialBreakpointResult::kKeepSuspended;
     }
   }
 
@@ -630,8 +626,12 @@ void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& reque
 
 void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
   // Modules can only be read after the debug state is set.
-  if (dl_debug_addr_)
-    reply->modules = process_handle_->GetModules(dl_debug_addr_);
+  if (dl_debug_addr_) {
+    // Since the client requested the modules explicitly, force update our cache in case something
+    // changed unexpectedly.
+    module_list_.Update(process_handle(), dl_debug_addr_);
+    reply->modules = module_list_.modules();
+  }
 }
 
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,

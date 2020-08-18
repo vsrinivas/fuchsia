@@ -110,16 +110,13 @@ class DebuggedProcess : public ProcessHandleObserver {
   enum class SpecialBreakpointResult { kNotSpecial, kContinue, kKeepSuspended };
   SpecialBreakpointResult HandleSpecialBreakpoint(ProcessBreakpoint* optional_bp);
 
-  // If the process can know its modules, suspend all thread and send the module list.
+  // If the process can know its modules, suspend all thread and send the module list. This does not
+  // refresh the module list.
   //
   // This is used in the case where we attach to an existing process or a new forked process and the
   // debug address is known. The client expects the threads to be suspended so it can resolve
   // breakpoints and resume them.
   virtual void SuspendAndSendModulesIfKnown();
-
-  // Sends the currently loaded modules to the client with the current list of threads. All threads
-  // are assumed to be paused before this call.
-  void SendModuleNotification();
 
   // Looks for breakpoints at the given address. Null if no breakpoints are at that address.
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
@@ -179,6 +176,10 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   void OnStdout(bool close);
   void OnStderr(bool close);
+
+  // Sends the currently loaded modules to the client with the current list of threads. This does
+  // not refresh the module cache. All threads are assumed to be paused before this call.
+  void SendModuleNotification();
 
   // Sends a IO notification over to the client.
   void SendIO(debug_ipc::NotifyIO::Type, const std::vector<char>& data);
