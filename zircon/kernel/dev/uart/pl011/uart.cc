@@ -17,7 +17,9 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <kernel/auto_lock.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
 #include <platform/debug.h>
@@ -62,20 +64,24 @@ static AutounsignalEvent uart_dputc_event{true};
 
 static SpinLock uart_spinlock;
 
+// clear and set txim (transmit interrupt mask)
 static inline void pl011_mask_tx() { UARTREG(uart_base, UART_IMSC) &= ~(1 << 5); }
-
 static inline void pl011_unmask_tx() { UARTREG(uart_base, UART_IMSC) |= (1 << 5); }
+
+// clear and set rtim and rxim (receive timeout and interrupt mask)
+static inline void pl011_mask_rx() { UARTREG(uart_base, UART_IMSC) &= ~((1 << 6) | (1 << 4)); }
+static inline void pl011_unmask_rx() { UARTREG(uart_base, UART_IMSC) |= (1 << 6) | (1 << 4); }
 
 static interrupt_eoi pl011_uart_irq(void* arg) {
   /* read interrupt status and mask */
   uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
-  if (isr & ((1 << 4) | (1 << 6))) {  // rxmis
+  if (isr & ((1 << 6) | (1 << 4))) {  // rtims/rxmis
     /* while fifo is not empty, read chars out of it */
     while ((UARTREG(uart_base, UART_FR) & (1 << 4)) == 0) {
       /* if we're out of rx buffer, mask the irq instead of handling it */
       if (uart_rx_buf.Full()) {
-        UARTREG(uart_base, UART_IMSC) &= ~((1 << 4) | (1 << 6));  // !rxim
+        pl011_mask_rx();
         break;
       }
 
@@ -84,7 +90,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     }
   }
   uart_spinlock.Acquire();
-  if (isr & (1 << 5)) {
+  if (isr & (1 << 5)) {  // txmis
     /*
      * Signal any waiting Tx and mask Tx interrupts once we
      * wakeup any blocked threads
@@ -133,7 +139,7 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
 static int pl011_uart_getc(bool wait) {
   zx::status<char> result = uart_rx_buf.ReadChar(wait);
   if (result.is_ok()) {
-    UARTREG(uart_base, UART_IMSC) |= ((1 << 4) | (1 << 6));  // rxim
+    pl011_unmask_rx();
     return result.value();
   }
 
@@ -157,37 +163,68 @@ static int pl011_uart_pgetc() {
 }
 
 static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  interrupt_saved_state_t state;
   bool copied_CR = false;
 
+  // if tx irqs are disabled, override block/noblock argument
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  uart_spinlock.AcquireIrqSave(state);
+
   while (len > 0) {
-    // Is FIFO Full ?
-    while (UARTREG(uart_base, UART_FR) & (1 << 5)) {
+    bool wait = false;
+    size_t to_write = 0;
+
+    // Acquire the main uart spinlock once every iteration to try to cap the worst
+    // case time holding it. If a large string is passed, for example, this routine
+    // will write 16 bytes at a time into the fifo per iteration, dropping and
+    // reacquiring the spinlock every cycle.
+    AutoSpinLock guard(&uart_spinlock);
+
+    uint32_t uart_fr = UARTREG(uart_base, UART_FR);
+    if (uart_fr & (1 << 7)) {  // txfe
+      // Is FIFO completely empty? If so, we can write up to 16 bytes guaranteed.
+      const size_t max_fifo = 16;
+      to_write = ktl::min(len, max_fifo);
+    } else if (uart_fr & (1 << 5)) {  // txff
+      // Is the FIFO completely full? if so, block or spin at the end of the loop
+      wait = true;
+    } else {
+      // We have at least one byte left in the fifo, stuff one in and loop around
+      to_write = 1;
+    }
+
+    // stuff up to to_write number of chars into the fifo
+    for (size_t i = 0; i < to_write; i++) {
+      if (!copied_CR && map_NL && *str == '\n') {
+        copied_CR = true;
+        UARTREG(uart_base, UART_DR) = '\r';
+      } else {
+        copied_CR = false;
+        UARTREG(uart_base, UART_DR) = *str++;
+        len--;
+      }
+    }
+
+    // If at the end of the loop we've decided to wait, block or spin. Otherwise loop
+    // around.
+    if (wait) {
       if (block) {
-        /* Unmask Tx interrupts before we block on the event */
+        // Unmask Tx interrupts before we block on the event. The TX irq handler
+        // will signal the event when the fifo falls below a threshold.
         pl011_unmask_tx();
-        uart_spinlock.ReleaseIrqRestore(state);
+
+        // drop the spinlock before waiting
+        guard.release();
         uart_dputc_event.Wait();
       } else {
-        uart_spinlock.ReleaseIrqRestore(state);
+        // drop the spinlock before yielding
+        guard.release();
         arch::Yield();
       }
-      uart_spinlock.AcquireIrqSave(state);
     }
-    if (!copied_CR && map_NL && *str == '\n') {
-      copied_CR = true;
-      UARTREG(uart_base, UART_DR) = '\r';
-    } else {
-      copied_CR = false;
-      UARTREG(uart_base, UART_DR) = *str++;
-      len--;
-    }
+
+    // Note spinlock will be dropped and reaquired around this loop
   }
-  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void pl011_start_panic() { uart_tx_irq_enabled = false; }
@@ -209,7 +246,8 @@ static void pl011_uart_init_early(const void* driver_data, uint32_t length) {
   ASSERT(uart_base);
   uart_irq = driver->irq;
 
-  UARTREG(uart_base, UART_CR) = (1 << 8) | (1 << 0);  // tx_enable, uarten
+  UARTREG(uart_base, UART_LCRH) = (3 << 5) | (1 << 4);  // 8 bit word, enable fifos
+  UARTREG(uart_base, UART_CR) = (1 << 8) | (1 << 0);    // tx_enable, uarten
 
   pdev_register_uart(&uart_ops);
 }
