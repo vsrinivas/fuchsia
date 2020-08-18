@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::{Inspector, Node},
+    fuchsia_inspect::{health::Reporter, Inspector, Node},
     fuchsia_inspect_derive::{IValue, Inspect},
     fuchsia_zircon as zx,
     futures::FutureExt,
@@ -140,6 +140,8 @@ pub struct InspectDiagnostics {
     clock: Arc<zx::Clock>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
     node: Node,
+    /// The inspect health node to expose component status.
+    health: fuchsia_inspect::health::Node,
 }
 
 impl InspectDiagnostics {
@@ -157,7 +159,9 @@ impl InspectDiagnostics {
             last_update: None,
             clock: Arc::clone(&clock),
             node: node.clone_weak(),
+            health: fuchsia_inspect::health::Node::new(node),
         };
+        diagnostics.health.set_starting_up();
         // Following the general inspect API philosophy we make our best effort at exporting data
         // without raising errors that would lead branching logic (i.e. "if inspect is available do
         // this, otherwise do that" in the operational code.
@@ -186,6 +190,7 @@ impl InspectDiagnostics {
 
     /// Records an update to the UTC zx::Clock
     pub fn update_clock(&mut self) {
+        self.health.set_ok();
         match self.clock.get_details() {
             Ok(details) => {
                 if let Some(last_update) = &mut self.last_update {
@@ -286,6 +291,9 @@ mod tests {
                     monotonic: AnyProperty,
                     kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
+                },
+                "fuchsia.inspect.Health": contains {
+                    status: "STARTING_UP",
                 }
             }
         );
@@ -345,6 +353,9 @@ mod tests {
                     utc_offset: AnyProperty,
                     rate_ppm: 1_000_000u64 + RATE_ADJUST as u64,
                     error_bounds: ERROR_BOUNDS,
+                },
+                "fuchsia.inspect.Health": contains {
+                    status: "OK",
                 },
             }
         );
