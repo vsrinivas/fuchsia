@@ -16,8 +16,107 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
+namespace fnet = ::llcpp::fuchsia::net;
 
 namespace {
+
+// A helper structure to keep a socket address and the variants allocations in stack.
+struct SocketAddress {
+  fnet::SocketAddress address;
+  union U {
+    fnet::Ipv4SocketAddress ipv4;
+    fnet::Ipv6SocketAddress ipv6;
+
+    U() { memset(this, 0x00, sizeof(U)); }
+  } storage;
+
+  zx_status_t LoadSockAddr(const struct sockaddr* addr, size_t addr_len) {
+    // Address length larger than sockaddr_storage causes an error for API compatibility only.
+    if (addr == nullptr || addr_len > sizeof(struct sockaddr_storage)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    switch (addr->sa_family) {
+      case AF_INET: {
+        if (addr_len < sizeof(struct sockaddr_in)) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+        const auto* s = reinterpret_cast<const struct sockaddr_in*>(addr);
+        address.set_ipv4(fidl::unowned_ptr(&storage.ipv4));
+        std::copy_n(reinterpret_cast<const uint8_t*>(&s->sin_addr.s_addr),
+                    decltype(storage.ipv4.address.addr)::size(), storage.ipv4.address.addr.begin());
+        storage.ipv4.port = ntohs(s->sin_port);
+        return ZX_OK;
+      }
+      case AF_INET6: {
+        if (addr_len < sizeof(struct sockaddr_in6)) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+        const auto* s = reinterpret_cast<const struct sockaddr_in6*>(addr);
+        address.set_ipv6(fidl::unowned_ptr(&storage.ipv6));
+        std::copy(std::begin(s->sin6_addr.s6_addr), std::end(s->sin6_addr.s6_addr),
+                  storage.ipv6.address.addr.begin());
+        storage.ipv6.port = ntohs(s->sin6_port);
+        storage.ipv6.zone_index = s->sin6_scope_id;
+        return ZX_OK;
+      }
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+  }
+};
+
+fsocket::RecvMsgFlags to_recvmsg_flags(int flags) {
+  fsocket::RecvMsgFlags r;
+  if (flags & MSG_PEEK) {
+    r |= fsocket::RecvMsgFlags::PEEK;
+  }
+  return r;
+}
+
+fsocket::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::SendMsgFlags(); }
+
+size_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* addr, size_t addr_len) {
+  switch (fidl.which()) {
+    case fnet::SocketAddress::Tag::kIpv4: {
+      struct sockaddr_in tmp;
+      auto* s = reinterpret_cast<struct sockaddr_in*>(addr);
+      if (addr_len < sizeof(tmp)) {
+        s = &tmp;
+      }
+      memset(s, 0x00, addr_len);
+      const auto& ipv4 = fidl.ipv4();
+      s->sin_family = AF_INET;
+      s->sin_port = htons(ipv4.port);
+      std::copy(ipv4.address.addr.begin(), ipv4.address.addr.end(),
+                reinterpret_cast<uint8_t*>(&s->sin_addr));
+      // Copy truncated address.
+      if (s == &tmp) {
+        memcpy(addr, &tmp, addr_len);
+      }
+      return sizeof(tmp);
+    }
+    case fnet::SocketAddress::Tag::kIpv6: {
+      struct sockaddr_in6 tmp;
+      auto* s = reinterpret_cast<struct sockaddr_in6*>(addr);
+      if (addr_len < sizeof(tmp)) {
+        s = &tmp;
+      }
+      memset(s, 0x00, addr_len);
+      const auto& ipv6 = fidl.ipv6();
+      s->sin6_family = AF_INET6;
+      s->sin6_port = htons(ipv6.port);
+      s->sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index);
+      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
+                s->sin6_addr.__in6_union.__s6_addr);
+      // Copy truncated address.
+      if (s == &tmp) {
+        memcpy(addr, &tmp, addr_len);
+      }
+      return sizeof(tmp);
+    }
+  }
+}
+
 zx_status_t base_close(const zx::channel& channel) {
   auto response = fsocket::BaseSocket::Call::Close(channel.borrow());
   zx_status_t status;
@@ -35,11 +134,15 @@ zx_status_t base_close(const zx::channel& channel) {
 
 zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, socklen_t addrlen,
                       int16_t* out_code) {
-  auto response = fsocket::BaseSocket::Call::Bind(
-      std::move(channel),
-      fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
-                       addrlen));
-  zx_status_t status = response.status();
+  SocketAddress fidl_addr;
+  zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto response =
+      fsocket::BaseSocket::Call::Bind2(std::move(channel), std::move(fidl_addr.address));
+  status = response.status();
   if (status != ZX_OK) {
     return status;
   }
@@ -54,11 +157,31 @@ zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, 
 
 zx_status_t base_connect(zx::unowned_channel channel, const struct sockaddr* addr,
                          socklen_t addrlen, int16_t* out_code) {
-  auto response = fsocket::BaseSocket::Call::Connect(
-      std::move(channel),
-      fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
-                       addrlen));
-  zx_status_t status = response.status();
+  // If address is AF_UNSPEC we should call disconnect.
+  if (addr->sa_family == AF_UNSPEC) {
+    auto response = fsocket::BaseSocket::Call::Disconnect(std::move(channel));
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    const auto& result = response.Unwrap()->result;
+    if (result.is_err()) {
+      *out_code = static_cast<int16_t>(result.err());
+    } else {
+      *out_code = 0;
+    }
+    return ZX_OK;
+  }
+
+  SocketAddress fidl_addr;
+  zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto response =
+      fsocket::BaseSocket::Call::Connect2(std::move(channel), std::move(fidl_addr.address));
+  status = response.status();
   if (status != ZX_OK) {
     return status;
   }
@@ -88,20 +211,19 @@ zx_status_t base_getname(R response, struct sockaddr* addr, socklen_t* addrlen, 
   }
   *out_code = 0;
   auto const& out = result.response().addr;
-  memcpy(addr, out.data(), std::min(static_cast<size_t>(*addrlen), out.count()));
-  *addrlen = static_cast<socklen_t>(out.count());
+  *addrlen = fidl_to_sockaddr(out, addr, *addrlen);
   return ZX_OK;
 }
 
 zx_status_t base_getsockname(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetSockName(std::move(channel)), addr, addrlen,
+  return base_getname(fsocket::BaseSocket::Call::GetSockName2(std::move(channel)), addr, addrlen,
                       out_code);
 }
 
 zx_status_t base_getpeername(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetPeerName(std::move(channel)), addr, addrlen,
+  return base_getname(fsocket::BaseSocket::Call::GetPeerName2(std::move(channel)), addr, addrlen,
                       out_code);
 }
 
@@ -473,8 +595,10 @@ static fdio_ops_t fdio_datagram_socket_ops = {
             datalen += msg->msg_iov[i].iov_len;
           }
 
-          auto response = sio->client.RecvMsg(msg->msg_namelen, static_cast<uint32_t>(datalen),
-                                              msg->msg_controllen, static_cast<int16_t>(flags));
+          // TODO(fxbug.dev/21106): Support control messages.
+          auto response =
+              sio->client.RecvMsg2(msg->msg_namelen != 0 && msg->msg_name != nullptr,
+                                   static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -488,11 +612,13 @@ static fdio_ops_t fdio_datagram_socket_ops = {
 
           {
             auto const& out = result.response().addr;
-            if (msg->msg_name != nullptr) {
-              memcpy(msg->msg_name, out.data(),
-                     std::min(static_cast<size_t>(msg->msg_namelen), out.count()));
+            // Result address has invalid tag when it's not provided by the server (when want_addr
+            // is false).
+            // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
+            if (msg->msg_namelen != 0 && msg->msg_name != nullptr && !out.has_invalid_tag()) {
+              msg->msg_namelen = static_cast<socklen_t>(fidl_to_sockaddr(
+                  out, static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
             }
-            msg->msg_namelen = static_cast<socklen_t>(out.count());
           }
 
           {
@@ -516,15 +642,6 @@ static fdio_ops_t fdio_datagram_socket_ops = {
               actual += result.response().truncated;
             }
             *out_actual = actual;
-          }
-
-          {
-            auto const& out = result.response().control;
-            if (msg->msg_control != nullptr) {
-              memcpy(msg->msg_control, out.data(),
-                     std::min(static_cast<size_t>(msg->msg_controllen), out.count()));
-            }
-            msg->msg_controllen = static_cast<socklen_t>(out.count());
           }
           return ZX_OK;
         },
@@ -559,14 +676,21 @@ static fdio_ops_t fdio_datagram_socket_ops = {
               }
             }
           };
-
-          auto response = sio->client.SendMsg2(
-              fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_name)),
-                               msg->msg_namelen),
-              vec(),
-              fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(msg->msg_control)),
-                               msg->msg_controllen),
-              static_cast<int16_t>(flags));
+          SocketAddress addr;
+          // Attempt to load socket address if either name or namelen is set.
+          // If only one is set, it'll result in INVALID_ARGS.
+          if (msg->msg_namelen != 0 || msg->msg_name != nullptr) {
+            zx_status_t status =
+                addr.LoadSockAddr(static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen);
+            if (status != ZX_OK) {
+              return status;
+            }
+          }
+          // TODO(fxbug.dev/21106): Support control messages.
+          // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
+          // Currently just using a default-initialized union with an invalid tag.
+          auto response = sio->client.SendMsg(std::move(addr.address), vec(),
+                                              fsocket::SendControlData(), to_sendmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -582,8 +706,22 @@ static fdio_ops_t fdio_datagram_socket_ops = {
         },
     .shutdown =
         [](fdio_t* io, int how, int16_t* out_code) {
+          fsocket::ShutdownMode mode;
+          switch (how) {
+            case SHUT_RD:
+              mode = fsocket::ShutdownMode::READ;
+              break;
+            case SHUT_WR:
+              mode = fsocket::ShutdownMode::WRITE;
+              break;
+            case SHUT_RDWR:
+              mode = fsocket::ShutdownMode::READ | fsocket::ShutdownMode::WRITE;
+              break;
+            default:
+              return ZX_ERR_INVALID_ARGS;
+          }
           auto const sio = reinterpret_cast<zxio_datagram_socket_t*>(fdio_get_zxio(io));
-          auto response = sio->client.Shutdown(static_cast<int16_t>(how));
+          auto response = sio->client.Shutdown2(mode);
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
@@ -733,7 +871,7 @@ static fdio_ops_t fdio_stream_socket_ops = {
     .accept =
         [](fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code) {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          auto response = sio->client.Accept(static_cast<int16_t>(flags));
+          auto response = sio->client.Accept2();
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;
