@@ -24,14 +24,15 @@ namespace {
 //
 // We use a macro to avoid having to evaluate the arguments in the
 // (expected case) that the condition is true.
-#define AssertThat(condition, ...)                                    \
+#define AssertThat(workload, condition, ...)                          \
   do {                                                                \
     if (unlikely(!(condition))) {                                     \
       fprintf(stderr,                                                 \
               "\n"                                                    \
               "*** FAILURE ***\n"                                     \
               "\n"                                                    \
-              "CPU calculation failed:\n\n");                         \
+              "Workload '%s' CPU calculation failed:\n\n",            \
+              workload);                                              \
       fprintf(stderr, __VA_ARGS__);                                   \
       fprintf(stderr,                                                 \
               "\n"                                                    \
@@ -43,8 +44,8 @@ namespace {
   } while (false)
 
 // Assert that the given values are equal, within an |epsilon| error.
-void AssertEqual(double expected, double actual, double epsilon = 0.0) {
-  AssertThat(std::abs(expected - actual) <= epsilon,
+void AssertEqual(const char* workload, double expected, double actual, double epsilon = 0.0) {
+  AssertThat(workload, std::abs(expected - actual) <= epsilon,
              "      Expected: %.17g (%s)\n"
              "        Actual: %.17g (%s)\n"
              "    Difference: %.17g > %.17g (***)\n",
@@ -53,8 +54,8 @@ void AssertEqual(double expected, double actual, double epsilon = 0.0) {
 }
 
 // Assert that the given uint64_t's are equal.
-void AssertEqual(uint64_t expected, uint64_t actual) {
-  AssertThat(expected == actual,
+void AssertEqual(const char* workload, uint64_t expected, uint64_t actual) {
+  AssertThat(workload, expected == actual,
              "      Expected: %20ld (%#016lx)\n"
              "        Actual: %20ld (%#016lx)\n",
              expected, expected, actual, actual);
@@ -114,7 +115,7 @@ class SinCosWorkload final : public Workload {
       result += a * a + b * b;
     }
 
-    AssertEqual(kIterations, result, DBL_EPSILON * kIterations);
+    AssertEqual("trigonometry", kIterations, result, DBL_EPSILON * kIterations);
   }
 };
 
@@ -132,7 +133,7 @@ class FibonacciWorkload final : public Workload {
  public:
   void DoWork() final {
     uint64_t result = Fibonacci(HideFromCompiler(30));
-    AssertEqual(832040, result);
+    AssertEqual("fibonacci", 832040, result);
   }
 };
 
@@ -177,7 +178,7 @@ class MatrixMultiplicationWorkload final : public Workload {
     // Ensure the final result matches our random_ matrix.
     for (int x = 0; x < kSize; x++) {
       for (int y = 0; y < kSize; y++) {
-        AssertEqual(active.m[x][y], random_.m[x][y], /*epsilon=*/0.0);
+        AssertEqual("matrix", active.m[x][y], random_.m[x][y], /*epsilon=*/0.0);
       }
     }
   }
@@ -208,7 +209,7 @@ class MersenneTwisterWorkload final : public Workload {
 
     // The C++11 standard states that the 10,000th consecutive
     // invocation of the mt19937_64 should be the following value.
-    AssertEqual(v, 0x8a85'92f5'817e'd872);
+    AssertEqual("mersenne", v, 0x8a85'92f5'817e'd872);
   }
 };
 
