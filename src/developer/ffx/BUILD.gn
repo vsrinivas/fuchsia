@@ -41,6 +41,7 @@ if (is_host) {
     sources = [
       "src/args.rs",
       "src/constants.rs",
+      "src/lib.rs",
       "src/logger.rs",
       "src/main.rs",
     ]

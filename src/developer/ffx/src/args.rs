@@ -21,7 +21,7 @@ pub struct Ffx {
     pub target: Option<String>,
 
     #[argh(subcommand)]
-    pub subcommand: Subcommand,
+    pub subcommand: Option<Subcommand>,
 }
 
 impl Default for Ffx {
@@ -30,11 +30,11 @@ impl Default for Ffx {
             target: None,
             config: None,
             env: None,
-            subcommand: Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+            subcommand: Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
                 subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(
                     ffx_daemon_start_args::StartCommand {},
                 ),
-            }),
+            })),
         }
     }
 }

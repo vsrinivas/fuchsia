@@ -39,10 +39,10 @@ async fn is_experiment_subcommand_on(key: &'static str) -> bool {
     ffx_config::get!(bool, key, false).await
 }
 
-fn get_log_name(subcommand: &Subcommand) -> &'static str {
-    if let Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+fn get_log_name(subcommand: &Option<Subcommand>) -> &'static str {
+    if let Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
         subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
-    }) = subcommand
+    })) = subcommand
     {
         "ffx.daemon"
     } else {
