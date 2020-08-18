@@ -59,6 +59,35 @@ void RunWorkload(StatusLine* status, ProfileManager* profile_manager, Temperatur
               DurationToSecs(duration), TemperatureToString(temperature).c_str());
 }
 
+// Get a list of workloads to run.
+std::optional<std::vector<CpuWorkload>> GetWorkloads(const CommandLineArgs& args) {
+  // Fetch all workloads.
+  std::vector<CpuWorkload> workloads = GetCpuWorkloads();
+
+  // If no specific workload was used, run them all.
+  if (args.cpu_workload.empty()) {
+    return workloads;
+  }
+
+  // Otherwise, find the named workload.
+  for (const CpuWorkload& workload : workloads) {
+    if (workload.name == args.cpu_workload) {
+      return std::vector<CpuWorkload>{workload};
+    }
+  }
+
+  // Invalid workload.
+  fprintf(stderr,
+          "Invalid workload name: '%s'.\n\n"
+          "Valid workload names are:\n",
+          args.cpu_workload.c_str());
+  for (const CpuWorkload& workload : workloads) {
+    fprintf(stderr, "  %s\n", workload.name.c_str());
+  }
+
+  return std::nullopt;
+}
+
 }  // namespace
 
 bool StressCpu(StatusLine* status, const CommandLineArgs& args, zx::duration duration,
@@ -86,7 +115,11 @@ bool StressCpu(StatusLine* status, const CommandLineArgs& args, zx::duration dur
   }
 
   // Get workloads.
-  std::vector<CpuWorkload> workloads = GetCpuWorkloads();
+  std::optional<std::vector<CpuWorkload>> maybe_workloads = GetWorkloads(args);
+  if (!maybe_workloads.has_value()) {
+    return false;
+  }
+  std::vector<CpuWorkload> workloads = std::move(maybe_workloads).value();
 
   // Get initial time per test.
   //

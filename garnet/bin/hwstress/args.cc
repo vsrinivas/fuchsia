@@ -34,6 +34,10 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
                     &CommandLineArgs::ram_to_test_percent);
   parser->AddSwitch("utilization", 'u', "Target CPU utilization percent.",
                     &CommandLineArgs::utilization_percent);
+  parser->AddSwitch("workload", 'w',
+                    "Name of a CPU workload to use. If not specified, "
+                    "all available workloads will be used.",
+                    &CommandLineArgs::cpu_workload);
   return parser;
 }
 
@@ -65,6 +69,10 @@ CPU test options:
                          CPU should be used, while 50 would indicate
                          to use 50% of CPU. Must be strictly greater
                          than 0, and no more than 100.
+  -w, --workload=<name>  Run a specific CPU workload. The full list
+                         can be determined by using "--workload=list".
+                         If not specified, each of the internal
+                         workloads will be iterated through repeatedly.
 
 Flash test options:
   -c, --cleanup-test-partitions

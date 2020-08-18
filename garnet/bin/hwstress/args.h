@@ -75,6 +75,9 @@ struct CommandLineArgs {
 
   // Target CPU utilization, as a percentage in (0.0, 100.0].
   double utilization_percent = 100.0;
+
+  // CPU workload to use.
+  std::string cpu_workload;
 };
 
 // Print usage information to stdout.

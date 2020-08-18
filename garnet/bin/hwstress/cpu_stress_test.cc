@@ -20,5 +20,21 @@ TEST(Cpu, StressCpu) {
   EXPECT_TRUE(StressCpu(&status, args, zx::msec(1)));
 }
 
+TEST(Cpu, WorkloadName) {
+  StatusLine status;
+  CommandLineArgs args;
+
+  // No workload name should complete successfully.
+  EXPECT_TRUE(StressCpu(&status, args, zx::msec(1)));
+
+  // A valid workload name should complete successfully.
+  args.cpu_workload = "matrix";
+  EXPECT_TRUE(StressCpu(&status, args, zx::msec(1)));
+
+  // An invalid workload name should fail.
+  args.cpu_workload = "does_not_exist";
+  EXPECT_FALSE(StressCpu(&status, args, zx::msec(1)));
+}
+
 }  // namespace
 }  // namespace hwstress

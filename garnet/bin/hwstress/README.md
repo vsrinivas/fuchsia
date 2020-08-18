@@ -32,6 +32,10 @@ CPU test options:
                          CPU should be used, while 50 would indicate
                          to use 50% of CPU. Must be strictly greater
                          than 0, and no more than 100.
+  -w, --workload=<name>  Run a specific CPU workload. The full list
+                         can be determined by using "--workload=list".
+                         If not specified, each of the internal
+                         workloads will be iterated through repeatedly.
 
 Flash test options:
   -c, --cleanup-test-partitions

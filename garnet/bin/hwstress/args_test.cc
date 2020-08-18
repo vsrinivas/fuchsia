@@ -96,6 +96,10 @@ TEST(Args, ParseCpu) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u"}}).is_error());
   EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u", "0"}}).is_error());
   EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-u", "101"}}).is_error());
+
+  // Workload values
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu"}})->cpu_workload, "");
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-w", "xyz"}})->cpu_workload, "xyz");
 }
 
 }  // namespace
