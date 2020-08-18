@@ -821,14 +821,9 @@ impl DhcpOption {
                     .map_err(|_| ProtocolError::InvalidBufferLength(val.len()))?;
                 Ok(DhcpOption::ServerIdentifier(Ipv4Addr::from(bytes)))
             }
-            OptionCode::ParameterRequestList => {
-                let reqs = val.into_iter().try_fold(Vec::new(), |mut reqs, code| {
-                    let code = OptionCode::try_from(code)?;
-                    reqs.push(code);
-                    Ok(reqs)
-                })?;
-                Ok(DhcpOption::ParameterRequestList(reqs))
-            }
+            OptionCode::ParameterRequestList => Ok(DhcpOption::ParameterRequestList(
+                val.into_iter().filter_map(|code| OptionCode::try_from(code).ok()).collect(),
+            )),
             OptionCode::Message => {
                 let message = String::from_utf8(val)
                     .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
@@ -2092,5 +2087,32 @@ mod tests {
         let mut expected_msg = msg();
         expected_msg.options.remove(0);
         assert_eq!(expected_msg, result);
+    }
+
+    #[test]
+    fn test_parameter_request_list_with_known_and_unknown_options_returns_known_options() {
+        assert_eq!(
+            DhcpOption::from_raw_parts(
+                OptionCode::ParameterRequestList,
+                vec![
+                    121, /* unrecognized */
+                    1, 3, 6, 15, 31, 33, 249, /* unrecognized */
+                    43, 44, 46, 47, 119, /* unrecognized */
+                    252, /* unrecognized */
+                ]
+            ),
+            Ok(DhcpOption::ParameterRequestList(vec![
+                OptionCode::SubnetMask,
+                OptionCode::Router,
+                OptionCode::DomainNameServer,
+                OptionCode::DomainName,
+                OptionCode::PerformRouterDiscovery,
+                OptionCode::StaticRoute,
+                OptionCode::VendorSpecificInformation,
+                OptionCode::NetBiosOverTcpipNameServer,
+                OptionCode::NetBiosOverTcpipNodeType,
+                OptionCode::NetBiosOverTcpipScope,
+            ]))
+        );
     }
 }
