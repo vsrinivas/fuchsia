@@ -45,7 +45,6 @@ static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_c
 static constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
 static constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
 static constexpr char kJsonKeyTargetName[] = "target_name";
-static constexpr char kJsonKeyStates[] = "states";
 static constexpr char kJsonKeyTripPoint[] = "trip_point";
 static constexpr char kJsonKeyTripPointDeactivateBelow[] = "deactivate_below";
 static constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
@@ -382,47 +381,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                      independent_volume_control, std::move(pipeline_config), driver_gain_db)));
 }
 
-// TODO(fxbug.dev/57804): Remove support for old config format once it is no longer in use.
-std::vector<ThermalConfig::Entry> ParseThermalPolicyEntriesFromOldFormatJsonObject(
-    const rapidjson::Value& value) {
-  FX_DCHECK(value.IsObject());
-
-  auto target_name_it = value.FindMember(kJsonKeyTargetName);
-  FX_DCHECK(target_name_it != value.MemberEnd());
-  FX_DCHECK(target_name_it->value.IsString());
-  const auto* target_name = target_name_it->value.GetString();
-
-  auto states_it = value.FindMember(kJsonKeyStates);
-  FX_DCHECK(states_it != value.MemberEnd());
-  FX_DCHECK(states_it->value.IsArray());
-  auto states_array = states_it->value.GetArray();
-
-  std::vector<ThermalConfig::Entry> entries;
-  for (const auto& state : states_array) {
-    FX_DCHECK(state.IsObject());
-
-    auto trip_point_it = state.FindMember(kJsonKeyTripPoint);
-    FX_DCHECK(trip_point_it != state.MemberEnd());
-    FX_DCHECK(trip_point_it->value.IsUint());
-    FX_DCHECK(trip_point_it->value.GetUint() >= 1);
-    FX_DCHECK(trip_point_it->value.GetUint() <= 100);
-    auto trip_point = trip_point_it->value.GetUint();
-
-    auto config_it = state.FindMember(kJsonKeyConfig);
-    FX_DCHECK(config_it != state.MemberEnd());
-    rapidjson::StringBuffer config_buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
-    config_it->value.Accept(writer);
-
-    entries.push_back(ThermalConfig::Entry(
-        ThermalConfig::TripPoint{trip_point, trip_point},
-        {ThermalConfig::StateTransition(target_name, config_buf.GetString())}));
-  }
-
-  return entries;
-}
-
-ThermalConfig::Entry ParseThermalPolicyEntryFromNewFormatJsonObject(const rapidjson::Value& value) {
+ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
   FX_DCHECK(value.IsObject());
 
   auto trip_point_it = value.FindMember(kJsonKeyTripPoint);
@@ -542,36 +501,12 @@ fit::result<> ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& inp
   return fit::ok();
 }
 
-void ParseOldFormatThermalPolicy(const rapidjson::Value::ConstArray& thermal_policy_entries,
-                                 ProcessConfigBuilder* config_builder) {
-  // This is an artifical restriction to simplify parsing as the old format is phased out.
-  FX_DCHECK(thermal_policy_entries.Size() == 1);
-  const auto entries = ParseThermalPolicyEntriesFromOldFormatJsonObject(thermal_policy_entries[0]);
-  for (const auto& entry : entries) {
-    config_builder->AddThermalPolicyEntry(entry);
-  }
-}
-
-void ParseNewFormatThermalPolicy(const rapidjson::Value::ConstArray& thermal_policy_entries,
-                                 ProcessConfigBuilder* config_builder) {
-  for (const auto& thermal_policy_entry : thermal_policy_entries) {
-    config_builder->AddThermalPolicyEntry(
-        ParseThermalPolicyEntryFromNewFormatJsonObject(thermal_policy_entry));
-  }
-}
-
 void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
                                       ProcessConfigBuilder* config_builder) {
   FX_DCHECK(value.IsArray());
-  const auto thermal_policy_entries = value.GetArray();
-
-  // Inspect the first entry to determine whether format is old or new. Entries in the old format
-  // include the target name at the top level; entries in the new format do not.
-  const auto& entry = thermal_policy_entries[0];
-  if (entry.FindMember(kJsonKeyTargetName) != entry.MemberEnd()) {
-    ParseOldFormatThermalPolicy(thermal_policy_entries, config_builder);
-  } else {
-    ParseNewFormatThermalPolicy(thermal_policy_entries, config_builder);
+  for (const auto& thermal_policy_entry : value.GetArray()) {
+    config_builder->AddThermalPolicyEntry(
+        ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));
   }
 }
 

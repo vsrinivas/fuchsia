@@ -254,44 +254,7 @@ impl ThermalLimiter {
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
-                        // NOTE(fxb/57804): Copypasta between Subscribe and Subscribe2
-                        // implementations is temporary until Subscribe2 replaces Subscribe.
                         fthermal::ControllerRequest::Subscribe {
-                            actor,
-                            actor_type,
-                            trip_points,
-                            responder,
-                        } => {
-                            fuchsia_trace::instant!(
-                                "power_manager",
-                                "ThermalLimiter::handle_subscribe",
-                                fuchsia_trace::Scope::Thread
-                            );
-                            // A TripPoint with deactivate_below == activate_at is equivalent to the
-                            // older style of trip point with a single thermal load specified.
-                            let trip_points: Vec<fthermal::TripPoint> = trip_points
-                                .into_iter()
-                                .map(|val| fthermal::TripPoint {
-                                    deactivate_below: val,
-                                    activate_at: val,
-                                })
-                                .collect();
-                            let mut result = self
-                                .handle_new_client(actor.into_proxy()?, actor_type, trip_points)
-                                .await;
-                            log_if_err!(
-                                result.map_err(|e| format!("{:?}", e)),
-                                "Failed to handle new client"
-                            );
-                            fuchsia_trace::instant!(
-                                "power_manager",
-                                "ThermalLimiter::handle_new_client_result",
-                                fuchsia_trace::Scope::Thread,
-                                "result" => format!("{:?}", result).as_str()
-                            );
-                            let _ = responder.send(&mut result);
-                        }
-                        fthermal::ControllerRequest::Subscribe2 {
                             actor,
                             actor_type,
                             trip_points,
@@ -530,7 +493,7 @@ pub mod tests {
         let mut trip_points: Vec<fthermal::TripPoint> =
             trip_points.into_iter().map(|p| p.into()).collect();
         controller_proxy
-            .subscribe2(actor_proxy, actor_type, &mut trip_points.iter_mut())
+            .subscribe(actor_proxy, actor_type, &mut trip_points.iter_mut())
             .await
             .unwrap()?;
 

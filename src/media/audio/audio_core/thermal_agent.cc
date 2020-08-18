@@ -148,12 +148,12 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
     trip_points.push_back(entry.trip_point());
   }
 
-  thermal_controller_->Subscribe2(
+  thermal_controller_->Subscribe(
       binding_.NewBinding(), fuchsia::thermal::ActorType::AUDIO, std::move(trip_points),
-      [this](fuchsia::thermal::Controller_Subscribe2_Result result) {
+      [this](fuchsia::thermal::Controller_Subscribe_Result result) {
         if (result.is_err()) {
           FX_CHECK(result.err() != fuchsia::thermal::Error::INVALID_ARGUMENTS);
-          FX_LOGS(ERROR) << "fuchsia.thermal.Controller/Subscribe2 failed";
+          FX_LOGS(ERROR) << "fuchsia.thermal.Controller/Subscribe failed";
         }
 
         thermal_controller_.set_error_handler(nullptr);

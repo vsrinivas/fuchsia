@@ -890,75 +890,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidChannelCount) {
   EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(9, 8)).is_error());
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOldFormatThermalPolicy) {
-  static const std::string kConfigWithThermalPolicy =
-      R"JSON({
-    "volume_curve": [
-      {
-          "level": 0.0,
-          "db": -160.0
-      },
-      {
-          "level": 1.0,
-          "db": 0.0
-      }
-    ],
-    "thermal_policy" : [
-      {
-          "target_name": "target name 0",
-          "states": [
-            {
-              "trip_point": 25,
-              "config": {
-                "value": "config 0 25"
-              }
-            },
-            {
-              "trip_point": 50,
-              "config": {
-                "value": "config 0 50"
-              }
-            },
-            {
-              "trip_point": 75,
-              "config": {
-                "value": "config 0 75"
-              }
-            }
-          ]
-      }
-    ]
-  })JSON";
-  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithThermalPolicy.data(),
-                               kConfigWithThermalPolicy.size()));
-
-  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
-
-  auto config = result.value();
-  const auto& entries = config.thermal_config().entries();
-  EXPECT_EQ(3u, entries.size());
-
-  EXPECT_EQ(25u, entries[0].trip_point().deactivate_below);
-  EXPECT_EQ(25u, entries[0].trip_point().activate_at);
-  EXPECT_EQ(1u, entries[0].state_transitions().size());
-  EXPECT_EQ("target name 0", entries[0].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 0 25\"}", entries[0].state_transitions()[0].config());
-
-  EXPECT_EQ(50u, entries[1].trip_point().deactivate_below);
-  EXPECT_EQ(50u, entries[1].trip_point().activate_at);
-  EXPECT_EQ(1u, entries[1].state_transitions().size());
-  EXPECT_EQ("target name 0", entries[1].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 0 50\"}", entries[1].state_transitions()[0].config());
-
-  EXPECT_EQ(75u, entries[2].trip_point().deactivate_below);
-  EXPECT_EQ(75u, entries[2].trip_point().activate_at);
-  EXPECT_EQ(1u, entries[2].state_transitions().size());
-  EXPECT_EQ("target name 0", entries[2].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 0 75\"}", entries[2].state_transitions()[0].config());
-}
-
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithNewFormatThermalPolicy) {
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
   static const std::string kConfigWithThermalPolicy =
       R"JSON({
     "volume_curve": [

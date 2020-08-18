@@ -65,14 +65,14 @@ class FakeThermalController : public fuchsia::thermal::Controller {
   bool& set_thermal_state_returned() { return set_thermal_state_returned_; }
 
   // fuchsia::thermal::Controller implementation.
-  void Subscribe2(fidl::InterfaceHandle<class fuchsia::thermal::Actor> actor,
-                  fuchsia::thermal::ActorType actor_type, std::vector<TripPoint> trip_points,
-                  Subscribe2Callback callback) override {
+  void Subscribe(fidl::InterfaceHandle<class fuchsia::thermal::Actor> actor,
+                 fuchsia::thermal::ActorType actor_type, std::vector<TripPoint> trip_points,
+                 SubscribeCallback callback) override {
     actor_.Bind(std::move(actor));
     actor_type_ = actor_type;
     trip_points_.assign(trip_points.begin(), trip_points.end());
-    callback(fuchsia::thermal::Controller_Subscribe2_Result::WithResponse(
-        fuchsia::thermal::Controller_Subscribe2_Response()));
+    callback(fuchsia::thermal::Controller_Subscribe_Result::WithResponse(
+        fuchsia::thermal::Controller_Subscribe_Response()));
   }
 
  private:

@@ -33,7 +33,7 @@ const uint32 MAX_THERMAL_LOAD = 100;
 /// is greater than or equal to `activate_at`, and deactivated when it is less than
 /// `deactivate_below`.
 ///
-/// See [fuchsia.thermal/Controller.Subscribe2] for the relationship between trip points and thermal
+/// See [fuchsia.thermal/Controller.Subscribe] for the relationship between trip points and thermal
 /// states.
 struct TripPoint {
     /// The trip point will be deactivated when thermal load drops below this value.
@@ -46,30 +46,6 @@ struct TripPoint {
 /// A protocol providing the API for a client service to subscribe to receive thermal state updates.
 [Discoverable]
 protocol Controller {
-    // TODO(fxb/57804): Replace this method with Subscribe2 once clients are transitioned.
-    /// Subscribes with the Controller to receive thermal state changes on the specified
-    /// [fuchsia.thermal/Actor] proxy handle.
-    ///
-    /// The current thermal state will be sent immediately, with all subsequent state changes
-    /// occuring based on the changing system thermal load and specified `trip_points`.
-    ///
-    /// + request `actor` a [fuchsia.thermal/Actor] proxy to handle the SetThermalState callbacks
-    /// + request `actor_type` a [fuchsia.thermal/ActorType] value to indicate the type of
-    ///     subsystem this actor is representing. The Controller may leverage this extra
-    ///     information to thermally limit only specific subsystems as needed.
-    /// + request `trip_points` a vector containing the points within the normalized thermal
-    ///     limiting range [0 - `MAX_THERMAL_LOAD`] at which the Actor should be transitioned to
-    ///     the next thermal state. The Controller will call SetThermalState on the Actor each
-    ///     time these points are crossed within the normalized range. The vector must:
-    ///       - have length in the range [1 - `MAX_TRIP_POINT_COUNT`]
-    ///       - have values in the range [1 - `MAX_THERMAL_LOAD`]
-    ///       - be monotonically increasing
-    /// * error a [fuchsia.thermal/Error] value indicating the reason (if any) that Subscribe failed
-    [Deprecated, Transitional]
-    Subscribe(Actor actor,
-              ActorType actor_type,
-              vector<uint32>:MAX_TRIP_POINT_COUNT trip_points) -> () error Error;
-
     /// Subscribes with the Controller to receive thermal state changes on the specified
     /// [fuchsia.thermal/Actor] proxy handle.
     ///
@@ -94,10 +70,9 @@ protocol Controller {
     ///   Failure to meet these conditions will cause [fuchsia.thermal/Error].INVALID_ARGUMENTS to
     ///   be returned.
     /// * error a [fuchsia.thermal/Error] value indicating the reason (if any) that Subscribe failed
-    [Transitional]
-    Subscribe2(Actor actor,
-               ActorType actor_type,
-               vector<TripPoint>:MAX_TRIP_POINT_COUNT trip_points) -> () error Error;
+    Subscribe(Actor actor,
+              ActorType actor_type,
+              vector<TripPoint>:MAX_TRIP_POINT_COUNT trip_points) -> () error Error;
 };
 
 /// The protocol to receive thermal state updates from the fuchsia.thermal/Controller.
