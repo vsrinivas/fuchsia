@@ -40,26 +40,7 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTask>, Error> {
-        // all sinks must support these options
-        let pcm_format = PcmFormat {
-            pcm_mode: AudioPcmMode::Linear,
-            bits_per_sample: 16,
-            frames_per_second: 48000,
-            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-        };
-
-        let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)?;
-        if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
-            fx_vlog!(2, "SourceTaskBuilder: can't build encoded stream: {:?}", e);
-            return Err(e);
-        }
-        Ok(Box::new(ConfiguredSourceTask::build(
-            pcm_format,
-            self.source_type,
-            peer_id.clone(),
-            codec_config,
-            data_stream_inspect,
-        )))
+        Ok(Box::new(self.configure_task(peer_id, codec_config, data_stream_inspect)?))
     }
 }
 
@@ -69,15 +50,46 @@ impl SourceTaskBuilder {
     pub fn new(source_type: sources::AudioSourceType) -> Self {
         Self { source_type }
     }
+
+    pub(crate) fn configure_task(
+        &self,
+        peer_id: &PeerId,
+        codec_config: &MediaCodecConfig,
+        data_stream_inspect: DataStreamInspect,
+    ) -> Result<ConfiguredSourceTask, Error> {
+        let channel_map = match codec_config.channel_count()? {
+            1 => vec![AudioChannelId::Cf],
+            2 => vec![AudioChannelId::Lf, AudioChannelId::Rf],
+            _ => return Err(format_err!("SourceTask only supports up to 2 channels")),
+        };
+        let pcm_format = PcmFormat {
+            pcm_mode: AudioPcmMode::Linear,
+            bits_per_sample: 16,
+            frames_per_second: codec_config.sampling_frequency()?,
+            channel_map,
+        };
+        let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)?;
+        if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
+            fx_vlog!(2, "SourceTaskBuilder: can't build encoded stream: {:?}", e);
+            return Err(e);
+        }
+        Ok(ConfiguredSourceTask::build(
+            pcm_format,
+            self.source_type,
+            peer_id.clone(),
+            codec_config,
+            data_stream_inspect,
+        ))
+    }
 }
 
 /// Provides audio from this to the MediaStream when started.  Streams are created and started when
 /// this task is started, and destoyed when stopped.
-struct ConfiguredSourceTask {
+pub(crate) struct ConfiguredSourceTask {
     /// The type of source audio.
     source_type: sources::AudioSourceType,
     /// Format the source audio should be produced in.
-    pcm_format: PcmFormat,
+    pub(crate) pcm_format: PcmFormat,
     /// Id of the peer that will be receiving the stream.  Used to distinguish sources for Fuchsia
     /// Media.
     peer_id: PeerId,
@@ -134,7 +146,7 @@ impl ConfiguredSourceTask {
     /// Build a new ConfiguredSourceTask.  Usually only called by SourceTaskBuilder.
     /// `ConfiguredSourceTask::start` will only return errors if the settings here can not produce a
     /// stream.  No checks are done when building.
-    fn build(
+    pub(crate) fn build(
         pcm_format: PcmFormat,
         source_type: sources::AudioSourceType,
         peer_id: PeerId,

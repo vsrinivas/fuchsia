@@ -117,18 +117,26 @@ rustc_test("encoding_integration_bin") {
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/mundane",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
   ]
 
   sources = [
     "src/encoding.rs",
     "src/encoding_integration.rs",
+    "src/pcm_audio.rs",
+    "src/source_task.rs",
+    "src/sources.rs",
   ]
 }
 
