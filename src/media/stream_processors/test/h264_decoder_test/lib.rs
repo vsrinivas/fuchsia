@@ -9,15 +9,15 @@
 
 #![cfg(test)]
 
-mod h264;
-
-use crate::h264::*;
 use anyhow;
+use h264_stream::*;
 use lazy_static::lazy_static;
 use std::{fs::File, io::Read, rc::Rc, result::Result};
 use stream_processor_decoder_factory::*;
 use stream_processor_test::*;
 use video_frame_hasher::*;
+
+pub const BEAR_TEST_FILE: &str = "/pkg/data/bear.h264";
 
 lazy_static! {
     static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");

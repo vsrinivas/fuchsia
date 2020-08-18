@@ -7,14 +7,13 @@ use async_trait::async_trait;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
+use h264_stream::*;
 use std::io::Write;
 use std::rc::Rc;
 use stream_processor_decoder_factory::*;
 use stream_processor_encoder_factory::*;
 use stream_processor_test::*;
 use video_frame_stream::*;
-
-use crate::h264::*;
 
 pub struct H264NalValidator {
     pub expected_nals: Option<Vec<H264NalKind>>,

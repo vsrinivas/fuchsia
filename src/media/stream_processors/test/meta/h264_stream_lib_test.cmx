@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/h264_stream_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

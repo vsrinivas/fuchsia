@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod h264;
 mod test_suite;
 
-use crate::h264::*;
 use crate::test_suite::*;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_async as fasync;
+use h264_stream::*;
 use std::rc::Rc;
 use stream_processor_test::*;
 
