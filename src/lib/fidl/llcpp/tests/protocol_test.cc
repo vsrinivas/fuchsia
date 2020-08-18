@@ -7,6 +7,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/object.h>
 #include <zircon/errors.h>
@@ -350,4 +351,18 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterTrackingPtrMove) {
   // Handle cleaned up after ResultOf destructor is called.
   // Remaining handle is the dupe.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
+}
+
+class EmptyImpl : public test::Empty::Interface {
+ public:
+};
+
+TEST(EmptyTest, EmptyProtocolHasBindableInterface) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  zx::channel client_end, server_end;
+  ASSERT_EQ(zx::channel::create(0, &client_end, &server_end), ZX_OK);
+
+  EmptyImpl server;
+  fidl::BindServer(loop.dispatcher(), std::move(server_end), &server);
 }

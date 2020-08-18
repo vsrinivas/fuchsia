@@ -47,3 +47,6 @@ protocol HandleProvider {
     GetHandleVector(uint32 count) -> (vector<HandleStruct> value);
     GetHandleUnion() -> (HandleUnionStruct value);
 };
+
+protocol Empty {
+};

@@ -522,7 +522,6 @@ class {{ .Name }} final {
 
 {{ template "ClientForwardDeclaration" . }}
 
-  {{- if .Methods }}
 {{ "" }}
   // Pure-virtual interface to be implemented by a server.
   class Interface {
@@ -595,7 +594,6 @@ class {{ .Name }} final {
   static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-  {{- end }}
 
   {{- /* Events */}}
   {{- if .Methods }}
@@ -719,10 +717,8 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- end }}
 
 {{- /* Server implementation */}}
-{{- if .Methods }}
 {{ template "SyncServerTryDispatchMethodDefinition" . }}
 {{ template "SyncServerDispatchMethodDefinition" . }}
-{{- end }}
 
 {{- if .Methods }}
 {{ "" }}

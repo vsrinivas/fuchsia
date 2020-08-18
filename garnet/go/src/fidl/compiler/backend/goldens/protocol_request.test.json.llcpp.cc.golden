@@ -534,6 +534,28 @@ std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
   return {};
 }
 
+bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                        ::fidl::Transaction* txn) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    default: {
+      return false;
+    }
+  }
+}
+
+bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
+                     ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->InternalError(
+        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  }
+  return found;
+}
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp
