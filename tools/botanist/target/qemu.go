@@ -396,7 +396,12 @@ func (t *QEMUTarget) Stop(ctx context.Context) error {
 
 // Wait waits for the QEMU target to stop.
 func (t *QEMUTarget) Wait(ctx context.Context) error {
-	return <-t.c
+	select {
+	case err := <-t.c:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func copyImagesToDir(ctx context.Context, dir string, imgs ...*bootserver.Image) error {
