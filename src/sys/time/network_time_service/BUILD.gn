@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":network-time-service-tests" ]
+}
 
 group("network_time_service") {
   deps = [ ":network-time-service" ]
@@ -12,16 +18,20 @@ source_set("lib") {
   sources = [
     "service.cc",
     "service.h",
+    "watcher.cc",
+    "watcher.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.deprecatedtimezone",
+    "//sdk/fidl/fuchsia.time.external",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/sys/time/lib/network_time:lib",
     "//third_party/roughtime:client_lib",
+    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -63,5 +73,40 @@ package("network-time-service") {
       path = rebase_path("meta/network_time_service.cmx")
       dest = "network_time_service.cmx"
     },
+  ]
+}
+
+test_package("network-time-service-tests") {
+  deps = [ ":network_time_service_unittests" ]
+
+  tests = [
+    {
+      name = "network_time_service_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("network_time_service_unittests") {
+  output_name = "network_time_service_tests"
+
+  testonly = true
+
+  sources = [
+    "service_test.cc",
+    "watcher_test.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/time/lib/network_time/test:roughtime_test_lib",
+    "//third_party/boringssl",
+    "//third_party/roughtime:client_lib",
+    "//zircon/public/lib/zx",
   ]
 }

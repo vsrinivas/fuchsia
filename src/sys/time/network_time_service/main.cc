@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network_time_service::TimeServiceImpl svc(
       sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(updater),
-      std::move(server));
+      std::move(server), loop.dispatcher());
   if (immediate) {
     svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](auto result) {
                  FX_LOGS(INFO) << "time sync result " << (result ? "succeeded" : "failed");
