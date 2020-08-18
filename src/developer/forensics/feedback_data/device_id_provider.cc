@@ -61,6 +61,7 @@ AnnotationOr InitializeDeviceId(const std::string& path) {
     return AnnotationOr(Error::kFileWriteFailure);
   }
 
+  FX_LOGS(INFO) << "Successfully created new feedback device id";
   return AnnotationOr(new_id);
 }
 
