@@ -17,11 +17,13 @@ document describes best practices specific to Fuchsia Networking.
 
 ## Coding Guidelines
 
-### General Advice
+### Avoid Duplication
 
 Avoid duplicating code whenever possible. In cases where existing code is not
 exposed in a manner suitable to your needs, prefer to extract the necessary
 parts into a common dependency.
+
+### Error Handling
 
 Avoid unhandled errors and APIs which inherently disallow proper error handling;
 for a common example, consider [`fuchsia_async::executor::spawn`][spawn].
@@ -29,6 +31,22 @@ for a common example, consider [`fuchsia_async::executor::spawn`][spawn].
 severed). In most cases `spawn` can be replaced with a future that is later
 included in a [`select`][select] expression ([example commit][spawn_select]) or
 simply `await`ed on directly ([example commit][spawn_await]).
+
+### Avoid Implicit Drops
+
+Do not implicitly discard values. In cases where a return value is unused,
+always be explicit. In *Go*, assign unused values to the [blank
+identifier][blank_identifier]. In *Rust*, prefer destructuring assignment
+whenever possible, including when the return value is unit (`()`). When
+discarding primitive types where destructuring is not possible, use type
+annotations:
+```
+rust let _useless_rand: u8 = rand::thread_rng().gen();
+```
+Apply the same rules to unused closure parameters.
+
+
+### Compile-time over Run-time
 
 Prefer type safety over runtime invariant checking. In other words, arrange your
 abstractions such that they cannot express invalid conditions rather than
@@ -237,6 +255,7 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [spawn_select]: https://fuchsia.googlesource.com/fuchsia/+/0c00fd3%5E%21/#F3
 [spawn_await]: https://fuchsia.googlesource.com/fuchsia/+/038d2b9%5E%21/#F0
 [magic_number]: https://en.wikipedia.org/wiki/Magic_number_(programming)
+[blank_identifier]: https://golang.org/doc/effective_go.html#blank
 [rfc_process]: /docs/project/rfcs/0001_rfc_process.md
 [commit_guidelines]: https://www.git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines
 [commit_log-message-integration]: https://chromium.googlesource.com/infra/infra/+/master/appengine/monorail/doc/userguide/power-users.md#commit_log-message-integration
