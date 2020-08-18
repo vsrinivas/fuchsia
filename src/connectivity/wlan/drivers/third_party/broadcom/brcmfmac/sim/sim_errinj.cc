@@ -59,7 +59,7 @@ void SimErrorInjector::DelErrInjCmd(uint32_t cmd) {
 
 void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
                                       std::optional<uint16_t> ifidx,
-                                      std::optional<const void*> alt_data) {
+                                      const std::vector<uint8_t>* alt_data) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
     if (it->iovar.size() == strlen(iovar) + 1 &&
         (memcmp(iovar, it->iovar.data(), it->iovar.size()) == 0)) {
@@ -106,7 +106,7 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
 }
 
 bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
-                                                 std::optional<const void*>* alt_value_out,
+                                                 const std::vector<uint8_t>** alt_value_out,
                                                  uint16_t ifidx) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
     if (((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) &&

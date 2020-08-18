@@ -367,6 +367,19 @@ executable("no_random_mac_test") {
   ]
 }
 
+executable("err_inject_test") {
+  output_name = "err_inject_test"
+  testonly = true
+  sources = [ "err_inject_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 unittest_package("brcmfmac_sim_test") {
   package_name = "brcmfmac-sim-test"
   deps = [
@@ -382,6 +395,7 @@ unittest_package("brcmfmac_sim_test") {
     ":data_frame_test",
     ":disassoc_test",
     ":dynamic_if_test",
+    ":err_inject_test",
     ":escan_params_test",
     ":firmware_config_test",
     ":ifc_query_test",
@@ -485,6 +499,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "no_random_mac_test"
+      environments = basic_envs
+    },
+    {
+      name = "err_inject_test"
       environments = basic_envs
     },
   ]

@@ -1638,10 +1638,17 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     *fw_err = BCME_OK;
   }
 
-  std::optional<const void*> err_inj_alt_value;
+  const std::vector<uint8_t>* err_inj_alt_value;
   if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, &err_inj_alt_value, ifidx)) {
-    if (err_inj_alt_value) {
-      memcpy(value_out, *err_inj_alt_value, value_len);
+    if (err_inj_alt_value != nullptr) {
+      // Use provided replacement data
+      size_t alt_data_size = err_inj_alt_value->size();
+      memcpy(value_out, err_inj_alt_value->data(), std::min(alt_data_size, value_len));
+      if (alt_data_size < value_len) {
+        // Zero out any remaining bytes
+        uint8_t* bytes_out = reinterpret_cast<uint8_t*>(value_out);
+        memset(&bytes_out[alt_data_size], 0, value_len - alt_data_size);
+      }
     } else {
       memset(value_out, 0, value_len);
     }

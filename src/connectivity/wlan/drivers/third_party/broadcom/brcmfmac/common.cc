@@ -278,8 +278,8 @@ zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country) {
   }
 
   // Log out the country code settings for reference
-  BRCMF_INFO("Country code get ccode %s, abbrev %s, rev %d", ccreq.ccode, ccreq.country_abbrev,
-             ccreq.rev);
+  BRCMF_INFO("Country code get ccode %.*s, abbrev %.*s, rev %d", BRCMF_COUNTRY_BUF_SZ, ccreq.ccode,
+             BRCMF_COUNTRY_BUF_SZ, ccreq.country_abbrev, ccreq.rev);
   memcpy(out_country->alpha2, ccreq.ccode, WLANPHY_ALPHA2_LEN);
   return ZX_OK;
 }
