@@ -11,6 +11,7 @@
 
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
+#include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 // clang-format on
 
@@ -24,8 +25,12 @@ namespace testing {
 
 namespace {
 using fuchsia::lowpan::ConnectivityState;
+using fuchsia::lowpan::Credential;
+using fuchsia::lowpan::Identity;
+using fuchsia::lowpan::ProvisioningParams;
 using fuchsia::lowpan::Role;
 using fuchsia::lowpan::device::Device;
+using fuchsia::lowpan::device::DeviceExtra;
 using fuchsia::lowpan::device::DeviceState;
 using fuchsia::lowpan::device::Lookup;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
@@ -34,6 +39,25 @@ using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
 const char kFakeInterfaceName[] = "fake0";
+
+// Helper to format bytes in log messages.
+std::string FormatBytes(const std::vector<uint8_t>& bytes) {
+  std::stringstream ss;
+  bool first = true;
+
+  ss << "[";
+  for (auto byte : bytes) {
+    if (!first) {
+      ss << ", ";
+    }
+    first = false;
+    ss << "0x" << std::hex << +byte;
+  }
+  ss << "]";
+
+  return ss.str();
+}
+
 }  // namespace
 
 class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_TestBase,
@@ -43,21 +67,105 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
 
   // Fidl interfaces.
 
+  void GetCredential(GetCredentialCallback callback) override {
+    std::unique_ptr<Credential> cloned_credential = std::make_unique<Credential>();
+
+    ASSERT_EQ(credential_.Clone(cloned_credential.get()), ZX_OK);
+    callback(std::move(cloned_credential));
+  }
+
   void GetSupportedNetworkTypes(GetSupportedNetworkTypesCallback callback) override {
     callback({fuchsia::lowpan::NET_TYPE_THREAD_1_X});
+  }
+
+  void LeaveNetwork(LeaveNetworkCallback callback) override {
+    identity_ = Identity();
+    credential_ = Credential();
+
+    // Transition state.
+    switch (connectivity_state_) {
+      case ConnectivityState::ATTACHING:
+      case ConnectivityState::ATTACHED:
+      case ConnectivityState::ISOLATED:
+        connectivity_state_ = ConnectivityState::OFFLINE;
+        break;
+      case ConnectivityState::READY:
+        connectivity_state_ = ConnectivityState::INACTIVE;
+        break;
+      default:
+        // Do nothing, device was not on network.
+        break;
+    }
+
+    callback();
+  }
+
+  void ProvisionNetwork(ProvisioningParams params, ProvisionNetworkCallback callback) override {
+    identity_ = std::move(params.identity);
+    if (params.credential) {
+      credential_ = std::move(*params.credential);
+    }
+
+    // Transition state.
+    switch (connectivity_state_) {
+      case ConnectivityState::INACTIVE:
+        connectivity_state_ = ConnectivityState::READY;
+        break;
+      case ConnectivityState::OFFLINE:
+      case ConnectivityState::COMMISSIONING:
+        connectivity_state_ = ConnectivityState::ATTACHED;
+        break;
+      default:
+        // Do nothing, device is already provisioned.
+        break;
+    }
+
+    callback();
+  }
+
+  void SetActive(bool active, SetActiveCallback callback) override {
+    // Transition state.
+    if (active) {
+      switch (connectivity_state_) {
+        case ConnectivityState::INACTIVE:
+          connectivity_state_ = ConnectivityState::OFFLINE;
+          break;
+        case ConnectivityState::READY:
+          connectivity_state_ = ConnectivityState::ATTACHED;
+          break;
+        default:
+          // Do nothing, device is already active.
+          break;
+      }
+    } else {
+      switch (connectivity_state_) {
+        case ConnectivityState::OFFLINE:
+        case ConnectivityState::COMMISSIONING:
+          connectivity_state_ = ConnectivityState::INACTIVE;
+          break;
+        case ConnectivityState::ATTACHING:
+        case ConnectivityState::ATTACHED:
+        case ConnectivityState::ISOLATED:
+          connectivity_state_ = ConnectivityState::READY;
+          break;
+        default:
+          // Do nothing, device is already inactive.
+          break;
+      }
+    }
+
+    callback();
   }
 
   void WatchDeviceState(WatchDeviceStateCallback callback) override {
     callback(std::move(DeviceState().set_role(role_).set_connectivity_state(connectivity_state_)));
   }
 
-  void SetActive(bool active, SetActiveCallback callback) override {
-    if (active) {
-      connectivity_state_ = ConnectivityState::OFFLINE;
-    } else {
-      connectivity_state_ = ConnectivityState::INACTIVE;
-    }
-    callback();
+  void WatchIdentity(WatchIdentityCallback callback) override {
+    Identity cloned_identity;
+
+    ASSERT_EQ(identity_.Clone(&cloned_identity), ZX_OK);
+    callback(std::move(cloned_identity));
   }
 
   // Accessors/mutators for testing.
@@ -65,6 +173,10 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
   ConnectivityState connectivity_state() { return connectivity_state_; }
+
+  Credential& credential() { return credential_; }
+
+  Identity& identity() { return identity_; }
 
   FakeLowpanDevice& set_connectivity_state(ConnectivityState state) {
     connectivity_state_ = state;
@@ -83,6 +195,8 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
   async_dispatcher_t* dispatcher_;
 
   ConnectivityState connectivity_state_{ConnectivityState::INACTIVE};
+  Credential credential_;
+  Identity identity_;
   Role role_{Role::DETACHED};
 };
 
@@ -105,6 +219,11 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
       device_bindings_.AddBinding(&device_, std::move(*protocols.mutable_device()), dispatcher_);
     }
 
+    if (protocols.has_device_extra()) {
+      device_extra_bindings_.AddBinding(&device_, std::move(*protocols.mutable_device_extra()),
+                                        dispatcher_);
+    }
+
     result.set_response(response);
     callback(std::move(result));
   }
@@ -122,6 +241,7 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
  private:
   FakeLowpanDevice device_;
   fidl::BindingSet<Device> device_bindings_;
+  fidl::BindingSet<DeviceExtra> device_extra_bindings_;
   async_dispatcher_t* dispatcher_;
   fidl::Binding<Lookup> binding_{this};
 };
@@ -183,6 +303,146 @@ TEST_F(ThreadStackManagerTest, IsAttached) {
   // Set to attached and confirm.
   fake_lookup_.device().set_connectivity_state(ConnectivityState::ATTACHED);
   EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadAttached());
+}
+
+TEST_F(ThreadStackManagerTest, GetProvisionNoCredential) {
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  // Set up device info.
+  fake_lookup_.device()
+      .identity()
+      .set_net_type(fuchsia::lowpan::NET_TYPE_THREAD_1_X)
+      .set_raw_name(std::vector<uint8_t>(kFakeNetworkName.begin(), kFakeNetworkName.end()))
+      .set_panid(kFakePANId)
+      .set_channel(kFakeChannel)
+      .set_xpanid(kFakeExtendedId);
+  fake_lookup_.device().credential().set_master_key(kFakeMasterKey);
+
+  // Get the provision.
+  DeviceNetworkInfo net_info;
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
+
+  EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
+  EXPECT_FALSE(net_info.FieldPresent.ThreadNetworkKey);
+
+  EXPECT_EQ(kFakeNetworkName, std::string(net_info.ThreadNetworkName));
+  EXPECT_TRUE(
+      std::equal(kFakeExtendedId.begin(), kFakeExtendedId.end(), net_info.ThreadExtendedPANId))
+      << "Expected " << FormatBytes(kFakeExtendedId) << "; recieved "
+      << FormatBytes(std::vector<uint8_t>(
+             net_info.ThreadExtendedPANId,
+             net_info.ThreadExtendedPANId + DeviceNetworkInfo::kThreadExtendedPANIdLength));
+  EXPECT_EQ(kFakeChannel, net_info.ThreadChannel);
+  EXPECT_EQ(kFakePANId, net_info.ThreadPANId);
+}
+
+TEST_F(ThreadStackManagerTest, GetProvisionWithCredential) {
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  // Set up device info.
+  fake_lookup_.device()
+      .identity()
+      .set_net_type(fuchsia::lowpan::NET_TYPE_THREAD_1_X)
+      .set_raw_name(std::vector<uint8_t>(kFakeNetworkName.begin(), kFakeNetworkName.end()))
+      .set_panid(kFakePANId)
+      .set_channel(kFakeChannel)
+      .set_xpanid(kFakeExtendedId);
+  fake_lookup_.device().credential().set_master_key(kFakeMasterKey);
+
+  // Get the provision.
+  DeviceNetworkInfo net_info;
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, true), WEAVE_NO_ERROR);
+
+  EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
+  EXPECT_TRUE(net_info.FieldPresent.ThreadNetworkKey);
+
+  EXPECT_EQ(kFakeNetworkName, std::string(net_info.ThreadNetworkName));
+  EXPECT_TRUE(
+      std::equal(kFakeExtendedId.begin(), kFakeExtendedId.end(), net_info.ThreadExtendedPANId))
+      << "Expected " << FormatBytes(kFakeExtendedId) << "; recieved "
+      << FormatBytes(std::vector<uint8_t>(
+             net_info.ThreadExtendedPANId,
+             net_info.ThreadExtendedPANId + DeviceNetworkInfo::kThreadExtendedPANIdLength));
+  EXPECT_TRUE(std::equal(kFakeMasterKey.begin(), kFakeMasterKey.end(), net_info.ThreadNetworkKey))
+      << "Expected " << FormatBytes(kFakeExtendedId) << "; recieved "
+      << FormatBytes(std::vector<uint8_t>(
+             net_info.ThreadNetworkKey,
+             net_info.ThreadNetworkKey + DeviceNetworkInfo::kThreadNetworkKeyLength));
+  EXPECT_EQ(kFakeChannel, net_info.ThreadChannel);
+  EXPECT_EQ(kFakePANId, net_info.ThreadPANId);
+}
+
+TEST_F(ThreadStackManagerTest, SetProvision) {
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  // Set up provisioning info.
+  DeviceNetworkInfo net_info;
+  net_info.ThreadPANId = kFakePANId;
+  net_info.ThreadChannel = kFakeChannel;
+  std::memcpy(net_info.ThreadNetworkName, kFakeNetworkName.data(),
+              std::min<size_t>(kFakeNetworkName.size() + 1,
+                               DeviceNetworkInfo::kMaxThreadNetworkNameLength));
+  std::memcpy(
+      net_info.ThreadExtendedPANId, kFakeExtendedId.data(),
+      std::min<size_t>(kFakeExtendedId.size(), DeviceNetworkInfo::kThreadExtendedPANIdLength));
+  net_info.FieldPresent.ThreadExtendedPANId = true;
+  std::memcpy(net_info.ThreadNetworkKey, kFakeMasterKey.data(),
+              std::min<size_t>(kFakeMasterKey.size(), DeviceNetworkInfo::kThreadNetworkKeyLength));
+  net_info.FieldPresent.ThreadNetworkKey = true;
+
+  // Set provision, check pre- and post-conditions.
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_NO_ERROR);
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+
+  // Confirm identity.
+  auto& identity = fake_lookup_.device().identity();
+  EXPECT_EQ(identity.raw_name(),
+            (std::vector<uint8_t>{kFakeNetworkName.data(),
+                                  kFakeNetworkName.data() + kFakeNetworkName.size()}));
+  EXPECT_EQ(identity.xpanid(), kFakeExtendedId);
+  EXPECT_EQ(identity.panid(), kFakePANId);
+  EXPECT_EQ(identity.channel(), kFakeChannel);
+
+  // Confirm credential.
+  auto& credential = fake_lookup_.device().credential();
+  EXPECT_EQ(credential.master_key(), kFakeMasterKey);
+}
+
+TEST_F(ThreadStackManagerTest, ClearProvision) {
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  auto& device = fake_lookup_.device();
+
+  // Set up device info.
+  device.identity()
+      .set_net_type(fuchsia::lowpan::NET_TYPE_THREAD_1_X)
+      .set_raw_name(std::vector<uint8_t>(kFakeNetworkName.begin(), kFakeNetworkName.end()))
+      .set_panid(kFakePANId)
+      .set_channel(kFakeChannel)
+      .set_xpanid(kFakeExtendedId);
+  device.credential().set_master_key(kFakeMasterKey);
+  device.set_connectivity_state(ConnectivityState::READY);
+
+  // Clear provision, check pre- and post-conditions.
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  ThreadStackMgrImpl()._ClearThreadProvision();
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
 }
 
 }  // namespace testing
