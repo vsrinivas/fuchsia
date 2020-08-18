@@ -320,6 +320,8 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     ) {
         fx_log_info!("SpinelDriver: State Change: {:?} -> {:?}", old_state, new_state);
 
+        self.driver_state_change.trigger();
+
         match (old_state, new_state) {
             // TODO: Add state transition tasks here.
 
