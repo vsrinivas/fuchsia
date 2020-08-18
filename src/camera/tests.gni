@@ -1,0 +1,133 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+
+camera_tests = {
+  deps = [
+    "//src/camera/bin/camera-gym/test",
+    "//src/camera/bin/device/test",
+    "//src/camera/bin/device_watcher/test",
+    "//src/camera/bin/factory/test",
+    "//src/camera/calibration/algorithms/test",
+    "//src/camera/drivers/controller/configs/sherlock/test",
+    "//src/camera/drivers/controller/test",
+    "//src/camera/drivers/hw_accel/gdc/test",
+    "//src/camera/drivers/hw_accel/ge2d/test",
+    "//src/camera/drivers/sensors/imx227/test",
+    "//src/camera/drivers/test_utils/test:button_checker_test",
+    "//src/camera/drivers/test_utils/test:test_utils_test",
+    "//src/camera/lib/fake_camera/test",
+    "//src/camera/lib/fake_legacy_stream/test",
+    "//src/camera/lib/fake_stream/test",
+    "//src/camera/lib/hanging_get_helper/test",
+    "//src/camera/lib/image_writer/test",
+    "//src/camera/lib/stream_utils/test",
+    "//src/camera/lib/virtual_camera/test",
+  ]
+
+  tests = [
+    {
+      name = "gdc-test"
+      manifest = "//src/camera/drivers/hw_accel/gdc/test/meta/gdc-test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "ge2d-test"
+      manifest = "//src/camera/drivers/hw_accel/ge2d/test/meta/ge2d-test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "controller-test"
+      manifest = "//src/camera/drivers/controller/test/meta/controller-test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "configs_test"
+      manifest =
+          "//src/camera/drivers/controller/configs/sherlock/test/meta/configs_test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "button_checker_test"
+      manifest = "//src/camera/drivers/test_utils/test/meta/button_checker_test.cmx"
+      environments = [
+        sherlock_env,
+        astro_env,
+      ]
+    },
+    {
+      name = "test_utils_test"
+      manifest = "//src/camera/drivers/test_utils/test/meta/test_utils_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "image_writer_test"
+      manifest = "//src/camera/lib/image_writer/test/meta/image_writer_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "algorithms_test"
+      manifest = "//src/camera/calibration/algorithms/test/meta/algorithms_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "stream_utils_test"
+      manifest = "//src/camera/lib/stream_utils/test/meta/stream_utils_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "fake_legacy_stream_test"
+      manifest = "//src/camera/lib/fake_legacy_stream/test/fake_legacy_stream_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "camera_factory_test"
+      manifest = "//src/camera/bin/factory/test/meta/camera_factory_test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "device_watcher_test"
+      manifest = "//src/camera/bin/device_watcher/test/device_watcher_test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "device_test"
+      manifest = "//src/camera/bin/device/test/device_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "fake_stream_test"
+      manifest = "//src/camera/lib/fake_stream/test/fake_stream_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "fake_camera_test"
+      manifest = "//src/camera/lib/fake_camera/test/fake_camera_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "virtual_camera_test"
+      manifest = "//src/camera/lib/virtual_camera/test/virtual_camera_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "hanging_get_helper_test"
+      manifest =
+          "//src/camera/lib/hanging_get_helper/test/hanging_get_helper_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "imx227_test"
+      manifest = "//src/camera/drivers/sensors/imx227/test/meta/imx227_test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "camera_gym_test"
+      manifest = "//src/camera/bin/camera-gym/test/camera_gym_test.cmx"
+      environments = basic_envs
+    },
+
+    # Put additional camera tests here
+  ]
+}
