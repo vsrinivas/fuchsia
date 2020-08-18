@@ -91,3 +91,12 @@ client like this:
 ```shell
 $ fx shell present_view fuchsia-pkg://fuchsia.com/cpp-gfx-client#meta/cpp-gfx-client.cmx
 ```
+
+## Play with the web client
+
+To play around with the web client used in the automated test, invoke the
+client like this:
+
+```shell
+$ fx shell present_view fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx
+```

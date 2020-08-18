@@ -16,6 +16,9 @@ table PointerData {
 
     /// The monotonic time (ns) the pointer data was received by the client.
     3: zx.time time_received;
+
+    /// The number of physical pixels, per logical pixel, as reported by the client.
+    4: float64 device_pixel_ratio;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.

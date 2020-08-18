@@ -22,6 +22,7 @@ group("tests") {
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
     "//src/ui/tests/e2e_input_tests/touch/cpp-gfx-client",
+    "//src/ui/tests/e2e_input_tests/touch/one-chromium",
     "//src/ui/tests/e2e_input_tests/touch/one-flutter",
   ]
 }
@@ -57,6 +58,7 @@ test_package("touch-input-test") {
 
   data_deps = [
     "//src/ui/scenic",
+    "//src/ui/tests/e2e_input_tests/touch/one-chromium",
     "//src/ui/tests/e2e_input_tests/touch/one-flutter",
   ]
 }
@@ -76,12 +78,17 @@ test("touch-input-test-bin") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.web",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

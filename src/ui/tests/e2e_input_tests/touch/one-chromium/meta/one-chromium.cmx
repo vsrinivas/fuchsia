@@ -1,0 +1,22 @@
+{
+    "program": {
+        "binary": "bin/one-chromium"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.device.NameProvider",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.memorypressure.Provider",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.process.Launcher",
+            "fuchsia.test.ui.ResponseListener",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.web.ContextProvider"
+        ]
+    }
+}

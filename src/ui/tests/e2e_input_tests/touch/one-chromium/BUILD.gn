@@ -1,0 +1,41 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("one-chromium") {
+  deps = [ ":package" ]
+}
+
+executable("bin") {
+  output_name = "one-chromium"
+  sources = [ "one-chromium.cc" ]
+  deps = [
+    "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/ui/tests/e2e_input_tests/touch:fuchsia.test.ui",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "one-chromium"
+  manifest = rebase_path("meta/one-chromium.cmx")
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("package") {
+  package_name = "one-chromium"
+  deps = [ ":component" ]
+}
