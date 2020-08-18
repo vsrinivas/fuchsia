@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
+    anyhow::{format_err, Error},
     bt_a2dp::media_types::*,
     bt_a2dp::{peer::Peer, stream::Streams},
     bt_avdtp as avdtp,
@@ -17,45 +17,44 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
-    std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
+    std::{collections::HashMap, convert::TryInto, sync::Arc},
 };
 
-use crate::{avrcp_relay::AvrcpRelay, SBC_SEID};
+use crate::SBC_SEID;
+
+pub type PeerSessionFn =
+    dyn Fn(&PeerId) -> fasync::Task<Result<(Streams, fasync::Task<()>), Error>>;
 
 /// ConnectedPeers owns the set of connected peers and manages peers based on
 /// discovery, connections and disconnections.
 pub struct ConnectedPeers {
     /// The set of connected peers.
     connected: DetachableMap<PeerId, Peer>,
-    /// ProfileDescriptors from discovering the peer.
-    descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
-    /// The set of streams that are made available to peers.
-    streams: Streams,
+    /// ProfileDescriptors from discovering the peer, stored here before a peer connects.
+    descriptors: HashMap<PeerId, ProfileDescriptor>,
+    /// A generator which returns an appropriate set of streams for a peer given it's id.
+    peer_session_gen: Box<PeerSessionFn>,
     /// Profile Proxy, used to connect new transport sockets.
     profile: ProfileProxy,
     /// Cobalt logger to use and hand out to peers
     cobalt_sender: CobaltSender,
-    /// Media session domain
-    domain: Option<String>,
     /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
     inspect: inspect::Node,
 }
 
 impl ConnectedPeers {
     pub(crate) fn new(
-        streams: Streams,
+        peer_session_gen: Box<PeerSessionFn>,
         profile: ProfileProxy,
         cobalt_sender: CobaltSender,
-        domain: Option<String>,
     ) -> Self {
         Self {
             connected: DetachableMap::new(),
             descriptors: HashMap::new(),
-            streams,
+            peer_session_gen,
             profile,
             inspect: inspect::Node::default(),
             cobalt_sender,
-            domain,
         }
     }
 
@@ -112,85 +111,80 @@ impl ConnectedPeers {
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
-        if self.descriptors.insert(id, Some(desc)).is_some() {
-            // We have maybe connected to this peer before, and we just need to
-            // discover the streams.
-            if let Some(peer) = self.get(&id) {
-                peer.set_descriptor(desc.clone());
-            }
+        self.descriptors.insert(id, desc);
+        if let Some(peer) = self.get(&id) {
+            peer.set_descriptor(desc.clone());
         }
     }
 
     /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
     /// this connection (and should take the INT role)
-    pub fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
-        match self.get(&id) {
-            Some(peer) => {
-                if let Err(e) = peer.receive_channel(channel) {
-                    fx_log_warn!("{} failed to connect channel: {}", id, e);
-                }
+    pub async fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
+        if let Some(peer) = self.get(&id) {
+            if let Err(e) = peer.receive_channel(channel) {
+                fx_log_warn!("{} failed to connect channel: {}", id, e);
             }
-            None => {
-                fx_log_info!("Adding new peer for {}", id);
-                let avdtp_peer = avdtp::Peer::new(channel);
-
-                let mut peer = Peer::create(
-                    id,
-                    avdtp_peer,
-                    self.streams.as_new(),
-                    self.profile.clone(),
-                    Some(self.cobalt_sender.clone()),
-                );
-
-                if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
-                    fx_log_warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
-                }
-
-                // Start remote discovery if profile information exists for the device_id
-                // and a2dp sink not assuming the INT role.
-                match self.descriptors.entry(id) {
-                    Entry::Occupied(entry) => {
-                        if let Some(prof) = entry.get() {
-                            peer.set_descriptor(prof.clone());
-                        }
-                    }
-                    // Otherwise just insert the device ID with no profile
-                    // Run discovery when profile is updated
-                    Entry::Vacant(entry) => {
-                        entry.insert(None);
-                    }
-                }
-                let closed_fut = peer.closed();
-                self.connected.insert(id, peer);
-
-                let avrcp_relay = AvrcpRelay::start(id, self.domain.clone()).ok();
-
-                if initiator {
-                    let weak_peer = self.connected.get(&id).expect("just added");
-                    fuchsia_async::Task::local(async move {
-                        if let Err(e) = ConnectedPeers::start_streaming(&weak_peer).await {
-                            fx_vlog!(1, "Streaming task ended: {:?}", e);
-                            weak_peer.detach();
-                        }
-                    })
-                    .detach();
-                }
-
-                // Remove the peer when we disconnect.
-                let detached_peer = self.connected.get(&id).expect("just added");
-                let mut descriptors = self.descriptors.clone();
-                let disconnected_id = id.clone();
-                fasync::Task::local(async move {
-                    closed_fut.await;
-                    fx_log_info!("Peer {:?} disconnected", detached_peer.key());
-                    detached_peer.detach();
-                    descriptors.remove(&disconnected_id);
-                    // Captures the relay to extend the lifetime until after the peer clooses.
-                    drop(avrcp_relay);
-                })
-                .detach();
-            }
+            return;
         }
+
+        let (streams, session_task) = match (self.peer_session_gen)(&id).await {
+            Ok(x) => x,
+            Err(e) => {
+                fx_log_warn!("Couldn't generate peer session for {}: {:?}", id, e);
+                return;
+            }
+        };
+
+        let entry = self.connected.lazy_entry(&id);
+
+        fx_log_info!("Adding new peer for {}", id);
+        let avdtp_peer = avdtp::Peer::new(channel);
+
+        let mut peer = Peer::create(
+            id,
+            avdtp_peer,
+            streams,
+            self.profile.clone(),
+            Some(self.cobalt_sender.clone()),
+        );
+
+        if let Some(desc) = self.descriptors.get(&id) {
+            peer.set_descriptor(desc.clone());
+        }
+
+        if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
+            fx_log_warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
+        }
+
+        let closed_fut = peer.closed();
+        let peer = match entry.try_insert(peer) {
+            Err(_peer) => {
+                fx_log_warn!("Peer connected while we were setting up peer: {}", id);
+                return;
+            }
+            Ok(weak_peer) => weak_peer,
+        };
+
+        if initiator {
+            let peer_clone = peer.clone();
+            fuchsia_async::Task::local(async move {
+                if let Err(e) = ConnectedPeers::start_streaming(&peer_clone).await {
+                    fx_vlog!(1, "Streaming ended with error: {:?}", e);
+                    peer_clone.detach();
+                }
+            })
+            .detach();
+        }
+
+        // Remove the peer when we disconnect.
+        fasync::Task::local(async move {
+            closed_fut.await;
+            fx_log_info!("Peer {:?} disconnected", peer.key());
+            peer.detach();
+            // Captures the session task to extend the task lifetime.
+            drop(session_task);
+        })
+        .detach();
     }
 }
 
@@ -258,15 +252,21 @@ mod tests {
         };
     }
 
+    fn no_streams_session_fn() -> Box<PeerSessionFn> {
+        Box::new(|_peer_id| {
+            fasync::Task::spawn(async { Ok((Streams::new(), fasync::Task::spawn(async {}))) })
+        })
+    }
+
     fn setup_connected_peer_test(
     ) -> (fasync::Executor, PeerId, ConnectedPeers, ProfileRequestStream) {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let exec = fasync::Executor::new().expect("executor should build");
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let peers = ConnectedPeers::new(Streams::new(), proxy, cobalt_sender, None);
+        let peers = ConnectedPeers::new(no_streams_session_fn(), proxy, cobalt_sender);
 
         (exec, id, peers, stream)
     }
@@ -277,7 +277,7 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        peers.connected(id, channel, false);
+        exec.run_singlethreaded(peers.connected(id, channel, false));
 
         let peer = match peers.get(&id) {
             None => panic!("Peer should be in ConnectedPeers after connection"),
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn connected_peers_inspect() {
-        let (_exec, id, mut peers, _stream) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let inspect = inspect::Inspector::new();
         peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
@@ -298,7 +298,7 @@ mod tests {
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
-        peers.connected(id, channel, false);
+        exec.run_singlethreaded(peers.connected(id, channel, false));
 
         assert_inspect_tree!(inspect, root: { peers: { peer_0: {
             id: "0000000000000001", local_streams: contains {}
@@ -311,7 +311,7 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        peers.connected(id, channel, false);
+        exec.run_singlethreaded(peers.connected(id, channel, false));
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -327,7 +327,7 @@ mod tests {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let (remote, channel) = Channel::create();
-        peers.connected(id, channel, false);
+        exec.run_singlethreaded(peers.connected(id, channel, false));
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -340,7 +340,7 @@ mod tests {
         // Connect another peer with the same ID
         let (_remote, channel) = Channel::create();
 
-        peers.connected(id, channel, false);
+        exec.run_singlethreaded(peers.connected(id, channel, false));
         run_to_stalled(&mut exec);
 
         // Should be connected.

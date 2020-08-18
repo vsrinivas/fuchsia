@@ -22,7 +22,6 @@ use {
 };
 
 use crate::player;
-use crate::DEFAULT_SESSION_ID;
 
 /// The number of preload packets to load into the preload buffer before starting playback.
 // TODO(): This preload shouldn't be needed, since the AUdioConsumer should handle a jitter buffer.
@@ -31,11 +30,12 @@ const PRELOAD_PACKETS: usize = 6;
 #[derive(Clone)]
 pub struct SinkTaskBuilder {
     cobalt_sender: CobaltSender,
+    session_id: u64,
 }
 
 impl SinkTaskBuilder {
-    pub fn new(cobalt_sender: CobaltSender) -> Self {
-        Self { cobalt_sender }
+    pub fn new(cobalt_sender: CobaltSender, session_id: u64) -> Self {
+        Self { cobalt_sender, session_id }
     }
 }
 
@@ -50,6 +50,7 @@ impl MediaTaskBuilder for SinkTaskBuilder {
             codec_config,
             self.cobalt_sender.clone(),
             data_stream_inspect,
+            self.session_id,
         )))
     }
 }
@@ -63,6 +64,8 @@ struct ConfiguredSinkTask {
     stop_sender: Option<AbortHandle>,
     /// Data Stream inspect object for tracking total bytes / current transfer speed.
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
+    /// Session ID for Media
+    session_id: u64,
 }
 
 impl ConfiguredSinkTask {
@@ -70,21 +73,22 @@ impl ConfiguredSinkTask {
         codec_config: &MediaCodecConfig,
         cobalt_sender: CobaltSender,
         stream_inspect: DataStreamInspect,
+        session_id: u64,
     ) -> Self {
         Self {
             codec_config: codec_config.clone(),
             cobalt_sender,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
             stop_sender: None,
+            session_id,
         }
     }
 }
 
 impl MediaTask for ConfiguredSinkTask {
     fn start(&mut self, stream: MediaStream) -> Result<(), Error> {
-        // TODO(42976) get real media session id
-        let session_id = DEFAULT_SESSION_ID;
         let codec_config = self.codec_config.clone();
+        let session_id = self.session_id;
         let player_fut = media_stream_task(
             stream,
             Box::new(move || player::Player::new(session_id, codec_config.clone())),
@@ -470,11 +474,13 @@ mod tests {
         let pending_stream = futures::stream::pending();
         let codec_type = sbc_config.codec_type().clone();
 
+        let session_id = 1;
+
         let media_stream_fut = media_stream_task(
             pending_stream,
             Box::new(move || {
                 player::Player::from_proxy(
-                    DEFAULT_SESSION_ID,
+                    session_id,
                     sbc_config.clone(),
                     audio_consumer_factory_proxy.clone(),
                 )
@@ -490,7 +496,7 @@ mod tests {
                 &mut exec,
                 &mut audio_consumer_factory_request_stream,
                 codec_type.clone(),
-                DEFAULT_SESSION_ID,
+                session_id,
             );
         player::tests::respond_event_status(
             &mut exec,
@@ -513,7 +519,7 @@ mod tests {
                 &mut exec,
                 &mut audio_consumer_factory_request_stream,
                 codec_type,
-                DEFAULT_SESSION_ID,
+                session_id,
             );
 
         // This time we don't respond to the event status, so the player failed immediately after

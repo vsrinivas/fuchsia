@@ -15,6 +15,7 @@ use {
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_component::LifecycleState,
+    fidl_fuchsia_media_sessions2 as sessions2,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         profile::find_profile_descriptors,
@@ -31,6 +32,7 @@ use {
     std::{convert::TryFrom, convert::TryInto, sync::Arc},
 };
 
+use crate::avrcp_relay::AvrcpRelay;
 use crate::connected_peers::ConnectedPeers;
 
 mod avrcp_relay;
@@ -82,84 +84,141 @@ pub const DEFAULT_SESSION_ID: u64 = 0;
 // create the signaling channel, configure, open and start the stream.
 const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
-fn build_sbc_endpoint(endpoint_type: avdtp::EndpointType) -> avdtp::Result<avdtp::StreamEndpoint> {
-    let sbc_codec_info = SbcCodecInfo::new(
-        SbcSamplingFrequency::MANDATORY_SNK,
-        SbcChannelMode::MANDATORY_SNK,
-        SbcBlockCount::MANDATORY_SNK,
-        SbcSubBands::MANDATORY_SNK,
-        SbcAllocation::MANDATORY_SNK,
-        SbcCodecInfo::BITPOOL_MIN,
-        SbcCodecInfo::BITPOOL_MAX,
-    )?;
-    fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
-
-    avdtp::StreamEndpoint::new(
-        SBC_SEID,
-        avdtp::MediaType::Audio,
-        endpoint_type,
-        vec![
-            ServiceCapability::MediaTransport,
-            ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes().to_vec(),
-            },
-        ],
-    )
-}
-
-fn build_aac_endpoint(endpoint_type: avdtp::EndpointType) -> avdtp::Result<avdtp::StreamEndpoint> {
-    let aac_codec_info = AacCodecInfo::new(
-        AacObjectType::MANDATORY_SNK,
-        AacSamplingFrequency::MANDATORY_SNK,
-        AacChannels::MANDATORY_SNK,
-        true,
-        0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
-    )?;
-
-    fx_vlog!(1, "Supported codec parameters: {:?}.", aac_codec_info);
-
-    avdtp::StreamEndpoint::new(
-        AAC_SEID,
-        avdtp::MediaType::Audio,
-        endpoint_type,
-        vec![
-            ServiceCapability::MediaTransport,
-            ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-                codec_extra: aac_codec_info.to_bytes().to_vec(),
-            },
-        ],
-    )
-}
-
 fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapability> {
     endpoint.capabilities().iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
 
-async fn build_local_streams(cobalt_sender: CobaltSender) -> Result<stream::Streams, Error> {
-    let sink_task_builder = sink_task::SinkTaskBuilder::new(cobalt_sender);
-    let mut streams = stream::Streams::new();
+struct StreamsBuilder {
+    cobalt_sender: CobaltSender,
+    domain: Option<String>,
+    aac_available: bool,
+}
 
-    // TODO(BT-533): detect codecs, add streams for each codec
-    // SBC is required
-    let sbc_endpoint = build_sbc_endpoint(avdtp::EndpointType::Sink)?;
-    let codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
-    let sbc_config = MediaCodecConfig::try_from(codec_cap)?;
-    if let Err(e) = player::Player::test_playable(&sbc_config).await {
-        fx_log_warn!("Can't play required SBC audio: {}", e);
-        return Err(e);
+impl StreamsBuilder {
+    async fn system_playable(
+        cobalt_sender: CobaltSender,
+        domain: Option<String>,
+    ) -> Result<Self, Error> {
+        // TODO(BT-533): detect codecs, add streams for each codec
+        // SBC is required
+        let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
+        let codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
+        let sbc_config = MediaCodecConfig::try_from(codec_cap)?;
+        if let Err(e) = player::Player::test_playable(&sbc_config).await {
+            fx_log_warn!("Can't play required SBC audio: {}", e);
+            return Err(e);
+        }
+
+        let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
+        let codec_cap = find_codec_cap(&aac_endpoint).expect("just built");
+        let aac_config = MediaCodecConfig::try_from(codec_cap)?;
+        let aac_available = player::Player::test_playable(&aac_config).await.is_ok();
+
+        Ok(Self { cobalt_sender, domain, aac_available })
     }
 
-    streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
+    fn build_sbc_endpoint(
+        endpoint_type: avdtp::EndpointType,
+    ) -> avdtp::Result<avdtp::StreamEndpoint> {
+        let sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::MANDATORY_SNK,
+            SbcChannelMode::MANDATORY_SNK,
+            SbcBlockCount::MANDATORY_SNK,
+            SbcSubBands::MANDATORY_SNK,
+            SbcAllocation::MANDATORY_SNK,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )?;
+        fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
-    let aac_endpoint = build_aac_endpoint(avdtp::EndpointType::Sink)?;
+        avdtp::StreamEndpoint::new(
+            SBC_SEID,
+            avdtp::MediaType::Audio,
+            endpoint_type,
+            vec![
+                ServiceCapability::MediaTransport,
+                ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                    codec_extra: sbc_codec_info.to_bytes().to_vec(),
+                },
+            ],
+        )
+    }
 
-    streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder));
+    fn build_aac_endpoint(
+        endpoint_type: avdtp::EndpointType,
+    ) -> avdtp::Result<avdtp::StreamEndpoint> {
+        let aac_codec_info = AacCodecInfo::new(
+            AacObjectType::MANDATORY_SNK,
+            AacSamplingFrequency::MANDATORY_SNK,
+            AacChannels::MANDATORY_SNK,
+            true,
+            0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
+        )?;
 
-    Ok(streams)
+        fx_vlog!(1, "Supported codec parameters: {:?}.", aac_codec_info);
+
+        avdtp::StreamEndpoint::new(
+            AAC_SEID,
+            avdtp::MediaType::Audio,
+            endpoint_type,
+            vec![
+                ServiceCapability::MediaTransport,
+                ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                    codec_extra: aac_codec_info.to_bytes().to_vec(),
+                },
+            ],
+        )
+    }
+
+    async fn setup_audio_session(
+        domain: Option<String>,
+    ) -> Result<(sessions2::PlayerRequestStream, u64), Error> {
+        let publisher =
+            fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
+                .context("Failed to connect to MediaSession interface")?;
+
+        let (player_client, player_request_stream) = create_request_stream()?;
+
+        let registration = sessions2::PlayerRegistration {
+            domain: domain.or(Some("Bluetooth".to_string())),
+            ..Decodable::new_empty()
+        };
+
+        let session_id = publisher.publish(player_client, registration).await?;
+
+        Ok((player_request_stream, session_id))
+    }
+
+    fn into_session_gen(self) -> Box<connected_peers::PeerSessionFn> {
+        Box::new(move |peer_id: &PeerId| {
+            let domain = self.domain.clone();
+            let peer_id = peer_id.clone();
+            let cobalt_sender = self.cobalt_sender.clone();
+            let aac_available = self.aac_available.clone();
+            let gen_fut = async move {
+                let (player_request_stream, session_id) = Self::setup_audio_session(domain).await?;
+                fx_log_info!("Session ID: {}", session_id);
+                let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_request_stream)
+                    .unwrap_or(fasync::Task::spawn(async {}));
+
+                let sink_task_builder = sink_task::SinkTaskBuilder::new(cobalt_sender, session_id);
+                let mut streams = stream::Streams::new();
+                let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
+                streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
+
+                if aac_available {
+                    let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
+                    streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder.clone()));
+                }
+                Ok((streams, avrcp_task))
+            };
+            fasync::Task::spawn(gen_fut)
+        })
+    }
 }
 
 /// Establishes the signaling channel after the delay specified by `timer_expired`.
@@ -215,11 +274,18 @@ async fn connect_after_timeout(
         Ok(chan) => chan,
     };
 
-    handle_connection(&peer_id, channel, true, &mut peers.lock(), &mut controller_pool.lock());
+    handle_connection(
+        &peer_id,
+        channel,
+        /* initiate = */ true,
+        &mut peers.lock(),
+        &mut controller_pool.lock(),
+    )
+    .await;
 }
 
 /// Handles incoming peer connections
-fn handle_connection(
+async fn handle_connection(
     peer_id: &PeerId,
     channel: Channel,
     initiate: bool,
@@ -227,7 +293,7 @@ fn handle_connection(
     controller_pool: &mut ControllerPool,
 ) {
     fx_log_info!("Connection from {}: {:?}!", peer_id, channel);
-    peers.connected(peer_id.clone(), channel, initiate);
+    peers.connected(peer_id.clone(), channel, initiate).await;
     if let Some(peer) = peers.get_weak(&peer_id) {
         // Add the controller to the peers
         controller_pool.peer_connected(peer_id.clone(), peer);
@@ -334,20 +400,15 @@ async fn main() -> Result<(), Error> {
         sender
     };
 
-    let streams = build_local_streams(cobalt_logger.clone()).await?;
-
-    if streams.is_empty() {
-        return Err(format_err!("Can't play media - no codecs found or media player missing"));
-    }
+    let stream_gen = StreamsBuilder::system_playable(cobalt_logger.clone(), opts.domain).await?;
 
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
     let mut peers = connected_peers::ConnectedPeers::new(
-        streams,
+        stream_gen.into_session_gen(),
         profile_svc.clone(),
         cobalt_logger.clone(),
-        opts.domain,
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
         fx_log_info!("Failed to attach to inspect: {:?}", e);
@@ -414,7 +475,12 @@ async fn handle_profile_events(
                     Some(request) => request,
                 };
                 let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
-                handle_connection(&peer_id.into(), channel.try_into()?, false, &mut peers.lock(), &mut controller_pool.lock());
+                handle_connection(
+                    &peer_id.into(),
+                    channel.try_into()?,
+                    /* initiate = */ false,
+                    &mut peers.lock(),
+                    &mut controller_pool.lock()).await;
             }
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -456,6 +522,14 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
+    fn no_streams_gen() -> Box<connected_peers::PeerSessionFn> {
+        Box::new(|_peer_id| {
+            fasync::Task::spawn(async {
+                Ok((stream::Streams::new(), fasync::Task::spawn(async {})))
+            })
+        })
+    }
+
     fn setup_connected_peer_test() -> (
         fasync::Executor,
         Arc<Mutex<ConnectedPeers>>,
@@ -468,10 +542,9 @@ mod tests {
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
-            stream::Streams::new(),
+            no_streams_gen(),
             proxy.clone(),
             cobalt_sender,
-            None,
         )));
 
         let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
@@ -523,7 +596,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (sender, _) = fake_cobalt_sender();
-        let mut streams_fut = Box::pin(build_local_streams(sender));
+        let mut streams_fut = Box::pin(StreamsBuilder::system_playable(sender, None));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
@@ -635,13 +708,20 @@ mod tests {
 
         // A peer connects before the timeout.
         let (_remote, transport) = Channel::create();
-        handle_connection(
-            &peer_id,
-            transport,
-            false,
-            &mut peers.lock(),
-            &mut controller_pool.lock(),
-        );
+        {
+            let mut peers_lock = peers.lock();
+            let mut controller_pool_lock = controller_pool.lock();
+            let connection_fut = handle_connection(
+                &peer_id,
+                transport,
+                /* initiate = */ false,
+                &mut peers_lock,
+                &mut controller_pool_lock,
+            );
+            pin_mut!(connection_fut);
+
+            assert!(exec.run_until_stalled(&mut connection_fut).is_ready());
+        }
 
         run_to_stalled(&mut exec);
 
