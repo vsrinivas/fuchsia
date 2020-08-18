@@ -175,7 +175,7 @@ impl PackageDataCollector {
         }
         let getter = ArtifactGetter::new(&Path::new(&fuchsia_dir).join(REPOSITORY_PATH));
         for (path, merkle) in package.contents.iter() {
-            if path == "zbi" {
+            if path == "zbi" || path == "zbi.signed" {
                 let zbi_data = getter.read_raw(&format!("blobs/{}", merkle))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
