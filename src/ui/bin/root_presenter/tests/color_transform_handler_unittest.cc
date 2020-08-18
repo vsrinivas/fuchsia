@@ -101,6 +101,29 @@ TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
   ASSERT_EQ(kCorrectDeuteranomaly, command.value().set_display_color_conversion().matrix);
 }
 
+// Basic test to make sure the color transform handler can set the minimum rgb value
+// on the display and that the callback function gets fired.
+TEST_F(ColorTransformHandlerTest, VerifyDisplayMinimumRgb) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
+  RunLoopUntilIdle();
+
+  uint8_t minimum_rgb = 15;
+  bool callback_called = false;
+  color_transform_handler_->SetMinimumRgb(minimum_rgb,
+                                          [&callback_called] { callback_called = true; });
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic received the correct minimum display value.
+  ASSERT_TRUE(fake_session_->PresentWasCalled());
+  auto command = fake_session_->GetFirstCommand();
+  ASSERT_TRUE(command.has_value());
+  ASSERT_EQ(command.value().Which(), fuchsia::ui::gfx::Command::Tag::kSetDisplayMinimumRgb);
+  ASSERT_EQ(minimum_rgb, command.value().set_display_minimum_rgb().min_value);
+  ASSERT_TRUE(callback_called);
+}
+
 // Ensures identical color transforms are sent to Scenic exactly once.
 TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalA11yColorTransforms) {
   // Create ColorTransformHandler.

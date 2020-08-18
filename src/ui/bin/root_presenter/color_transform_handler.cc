@@ -43,6 +43,7 @@ ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_co
   color_transform_handler_bindings_.Bind(handle.NewRequest());
   color_transform_manager_->RegisterColorTransformHandler(std::move(handle));
   component_context->outgoing()->AddPublicService(color_adjustment_bindings_.GetHandler(this));
+  component_context->outgoing()->AddPublicService(display_backlight_bindings_.GetHandler(this));
 }
 
 ColorTransformHandler::~ColorTransformHandler() {
@@ -85,6 +86,20 @@ void ColorTransformHandler::SetColorAdjustment(
 
   SetScenicColorConversion(color_adjustment_table.matrix(), /* preoffsets */ kZero,
                            /* postoffsets */ kZero);
+}
+
+void ColorTransformHandler::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCallback callback) {
+  // Init Scenic command
+  fuchsia::ui::gfx::SetDisplayMinimumRgbCmdHACK display_minimum_rgb_cmd;
+  display_minimum_rgb_cmd.min_value = minimum_rgb;
+
+  // Create and enqueue scenic color adjustment cmd.
+  fuchsia::ui::gfx::Command color_adjustment_cmd;
+  color_adjustment_cmd.set_set_display_minimum_rgb(std::move(display_minimum_rgb_cmd));
+  session_->Enqueue(std::move(color_adjustment_cmd));
+
+  // Present with callback.
+  safe_presenter_->QueuePresent(std::move(callback));
 }
 
 void ColorTransformHandler::SetScenicColorConversion(

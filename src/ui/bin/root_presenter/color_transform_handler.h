@@ -8,6 +8,7 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/brightness/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -47,11 +48,14 @@ class ColorTransformState {
   fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
 };
 
-// Color Transform Handler is responsible for translating color transform requests into Scenic
-// commands to change the display's color transform. It tracks whether accessibility color
-// correction is currently applied.
+// Color Transform Handler is responsible for sending commands to the display to modify pixel
+// data. This includes translating color transform requests into Scenic commands to change the
+// display's color transform, tracking whether accessibility color correction is currently
+// applied and applying clamping to the minimum allowed rgb value in order to adjust for
+// backlight bleeding.
 class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandler,
-                              public fuchsia::ui::brightness::ColorAdjustmentHandler {
+                              public fuchsia::ui::brightness::ColorAdjustmentHandler,
+                              public fuchsia::ui::policy::DisplayBacklight {
  public:
   explicit ColorTransformHandler(sys::ComponentContext* component_context,
                                  scenic::ResourceId compositor_id, scenic::Session* session,
@@ -77,6 +81,12 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
   void SetColorAdjustment(
       fuchsia::ui::brightness::ColorAdjustmentTable color_adjustment_table) override;
 
+  // SetMinimumRgb is called to clamp the minimum RGB value the display can take on. This is to
+  // reduce the amount of backlighting seen on certain devices in dark environments. The clamping
+  // value is passed along to the display controller regardless of what other ally color correction
+  // or brightness correction is also being applied.
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCallback callback) override;
+
  private:
   void SetScenicColorConversion(const std::array<float, 9> color_transform_matrix,
                                 const std::array<float, 3> color_transform_pre_offsets,
@@ -100,6 +110,7 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
   const scenic::ResourceId compositor_id_;
   fidl::Binding<fuchsia::accessibility::ColorTransformHandler> color_transform_handler_bindings_;
   fidl::BindingSet<fuchsia::ui::brightness::ColorAdjustmentHandler> color_adjustment_bindings_;
+  fidl::BindingSet<fuchsia::ui::policy::DisplayBacklight> display_backlight_bindings_;
   fuchsia::accessibility::ColorTransformPtr color_transform_manager_;
   ColorTransformState color_transform_state_;
 };
