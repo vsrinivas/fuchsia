@@ -136,7 +136,6 @@ common_test_contents = [
   "//zircon/system/utest/dlfcn",
   "//zircon/system/utest/fs-bench",
   "//zircon/system/utest/fs-management",
-  "//zircon/system/utest/fs-recovery",
   "//zircon/system/utest/fs-test-utils",
   "//zircon/system/utest/log",
   "//zircon/system/utest/memfs",

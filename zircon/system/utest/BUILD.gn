@@ -12,5 +12,6 @@ group("tests") {
   deps = [
     "dash",
     "fvm:tests",
+    "fs-recovery:tests"
   ]
 }
