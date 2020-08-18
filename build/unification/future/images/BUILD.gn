@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/images/args.gni")
-import("//build/images/zxcrypt.gni")
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zbi/zbi_input.gni")
 
@@ -12,10 +11,6 @@ import("legacy_zircon_objects.gni")
 # This file contains ZBI targets which mirror the ones under //build/images.
 # Ultimately the file will disappear and its contents will be progressively
 # dispatched to //build/images.
-
-group("zxcrypt") {
-  deps = [ "//src/security/policy/zxcrypt:$zxcrypt_key_source" ]
-}
 
 zbi_input("fuchsia_kernel_cmdline") {
   type = "cmdline"

@@ -10,7 +10,6 @@ import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
-import("//build/images/zxcrypt.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/future/images/zedboot.gni")
@@ -57,11 +56,6 @@ devmgr_config("devmgr_config") {
   label = ":devmgr_config.txt"
 }
 
-generated_file("zxcrypt_config.txt") {
-  outputs = [ "$target_out_dir/$target_name" ]
-  contents = zxcrypt_key_source
-}
-
 cmdline = [
             "console.shell=true",
             "netsvc.disable=false",
@@ -86,7 +80,6 @@ migrated_zbi("zbi") {
 
   deps = [
     ":kernel_cmdline",
-    "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
     "//src/sys/installer:bin",
   ]

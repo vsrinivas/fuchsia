@@ -10,7 +10,6 @@ import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
-import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/unification/future/images/devmgr_config.gni")
@@ -361,11 +360,6 @@ template("assemble_system") {
     testonly = true
   }
 
-  generated_resource("${image_name}_zxcrypt_config") {
-    outputs = [ "config/zxcrypt" ]
-    contents = zxcrypt_key_source
-  }
-
   zbi_input("${image_name}_cmdline") {
     type = "cmdline"
     args = []
@@ -412,7 +406,6 @@ template("assemble_system") {
              ":${image_name}_cmdline",
              ":${image_name}_devmgr_config",
              ":${image_name}_system_image.manifest",
-             ":${image_name}_zxcrypt_config",
              "//build/unification/zbi:kernel",
            ] + invoker.bootfs_labels
 

@@ -20,7 +20,6 @@ import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/vbmeta.gni")
-import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
 import("//build/product.gni")
@@ -561,16 +560,10 @@ devmgr_config("devmgr_config_prime") {
   testonly = true
 }
 
-generated_file("zxcrypt_config.txt") {
-  outputs = [ "$target_out_dir/$target_name" ]
-  contents = zxcrypt_key_source
-}
-
 group("fuchsia_contents") {
   testonly = true
   deps = [
     "//build/unification/future/images:fuchsia_kernel_cmdline",
-    "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
   ]
   deps += product_bootfs_labels + board_bootfs_labels
