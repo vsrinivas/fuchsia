@@ -69,6 +69,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:proptest",
   ]
 
   sources = [
