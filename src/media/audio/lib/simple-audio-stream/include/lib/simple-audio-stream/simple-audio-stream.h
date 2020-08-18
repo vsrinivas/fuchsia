@@ -57,7 +57,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase =
-    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::UnbindableDeprecated>;
+    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::UnbindableNew>;
 
 // The SimpleAudioStream server (thread compatible) implements Device::Interface and
 // RingBuffer::Interface.
@@ -109,7 +109,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void Shutdown() __TA_EXCLUDES(domain_token());
 
   // DDK device implementation
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -427,7 +427,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
   bool rb_fetched_ __TA_GUARDED(domain_token()) = false;
-  bool is_shutdown_ = false;
+  std::atomic_bool shutting_down_ = false;
 
   // The server implementation is single threaded, however NotifyPosition() can be called from any
   // thread. Hence to use expected_notifications_per_ring_ and position_completer_ within

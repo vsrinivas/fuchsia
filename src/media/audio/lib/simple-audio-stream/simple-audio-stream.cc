@@ -18,7 +18,7 @@
 namespace audio {
 
 void SimpleAudioStream::Shutdown() {
-  if (!is_shutdown_) {
+  if (!shutting_down_.exchange(true)) {
     loop_.Shutdown();
 
     // We have shutdown our loop, it is now safe to assert we are holding the domain token.
@@ -34,7 +34,6 @@ void SimpleAudioStream::Shutdown() {
     }
 
     ShutdownHook();
-    is_shutdown_ = true;
   }
 }
 
@@ -156,14 +155,14 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   return ZX_OK;
 }
 
-void SimpleAudioStream::DdkUnbindDeprecated() {
+void SimpleAudioStream::DdkUnbindNew(ddk::UnbindTxn txn) {
   Shutdown();
 
   // TODO(johngro): We need to signal our SimpleAudioStream owner to let them
   // know that we have been unbound and are in the process of shutting down.
 
   // Unpublish our device node.
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void SimpleAudioStream::DdkRelease() {

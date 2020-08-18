@@ -167,6 +167,16 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   server->DdkRelease();
 }
 
+TEST(SimpleAudioTest, UnbindAndAlsoShutdown) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+  server->DdkAsyncRemove();
+  server->Shutdown();
+  EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
+}
+
 TEST(SimpleAudioTest, SetAndGetGain) {
   fake_ddk::Bind tester;
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);

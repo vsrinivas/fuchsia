@@ -111,13 +111,15 @@ void VirtualAudioDeviceImpl::RemoveStream() {
     // This bool tells the stream that Unbind originates from us (parent), so don't call us back.
     stream_->shutdown_by_parent_ = true;
 
-    // DdkUnbind won't return until any in-flight calls to PostToDispatcher are quiesced (Unbind
-    // calls Shutdown which deactivates its execution domain, and all PostToDispatcher calls are
+    // Shutdown won't return until any in-flight calls to PostToDispatcher are quiesced.
+    // Shutdown deactivates its execution domain, and all PostToDispatcher calls are
     // made from this execution domain). This guarantee is critical, because Add changes what
     // task_queue_ points to. If calls to PostToDispatcher WERE still outstanding, then it would be
     // possible that Add could be called before task_queue_->Enqueue runs, causing us to erroneously
     // run a task associated with the older stream, in the context of the new stream.
-    stream_->DdkUnbindDeprecated();
+    stream_->Shutdown();
+    // Request the device be unbound.
+    stream_->DdkAsyncRemove();
 
     // Now that the stream has done its shutdown, we release our reference.
     stream_ = nullptr;
