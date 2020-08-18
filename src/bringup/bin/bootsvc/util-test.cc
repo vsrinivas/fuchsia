@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/bringup/bin/bootsvc/util.h"
+
 #include <zircon/types.h>
 
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
-
-#include "../util.h"
 
 namespace {
 
@@ -19,7 +19,7 @@ struct SplitStringTestCase {
 };
 
 // Test the SplitString util individually.
-TEST(BootsvcUnitTests, TestSplitString) {
+TEST(UtilTest, TestSplitString) {
   // Makeshift parametrized test.
   struct {
     const char* input;
@@ -48,7 +48,7 @@ TEST(BootsvcUnitTests, TestSplitString) {
 }
 
 // Make sure that we can parse boot args from a configuration string
-TEST(BootsvcUnitTests, TestParseBootArgs) {
+TEST(UtilTest, TestParseBootArgs) {
   const char config1[] = R"(
 # comment
 key

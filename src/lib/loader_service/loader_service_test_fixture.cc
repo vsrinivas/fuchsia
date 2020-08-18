@@ -25,34 +25,9 @@ namespace loader {
 namespace test {
 
 namespace fldsvc = ::llcpp::fuchsia::ldsvc;
-
-namespace {
-
 namespace fsec = ::llcpp::fuchsia::security::resource;
 
-zx::status<zx::unowned_resource> GetVmexResource() {
-  static const std::string kVmexResourcePath = "/svc/" + std::string(fsec::Vmex::Name);
-
-  static zx::resource vmex_resource;
-  if (!vmex_resource.is_valid()) {
-    zx::channel client, server;
-    auto status = zx::make_status(zx::channel::create(0, &client, &server));
-    if (status.is_error()) {
-      return status.take_error();
-    }
-    status = zx::make_status(fdio_service_connect(kVmexResourcePath.c_str(), server.release()));
-    if (status.is_error()) {
-      return status.take_error();
-    }
-
-    auto result = fsec::Vmex::Call::Get(client.borrow());
-    if (!result.ok()) {
-      return zx::error(result.status());
-    }
-    vmex_resource = std::move(result.Unwrap()->vmex);
-  }
-  return zx::ok(vmex_resource.borrow());
-}
+namespace {
 
 zx_rights_t get_rights(const zx::object_base& handle) {
   zx_info_handle_basic_t info;
@@ -163,6 +138,31 @@ void LoaderServiceTest::Config(fldsvc::Loader::SyncClient& client, std::string c
   if (expected.is_ok()) {
     ASSERT_EQ(result.Unwrap()->rv, expected.value());
   }
+}
+
+// static
+zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
+  static const std::string kVmexResourcePath = "/svc/" + std::string(fsec::Vmex::Name);
+
+  static zx::resource vmex_resource;
+  if (!vmex_resource.is_valid()) {
+    zx::channel client, server;
+    auto status = zx::make_status(zx::channel::create(0, &client, &server));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    status = zx::make_status(fdio_service_connect(kVmexResourcePath.c_str(), server.release()));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+
+    auto result = fsec::Vmex::Call::Get(client.borrow());
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    vmex_resource = std::move(result.Unwrap()->vmex);
+  }
+  return zx::ok(vmex_resource.borrow());
 }
 
 }  // namespace test

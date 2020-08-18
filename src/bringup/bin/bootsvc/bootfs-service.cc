@@ -7,11 +7,13 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/bootfs/parser.h>
+#include <lib/zx/event.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <string_view>
 #include <utility>
@@ -20,6 +22,7 @@
 #include <fs/vfs_types.h>
 #include <launchpad/launchpad.h>
 
+#include "lib/zx/time.h"
 #include "util.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -161,14 +164,22 @@ zx_status_t BootfsService::Open(const char* path, bool executable, zx::vmo* vmo,
 }
 
 BootfsService::~BootfsService() {
-  auto callback = [parts(std::move(owned_vmos_))](zx_status_t status) mutable {
+  // Correctly shutting down a memfs (avoiding both use-after-frees and leaks) requires async
+  // operations, so we use an Event to wait until the shutdown callback is finished. This is a bit
+  // silly and likely won't be exercised outside of tests since bootsvc usually does not terminate
+  // normally, but it makes ASAN and LSAN happy.
+  zx::event event;
+  zx::event::create(0, &event);
+  auto callback = [parts(std::move(owned_vmos_)), &event](zx_status_t status) mutable {
     // Bootfs uses multiple Vnodes which may share a reference to a single VMO.
     // Since the lifetime of the VMOs are coupled with the BootfsService, all
     // connections to these Vnodes must be terminated (with Shutdown) before
     // we can safely close the VMOs
     parts.reset();
+    event.signal(0, ZX_USER_SIGNAL_0);
   };
   vfs_->Shutdown(std::move(callback));
+  event.wait_one(ZX_USER_SIGNAL_0, zx::deadline_after(zx::min(1)), nullptr);
 }
 
 zx_status_t BootfsService::DuplicateAsExecutable(const zx::vmo& vmo, zx::vmo* out_vmo) {

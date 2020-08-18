@@ -18,8 +18,8 @@ group("kernel") {
 group("tests") {
   testonly = true
   deps = [
-    "//src/bringup/bin/bootsvc/test:bootsvc-integration-tests",
-    "//src/bringup/bin/bootsvc/test:bootsvc-root-job-test",
+    "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests",
+    "//src/bringup/bin/bootsvc/integration_test:bootsvc-root-job-test",
     "//src/zircon/tests/mexec:zbi-child-image",
     "//src/zircon/tests/mexec:zbi-parent-image",
     "//zircon/system/utest/core:core-tests",

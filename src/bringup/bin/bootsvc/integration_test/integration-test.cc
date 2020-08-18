@@ -236,6 +236,7 @@ TEST(BootsvcIntegrationTest, BootItems) {
   ASSERT_EQ(ZX_OK, status);
 
   // Check that we can get the following boot item types.
+  // clang-format off
   uint32_t types[] = {
       ZBI_TYPE_CRASHLOG,
       ZBI_TYPE_PLATFORM_ID,
@@ -243,6 +244,7 @@ TEST(BootsvcIntegrationTest, BootItems) {
       ZBI_TYPE_STORAGE_RAMDISK,
       ZBI_TYPE_SERIAL_NUMBER,
   };
+  // clang-format on
   for (uint32_t type : types) {
     zx::vmo payload;
     uint32_t length;

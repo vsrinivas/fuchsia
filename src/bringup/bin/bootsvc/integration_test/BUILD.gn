@@ -8,25 +8,6 @@ import("//build/unification/zbi/resource.gni")
 import("//build/unification/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
-test("bootsvc-unit-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "bootsvc-unit-test"
-  sources = [ "unit-test.cc" ]
-  deps = [
-    "..:util",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
 executable("bootsvc-integration-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]

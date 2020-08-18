@@ -172,7 +172,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 // If the next process terminates, bootsvc will quit.
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
-                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
+                       std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
                        const zx::resource& root_rsrc, const zx::debuglog& log, async::Loop& loop,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   const char* bootsvc_next = getenv("bootsvc.next");
@@ -217,11 +217,10 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_create(0, next_program, &lp);
   {
     // Use the local loader service backed directly by the primary BOOTFS.
-    zx::channel local_loader_conn;
-    status = loader_svc->Connect(&local_loader_conn);
-    ZX_ASSERT_MSG(status == ZX_OK, "failed to connect to BootfsLoaderService : %s\n",
-                  zx_status_get_string(status));
-    zx_handle_t old = launchpad_use_loader_service(lp, local_loader_conn.release());
+    zx::status<zx::channel> loader_conn = loader_svc->Connect();
+    ZX_ASSERT_MSG(loader_conn.is_ok(), "failed to connect to BootfsLoaderService : %s\n",
+                  loader_conn.status_string());
+    zx_handle_t old = launchpad_use_loader_service(lp, loader_conn.value().release());
     ZX_ASSERT(old == ZX_HANDLE_INVALID);
   }
   launchpad_load_from_vmo(lp, program.release());
@@ -385,10 +384,7 @@ int main(int argc, char** argv) {
 
   // Creating the loader service
   printf("bootsvc: Creating loader service...\n");
-  fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc;
-  status = bootsvc::BootfsLoaderService::Create(bootfs_svc, loop.dispatcher(), &loader_svc);
-  ZX_ASSERT_MSG(status == ZX_OK, "BootfsLoaderService creation failed: %s\n",
-                zx_status_get_string(status));
+  auto loader_svc = bootsvc::BootfsLoaderService::Create(loop.dispatcher(), bootfs_svc);
 
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that

@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//build/unification/zbi/zbi_input.gni")
+import("//src/sys/build/components.gni")
 
 group("bootsvc") {
   deps = [
@@ -11,58 +13,78 @@ group("bootsvc") {
   ]
 }
 
+# There are also integration tests under intergration_test/, but they are not component tests so
+# they aren't included in the same way.
+group("tests") {
+  testonly = true
+  deps = [ ":bootsvc-tests" ]
+}
+
+zbi_input("bin-input") {
+  # Using a prefix to install bootsvc in the same spot on zbi's
+  # as back when it was built by the ZN build.
+  # Note that this may be removed post-unification.
+  prefix = "pkg/bootsvc"
+  deps = [ ":bin" ]
+}
+
 zbi_input("cmdline") {
   visibility = [ ":*" ]
   type = "cmdline"
   args = [ "--entry=userboot.root=pkg/bootsvc" ]
 }
 
-executable("bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "bootsvc"
+source_set("lib") {
+  visibility = [ ":*" ]
   sources = [
     "bootfs-loader-service.cc",
     "bootfs-loader-service.h",
     "bootfs-service.cc",
     "bootfs-service.h",
-    "main.cc",
     "svcfs-service.cc",
     "svcfs-service.h",
   ]
-  deps = [
+  public_deps = [
     ":util",
+    "//src/lib/loader_service",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/memfs:memfs-cpp",
+  ]
+  deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
+    "//src/lib/files",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/launchpad",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
 }
 
-# This is also used by code in test/.
+executable("bin") {
+  output_name = "bootsvc"
+  sources = [ "main.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/launchpad",
+  ]
+}
+
 source_set("util") {
   visibility = [ "./*" ]
   sources = [
@@ -77,10 +99,37 @@ source_set("util") {
   ]
 }
 
-zbi_input("bin-input") {
-  # Using a prefix to install bootsvc in the same spot on zbi's
-  # as back when it was built by the ZN build.
-  # Note that this may be removed post-unification.
-  prefix = "pkg/bootsvc"
-  deps = [ ":bin" ]
+test("util_test") {
+  output_name = "bootsvc_util_test"
+  sources = [ "util-test.cc" ]
+  deps = [
+    ":util",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_component("util-test") {
+  executable_path = "test/bootsvc_util_test"
+  deps = [ ":util_test" ]
+}
+
+test("bootfs_loader_service_test") {
+  sources = [ "bootfs-loader-service-test.cc" ]
+  deps = [
+    ":lib",
+    "//src/lib/loader_service:loader_service_test_fixture",
+  ]
+}
+
+fuchsia_unittest_component("bootfs-loader-service-test") {
+  manifest = "meta/bootfs-loader-service-test.cmx"
+  deps = [ ":bootfs_loader_service_test" ]
+}
+
+fuchsia_test_package("bootsvc-tests") {
+  test_components = [
+    ":bootfs-loader-service-test",
+    ":util-test",
+  ]
 }

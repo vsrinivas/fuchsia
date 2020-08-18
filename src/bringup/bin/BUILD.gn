@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "bootsvc:tests",
     "pwrbtn-monitor:tests",
     "virtcon:test",
   ]

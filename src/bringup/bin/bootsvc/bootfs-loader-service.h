@@ -6,62 +6,28 @@
 #define SRC_BRINGUP_BIN_BOOTSVC_BOOTFS_LOADER_SERVICE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/zx/vmo.h>
 
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <loader-service/loader-service.h>
 
 #include "bootfs-service.h"
+#include "src/lib/loader_service/loader_service.h"
 
 namespace bootsvc {
 
-class BootfsLoaderService : public fbl::RefCounted<BootfsService> {
+class BootfsLoaderService : public loader::LoaderServiceBase {
  public:
-  ~BootfsLoaderService();
-
-  BootfsLoaderService(const BootfsLoaderService&) = delete;
-  BootfsLoaderService& operator=(const BootfsLoaderService&) = delete;
-  BootfsLoaderService(BootfsLoaderService&&) = delete;
-  BootfsLoaderService& operator=(BootfsLoaderService&&) = delete;
-
   // Create a loader that loads from the given bootfs service and dispatches
   // on the given dispatcher.
-  static zx_status_t Create(fbl::RefPtr<BootfsService> svc, async_dispatcher_t* dispatcher,
-                            fbl::RefPtr<BootfsLoaderService>* loader_out);
-
-  // Returns a dl_set_loader_service-compatible loader service
-  zx_status_t Connect(zx::channel* out);
+  static std::shared_ptr<BootfsLoaderService> Create(async_dispatcher_t* dispatcher,
+                                                     fbl::RefPtr<BootfsService> bootfs);
 
  private:
-  explicit BootfsLoaderService(fbl::RefPtr<BootfsService> svc);
+  BootfsLoaderService(async_dispatcher_t* dispatcher, fbl::RefPtr<BootfsService> bootfs)
+      : LoaderServiceBase(dispatcher, "bootsvc"), bootfs_(std::move(bootfs)) {}
 
-  zx_status_t LoadObject(const char* name, zx::vmo* vmo_out);
-  zx_status_t LoadAbspath(const char* name, zx::vmo* vmo_out);
-  zx_status_t PublishDataSink(const char* name, zx::vmo vmo);
-
-  static zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo_out) {
-    zx::vmo vmo;
-    zx_status_t status = reinterpret_cast<BootfsLoaderService*>(ctx)->LoadObject(name, &vmo);
-    *vmo_out = vmo.release();
-    return status;
-  }
-
-  static zx_status_t LoadAbspath(void* ctx, const char* name, zx_handle_t* vmo_out) {
-    zx::vmo vmo;
-    zx_status_t status = reinterpret_cast<BootfsLoaderService*>(ctx)->LoadAbspath(name, &vmo);
-    *vmo_out = vmo.release();
-    return status;
-  }
-
-  static zx_status_t PublishDataSink(void* ctx, const char* name, zx_handle_t vmo) {
-    return reinterpret_cast<BootfsLoaderService*>(ctx)->PublishDataSink(name, zx::vmo(vmo));
-  }
-
-  static const loader_service_ops_t kOps_;
+  virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) override;
 
   fbl::RefPtr<BootfsService> bootfs_;
-  loader_service_t* loader_ = nullptr;
 };
 
 }  // namespace bootsvc

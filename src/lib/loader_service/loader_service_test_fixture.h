@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/memfs/cpp/vnode.h>
+#include <lib/zx/resource.h>
 
 #include <memory>
 #include <vector>
@@ -71,6 +72,10 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
   void Config(llcpp::fuchsia::ldsvc::Loader::SyncClient& client, std::string config,
               zx::status<zx_status_t> expected);
 
+  // Helper function to interact with fuchsia.security.resource.Vmex
+  static zx::status<zx::unowned_resource> GetVmexResource();
+
+  async::Loop& fs_loop() { return fs_loop_; }
   async::Loop& loader_loop() { return loader_loop_; }
   fbl::RefPtr<memfs::VnodeDir>& root_dir() { return root_dir_; }
 
