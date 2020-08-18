@@ -20,6 +20,7 @@ config("ktl.config") {
 
     # TODO(44971): Referenced in environment configs.
     "$zx/kernel:*",
+    "$zx/system/ulib/*",
   ]
 
   defines = [
