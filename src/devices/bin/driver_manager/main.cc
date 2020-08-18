@@ -365,19 +365,24 @@ int main(int argc, char** argv) {
   system_instance.start_services(coordinator);
 
   if (driver_manager_params.driver_host_strict_linking) {
-    std::unique_ptr<DriverHostLoaderService> loader_service;
-    status = DriverHostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
+    fbl::unique_fd lib_fd;
+    status = fdio_open_fd("/pkg/lib",
+                          ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                          lib_fd.reset_and_get_address());
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
+      LOGF(ERROR, "Failed to open /pkg/lib: %s", zx_status_get_string(status));
       return status;
     }
+
+    auto loader_service = DriverHostLoaderService::Create(loop.dispatcher(), std::move(lib_fd));
     coordinator.set_loader_service_connector([ls = std::move(loader_service)](zx::channel* c) {
-      zx_status_t status = ls->Connect(c);
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Failed to add driver_host loader connection: %s",
-             zx_status_get_string(status));
+      auto conn = ls->Connect();
+      if (conn.is_error()) {
+        LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
+      } else {
+        *c = std::move(conn).value();
       }
-      return status;
+      return conn.status_value();
     });
   } else if (!devmgr_args.use_default_loader) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {

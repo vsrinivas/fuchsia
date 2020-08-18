@@ -5,34 +5,21 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_LOADER_SERVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_LOADER_SERVICE_H_
 
-#include <lib/fdio/namespace.h>
-#include <lib/zx/channel.h>
+#include "src/lib/loader_service/loader_service.h"
 
-#include <memory>
-
-#include <fbl/unique_fd.h>
-#include <loader-service/loader-service.h>
-
-class SystemInstance;
-
-// A loader service for driver_hosts that restricts access to dynamic libraries.
-class DriverHostLoaderService {
+// A loader service for driver_hosts that restricts access to dynamic libraries by applying an
+// allowlist, but then otherwise simply loads them from the given lib directory.
+class DriverHostLoaderService : public loader::LoaderService {
  public:
-  // Create a new loader service for driver_hosts. The |dispatcher| must have a
-  // longer lifetime than |out|.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, SystemInstance* system_instance,
-                            std::unique_ptr<DriverHostLoaderService>* out);
-  ~DriverHostLoaderService();
-
-  // Connect to the loader service.
-  zx_status_t Connect(zx::channel* out);
-
-  // Return the file descriptor for the root namespace of the loader service.
-  const fbl::unique_fd& root() const { return root_; }
+  static std::shared_ptr<DriverHostLoaderService> Create(async_dispatcher_t* dispatcher,
+                                                         fbl::unique_fd lib_fd,
+                                                         std::string name = "driver_host");
 
  private:
-  fbl::unique_fd root_;
-  loader_service_t* svc_ = nullptr;
+  DriverHostLoaderService(async_dispatcher_t* dispatcher, fbl::unique_fd lib_fd, std::string name)
+      : LoaderService(dispatcher, std::move(lib_fd), std::move(name)) {}
+
+  virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) override;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_LOADER_SERVICE_H_

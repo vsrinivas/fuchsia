@@ -2,19 +2,17 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob"
+                "fuchsia.security.resource.Vmex"
             ]
         }
     },
     "program": {
-        "binary": "test/driver_manager_test"
+        "binary": "test/driver_host_loader_service_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.boot.Items",
-            "fuchsia.boot.RootJob",
             "fuchsia.logger.LogSink",
-            "fuchsia.process.Launcher"
+            "fuchsia.security.resource.Vmex"
         ]
     }
 }

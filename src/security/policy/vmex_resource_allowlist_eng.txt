@@ -1,4 +1,5 @@
 fuchsia-pkg://fuchsia.com/bootsvc-tests#meta/bootfs-loader-service-test.cmx
+fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-host-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/fshost-tests#meta/deprecated-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/loader-service-test#meta/loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/vmex_resource_allowed.cmx

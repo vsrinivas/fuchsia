@@ -2,139 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver_host_loader_service.h"
+#include "src/devices/bin/driver_manager/driver_host_loader_service.h"
 
-#include <errno.h>
-#include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/io.h>
-#include <lib/fit/defer.h>
-#include <stdint.h>
-#include <zircon/status.h>
+#include <zircon/errors.h>
 
-#include <array>
-#include <memory>
-
-#include <fbl/string_printf.h>
-
-#include "coordinator.h"
-#include "fdio.h"
-#include "src/devices/lib/log/log.h"
-#include "system_instance.h"
+#include "src/lib/files/path.h"
 
 namespace {
 
-static constexpr std::array<const char*, 3> kDriverWhitelist{
+static constexpr std::array<const char*, 3> kDriverAllowlist{
     "libasync-default.so",
     "libdriver.so",
     "libfdio.so",
 };
 
-// Check if the driver is in the whitelist.
-bool InWhitelist(const char* name) {
-  for (const char* driver : kDriverWhitelist) {
-    if (strcmp(driver, name) == 0) {
+// Check if the driver is in the allowlist.
+bool InAllowlist(std::string path) {
+  // path may have multiple path components, e.g. if loading the asan variant of a library, and
+  // these should be allowed as long as the library name is in the allowlist.
+  std::string base = files::GetBaseName(path);
+  for (const char* entry : kDriverAllowlist) {
+    if (base == entry) {
       return true;
     }
   }
   return false;
 }
 
-zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
-  if (!InWhitelist(name)) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-  auto self = static_cast<DriverHostLoaderService*>(ctx);
-  fbl::String path = fbl::StringPrintf("/boot/lib/%s", name);
-  int raw_fd;
-  zx_status_t status =
-      fdio_open_fd_at(self->root().get(), path.c_str(),
-                      fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &raw_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-  fbl::unique_fd fd(raw_fd);
-  zx::vmo exec_vmo;
-  status = fdio_get_vmo_exec(fd.get(), exec_vmo.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = exec_vmo.set_property(ZX_PROP_NAME, path.c_str(), path.size());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *vmo = exec_vmo.release();
-  return ZX_OK;
-}
-
-zx_status_t LoadAbspath(void* ctx, const char* path, zx_handle_t* vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t PublishDataSink(void* ctx, const char* name, zx_handle_t vmo) {
-  zx_handle_close(vmo);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-constexpr loader_service_ops_t ops_{
-    .load_object = LoadObject,
-    .load_abspath = LoadAbspath,
-    .publish_data_sink = PublishDataSink,
-    .finalizer = nullptr,
-};
-
 }  // namespace
 
-zx_status_t DriverHostLoaderService::Create(async_dispatcher_t* dispatcher,
-                                            SystemInstance* system_instance,
-                                            std::unique_ptr<DriverHostLoaderService>* out) {
-  fdio_ns_t* ns;
-  zx_status_t status = fdio_ns_create(&ns);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create namespace: %s", zx_status_get_string(status));
-    return status;
-  }
-  auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
-  zx::channel boot_client, boot_server;
-  status = zx::channel::create(0, &boot_client, &boot_server);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_open("/boot", FS_READONLY_DIR_FLAGS, boot_server.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to '/boot': %s", zx_status_get_string(status));
-    return status;
-  }
-  status = fdio_ns_bind(ns, "/boot", boot_client.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to bind namespace '/boot': %s", zx_status_get_string(status));
-    return status;
-  }
-  fbl::unique_fd root(fdio_ns_opendir(ns));
-  if (!root) {
-    LOGF(ERROR, "Failed to open root directory");
-    return ZX_ERR_IO;
-  }
-  std::unique_ptr<DriverHostLoaderService> ldsvc(new DriverHostLoaderService);
-  status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
-    return status;
-  }
-  ldsvc->root_ = std::move(root);
-  *out = std::move(ldsvc);
-  return ZX_OK;
+// static
+std::shared_ptr<DriverHostLoaderService> DriverHostLoaderService::Create(
+    async_dispatcher_t* dispatcher, fbl::unique_fd lib_fd, std::string name) {
+  // Can't use make_shared because constructor is private
+  return std::shared_ptr<DriverHostLoaderService>(
+      new DriverHostLoaderService(dispatcher, std::move(lib_fd), std::move(name)));
 }
 
-DriverHostLoaderService::~DriverHostLoaderService() {
-  if (svc_ != nullptr) {
-    loader_service_release(svc_);
+zx::status<zx::vmo> DriverHostLoaderService::LoadObjectImpl(std::string path) {
+  if (!InAllowlist(path)) {
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
-}
-
-zx_status_t DriverHostLoaderService::Connect(zx::channel* out) {
-  return loader_service_connect(svc_, out->reset_and_get_address());
+  return LoaderService::LoadObjectImpl(path);
 }

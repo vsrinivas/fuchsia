@@ -73,6 +73,8 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/devices/lib/log",
     "//src/lib/ddk",
+    "//src/lib/files",
+    "//src/lib/loader_service",
     "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -91,7 +93,6 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/svc",
@@ -111,7 +112,7 @@ executable("driver_manager") {
   configs += [ "//build/config:all_source" ]
 }
 
-test("driver-manager-test") {
+test("driver_manager_test") {
   sources = [
     "autobind_tests.cc",
     "binding_test.cc",
@@ -138,12 +139,10 @@ test("driver-manager-test") {
   ]
 }
 
-fuchsia_component("driver-manager-test-component") {
-  testonly = true
-  component_name = "driver-manager-test"
+fuchsia_unittest_component("driver-manager-test") {
   manifest = "meta/driver-manager-test.cmx"
   deps = [
-    ":driver-manager-test",
+    ":driver_manager_test",
     "testing:ambient_vmex_test_util",
     "testing:new_process_test_util",
     "//src/devices/bin/driver_host",
@@ -153,8 +152,25 @@ fuchsia_component("driver-manager-test-component") {
   ]
 }
 
+# This is a separate test binary because this test fixture uses gtest, not zxtest
+test("driver_host_loader_service_test") {
+  sources = [ "driver_host_loader_service_test.cc" ]
+  deps = [
+    ":lib",
+    "//src/lib/loader_service:loader_service_test_fixture",
+  ]
+}
+
+fuchsia_unittest_component("driver-host-loader-service-test") {
+  manifest = "meta/driver-host-loader-service-test.cmx"
+  deps = [ ":driver_host_loader_service_test" ]
+}
+
 fuchsia_test_package("driver-manager-tests") {
-  test_components = [ ":driver-manager-test-component" ]
+  test_components = [
+    ":driver-host-loader-service-test",
+    ":driver-manager-test",
+  ]
 }
 
 component_manifest_resources("meta") {
