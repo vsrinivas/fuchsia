@@ -30,6 +30,9 @@ test("display-core-unittests") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-testing",
   ]
+
+  # TODO(fxb/58491): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 static_library("base") {
