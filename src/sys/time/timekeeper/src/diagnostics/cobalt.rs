@@ -42,7 +42,7 @@ impl CobaltDiagnostics {
     /// Records a Timekeeper lifecycle event.
     pub fn log_lifecycle_event(
         &mut self,
-        event_type: time_metrics_registry::TimeMetricDimensionEventType,
+        event_type: time_metrics_registry::TimekeeperLifecycleEventsMetricDimensionEventType,
     ) {
         self.sender
             .log_event(time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event_type)
