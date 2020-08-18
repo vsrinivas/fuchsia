@@ -32,6 +32,7 @@
 #include <kernel/scheduler.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
+#include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <ktl/iterator.h>
 #include <lk/init.h>
@@ -453,6 +454,7 @@ static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
     printf("usage:\n");
     printf("%s unplug <cpu_id>\n", argv[0].str);
     printf("%s hotplug <cpu_id>\n", argv[0].str);
+    printf("%s reschedule <cpu_id>        : send a reschedule ipi to <cpu_id>\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
 
@@ -471,6 +473,31 @@ static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
     zx_status_t status = mp_hotplug_cpu((cpu_num_t)argv[2].u);
     printf("CPU %lu hotplug %s %d\n", argv[2].u, (status == ZX_OK ? "succeeded" : "failed"),
            status);
+  } else if (!strcmp(argv[1].str, "reschedule")) {
+    if (argc < 3) {
+      printf("specify a cpu_id\n");
+      goto usage;
+    }
+
+    auto target_cpu = static_cast<cpu_num_t>(argv[2].u);
+    if (!mp_is_cpu_active(target_cpu)) {
+      printf("target cpu %u is not active\n", target_cpu);
+      return ZX_OK;
+    }
+
+    cpu_mask_t mask = cpu_num_to_mask(target_cpu);
+    cpu_num_t sending_cpu;
+    {
+      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      sending_cpu = arch_curr_cpu_num();
+      mp_reschedule(mask, 0);
+    }
+
+    if (sending_cpu == target_cpu) {
+      printf("sending cpu is same as target cpu, no ipi sent\n");
+    } else {
+      printf("sent reschedule ipi to cpu %u\n", target_cpu);
+    }
   } else {
     printf("unknown command\n");
     goto usage;
