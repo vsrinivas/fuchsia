@@ -331,13 +331,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	// TODO(fxbug.dev/43188): We temporarily capture the tail of all stdout and
 	// stderr to search for a particular error signature.
 	var outputSink bytes.Buffer
-	cmd := &exec.Cmd{
-		Path:   invocation[0],
-		Args:   invocation,
-		Dir:    workdir,
-		Stdout: io.MultiWriter(os.Stdout, &outputSink),
-		Stderr: io.MultiWriter(os.Stderr, &outputSink),
-	}
+	cmd := exec.Command(invocation[0], invocation[1:]...)
+	cmd.Dir = workdir
 	if t.ptm != nil {
 		cmd.Stdin = t.ptm
 		cmd.Stdout = io.MultiWriter(t.ptm, &outputSink, os.Stdout)
@@ -347,6 +342,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 			Setsid:  true,
 			Ctty:    int(t.ptm.Fd()),
 		}
+	} else {
+		cmd.Stdout = io.MultiWriter(&outputSink, os.Stdout)
+		cmd.Stderr = io.MultiWriter(&outputSink, os.Stderr)
 	}
 	logger.Debugf(ctx, "QEMU invocation:\n%s", strings.Join(invocation, " "))
 
