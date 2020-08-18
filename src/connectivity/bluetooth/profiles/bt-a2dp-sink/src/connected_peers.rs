@@ -15,7 +15,7 @@ use {
     },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::Inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
@@ -46,7 +46,6 @@ impl ConnectedPeers {
         streams: Streams,
         profile: ProfileProxy,
         cobalt_sender: CobaltSender,
-        inspect: inspect::Node,
         domain: Option<String>,
     ) -> Self {
         Self {
@@ -54,7 +53,7 @@ impl ConnectedPeers {
             descriptors: HashMap::new(),
             streams,
             profile,
-            inspect,
+            inspect: inspect::Node::default(),
             cobalt_sender,
             domain,
         }
@@ -195,6 +194,13 @@ impl ConnectedPeers {
     }
 }
 
+impl Inspect for &mut ConnectedPeers {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,6 +209,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
+    use fuchsia_inspect::assert_inspect_tree;
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
     use std::convert::TryFrom;
@@ -258,15 +265,8 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
-        let inspect = inspect::Inspector::new();
 
-        let peers = ConnectedPeers::new(
-            Streams::new(),
-            proxy,
-            cobalt_sender,
-            inspect.root().create_child("connected"),
-            None,
-        );
+        let peers = ConnectedPeers::new(Streams::new(), proxy, cobalt_sender, None);
 
         (exec, id, peers, stream)
     }
@@ -285,6 +285,24 @@ mod tests {
         };
 
         exercise_avdtp(&mut exec, remote, &peer);
+    }
+
+    #[test]
+    fn connected_peers_inspect() {
+        let (_exec, id, mut peers, _stream) = setup_connected_peer_test();
+
+        let inspect = inspect::Inspector::new();
+        peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
+
+        assert_inspect_tree!(inspect, root: { peers: {} });
+
+        // Connect a peer, it should show up in the tree.
+        let (_remote, channel) = Channel::create();
+        peers.connected(id, channel, false);
+
+        assert_inspect_tree!(inspect, root: { peers: { peer_0: {
+            id: "0000000000000001", local_streams: contains {}
+        }}});
     }
 
     #[test]

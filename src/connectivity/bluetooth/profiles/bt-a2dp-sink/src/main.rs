@@ -23,6 +23,7 @@ use {
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::Inspect,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{select, StreamExt, TryStreamExt},
@@ -305,20 +306,21 @@ async fn main() -> Result<(), Error> {
     let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
     let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
 
-    let inspect = inspect::Inspector::new();
     let mut fs = ServiceFs::new();
-    inspect.serve(&mut fs)?;
 
-    let pool_clone = controller_pool.clone();
-    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
+    let inspect = inspect::Inspector::new();
+    inspect.serve(&mut fs)?;
 
     let mut lifecycle = ComponentLifecycleServer::spawn();
     fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
 
+    let pool_clone = controller_pool.clone();
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
+
     if let Err(e) = fs.take_and_serve_directory_handle() {
-        fx_log_warn!("Unable to serve Inspect service directory: {}", e);
+        fx_log_warn!("Unable to serve service directory: {}", e);
     }
-    fasync::Task::spawn(fs.collect::<()>()).detach();
+    let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
     let abs_vol_relay = volume_relay::VolumeRelay::start();
     if let Err(e) = &abs_vol_relay {
@@ -341,13 +343,17 @@ async fn main() -> Result<(), Error> {
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
-    let peers = Arc::new(Mutex::new(connected_peers::ConnectedPeers::new(
+    let mut peers = connected_peers::ConnectedPeers::new(
         streams,
         profile_svc.clone(),
         cobalt_logger.clone(),
-        inspect.root().create_child("connected"),
         opts.domain,
-    )));
+    );
+    if let Err(e) = peers.iattach(&inspect.root(), "connected") {
+        fx_log_info!("Failed to attach to inspect: {:?}", e);
+    }
+
+    let peers = Arc::new(Mutex::new(peers));
 
     let service_defs = vec![make_profile_service_definition()];
 
@@ -461,12 +467,10 @@ mod tests {
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
-        let inspect = inspect::Inspector::new();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             stream::Streams::new(),
             proxy.clone(),
             cobalt_sender,
-            inspect.root().create_child("connected"),
             None,
         )));
 

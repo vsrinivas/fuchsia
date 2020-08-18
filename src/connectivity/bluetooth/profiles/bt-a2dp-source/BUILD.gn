@@ -26,6 +26,9 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -54,6 +57,7 @@ rustc_binary("bin") {
     "src/encoding.rs",
     "src/main.rs",
     "src/pcm_audio.rs",
+    "src/peers.rs",
     "src/source_task.rs",
     "src/sources.rs",
   ]
