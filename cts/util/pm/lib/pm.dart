@@ -6,10 +6,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
+import 'package:path/path.dart' as path;
 import 'package:ports/ports.dart';
 import 'package:pkg/pkg.dart';
 import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:retry/retry.dart';
 import 'package:test/test.dart';
 
 class PackageManagerRepo {
@@ -71,7 +73,43 @@ class PackageManagerRepo {
         workingDirectory: workingDirectory);
   }
 
-  /// Start a package server using `pm serve`.
+  /// Start a package server using `pm serve` with serve-selected port.
+  ///
+  /// Passes in `-l :0` to tell `serve` to choose its own port.
+  /// `-f <port file path>` saves the chosen port number to a file.
+  ///
+  /// Does not return until the port file is created, or times out.
+  ///
+  /// Uses this command:
+  /// `pm serve -repo=<repo path> -l :0 -f <port file path> [extraArgs]`
+  Future<void> pmServeRepoLFExtra(List<String> extraServeArgs) async {
+    final portFilePath = path.join(_repoPath, 'port_file.txt');
+    List<String> arguments = [
+      'serve',
+      '-repo=$_repoPath',
+      '-l',
+      ':0',
+      '-f',
+      portFilePath
+    ];
+    _log.info('Serve is starting.');
+    _serveProcess =
+        Optional.of(await Process.start(_pmPath, arguments + extraServeArgs));
+    expect(_serveProcess.isPresent, isTrue);
+
+    _log.info('Waiting until the port file is created at: $portFilePath');
+    final portFile = File(portFilePath);
+    final retryOptions = RetryOptions(maxAttempts: 5);
+    String portString = await retryOptions.retry(portFile.readAsStringSync);
+    expect(portString, isNotNull);
+    _servePort = Optional.of(int.parse(portString));
+    expect(_servePort.isPresent, isTrue);
+    _log.info('Serve started on port: ${_servePort.value}');
+  }
+
+  /// Start a package server using `pm serve` with our own port selection.
+  ///
+  /// Does not return until the serve begins listening, or times out.
   ///
   /// Uses this command:
   /// `pm serve -repo=<repo path> -l :<port number> [extraArgs]`
@@ -88,6 +126,18 @@ class PackageManagerRepo {
       return Process.start(_pmPath, arguments + extraServeArgs);
     }));
     expect(_serveProcess.isPresent, isTrue);
+
+    expect(_servePort.isPresent, isTrue);
+    _log.info('Wait until serve responds to curl.');
+    final curlResponse = await Process.run('curl', [
+      'http://localhost:${_servePort.value}/targets.json',
+      '--retry',
+      '5',
+      '--retry-delay',
+      '1',
+      '--retry-connrefused'
+    ]);
+    expect(curlResponse.exitCode, 0);
   }
 
   /// Add repo source using `amberctl add_src`.

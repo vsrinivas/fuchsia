@@ -24,7 +24,9 @@ dart_test("package_manager_test") {
     "//cts/util/ports:ports",
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/quiver",
+    "//third_party/dart-pkg/pub/retry",
     "//third_party/dart-pkg/pub/test",
   ]
 

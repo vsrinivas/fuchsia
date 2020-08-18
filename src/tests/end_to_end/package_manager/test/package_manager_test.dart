@@ -11,6 +11,7 @@ import 'package:path/path.dart' as path;
 import 'package:pkg/pkg.dart';
 import 'package:pm/pm.dart';
 import 'package:quiver/core.dart' show Optional;
+import 'package:retry/retry.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
@@ -271,15 +272,33 @@ void main() {
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
 
-      // Wait long enough for the serve process to come up.
-      log.info('Getting the available packages');
-      final curlResponse =
-          await Process.run('curl', ['http://localhost:$port/targets.json']);
-      expect(curlResponse.exitCode, 0);
-
       log.info('Checking that $portFilePath was generated with content: $port');
-      String fileContents = (await File(portFilePath).readAsString()).trim();
-      expect(int.parse(fileContents), port);
+      final retryOptions = RetryOptions(maxAttempts: 5);
+      String portString =
+          await retryOptions.retry(File(portFilePath).readAsStringSync);
+      expect(portString, isNotNull);
+      expect(int.parse(portString), port);
+    });
+    test(
+        'Test `pm serve` chooses its own port number and writes it to a given file path.',
+        () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pm serve -repo=<path> -l :0 -f <path to export port number>
+      await repoServer.setupRepo('$testPackageName-0.far', manifestPath);
+
+      await repoServer.pmServeRepoLFExtra([]);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+
+      log.info('Checking port ${optionalPort.value} is valid.');
+      final curlResponse = await Process.run(
+          'curl', ['http://localhost:${optionalPort.value}/targets.json']);
+
+      expect(curlResponse.exitCode, 0);
+      final curlOutput = curlResponse.stdout.toString();
+      expect(curlOutput.contains('$testPackageName/0'), isTrue);
     });
     test(
         'Test `amberctl add_repo_cfg` does not set a rewrite rule to use the '
