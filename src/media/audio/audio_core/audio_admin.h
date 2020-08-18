@@ -40,13 +40,13 @@ class AudioAdmin {
                                     fuchsia::media::Behavior policy_action) = 0;
   };
 
-  // An interface by which |AudioAdmin| can report which AudioCaptureUsages are active.
+  // An interface by which |AudioAdmin| can report which AudioRenderUsages are active.
   class ActivityDispatcher {
    public:
     virtual ~ActivityDispatcher() {}
 
-    using Activity = std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>;
-    virtual void OnActivityChanged(std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
+    using Activity = std::bitset<fuchsia::media::RENDER_USAGE_COUNT>;
+    virtual void OnActivityChanged(std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity) = 0;
   };
 
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.

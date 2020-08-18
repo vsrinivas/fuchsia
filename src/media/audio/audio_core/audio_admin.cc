@@ -316,8 +316,8 @@ void AudioAdmin::UpdateActivity() {
   TRACE_DURATION("audio", "AudioAdmin::UpdateActivity");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
 
-  std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity;
-  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+  std::bitset<fuchsia::media::RENDER_USAGE_COUNT> activity;
+  for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     if (IsActive(static_cast<fuchsia::media::AudioRenderUsage>(i))) {
       activity.set(i);
     }

@@ -15,7 +15,7 @@ std::vector<AudioRenderUsage> ActivityToUsageVector(
   std::vector<AudioRenderUsage> usage_vector;
   usage_vector.reserve(activity.count());
 
-  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+  for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     if (activity[i]) {
       usage_vector.push_back(static_cast<AudioRenderUsage>(i));
     }
