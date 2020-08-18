@@ -232,6 +232,9 @@ test_package("mediaplayer_tests") {
       dest = "media_test_data/sfx-opus-441.webm"
     },
   ]
+
+  # TODO(fxb/58495): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config_data("player_config") {
