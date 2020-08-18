@@ -148,13 +148,11 @@ void WebUI::HandleClient(FILE* fp) {
     return;
   }
   if (strcmp(cmd, "bayer/on") == 0) {
-    control_->SetIspBypassMode(true);
     isBayer_ = true;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is on\n", fp);
     return;
   }
   if (strcmp(cmd, "bayer/off") == 0) {
-    control_->SetIspBypassMode(false);
     isBayer_ = false;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\nbayer mode is off\n", fp);
     return;

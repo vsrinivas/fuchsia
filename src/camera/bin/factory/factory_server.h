@@ -38,20 +38,6 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
   // Returns the class request handler.
   fidl::InterfaceRequestHandler<fuchsia::factory::camera::Controller> GetHandler();
 
-  // Getters
-  bool streaming() const { return streaming_; }
-
-  void StartStream() {}
-  void StopStream() {}
-  void CaptureFrames(uint32_t amount, std::string dir_path) {}
-  void DisplayToScreen(uint32_t stream_index) {}
-  void GetOtpData();
-  void GetSensorTemperature();
-  void SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp);
-  void SetAEMode(fuchsia::factory::camera::ExposureMode mode);
-  void SetExposure(float integration_time, float analog_gain, float digital_gain);
-  void SetSensorMode(uint32_t mode);
-  void SetTestPatternMode(uint16_t mode);
   void Capture();
 
  private:
@@ -59,21 +45,19 @@ class FactoryServer : public fuchsia::factory::camera::Controller, WebUIControl 
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::factory::camera::Controller> request);
 
   // |fuchsia.camera.factory.Controller|
-  void StartStreaming() override {}
-  void StopStreaming() override {}
-  void CaptureFrames(uint32_t amount, std::string dir_path, CaptureFramesCallback cb) override {}
+  void IsIspBypassModeEnabled(bool enabled) override;
+  void CaptureFrames(std::string dir_path, CaptureFramesCallback cb) override;
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
 
   // |WebUIControl|
   void RequestCaptureData(uint32_t stream_index, CaptureResponse callback) override;
-  void SetIspBypassMode(bool on) override;
 
   async::Loop loop_;
   fit::closure stop_callback_;
   fidl::Binding<fuchsia::factory::camera::Controller> controller_binding_;
   std::unique_ptr<Streamer> streamer_;
   std::unique_ptr<WebUI> webui_;
-  bool streaming_ = false;
+  bool bypass_ = false;
 };
 
 }  // namespace camera

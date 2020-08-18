@@ -29,7 +29,6 @@ enum RGBConversionType : uint8_t {
 class WebUIControl {
  public:
   virtual void RequestCaptureData(uint32_t stream_index, CaptureResponse callback) = 0;
-  virtual void SetIspBypassMode(bool on) = 0;
 };
 
 // A Web UI for controlling camera-gym from the host

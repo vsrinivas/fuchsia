@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/factory/camera/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -35,16 +36,9 @@ enum Command {
 };
 
 constexpr std::string_view kDevicePath = "/dev/class/isp/000";
-
-constexpr std::string_view kFlag0 = "target";
-constexpr std::string_view kFlag1 = "command";
-
-constexpr std::string_view kTarget0 = "controller";
-constexpr std::string_view kTarget1 = "isp";
+constexpr std::string_view kFlag = "command";
 
 // Controller Commands
-constexpr std::string_view kCommand0 = "StartStream";
-constexpr std::string_view kCommand1 = "StopStream";
 constexpr std::string_view kCommand2 = "CaptureFrames";
 constexpr std::string_view kCommand3 = "DisplayToScreen";
 // ISP Commands
@@ -57,27 +51,13 @@ constexpr std::string_view kCommand9 = "SetSensorMode";
 constexpr std::string_view kCommand10 = "SetTestPatternMode";
 constexpr std::string_view kCommand11 = "SetBypassMode";
 
-fit::result<Target, zx_status_t> StrToTarget(const std::string& str) {
-  if (str == kTarget0)
-    return fit::ok(CONTROLLER);
-  if (str == kTarget1)
-    return fit::ok(ISP);
-  return fit::error(ZX_ERR_INVALID_ARGS);
-}
-
-fit::result<Command, zx_status_t> StrToControllerCommand(const std::string& str) {
-  if (str == kCommand0)
-    return fit::ok(START_STREAM);
-  if (str == kCommand1)
-    return fit::ok(STOP_STREAM);
+fit::result<Command, zx_status_t> StrToCommand(const std::string& str) {
+  // Controller
   if (str == kCommand2)
     return fit::ok(CAPTURE_FRAMES);
   if (str == kCommand3)
     return fit::ok(DISPLAY_TO_SCREEN);
-  return fit::error(ZX_ERR_INVALID_ARGS);
-}
-
-fit::result<Command, zx_status_t> StrToIspCommand(const std::string& str) {
+  // ISP
   if (str == kCommand4)
     return fit::ok(GET_OTP_DATA);
   if (str == kCommand5)
@@ -97,15 +77,31 @@ fit::result<Command, zx_status_t> StrToIspCommand(const std::string& str) {
   return fit::error(ZX_ERR_INVALID_ARGS);
 }
 
-zx_status_t RunControllerCommand() { return ZX_OK; }
-
 // TODO(fxbug.dev/58025): The varius std::stoi() calls can fail here and cause a crash, be sure to
 // sanitize input.
-zx_status_t RunIspCommand(fuchsia::factory::camera::IspPtr& isp, const Command command,
-                          const std::vector<std::string> args,
-                          fit::function<void(const std::string)> exit_on_success_cb,
-                          fit::function<void(zx_status_t, const std::string)> exit_on_failure_cb) {
+zx_status_t RunCommand(fuchsia::factory::camera::ControllerPtr& controller,
+                       fuchsia::factory::camera::IspPtr& isp, const Command command,
+                       const std::vector<std::string> args,
+                       fit::function<void(const std::string)> exit_on_success_cb,
+                       fit::function<void(zx_status_t, const std::string)> exit_on_failure_cb) {
   switch (command) {
+    case CAPTURE_FRAMES: {
+      if (args.size() > 1) {
+        FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Accepts at most one arg";
+        return ZX_ERR_INVALID_ARGS;
+      }
+      controller->CaptureFrames(
+          args.size() == 0 ? "" : args[0],
+          [success_cb = std::move(exit_on_success_cb), failure_cb = std::move(exit_on_failure_cb)](
+              zx_status_t capture_frames_status, fuchsia::images::ImageInfo info) {
+            if (capture_frames_status != ZX_OK) {
+              failure_cb(capture_frames_status, std::string{kCommand2});
+              return;
+            }
+            success_cb(std::string{kCommand2});
+          });
+      break;
+    }
     case GET_OTP_DATA:
       isp->GetOtpData(
           [success_cb = std::move(exit_on_success_cb), failure_cb = std::move(exit_on_failure_cb)](
@@ -203,31 +199,17 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (!command_line.HasOption(kFlag0)) {
-    FX_LOGS(ERROR) << "User must specify 'target' flag.";
-    return EXIT_FAILURE;
-  }
-
-  std::string target;
-  command_line.GetOptionValue(kFlag0, &target);
-
-  auto target_result = StrToTarget(target);
-  if (target_result.is_error()) {
-    FX_LOGS(ERROR) << "Target not valid. Must be one of: " << kTarget0 << ", " << kTarget1;
-    return EXIT_FAILURE;
-  }
-
-  if (!command_line.HasOption(kFlag1)) {
+  if (!command_line.HasOption(kFlag)) {
     FX_LOGS(ERROR) << "User must specify 'command' flag.";
     return EXIT_FAILURE;
   }
 
   std::string command;
-  command_line.GetOptionValue(kFlag1, &command);
+  command_line.GetOptionValue(kFlag, &command);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto exit_on_success_cb = [&loop](const std::string& command) {
-    FX_PLOGS(INFO, ZX_OK) << "camera-factory-cli ran with command '" << command << "'.";
+    FX_PLOGS(INFO, ZX_OK) << "camera-factory-cli ran with command '" << command << "'";
     loop.Quit();
   };
   auto exit_on_failure_cb = [&loop](zx_status_t status, const std::string& command) {
@@ -237,88 +219,85 @@ int main(int argc, char* argv[]) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   zx_status_t status;
-  if (target_result.value() == CONTROLLER) {
-    // Parse command.
-    auto command_result = StrToIspCommand(command);
-    if (command_result.is_error()) {
-      FX_LOGS(ERROR) << "Command not valid for specified target.";
-      return EXIT_FAILURE;
-    }
-
-    // Connect to the camera-factory Controller.
-    fuchsia::factory::camera::ControllerHandle controller_handle;
-    status = context->svc()->Connect(controller_handle.NewRequest());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to request camera-factory Controller service.";
-      return EXIT_FAILURE;
-    }
-
-    fuchsia::factory::camera::ControllerPtr controller;
-    status = controller.Bind(std::move(controller_handle), loop.dispatcher());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to get camera-factory Controller pointer.";
-      return EXIT_FAILURE;
-    }
-
-    controller.set_error_handler([&loop, &controller](zx_status_t status) {
-      FX_PLOGS(ERROR, status) << "camera-factory-cli Controller channel closing due to error.";
-      controller = nullptr;
-      loop.Quit();
-    });
-
-    // Execute command.
-    status = RunControllerCommand();
-  } else {
-    // Parse command.
-    auto command_result = StrToIspCommand(command);
-    if (command_result.is_error()) {
-      FX_LOGS(ERROR) << "Command not valid for specified target.";
-      return EXIT_FAILURE;
-    }
-
-    // Connect to the ISP.
-    int result = open(kDevicePath.data(), O_RDONLY);
-    if (result < 0) {
-      FX_LOGS(ERROR) << "Error opening device at " << kDevicePath;
-      return EXIT_FAILURE;
-    }
-    fbl::unique_fd fd;
-    fd.reset(result);
-
-    zx::channel channel;
-    status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to get handle for device at " << kDevicePath;
-      return EXIT_FAILURE;
-    }
-
-    fuchsia::factory::camera::IspPtr isp;
-    status = isp.Bind(std::move(channel), loop.dispatcher());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to get camera-factory Controller pointer.";
-      return EXIT_FAILURE;
-    }
-
-    isp.set_error_handler([&loop, &isp](zx_status_t status) {
-      FX_PLOGS(ERROR, status) << "camera-factory-cli Isp channel closing due to error.";
-      isp = nullptr;
-      loop.Quit();
-    });
-
-    // Execute command.
-    status = RunIspCommand(isp, command_result.value(), command_line.positional_args(),
-                           exit_on_success_cb, exit_on_failure_cb);
+  // Parse command.
+  auto command_result = StrToCommand(command);
+  if (command_result.is_error()) {
+    FX_LOGS(ERROR) << "Command not valid for specified target.";
+    return EXIT_FAILURE;
   }
+
+  // Connect to the camera-factory Controller.
+  fuchsia::factory::camera::ControllerHandle controller_handle;
+  status = context->svc()->Connect(controller_handle.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to request camera-factory Controller service.";
+    return EXIT_FAILURE;
+  }
+
+  fuchsia::factory::camera::ControllerPtr controller;
+  status = controller.Bind(std::move(controller_handle), loop.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get camera-factory Controller pointer.";
+    return EXIT_FAILURE;
+  }
+
+  // Connect to the ISP.
+  int result = open(kDevicePath.data(), O_RDONLY);
+  if (result < 0) {
+    FX_LOGS(ERROR) << "Error opening device at " << kDevicePath;
+    return EXIT_FAILURE;
+  }
+  fbl::unique_fd fd;
+  fd.reset(result);
+
+  zx::channel channel;
+  status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get handle for device at " << kDevicePath;
+    return EXIT_FAILURE;
+  }
+
+  fuchsia::factory::camera::IspPtr isp;
+  status = isp.Bind(std::move(channel), loop.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get camera-factory Controller pointer.";
+    return EXIT_FAILURE;
+  }
+
+  // Error handling
+  auto shutdown_cb = [&controller, &isp]() {
+    controller = nullptr;
+    isp = nullptr;
+  };
+
+  controller.set_error_handler([&loop, &shutdown_cb](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "camera-factory-cli Controller channel closing due to error.";
+    shutdown_cb();
+    loop.Quit();
+  });
+
+  isp.set_error_handler([&loop, &shutdown_cb](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "camera-factory-cli Isp channel closing due to error.";
+    shutdown_cb();
+    loop.Quit();
+  });
+
+  // Execute command.
+  status = RunCommand(controller, isp, command_result.value(), command_line.positional_args(),
+                      exit_on_success_cb, exit_on_failure_cb);
 
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "camera-factory-cli loop never started";
+    shutdown_cb();
     return EXIT_FAILURE;
   }
 
   // Wait for exit callback.
   FX_LOGS(INFO) << "camera-factory-cli loop started.";
   loop.Run();
-  FX_LOGS(INFO) << "camera-factory-cli loop quit, ran with command: " << command;
+  FX_LOGS(INFO) << "camera-factory-cli loop quit after '" << command << "' ran.";
+
+  shutdown_cb();
 
   return EXIT_SUCCESS;
 }

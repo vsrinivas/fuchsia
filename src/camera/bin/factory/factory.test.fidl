@@ -22,11 +22,11 @@ enum ExposureMode : uint8 {
 /// This interface provides access to factory-only functionality in the ISP driver.
 [Discoverable]
 protocol Controller {
-    /// Connects to all available streams and begins streaming.
-    StartStreaming();
-    /// Stops streaming.
-    /// This is safe to call even if there are no active streams.
-    StopStreaming();
+    /// Instructs the controller to switch its stream format based on the ISP's output.
+    /// + request `on` The ISP's streaming mode:
+    ///                 `True` 16-bit portable grey map format.
+    ///                 `False` 10-bit RGB format.
+    IsIspBypassModeEnabled(bool enabled);
 
     /// Instructs the device to capture a frame from the stream, and write it to disk.
     ///
@@ -39,7 +39,7 @@ protocol Controller {
     ///                                  not a directory.
     /// - response `image_info` A struct outlining the image's properties, e.g.
     ///                         width/height, pixel format, etc.
-    CaptureFrames(uint32 amount, string dir_path)
+    CaptureFrames(string dir_path)
         -> (zx.status s, fuchsia.images.ImageInfo image_info);
 
     /// Displays a single stream the DUT's screen.

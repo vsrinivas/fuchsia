@@ -10,7 +10,9 @@
 #include <iostream>
 
 #include <fbl/unique_fd.h>
+#include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
+#include <src/lib/files/path.h>
 
 namespace camera {
 
@@ -100,6 +102,40 @@ void FactoryServer::RequestCaptureData(uint32_t stream, CaptureResponse callback
       });
 }
 
-void FactoryServer::SetIspBypassMode(bool on) {}
+void FactoryServer::IsIspBypassModeEnabled(bool enabled) {}
+
+void FactoryServer::CaptureFrames(std::string dir_path, CaptureFramesCallback cb) {
+  streamer_->RequestCapture(
+      0, "", true, [&](zx_status_t status, std::unique_ptr<camera::Capture> frame) {
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "capture failed";
+          cb(ZX_OK, fuchsia::images::ImageInfo{});
+          return;
+        }
+        if (dir_path != "") {
+          if (!files::CreateDirectory("/data/" + dir_path)) {
+            FX_LOGS(ERROR) << "Failed to create on-disk directory to write to.";
+            return;
+          }
+        }
+        auto file = "/data/" + dir_path + "/capture.png";
+        FILE* filefp = fopen(file.data(), "w");
+        if (filefp == NULL) {
+          FX_LOGS(ERROR) << "failed to open " << file << ": " << strerror(errno);
+          return;
+        }
+
+        // TODO(fxbug.dev/58498): Check if frame->properties_.image_format ==
+        // fuchsia::sysmem::PixelFormatType::NV12
+        if (bypass_) {
+          frame->WritePNGUnprocessed(filefp, true);
+        } else {
+          frame->WritePNGAsNV12(filefp);
+        }
+
+        fclose(filefp);
+        cb(ZX_OK, fuchsia::images::ImageInfo{});
+      });
+}
 
 }  // namespace camera
