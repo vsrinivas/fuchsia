@@ -189,10 +189,12 @@ template <typename T>
 static zx_status_t RequestBoundCheck(const T& request, uint64_t vslice_max) {
   if (request.offset == 0 || request.offset > vslice_max) {
     return ZX_ERR_OUT_OF_RANGE;
-  } else if (request.length > vslice_max) {
+  }
+  if (request.length > vslice_max) {
     return ZX_ERR_OUT_OF_RANGE;
-  } else if (request.offset + request.length < request.offset ||
-             request.offset + request.length > vslice_max) {
+  }
+  if (request.offset + request.length < request.offset ||
+      request.offset + request.length > vslice_max) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_OK;
@@ -218,43 +220,49 @@ zx_status_t VPartition::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   }
 }
 
-typedef struct multi_txn_state {
-  multi_txn_state(size_t total, block_op_t* txn, block_impl_queue_callback cb, void* cookie)
-      : txns_completed(0),
-        txns_total(total),
-        status(ZX_OK),
-        original(txn),
-        completion_cb(cb),
-        cookie(cookie) {}
+class MultiTransactionState {
+ public:
+  MultiTransactionState(size_t total, block_op_t* txn, block_impl_queue_callback cb, void* cookie)
+      : txns_completed_(0),
+        txns_total_(total),
+        status_(ZX_OK),
+        original_(txn),
+        completion_cb_(cb),
+        cookie_(cookie) {}
 
-  fbl::Mutex lock;
-  size_t txns_completed TA_GUARDED(lock);
-  size_t txns_total TA_GUARDED(lock);
-  zx_status_t status TA_GUARDED(lock);
-  block_op_t* original TA_GUARDED(lock);
-  block_impl_queue_callback completion_cb TA_GUARDED(lock);
-  void* cookie TA_GUARDED(lock);
-} multi_txn_state_t;
-
-static void multi_txn_completion(void* cookie, zx_status_t status, block_op_t* txn) {
-  multi_txn_state_t* state = static_cast<multi_txn_state_t*>(cookie);
-  bool last_txn = false;
-  {
-    fbl::AutoLock lock(&state->lock);
-    state->txns_completed++;
-    if (state->status == ZX_OK && status != ZX_OK) {
-      state->status = status;
+  void Completion(zx_status_t status, block_op_t* txn) {
+    bool last_txn = false;
+    {
+      fbl::AutoLock lock(&lock_);
+      txns_completed_++;
+      if (status_ == ZX_OK && status != ZX_OK) {
+        status_ = status;
+      }
+      if (txns_completed_ == txns_total_) {
+        last_txn = true;
+        completion_cb_(cookie_, status_, original_);
+      }
     }
-    if (state->txns_completed == state->txns_total) {
-      last_txn = true;
-      state->completion_cb(state->cookie, state->status, state->original);
+
+    delete[] txn;
+    if (last_txn) {
+      delete this;
     }
   }
 
-  if (last_txn) {
-    delete state;
-  }
-  delete[] txn;
+ private:
+  fbl::Mutex lock_;
+  size_t txns_completed_ TA_GUARDED(lock_);
+  size_t txns_total_ TA_GUARDED(lock_);
+  zx_status_t status_ TA_GUARDED(lock_);
+  block_op_t* original_ TA_GUARDED(lock_);
+  block_impl_queue_callback completion_cb_ TA_GUARDED(lock_);
+  void* cookie_ TA_GUARDED(lock_);
+};
+
+static void MultiTransactionCompletion(void* cookie, zx_status_t status, block_op_t* txn) {
+  MultiTransactionState* state = static_cast<MultiTransactionState*>(cookie);
+  state->Completion(status, txn);
 }
 
 void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb,
@@ -350,8 +358,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   fbl::Vector<block_op_t*> txns;
   txns.reserve(txn_count);
 
-  std::unique_ptr<multi_txn_state_t> state(
-      new multi_txn_state_t(txn_count, txn, completion_cb, cookie));
+  std::unique_ptr<MultiTransactionState> state(
+      new MultiTransactionState(txn_count, txn, completion_cb, cookie));
 
   uint32_t length_remaining = txn_length;
   for (size_t i = 0; i < txn_count; i++) {
@@ -386,9 +394,10 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   ZX_ASSERT(length_remaining == 0);
 
   for (size_t i = 0; i < txn_count; i++) {
-    mgr_->Queue(txns[i], multi_txn_completion, state.get());
+    mgr_->Queue(txns[i], MultiTransactionCompletion, state.get());
   }
-  // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+  // When mullti-transaction operation completes, the state gets deleted from
+  // Completion() context. We should not be deleting it again.
   __UNUSED auto ptr = state.release();
 }
 

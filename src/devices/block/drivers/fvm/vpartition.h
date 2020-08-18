@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FVM_VPARTITION_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FVM_VPARTITION_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
@@ -97,7 +97,7 @@ class VPartition : public PartitionDeviceType,
   size_t GetEntryIndex() const { return entry_index_; }
 
   void KillLocked() TA_REQ(lock_) { entry_index_ = 0; }
-  bool IsKilledLocked() TA_REQ(lock_) { return entry_index_ == 0; }
+  bool IsKilledLocked() const TA_REQ(lock_) { return entry_index_ == 0; }
 
   VPartition(VPartitionManager* vpm, size_t entry_index, size_t block_op_size);
   ~VPartition();
@@ -121,4 +121,4 @@ class VPartition : public PartitionDeviceType,
 
 }  // namespace fvm
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FVM_VPARTITION_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
