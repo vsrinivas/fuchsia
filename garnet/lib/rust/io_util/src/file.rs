@@ -143,7 +143,7 @@ where
 {
     let mut data = data.as_ref();
 
-    while data.len() > 0 {
+    while !data.is_empty() {
         let (status, bytes_written) =
             file.write(&data[..std::cmp::min(MAX_BUF as usize, data.len())]).await?;
         Status::ok(status).map_err(WriteError::WriteError)?;
@@ -195,7 +195,7 @@ pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
         read(&file).await
     }
     .await
-    .map_err(|source| ReadNamedError { path: path.to_owned(), source: source.into() })
+    .map_err(|source| ReadNamedError { path: path.to_owned(), source })
 }
 
 /// Reads a utf-8 encoded string from the given file's current offset to the end of the file.

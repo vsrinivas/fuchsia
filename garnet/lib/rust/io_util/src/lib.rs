@@ -237,7 +237,7 @@ pub fn canonicalize_path(path: &str) -> &str {
 }
 
 /// Verifies path is relative, utf-8, and non-empty.
-fn check_path<'a>(path: &'a Path) -> Result<&'a str, Error> {
+fn check_path(path: &Path) -> Result<&str, Error> {
     if path.is_absolute() {
         return Err(format_err!("path must be relative"));
     }
