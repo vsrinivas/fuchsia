@@ -1,0 +1,13 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define a number of global variables that are normally defined by the Zircon
+# build system. This should only be used when processing Zircon-specific target
+# rules under //zircon/ which invoke zx_library() or zx_host_tool()
+
+# `is_gcc` is true for GCC-based toolchains.
+is_gcc = false
+
+# `is_kernel` is true for kernel-specific toolchains.
+is_kernel = false

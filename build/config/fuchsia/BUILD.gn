@@ -164,6 +164,16 @@ config("shared_library_config") {
   cflags = [ "-fPIC" ]
 }
 
+# NOTE: Even though this config has been moved to //build/config:BUILD.gn, it
+# is still referenced by third_party/{ICU,Vulkan-ValidationLayers}. This forces
+# BUILDCONFIG.gn to still reference the //build/config/fuchsia version to avoid
+# breaking their BUILD.gn files, and hence this definition below.
+#
+# TODO(54322): Remove this after build unification completes.
+config("thread_safety_annotations") {
+  configs = [ "//build/config:thread_safety_annotations" ]
+}
+
 config("fdio_config") {
   # This config is only a marker that is used to signal that a given executable
   # should link with fdio. With fdio now getting built in this very build, there
@@ -173,11 +183,6 @@ config("fdio_config") {
 }
 
 config("executable_config") {
-}
-
-config("thread_safety_annotations") {
-  cflags = [ "-Wthread-safety" ]
-  defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
 }
 
 config("auto_var_init") {

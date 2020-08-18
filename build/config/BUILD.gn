@@ -5,9 +5,11 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/clang/crash_diagnostics.gni")
 import("//build/config/compiler.gni")
+import("//build/config/linker.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+import("//build/unification/global_variables.gni")
 
 declare_args() {
   if (is_fuchsia) {
@@ -107,17 +109,34 @@ config("language") {
   }
 }
 
-config("compiler") {
-  asmflags = []
+config("color_diagnostics") {
+  # GCC correctly defaults this from the terminal, so leave it alone.
+  if (!is_gcc) {
+    cflags = [ "-fcolor-diagnostics" ]
+    asmflags = cflags
+    ldflags = cflags
 
-  cflags = [ "-fcolor-diagnostics" ]
-  cflags_c = []
+    # The macOS linker does not support `--color-diagnostics`.
+    if (current_os != "mac") {
+      ldflags += [ "-Wl,--color-diagnostics" ]
+    }
+  }
+}
+
+config("crash-diagnostics-dir") {
+  if (!is_gcc && crash_diagnostics_dir != "") {
+    cflags = [ "-fcrash-diagnostics-dir=" +
+               rebase_path(crash_diagnostics_dir, root_build_dir) ]
+    asmflags = cflags
+    ldflags = cflags
+  }
+}
+
+config("compiler") {
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
-  cflags_objc = []
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
-  ldflags = []
-  defines = []
   configs = [
+    ":color_diagnostics",
     ":toolchain_version_stamp",
     ":rust_panic_cfg",
   ]
@@ -133,18 +152,7 @@ config("compiler") {
     }
   }
 
-  # Linker on macOS does not support `color-diagnostics`
-  if (current_os != "mac") {
-    ldflags += [ "-Wl,--color-diagnostics" ]
-  }
-
-  if (crash_diagnostics_dir != "") {
-    cflags += [ "-fcrash-diagnostics-dir=" +
-                rebase_path(crash_diagnostics_dir, root_build_dir) ]
-  }
-
-  asmflags += cflags
-  asmflags += cflags_c
+  configs += [ ":crash-diagnostics-dir" ]
 }
 
 # We want to force a recompile and relink of the world whenever our toolchain
@@ -168,27 +176,61 @@ config("toolchain_version_stamp") {
 }
 
 config("relative_paths") {
-  cflags = [
+  # TODO(54161): Keep in sync with //zircon/public/gn/config:relative_paths
+  # until build unification completes.
+
+  if (is_gcc) {
+    if (use_goma) {
+      # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
+      # build commands, allowing it to reuse compilation results for users running
+      # out of different working directories. However, it only supports a single
+      # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
+      # canonicalization to fail, meaning that builds running out of different
+      # directories won't share cache results. For now, we just provide a single
+      # debug-prefix-map, even though more would be ideal.
+
+      # Map "/some/dir/fuchsia" to "../..".
+      cflags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+                 rebase_path("$zx/..", root_build_dir) ]
+    } else {
+      cflags = [
+        # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
+        "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
+
+        # Map "/some/dir/fuchsia/out" to "..".
+        "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+
+        # Map "/some/dir/fuchsia" to "../..".
+        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+            rebase_path("$zx/..", root_build_dir),
+      ]
+    }
+  } else {
     # Make builds independent of the absolute file path. -fdebug-prefix-map=
     # can be used to the same effect, but it requires putting the absolute path
     # to the build directory in the compile command, thus making it dependent
     # on the absolute path of build directory. -fdebug-compilation-dir is
     # designed to address this issue, making both debug info and the compile
     # command itself independent of the absolute path of the build directory.
-    "-fdebug-compilation-dir",
-    ".",
+    cflags = [
+      "-fdebug-compilation-dir",
+      ".",
+    ]
+  }
 
+  if (!is_gcc) {
     # This makes sure that include directories in the toolchain are
-    # represented as relative to the build directory (because that's how
-    # we invoke the compiler), rather than absolute.  This can affect
-    # __FILE__ expansions (e.g. assertions in system headers).  We
-    # normally run a compiler that's someplace within the source tree
-    # (//prebuilt/...), so its absolute installation path will have a
-    # prefix matching absolute_path and hence be mapped to relative_path
-    # in the debugging information, so this should actually be
-    # superfluous for purposes of the debugging information.
-    "-no-canonical-prefixes",
-  ]
+    # represented as relative to the build directory (because that's how we
+    # invoke the compiler), rather than absolute.  This can affect __FILE__
+    # expansions (e.g. assertions in system headers).  We normally run a
+    # compiler that's someplace within the source tree, so its absolute
+    # installation path will have a prefix matching `absolute_path` and
+    # hence be mapped to `relative_path` in the debugging information, so
+    # this should actually be superfluous for purposes of the debugging
+    # information.
+    cflags += [ "-no-canonical-prefixes" ]
+  }
+
   asmflags = cflags
   ldflags = cflags
 
@@ -313,7 +355,11 @@ config("optimize_default") {
 }
 
 config("optimize_size") {
-  cflags = [ "-Oz" ]
+  if (is_gcc) {
+    cflags = [ "-Os" ]
+  } else {
+    cflags = [ "-Oz" ]
+  }
   ldflags = cflags
   rustflags = [ "-Copt-level=z" ]
   configs = [ ":linker_string_merging" ]
@@ -595,13 +641,20 @@ config("no_sanitizers") {
 config("icf") {
   # This changes C/C++ semantics and might be incompatible with third-party
   # code that relies on function pointers comparison.
-  if (current_os == "win") {
+  if (current_os == "win" && (linker == "lld" || !is_gcc)) {
     ldflags = [ "-Wl,/opt:icf=all" ]
-  } else {
+  } else if (linker == "gold" || linker == "lld") {
     ldflags = [ "-Wl,--icf=all" ]
   }
 }
 
 config("all_source") {
   defines = [ "_ALL_SOURCE" ]
+}
+
+config("thread_safety_annotations") {
+  if (!is_gcc) {
+    cflags = [ "-Wthread-safety" ]
+    defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
+  }
 }

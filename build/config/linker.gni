@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/global_variables.gni")
+
+# The `linker` global variable indicates which linker is used to build
+# binaries, the following values are supported:
+#
+#  - "lld": For the Clang linker
+#  - "gold": For the Gold linker, used when building with GCC.
+#  - "": For the default linker associated with the current compiler, e.g.
+#      this will be the BFD linker when using GCC.
+#
+if (current_os == "mac") {
+  # Only the native host linker works for macOS.
+  linker = ""
+} else if (is_gcc) {
+  # Assume ld.gold is available for any native Linux host, and for any ELF
+  # cross-compile target.  Use Gold for userland, and BFD ld for kernel.
+  if (current_os == "linux" ||
+      ((current_cpu != host_cpu || current_os != host_os) && !is_kernel &&
+       current_os != "win")) {
+    linker = "gold"
+  } else {
+    # For GCC on non-ELF hosts, use the system default linker.
+    linker = ""
+  }
+} else {
+  # Always use lld with Clang.
+  linker = "lld"
+}
