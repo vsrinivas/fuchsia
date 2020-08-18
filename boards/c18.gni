@@ -15,3 +15,15 @@ custom_signing_script =
 
 # required tool for packaging script
 board_package_labels += [ "//tools/vboot_reference:futility_host" ]
+
+_common_bootfs_deps = [
+  "//src/devices/block/drivers/mtk-sdmmc",
+  "//src/devices/gpio/drivers/mt-8167",
+  "//src/devices/spi/drivers/mtk-spi",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps

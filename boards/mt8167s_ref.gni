@@ -9,6 +9,33 @@ board_name = "mt8167s_ref"
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/mt8167s_ref/package-image.sh"
 
+_common_bootfs_deps = [
+  "//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek",
+  "//src/devices/block/drivers/mtk-sdmmc",
+  "//src/devices/board/drivers/mt8167s_ref",
+  "//src/devices/clock/drivers/mtk-clk",
+  "//src/devices/gpio/drivers/mt-8167",
+  "//src/devices/i2c/drivers/mt8167-i2c",
+  "//src/devices/power/drivers/mtk-power",
+  "//src/devices/spi/drivers/mtk-spi",
+  "//src/devices/thermal/drivers/mtk-thermal",
+  "//src/devices/usb/drivers/mt-musb-host",
+  "//src/devices/usb/drivers/mt-musb-peripheral",
+  "//src/graphics/display/drivers/dsi-mt",
+  "//src/graphics/display/drivers/mt8167s-display",
+  "//src/media/audio/drivers/codecs/tas5782",
+  "//src/media/audio/drivers/mt8167-tdm-input",
+  "//src/media/audio/drivers/mt8167-tdm-output",
+  "//src/ui/backlight/drivers/sg-micro",
+  "//src/ui/input/drivers/bma253",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 use_vbmeta = true
 avb_key = "//zircon/third_party/tools/android/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =
