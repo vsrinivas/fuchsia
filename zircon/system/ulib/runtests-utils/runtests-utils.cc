@@ -180,7 +180,12 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
   } else {
     fprintf(summary_json, "\n");
   }
-  fprintf(summary_json, "}\n");
+  // We really should have been checking for errors all along, but most likely the final fprintf
+  // will fail or succeed along with all the others.
+  const int final_ret_val = fprintf(summary_json, "}\n");
+  if (final_ret_val < 0) {
+    return errno;
+  }
   return 0;
 }
 
