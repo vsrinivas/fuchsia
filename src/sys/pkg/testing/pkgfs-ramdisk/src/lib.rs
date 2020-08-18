@@ -91,7 +91,7 @@ impl PkgfsRamdiskBuilder {
 
     /// Use the given system_image_merkle when constructing the PkgfsRamdisk.
     pub fn system_image_merkle(mut self, system_image_merkle: &Hash) -> Self {
-        self.args.system_image_merkle = Some(system_image_merkle.clone());
+        self.args.system_image_merkle = Some(*system_image_merkle);
         self
     }
 

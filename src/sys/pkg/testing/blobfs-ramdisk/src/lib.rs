@@ -217,7 +217,7 @@ impl BlobfsRamdisk {
     fn write_blob_sync(&self, merkle: &Hash, bytes: &[u8]) -> Result<(), Error> {
         use std::{convert::TryInto, io::Write};
 
-        let mut file = self.root_dir().unwrap().write_file(merkle.to_string(), 0777)?;
+        let mut file = self.root_dir().unwrap().write_file(merkle.to_string(), 0o777)?;
         file.set_len(bytes.len().try_into().unwrap())?;
         file.write_all(&bytes)?;
         Ok(())
