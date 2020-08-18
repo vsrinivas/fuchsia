@@ -90,7 +90,7 @@ class VPartitionManager : public ManagerDeviceType {
 
   void SetFormatInfoForTest(const fvm::FormatInfo& format_info) { format_info_ = format_info; }
 
-  VPartitionManager(zx_device_t* dev, const block_info_t& info, size_t block_op_size,
+  VPartitionManager(zx_device_t* parent, const block_info_t& info, size_t block_op_size,
                     const block_impl_protocol_t* bp);
   ~VPartitionManager();
 
@@ -113,7 +113,7 @@ class VPartitionManager : public ManagerDeviceType {
                                     const char* name_data, size_t name_size, uint32_t flags,
                                     fidl_txn_t* txn);
   zx_status_t FIDLQuery(fidl_txn_t* txn);
-  zx_status_t FIDLGetInfo(fidl_txn_t* txn);
+  zx_status_t FIDLGetInfo(fidl_txn_t* txn) const;
   zx_status_t FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
                            const fuchsia_hardware_block_partition_GUID* new_guid, fidl_txn_t* txn);
 
@@ -172,7 +172,7 @@ class VPartitionManager : public ManagerDeviceType {
         (first_metadata_is_primary_) ? SuperblockType::kSecondary : SuperblockType::kPrimary);
   }
 
-  zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
+  zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;

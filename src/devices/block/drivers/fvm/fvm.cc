@@ -56,7 +56,7 @@ VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& in
 VPartitionManager::~VPartitionManager() = default;
 
 // static
-zx_status_t VPartitionManager::Bind(void*, zx_device_t* dev) {
+zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   block_info_t block_info;
   block_impl_protocol_t bp;
   size_t block_op_size = 0;
@@ -129,7 +129,7 @@ static void IoCallback(void* cookie, zx_status_t status, block_op_t* op) {
 }
 
 zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t len,
-                                          uint32_t command) {
+                                          uint32_t command) const {
   const size_t block_size = info_.block_size;
   const size_t max_transfer = info_.max_transfer_size / block_size;
   size_t len_remaining = len / block_size;
@@ -224,18 +224,22 @@ zx_status_t VPartitionManager::Load() {
   if ((format_info_.slice_size() * VSliceMax()) / VSliceMax() != format_info_.slice_size()) {
     fprintf(stderr, "fvm: Slice Size, VSliceMax overflow block address space\n");
     return ZX_ERR_BAD_STATE;
-  } else if (info_.block_size == 0 || SliceSize() % info_.block_size) {
+  }
+  if (info_.block_size == 0 || SliceSize() % info_.block_size) {
     fprintf(stderr, "fvm: Bad block (%u) or slice size (%zu)\n", info_.block_size, SliceSize());
     return ZX_ERR_BAD_STATE;
-  } else if (sb.vpartition_table_size != kVPartTableLength) {
+  }
+  if (sb.vpartition_table_size != kVPartTableLength) {
     fprintf(stderr, "fvm: Bad vpartition table size %zu (expected %zu)\n", sb.vpartition_table_size,
             kVPartTableLength);
     return ZX_ERR_BAD_STATE;
-  } else if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
+  }
+  if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
     fprintf(stderr, "fvm: Bad allocation table size %zu (expected at least %zu)\n",
             sb.allocation_table_size, AllocTableLength(sb.fvm_partition_size, SliceSize()));
     return ZX_ERR_BAD_STATE;
-  } else if (sb.fvm_partition_size > DiskSize()) {
+  }
+  if (sb.fvm_partition_size > DiskSize()) {
     fprintf(stderr,
             "fvm: Block Device too small (fvm_partition_size is %zu and block_device_size is "
             "%zu).\n",
@@ -330,7 +334,8 @@ zx_status_t VPartitionManager::Load() {
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     if (GetVPartEntryLocked(i)->slices == 0) {
       continue;
-    } else if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
+    }
+    if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
       fprintf(stderr, "FVM: Failed to Create vpartition %zu\n", i);
       return status;
     }
@@ -360,11 +365,13 @@ zx_status_t VPartitionManager::Load() {
   for (size_t i = 0; i < fvm::kMaxVPartitions; i++) {
     if (vpartitions[i] == nullptr) {
       continue;
-    } else if (GetAllocatedVPartEntry(i)->IsInactive()) {
+    }
+    if (GetAllocatedVPartEntry(i)->IsInactive()) {
       fprintf(stderr, "FVM: Freeing inactive partition\n");
       FreeSlices(vpartitions[i].get(), 0, VSliceMax());
       continue;
-    } else if (AddPartition(std::move(vpartitions[i]))) {
+    }
+    if (AddPartition(std::move(vpartitions[i]))) {
       continue;
     }
     device_count++;
@@ -641,9 +648,11 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
       std::min<size_t>(fuchsia_hardware_block_partition_NAME_LENGTH, kMaxVPartitionNameLength);
   if (slice_count >= std::numeric_limits<uint32_t>::max()) {
     return reply(txn, ZX_ERR_OUT_OF_RANGE);
-  } else if (slice_count == 0) {
+  }
+  if (slice_count == 0) {
     return reply(txn, ZX_ERR_OUT_OF_RANGE);
-  } else if (name_size > max_name_len) {
+  }
+  if (name_size > max_name_len) {
     return reply(txn, ZX_ERR_INVALID_ARGS);
   }
 
@@ -689,7 +698,7 @@ zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {
   return fuchsia_hardware_block_volume_VolumeManagerQuery_reply(txn, ZX_OK, &info);
 }
 
-zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) {
+zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) const {
   fuchsia_hardware_block_volume_VolumeManagerInfo info;
   info.slice_size = format_info().slice_size();
   info.current_slice_count =
