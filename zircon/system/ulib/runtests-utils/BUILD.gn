@@ -25,7 +25,6 @@ zx_library("runtests-utils") {
   sdk_headers = [
     "runtests-utils/fuchsia-run-test.h",
     "runtests-utils/log-exporter.h",
-    "runtests-utils/posix-run-test.h",
     "runtests-utils/runtests-utils.h",
     "runtests-utils/service-proxy-dir.h",
   ]
@@ -98,7 +97,5 @@ zx_library("runtests-utils") {
           "list lines")
       include_dirs = [ target_gen_dir ]
     }
-  } else {
-    sources += [ "posix-run-test.cc" ]
   }
 }
