@@ -12,7 +12,7 @@
 #define PANEL_G101B158_FT UINT8_C(0x03)
 #define PANEL_ILI9881C UINT8_C(0x04)
 #define PANEL_ST7701S UINT8_C(0x05)
-
+#define PANEL_TV080WXM_FT UINT8_C(0x06)
 #define PANEL_UNKNOWN UINT8_C(0xFF)
 
 // Astro/Sherlock Display Configuration. These configuration comes directly from
@@ -81,7 +81,6 @@ const display_setting_t kDisplaySettingTV101WXM_FT = {
     .vsync_bp = 20,
     .vsync_pol = 0,
 };
-
 const display_setting_t kDisplaySettingIli9881c = {
     .lane_num = 4,
     .bit_rate_max = 0,  // unused
@@ -98,7 +97,6 @@ const display_setting_t kDisplaySettingIli9881c = {
     .vsync_bp = 16,
     .vsync_pol = 0,  // unused
 };
-
 const display_setting_t kDisplaySettingSt7701s = {
     .lane_num = 2,
     .bit_rate_max = 0,  // unused
@@ -114,6 +112,22 @@ const display_setting_t kDisplaySettingSt7701s = {
     .vsync_width = 8,
     .vsync_bp = 20,
     .vsync_pol = 0,  // unused
+};
+const display_setting_t kDisplaySettingTV080WXM_FT = {
+    .lane_num = 4,
+    .bit_rate_max = 625,
+    .clock_factor = 8,
+    .lcd_clock = 77967000,
+    .h_active = 800,
+    .v_active = 1280,
+    .h_period = 864,
+    .v_period = 1504,
+    .hsync_width = 14,
+    .hsync_bp = 25,
+    .hsync_pol = 0,
+    .vsync_width = 8,
+    .vsync_bp = 32,
+    .vsync_pol = 0,
 };
 
 typedef struct {

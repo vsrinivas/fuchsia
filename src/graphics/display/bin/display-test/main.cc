@@ -656,7 +656,8 @@ Platforms GetPlatform() {
   if (board_name_cmp.find("astro") != std::string_view::npos ||
       board_name_cmp.find("sherlock") != std::string_view::npos ||
       board_name_cmp.find("vim2") != std::string_view::npos ||
-      board_name_cmp.find("nelson") != std::string_view::npos) {
+      board_name_cmp.find("nelson") != std::string_view::npos ||
+      board_name_cmp.find("luis") != std::string_view::npos) {
     return AMLOGIC_PLATFORM;
   }
   if (board_name_cmp.find("cleo") != std::string_view::npos ||
@@ -707,6 +708,7 @@ int main(int argc, const char* argv[]) {
   }
 
   if (!bind_display(controller, &displays)) {
+    usage();
     return -1;
   }
 

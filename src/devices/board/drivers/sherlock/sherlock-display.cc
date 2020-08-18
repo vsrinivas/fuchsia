@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/display-panel.h>
+#include <zircon/errors.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -187,6 +188,7 @@ zx_status_t Sherlock::DisplayInit() {
     return status;
   }
 
+  // Sherlock and Luis have the same display resolution (different size)
   display_panel_t display_panel_info[] = {
       {
           .width = 800,
@@ -194,17 +196,32 @@ zx_status_t Sherlock::DisplayInit() {
       },
   };
 
-  uint8_t pt;
-  gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
-  gpio_impl_.Read(GPIO_PANEL_DETECT, &pt);
-  if (pt) {
-    display_panel_info[0].panel_type = PANEL_G101B158_FT;
-  } else {
-    display_panel_info[0].panel_type = PANEL_TV101WXM_FT;
+  pdev_board_info_t board_info;
+  status = pbus_.GetBoardInfo(&board_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
+    return status;
   }
-  display_panel_metadata[0].data_size = sizeof(display_panel_info);
-  display_panel_metadata[0].data_buffer = &display_panel_info;
 
+  if (board_info.pid == PDEV_PID_SHERLOCK) {
+    uint8_t pt;
+    gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_PANEL_DETECT, &pt);
+    if (pt) {
+      display_panel_info[0].panel_type = PANEL_G101B158_FT;
+    } else {
+      display_panel_info[0].panel_type = PANEL_TV101WXM_FT;
+    }
+    display_panel_metadata[0].data_size = sizeof(display_panel_info);
+    display_panel_metadata[0].data_buffer = &display_panel_info;
+  } else if (board_info.pid == PDEV_PID_LUIS) {
+    display_panel_info[0].panel_type = PANEL_TV080WXM_FT;
+    display_panel_metadata[0].data_size = sizeof(display_panel_info);
+    display_panel_metadata[0].data_buffer = &display_panel_info;
+  } else {
+    zxlogf(ERROR, "%s: Unsupported board detected: %s\n", __func__, board_info.board_name);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __FUNCTION__, status);

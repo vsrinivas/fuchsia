@@ -138,6 +138,8 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     init_disp_table_ = &kDisplaySettingTV101WXM_FT;
   } else if (panel_type_ == PANEL_G101B158_FT) {
     init_disp_table_ = &kDisplaySettingG101B158_FT;
+  } else if (panel_type_ == PANEL_TV080WXM_FT) {
+    init_disp_table_ = &kDisplaySettingTV080WXM_FT;
   } else {
     DISP_ERROR("Unsupported panel detected!\n");
     status = ZX_ERR_NOT_SUPPORTED;

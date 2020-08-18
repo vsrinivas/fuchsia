@@ -440,6 +440,9 @@ constexpr uint8_t lcd_init_sequence_TV101WXM_FT[] = {
     2,         0x97,    0x00,    GEN_CMD,   2,       0xE0,    0x00,    DCS_CMD, 1,       0x29,
     DELAY_CMD, 0xFF,
 };
+constexpr uint8_t lcd_init_sequence_TV080WXM_FT[] = {
+    DELAY_CMD, 120, DCS_CMD, 1, 0x11, DELAY_CMD, 120, DCS_CMD, 1, 0x29,
+};
 }  // namespace
 
 zx_status_t Lcd::GetDisplayId() {
@@ -540,6 +543,8 @@ zx_status_t Lcd::Enable() {
     status = LoadInitTable(lcd_init_sequence_TV101WXM_FT, sizeof(lcd_init_sequence_TV101WXM_FT));
   } else if (panel_type_ == PANEL_G101B158_FT) {
     status = LoadInitTable(lcd_init_sequence_G101B158_FT, sizeof(lcd_init_sequence_G101B158_FT));
+  } else if (panel_type_ == PANEL_TV080WXM_FT) {
+    status = LoadInitTable(lcd_init_sequence_TV080WXM_FT, sizeof(lcd_init_sequence_TV080WXM_FT));
   } else {
     DISP_ERROR("Unsupported panel detected!\n");
     status = ZX_ERR_NOT_SUPPORTED;
