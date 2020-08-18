@@ -304,15 +304,14 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 
 func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
 	// Stop the targets in parallel.
-	var wg sync.WaitGroup
+	eg, ctx := errgroup.WithContext(ctx)
 	for _, t := range targets {
-		wg.Add(1)
-		go func(t Target) {
-			defer wg.Done()
-			t.Stop(ctx)
-		}(t)
+		t := t
+		eg.Go(func() error {
+			return t.Stop(ctx)
+		})
 	}
-	wg.Wait()
+	_ = eg.Wait()
 }
 
 func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string, socketPath string) error {
@@ -391,8 +390,8 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 				// Skip syslogger.Close() to avoid double close; syslogger.Close() only closes the underlying client,
 				// which is closed in another defer above.
 			}()
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				if err := syslogger.Stream(ctx, s); err != nil && !errors.Is(err, ctx.Err()) {
 					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)

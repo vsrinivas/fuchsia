@@ -16,11 +16,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
-
-	"github.com/creack/pty"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
@@ -28,6 +25,9 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
+
+	"github.com/creack/pty"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -401,26 +401,16 @@ func (t *QEMUTarget) Wait(ctx context.Context) error {
 
 func copyImagesToDir(ctx context.Context, dir string, imgs ...*bootserver.Image) error {
 	// Copy each in a goroutine for efficiency's sake.
-	errs := make(chan error, len(imgs))
-	var wg sync.WaitGroup
-	wg.Add(len(imgs))
+	eg, ctx := errgroup.WithContext(ctx)
 	for _, img := range imgs {
-		go func(img *bootserver.Image) {
-			if img.Reader != nil {
-				if err := copyImageToDir(ctx, dir, img); err != nil {
-					errs <- err
-				}
-			}
-			wg.Done()
-		}(img)
+		if img.Reader != nil {
+			img := img
+			eg.Go(func() error {
+				return copyImageToDir(ctx, dir, img)
+			})
+		}
 	}
-	wg.Wait()
-	select {
-	case err := <-errs:
-		return err
-	default:
-		return nil
-	}
+	return eg.Wait()
 }
 
 func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) error {
