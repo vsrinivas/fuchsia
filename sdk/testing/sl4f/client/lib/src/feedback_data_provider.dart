@@ -7,12 +7,12 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'sl4f_client.dart';
 
-class FeedbackBugreport {
+class FeedbackSnapshot {
   /// The loaded zip.
   final Archive archive;
 
-  /// Creates a new [FeedbackBugreport] from a string with the zip contents.
-  FeedbackBugreport(String zipContents)
+  /// Creates a new [FeedbackSnapshot] from a string with the zip contents.
+  FeedbackSnapshot(String zipContents)
       : archive = ZipDecoder().decodeBytes(base64Decode(zipContents));
 
   /// Reads the json in inspect.json
@@ -32,14 +32,14 @@ class FeedbackDataProvider {
   /// Construct a [Feedback] object.
   FeedbackDataProvider(this.sl4f);
 
-  /// Performs a call to `fuchsia.feedback.DataProvider#GetBugreport` and returns
-  /// a [FeedbackBugreport] that contains the resulting zip.
-  Future<FeedbackBugreport> getBugreport() async {
+  /// Performs a call to `fuchsia.feedback.DataProvider#GetSnapshot` and returns
+  /// a [FeedbackSnapshot] that contains the resulting zip.
+  Future<FeedbackSnapshot> getSnapshot() async {
     final result =
-        await sl4f.request('feedback_data_provider_facade.GetBugreport', {}) ??
+        await sl4f.request('feedback_data_provider_facade.GetSnapshot', {}) ??
             {};
     if (result.containsKey('zip')) {
-      return FeedbackBugreport(result['zip']);
+      return FeedbackSnapshot(result['zip']);
     }
     return null;
   }

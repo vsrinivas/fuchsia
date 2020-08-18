@@ -5,8 +5,8 @@
 /// Enum for supported Feedback commands.
 #[derive(Debug, PartialEq)]
 pub enum FeedbackDataProviderMethod {
-    /// Wraps `fuchsia.feedback.DataProvider#GetBugreport`
-    GetBugreport,
+    /// Wraps `fuchsia.feedback.DataProvider#GetSnapshot`
+    GetSnapshot,
 }
 
 impl std::str::FromStr for FeedbackDataProviderMethod {
@@ -14,7 +14,7 @@ impl std::str::FromStr for FeedbackDataProviderMethod {
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
-            "GetBugreport" => Ok(FeedbackDataProviderMethod::GetBugreport),
+            "GetSnapshot" => Ok(FeedbackDataProviderMethod::GetSnapshot),
             _ => {
                 return Err(format_err!("invalid Feedback DataProvider Facade method: {}", method))
             }

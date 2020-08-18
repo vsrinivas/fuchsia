@@ -34,7 +34,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'feedback_data_provider_facade.GetBugreport');
+      expect(body['method'], 'feedback_data_provider_facade.GetSnapshot');
       req.response.write(jsonEncode({
         'id': body['id'],
         'result': {
@@ -47,7 +47,7 @@ void main(List<String> args) {
 
     fakeServer.listen(handler);
 
-    final result = await FeedbackDataProvider(sl4f).getBugreport();
+    final result = await FeedbackDataProvider(sl4f).getSnapshot();
     expect(result.inspect, equals(inspect));
   }, timeout: Timeout(Duration(minutes: 2)));
 }

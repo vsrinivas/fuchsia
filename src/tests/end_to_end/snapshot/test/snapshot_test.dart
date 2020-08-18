@@ -20,9 +20,9 @@ void main() {
     sl4fDriver.close();
   });
 
-  test('bugreport contains inspect data', () async {
-    final bugreport = await feedback.getBugreport();
-    final result = bugreport.inspect
+  test('snapshot contains inspect data', () async {
+    final snapshot = await feedback.getSnapshot();
+    final result = snapshot.inspect
         .where((entry) =>
             entry.containsKey('moniker') &&
             entry['moniker'] == 'core/archivist')

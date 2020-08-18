@@ -16,7 +16,7 @@ use {
 impl Facade for FeedbackDataProviderFacade {
     async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
         match method.parse()? {
-            FeedbackDataProviderMethod::GetBugreport => self.get_bugreport().await,
+            FeedbackDataProviderMethod::GetSnapshot => self.get_snapshot().await,
         }
     }
 }
