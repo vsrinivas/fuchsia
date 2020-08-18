@@ -193,16 +193,6 @@ func (t *QEMUTarget) SSHKey() string {
 
 // Start starts the QEMU target.
 func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
-	// We create a working directory for the QEMU process below, but cannot
-	// clean it up until we error or until the process finishes. The former is
-	// handled in this block, while the latter is handled in a goroutine below.
-	var workdir string
-	go func() {
-		if workdir != "" && err != nil {
-			os.RemoveAll(workdir)
-		}
-	}()
-
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}
@@ -241,13 +231,18 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if zirconA.Reader == nil {
 		return fmt.Errorf("could not find zbi_zircon-a")
 	}
-	// The QEMU command needs to be invoked within an emptm directory, as QEMU
+	// The QEMU command needs to be invoked within an empty directory, as QEMU
 	// will attempt to pick up files from its working directory, one notable
-	// culprit being multiboot.bin.  This can result in strange behavior.
-	workdir, err = ioutil.TempDir("", "qemu-working-dir")
+	// culprit being multiboot.bin. This can result in strange behavior.
+	workdir, err := ioutil.TempDir("", "qemu-working-dir")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			os.RemoveAll(workdir)
+		}
+	}()
 
 	if err := copyImagesToDir(ctx, workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
 		return err
