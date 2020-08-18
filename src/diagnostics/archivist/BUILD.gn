@@ -150,21 +150,30 @@ fuchsia_component("archivist-v2") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("observer-v1") {
-  component_name = "observer"
-  manifest = "meta/observer.cmx"
+fuchsia_component("archivist-for-embedding-v1") {
+  component_name = "archivist-for-embedding"
+  manifest = "meta/archivist-for-embedding.cmx"
   deps = [
     ":bin",
-    ":observer-config-file",
+    ":embedding-config-file",
+  ]
+}
+
+fuchsia_component("observer-v1") {
+  component_name = "observer"
+  manifest = "meta/archivist-for-embedding.cmx"
+  deps = [
+    ":bin",
+    ":embedding-config-file",
   ]
 }
 
 fuchsia_component("observer-v2") {
   component_name = "observer"
-  manifest = "meta/observer.cml"
+  manifest = "meta/archivist-for-embedding.cml"
   deps = [
     ":bin",
-    ":observer-config-file",
+    ":embedding-config-file",
   ]
 }
 
@@ -172,10 +181,20 @@ fuchsia_package("archivist") {
   deps = [
     ":archivist-v1",
     ":archivist-v2",
+
+    # TODO(fxbug.dev/56386) remove
+    ":archivist-for-embedding-v1",
+
+    # TODO(fxbug.dev/58074) remove
     ":observer-v1",
   ]
 }
 
+fuchsia_package("archivist-for-embedding") {
+  deps = [ ":archivist-for-embedding-v1" ]
+}
+
+# TODO(fxbug.dev/58074) delete this package
 fuchsia_package("observer") {
   deps = [ ":observer-v2" ]
 }
@@ -187,14 +206,15 @@ config_data("archivist_config") {
   sources = [ "configs/archivist_config.json" ]
 }
 
-resource("observer-config-file") {
-  sources = [ "configs/observer_config.json" ]
+resource("embedding-config-file") {
+  sources = [ "configs/embedding-config.json" ]
   outputs = "data/{{source_file_part}}"
 }
 
 group("with_default_config") {
   deps = [
     ":archivist",
+    ":archivist-for-embedding",
     ":archivist_config",
     ":observer",
   ]

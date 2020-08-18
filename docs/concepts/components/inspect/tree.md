@@ -184,9 +184,9 @@ data is collected from its `out/diagnostics` directory.
 A connection to this directory is provided to Archivist by the
 [`ComponentEventProvider`][fidl-event-provider] protocol.
 
-A separate component, called `observer.cmx`, serves the same purpose as
-the Archivist but may be injected into tests. Observer allows tests to
-find only their own diagnostics data, helping to make tests hermitic.
+A separate component, called `archivist-for-embedding.cmx`, serves the same
+purpose as the Archivist but may be injected into tests. This allows tests
+to find only their own diagnostics data, helping to make tests hermetic.
 
 #### Collection under component\_manager
 
@@ -222,9 +222,9 @@ directory to the framework. This typically looks as follows:
 
 #### Reading Inspect from the Archivist
 
-The Archivist (and observer) host
-[`fuchsia.diagnostics.ArchiveAccessor`][archive], which provides the `ReadInspect`
-method to obtain Inspect data from running components.
+The Archivist hosts [`fuchsia.diagnostics.ArchiveAccessor`][archive],
+which provides the `StreamDiagnostics` method to obtain Inspect data from
+running components.
 
 [archive]: /sdk/fidl/fuchsia.diagnostics/reader.fidl
 [archivist]: /src/diagnostics/archivist

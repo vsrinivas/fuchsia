@@ -52,17 +52,15 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
 
-    let log_name;
+    let log_name = "archivist";
     let mut log_server = None;
     if opt.consume_own_logs {
         let (log_client, server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
         log_server = Some(server);
-        log_name = "archivist";
         fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
         info!("Logging started.");
     } else {
-        log_name = "observer";
-        fuchsia_syslog::init_with_tags(&[log_name])?;
+        fuchsia_syslog::init_with_tags(&[log_name, "embedded"])?;
     }
 
     let mut executor = fasync::Executor::new()?;

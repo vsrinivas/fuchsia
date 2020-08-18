@@ -23,14 +23,14 @@ pub use diagnostics_reader::{Inspect, Lifecycle};
 /// collected.
 pub struct AppWithDiagnostics {
     app: App,
-    observer: App,
+    archivist: App,
     recv_logs: mpsc::UnboundedReceiver<LogMessage>,
     env_proxy: EnvironmentControllerProxy,
     _env_task: Task<()>,
     _listen_task: Task<()>,
 }
 
-const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
+const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx";
 
 impl AppWithDiagnostics {
     /// Launch the app from the given URL with the given arguments in the named realm, collecting
@@ -50,7 +50,7 @@ impl AppWithDiagnostics {
         let launcher = connect_to_service::<LauncherMarker>().unwrap();
 
         // we need an archivist to collect the diagnostics from the nested realm we make below
-        let observer = launch_with_options(
+        let archivist = launch_with_options(
             &launcher,
             ARCHIVIST_URL.to_owned(),
             // the log connector api is challenging to integrate with the stop api
@@ -60,7 +60,7 @@ impl AppWithDiagnostics {
         .unwrap();
 
         // start listening
-        let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+        let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
         let mut options = LogFilterOptions {
             filter_by_pid: false,
             pid: 0,
@@ -79,7 +79,7 @@ impl AppWithDiagnostics {
 
         // start the component
         let realm_label = realm.to_string();
-        let dir_req = observer.directory_request().clone();
+        let dir_req = archivist.directory_request().clone();
         let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
         let (env_proxy, app) = fs
             .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
@@ -94,11 +94,11 @@ impl AppWithDiagnostics {
             fs.collect::<()>().await;
         }));
 
-        Self { app, observer, recv_logs, env_proxy, _env_task, _listen_task }
+        Self { app, archivist, recv_logs, env_proxy, _env_task, _listen_task }
     }
 
     pub fn reader(&self) -> ArchiveReader {
-        let archive = self.observer.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+        let archive = self.archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
         ArchiveReader::new().with_archive(archive).without_url(ARCHIVIST_URL)
     }
 
@@ -134,11 +134,11 @@ impl AppWithDiagnostics {
         // wait for logging_component to die
         let status = self.app.wait().await.unwrap();
 
-        // kill environment before stopping observer.
+        // kill environment before stopping archivist.
         self.env_proxy.kill().await.unwrap();
 
         // connect to controller and call stop
-        let controller = self.observer.connect_to_service::<ControllerMarker>().unwrap();
+        let controller = self.archivist.connect_to_service::<ControllerMarker>().unwrap();
         controller.stop().unwrap();
 
         // collect all logs
@@ -147,11 +147,11 @@ impl AppWithDiagnostics {
             .collect::<Vec<_>>()
             .await
             .into_iter()
-            .filter(|m| !m.tags.iter().any(|t| t == "observer" || t == "archivist"))
+            .filter(|m| !m.tags.iter().any(|t| t == "archivist"))
             .collect::<Vec<_>>();
 
-        // recv_logs returned, means observer must be dead. check.
-        assert!(self.observer.wait().await.unwrap().success());
+        // recv_logs returned, means archivist must be dead. check.
+        assert!(self.archivist.wait().await.unwrap().success());
 
         // in case we got things out of order
         logs.sort_by_key(|msg| msg.time);

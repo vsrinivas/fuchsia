@@ -3,7 +3,7 @@
 
 //! This test:
 //!
-//! 1. constructs a diagnostics observer.cmx
+//! 1. constructs a diagnostics archivist-for-embedding.cmx
 //! 2. uses it as the LogSink for a hermetic test environment
 //! 3. runs a simple component in the test environment to produce some logs
 //! 4. inspects the log output of the child component
@@ -23,12 +23,12 @@ use {
 
 const CHILD_WITH_LOGS_URL: &str =
     "fuchsia-pkg://fuchsia.com/appmgr_log_integration_tests#meta/log_emitter_for_test.cmx";
-const OBSERVER_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
+const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx";
 
 #[fasync::run(2)]
 async fn main() {
     if false {
-        let mut builder = AppBuilder::new(OBSERVER_URL);
+        let mut builder = AppBuilder::new(ARCHIVIST_URL);
         let observer_dir_req = Arc::clone(builder.directory_request().unwrap());
         let our_launcher = connect_to_service::<LauncherMarker>().unwrap();
         let observer = builder.spawn(&our_launcher).unwrap();

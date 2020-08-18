@@ -5,7 +5,7 @@
             "--disable-klog",
             "--disable-log-connector",
             "--config-path",
-            "/pkg/data/observer_config.json",
+            "/pkg/data/embedding-config.json",
         ],
     },
     use: [

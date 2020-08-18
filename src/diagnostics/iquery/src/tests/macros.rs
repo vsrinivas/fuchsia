@@ -115,7 +115,7 @@ impl CommandAssertion {
     fn do_remove_observer(&self, result: String) -> String {
         match &self.format[..] {
             "json" => {
-                // Removes the entry in the vector for the observer.cmx
+                // Removes the entry in the vector for the archivist-for-embedding.cmx
                 let mut result_json: serde_json::Value =
                     serde_json::from_str(&result).expect("expected json");
                 match result_json.as_array_mut() {
@@ -125,7 +125,11 @@ impl CommandAssertion {
                             value
                                 .get("moniker")
                                 .and_then(|val| val.as_str())
-                                .map(|val| !val.ends_with("observer.cmx"))
+                                .map(|val| {
+                                    // TODO(fxbug.dev/58074) remove observer.cmx
+                                    !(val.ends_with("archivist-for-embedding.cmx")
+                                        || val.ends_with("observer.cmx"))
+                                })
                                 .unwrap_or(true)
                         });
                         serde_json::to_string_pretty(&result_json).unwrap()
@@ -133,9 +137,13 @@ impl CommandAssertion {
                 }
             }
             "text" => {
-                // Removes the chunk of text that belongs to observer.cmx
+                // Removes the chunk of text that belongs to archivist-for-embedding.cmx
                 let lines = result.lines().collect::<Vec<_>>();
-                match lines.iter().enumerate().find(|(_, line)| line.ends_with("observer.cmx:")) {
+                match lines.iter().enumerate().find(|(_, line)| {
+                    // TODO(fxbug.dev/58074) remove observer.cmx
+                    line.ends_with("archivist-for-embedding.cmx:")
+                        || line.ends_with("observer.cmx:")
+                }) {
                     None => result,
                     Some((found_index, _)) => {
                         let next_index = lines

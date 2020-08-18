@@ -5,7 +5,7 @@
             "--install-controller",
             "--disable-event-source",
             "--config-path",
-            "/pkg/data/observer_config.json"
+            "/pkg/data/embedding-config.json"
         ],
         "binary": "bin/archivist"
     },

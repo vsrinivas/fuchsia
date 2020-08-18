@@ -135,7 +135,7 @@ async fn listen_for_klog_routed_stdio() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn observer_stop_api() {
+async fn embedding_stop_api() {
     let (status, logs) = AppWithDiagnostics::launch(
         "logging",
         "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx",
@@ -153,11 +153,11 @@ async fn observer_stop_api() {
 
 #[fasync::run_singlethreaded(test)]
 async fn same_log_sink_simultaneously() {
-    // launch observer.cmx
+    // launch archivist-for-embedding.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
-    let mut observer = launch_with_options(
+    let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
         Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )
@@ -166,7 +166,7 @@ async fn same_log_sink_simultaneously() {
     // connect multiple identical log sinks
     for _ in 0..50 {
         let (message_client, message_server) = Socket::create(SocketOpts::DATAGRAM).unwrap();
-        let log_sink = observer.connect_to_service::<LogSinkMarker>().unwrap();
+        let log_sink = archivist.connect_to_service::<LogSinkMarker>().unwrap();
         log_sink.connect(message_server).unwrap();
 
         // each with the same message repeated multiple times
@@ -182,7 +182,7 @@ async fn same_log_sink_simultaneously() {
     }
 
     // run log listener
-    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
@@ -202,14 +202,14 @@ async fn same_log_sink_simultaneously() {
     .detach();
 
     // connect to controller and call stop
-    let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs
     let logs = recv_logs.map(|message| (message.severity, message.msg)).collect::<Vec<_>>().await;
 
-    // recv_logs returned, means observer must be dead. check.
-    assert!(observer.wait().await.unwrap().success());
+    // recv_logs returned, means archivist must be dead. check.
+    assert!(archivist.wait().await.unwrap().success());
     assert_eq!(
         logs,
         std::iter::repeat((INFO, "repeated log".to_owned())).take(250).collect::<Vec<_>>()
@@ -272,20 +272,20 @@ async fn same_log_sink_simultaneously_via_connector() {
     .unwrap();
     fasync::Task::spawn(fs.collect()).detach();
 
-    // launch observer.cmx
+    // launch archivist-for-embedding.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
     let mut options = LaunchOptions::new();
     options.set_additional_services(vec![LogConnectorMarker::NAME.to_string()], dir_client);
-    let mut observer = launch_with_options(
+    let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
         None,
         options,
     )
     .unwrap();
 
     // run log listener
-    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
@@ -305,14 +305,14 @@ async fn same_log_sink_simultaneously_via_connector() {
     .detach();
 
     // connect to controller and call stop
-    let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs
     let logs = recv_logs.map(|message| (message.severity, message.msg)).collect::<Vec<_>>().await;
 
-    // recv_logs returned, means observer must be dead. check.
-    assert!(observer.wait().await.unwrap().success());
+    // recv_logs returned, means archivist_for_test must be dead. check.
+    assert!(archivist.wait().await.unwrap().success());
     assert_eq!(
         logs,
         std::iter::repeat((INFO, "repeated log".to_owned())).take(250).collect::<Vec<_>>()
@@ -349,11 +349,11 @@ async fn timestamp_sorting_for_batches() {
         })
         .collect::<Vec<_>>();
 
-    // launch observer.cmx
+    // launch archivist-for-embedding.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
-    let mut observer = launch_with_options(
+    let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
         Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )
@@ -370,15 +370,15 @@ async fn timestamp_sorting_for_batches() {
         send_hare.write(packets[hare_times.0].as_bytes()).unwrap();
 
         // connect to log_sink and make sure we have a clean slate
-        let mut early_listener = listen_to_observer(&observer);
-        let log_sink = observer.connect_to_service::<LogSinkMarker>().unwrap();
+        let mut early_listener = listen_to_archivist(&archivist);
+        let log_sink = archivist.connect_to_service::<LogSinkMarker>().unwrap();
 
         // connect the tortoise's socket
         log_sink.connect(recv_tort).unwrap();
         let tort_expected = messages[tort_times.0].clone();
         let mut expected_dump = vec![tort_expected.clone()];
         assert_eq!(&early_listener.next().await.unwrap(), &tort_expected);
-        assert_eq!(&dump_from_observer(&observer).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
 
         // connect hare's socket
         log_sink.connect(recv_hare).unwrap();
@@ -387,10 +387,10 @@ async fn timestamp_sorting_for_batches() {
         expected_dump.sort_by_key(|m| m.time);
 
         assert_eq!(&early_listener.next().await.unwrap(), &hare_expected);
-        assert_eq!(&dump_from_observer(&observer).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
 
         // start a new listener and make sure it gets backlog reversed from early listener
-        let mut middle_listener = listen_to_observer(&observer);
+        let mut middle_listener = listen_to_archivist(&archivist);
         assert_eq!(&middle_listener.next().await.unwrap(), &hare_expected);
         assert_eq!(&middle_listener.next().await.unwrap(), &tort_expected);
 
@@ -402,7 +402,7 @@ async fn timestamp_sorting_for_batches() {
 
         assert_eq!(&early_listener.next().await.unwrap(), &tort_expected2);
         assert_eq!(&middle_listener.next().await.unwrap(), &tort_expected2);
-        assert_eq!(&dump_from_observer(&observer).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
 
         // send the second hare message and assert it's seen
         send_tort.write(packets[hare_times.1].as_bytes()).unwrap();
@@ -412,10 +412,10 @@ async fn timestamp_sorting_for_batches() {
 
         assert_eq!(&early_listener.next().await.unwrap(), &hare_expected2);
         assert_eq!(&middle_listener.next().await.unwrap(), &hare_expected2);
-        assert_eq!(&dump_from_observer(&observer).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
 
-        // listening after all messages were seen by observer.cmx should be time-ordered
-        let mut final_listener = listen_to_observer(&observer);
+        // listening after all messages were seen by archivist-for-embedding.cmx should be time-ordered
+        let mut final_listener = listen_to_archivist(&archivist);
         assert_eq!(&final_listener.next().await.unwrap(), &hare_expected);
         assert_eq!(&final_listener.next().await.unwrap(), &tort_expected);
         assert_eq!(&final_listener.next().await.unwrap(), &hare_expected2);
@@ -423,14 +423,14 @@ async fn timestamp_sorting_for_batches() {
     }
 
     // connect to controller and call stop
-    let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
-    assert!(observer.wait().await.unwrap().success());
+    assert!(archivist.wait().await.unwrap().success());
 }
 
-async fn dump_from_observer(observer: &App) -> Vec<LogMessage> {
-    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+async fn dump_from_archivist(archivist: &App) -> Vec<LogMessage> {
+    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, true, None).await.unwrap();
@@ -439,8 +439,8 @@ async fn dump_from_observer(observer: &App) -> Vec<LogMessage> {
     recv_logs.collect::<Vec<_>>().await
 }
 
-fn listen_to_observer(observer: &App) -> mpsc::UnboundedReceiver<LogMessage> {
-    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+fn listen_to_archivist(archivist: &App) -> mpsc::UnboundedReceiver<LogMessage> {
+    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, false, None).await.unwrap();

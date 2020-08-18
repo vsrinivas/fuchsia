@@ -87,7 +87,7 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
        Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
        For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity
 
-       By default when installing log listener, all logs are collected. To filter 
+       By default when installing log listener, all logs are collected. To filter
        by higher severity please pass severity: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
        example: run-test-component --min-severity-logs=WARN <url>
 )");
@@ -169,8 +169,8 @@ std::string log_level(int32_t severity) {
 
 std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr& launcher,
                                                 async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info{.url =
-                                           "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"};
+  fuchsia::sys::LaunchInfo launch_info{
+      .url = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx"};
   launch_info.arguments = {"--disable-log-connector"};
 
   return run::Component::Launch(launcher, std::move(launch_info), dispatcher);
