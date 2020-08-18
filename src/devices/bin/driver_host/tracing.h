@@ -9,9 +9,12 @@
 
 namespace internal {
 // Register the driver_host as a "trace provider" with the trace manager.
-// There is no corresponding "unregister" function: we remain registered
-// until either us or the manager terminate.
+// This method is *NOT* thread-safe.
 zx_status_t start_trace_provider();
+
+// Unregister the driver_host as a "trace provider" with the trace manager.
+// This method is *NOT* thread-safe.
+void stop_trace_provider();
 
 }
 

@@ -14,7 +14,14 @@
 
 namespace internal {
 
+static trace_provider_t* g_trace_provider;
+static async_loop_t* g_loop;
+
 zx_status_t start_trace_provider() {
+  if (g_trace_provider != nullptr || g_loop != nullptr) {
+    LOGF(ERROR, "Trace provider already started");
+    return ZX_ERR_ALREADY_BOUND;
+  }
   async_loop_t* loop;
   zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop);
   if (status != ZX_OK) {
@@ -43,10 +50,24 @@ zx_status_t start_trace_provider() {
     return ZX_ERR_INTERNAL;
   }
 
+  g_trace_provider = trace_provider;
+  g_loop = loop;
+
   // N.B. The registry has begun, but these things are async. TraceManager
   // may not even be running yet (and likely isn't).
   VLOGF(1, "Started trace provider");
   return ZX_OK;
+}
+
+void stop_trace_provider() {
+  if (g_loop != nullptr) {
+    async_loop_destroy(g_loop);
+    g_loop = nullptr;
+  }
+  if (g_trace_provider != nullptr) {
+    trace_provider_destroy(g_trace_provider);
+    g_trace_provider = nullptr;
+  }
 }
 
 }  // namespace internal
