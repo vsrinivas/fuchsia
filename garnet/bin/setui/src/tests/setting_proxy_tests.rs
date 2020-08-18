@@ -311,7 +311,7 @@ async fn test_request() {
         .message(
             Payload::Action(SettingAction {
                 id: request_id,
-                setting_type: setting_type,
+                setting_type,
                 data: SettingActionData::Request(SettingRequest::Get),
             }),
             Audience::Messenger(environment.proxy_signature),
@@ -332,6 +332,80 @@ async fn test_request() {
     }
 }
 
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_request_order() {
+    let setting_type = SettingType::Unknown;
+    let request_id_1 = 42;
+    let request_id_2 = 43;
+    let environment = create_test_environment(setting_type, None).await;
+
+    environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
+
+    // Send multiple requests.
+    let receptor_1 = environment
+        .messenger_client
+        .message(
+            Payload::Action(SettingAction {
+                id: request_id_1,
+                setting_type,
+                data: SettingActionData::Request(SettingRequest::Get),
+            }),
+            Audience::Messenger(environment.proxy_signature),
+        )
+        .send();
+    let receptor_2 = environment
+        .messenger_client
+        .message(
+            Payload::Action(SettingAction {
+                id: request_id_2,
+                setting_type,
+                data: SettingActionData::Request(SettingRequest::Get),
+            }),
+            Audience::Messenger(environment.proxy_signature),
+        )
+        .send();
+
+    // Wait for both requests to finish and add them to the list as they finish so we can verify the
+    // order.
+    let mut completed_request_ids = Vec::<u64>::new();
+    let mut receptor_1_fuse = receptor_1.fuse();
+    let mut receptor_2_fuse = receptor_2.fuse();
+    loop {
+        environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
+        futures::select! {
+            payload_1 = receptor_1_fuse.next() => {
+                if let Some(MessageEvent::Message(
+                    Payload::Event(SettingEvent::Response(response_id, response)),
+                    _,
+                )) = payload_1
+                {
+                    assert_eq!(request_id_1, response_id);
+                    // First request finishes first.
+                    assert_eq!(completed_request_ids.len(), 0);
+                    completed_request_ids.push(response_id);
+                }
+            },
+            payload_2 = receptor_2_fuse.next() => {
+                if let Some(MessageEvent::Message(
+                    Payload::Event(SettingEvent::Response(response_id, response)),
+                    _,
+                )) = payload_2
+                {
+                    assert_eq!(request_id_2, response_id);
+                    // Second request finishes second.
+                    assert_eq!(completed_request_ids.len(), 1);
+                    completed_request_ids.push(response_id);
+                }
+            },
+            complete => break,
+        }
+    }
+
+    assert_eq!(completed_request_ids.len(), 2);
+    assert_eq!(completed_request_ids[0], request_id_1);
+    assert_eq!(completed_request_ids[1], request_id_2);
+}
+
 /// Ensures setting handler is only generated once if never torn down.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_generation() {
@@ -346,7 +420,7 @@ async fn test_generation() {
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
-                    setting_type: setting_type,
+                    setting_type,
                     data: SettingActionData::Listen(1),
                 }),
                 Audience::Messenger(environment.proxy_signature),
@@ -365,7 +439,7 @@ async fn test_generation() {
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
-                    setting_type: setting_type,
+                    setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
                 Audience::Messenger(environment.proxy_signature),
