@@ -45,6 +45,15 @@ var _ link.Observer = (*Client)(nil)
 var _ stack.LinkEndpoint = (*Client)(nil)
 var _ stack.GSOEndpoint = (*Client)(nil)
 
+// InfoProvider abstracts a common information interface for different Clients.
+type InfoProvider interface {
+	RxStats() *fifo.RxStats
+	TxStats() *fifo.TxStats
+	Info() network.Info
+}
+
+var _ InfoProvider = (*Client)(nil)
+
 // A client for a network device that implements the
 // fuchsia.hardware.network.Device protocol.
 type Client struct {
@@ -492,4 +501,19 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	}
 
 	return c, nil
+}
+
+// RxStats implements InfoProvider.
+func (c *Client) RxStats() *fifo.RxStats {
+	return &c.handler.Stats.Rx
+}
+
+// TxStats implements InfoProvider.
+func (c *Client) TxStats() *fifo.TxStats {
+	return &c.handler.Stats.Tx
+}
+
+// Info implements InfoProvider.
+func (c *Client) Info() network.Info {
+	return c.info
 }

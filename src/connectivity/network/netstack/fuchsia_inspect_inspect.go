@@ -13,7 +13,10 @@ import (
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -34,14 +37,15 @@ type inspectInner interface {
 }
 
 const (
-	statsLabel = "Stats"
-	socketInfo = "Socket Info"
-	dhcpInfo   = "DHCP Info"
-	ethInfo    = "Ethernet Info"
-	rxReads    = "RxReads"
-	rxWrites   = "RxWrites"
-	txReads    = "TxReads"
-	txWrites   = "TxWrites"
+	statsLabel    = "Stats"
+	socketInfo    = "Socket Info"
+	dhcpInfo      = "DHCP Info"
+	ethInfo       = "Ethernet Info"
+	netdeviceInfo = "Network Device Info"
+	rxReads       = "RxReads"
+	rxWrites      = "RxWrites"
+	txReads       = "TxReads"
+	txWrites      = "TxWrites"
 )
 
 // An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
@@ -195,7 +199,7 @@ type ifStateInfo struct {
 	dhcpEnabled         bool
 	dhcpInfo            dhcp.Info
 	dhcpStats           *dhcp.Stats
-	client              *eth.Client
+	controller          link.Controller
 }
 
 type nicInfoMapInspectImpl struct {
@@ -293,9 +297,14 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 	if impl.value.dhcpEnabled {
 		children = append(children, dhcpInfo)
 	}
-	if impl.value.client != nil {
+
+	switch impl.value.controller.(type) {
+	case *eth.Client:
 		children = append(children, ethInfo)
+	case netdevice.InfoProvider:
+		children = append(children, netdeviceInfo)
 	}
+
 	return children
 }
 
@@ -315,7 +324,12 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 	case ethInfo:
 		return &ethInfoInspectImpl{
 			name:  childName,
-			value: impl.value.client,
+			value: impl.value.controller.(*eth.Client),
+		}
+	case netdeviceInfo:
+		return &netdevInspectImpl{
+			name:  childName,
+			value: impl.value.controller.(netdevice.InfoProvider),
 		}
 	default:
 		return nil
@@ -396,7 +410,7 @@ func (impl *ethInfoInspectImpl) ReadData() inspect.Object {
 	}
 }
 
-func (impl *ethInfoInspectImpl) ListChildren() []string {
+func getFifoStatsChildren() []string {
 	return []string{
 		rxReads,
 		rxWrites,
@@ -405,35 +419,70 @@ func (impl *ethInfoInspectImpl) ListChildren() []string {
 	}
 }
 
-func (impl *ethInfoInspectImpl) GetChild(childName string) inspectInner {
+func getFifoStatsImpl(childName string, rx *fifo.RxStats, tx *fifo.TxStats) inspectInner {
 	switch childName {
 	case rxReads:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.RxStats().Reads,
-			size:  impl.value.RxStats().Size(),
+			value: rx.Reads,
+			size:  rx.Size(),
 		}
 	case rxWrites:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.RxStats().Writes,
-			size:  impl.value.RxStats().Size(),
+			value: rx.Writes,
+			size:  rx.Size(),
 		}
 	case txReads:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.TxStats().Reads,
-			size:  impl.value.TxStats().Size(),
+			value: tx.Reads,
+			size:  tx.Size(),
 		}
 	case txWrites:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.TxStats().Writes,
-			size:  impl.value.TxStats().Size(),
+			value: tx.Writes,
+			size:  tx.Size(),
 		}
 	default:
 		return nil
 	}
+}
+
+func (impl *ethInfoInspectImpl) ListChildren() []string {
+	return getFifoStatsChildren()
+}
+
+func (impl *ethInfoInspectImpl) GetChild(childName string) inspectInner {
+	return getFifoStatsImpl(childName, impl.value.RxStats(), impl.value.TxStats())
+}
+
+var _ inspectInner = (*netdevInspectImpl)(nil)
+
+type netdevInspectImpl struct {
+	name  string
+	value netdevice.InfoProvider
+}
+
+func (impl *netdevInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+		Metrics: []inspect.Metric{
+			{Key: "TxDrops", Value: inspect.MetricValueWithUintValue(impl.value.TxStats().Drops.Value())},
+		},
+		Properties: []inspect.Property{
+			{Key: "Class", Value: inspect.PropertyValueWithStr(impl.value.Info().Class.String())},
+		},
+	}
+}
+
+func (impl *netdevInspectImpl) ListChildren() []string {
+	return getFifoStatsChildren()
+}
+
+func (impl *netdevInspectImpl) GetChild(childName string) inspectInner {
+	return getFifoStatsImpl(childName, impl.value.RxStats(), impl.value.TxStats())
 }
 
 var _ inspectInner = (*fifoStatsInspectImpl)(nil)

@@ -1143,9 +1143,7 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 			info.dhcpStats = ifs.mu.dhcp.Stats()
 		}
 		ifs.mu.Unlock()
-		if client, ok := ifs.controller.(*eth.Client); ok {
-			info.client = client
-		}
+		info.controller = ifs.controller
 		ifStates[id] = info
 	}
 	return ifStates

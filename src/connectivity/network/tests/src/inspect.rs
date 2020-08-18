@@ -155,6 +155,17 @@ async fn inspect_nic() -> Result {
         )
         .await
         .context("failed to join network with ethernet endpoint")?;
+    let netdev = env
+        .join_network::<netemul::NetworkDevice, _>(
+            &network,
+            "netdev-ep",
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: fidl_ip!(192.168.0.2),
+                prefix_len: 24,
+            }),
+        )
+        .await
+        .context("failed to join network with netdevice endpoint")?;
 
     let netstack = env
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
@@ -180,16 +191,18 @@ async fn inspect_nic() -> Result {
                 };
 
                 // Verify installed interface state.
-                let ready = interfaces_by_id
-                    .get(&eth.id())
-                    .map(|iface| {
-                        // eth endpoint is up, has assigned IPv4 and IPv6
-                        // addresses.
-                        iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
-                            && iface.addr != fidl_ip!(0.0.0.0)
-                            && iface.ipv6addrs.len() != 0
-                    })
-                    .unwrap_or(false);
+                let ready = [netdev.id(), eth.id()].iter().all(|id| {
+                    interfaces_by_id
+                        .get(id)
+                        .map(|iface| {
+                            // endpoint is up, has assigned IPv4 and IPv6
+                            // addresses.
+                            iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
+                                && iface.addr != fidl_ip!(0.0.0.0)
+                                && iface.ipv6addrs.len() != 0
+                        })
+                        .unwrap_or(false)
+                });
                 futures::future::ok(if ready { Some((loopback, interfaces_by_id)) } else { None })
             },
         )
@@ -198,20 +211,28 @@ async fn inspect_nic() -> Result {
         .context("failed to observe desired final state")?
         .ok_or_else(|| anyhow::anyhow!("netstack stream ended unexpectedly"))?;
 
-    let loopback_props = ifaces.remove(&loopback_id).expect("loopback missing");
-    let eth_props = ifaces.remove(&eth.id()).expect("eth missing");
+    let loopback_props = ifaces.remove(&loopback_id).context("loopback missing")?;
+    let eth_props = ifaces.remove(&eth.id()).context("eth missing")?;
+    let netdev_props = ifaces.remove(&netdev.id()).context("netdev missing")?;
     let loopback_id = format!("{}", loopback_id);
     let eth_id = format!("{}", eth_props.id);
-    let eth_mac = format!(
-        "{}",
-        fidl_fuchsia_net_ext::MacAddress {
-            octets: (&eth_props.hwaddr[..])
-                .try_into()
-                .context("invalid hardware address length")?
-        }
-    );
+    let netdev_id = format!("{}", netdev_props.id);
+
+    fn slice_to_mac(bytes: &[u8]) -> Result<String> {
+        Ok(format!(
+            "{}",
+            fidl_fuchsia_net_ext::MacAddress {
+                octets: bytes.try_into().context("invalid hardware address length")?
+            }
+        ))
+    }
+
+    let eth_mac = slice_to_mac(&eth_props.hwaddr[..])?;
+    let netdev_mac = slice_to_mac(&netdev_props.hwaddr[..])?;
+
     let loopback_addrs = AddressMatcher::new(&loopback_props);
     let eth_addrs = AddressMatcher::new(&eth_props);
+    let netdev_addrs = AddressMatcher::new(&netdev_props);
 
     let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
         .await
@@ -220,7 +241,7 @@ async fn inspect_nic() -> Result {
     // Debug print the tree to make debugging easier in case of failures.
     println!("Got inspect data: {:#?}", data);
     use fuchsia_inspect::testing::AnyProperty;
-    fuchsia_inspect::assert_inspect_tree!(data, NICs: contains {
+    fuchsia_inspect::assert_inspect_tree!(data, NICs: {
         loopback_id.clone() => {
             Name: loopback_props.name,
             Loopback: "true",
@@ -290,11 +311,52 @@ async fn inspect_nic() -> Result {
                 TxReads: contains {},
                 TxWrites: contains {}
             }
+        },
+        netdev_id.clone() => {
+            Name: netdev_props.name,
+            Loopback: "false",
+            LinkOnline: "true",
+            AdminUp: "true",
+            Promiscuous: "false",
+            Up: "true",
+            MTU: u64::from(netemul::DEFAULT_MTU),
+            NICID: netdev_id,
+            Running: "true",
+            "DHCP enabled": "false",
+            LinkAddress: netdev_mac,
+            // NB: The interface has 3 addresses: IPv4, IPv6, and the ARP
+            // protocol address that is always reported.
+            ProtocolAddress0: netdev_addrs.clone(),
+            ProtocolAddress1: netdev_addrs.clone(),
+            ProtocolAddress2: netdev_addrs.clone(),
+            Stats: {
+                DisabledRx: {
+                    Bytes: AnyProperty,
+                    Packets: AnyProperty,
+                },
+                Tx: {
+                   Bytes: AnyProperty,
+                   Packets: AnyProperty,
+                },
+                Rx: {
+                    Bytes: AnyProperty,
+                    Packets: AnyProperty,
+                }
+            },
+            "Network Device Info": {
+                TxDrops: AnyProperty,
+                Class: "Unknown",
+                RxReads: contains {},
+                RxWrites: contains {},
+                TxReads: contains {},
+                TxWrites: contains {}
+            }
         }
     });
 
     let () = loopback_addrs.check().context("loopback addresses match failed")?;
     let () = eth_addrs.check().context("ethernet addresses match failed")?;
+    let () = netdev_addrs.check().context("netdev addresses match failed")?;
 
     Ok(())
 }
