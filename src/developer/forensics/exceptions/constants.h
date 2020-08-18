@@ -13,12 +13,11 @@ namespace exceptions {
 constexpr size_t kMaxNumExceptionHandlers = 10;
 constexpr zx::duration kExceptionTtl = zx::min(5);
 
-// The handler waits on responses from the component lookup service and crash reporting services
-// for 30 seconds each. Note, 60 seconds is not the upper bound on how long exception handling
-// takes in total because minidump generation happens in parallel with component lookup, but may
-// take longer than 30 seconds.
+// The handler waits on a response from the component lookup service for 30 seconds.
+//
+// 30 seconds is not the upper bound on how long exception handling takes in total because minidump
+// generation happens prior to component lookup and could take some arbitrary time.
 constexpr zx::duration kComponentLookupTimeout{zx::sec(30)};
-constexpr zx::duration kCrashReporterTimeout{zx::sec(30)};
 
 }  // namespace exceptions
 }  // namespace forensics

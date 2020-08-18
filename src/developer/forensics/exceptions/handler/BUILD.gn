@@ -27,8 +27,6 @@ source_set("lib") {
   sources = [
     "component_lookup.cc",
     "component_lookup.h",
-    "crash_reporter.cc",
-    "crash_reporter.h",
     "handler.cc",
     "handler.h",
     "minidump.cc",

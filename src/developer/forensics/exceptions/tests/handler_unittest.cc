@@ -117,21 +117,18 @@ class HandlerTest : public UnitTestFixture {
 
   void HandleException(
       zx::exception exception, zx::duration component_lookup_timeout,
-      zx::duration crash_reporter_timeout, ::fit::closure callback = [] {}) {
+      ::fit::closure callback = [] {}) {
     executor_.schedule_task(
-        Handle(std::move(exception), dispatcher(), services(), component_lookup_timeout,
-               crash_reporter_timeout)
+        Handle(std::move(exception), dispatcher(), services(), component_lookup_timeout)
             .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
     RunLoopUntilIdle();
   }
 
   void HandleException(
       const std::string& process_name, const zx_koid_t process_koid,
-      zx::duration component_lookup_timeout, zx::duration crash_reporter_timeout,
-      ::fit::closure callback = [] {}) {
+      zx::duration component_lookup_timeout, ::fit::closure callback = [] {}) {
     executor_.schedule_task(
-        Handle(process_name, process_koid, dispatcher(), services(), component_lookup_timeout,
-               crash_reporter_timeout)
+        Handle(process_name, process_koid, dispatcher(), services(), component_lookup_timeout)
             .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
     RunLoopUntilIdle();
   }
@@ -243,8 +240,7 @@ TEST_F(HandlerTest, NoIntrospectConnection) {
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  HandleException(std::move(exception.exception), kDefaultTimeout, kDefaultTimeout,
-                  [&called] { called = true; });
+  HandleException(std::move(exception.exception), kDefaultTimeout, [&called] { called = true; });
 
   ASSERT_TRUE(called);
   EXPECT_EQ(crash_reporter().reports().size(), 1u);
@@ -263,30 +259,7 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  HandleException(std::move(exception.exception), kDefaultTimeout, kDefaultTimeout,
-                  [&called] { called = true; });
-
-  ASSERT_TRUE(called);
-
-  // The stub shouldn't be called.
-  EXPECT_EQ(crash_reporter().reports().size(), 0u);
-
-  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
-  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
-  // environment and create noise on the overall system.
-  exception.job.kill();
-}
-
-TEST_F(HandlerTest, CrashReportingTimesOut) {
-  SetUpCrashIntrospect();
-
-  // Create the exception.
-  ExceptionContext exception;
-  ASSERT_TRUE(RetrieveExceptionContext(&exception));
-
-  bool called = false;
-  HandleException(std::move(exception.exception), kDefaultTimeout,
-                  /*crash_reporter_timeout=*/zx::sec(0), [&called] { called = true; });
+  HandleException(std::move(exception.exception), kDefaultTimeout, [&called] { called = true; });
 
   ASSERT_TRUE(called);
 
@@ -304,8 +277,7 @@ TEST_F(HandlerTest, GettingInvalidVMO) {
   SetUpCrashIntrospect();
 
   bool called = false;
-  HandleException(zx::exception{}, zx::duration::infinite(), zx::duration::infinite(),
-                  [&called] { called = true; });
+  HandleException(zx::exception{}, zx::duration::infinite(), [&called] { called = true; });
 
   ASSERT_TRUE(called);
 
@@ -337,7 +309,7 @@ TEST_F(HandlerTest, NoException) {
   exception.exception.reset();
 
   bool called = false;
-  HandleException(process_name, process_koid, zx::duration::infinite(), zx::duration::infinite(),
+  HandleException(process_name, process_koid, zx::duration::infinite(),
                   [&called] { called = true; });
 
   ASSERT_TRUE(called);

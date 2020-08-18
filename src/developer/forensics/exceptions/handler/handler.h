@@ -19,13 +19,13 @@ namespace handler {
 // Handles asynchronously filing a crash report for a given zx::exception.
 ::fit::promise<> Handle(zx::exception exception, async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
-                        zx::duration component_lookup_timeout, zx::duration crash_reporter_timeout);
+                        zx::duration component_lookup_timeout);
 
 // Handles asynchronously filing a crash report for a given program.
 ::fit::promise<> Handle(const std::string& process_name, zx_koid_t process_koid,
                         async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
-                        zx::duration component_lookup_timeout, zx::duration crash_reporter_timeout);
+                        zx::duration component_lookup_timeout);
 
 }  // namespace handler
 }  // namespace exceptions

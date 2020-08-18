@@ -3,10 +3,10 @@
 
 #include "src/developer/forensics/exceptions/handler/handler.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/exceptions/handler/component_lookup.h"
-#include "src/developer/forensics/exceptions/handler/crash_reporter.h"
 #include "src/developer/forensics/exceptions/handler/minidump.h"
 #include "src/developer/forensics/exceptions/handler/report_builder.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
@@ -24,24 +24,23 @@ using fuchsia::sys::internal::SourceIdentity;
 ::fit::promise<> Handle(CrashReportBuilder builder, const zx_koid_t process_koid,
                         async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
-                        const zx::duration component_lookup_timeout,
-                        const zx::duration crash_reporter_timeout) {
+                        const zx::duration component_lookup_timeout) {
   return GetComponentSourceIdentity(dispatcher, services, fit::Timeout(component_lookup_timeout),
                                     process_koid)
-      .then([builder = std::move(builder)](::fit::result<SourceIdentity>& result) mutable {
-        SourceIdentity component_info;
-        if (result.is_ok()) {
-          component_info = result.take_value();
-        }
-
-        builder.SetComponentInfo(component_info);
-
-        return ::fit::ok(builder.Consume());
-      })
       .then(
-          [dispatcher, services, crash_reporter_timeout](::fit::result<CrashReport>& crash_report) {
-            return FileCrashReport(dispatcher, services, fit::Timeout(crash_reporter_timeout),
-                                   crash_report.take_value());
+          [builder = std::move(builder), services](::fit::result<SourceIdentity>& result) mutable {
+            SourceIdentity component_info;
+            if (result.is_ok()) {
+              component_info = result.take_value();
+            }
+
+            builder.SetComponentInfo(component_info);
+
+            // We make a fire-and-forget request as we won't do anything with the result.
+            fuchsia::feedback::CrashReporterPtr crash_reporter;
+            crash_reporter = services->Connect<fuchsia::feedback::CrashReporter>();
+            crash_reporter->File(builder.Consume(),
+                                 [](fuchsia::feedback::CrashReporter_File_Result result) {});
           });
 }
 
@@ -49,8 +48,7 @@ using fuchsia::sys::internal::SourceIdentity;
 
 ::fit::promise<> Handle(zx::exception exception, async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
-                        const zx::duration component_lookup_timeout,
-                        const zx::duration crash_reporter_timeout) {
+                        const zx::duration component_lookup_timeout) {
   zx::process process;
   if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get process";
@@ -71,21 +69,18 @@ using fuchsia::sys::internal::SourceIdentity;
     builder.SetMinidump(std::move(minidump));
   }
 
-  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout,
-                crash_reporter_timeout);
+  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout);
 }
 
 // Handles asynchronously filing a crash report for a given program.
 ::fit::promise<> Handle(const std::string& process_name, const zx_koid_t process_koid,
                         async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
-                        zx::duration component_lookup_timeout,
-                        zx::duration crash_reporter_timeout) {
+                        zx::duration component_lookup_timeout) {
   CrashReportBuilder builder;
   builder.SetProcessName(process_name);
   builder.SetExceptionExpired();
-  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout,
-                crash_reporter_timeout);
+  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout);
 }
 
 }  // namespace handler

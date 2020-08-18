@@ -36,14 +36,13 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-    handle_exception = Handle(std::move(exception), loop.dispatcher(),
-                              sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout,
-                              kCrashReporterTimeout);
+    handle_exception =
+        Handle(std::move(exception), loop.dispatcher(),
+               sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout);
   } else if (argc == 3) {
     handle_exception = Handle(
         /*process_name=*/argv[1], /*process_koid=*/std::stoul(argv[2]), loop.dispatcher(),
-        sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout,
-        kCrashReporterTimeout);
+        sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout);
   } else {
     FX_LOGS(FATAL) << "Wrong number of arguments";
     return EXIT_FAILURE;
