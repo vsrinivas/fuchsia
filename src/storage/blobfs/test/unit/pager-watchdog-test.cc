@@ -7,7 +7,7 @@
 #include <condition_variable>
 #include <mutex>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace blobfs {
 namespace pager {
@@ -54,10 +54,13 @@ TEST(PagerWatchdogTest, DoesNotFireIfDisarmed) {
 }
 
 TEST(PagerWatchdogDeathTest, AssertsWithMultipleTokens) {
-  ASSERT_DEATH(([]() {
-    static auto* watchdog = new PagerWatchdog(zx::sec(1));
-    PagerWatchdog::ArmToken tokens[] = {watchdog->Arm(), watchdog->Arm()};
-  }));
+  ASSERT_DEATH(
+      {
+        static auto* watchdog = new PagerWatchdog(zx::sec(1));
+        PagerWatchdog::ArmToken token1 = watchdog->Arm();
+        PagerWatchdog::ArmToken token2 = watchdog->Arm();
+      },
+      "watchdog_.token_ == nullptr");
 }
 
 }  // namespace

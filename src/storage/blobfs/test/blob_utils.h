@@ -11,6 +11,8 @@
 #include <memory>
 #include <string>
 
+#include <fbl/unique_fd.h>
+
 namespace blobfs {
 
 using BlobSrcFunction = std::function<void(char* data, size_t length)>;
@@ -64,6 +66,11 @@ void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
 
 // Verifies that a file contains the data in the provided buffer.
 void VerifyContents(int fd, const char* data, size_t data_size);
+
+// Creates an open blob with the provided Merkle tree + Data, and reads back to verify the data.
+// Asserts (via ASSERT_* in gtest) that the write and read succeeded.
+// TODO(jfsulliv): Return a status, or change the name to indicate that this will assert on failure.
+void MakeBlob(const BlobInfo* info, fbl::unique_fd* fd);
 
 }  // namespace blobfs
 

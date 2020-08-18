@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <memory>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "iterator/block-iterator.h"
 #include "iterator/node-populator.h"
@@ -25,17 +25,16 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |allocated_blocks| extents.
   size_t block_count = 3 * allocated_blocks;
-  ASSERT_NO_FAILURES(
-      InitializeAllocator(block_count, allocated_nodes, space_manager, out_allocator));
+  InitializeAllocator(block_count, allocated_nodes, space_manager, out_allocator);
   if (fragmented) {
-    ASSERT_NO_FAILURES(ForceFragmentation(out_allocator->get(), block_count));
+    ForceFragmentation(out_allocator->get(), block_count);
   }
 
   // Allocate the initial nodes and blocks.
   fbl::Vector<ReservedNode> nodes;
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK((*out_allocator)->ReserveNodes(allocated_nodes, &nodes));
-  ASSERT_OK((*out_allocator)->ReserveBlocks(allocated_blocks, &extents));
+  ASSERT_EQ((*out_allocator)->ReserveNodes(allocated_nodes, &nodes), ZX_OK);
+  ASSERT_EQ((*out_allocator)->ReserveBlocks(allocated_blocks, &extents), ZX_OK);
   if (fragmented) {
     ASSERT_EQ(allocated_blocks, extents.size());
   }
@@ -51,7 +50,7 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
     return NodePopulator::IterationCommand::Continue;
   };
   NodePopulator populator(out_allocator->get(), std::move(extents), std::move(nodes));
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
 }
 
 // Iterate over the null blob.
@@ -63,8 +62,8 @@ TEST(AllocatedExtentIteratorTest, Null) {
   constexpr size_t kAllocatedExtents = 0;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -74,8 +73,8 @@ TEST(AllocatedExtentIteratorTest, Null) {
 
   AllocatedExtentIterator iter(allocator.get(), node_index);
   ASSERT_TRUE(iter.Done());
-  ASSERT_EQ(0, iter.BlockIndex());
-  ASSERT_EQ(0, iter.ExtentIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
+  ASSERT_EQ(0u, iter.ExtentIndex());
 }
 
 // Iterate over a blob with inline extents.
@@ -87,8 +86,8 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -97,7 +96,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
   AllocatedExtentIterator iter(allocator.get(), node_index);
-  ASSERT_EQ(0, iter.BlockIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
   uint32_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
@@ -107,7 +106,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
 
     const Extent* extent;
-    ASSERT_OK(iter.Next(&extent));
+    ASSERT_EQ(iter.Next(&extent), ZX_OK);
     ASSERT_TRUE(allocated_extents[i] == *extent);
     blocks_seen += extent->Length();
   }
@@ -126,8 +125,8 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 3;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -136,8 +135,8 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
   AllocatedExtentIterator iter(allocator.get(), node_index);
-  ASSERT_EQ(0, iter.ExtentIndex());
-  ASSERT_EQ(0, iter.BlockIndex());
+  ASSERT_EQ(0u, iter.ExtentIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
   uint32_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
@@ -153,7 +152,7 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
 
     const Extent* extent;
-    ASSERT_OK(iter.Next(&extent));
+    ASSERT_EQ(iter.Next(&extent), ZX_OK);
     ASSERT_TRUE(allocated_extents[i] == *extent);
     blocks_seen += extent->Length();
   }
@@ -173,8 +172,8 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 4;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -192,7 +191,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     ASSERT_TRUE(!iter.Done());
     const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_OK(iter.Next(&extent));
+      ASSERT_EQ(iter.Next(&extent), ZX_OK);
     }
     ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
   }
@@ -208,7 +207,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
     ASSERT_TRUE(!iter.Done());
     const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_OK(iter.Next(&extent));
+      ASSERT_EQ(iter.Next(&extent), ZX_OK);
     }
     ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
   }
@@ -226,7 +225,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   //        ASSERT_TRUE(!iter.Done());
   //        const Extent* extent;
   //        for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-  //            ASSERT_OK(iter.Next(&extent));
+  //            ASSERT_EQ(iter.Next(&extent), ZX_OK);
   //        }
   //        ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
   //    }
@@ -242,8 +241,8 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 3;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -252,7 +251,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
   BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
-  ASSERT_EQ(0, iter.BlockIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
   // Since we are maximally fragmented, we're polling for single block
@@ -266,8 +265,8 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
     // "i + 1" is arbitrary, but it checks trying a request for "at least
     // one" block, and some additional request sizes. It doesn't matter in
     // the fragmented case, since the |actual_length| should always be one.
-    ASSERT_OK(iter.Next(static_cast<uint32_t>(i + 1), &actual_length, &actual_start));
-    ASSERT_EQ(1, actual_length);
+    ASSERT_EQ(iter.Next(static_cast<uint32_t>(i + 1), &actual_length, &actual_start), ZX_OK);
+    ASSERT_EQ(1u, actual_length);
     ASSERT_EQ(allocated_extents[i].Start(), actual_start);
     blocks_seen += actual_length;
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
@@ -286,14 +285,14 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   constexpr size_t kAllocatedBlocks = 100;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/false,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/false, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
   const InodePtr inode = allocator->GetNode(node_index);
   ASSERT_TRUE(inode->header.IsAllocated());
-  ASSERT_EQ(1, inode->extent_count);
+  ASSERT_EQ(1u, inode->extent_count);
 
   // The allocation is contiguous, so the number of blocks we see is
   // completely dependent on the amount we ask for.
@@ -301,11 +300,11 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   // Try asking for all the blocks.
   {
     BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
-    ASSERT_EQ(0, iter.BlockIndex());
+    ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
     uint32_t actual_length;
     uint64_t actual_start;
-    ASSERT_OK(iter.Next(10000, &actual_length, &actual_start));
+    ASSERT_EQ(iter.Next(10000, &actual_length, &actual_start), ZX_OK);
     ASSERT_EQ(kAllocatedBlocks, actual_length);
     ASSERT_EQ(allocated_extents[0].Start(), actual_start);
     ASSERT_TRUE(iter.Done());
@@ -314,7 +313,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   // Try asking for some of the blocks (in a linearly increasing size).
   {
     BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
-    ASSERT_EQ(0, iter.BlockIndex());
+    ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
 
     uint32_t blocks_seen = 0;
@@ -322,7 +321,8 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
     while (!iter.Done()) {
       uint32_t actual_length;
       uint64_t actual_start;
-      ASSERT_OK(iter.Next(static_cast<uint32_t>(request_size), &actual_length, &actual_start));
+      ASSERT_EQ(iter.Next(static_cast<uint32_t>(request_size), &actual_length, &actual_start),
+                ZX_OK);
       ASSERT_EQ(std::min(request_size, kAllocatedBlocks - blocks_seen), actual_length);
       ASSERT_EQ(allocated_extents[0].Start() + blocks_seen, actual_start);
       request_size++;
@@ -340,8 +340,8 @@ TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + (2 * kContainerMaxExtents) + 1;
   constexpr size_t kAllocatedNodes = 4;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator, &allocated_extents, &allocated_nodes));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator,
+            &allocated_extents, &allocated_nodes);
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
@@ -389,7 +389,6 @@ TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
       allocated_nodes[2];
   ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
             ZX_ERR_IO_DATA_INTEGRITY);
-
 }
 
 }  // namespace

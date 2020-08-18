@@ -10,7 +10,7 @@
 #include <optional>
 
 #include <blobfs/format.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "compression/blob-compressor.h"
 #include "compression/chunked.h"
@@ -46,14 +46,16 @@ std::unique_ptr<char[]> GenerateInput(DataType data_type, unsigned* seed, size_t
       }
       break;
     default:
-      ADD_FAILURE("Bad Data Type");
+      EXPECT_TRUE(false) << "Bad Data Type";
   }
   return input;
 }
 
 void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t size, size_t step,
                        std::optional<BlobCompressor>* out) {
-  CompressionSettings settings = { .compression_algorithm = algorithm, };
+  CompressionSettings settings = {
+      .compression_algorithm = algorithm,
+  };
   auto compressor = BlobCompressor::Create(settings, size);
   ASSERT_TRUE(compressor);
 
@@ -61,11 +63,11 @@ void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t
   while (offset != size) {
     const void* data = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(input) + offset);
     const size_t incremental_size = std::min(step, size - offset);
-    ASSERT_OK(compressor->Update(data, incremental_size));
+    ASSERT_EQ(compressor->Update(data, incremental_size), ZX_OK);
     offset += incremental_size;
   }
-  ASSERT_OK(compressor->End());
-  EXPECT_GT(compressor->Size(), 0);
+  ASSERT_EQ(compressor->End(), ZX_OK);
+  EXPECT_GT(compressor->Size(), 0ul);
 
   *out = std::move(compressor);
 }
@@ -77,11 +79,12 @@ void DecompressAndVerifyMapping(SeekableDecompressor* decompressor, const uint8_
   ASSERT_LE(mapping.compressed_offset + mapping.compressed_length, compressed_size);
   fbl::Array<uint8_t> buf(new uint8_t[mapping.decompressed_length], mapping.decompressed_length);
   size_t sz = mapping.decompressed_length;
-  ASSERT_OK(decompressor->DecompressRange(buf.get(), &sz,
-                                          compressed_buf + mapping.compressed_offset,
-                                          mapping.compressed_length, mapping.decompressed_offset));
+  ASSERT_EQ(
+      decompressor->DecompressRange(buf.get(), &sz, compressed_buf + mapping.compressed_offset,
+                                    mapping.compressed_length, mapping.decompressed_offset),
+      ZX_OK);
   EXPECT_EQ(mapping.decompressed_length, sz);
-  EXPECT_BYTES_EQ(expected + mapping.decompressed_offset, buf.get(), sz);
+  EXPECT_EQ(memcmp(expected + mapping.decompressed_offset, buf.get(), sz), 0);
 }
 
 void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
@@ -109,8 +112,8 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
   mapping = decompressor->MappingForDecompressedRange(0, expected_size);
   ASSERT_TRUE(mapping.is_ok());
   DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
-                             compressed_size, static_cast<const uint8_t*>(expected),
-                             expected_size, mapping.value());
+                             compressed_size, static_cast<const uint8_t*>(expected), expected_size,
+                             mapping.value());
 }
 
 // Tests a contained case of compression and decompression.
@@ -119,31 +122,32 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
 // step: The step size of updating the compression buffer.
 void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_type, size_t size,
                                size_t step) {
-  ASSERT_LE(step, size, "Step size too large");
+  ASSERT_LE(step, size) << "Step size too large";
 
-  unsigned seed = ::zxtest::Runner::GetInstance()->random_seed();
+  unsigned seed = ::testing::UnitTest::GetInstance()->random_seed();
 
   // Generate input.
   std::unique_ptr<char[]> input(GenerateInput(data_type, &seed, size));
 
   // Compress a buffer.
   std::optional<BlobCompressor> compressor;
-  ASSERT_NO_FAILURES(CompressionHelper(algorithm, input.get(), size, step, &compressor));
+  CompressionHelper(algorithm, input.get(), size, step, &compressor);
   ASSERT_TRUE(compressor);
 
   // Decompress the buffer.
   std::unique_ptr<SeekableDecompressor> decompressor;
   switch (algorithm) {
     case CompressionAlgorithm::CHUNKED: {
-      ASSERT_OK(SeekableChunkedDecompressor::CreateDecompressor(
-          compressor->Data(), compressor->Size(), compressor->Size(), &decompressor));
+      ASSERT_EQ(SeekableChunkedDecompressor::CreateDecompressor(
+                    compressor->Data(), compressor->Size(), compressor->Size(), &decompressor),
+                ZX_OK);
       break;
     }
     default:
       ASSERT_TRUE(false);
   }
-  ASSERT_NO_FAILURES(DecompressionHelper(decompressor.get(), &seed, compressor->Data(),
-                                         compressor->Size(), input.get(), size));
+  DecompressionHelper(decompressor.get(), &seed, compressor->Data(), compressor->Size(),
+                      input.get(), size);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible1) {

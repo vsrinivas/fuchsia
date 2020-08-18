@@ -5,7 +5,7 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs.h"
 
@@ -27,14 +27,14 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
 void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
   MountOptions options = {};
   std::unique_ptr<Blobfs> blobfs;
-  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
   ASSERT_GE(blobfs->Info().inode_count, kBlobfsDefaultInodeCount);
 }
 
 void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
   MountOptions options = {};
   std::unique_ptr<Blobfs> blobfs;
-  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
   ASSERT_GE(blobfs->Info().journal_block_count, kDefaultJournalBlocks);
 }
 
@@ -63,7 +63,7 @@ TEST(FormatFilesystemTest, CannotFormatSmallDevice) {
 TEST(FormatFilesystemTest, CannotFormatDeviceWithNonDivisorBlockSize) {
   const uint64_t kBlockCount = 1 << 20;
   uint64_t kBlockSize = 511;
-  EXPECT_NE(kBlobfsBlockSize % kBlockSize, 0, "Expected non-divisor block size");
+  EXPECT_NE(kBlobfsBlockSize % kBlockSize, 0ul) << "Expected non-divisor block size";
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(ZX_ERR_IO_INVALID, FormatFilesystem(device.get()));
 }
@@ -88,8 +88,8 @@ TEST(FormatFilesystemTest, FormatNonFVMSmallestDevice) {
   // Smallest possible device.
   {
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-    ASSERT_OK(FormatFilesystem(device.get()));
-    ASSERT_OK(CheckMountability(std::move(device)));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
   }
 
   // One block smaller than the smallest possible device.
@@ -126,8 +126,8 @@ TEST(FormatFilesystemTest, FormatFVMSmallestDevice) {
   {
     auto device =
         std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-    ASSERT_OK(FormatFilesystem(device.get()));
-    ASSERT_OK(CheckMountability(std::move(device)));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+    ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
   }
 
   // One slice smaller than the smallest possible device.
@@ -143,8 +143,8 @@ TEST(FormatFilesystemTest, FormatNonFVMDevice) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 TEST(FormatFilesystemTest, FormatFVMDevice) {
@@ -154,8 +154,8 @@ TEST(FormatFilesystemTest, FormatFVMDevice) {
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 // Blobfs can be formatted on devices that have "trailing device block(s)" that
@@ -164,8 +164,8 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceWithTrailingDiskBlock) {
   const uint64_t kBlockCount = (1 << 20) + 1;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 TEST(FormatFilesystemTest, FormatFVMDeviceWithTrailingDiskBlock) {
@@ -175,8 +175,8 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithTrailingDiskBlock) {
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 // Blobfs can be formatted on devices that have block sizes up to and including
@@ -185,8 +185,8 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceWithLargestBlockSize) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 TEST(FormatFilesystemTest, FormatFVMDeviceWithLargestBlockSize) {
@@ -196,8 +196,8 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithLargestBlockSize) {
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 // Blobfs cannot be formatted on devices that have block sizes larger than the
@@ -227,7 +227,7 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   device->SetInfoFlags(fuchsia_hardware_block_FLAG_READONLY);
 
   MountOptions mount_options = {};
@@ -235,7 +235,7 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   mount_options.metrics = false;
   mount_options.journal = false;
   std::unique_ptr<Blobfs> fs = nullptr;
-  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs));
+  ASSERT_EQ(Blobfs::Create(nullptr, std::move(device), &mount_options, zx::resource(), &fs), ZX_OK);
   ASSERT_EQ(Writability::ReadOnlyDisk, fs->writability());
 }
 
@@ -246,7 +246,7 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   device->SetInfoFlags(fuchsia_hardware_block_FLAG_READONLY);
 
   MountOptions options = {};
@@ -264,7 +264,7 @@ TEST(FormatFilesystemTest, CreateBlobfsFailureOnUnalignedBlockSize) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   device->SetBlockSize(kBlockSize + 1);
   ASSERT_EQ(ZX_ERR_IO, CheckMountability(std::move(device)));
 }
@@ -275,7 +275,7 @@ TEST(FormatFilesystemTest, CreateBlobfsFailureWithLessBlocks) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   device->SetBlockCount(kBlockCount - 1);
   ASSERT_EQ(ZX_ERR_BAD_STATE, CheckMountability(std::move(device)));
 }
@@ -286,9 +286,9 @@ TEST(FormatFilesystemTest, CreateBlobfsSuccessWithMoreBlocks) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = 512;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   device->SetBlockCount(kBlockCount + 1);
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 // Blobfs cannot be formatted on an FVM with a slice size smaller than a block size.
@@ -311,8 +311,8 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithSmallestSliceSize) {
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  ASSERT_OK(CheckMountability(std::move(device)));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+  ASSERT_EQ(CheckMountability(std::move(device)), ZX_OK);
 }
 
 // Blobfs cannot be formatted on an FVM with a slice size that does not divide
@@ -332,7 +332,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultInodeCount) {
   const uint64_t kBlockCount = MinimumFilesystemBlocks();
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   CheckDefaultInodeCount(std::move(device));
 }
 
@@ -343,7 +343,7 @@ TEST(FormatFilesystemTest, FormatFvmDeviceDefaultJournalBlocks) {
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   CheckDefaultJournalBlocks(std::move(device));
 }
 
@@ -351,7 +351,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultJournalBlocks) {
   const uint64_t kBlockCount = MinimumFilesystemBlocks();
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
   CheckDefaultJournalBlocks(std::move(device));
 }
 

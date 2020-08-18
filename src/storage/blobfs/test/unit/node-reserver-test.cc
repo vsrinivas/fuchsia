@@ -5,7 +5,7 @@
 #include "allocator/node-reserver.h"
 
 #include <bitmap/rle-bitmap.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "allocator/extent-reserver.h"
 
@@ -18,9 +18,9 @@ TEST(NodeReserver, Reserve) {
   {
     const uint32_t ino = 3;
     ReservedNode reserved_node(&reserver, ino);
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
   }
-  EXPECT_EQ(0, reserver.ReservedNodeCount());
+  EXPECT_EQ(0u, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, ReserveReset) {
@@ -28,11 +28,11 @@ TEST(NodeReserver, ReserveReset) {
   {
     const uint32_t ino = 3;
     ReservedNode reserved_node(&reserver, ino);
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
     reserved_node.Reset();
-    EXPECT_EQ(0, reserver.ReservedNodeCount());
+    EXPECT_EQ(0u, reserver.ReservedNodeCount());
   }
-  EXPECT_EQ(0, reserver.ReservedNodeCount());
+  EXPECT_EQ(0u, reserver.ReservedNodeCount());
 }
 
 // Test the constructors of the reserved node.
@@ -41,10 +41,10 @@ TEST(NodeReserver, Constructor) {
   // Test the constructor.
   {
     ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3, reserved_node.index());
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(3u, reserved_node.index());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
   }
-  EXPECT_EQ(0, reserver.ReservedNodeCount());
+  EXPECT_EQ(0u, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, MoveConstructor) {
@@ -52,14 +52,14 @@ TEST(NodeReserver, MoveConstructor) {
   // Test the move constructor.
   {
     ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3, reserved_node.index());
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(3u, reserved_node.index());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
 
     ReservedNode dest_node(std::move(reserved_node));
-    EXPECT_EQ(3, dest_node.index());
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(3u, dest_node.index());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
   }
-  EXPECT_EQ(0, reserver.ReservedNodeCount());
+  EXPECT_EQ(0u, reserver.ReservedNodeCount());
 }
 
 TEST(NodeReserver, MoveAssignment) {
@@ -67,14 +67,14 @@ TEST(NodeReserver, MoveAssignment) {
   // Test the move assignment operator.
   {
     ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3, reserved_node.index());
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(3u, reserved_node.index());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
 
     ReservedNode dest_node = std::move(reserved_node);
-    EXPECT_EQ(3, dest_node.index());
-    EXPECT_EQ(1, reserver.ReservedNodeCount());
+    EXPECT_EQ(3u, dest_node.index());
+    EXPECT_EQ(1u, reserver.ReservedNodeCount());
   }
-  EXPECT_EQ(0, reserver.ReservedNodeCount());
+  EXPECT_EQ(0u, reserver.ReservedNodeCount());
 }
 
 }  // namespace

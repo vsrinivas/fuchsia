@@ -47,9 +47,4 @@ class BlobfsFixedDiskSizeTestWithFvm : public fs::FixedDiskSizeTestWithFvm {
   void CheckInfo() override;
 };
 
-// Creates an open blob with the provided Merkle tree + Data, and reads back to
-// verify the data.
-// TODO(rvargas): Move to a better place.
-void MakeBlob(const blobfs::BlobInfo* info, fbl::unique_fd* fd);
-
 #endif  // SRC_STORAGE_BLOBFS_TEST_INTEGRATION_BLOBFS_FIXTURES_H_

@@ -11,7 +11,7 @@
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs.h"
 #include "test/blob_utils.h"
@@ -26,23 +26,23 @@ constexpr const char kEmptyBlobName[] =
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
-class BlobTest : public zxtest::Test {
+class BlobTest : public testing::Test {
  public:
   void SetUp() override {
     auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     device_ = device.get();
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
 
     MountOptions options;
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
   }
 
   void TearDown() override { device_ = nullptr; }
 
   fbl::RefPtr<fs::Vnode> OpenRoot() const {
     fbl::RefPtr<fs::Vnode> root;
-    EXPECT_OK(fs_->OpenRootNode(&root));
+    EXPECT_EQ(fs_->OpenRootNode(&root), ZX_OK);
     return root;
   }
 
@@ -56,7 +56,7 @@ class BlobTest : public zxtest::Test {
 TEST_F(BlobTest, Truncate_WouldOverflow) {
   fbl::RefPtr root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_OK(root->Create(&file, kEmptyBlobName, 0));
+  ASSERT_EQ(root->Create(&file, kEmptyBlobName, 0), ZX_OK);
 
   EXPECT_EQ(file->Truncate(UINT64_MAX), ZX_ERR_OUT_OF_RANGE);
 }
@@ -67,14 +67,14 @@ TEST_F(BlobTest, SyncBehavior) {
   auto root = OpenRoot();
 
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob("", 64, &info));
+  GenerateRandomBlob("", 64, &info);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_OK(root->Create(&file, info->path, 0));
+  ASSERT_EQ(root->Create(&file, info->path, 0), ZX_OK);
 
   size_t out_actual = 0;
-  EXPECT_OK(file->Truncate(info->size_data));
+  EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
 
   // PHASE 1: Incomplete data.
   //
@@ -88,12 +88,12 @@ TEST_F(BlobTest, SyncBehavior) {
 
   // PHASE 2: Complete data, not yet synced.
   device_->Pause();  // Don't let it sync yet.
-  EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
+  EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
   EXPECT_EQ(info->size_data, out_actual);
 
   loop_.ResetQuit();
   file->Sync([loop = &loop_](zx_status_t status) {
-    EXPECT_STATUS(ZX_OK, status);
+    EXPECT_EQ(ZX_OK, status);
     loop->Quit();
   });
 
@@ -118,19 +118,20 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   MountOptions options = {.compression_settings = {
                               .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
                           }};
-  ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
-                           zx::resource(), &fs_));
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                           zx::resource(), &fs_),
+            ZX_OK);
 
   std::unique_ptr<BlobInfo> info;
   uint64_t block;
   {
     auto root = OpenRoot();
-    ASSERT_NO_FAILURES(GenerateRandomBlob("", 64, &info));
+    GenerateRandomBlob("", 64, &info);
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_OK(root->Create(&file, info->path + 1, 0));
+    ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
     size_t out_actual = 0;
-    EXPECT_OK(file->Truncate(info->size_data));
-    EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
     EXPECT_EQ(out_actual, info->size_data);
     {
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
@@ -143,7 +144,7 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
 
   // Read the block that contains the blob.
   storage::VmoBuffer buffer;
-  ASSERT_OK(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"));
+  ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
   block_fifo_request_t request = {
       .opcode = BLOCKIO_READ,
       .vmoid = buffer.vmoid(),
@@ -151,26 +152,27 @@ TEST_F(BlobTest, ReadingBlobVerifiesTail) {
       .vmo_offset = 0,
       .dev_offset = block * kBlobfsBlockSize / kBlockSize,
   };
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Corrupt the end of the block.
   static_cast<uint8_t*>(buffer.Data(0))[kBlobfsBlockSize - 1] = 1;
 
   // Write the block back.
   request.opcode = BLOCKIO_WRITE;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
   // Remount and try and read the blob.
-  ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+  ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+            ZX_OK);
 
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
-  ASSERT_OK(root->Lookup(&file, info->path + 1));
+  ASSERT_EQ(root->Lookup(&file, info->path + 1), ZX_OK);
 
   // Trying to read from the blob should fail with an error.
   size_t actual;
   uint8_t data;
-  EXPECT_STATUS(file->Read(&data, 1, 0, &actual), ZX_ERR_IO_DATA_INTEGRITY);
+  EXPECT_EQ(file->Read(&data, 1, 0, &actual), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
@@ -186,38 +188,40 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
                             }};
 
     // Remount with new compression algorithm
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
-                             zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                             zx::resource(), &fs_),
+              ZX_OK);
 
     auto root = OpenRoot();
     std::unique_ptr<BlobInfo> info;
 
     // Write the blob
     {
-      ASSERT_NO_FAILURES(GenerateRealisticBlob("", 1 << 16, &info));
+      GenerateRealisticBlob("", 1 << 16, &info);
       fbl::RefPtr<fs::Vnode> file;
-      ASSERT_OK(root->Create(&file, info->path + 1, 0));
+      ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
       size_t out_actual = 0;
-      EXPECT_OK(file->Truncate(info->size_data));
-      EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
+      EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+      EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
       EXPECT_EQ(out_actual, info->size_data);
     }
 
     // Remount with same compression algorithm.
     // This prevents us from relying on caching when we read back the blob.
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
-                             zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                             zx::resource(), &fs_),
+              ZX_OK);
     root = OpenRoot();
 
     // Read back the blob
     {
       fbl::RefPtr<fs::Vnode> file;
-      ASSERT_OK(root->Lookup(&file, info->path + 1));
+      ASSERT_EQ(root->Lookup(&file, info->path + 1), ZX_OK);
       size_t actual;
       uint8_t data[info->size_data];
-      EXPECT_OK(file->Read(&data, info->size_data, 0, &actual));
+      EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
       EXPECT_EQ(info->size_data, actual);
-      EXPECT_BYTES_EQ(data, info->data.get(), info->size_data);
+      EXPECT_EQ(memcmp(data, info->data.get(), info->size_data), 0);
     }
   }
 }

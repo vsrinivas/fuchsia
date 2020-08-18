@@ -21,7 +21,7 @@ template("blobfs_large_integration_test") {
     deps = [
       ":integration-fixtures",
       ":load-generator",
-      ":test-utils",
+      ":test-utils-zxtest",
       "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
       "//sdk/lib/fdio",
       "//src/storage/blobfs",

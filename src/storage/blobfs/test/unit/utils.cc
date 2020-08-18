@@ -7,9 +7,9 @@
 #include <memory>
 
 #include <fbl/auto_call.h>
+#include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
-#include <zxtest/zxtest.h>
 
 using id_allocator::IdAllocator;
 
@@ -19,7 +19,7 @@ namespace {
 
 storage::OwnedVmoid AttachVmo(BlockDevice* device, zx::vmo* vmo) {
   storage::Vmoid vmoid;
-  EXPECT_OK(device->BlockAttachVmo(*vmo, &vmoid));
+  EXPECT_EQ(device->BlockAttachVmo(*vmo, &vmoid), ZX_OK);
   return storage::OwnedVmoid(std::move(vmoid), device);
 }
 
@@ -28,9 +28,9 @@ storage::OwnedVmoid AttachVmo(BlockDevice* device, zx::vmo* vmo) {
 void VerifySizeBlockAligned(BlockDevice* device, size_t size, uint64_t offset,
                             uint32_t* out_block_size) {
   fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_OK(device->BlockGetInfo(&info));
-  ASSERT_EQ(size % info.block_size, 0);
-  ASSERT_EQ(offset % info.block_size, 0);
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
+  ASSERT_EQ(size % info.block_size, 0ul);
+  ASSERT_EQ(offset % info.block_size, 0ul);
   *out_block_size = info.block_size;
 }
 
@@ -98,14 +98,14 @@ zx_status_t MockTransactionManager::BlockDetachVmo(storage::Vmoid vmoid) {
 void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
                          std::unique_ptr<Allocator>* out) {
   RawBitmap block_map;
-  ASSERT_OK(block_map.Reset(blocks));
+  ASSERT_EQ(block_map.Reset(blocks), ZX_OK);
   fzl::ResizeableVmoMapper node_map;
-  ASSERT_OK(node_map.CreateAndMap(nodes * kBlobfsBlockSize, "node map"));
+  ASSERT_EQ(node_map.CreateAndMap(nodes * kBlobfsBlockSize, "node map"), ZX_OK);
 
   space_manager->MutableInfo().inode_count = nodes;
   space_manager->MutableInfo().data_block_count = blocks;
   std::unique_ptr<IdAllocator> nodes_bitmap = {};
-  ASSERT_OK(IdAllocator::Create(nodes, &nodes_bitmap), "nodes bitmap");
+  ASSERT_EQ(IdAllocator::Create(nodes, &nodes_bitmap), ZX_OK);
   *out = std::make_unique<Allocator>(space_manager, std::move(block_map), std::move(node_map),
                                      std::move(nodes_bitmap));
   (*out)->SetLogging(false);
@@ -116,8 +116,8 @@ void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
 void ForceFragmentation(Allocator* allocator, size_t blocks) {
   fbl::Vector<ReservedExtent> extents[blocks];
   for (size_t i = 0; i < blocks; i++) {
-    ASSERT_OK(allocator->ReserveBlocks(1, &extents[i]));
-    ASSERT_EQ(1, extents[i].size());
+    ASSERT_EQ(allocator->ReserveBlocks(1, &extents[i]), ZX_OK);
+    ASSERT_EQ(1ul, extents[i].size());
   }
 
   for (size_t i = 0; i < blocks; i += 2) {
@@ -146,7 +146,7 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
   VerifySizeBlockAligned(device, size, dev_offset, &block_size);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(size, 0, &vmo));
+  ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
 
   storage::OwnedVmoid vmoid = AttachVmo(device, &vmo);
 
@@ -156,8 +156,8 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
   request.length = safemath::checked_cast<uint32_t>(size / block_size);
   request.vmo_offset = 0;
   request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-  ASSERT_OK(vmo.read(buf, 0, size));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  ASSERT_EQ(vmo.read(buf, 0, size), ZX_OK);
 }
 
 void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset) {
@@ -165,8 +165,8 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
   VerifySizeBlockAligned(device, size, dev_offset, &block_size);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-  ASSERT_OK(vmo.write(buf, 0, size));
+  ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
+  ASSERT_EQ(vmo.write(buf, 0, size), ZX_OK);
 
   storage::OwnedVmoid vmoid = AttachVmo(device, &vmo);
 
@@ -176,7 +176,7 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
   request.length = safemath::checked_cast<uint32_t>(size / block_size);
   request.vmo_offset = 0;
   request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);
-  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 }
 
 }  // namespace blobfs

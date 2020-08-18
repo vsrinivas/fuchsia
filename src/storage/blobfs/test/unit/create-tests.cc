@@ -12,7 +12,7 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blobfs.h"
 #include "utils.h"
@@ -25,7 +25,7 @@ using block_client::FakeBlockDevice;
 
 void CreateAndFormatDevice(std::unique_ptr<FakeBlockDevice>* out) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
 
   *out = std::move(device);
 }
@@ -36,8 +36,8 @@ TEST(CreateTest, ValidSuperblock) {
 
   std::unique_ptr<blobfs::Blobfs> blobfs;
   blobfs::MountOptions options;
-  EXPECT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs));
-  EXPECT_NOT_NULL(blobfs.get());
+  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs), ZX_OK);
+  EXPECT_NE(blobfs.get(), nullptr);
 }
 
 TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
@@ -55,7 +55,7 @@ TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
 
   EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs),
             ZX_ERR_IO_OVERRUN);
-  EXPECT_NULL(blobfs.get());
+  EXPECT_EQ(blobfs.get(), nullptr);
 }
 
 }  // namespace

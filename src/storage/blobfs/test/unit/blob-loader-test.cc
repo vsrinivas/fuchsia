@@ -16,7 +16,7 @@
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blob.h"
 #include "blobfs.h"
@@ -45,16 +45,16 @@ std::set<uint64_t> AddressRange(uint64_t start, uint64_t len) {
 class FakeTransferBuffer : public pager::TransferBuffer {
  public:
   FakeTransferBuffer(const char* data, size_t len) : data_(new uint8_t[len], len) {
-    ASSERT_OK(zx::vmo::create(len, 0, &vmo_));
+    EXPECT_EQ(zx::vmo::create(len, 0, &vmo_), ZX_OK);
     memcpy(data_.get(), data, len);
   }
 
-  void AssertHasNoAddressesMapped() { ASSERT_EQ(mapped_addresses_.size(), 0); }
+  void AssertHasNoAddressesMapped() { ASSERT_EQ(mapped_addresses_.size(), 0ul); }
 
   void AssertHasAddressesMapped(std::set<uint64_t> addresses) {
     for (const auto& address : addresses) {
       if (mapped_addresses_.find(address) == mapped_addresses_.end()) {
-        ADD_FAILURE("Address 0x%lx not mapped", address);
+        EXPECT_TRUE(false) << "Address " << address << " not mapped";
       }
     }
   }
@@ -84,27 +84,27 @@ class FakeTransferBuffer : public pager::TransferBuffer {
   std::set<uint64_t> mapped_addresses_;
 };
 
-class BlobLoaderTest : public zxtest::Test {
+class BlobLoaderTest : public testing::Test {
  public:
   void Init(CompressionAlgorithm algorithm) {
-    srand(zxtest::Runner::GetInstance()->random_seed());
+    srand(testing::UnitTest::GetInstance()->random_seed());
 
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
     loop_.StartThread();
 
     MountOptions options = {.compression_settings = {
                                 .compression_algorithm = algorithm,
                             }};
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
 
     // Pre-seed with some random blobs.
     for (unsigned i = 0; i < 3; i++) {
       AddRandomBlob(1024, nullptr);
     }
-    ASSERT_OK(Sync());
+    ASSERT_EQ(Sync(), ZX_OK);
   }
 
   FakeTransferBuffer& InitPager(std::unique_ptr<FakeTransferBuffer> buffer) {
@@ -139,21 +139,21 @@ class BlobLoaderTest : public zxtest::Test {
   // |out_info| is optional and is used to retrieve the created file information.
   void AddRandomBlob(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     fbl::RefPtr<fs::Vnode> root;
-    ASSERT_OK(fs_->OpenRootNode(&root));
+    ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
     fs::Vnode* root_node = root.get();
 
     std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FAILURES(GenerateRandomBlob("", sz, &info));
+    GenerateRandomBlob("", sz, &info);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_OK(root_node->Create(&file, info->path, 0));
+    ASSERT_EQ(root_node->Create(&file, info->path, 0), ZX_OK);
 
     size_t actual;
-    EXPECT_OK(file->Truncate(info->size_data));
-    EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &actual));
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
     EXPECT_EQ(actual, info->size_data);
-    EXPECT_OK(file->Close());
+    EXPECT_EQ(file->Close(), ZX_OK);
 
     if (out_info != nullptr) {
       *out_info = std::move(info);
@@ -165,8 +165,8 @@ class BlobLoaderTest : public zxtest::Test {
   uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
-    EXPECT_OK(digest.Parse(info.path));
-    EXPECT_OK(fs_->Cache().Lookup(digest, &node));
+    EXPECT_EQ(digest.Parse(info.path), ZX_OK);
+    EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
     return vnode->Ino();
   }
@@ -197,18 +197,18 @@ void DoTest_NullBlob(BlobLoaderTest* test) {
   size_t blob_len = 0;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   EXPECT_FALSE(data.vmo().is_valid());
-  EXPECT_EQ(data.size(), 0);
+  EXPECT_EQ(data.size(), 0ul);
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0);
+  EXPECT_EQ(info->size_merkle, 0ul);
 }
 
 TEST_F(ZstdCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
@@ -220,19 +220,19 @@ void DoTest_SmallBlob(BlobLoaderTest* test) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  EXPECT_BYTES_EQ(data.start(), info->data.get(), info->size_data);
+  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0);
+  EXPECT_EQ(info->size_merkle, 0ul);
 }
 
 TEST_F(ZstdCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
@@ -244,7 +244,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
   FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
@@ -252,19 +252,20 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+            ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
   buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
-  EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
+  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
   buffer.AssertHasAddressesMapped({0ul});
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0);
+  EXPECT_EQ(info->size_merkle, 0ul);
 }
 
 TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
@@ -275,20 +276,20 @@ void DoTest_LargeBlob(BlobLoaderTest* test) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  EXPECT_BYTES_EQ(data.start(), info->data.get(), info->size_data);
+  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
+  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
 TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
@@ -300,20 +301,20 @@ void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   BlobLoader loader = test->CreateLoader();
 
   fzl::OwnedVmoMapper data, merkle;
-  ASSERT_OK(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlob(test->LookupInode(*info), nullptr, &data, &merkle), ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
-  EXPECT_BYTES_EQ(data.start(), info->data.get(), info->size_data);
+  EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
+  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
 TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
@@ -333,7 +334,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   size_t blob_len = 1 << 18;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
   FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
@@ -341,20 +342,21 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+            ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
   buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
-  EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
+  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
   buffer.AssertHasAddressesMapped(AddressRange(0, 1 << 18));
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
+  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
 TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
@@ -365,7 +367,7 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   size_t blob_len = (1 << 18) - 1;
   std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
-  ASSERT_OK(test->Sync());
+  ASSERT_EQ(test->Sync(), ZX_OK);
 
   auto buffer_ptr = std::make_unique<FakeTransferBuffer>(info->data.get(), info->size_data);
   FakeTransferBuffer& buffer = test->InitPager(std::move(buffer_ptr));
@@ -373,20 +375,21 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
 
   fzl::OwnedVmoMapper data, merkle;
   std::unique_ptr<pager::PageWatcher> page_watcher;
-  ASSERT_OK(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle));
+  ASSERT_EQ(loader.LoadBlobPaged(test->LookupInode(*info), nullptr, &page_watcher, &data, &merkle),
+            ZX_OK);
 
   ASSERT_TRUE(data.vmo().is_valid());
   ASSERT_GE(data.size(), info->size_data);
   buffer.AssertHasNoAddressesMapped();
   // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
   fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_OK(data.vmo().read(buf.get(), 0, blob_len));
-  EXPECT_BYTES_EQ(buf.get(), info->data.get(), info->size_data);
+  ASSERT_EQ(data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
+  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
   buffer.AssertHasAddressesMapped(AddressRange(0, blob_len));
 
   ASSERT_TRUE(merkle.vmo().is_valid());
   ASSERT_GE(merkle.size(), info->size_merkle);
-  EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
+  EXPECT_EQ(memcmp(merkle.start(), info->merkle.get(), info->size_merkle), 0);
 }
 
 TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {

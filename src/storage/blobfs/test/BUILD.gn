@@ -35,9 +35,7 @@ group("legacy_test") {
   deps = [
     ":blobfs-integration",
     ":blobfs-integration-paged",
-    ":zstd-fuzzer",
-    ":zstd-seekable-fuzzer",
-    ":zstd-seekable-symmetric-fuzzer",
+    ":large-test",
   ]
 }
 
@@ -76,8 +74,10 @@ config("test-utils-headers") {
   include_dirs = [ ".." ]
 }
 
-source_set("test-utils") {
+# TODO(fxbug.dev/52911): Remove migration target
+source_set("test-utils-zxtest") {
   testonly = true
+  defines = [ "BLOBFS_USE_ZXTEST" ]
   sources = [
     "blob_utils.cc",
     "blob_utils.h",
@@ -89,8 +89,27 @@ source_set("test-utils") {
     "//zircon/system/ulib/digest",
   ]
   public_deps = [
-    "..:blobfs",
-    "..:private_headers",
+    "//src/storage/blobfs",
+    "//src/storage/blobfs:private_headers",
+  ]
+  public_configs = [ ":test-utils-headers" ]
+}
+
+source_set("test-utils") {
+  testonly = true
+  sources = [
+    "blob_utils.cc",
+    "blob_utils.h",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/digest",
+  ]
+  public_deps = [
+    "//src/storage/blobfs",
+    "//src/storage/blobfs:private_headers",
   ]
   public_configs = [ ":test-utils-headers" ]
 }
@@ -130,13 +149,14 @@ test("blobfs_unittest") {
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/chunked-compression",
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zstd",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -144,16 +164,14 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs-test-utils",
-    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]
-  testonly = true
 }
 
 fuchsia_unittest_package("blobfs-unittest") {
-  executable_path = "test/blobfs_unittest"
+  manifest = "meta/blobfs-unittest.cmx"
   deps = [
     ":blobfs_unittest",
     ":test-binary",
@@ -172,7 +190,7 @@ source_set("integration-fixtures") {
   testonly = true
   sources = [ "integration/blobfs_fixtures.cc" ]
   deps = [
-    ":test-utils",
+    ":test-utils-zxtest",
     "//sdk/lib/fdio",
     "//src/storage/blobfs",
     "//zircon/public/lib/zxtest",
@@ -205,7 +223,7 @@ test("blobfs-integration") {
   ]
   deps = [
     ":integration-fixtures",
-    ":test-utils",
+    ":test-utils-zxtest",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
@@ -242,7 +260,7 @@ source_set("load-generator") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",
   ]
-  public_deps = [ ":test-utils" ]
+  public_deps = [ ":test-utils-zxtest" ]
 }
 
 blobfs_large_integration_test("fragmentation") {

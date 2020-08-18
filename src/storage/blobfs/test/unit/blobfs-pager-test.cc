@@ -22,7 +22,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "blob-verifier.h"
 #include "compression/blob-compressor.h"
@@ -56,7 +56,7 @@ class MockBlob {
   ~MockBlob() { page_watcher_->DetachPagedVmoSync(); }
 
   void CommitRange(uint64_t offset, uint64_t length) {
-    ASSERT_OK(vmo_.op_range(ZX_VMO_OP_COMMIT, offset, length, nullptr, 0));
+    ASSERT_EQ(vmo_.op_range(ZX_VMO_OP_COMMIT, offset, length, nullptr, 0), ZX_OK);
 
     zx_info_vmo_t info;
     ZX_ASSERT(vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
@@ -65,7 +65,7 @@ class MockBlob {
 
   void Read(uint64_t offset, uint64_t length) {
     fbl::Array<char> buf(new char[length], length);
-    ASSERT_OK(vmo_.read(buf.get(), offset, length));
+    ASSERT_EQ(vmo_.read(buf.get(), offset, length), ZX_OK);
 
     length = std::min(length, data_size_ - offset);
     if (length > 0) {
@@ -107,15 +107,18 @@ class MockBlobFactory {
     if (data_corruption_) {
       fbl::Array<uint8_t> corrupt(new uint8_t[sz], sz);
       memset(corrupt.get(), identifier + 1, sz);
-      EXPECT_OK(
-          digest::MerkleTreeCreator::Create(corrupt.get(), sz, &merkle_tree, &tree_len, &root));
+      EXPECT_EQ(
+          digest::MerkleTreeCreator::Create(corrupt.get(), sz, &merkle_tree, &tree_len, &root),
+          ZX_OK);
     } else {
-      EXPECT_OK(digest::MerkleTreeCreator::Create(data.get(), sz, &merkle_tree, &tree_len, &root));
+      EXPECT_EQ(digest::MerkleTreeCreator::Create(data.get(), sz, &merkle_tree, &tree_len, &root),
+                ZX_OK);
     }
 
     std::unique_ptr<BlobVerifier> verifier;
-    EXPECT_OK(BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len, sz,
-                                   nullptr, &verifier));
+    EXPECT_EQ(BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len, sz,
+                                   nullptr, &verifier),
+              ZX_OK);
 
     // Generate the contents as they would be stored on disk. (This includes compression if
     // applicable)
@@ -130,18 +133,18 @@ class MockBlobFactory {
     auto page_watcher = std::make_unique<PageWatcher>(pager_, std::move(pager_info));
 
     zx::vmo vmo;
-    EXPECT_OK(page_watcher->CreatePagedVmo(fbl::round_up(sz, ZX_PAGE_SIZE), &vmo));
+    EXPECT_EQ(page_watcher->CreatePagedVmo(fbl::round_up(sz, ZX_PAGE_SIZE), &vmo), ZX_OK);
 
     // Make sure the vmo is valid and of the desired size.
     EXPECT_TRUE(vmo.is_valid());
     uint64_t vmo_size;
-    EXPECT_OK(vmo.get_size(&vmo_size));
+    EXPECT_EQ(vmo.get_size(&vmo_size), ZX_OK);
     EXPECT_EQ(vmo_size, fbl::round_up(sz, ZX_PAGE_SIZE));
 
     // Make sure the vmo is pager-backed.
     zx_info_vmo_t info;
-    EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-    EXPECT_NE(info.flags & ZX_INFO_VMO_PAGER_BACKED, 0);
+    EXPECT_EQ(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+    EXPECT_NE(info.flags & ZX_INFO_VMO_PAGER_BACKED, 0u);
 
     return std::make_unique<MockBlob>(identifier, std::move(vmo), std::move(raw_data), sz,
                                       std::move(page_watcher), std::move(merkle_tree));
@@ -162,8 +165,8 @@ class MockBlobFactory {
     };
     std::optional<BlobCompressor> compressor = BlobCompressor::Create(settings, len);
     EXPECT_TRUE(compressor);
-    EXPECT_OK(compressor->Update(input, len));
-    EXPECT_OK(compressor->End());
+    EXPECT_EQ(compressor->Update(input, len), ZX_OK);
+    EXPECT_EQ(compressor->End(), ZX_OK);
     size_t out_size = compressor->Size();
     fbl::Array<uint8_t> out(new uint8_t[out_size], out_size);
     memcpy(out.data(), compressor->Data(), out_size);
@@ -179,8 +182,9 @@ class MockBlobFactory {
       EXPECT_TRUE(false);
     }
     std::unique_ptr<SeekableDecompressor> decompressor;
-    EXPECT_OK(SeekableChunkedDecompressor::CreateDecompressor(data.get(), data.size(), data.size(),
-                                                              &decompressor));
+    EXPECT_EQ(SeekableChunkedDecompressor::CreateDecompressor(data.get(), data.size(), data.size(),
+                                                              &decompressor),
+              ZX_OK);
     return decompressor;
   }
 
@@ -194,9 +198,9 @@ class MockBlobFactory {
 class MockTransferBuffer : public TransferBuffer {
  public:
   static std::unique_ptr<MockTransferBuffer> Create(size_t sz) {
-    EXPECT_EQ(sz % ZX_PAGE_SIZE, 0);
+    EXPECT_EQ(sz % ZX_PAGE_SIZE, 0ul);
     zx::vmo vmo;
-    EXPECT_OK(zx::vmo::create(sz, 0, &vmo));
+    EXPECT_EQ(zx::vmo::create(sz, 0, &vmo), ZX_OK);
     return std::unique_ptr<MockTransferBuffer>(new MockTransferBuffer(std::move(vmo)));
   }
 
@@ -229,15 +233,15 @@ class MockTransferBuffer : public TransferBuffer {
     char identifier = static_cast<char>(info.identifier);
     EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
     const MockBlob& blob = *blob_registry_[identifier];
-    EXPECT_EQ(offset % kBlobfsBlockSize, 0);
+    EXPECT_EQ(offset % kBlobfsBlockSize, 0ul);
     EXPECT_LE(offset + length, blob.raw_data_size());
     // Fill the transfer buffer with the blob's data, to service page requests.
     if (do_partial_transfer_) {
       // Zero the entire range, and then explicitly fill the first half.
-      EXPECT_OK(vmo_.op_range(ZX_VMO_OP_ZERO, offset, length, nullptr, 0));
-      EXPECT_OK(vmo_.write(blob.raw_data() + offset, 0, length / 2));
+      EXPECT_EQ(vmo_.op_range(ZX_VMO_OP_ZERO, offset, length, nullptr, 0), ZX_OK);
+      EXPECT_EQ(vmo_.write(blob.raw_data() + offset, 0, length / 2), ZX_OK);
     } else {
-      EXPECT_OK(vmo_.write(blob.raw_data() + offset, 0, length));
+      EXPECT_EQ(vmo_.write(blob.raw_data() + offset, 0, length), ZX_OK);
     }
     return zx::ok();
   }
@@ -256,7 +260,7 @@ class MockTransferBuffer : public TransferBuffer {
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
 };
 
-class BlobfsPagerTest : public zxtest::Test {
+class BlobfsPagerTest : public testing::Test {
  public:
   void SetUp() override {
     auto buffer = MockTransferBuffer::Create(kTransferBufferSize);
@@ -298,7 +302,7 @@ class BlobfsPagerTest : public zxtest::Test {
 class RandomBlobReader {
  public:
   using Seed = std::default_random_engine::result_type;
-  RandomBlobReader() : random_engine_(zxtest::Runner::GetInstance()->random_seed()) {}
+  RandomBlobReader() : random_engine_(testing::UnitTest::GetInstance()->random_seed()) {}
   RandomBlobReader(Seed seed) : random_engine_(seed) {}
 
   RandomBlobReader(const RandomBlobReader& other) = default;
@@ -366,7 +370,7 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobs) {
   MockBlob* blobs[3] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::CHUNKED),
                         CreateBlob('z')};
   RandomBlobReader reader;
-  std::default_random_engine random_engine(zxtest::Runner::GetInstance()->random_seed());
+  std::default_random_engine random_engine(testing::UnitTest::GetInstance()->random_seed());
   std::uniform_int_distribution distribution(0, kBlobCount - 1);
   for (int i = 0; i < kNumReadRequests; i++) {
     reader.ReadOnce(blobs[distribution(random_engine)]);
@@ -380,7 +384,7 @@ TEST_F(BlobfsPagerTest, ReadRandomMultithreaded) {
   // All the threads will issue reads on the same blob.
   for (int i = 0; i < kNumThreads; i++) {
     threads[i] =
-        std::thread(RandomBlobReader(zxtest::Runner::GetInstance()->random_seed() + i), blob);
+        std::thread(RandomBlobReader(testing::UnitTest::GetInstance()->random_seed() + i), blob);
   }
   for (auto& thread : threads) {
     thread.join();
@@ -394,7 +398,7 @@ TEST_F(BlobfsPagerTest, ReadRandomMultithreaded_ZstdChunked) {
   // All the threads will issue reads on the same blob.
   for (int i = 0; i < kNumThreads; i++) {
     threads[i] =
-        std::thread(RandomBlobReader(zxtest::Runner::GetInstance()->random_seed() + i), blob);
+        std::thread(RandomBlobReader(testing::UnitTest::GetInstance()->random_seed() + i), blob);
   }
   for (auto& thread : threads) {
     thread.join();
@@ -409,8 +413,8 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
 
   // Each thread will issue reads on a different blob.
   for (int i = 0; i < kNumBlobs; i++) {
-    threads[i] =
-        std::thread(RandomBlobReader(zxtest::Runner::GetInstance()->random_seed() + i), blobs[i]);
+    threads[i] = std::thread(RandomBlobReader(testing::UnitTest::GetInstance()->random_seed() + i),
+                             blobs[i]);
   }
 
   for (auto& thread : threads) {
@@ -460,9 +464,9 @@ TEST_F(BlobfsPagerTest, AsyncLoopShutdown) {
 void AssertNoLeaksInVmo(const zx::vmo& vmo, char leak_char) {
   char scratch[ZX_PAGE_SIZE] = {0};
   size_t vmo_size;
-  ASSERT_OK(vmo.get_size(&vmo_size));
+  ASSERT_EQ(vmo.get_size(&vmo_size), ZX_OK);
   for (size_t offset = 0; offset < vmo_size; offset += sizeof(scratch)) {
-    ASSERT_OK(vmo.read(scratch, offset, sizeof(scratch)));
+    ASSERT_EQ(vmo.read(scratch, offset, sizeof(scratch)), ZX_OK);
     for (unsigned i = 0; i < sizeof(scratch); ++i) {
       ASSERT_NE(scratch[i], leak_char);
     }
@@ -480,14 +484,14 @@ TEST_F(BlobfsPagerTest, NoDataLeaked_Uncompressed) {
     MockBlob* new_blob = CreateBlob('a', CompressionAlgorithm::UNCOMPRESSED, 1);
     first_blob->CommitRange(0, 4096);
     new_blob->CommitRange(0, 1);
-    ASSERT_NO_FAILURES(AssertNoLeaksInVmo(new_blob->vmo(), 'x'));
+    AssertNoLeaksInVmo(new_blob->vmo(), 'x');
   }
   {
     MockBlob* first_blob = CreateBlob('y', CompressionAlgorithm::UNCOMPRESSED, 4096);
     MockBlob* new_blob = CreateBlob('b', CompressionAlgorithm::CHUNKED, 1);
     first_blob->CommitRange(0, 4096);
     new_blob->CommitRange(0, 1);
-    ASSERT_NO_FAILURES(AssertNoLeaksInVmo(new_blob->vmo(), 'y'));
+    AssertNoLeaksInVmo(new_blob->vmo(), 'y');
   }
 }
 
@@ -502,14 +506,14 @@ TEST_F(BlobfsPagerTest, NoDataLeaked_ZstdChunked) {
     MockBlob* new_blob = CreateBlob('a', CompressionAlgorithm::UNCOMPRESSED, 1);
     first_blob->CommitRange(0, 4096);
     new_blob->CommitRange(0, 1);
-    ASSERT_NO_FAILURES(AssertNoLeaksInVmo(new_blob->vmo(), 'x'));
+    AssertNoLeaksInVmo(new_blob->vmo(), 'x');
   }
   {
     MockBlob* first_blob = CreateBlob('y', CompressionAlgorithm::CHUNKED, 4096);
     MockBlob* new_blob = CreateBlob('b', CompressionAlgorithm::CHUNKED, 1);
     first_blob->CommitRange(0, 4096);
     new_blob->CommitRange(0, 1);
-    ASSERT_NO_FAILURES(AssertNoLeaksInVmo(new_blob->vmo(), 'y'));
+    AssertNoLeaksInVmo(new_blob->vmo(), 'y');
   }
 }
 
@@ -526,7 +530,7 @@ TEST_F(BlobfsPagerTest, PagerErrorCode_Uncompressed) {
 
   // No failure by default.
   MockBlob* blob = CreateBlob('a');
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 
   // Failure while populating pages.
   SetFailureMode(PagerErrorStatus::kErrIO);
@@ -549,7 +553,7 @@ TEST_F(BlobfsPagerTest, PagerErrorCode_Uncompressed) {
 
   // Failure mode has been cleared. No further failures expected.
   blob = CreateBlob('e');
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 }
 
 TEST_F(BlobfsPagerTest, PagerErrorCode_ZstdChunked) {
@@ -557,7 +561,7 @@ TEST_F(BlobfsPagerTest, PagerErrorCode_ZstdChunked) {
 
   // No failure by default.
   MockBlob* blob = CreateBlob('a', CompressionAlgorithm::CHUNKED);
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 
   // Failure while populating pages.
   SetFailureMode(PagerErrorStatus::kErrIO);
@@ -573,7 +577,7 @@ TEST_F(BlobfsPagerTest, PagerErrorCode_ZstdChunked) {
 
   // Failure mode has been cleared. No further failures expected.
   blob = CreateBlob('e', CompressionAlgorithm::CHUNKED);
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 }
 
 TEST_F(BlobfsPagerTest, FailAfterPagerError_Uncompressed) {
@@ -586,7 +590,7 @@ TEST_F(BlobfsPagerTest, FailAfterPagerError_Uncompressed) {
   SetFailureMode(PagerErrorStatus::kOK);
 
   // This should succeed now as the failure mode has been cleared. An IO error is not fatal.
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 
   // Failure while verifying pages.
   SetFailureMode(PagerErrorStatus::kErrDataIntegrity);
@@ -608,7 +612,7 @@ TEST_F(BlobfsPagerTest, FailAfterPagerError_ZstdChunked) {
   SetFailureMode(PagerErrorStatus::kOK);
 
   // This should succeed now as the failure mode has been cleared. An IO error is not fatal.
-  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_OK);
 
   // Failure while verifying pages.
   SetFailureMode(PagerErrorStatus::kErrDataIntegrity);

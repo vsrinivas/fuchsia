@@ -19,8 +19,7 @@
 
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
-#include <zxtest/base/test.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
@@ -32,33 +31,33 @@ namespace {
 
 const uint32_t kNumFilesystemBlocks = 400;
 
-class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
+class ZSTDCompressedBlockCollectionTest : public testing::Test {
  public:
   void SetUp() final {
     // Write API used to put desired bytes on block device (uncompressed), not exercise compression
     // code paths.
-    MountOptions options = {
-        .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
-    };
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                            }};
 
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
     loop_.StartThread();
 
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
   }
 
   void AddRandomBlobAndSync(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     AddRandomBlob(sz, out_info);
-    ASSERT_OK(Sync());
+    ASSERT_EQ(Sync(), ZX_OK);
   }
 
   void InitCollection(const BlobInfo& blob_info, uint64_t num_vmo_bytes,
                       std::unique_ptr<ZSTDCompressedBlockCollectionImpl>* out_coll) {
-    ASSERT_EQ(0, blob_info.size_merkle % kBlobfsBlockSize);
+    ASSERT_EQ(0ul, blob_info.size_merkle % kBlobfsBlockSize);
     uint64_t num_merkle_blocks64 = blob_info.size_merkle / kBlobfsBlockSize;
     ASSERT_LE(num_merkle_blocks64, std::numeric_limits<uint32_t>::max());
     uint32_t num_merkle_blocks = static_cast<uint32_t>(num_merkle_blocks64);
@@ -66,8 +65,8 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     uint64_t num_vmo_blocks64 = num_vmo_bytes / kBlobfsBlockSize;
     ASSERT_LE(num_vmo_blocks64, std::numeric_limits<uint32_t>::max());
     uint32_t num_vmo_blocks = static_cast<uint32_t>(num_vmo_blocks64);
-    ASSERT_OK(mapper_.CreateAndMap(num_vmo_bytes, map_options, nullptr, &vmo_));
-    ASSERT_OK(fs_->BlockAttachVmo(vmo_, &vmoid_.GetReference(fs_.get())));
+    ASSERT_EQ(mapper_.CreateAndMap(num_vmo_bytes, map_options, nullptr, &vmo_), ZX_OK);
+    ASSERT_EQ(fs_->BlockAttachVmo(vmo_, &vmoid_.GetReference(fs_.get())), ZX_OK);
 
     *out_coll = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
         &vmoid_, num_vmo_blocks, SpaceManager(), TransactionHandler(), NodeFinder(),
@@ -78,29 +77,29 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
   uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
-    EXPECT_OK(digest.Parse(info.path));
-    EXPECT_OK(fs_->Cache().Lookup(digest, &node));
+    EXPECT_EQ(digest.Parse(info.path), ZX_OK);
+    EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
     return vnode->Ino();
   }
 
   void AddRandomBlob(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     fbl::RefPtr<fs::Vnode> root;
-    ASSERT_OK(fs_->OpenRootNode(&root));
+    ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
     fs::Vnode* root_node = root.get();
 
     std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FAILURES(GenerateRandomBlob("", sz, &info));
+    GenerateRandomBlob("", sz, &info);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_OK(root_node->Create(&file, info->path, 0));
+    ASSERT_EQ(root_node->Create(&file, info->path, 0), ZX_OK);
 
     size_t actual;
-    EXPECT_OK(file->Truncate(info->size_data));
-    EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &actual));
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
     EXPECT_EQ(actual, info->size_data);
-    EXPECT_OK(file->Close());
+    EXPECT_EQ(file->Close(), ZX_OK);
 
     if (out_info != nullptr) {
       *out_info = std::move(info);
@@ -139,7 +138,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobRead) {
   // Read only data block in blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  ASSERT_OK(coll->Read(kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(coll->Read(kDataBlockOffset, kNumReadDataBlocks), ZX_OK);
   EXPECT_EQ(0,
             memcmp(mapper_.start(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
                    kNumReadDataBlocks * kBlobfsBlockSize));
@@ -191,7 +190,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BlobRead) {
   // Read only data block in blob.
   constexpr uint32_t kDataBlockOffset = 0;
   constexpr uint32_t kNumReadDataBlocks = kNumDataBlocks;
-  ASSERT_OK(coll->Read(kDataBlockOffset, kNumReadDataBlocks));
+  ASSERT_EQ(coll->Read(kDataBlockOffset, kNumReadDataBlocks), ZX_OK);
   EXPECT_EQ(0,
             memcmp(mapper_.start(), blob_info->data.get() + (kDataBlockOffset * kBlobfsBlockSize),
                    kNumReadDataBlocks * kBlobfsBlockSize));

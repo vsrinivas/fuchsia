@@ -5,8 +5,8 @@
 #include "inspector/parser.h"
 
 #include <blobfs/format.h>
+#include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
-#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
@@ -100,8 +100,8 @@ TEST(InspectorParser, WriteSingleInodeElement) {
   // Sanity check zeroed out ok.
   for (uint32_t i = 0; i < inode_count; ++i) {
     Inode out_inode = GetInodeElement(&device, i);
-    ASSERT_EQ(0, out_inode.blob_size);
-    ASSERT_EQ(0, out_inode.block_count);
+    ASSERT_EQ(0ul, out_inode.blob_size);
+    ASSERT_EQ(0u, out_inode.block_count);
   }
 
   // Test writing a single inode.
@@ -117,8 +117,8 @@ TEST(InspectorParser, WriteSingleInodeElement) {
   // Make sure rest of device is not set.
   for (uint64_t i = 1; i < inode_count; ++i) {
     Inode out_inode = GetInodeElement(&device, i);
-    ASSERT_EQ(0, out_inode.blob_size);
-    ASSERT_EQ(0, out_inode.block_count);
+    ASSERT_EQ(0ul, out_inode.blob_size);
+    ASSERT_EQ(0u, out_inode.block_count);
   }
 }
 
@@ -133,8 +133,8 @@ TEST(InspectorParser, WriteManyInodeElements) {
   // Sanity check zeroed out ok.
   for (uint32_t i = 0; i < inode_count; ++i) {
     Inode out_inode = GetInodeElement(&device, i);
-    ASSERT_EQ(0, out_inode.blob_size);
-    ASSERT_EQ(0, out_inode.block_count);
+    ASSERT_EQ(0ul, out_inode.blob_size);
+    ASSERT_EQ(0u, out_inode.block_count);
   }
 
   // Test setting all the inodes.

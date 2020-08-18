@@ -10,7 +10,7 @@
 #include <array>
 #include <thread>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "read-metrics.h"
 #include "verification-metrics.h"
@@ -28,7 +28,7 @@ TEST(ReadMetricsTest, UncompressedDiskRead) {
   ReadMetrics read_metrics(&metrics_node);
 
   auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
-  EXPECT_EQ(stats.read_bytes, 0);
+  EXPECT_EQ(stats.read_bytes, 0u);
   EXPECT_EQ(stats.read_ticks, 0);
 
   constexpr uint64_t kReadBytes = 1 * MB;
@@ -49,7 +49,7 @@ TEST(ReadMetricsTest, ChunkedDecompression) {
   ReadMetrics read_metrics(&metrics_node);
 
   auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
-  EXPECT_EQ(stats.decompress_bytes, 0);
+  EXPECT_EQ(stats.decompress_bytes, 0u);
   EXPECT_EQ(stats.decompress_ticks, 0);
 
   constexpr uint64_t kDecompressBytes = 1 * MB;
@@ -69,9 +69,9 @@ TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {
   VerificationMetrics verification_metrics;
 
   auto stats = verification_metrics.Get();
-  EXPECT_EQ(stats.blobs_verified, 0);
-  EXPECT_EQ(stats.data_size, 0);
-  EXPECT_EQ(stats.merkle_size, 0);
+  EXPECT_EQ(stats.blobs_verified, 0ul);
+  EXPECT_EQ(stats.data_size, 0ul);
+  EXPECT_EQ(stats.merkle_size, 0ul);
   EXPECT_EQ(stats.verification_time, 0);
 
   constexpr uint64_t kDataBytes = 10 * MB, kMerkleBytes = 1 * MB;
@@ -91,7 +91,7 @@ TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {
   EXPECT_EQ(stats.blobs_verified, kNumThreads);
   EXPECT_EQ(stats.data_size, kDataBytes * kNumThreads);
   EXPECT_EQ(stats.merkle_size, kMerkleBytes * kNumThreads);
-  EXPECT_EQ(stats.verification_time, kDuration * kNumThreads);
+  EXPECT_EQ(stats.verification_time, static_cast<zx_ticks_t>(kDuration * kNumThreads));
 }
 
 }  // namespace

@@ -18,7 +18,13 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
+
+// TODO(fxbug.dev/52911): Remove after all tests are on gtest
+#ifdef BLOBFS_USE_ZXTEST
 #include <zxtest/zxtest.h>
+#else
+#include <gtest/gtest.h>
+#endif
 
 namespace blobfs {
 namespace {
@@ -64,14 +70,16 @@ void GenerateBlob(BlobSrcFunction data_generator, const std::string& mount_path,
 
   Digest digest;
   std::unique_ptr<uint8_t[]> tree;
-  ASSERT_OK(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree, &info->size_merkle,
-                                      &digest));
+  ASSERT_EQ(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree, &info->size_merkle,
+                                      &digest),
+            ZX_OK);
   info->merkle.reset(reinterpret_cast<char*>(tree.release()));
   snprintf(info->path, sizeof(info->path), "%s/%s", mount_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree.
-  ASSERT_OK(MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
-                                       info->merkle.get(), info->size_merkle, digest));
+  ASSERT_EQ(MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
+                                       info->merkle.get(), info->size_merkle, digest),
+            ZX_OK);
   *out = std::move(info);
 }
 
@@ -83,7 +91,7 @@ void GenerateRandomBlob(const std::string& mount_path, size_t data_size,
 void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
                            std::unique_ptr<BlobInfo>* out) {
   static fbl::Array<uint8_t> template_data = LoadTemplateData();
-  ASSERT_GT(template_data.size(), 0);
+  ASSERT_GT(template_data.size(), 0ul);
   GenerateBlob(
       [](char* data, size_t length) {
         // TODO(jfsulliv): Use explicit seed
@@ -110,10 +118,18 @@ void VerifyContents(int fd, const char* data, size_t data_size) {
   std::unique_ptr<char[]> buffer(new char[kBuffersize]);
 
   for (size_t total_read = 0; total_read < data_size; total_read += kBuffersize) {
-    size_t read_size = std::min(kBuffersize, data_size - total_read);
+    ssize_t read_size = std::min(kBuffersize, data_size - total_read);
     ASSERT_EQ(read_size, read(fd, buffer.get(), read_size));
-    ASSERT_BYTES_EQ(&data[total_read], buffer.get(), read_size);
+    ASSERT_EQ(memcmp(&data[total_read], buffer.get(), read_size), 0);
   }
+}
+
+void MakeBlob(const BlobInfo* info, fbl::unique_fd* fd) {
+  fd->reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(*fd);
+  ASSERT_EQ(ftruncate(fd->get(), info->size_data), 0);
+  ASSERT_EQ(StreamAll(write, fd->get(), info->data.get(), info->size_data), 0);
+  VerifyContents(fd->get(), info->data.get(), info->size_data);
 }
 
 }  // namespace blobfs

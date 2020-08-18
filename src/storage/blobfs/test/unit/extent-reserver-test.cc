@@ -5,7 +5,7 @@
 #include "allocator/extent-reserver.h"
 
 #include <bitmap/rle-bitmap.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "allocator/node-reserver.h"
 
@@ -25,7 +25,7 @@ TEST(ExtentReserverTest, Reserve) {
     ReservedExtent reserved_extent(&reserver, extent);
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
   }
-  EXPECT_EQ(0, reserver.ReservedBlockCount());
+  EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 TEST(ExtentReserverTest, ReserveReset) {
@@ -40,9 +40,9 @@ TEST(ExtentReserverTest, ReserveReset) {
     ReservedExtent reserved_extent(&reserver, extent);
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
     reserved_extent.Reset();
-    EXPECT_EQ(0, reserver.ReservedBlockCount());
+    EXPECT_EQ(0u, reserver.ReservedBlockCount());
   }
-  EXPECT_EQ(0, reserver.ReservedBlockCount());
+  EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 // Test the constructors of the reserved extent.
@@ -59,7 +59,7 @@ TEST(ExtentReserverTest, Constructor) {
     EXPECT_EQ(extent.Length(), reserved_extent.extent().Length());
     EXPECT_EQ(block_count, reserver.ReservedBlockCount());
   }
-  EXPECT_EQ(0, reserver.ReservedBlockCount());
+  EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 TEST(ExtentReserverTest, MoveConstructor) {
@@ -71,16 +71,16 @@ TEST(ExtentReserverTest, MoveConstructor) {
   // Test reservation via move constructor.
   {
     ReservedExtent source_extent(&reserver, extent);
-    EXPECT_EQ(1, reserver.ReservedBlockCount());
+    EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), source_extent.extent().Start());
     EXPECT_EQ(extent.Length(), source_extent.extent().Length());
 
     ReservedExtent dest_extent(std::move(source_extent));
-    EXPECT_EQ(1, reserver.ReservedBlockCount());
+    EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), dest_extent.extent().Start());
     EXPECT_EQ(extent.Length(), dest_extent.extent().Length());
   }
-  EXPECT_EQ(0, reserver.ReservedBlockCount());
+  EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 TEST(ExtentReserverTest, MoveAssignment) {
@@ -92,12 +92,12 @@ TEST(ExtentReserverTest, MoveAssignment) {
   // Test reservation via the move assignment operator.
   {
     ReservedExtent source_extent(&reserver, extent);
-    EXPECT_EQ(1, reserver.ReservedBlockCount());
+    EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), source_extent.extent().Start());
     EXPECT_EQ(extent.Length(), source_extent.extent().Length());
 
     ReservedExtent dest_extent = std::move(source_extent);
-    EXPECT_EQ(1, reserver.ReservedBlockCount());
+    EXPECT_EQ(1u, reserver.ReservedBlockCount());
     EXPECT_EQ(extent.Start(), dest_extent.extent().Start());
     EXPECT_EQ(extent.Length(), dest_extent.extent().Length());
   }
@@ -110,15 +110,15 @@ TEST(ExtentReserverTest, Split) {
   BlockCountType block_count = 10;
   Extent extent{start_block, block_count};
 
-  EXPECT_EQ(0, reserver.ReservedBlockCount());
+  EXPECT_EQ(0u, reserver.ReservedBlockCount());
   ReservedExtent reserved_extent(&reserver, extent);
-  EXPECT_EQ(10, reserver.ReservedBlockCount());
+  EXPECT_EQ(10u, reserver.ReservedBlockCount());
 
   {
     const BlockCountType split_point = 5;
     ReservedExtent latter(reserved_extent.SplitAt(split_point));
     // After splitting, no reservations actually change.
-    EXPECT_EQ(10, reserver.ReservedBlockCount());
+    EXPECT_EQ(10u, reserver.ReservedBlockCount());
 
     // Verify the split extents contain the expected values.
     EXPECT_EQ(extent.Start(), reserved_extent.extent().Start());
@@ -130,7 +130,7 @@ TEST(ExtentReserverTest, Split) {
 
   // When the latter half of the reservation goes out of scope, the reservations
   // are cleaned up too.
-  EXPECT_EQ(5, reserver.ReservedBlockCount());
+  EXPECT_EQ(5u, reserver.ReservedBlockCount());
 }
 
 }  // namespace

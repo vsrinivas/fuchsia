@@ -1,0 +1,11 @@
+{
+    "program" : {
+        "binary" : "test/blobfs_unittest"
+    },
+    "sandbox" : {
+        "services" : [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

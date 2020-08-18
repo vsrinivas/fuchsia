@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "utils.h"
 
@@ -15,32 +15,32 @@ namespace {
 
 TEST(NodePopulatorTest, NodeCount) {
   for (ExtentCountType i = 0; i <= kInlineMaxExtents; i++) {
-    EXPECT_EQ(1, NodePopulator::NodeCountForExtents(i));
+    EXPECT_EQ(1u, NodePopulator::NodeCountForExtents(i));
   }
 
   for (ExtentCountType i = kInlineMaxExtents + 1; i <= kInlineMaxExtents + kContainerMaxExtents;
        i++) {
-    EXPECT_EQ(2, NodePopulator::NodeCountForExtents(i));
+    EXPECT_EQ(2u, NodePopulator::NodeCountForExtents(i));
   }
 
   for (ExtentCountType i = kInlineMaxExtents + kContainerMaxExtents + 1;
        i <= kInlineMaxExtents + kContainerMaxExtents * 2; i++) {
-    EXPECT_EQ(3, NodePopulator::NodeCountForExtents(i));
+    EXPECT_EQ(3u, NodePopulator::NodeCountForExtents(i));
   }
 }
 
 TEST(NodePopulatorTest, Null) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
+  InitializeAllocator(1, 1, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
   fbl::Vector<ReservedNode> nodes;
-  ASSERT_OK(allocator->ReserveNodes(1, &nodes));
+  ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
   const uint32_t node_index = nodes[0].index();
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
-  size_t nodes_visited = 0;
+  int nodes_visited = 0;
   auto on_node = [&](const ReservedNode& node) {
     ZX_DEBUG_ASSERT(node_index == node.index());
     nodes_visited++;
@@ -50,7 +50,7 @@ TEST(NodePopulatorTest, Null) {
     return NodePopulator::IterationCommand::Stop;
   };
 
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
   ASSERT_EQ(1, nodes_visited);
 }
 
@@ -58,25 +58,25 @@ TEST(NodePopulatorTest, Null) {
 TEST(NodePopulatorTest, WalkOne) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
+  InitializeAllocator(1, 1, &space_manager, &allocator);
 
   fbl::Vector<ReservedNode> nodes;
-  ASSERT_OK(allocator->ReserveNodes(1, &nodes));
+  ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
   const uint32_t node_index = nodes[0].index();
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(1, &extents));
-  ASSERT_EQ(1, extents.size());
+  ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
+  ASSERT_EQ(1ul, extents.size());
   const Extent allocated_extent = extents[0].extent();
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
-  size_t nodes_visited = 0;
+  int nodes_visited = 0;
   auto on_node = [&](const ReservedNode& node) {
     ZX_DEBUG_ASSERT(node_index == node.index());
     nodes_visited++;
   };
-  size_t extents_visited = 0;
+  int extents_visited = 0;
   auto on_extent = [&](ReservedExtent& extent) {
     ZX_DEBUG_ASSERT(allocated_extent.Start() == extent.extent().Start());
     ZX_DEBUG_ASSERT(allocated_extent.Length() == extent.extent().Length());
@@ -88,18 +88,18 @@ TEST(NodePopulatorTest, WalkOne) {
   const InodePtr inode = allocator->GetNode(node_index);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0u, inode->extent_count);
 
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
   ASSERT_EQ(1, nodes_visited);
   ASSERT_EQ(1, extents_visited);
 
   // After walking, observe that the node is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(1, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(1u, inode->extent_count);
   ASSERT_EQ(allocated_extent.Start(), inode->extents[0].Start());
   ASSERT_EQ(allocated_extent.Length(), inode->extents[0].Length());
 }
@@ -109,14 +109,14 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
   constexpr size_t kBlockCount = kInlineMaxExtents * 3;
-  ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, 1, &space_manager, &allocator));
-  ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
+  InitializeAllocator(kBlockCount, 1, &space_manager, &allocator);
+  ForceFragmentation(allocator.get(), kBlockCount);
 
   fbl::Vector<ReservedNode> nodes;
-  ASSERT_OK(allocator->ReserveNodes(1, &nodes));
+  ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kInlineMaxExtents, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kInlineMaxExtents, &extents), ZX_OK);
   ASSERT_EQ(kInlineMaxExtents, extents.size());
 
   fbl::Vector<Extent> allocated_extents;
@@ -142,17 +142,17 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   const InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0u, inode->extent_count);
 
-  ASSERT_OK(populator.Walk(on_node, on_extent));
-  ASSERT_EQ(1, nodes_visited);
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
+  ASSERT_EQ(1u, nodes_visited);
   ASSERT_EQ(kInlineMaxExtents, extents_visited);
 
   // After walking, observe that the node is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
+  ASSERT_EQ(0ul, inode->blob_size);
   ASSERT_EQ(kInlineMaxExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);
@@ -165,16 +165,16 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   std::unique_ptr<Allocator> allocator;
   constexpr size_t kBlockCount = kInlineMaxExtents * 5;
   constexpr size_t kNodeCount = 2;
-  ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
-  ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
+  InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator);
+  ForceFragmentation(allocator.get(), kBlockCount);
 
   constexpr size_t kExpectedExtents = kInlineMaxExtents + 1;
 
   fbl::Vector<ReservedNode> nodes;
-  ASSERT_OK(allocator->ReserveNodes(kNodeCount, &nodes));
+  ASSERT_EQ(allocator->ReserveNodes(kNodeCount, &nodes), ZX_OK);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kExpectedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kExpectedExtents, &extents), ZX_OK);
   ASSERT_EQ(kExpectedExtents, extents.size());
 
   fbl::Vector<Extent> allocated_extents;
@@ -200,10 +200,10 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0u, inode->extent_count);
 
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
   ASSERT_EQ(kNodeCount, nodes_visited);
   ASSERT_EQ(kExpectedExtents, extents_visited);
 
@@ -211,7 +211,7 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(allocated_nodes[1], inode->header.next_node);
-  ASSERT_EQ(0, inode->blob_size);
+  ASSERT_EQ(0ul, inode->blob_size);
   ASSERT_EQ(kExpectedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);
@@ -223,7 +223,7 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   ASSERT_TRUE(inode->header.IsExtentContainer());
   const ExtentContainer* container = inode->AsExtentContainer();
   ASSERT_EQ(allocated_nodes[0], container->previous_node);
-  ASSERT_EQ(1, container->extent_count);
+  ASSERT_EQ(1u, container->extent_count);
   ASSERT_TRUE(allocated_extents[kInlineMaxExtents] == container->extents[0]);
 }
 
@@ -236,14 +236,14 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |kExpectedExtents| extents.
   constexpr size_t kBlockCount = 3 * kExpectedExtents;
-  ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
-  ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
+  InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator);
+  ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
   fbl::Vector<ReservedNode> nodes;
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveNodes(kNodeCount, &nodes));
-  ASSERT_OK(allocator->ReserveBlocks(kExpectedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveNodes(kNodeCount, &nodes), ZX_OK);
+  ASSERT_EQ(allocator->ReserveBlocks(kExpectedExtents, &extents), ZX_OK);
   ASSERT_EQ(kExpectedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -257,8 +257,8 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0u, inode->extent_count);
 
   size_t nodes_visited = 0;
   auto on_node = [&](const ReservedNode& node) {
@@ -273,7 +273,7 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   };
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
 
   ASSERT_EQ(kNodeCount, nodes_visited);
   ASSERT_EQ(kExpectedExtents, extents_visited);
@@ -282,7 +282,7 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(allocated_nodes[1], inode->header.next_node);
-  ASSERT_EQ(0, inode->blob_size);
+  ASSERT_EQ(0ul, inode->blob_size);
   ASSERT_EQ(kExpectedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);
@@ -319,14 +319,14 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |kAllocatedExtents| extents.
   constexpr size_t kBlockCount = 3 * kAllocatedExtents;
-  ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
-  ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
+  InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator);
+  ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
   fbl::Vector<ReservedNode> nodes;
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveNodes(kAllocatedNodes, &nodes));
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveNodes(kAllocatedNodes, &nodes), ZX_OK);
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -340,8 +340,8 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0u, inode->extent_count);
 
   size_t nodes_visited = 0;
   auto on_node = [&](const ReservedNode& node) {
@@ -356,7 +356,7 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   };
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
 
   ASSERT_EQ(kUsedNodes, nodes_visited);
   ASSERT_EQ(kUsedExtents, extents_visited);
@@ -364,7 +364,7 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   // After walking, observe that the inode is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
+  ASSERT_EQ(0ul, inode->blob_size);
   ASSERT_EQ(kUsedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);
@@ -390,14 +390,14 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |kAllocatedExtents| extents.
   constexpr size_t kBlockCount = 3 * kAllocatedExtents;
-  ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator));
-  ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
+  InitializeAllocator(kBlockCount, kAllocatedNodes, &space_manager, &allocator);
+  ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
   fbl::Vector<ReservedNode> nodes;
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveNodes(kAllocatedNodes, &nodes));
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveNodes(kAllocatedNodes, &nodes), ZX_OK);
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -411,8 +411,8 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
-  ASSERT_EQ(0, inode->extent_count);
+  ASSERT_EQ(0ul, inode->blob_size);
+  ASSERT_EQ(0ul, inode->extent_count);
 
   size_t nodes_visited = 0;
   auto on_node = [&](const ReservedNode& node) {
@@ -430,7 +430,7 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   };
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-  ASSERT_OK(populator.Walk(on_node, on_extent));
+  ASSERT_EQ(populator.Walk(on_node, on_extent), ZX_OK);
 
   ASSERT_EQ(kUsedNodes, nodes_visited);
   ASSERT_EQ(kUsedExtents, extents_visited);
@@ -438,7 +438,7 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   // After walking, observe that the inode is allocated.
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
-  ASSERT_EQ(0, inode->blob_size);
+  ASSERT_EQ(0ul, inode->blob_size);
   ASSERT_EQ(kUsedExtents, inode->extent_count);
   for (size_t i = 0; i < kInlineMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[i] == inode->extents[i]);

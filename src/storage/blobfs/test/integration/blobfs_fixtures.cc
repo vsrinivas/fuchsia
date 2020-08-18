@@ -25,17 +25,11 @@ void CheckBlobfsInfo(fs::FilesystemTest* test) {
 
 }  // namespace
 
-void BlobfsTest::CheckInfo() {
-  CheckBlobfsInfo(this);
-}
+void BlobfsTest::CheckInfo() { CheckBlobfsInfo(this); }
 
-void BlobfsFixedDiskSizeTest::CheckInfo() {
-  CheckBlobfsInfo(this);
-}
+void BlobfsFixedDiskSizeTest::CheckInfo() { CheckBlobfsInfo(this); }
 
-void BlobfsTestWithFvm::CheckInfo() {
-  CheckBlobfsInfo(this);
-}
+void BlobfsTestWithFvm::CheckInfo() { CheckBlobfsInfo(this); }
 
 void BlobfsTestWithFvm::CheckPartitionSize() {
   // Minimum size required by ResizePartition test:
@@ -45,15 +39,4 @@ void BlobfsTestWithFvm::CheckPartitionSize() {
   ASSERT_GE(environment_->disk_size(), kMinFvmSize, "Insufficient disk space for FVM tests");
 }
 
-void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() {
-  CheckBlobfsInfo(this);
-}
-
-void MakeBlob(const blobfs::BlobInfo* info, fbl::unique_fd* fd) {
-  fd->reset(open(info->path, O_CREAT | O_RDWR));
-  ASSERT_TRUE(*fd, "Failed to create blob");
-  ASSERT_EQ(ftruncate(fd->get(), info->size_data), 0);
-  ASSERT_EQ(blobfs::StreamAll(write, fd->get(), info->data.get(), info->size_data), 0,
-            "Failed to write Data");
-  ASSERT_NO_FAILURES(blobfs::VerifyContents(fd->get(), info->data.get(), info->size_data));
-}
+void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() { CheckBlobfsInfo(this); }

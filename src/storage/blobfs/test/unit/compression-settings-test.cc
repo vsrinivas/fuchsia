@@ -4,16 +4,16 @@
 
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
+#include <gtest/gtest.h>
 #include <src/lib/chunked-compression/compression-params.h>
 #include <zstd/zstd.h>
-#include <zxtest/zxtest.h>
 
 namespace blobfs {
 namespace {
 
 // Simple basic conversion test.
 TEST(CompressionSettingsTest, CompressionAlgorithmToStringConvertLZ4) {
-  ASSERT_STR_EQ(CompressionAlgorithmToString(CompressionAlgorithm::LZ4), "LZ4");
+  ASSERT_STREQ(CompressionAlgorithmToString(CompressionAlgorithm::LZ4), "LZ4");
 }
 
 // Simple basic conversion for compression enabled.

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "iterator/block-iterator.h"
 #include "utils.h"
@@ -22,9 +22,9 @@ void TestSetup(size_t blocks, size_t nodes, bool fragmented, MockSpaceManager* s
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |blocks| extents.
   const size_t block_count = 3 * blocks;
-  ASSERT_NO_FAILURES(InitializeAllocator(block_count, nodes, space_manager, out_allocator));
+  InitializeAllocator(block_count, nodes, space_manager, out_allocator);
   if (fragmented) {
-    ASSERT_NO_FAILURES(ForceFragmentation(out_allocator->get(), block_count));
+    ForceFragmentation(out_allocator->get(), block_count);
   }
 }
 
@@ -37,17 +37,16 @@ TEST(VectorExtentIteratorTest, Null) {
   constexpr size_t kAllocatedExtents = 0;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
-  ASSERT_EQ(0, extents.size());
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
+  ASSERT_EQ(0ul, extents.size());
 
   VectorExtentIterator iter(extents);
 
   ASSERT_TRUE(iter.Done());
-  ASSERT_EQ(0, iter.BlockIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
 }
 
 // Iterate over a blob with some extents.
@@ -59,11 +58,10 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   VectorExtentIterator iter(extents);
@@ -73,7 +71,7 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
     ASSERT_FALSE(iter.Done());
 
     const Extent* extent;
-    ASSERT_OK(iter.Next(&extent));
+    ASSERT_EQ(iter.Next(&extent), ZX_OK);
     ASSERT_TRUE(extents[i].extent() == *extent);
     blocks_seen += extent->Length();
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
@@ -89,15 +87,14 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
-  ASSERT_EQ(0, iter.BlockIndex());
+  ASSERT_EQ(0ul, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
   uint32_t blocks_seen = 0;
@@ -105,8 +102,8 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
     ASSERT_FALSE(iter.Done());
     uint32_t actual_length;
     uint64_t actual_start;
-    ASSERT_OK(iter.Next(1, &actual_length, &actual_start));
-    ASSERT_EQ(1, actual_length);
+    ASSERT_EQ(iter.Next(1, &actual_length, &actual_start), ZX_OK);
+    ASSERT_EQ(1ul, actual_length);
     ASSERT_EQ(extents[i].extent().Start(), actual_start);
     blocks_seen += actual_length;
     ASSERT_EQ(blocks_seen, iter.BlockIndex());
@@ -122,18 +119,17 @@ TEST(VectorExtentIteratorTest, BlockIteratorRandomStart) {
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   for (int i = 0; i < 20; i++) {
     BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
     uint32_t block_index = static_cast<uint32_t>(rand() % kAllocatedExtents);
-    ASSERT_OK(IterateToBlock(&iter, block_index));
+    ASSERT_EQ(IterateToBlock(&iter, block_index), ZX_OK);
     ASSERT_EQ(block_index, iter.BlockIndex());
   }
 
@@ -156,7 +152,7 @@ void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_co
     return ZX_OK;
   };
 
-  ASSERT_OK(StreamBlocks(&iter, block_count, stream_callback));
+  ASSERT_EQ(StreamBlocks(&iter, block_count, stream_callback), ZX_OK);
   ASSERT_TRUE(iter.Done());
 }
 
@@ -168,11 +164,10 @@ TEST(VectorExtentIteratorTest, StreamBlocksFragmented) {
   constexpr size_t kAllocatedBlocks = kAllocatedExtents;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedBlocks, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   ValidateStreamBlocks(std::move(extents), kAllocatedBlocks);
@@ -186,11 +181,10 @@ TEST(VectorExtentIteratorTest, StreamBlocksContiguous) {
   constexpr size_t kAllocatedBlocks = 10;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/false,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/false, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedBlocks, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   ValidateStreamBlocks(std::move(extents), kAllocatedBlocks);
@@ -204,11 +198,10 @@ TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
   constexpr size_t kAllocatedBlocks = 10;
   constexpr size_t kAllocatedNodes = 1;
 
-  ASSERT_NO_FAILURES(TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/true,
-                               &space_manager, &allocator));
+  TestSetup(kAllocatedBlocks, kAllocatedNodes, /* fragmented=*/true, &space_manager, &allocator);
 
   fbl::Vector<ReservedExtent> extents;
-  ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+  ASSERT_EQ(allocator->ReserveBlocks(kAllocatedBlocks, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));

@@ -26,8 +26,7 @@
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <zxtest/base/test.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
@@ -55,35 +54,37 @@ void ZeroToSevenBlobSrcFunction(char* data, size_t length) {
 
 void CanaryBlobSrcFunction(char* data, size_t length) { memset(data, kCanaryInt, length); }
 
-class ZSTDSeekableBlobTest : public zxtest::Test {
+class ZSTDSeekableBlobTest : public testing::Test {
  public:
   void SetUp() {
-    MountOptions options = {
-        .compression_settings = { .compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE, }
-    };
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE,
+                            }};
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
     loop_.StartThread();
 
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
-    ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
-                                                 transaction_handler(), node_finder(),
-                                                 &compressed_blob_collection_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
+    ASSERT_EQ(
+        ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(), transaction_handler(),
+                                           node_finder(), &compressed_blob_collection_),
+        ZX_OK);
   }
 
   void AddBlobAndSync(std::unique_ptr<BlobInfo>* out_info) {
     AddBlob(out_info);
-    ASSERT_OK(Sync());
+    ASSERT_EQ(Sync(), ZX_OK);
   }
 
   void CheckRead(uint32_t node_index, std::vector<uint8_t>* buf, std::vector<uint8_t>* expected_buf,
                  uint64_t data_byte_offset, uint64_t num_bytes) {
     uint8_t* expected = expected_buf->data() + data_byte_offset;
-    ASSERT_OK(
-        compressed_blob_collection()->Read(node_index, buf->data(), data_byte_offset, num_bytes));
-    ASSERT_BYTES_EQ(expected, buf->data(), num_bytes);
+    ASSERT_EQ(
+        compressed_blob_collection()->Read(node_index, buf->data(), data_byte_offset, num_bytes),
+        ZX_OK);
+    ASSERT_EQ(memcmp(expected, buf->data(), num_bytes), 0);
   }
 
  protected:
@@ -93,8 +94,8 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
   uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
-    EXPECT_OK(digest.Parse(info.path));
-    EXPECT_OK(fs_->Cache().Lookup(digest, &node));
+    EXPECT_EQ(digest.Parse(info.path), ZX_OK);
+    EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
     return vnode->Ino();
   }
@@ -105,7 +106,7 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
 
   void AddBlobWithSrcFunction(std::unique_ptr<BlobInfo>* out_info, BlobSrcFunction src_fn) {
     fbl::RefPtr<fs::Vnode> root;
-    ASSERT_OK(fs_->OpenRootNode(&root));
+    ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
     fs::Vnode* root_node = root.get();
 
     std::unique_ptr<BlobInfo> info;
@@ -114,13 +115,13 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
-    ASSERT_OK(root_node->Create(&file, info->path, 0));
+    ASSERT_EQ(root_node->Create(&file, info->path, 0), ZX_OK);
 
     size_t actual;
-    EXPECT_OK(file->Truncate(info->size_data));
-    EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &actual));
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
     EXPECT_EQ(actual, info->size_data);
-    EXPECT_OK(file->Close());
+    EXPECT_EQ(file->Close(), ZX_OK);
 
     if (out_info != nullptr) {
       *out_info = std::move(info);
@@ -149,22 +150,23 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
 class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
  public:
   void SetUp() {
-    MountOptions options = {
-        .compression_settings = { .compression_algorithm = CompressionAlgorithm::ZSTD, }
-    };
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = CompressionAlgorithm::ZSTD,
+                            }};
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
     loop_.StartThread();
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
 
-    ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
-                                                 transaction_handler(), node_finder(),
-                                                 &compressed_blob_collection_));
+    ASSERT_EQ(
+        ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(), transaction_handler(),
+                                           node_finder(), &compressed_blob_collection_),
+        ZX_OK);
   }
 };
 
@@ -172,9 +174,9 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
  public:
   void SetUp() {
     // Write uncompressed to test block device-level seek and read.
-    MountOptions options = {
-        .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
-    };
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                            }};
 
     // Use a blob size that will have a "leftover byte" in an extra block to test block read edge
     // case.
@@ -182,17 +184,18 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
 
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
-    ASSERT_OK(FormatFilesystem(device.get()));
+    ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
     loop_.StartThread();
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_),
+              ZX_OK);
 
-    ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
-                                                 transaction_handler(), node_finder(),
-                                                 &compressed_blob_collection_));
+    ASSERT_EQ(
+        ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(), transaction_handler(),
+                                           node_finder(), &compressed_blob_collection_),
+        ZX_OK);
   }
 
   void AddBlob(std::unique_ptr<BlobInfo>* out_info) final {
@@ -229,12 +232,12 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   // `ZSTDSeekableBlobCollection.Read()` invoking them indirectly.
   const uint64_t read_buffer_num_bytes = fbl::round_up(blob_data_size, kBlobfsBlockSize);
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(read_buffer_num_bytes, "zstd-seekable-compressed"));
+  ASSERT_EQ(mapper.CreateAndMap(read_buffer_num_bytes, "zstd-seekable-compressed"), ZX_OK);
   // Note: `fzl::OwnedVmoMapper` would be cleaner than an auto call, but constraints on
   // `ZSTDSeekableBlob::Create()` (which exist due to constraints on its clients) require using the
   // unowned variant here.
   storage::OwnedVmoid vmoid(vmoid_registry());
-  ASSERT_OK(vmoid.AttachVmo(mapper.vmo()));
+  ASSERT_EQ(vmoid.AttachVmo(mapper.vmo()), ZX_OK);
   uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(*node_finder()->GetNode(node_index));
   auto blocks = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
       &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(), transaction_handler(),
@@ -244,7 +247,7 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   auto blocks_for_file = blocks.get();
 
   std::unique_ptr<ZSTDSeekableBlob> blob;
-  ASSERT_OK(ZSTDSeekableBlob::Create(&mapper, std::move(blocks), &blob));
+  ASSERT_EQ(ZSTDSeekableBlob::Create(&mapper, std::move(blocks), &blob), ZX_OK);
 
   ZSTDSeekableFile file = ZSTDSeekableFile{
       .blob = blob.get(),
@@ -263,7 +266,7 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   uint8_t expected[2] = {kCanaryByte, kCanaryByte};
   uint8_t buf[2] = {kNotCanaryByte, kNotCanaryByte};
   ASSERT_EQ(0, ZSTDRead(&file, buf, 2));
-  ASSERT_BYTES_EQ(expected, buf, 2);
+  ASSERT_EQ(memcmp(expected, buf, 2), 0);
 }
 
 TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
@@ -273,8 +276,9 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
   std::vector<uint8_t> buf(blob_info->size_data);
   std::vector<uint8_t> expected(blob_info->size_data);
   ZeroToSevenBlobSrcFunction(reinterpret_cast<char*>(expected.data()), blob_info->size_data);
-  ASSERT_OK(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data));
-  ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
+  ASSERT_EQ(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data),
+            ZX_OK);
+  ASSERT_EQ(memcmp(expected.data(), buf.data(), blob_info->size_data), 0);
 }
 
 TEST_F(ZSTDSeekableBlobTest, PartialRead) {
