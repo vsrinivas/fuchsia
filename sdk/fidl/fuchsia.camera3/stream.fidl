@@ -8,6 +8,8 @@ using fuchsia.math;
 using fuchsia.sysmem;
 using zx;
 
+const uint32 MAX_RESOLUTIONS_PER_STREAM = 256;
+
 /// A Stream represents timing, sequencing, and other camera-specific properties applied to a buffer
 /// collection.
 protocol Stream {
@@ -110,6 +112,12 @@ struct StreamProperties {
 
     /// Indicates whether a stream supports the SetCropRegion method.
     bool supports_crop_region;
+
+    /// Describes the precise resolutions supported by a stream, i.e. those for which SetResolution
+    /// results in a WatchResolution callback of the same value. If null, it indicates that the
+    /// stream supports arbitrary resolutions. If non-null, the list contains at least one element
+    /// reflecting the native resolution specified by |image_format|.
+    vector<fuchsia.math.Size>:MAX_RESOLUTIONS_PER_STREAM? supported_resolutions;
 };
 
 /// Describes the intended orientation of a given stream relative to its encoded data. For clarity,

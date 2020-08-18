@@ -7,7 +7,6 @@ library fuchsia.camera3;
 const uint32 MAX_IDENTIFIER_LENGTH = 256;
 const uint32 MAX_CONFIGURATIONS_PER_CAMERA = 256;
 const uint32 MAX_STREAMS_PER_CONFIGURATION = 256;
-const uint32 MAX_RESOLUTIONS_PER_STREAM = 1024;
 
 /// A Device represents a unique physical camera present in the system. Only one client may connect
 /// to an unbound physical camera, however the "Rebind" method can be used to create multiple
