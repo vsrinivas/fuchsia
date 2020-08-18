@@ -54,7 +54,7 @@ int Run(int argc, const char** argv) {
   }
 
   // Run the stress test.
-  StatusLine status(args.verbose ? LogLevel::kVerbose : LogLevel::kNormal);
+  StatusLine status(LogLevelFromString(args.log_level));
   bool success = false;
   switch (args.subcommand) {
     case StressTest::kCpu:

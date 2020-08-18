@@ -41,8 +41,8 @@ struct CommandLineArgs {
   // Show help.
   bool help = false;
 
-  // Verbose diagnostics.
-  bool verbose = false;
+  // Verbosity level of diagnostics.
+  std::string log_level = "normal";
 
   // Duration in seconds.
   //

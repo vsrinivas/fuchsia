@@ -15,9 +15,13 @@ namespace hwstress {
 
 // Level of log detail.
 enum class LogLevel {
+  kTerse,
   kNormal,
   kVerbose,
+  kInvalid,
 };
+
+LogLevel LogLevelFromString(const std::string& value);
 
 // Provides a simple console status line.
 //

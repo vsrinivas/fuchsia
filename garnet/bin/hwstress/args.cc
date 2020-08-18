@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "status.h"
 
 namespace hwstress {
 namespace {
@@ -27,7 +28,8 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
                     &CommandLineArgs::test_duration_seconds);
   parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
-  parser->AddSwitch("verbose", 'v', "Show verbose logging.", &CommandLineArgs::verbose);
+  parser->AddSwitch("logging-level", 'l', "Level of logging: terse, normal or verbose.",
+                    &CommandLineArgs::log_level);
   parser->AddSwitch("memory", 'm', "Amount of memory to test in megabytes.",
                     &CommandLineArgs::mem_to_test_megabytes);
   parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
@@ -59,7 +61,8 @@ Subcommands:
 Global options:
   -d, --duration=<secs>  Test duration in seconds. A value of "0" (the default)
                          indicates to continue testing until stopped.
-  -v, --verbose          Show additional logging.
+  -l, --logging-level    Level of logging to show: terse, normal (the default)
+                         or verbose.
   -h, --help             Show this help.
 
 CPU test options:
@@ -141,6 +144,11 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   // Validate duration.
   if (result.test_duration_seconds < 0) {
     return fitx::error("Test duration cannot be negative.");
+  }
+
+  // Validate logging level.
+  if (LogLevelFromString(result.log_level) == LogLevel::kInvalid) {
+    return fitx::error("Logging level must be one of: terse, normal or verbose.");
   }
 
   // Validate memory flags.

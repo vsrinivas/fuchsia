@@ -17,6 +17,20 @@
 
 namespace hwstress {
 
+LogLevel LogLevelFromString(const std::string& value) {
+  std::string value_lower(value);
+  std::for_each(value_lower.begin(), value_lower.end(), [](char& c) { c = std::tolower(c); });
+  if (value_lower == "terse") {
+    return LogLevel::kTerse;
+  } else if (value_lower == "normal") {
+    return LogLevel::kNormal;
+  } else if (value_lower == "verbose") {
+    return LogLevel::kVerbose;
+  } else {
+    return LogLevel::kInvalid;
+  }
+}
+
 namespace {
 
 // Return a copy of |s| with newlines stripped from it.
@@ -35,6 +49,9 @@ std::string StripNewlines(std::string_view s) {
 StatusLine::StatusLine(LogLevel level) : log_level_(level) {}
 
 void StatusLine::Log(std::string_view s) {
+  if (log_level_ == LogLevel::kTerse) {
+    return;
+  }
   // Remove any status already on the current line.
   ClearLineIfNeeded();
 
@@ -63,7 +80,7 @@ void StatusLine::Log(const char* fmt, ...) {
 
 void StatusLine::Set(std::string_view status) {
   // If the new value matches the old, we have nothing to do.
-  if (status == current_status_) {
+  if (status == current_status_ || log_level_ == LogLevel::kTerse) {
     return;
   }
 
