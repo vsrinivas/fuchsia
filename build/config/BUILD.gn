@@ -379,39 +379,38 @@ config("default_linker_gc") {
   configs = [ ":linker_gc_$optimize" ]
 }
 
-config("minimal_symbols") {
-  cflags = [ "-gline-tables-only" ]
-  asmflags = cflags
-  ldflags = cflags
-  rustflags = [ "-Cdebuginfo=1" ]
-}
+# Each of the debuginfo_$debuginfo configs below corresponds to a single setting
+# that controls the amount of debugging information used and is controlled by
+# the debuginfo argument. The default_debuginfo level is set to
+# debuginfo_$debuginfo for convenience, but individual targets can override
+# their debuginfo level by manually applying one of the configs below.
 
-config("symbols") {
-  cflags = [ "-g3" ]
-  asmflags = cflags
-  ldflags = cflags
-  rustflags = [ "-Cdebuginfo=2" ]
-}
+# NOTE: Keep in sync with //zircon/public/gn/config/BUILD.gn
 
-config("no_symbols") {
+config("debuginfo_none") {
   cflags = [ "-g0" ]
   asmflags = cflags
   ldflags = cflags
   rustflags = [ "-Cdebuginfo=0" ]
 }
 
-# Default symbols.
-config("default_symbols") {
-  if (symbol_level == 0) {
-    configs = [ ":no_symbols" ]
-  } else if (symbol_level == 1) {
-    configs = [ ":minimal_symbols" ]
-  } else if (symbol_level == 2) {
-    configs = [ ":symbols" ]
-  } else {
-    assert(symbol_level >= 0 && symbol_level <= 2)
-  }
-  if (symbol_level > 0 && current_os == "win") {
+config("debuginfo_backtrace") {
+  cflags = [ "-g1" ]
+  asmflags = cflags
+  ldflags = cflags
+  rustflags = [ "-Cdebuginfo=1" ]
+}
+
+config("debuginfo_debug") {
+  cflags = [ "-g3" ]
+  asmflags = cflags
+  ldflags = cflags
+  rustflags = [ "-Cdebuginfo=2" ]
+}
+
+config("default_debuginfo") {
+  configs = [ ":debuginfo_${debuginfo}" ]
+  if (debuginfo != "none" && current_os == "win") {
     # TODO(55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags = [ "-Wl,/debug:full" ]

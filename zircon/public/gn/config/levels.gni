@@ -11,11 +11,6 @@ declare_args() {
   # * 1 disables `ZX_DEBUG_ASSERT`. Standard C `assert()` remains enabled.
   # * 2 enables all asserts.
   assert_level = 2
-
-  # * 0 means no debugging information.
-  # * 1 means minimal debugging information sufficient to symbolize backtraces.
-  # * 2 means full debugging information for use with a symbolic debugger.
-  symbol_level = 2
 }
 
 # NOTE: Keep in sync with //build/config/compiler.gni
@@ -43,3 +38,20 @@ _optimize_valid = [
 
 assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
        "`optimize=\"$optimize\"` must be one of $_optimize_valid")
+
+# NOTE: Keep in sync with //build/config/compiler.gni
+declare_args() {
+  # * `none` means no debugging information
+  # * `backtrace` means sufficient debugging information to symbolize backtraces
+  # * `debug` means debugging information suited for debugging
+  debuginfo = "debug"
+}
+
+_debuginfo_valid = [
+  "none",
+  "backtrace",
+  "debug",
+]
+
+assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
+       "`debuginfo=\"...\"` must be one of $_debuginfo_valid")

@@ -9,17 +9,6 @@ if (is_debug) {
   default_optimize = "speed"
 }
 
-declare_args() {
-  # How many symbols to include in the build. This affects the performance of
-  # the build since the symbols are large and dealing with them is slow.
-  #   2 means regular build with symbols.
-  #   1 means minimal symbols, usually enough for backtraces only. Symbols with
-  # internal linkage (static functions or those in anonymous namespaces) may not
-  # appear when using this level.
-  #   0 means no symbols.
-  symbol_level = 2
-}
-
 # NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
 # TODO: Unify the default value between the two builds.
 declare_args() {
@@ -45,3 +34,20 @@ _optimize_valid = [
 
 assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
        "`optimize=\"...\"` must be one of $_optimize_valid")
+
+# NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
+declare_args() {
+  # * `none` means no debugging information
+  # * `backtrace` means sufficient debugging information to symbolize backtraces
+  # * `debug` means debugging information suited for debugging
+  debuginfo = "debug"
+}
+
+_debuginfo_valid = [
+  "none",
+  "backtrace",
+  "debug",
+]
+
+assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
+       "`debuginfo=\"...\"` must be one of $_debuginfo_valid")

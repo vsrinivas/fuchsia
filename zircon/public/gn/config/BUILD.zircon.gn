@@ -487,22 +487,38 @@ config("default_icf") {
   }
 }
 
-config("symbol_level") {
-  assert(symbol_level >= 0 && symbol_level <= 2)
-  if (symbol_level == 0) {
-    compiler_flags = [ "-g0" ]
-  } else if (symbol_level == 1) {
-    compiler_flags = [ "-gline-tables-only" ]
-  } else if (symbol_level == 2) {
-    compiler_flags = [ "-g3" ]
-  }
-  asmflags = compiler_flags
-  cflags = compiler_flags
-  ldflags = compiler_flags
-  if (symbol_level > 0 && current_os == "win") {
+# Each of the debuginfo_$debuginfo configs below corresponds to a single setting
+# that controls the amount of debugging information used and is controlled by
+# the debuginfo argument. The default_debuginfo level is set to
+# debuginfo_$debuginfo for convenience, but individual targets can override
+# their debuginfo level by manually applying one of the configs below.
+
+# NOTE: Keep in sync with //build/config/BUILD.gn
+
+config("debuginfo_none") {
+  cflags = [ "-g0" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("debuginfo_backtrace") {
+  cflags = [ "-g1" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("debuginfo_debug") {
+  cflags = [ "-g3" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("default_debuginfo") {
+  configs = [ ":debuginfo_${debuginfo}" ]
+  if (debuginfo != "none" && current_os == "win") {
     # TODO(55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
-    ldflags += [ "-Wl,/debug:full" ]
+    ldflags = [ "-Wl,/debug:full" ]
   }
 }
 

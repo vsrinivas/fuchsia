@@ -193,7 +193,7 @@ default_common_binary_configs = [
   "//build/config:default_include_dirs",
   "//build/config:default_linker_gc",
   "//build/config:default_optimize",
-  "//build/config:default_symbols",
+  "//build/config:default_debuginfo",
   "//build/config:default_warnings",
   "//build/config:no_exceptions",
   "//build/config:no_rtti",

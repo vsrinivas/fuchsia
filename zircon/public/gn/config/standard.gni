@@ -77,7 +77,7 @@ standard_configs = [
   "$zx/public/gn/config:relative_paths",
   "$zx/public/gn/config:assert_level",
   "$zx/public/gn/config:default_optimize",
-  "$zx/public/gn/config:symbol_level",
+  "$zx/public/gn/config:default_debuginfo",
   "$zx/public/gn/config:default_warnings",
   "$zx/public/gn/config:default_icf",
   "$zx/public/gn/config:default_include_dirs",
