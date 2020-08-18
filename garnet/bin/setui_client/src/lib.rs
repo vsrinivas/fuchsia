@@ -234,9 +234,9 @@ pub struct LightGroup {
     pub simple: Vec<bool>,
 
     #[structopt(short, long)]
-    /// Repeated parameter for a list of floating point brightness values from 0.0-1.0 inclusive to set for a
-    /// light group, where 0.0 is minimum brightness and 1.0 is maximum.
-    pub brightness: Vec<f64>,
+    /// Repeated parameter for a list of integer brightness values from 0-255 inclusive to set for a
+    /// light group.
+    pub brightness: Vec<u8>,
 
     #[structopt(short, long, parse(try_from_str = "str_to_rgb"))]
     /// Repeated parameter for a list of RGB values to set for a light group. Values should be in

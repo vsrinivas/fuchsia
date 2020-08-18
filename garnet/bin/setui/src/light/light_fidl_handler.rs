@@ -219,7 +219,7 @@ mod tests {
             name: "test2".to_string(),
             enabled: false,
             light_type: LightType::Rgb,
-            lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
+            lights: vec![LightState { value: Some(LightValue::Brightness(42)) }],
             hardware_index: vec![],
         };
 

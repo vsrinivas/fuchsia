@@ -200,7 +200,7 @@ void Lp50xxLight::GetCurrentBrightnessValue(uint32_t index,
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void Lp50xxLight::SetBrightnessValue(uint32_t index, double value,
+void Lp50xxLight::SetBrightnessValue(uint32_t index, uint8_t value,
                                      SetBrightnessValueCompleter::Sync completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
@@ -269,7 +269,7 @@ void Lp50xxLight::GetGroupCurrentBrightnessValue(
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
+void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
                                           SetGroupBrightnessValueCompleter::Sync completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }

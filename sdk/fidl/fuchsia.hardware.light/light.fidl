@@ -70,19 +70,17 @@ protocol Light {
     /// index: a number between 0 inclusive and the count received from GetNumLights.
     SetSimpleValue(uint32 index, bool value) -> () error LightError;
 
-    /// Returns the current brightness value (0.0 - 1.0) of the light indicated by index, where 0.0
-    /// is minimum brightness and 1.0 is maximum.
+    /// Returns the current brightness value (0 - 255) of the light indicated by index.
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    GetCurrentBrightnessValue(uint32 index) -> (float64 value) error LightError;
+    GetCurrentBrightnessValue(uint32 index) -> (uint8 value) error LightError;
 
-    /// Sets the current brightness value (0.0 - 1.0), where 0.0 is minimum brightness and 1.0 is
-    /// maximum.
+    /// Sets the current brightness value (0 - 255).
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    SetBrightnessValue(uint32 index, float64 value) -> () error LightError;
+    SetBrightnessValue(uint32 index, uint8 value) -> () error LightError;
 
     /// Returns the current RGB value for the single light.
     /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
@@ -116,21 +114,19 @@ protocol Light {
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
     SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> () error LightError;
 
-    /// Returns an array of the current brightness values (0.0 - 1.0) for the light group, where 0.0
-    /// is minimum brightness and 1.0 is maximum.
+    /// Returns an array of the current brightness values (0 - 255) for the light group.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<float64>:MAX? values) error LightError;
+    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<uint8>:MAX? values) error LightError;
 
-    /// Sets the current brightness values (0.0 - 1.0) for the light group through the values array, where
-    /// 0.0 is minimum brightness and 1.0 is maximum.
+    /// Sets the current brightness values (0 - 255) for the light group through the values array.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    SetGroupBrightnessValue(uint32 group_id, vector<float64>:MAX values) -> () error LightError;
+    SetGroupBrightnessValue(uint32 group_id, vector<uint8>:MAX values) -> () error LightError;
 
     /// Returns an array of the current RGB values for the light group.
     /// If group_id is invalid, INVALID_INDEX will be returned.

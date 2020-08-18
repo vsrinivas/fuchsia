@@ -89,7 +89,7 @@ void GpioLight::GetCurrentBrightnessValue(uint32_t index,
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void GpioLight::SetBrightnessValue(uint32_t index, double value,
+void GpioLight::SetBrightnessValue(uint32_t index, uint8_t value,
                                    SetBrightnessValueCompleter::Sync completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }

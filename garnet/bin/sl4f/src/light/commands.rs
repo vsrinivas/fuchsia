@@ -69,9 +69,9 @@ impl Facade for LightFacade {
             LightMethod::SetBrightnessValue => {
                 let index = get_index(args.clone())?;
                 let val = match args.get("value") {
-                    Some(x) => match x.clone().as_f64() {
-                        Some(v) => v,
-                        None => bail!("Expected a float64 value."),
+                    Some(x) => match x.clone().as_u64() {
+                        Some(v) => v as u8,
+                        None => bail!("Expected a uint8 value."),
                     },
                     None => bail!("Expected a serde_json Value value."),
                 };

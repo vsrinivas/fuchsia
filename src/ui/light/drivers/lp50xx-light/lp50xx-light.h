@@ -50,7 +50,7 @@ class Lp50xxLight : public Lp50xxLightType,
   void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer) override;
   void GetCurrentBrightnessValue(uint32_t index,
                                  GetCurrentBrightnessValueCompleter::Sync completer) override;
-  void SetBrightnessValue(uint32_t index, double value,
+  void SetBrightnessValue(uint32_t index, uint8_t value,
                           SetBrightnessValueCompleter::Sync completer) override;
   void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer) override;
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
@@ -63,7 +63,7 @@ class Lp50xxLight : public Lp50xxLightType,
                            SetGroupSimpleValueCompleter::Sync completer) override;
   void GetGroupCurrentBrightnessValue(
       uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) override;
-  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
                                SetGroupBrightnessValueCompleter::Sync completer) override;
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync completer) override;
