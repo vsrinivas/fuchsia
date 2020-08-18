@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/object.h>
 #include <lib/zx/thread.h>
@@ -223,6 +224,26 @@ TEST(ObjectWaitManyTest, TransientSignalsNotReturned) {
   EXPECT_EQ(items[0].pending, ZX_USER_SIGNAL_0);
   EXPECT_EQ(items[1].pending, ZX_USER_SIGNAL_1);
   EXPECT_EQ(items[2].pending, 0);
+}
+
+TEST(ObjectWaitManyTest, WaitOnZeroThings) {
+  zx::time before = zx::clock::get_monotonic();
+
+  // Time out 100 milliseconds from now.
+  zx::time deadline = before + zx::msec(100);
+
+  zx_status_t status = zx::handle::wait_many(nullptr, 0, deadline);
+
+  zx::time after = zx::clock::get_monotonic();
+
+  // The wait_many call should have "successfully" timed out, rather
+  // than reporting invalid args or some other error.
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+
+  // Time should have advanced, at least 10 milliseconds.
+  EXPECT_TRUE(after > before);
+  zx::duration delta = after - before;
+  EXPECT_TRUE(delta > zx::msec(10));
 }
 
 }  // namespace
