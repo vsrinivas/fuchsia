@@ -27,7 +27,6 @@ declare_args() {
 # build and is mostly used by image targets under //build/images.
 common_image_contents = [
   "//build/info:bootfs",
-  "//examples/drivers//fifo:demo-fifo",
   "//src/bringup/bin/bootsvc:bin",
   "//src/bringup/bin/console",
   "//src/bringup/bin/console:bootfs",

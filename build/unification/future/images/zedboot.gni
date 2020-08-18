@@ -82,7 +82,6 @@ zedboot_deps += [ "//src/bringup/bin/waitfor" ]
 
 # Finally, everything which used to come from the Zircon build as a monolith.
 zedboot_deps += [
-  "//examples/drivers//fifo:demo-fifo",
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
   "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
