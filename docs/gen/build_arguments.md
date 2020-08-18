@@ -227,15 +227,6 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:55
 
-### board_kernel_cmdline_args
-List of kernel command line this board to bake into the boot image that are
-required by this board. See also kernel_cmdline_args in
-//build/images/BUILD.gn
-
-**Current value (from the default):** `[]`
-
-From //build/board.gni:19
-
 ### board_name
 Board name used for paving and amber updates.
 
@@ -284,7 +275,7 @@ From //boards/arm64.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:30
+From //build/board.gni:25
 
 **Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
 
@@ -292,7 +283,7 @@ From //boards/x64.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:30
+From //build/board.gni:25
 
 ### board_tools
 List of paths to board-specific tools to include in the build output.
@@ -318,7 +309,7 @@ From //boards/arm64.gni:11
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:27
+From //build/board.gni:22
 
 **Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
 
@@ -326,7 +317,7 @@ From //boards/x64.gni:11
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:27
+From //build/board.gni:22
 
 ### board_zedboot_cmdline_args
 List of kernel command line arguments to bake into the zedboot image that are
@@ -335,7 +326,7 @@ required by this board. See also zedboot_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:24
+From //build/board.gni:19
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -619,7 +610,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -627,14 +618,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -862,7 +853,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -877,14 +868,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/8b6909f72fee69a1b3e44988eb3278b36060fb6d/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
