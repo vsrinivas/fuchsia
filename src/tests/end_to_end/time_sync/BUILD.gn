@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+dart_test("time_sync_test") {
+  sources = [ "time_sync_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+    },
+  ]
+}
+
+group("test") {
+  testonly = true
+
+  deps = [ ":time_sync_test($host_toolchain)" ]
+}
