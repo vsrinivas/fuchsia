@@ -41,4 +41,25 @@ TEST_F(SimTest, ClientIfcQuery) {
   }
 }
 
+// Verify that we can retrieve interface attributes even if the nchain iovar value is too large
+TEST_F(SimTest, BadNchainIovar) {
+  ASSERT_EQ(Init(), ZX_OK);
+
+  SimInterface client_ifc;
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+
+  // This invalid value of rxchain data has the potential to overflow the driver's internal
+  // data structures
+  const std::vector<uint8_t> alt_rxchain_data = {0xff, 0xff, 0xff, 0xff};
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("rxstreams_cap", ZX_OK, client_ifc.iface_id_,
+                                       &alt_rxchain_data);
+
+  wlanif_query_info_t ifc_query_result;
+  SCHEDULE_CALL(zx::sec(1), &SimInterface::Query, &client_ifc, &ifc_query_result);
+  env_->Run();
+
+  // This test just verifies that we don't crash when the iovar is retrieved
+}
+
 }  // namespace wlan::brcmfmac

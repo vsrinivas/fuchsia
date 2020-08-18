@@ -3475,7 +3475,11 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
   band->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
 
   // Supported MCS Set
-  ZX_ASSERT(nchain <= sizeof(band->ht_caps.supported_mcs_set.bytes));
+  size_t mcs_set_size = sizeof(band->ht_caps.supported_mcs_set.bytes);
+  if (nchain > mcs_set_size) {
+    BRCMF_ERR("Supported MCS set too small for nchain (%u), truncating", nchain);
+    nchain = mcs_set_size;
+  }
   memset(&band->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
 }
 
