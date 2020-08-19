@@ -6,7 +6,10 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("compression-interfaces") {
-  public = [ "compressor.h" ]
+  public = [
+    "compressor.h",
+    "decompressor.h",
+  ]
   public_deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -14,8 +17,14 @@ source_set("compression-interfaces") {
 }
 
 source_set("lz4-compression") {
-  sources = [ "lz4_compressor.cc" ]
-  public = [ "lz4_compressor.h" ]
+  sources = [
+    "lz4_compressor.cc",
+    "lz4_decompressor.cc",
+  ]
+  public = [
+    "lz4_compressor.h",
+    "lz4_decompressor.h",
+  ]
   public_deps = [
     ":compression-interfaces",
     "//src/storage/volume_image:options",
@@ -27,7 +36,10 @@ source_set("lz4-compression") {
 
 source_set("lz4-compression-test") {
   testonly = true
-  sources = [ "lz4_compressor_test.cc" ]
+  sources = [
+    "lz4_compressor_test.cc",
+    "lz4_decompressor_test.cc",
+  ]
   deps = [
     ":lz4-compression",
     "//third_party/googletest:gmock",

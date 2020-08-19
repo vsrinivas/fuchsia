@@ -5,38 +5,10 @@
 #include "src/storage/volume_image/utils/lz4_compressor.h"
 
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/lz4_result.h"
 
 namespace storage::volume_image {
 namespace {
-
-// Wrapper on top of LZ4* function return code.
-class Lz4Result {
- public:
-  // Implicit conversion from LZ4F_error_code_t.
-  Lz4Result(LZ4F_errorCode_t code) : code_(code) {}
-
-  // Returns true if the underlying |code_| is not an error.
-  bool is_ok() const { return !is_error(); }
-
-  // Returns true if the underlying |code_| is an error.
-  bool is_error() const { return LZ4F_isError(code_); }
-
-  // Returns a view into the error name of the underlying |code_|.
-  std::string_view error() const {
-    assert(is_error());
-    return std::string_view(LZ4F_getErrorName(code_));
-  }
-
-  // Returns the byte count, when overriden return value happens. This usually means that
-  // a function either returns a negative value or a number of bytes.
-  size_t byte_count() const {
-    assert(is_ok() && code_ >= 0);
-    return static_cast<size_t>(code_);
-  }
-
- private:
-  LZ4F_errorCode_t code_ = -1;
-};
 
 Lz4Compressor::Preferences ConvertOptionsToPreferences(
     const CompressionOptions& compression_options) {
@@ -85,12 +57,8 @@ Lz4Compressor::~Lz4Compressor() {
 
 fit::result<Lz4Compressor, std::string> Lz4Compressor::Create(const CompressionOptions& options) {
   if (options.schema != CompressionSchema::kLz4) {
-    std::string error = "Lz4Compressor requires";
-    error.append(EnumAsString(CompressionSchema::kLz4))
-        .append(". Provided: ")
-        .append(EnumAsString(options.schema))
-        .append(".");
-    return fit::error(error);
+    return fit::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
+                      ". Provided: " + EnumAsString(options.schema) + ".");
   }
   Preferences preferences = ConvertOptionsToPreferences(options);
   return fit::ok(Lz4Compressor(preferences));
