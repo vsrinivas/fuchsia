@@ -83,26 +83,32 @@ Playground.
 
 ## Contributing
 
-    fx set core.x64 --with //tools/fidl/measure-tape:host
-    fx build
+```
+fx set core.x64 --with //tools/fidl/measure-tape/src:host
+fx build
+```
 
 Then
 
-    fx measure-tape \
-        --json out/default/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json \
-        --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json \
-        --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json \
-        --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json \
-        --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json \
-        --target-type fuchsia.ui.scenic/Command \
-        --h-include-path lib/ui/scenic/cpp/commands_sizing.h \
-        --out-h sdk/lib/ui/scenic/cpp/commands_sizing.h \
-        --out-cc sdk/lib/ui/scenic/cpp/commands_sizing.cc
+```
+fx measure-tape \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json \
+    -target-type fuchsia.ui.scenic/Command \
+    -target-binding hlcpp \
+    -h-include-path lib/ui/scenic/cpp/commands_sizing.h \
+    -out-h sdk/lib/ui/scenic/cpp/commands_sizing.h \
+    -out-cc sdk/lib/ui/scenic/cpp/commands_sizing.cc
+```
 
 ## Testing
 
 ```
-fx test measure-tape-tests
+fx set core.x64 --with //tools/fidl/measure-tape:tests
+fx test measure-tape_test
 ```
 
 <!-- xrefs -->

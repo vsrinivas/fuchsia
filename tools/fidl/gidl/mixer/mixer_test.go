@@ -15,7 +15,8 @@ import (
 	"testing"
 
 	fidlir "fidl/compiler/backend/types"
-	gidlir "gidl/ir"
+
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 
 var testDataPath = func() string {
@@ -30,7 +31,7 @@ var testSchema = func() Schema {
 	path := filepath.Join(testDataPath, "mixer.test.fidl.json")
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		panic("please run fidl testdata/mixer.test.fidl")
 	}
 	var root fidlir.Root
 	err = json.Unmarshal(bytes, &root)

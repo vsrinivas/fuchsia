@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/scanner"
 
-	"gidl/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 
 type Parser struct {

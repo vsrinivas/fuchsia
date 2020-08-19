@@ -7,7 +7,7 @@ package ir
 import (
 	"reflect"
 
-	"gidl/config"
+	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 )
 
 func Merge(input []All) All {

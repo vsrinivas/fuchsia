@@ -1,5 +1,4 @@
-Contributing to FIDL
-====================
+# Contributing to FIDL
 
 [TOC]
 
@@ -358,7 +357,7 @@ fx build host-tools/gidl
 ### Measure Tape
 
 ```
-fx set core.x64 --with //tools/fidl/measure-tape:host
+fx set core.x64 --with //tools/fidl/measure-tape/src:host
 fx build
 ```
 
@@ -412,7 +411,7 @@ useful for debugging issues that prevent boot of the device.
 |--------------------------|-------------------------------------|---------------------------
 | fidlc compiler           | `fx test fidl-compiler`             | //zircon/tools/fidl
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
-| measure tape test        | `fx test measure-tape-tests`        | //tools/fidl/measure-tape
+| measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
 
 ### All Benchmarks
 

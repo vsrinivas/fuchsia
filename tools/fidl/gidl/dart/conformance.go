@@ -12,9 +12,10 @@ import (
 
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
-	gidlconfig "gidl/config"
-	gidlir "gidl/ir"
-	gidlmixer "gidl/mixer"
+
+	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`

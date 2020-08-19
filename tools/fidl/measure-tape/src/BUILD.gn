@@ -8,20 +8,17 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "measure-tape/..."
-
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/..."
   deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }
 
 go_binary("measure-tape") {
-  gopackage = "measure-tape"
-
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src"
   deps = [ ":lib" ]
 }
 
-go_test("unit-tests") {
-  gopackages = [ "measure-tape/measurer" ]
-
+go_test("measure-tape_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer" ]
   deps = [ ":lib" ]
 }
 

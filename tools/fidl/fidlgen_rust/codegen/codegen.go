@@ -13,8 +13,8 @@ import (
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 
-	"fidlgen_rust/ir"
-	"fidlgen_rust/templates"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/templates"
 )
 
 type Generator struct {

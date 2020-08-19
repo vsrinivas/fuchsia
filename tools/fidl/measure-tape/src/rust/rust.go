@@ -14,8 +14,8 @@ import (
 
 	fidlcommon "fidl/compiler/backend/common"
 
-	"measure-tape/measurer"
-	"measure-tape/utils"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/utils"
 )
 
 func WriteRs(buf *bytes.Buffer,

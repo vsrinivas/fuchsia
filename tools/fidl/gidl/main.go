@@ -16,16 +16,17 @@ import (
 	"strings"
 
 	fidlir "fidl/compiler/backend/types"
-	gidlconfig "gidl/config"
-	gidlcpp "gidl/cpp"
-	gidldart "gidl/dart"
-	gidlgolang "gidl/golang"
-	gidlir "gidl/ir"
-	gidlllcpp "gidl/llcpp"
-	gidlparser "gidl/parser"
-	gidlreference "gidl/reference"
-	gidlrust "gidl/rust"
-	gidlwalker "gidl/walker"
+
+	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	gidlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
+	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
+	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp"
+	gidlparser "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser"
+	gidlreference "go.fuchsia.dev/fuchsia/tools/fidl/gidl/reference"
+	gidlrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/rust"
+	gidlwalker "go.fuchsia.dev/fuchsia/tools/fidl/gidl/walker"
 )
 
 // Generator is a function that generates conformance tests for a particular

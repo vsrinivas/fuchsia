@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"text/template"
 
-	"fidlgen_syzkaller/ir"
-	"fidlgen_syzkaller/templates"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/templates"
 )
 
 type Generator struct {

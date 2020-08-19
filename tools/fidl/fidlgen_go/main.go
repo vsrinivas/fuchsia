@@ -13,8 +13,8 @@ import (
 
 	"fidl/compiler/backend/types"
 
-	"fidlgen_go/codegen"
-	"fidlgen_go/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
 )
 
 type flagsDef struct {

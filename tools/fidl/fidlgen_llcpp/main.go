@@ -14,7 +14,8 @@ import (
 
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/types"
-	"fidlgen_llcpp/codegen"
+
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/codegen"
 )
 
 type flagsDef struct {

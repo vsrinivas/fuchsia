@@ -12,7 +12,7 @@ import (
 
 	"fidl/compiler/backend/typestest"
 
-	"fidlgen_go/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.

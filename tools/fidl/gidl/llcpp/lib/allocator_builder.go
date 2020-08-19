@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	gidlir "gidl/ir"
-	gidlmixer "gidl/mixer"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 // Builds a LLCPP object using std::make_unique.

@@ -6,13 +6,13 @@ package parser
 
 import (
 	"fmt"
-	"gidl/ir"
 	"strings"
 	"testing"
 
 	fidlir "fidl/compiler/backend/types"
 
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 
 func TestParseValues(t *testing.T) {

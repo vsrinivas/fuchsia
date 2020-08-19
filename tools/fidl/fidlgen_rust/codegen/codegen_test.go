@@ -14,7 +14,7 @@ import (
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/typestest"
 
-	"fidlgen_rust/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
 )
 
 var testPath = func() string {

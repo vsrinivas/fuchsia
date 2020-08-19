@@ -9,11 +9,11 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_rust/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
 }
 
 go_binary("fidlgen_rust") {
-  gopackage = "fidlgen_rust"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
 
   sdk_category = "partner"
 
@@ -30,7 +30,7 @@ install_host_tools("host") {
 
 if (is_host) {
   go_test("fidlgen_rust_test") {
-    gopackages = [ "fidlgen_rust/codegen" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
 
     deps = [
       ":lib",
@@ -40,7 +40,7 @@ if (is_host) {
   }
 
   go_test("fidlgen_rust_ir_test") {
-    gopackages = [ "fidlgen_rust/ir" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir" ]
 
     deps = [
       ":lib",

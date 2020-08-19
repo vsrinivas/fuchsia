@@ -6,13 +6,15 @@ package cpp
 
 import (
 	"bytes"
-	fidlir "fidl/compiler/backend/types"
 	"fmt"
-	gidlconfig "gidl/config"
-	gidlir "gidl/ir"
-	gidlmixer "gidl/mixer"
 	"strings"
 	"text/template"
+
+	fidlir "fidl/compiler/backend/types"
+
+	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`

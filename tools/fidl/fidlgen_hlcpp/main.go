@@ -11,7 +11,7 @@ import (
 
 	"fidl/compiler/backend/types"
 
-	"fidlgen_hlcpp/codegen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen"
 )
 
 // TODO(fxb/45483): Until all SDK consumers are moved off to using dedicated

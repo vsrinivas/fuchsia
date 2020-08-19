@@ -9,11 +9,11 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_hlcpp/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
 }
 
 go_binary("fidlgen_hlcpp") {
-  gopackage = "fidlgen_hlcpp"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
 
   sdk_category = "partner"
 
@@ -31,7 +31,7 @@ install_host_tools("host") {
 # TODO(fxb/45483): Remove once all SDK customers are using HLCPP backend
 # directly.
 go_binary("fidlgen") {
-  gopackage = "fidlgen_hlcpp"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
 
   sdk_category = "partner"
 
@@ -43,7 +43,7 @@ go_binary("fidlgen") {
 
 if (is_host) {
   go_test("fidlgen_hlcpp_test") {
-    gopackages = [ "fidlgen_hlcpp/codegen" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen" ]
 
     deps = [
       ":lib",

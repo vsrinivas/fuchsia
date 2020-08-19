@@ -9,11 +9,11 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_go/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/..."
 }
 
 go_binary("fidlgen_go") {
-  gopackage = "fidlgen_go"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go"
 
   sdk_category = "partner"
 
@@ -30,7 +30,7 @@ install_host_tools("host") {
 
 if (is_host) {
   go_test("fidlgen_go_test") {
-    gopackages = [ "fidlgen_go/codegen" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen" ]
 
     deps = [
       ":lib",

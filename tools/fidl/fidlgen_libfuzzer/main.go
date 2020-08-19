@@ -11,7 +11,7 @@ import (
 
 	"fidl/compiler/backend/types"
 
-	"fidlgen_libfuzzer/codegen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/codegen"
 )
 
 var jsonPath = flag.String("json", "",

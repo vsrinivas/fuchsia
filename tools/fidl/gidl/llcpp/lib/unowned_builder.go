@@ -7,10 +7,11 @@ package lib
 import (
 	fidlir "fidl/compiler/backend/types"
 	"fmt"
-	gidlir "gidl/ir"
-	gidlmixer "gidl/mixer"
 	"strconv"
 	"strings"
+
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration) (string, string) {

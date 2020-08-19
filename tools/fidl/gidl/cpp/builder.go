@@ -14,8 +14,8 @@ import (
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 
-	gidlir "gidl/ir"
-	gidlmixer "gidl/mixer"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 func escapeStr(value string) string {

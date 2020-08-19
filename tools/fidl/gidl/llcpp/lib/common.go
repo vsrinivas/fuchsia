@@ -6,8 +6,9 @@ package lib
 
 import (
 	"fmt"
-	gidlmixer "gidl/mixer"
 	"strings"
+
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 func BytesBuilder(bytes []byte) string {

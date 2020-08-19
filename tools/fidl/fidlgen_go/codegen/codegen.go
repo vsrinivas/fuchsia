@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidlgen_go/ir"
-	"fidlgen_go/templates"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/templates"
 )
 
 type Generator struct {

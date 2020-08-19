@@ -7,7 +7,7 @@ package utils
 import (
 	"sort"
 
-	"measure-tape/measurer"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
 )
 
 // ForAllMethodsInOrder iterates over allMethods in the order of MethodID.

@@ -7,11 +7,10 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "fidlcparsequality"
 }
 
 go_binary("fidlcparsequality") {
-  gopackage = "fidlcparsequality"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlcparsequality"
 
   deps = [ ":lib" ]
 }

@@ -9,11 +9,11 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_libfuzzer/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
 }
 
 go_binary("fidlgen_libfuzzer") {
-  gopackage = "fidlgen_libfuzzer"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer"
 
   sdk_category = "partner"
 
@@ -30,7 +30,8 @@ install_host_tools("host") {
 
 if (is_host) {
   go_test("fidlgen_libfuzzer_test") {
-    gopackages = [ "fidlgen_libfuzzer/codegen" ]
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/codegen" ]
 
     deps = [
       ":lib",

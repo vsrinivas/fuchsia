@@ -9,7 +9,8 @@ import (
 	"math"
 
 	fidlir "fidl/compiler/backend/types"
-	gidlir "gidl/ir"
+
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 
 // ValueVisitor is an API that walks GIDL values.

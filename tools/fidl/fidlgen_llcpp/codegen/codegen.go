@@ -11,8 +11,9 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp"
-	"fidlgen_llcpp/templates/files"
-	"fidlgen_llcpp/templates/fragments"
+
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/templates/files"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/templates/fragments"
 )
 
 type Generator struct {

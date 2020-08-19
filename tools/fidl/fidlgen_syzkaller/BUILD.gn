@@ -9,11 +9,11 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "fidlgen_syzkaller/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."
 }
 
 go_binary("fidlgen_syzkaller") {
-  gopackage = "fidlgen_syzkaller"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller"
 
   sdk_category = "partner"
 
@@ -30,7 +30,8 @@ install_host_tools("host") {
 
 if (is_host) {
   go_test("fidlgen_syzkaller_test") {
-    gopackages = [ "fidlgen_syzkaller/codegen" ]
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/codegen" ]
 
     deps = [
       ":lib",

@@ -12,10 +12,11 @@ import (
 	"text/template"
 
 	fidlir "fidl/compiler/backend/types"
-	gidlconfig "gidl/config"
-	gidlir "gidl/ir"
-	libllcpp "gidl/llcpp/lib"
-	gidlmixer "gidl/mixer"
+
+	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
+	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`

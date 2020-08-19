@@ -10,13 +10,13 @@ import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
-  name = "gidl/..."
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
 
   deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }
 
 go_binary("gidl") {
-  gopackage = "gidl"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl"
 
   deps = [ ":lib" ]
 }
@@ -29,7 +29,7 @@ install_host_tools("host") {
 fidl("gidl_mixer_test_fidl") {
   name = "test.mixer"
   testonly = true
-  sources = [ "//tools/fidl/gidl/mixer/mixer.test.fidl" ]
+  sources = [ "//tools/fidl/gidl/mixer/testdata/mixer.test.fidl" ]
 }
 
 group("tests") {
@@ -44,13 +44,13 @@ group("tests") {
 
 if (is_host) {
   go_test("gidl_parser_test") {
-    gopackages = [ "gidl/parser" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser" ]
 
     deps = [ ":lib" ]
   }
 
   go_test("gidl_golang_test") {
-    gopackages = [ "gidl/golang" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang" ]
 
     deps = [ ":lib" ]
   }
@@ -62,7 +62,7 @@ if (is_host) {
   }
 
   go_test("gidl_mixer_test") {
-    gopackages = [ "gidl/mixer" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer" ]
 
     deps = [ ":lib" ]
     non_go_deps = [ ":gidl_mixer_test_json" ]

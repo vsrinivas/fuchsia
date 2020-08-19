@@ -16,9 +16,9 @@ import (
 
 	fidlir "fidl/compiler/backend/types"
 
-	"measure-tape/hlcpp"
-	"measure-tape/measurer"
-	"measure-tape/rust"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/hlcpp"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
+	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/rust"
 )
 
 type paths []string
@@ -34,7 +34,7 @@ func (filenames *paths) Set(filename string) error {
 
 var jsonFiles paths
 var targetBinding = flag.String("target-binding", "",
-	"Target binding for which to generate the measre tape")
+	"Target binding for which to generate the measure tape")
 var targetType = flag.String("target-type", "",
 	"Target type to measure, e.g. fuchsia.ui.scenic/Command")
 var outCc = flag.String("out-cc", "",
