@@ -27,7 +27,7 @@ mod storage;
 mod temp_installer;
 mod timer;
 
-use configuration::ChannelSource;
+use configuration::{ChannelSource, ClientConfiguration};
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init().expect("Can't init logger");
@@ -36,15 +36,16 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
 
     executor.run_singlethreaded(async {
-        let version = configuration::get_version().context("Failed to get version")?;
         let channel_configs = channel::get_configs().ok();
         info!("Omaha channel config: {:?}", channel_configs);
-        let ((app_set, channel_source), config) = futures::join!(
-            configuration::get_app_set(&version, &channel_configs),
-            configuration::get_config(&version),
-        );
+
+        let ClientConfiguration { platform_config, app_set, channel_data } =
+            ClientConfiguration::initialize(channel_configs.as_ref())
+                .await
+                .expect("Unable to read necessary client configuration");
+
         info!("Omaha app set: {:?}", app_set.to_vec().await);
-        info!("Update config: {:?}", config);
+        info!("Update config: {:?}", platform_config);
 
         let futures = FuturesUnordered::new();
 
@@ -64,7 +65,7 @@ fn main() -> Result<(), Error> {
         let root = inspector.root();
         let configuration_node =
             inspect::ConfigurationNode::new(root.create_child("configuration"));
-        configuration_node.set(&config);
+        configuration_node.set(&platform_config);
         let apps_node = inspect::AppsNode::new(root.create_child("apps"));
         apps_node.set(&app_set.to_vec().await);
         let state_node = inspect::StateNode::new(root.create_child("state"));
@@ -73,7 +74,7 @@ fn main() -> Result<(), Error> {
             inspect::ProtocolStateNode::new(root.create_child("protocol_state"));
         let last_results_node = inspect::LastResultsNode::new(root.create_child("last_results"));
         let platform_metrics_node = root.create_child("platform_metrics");
-        root.record_string("channel_source", format!("{:?}", channel_source));
+        root.record_string("channel_source", format!("{:?}", channel_data.source));
 
         // HTTP
         let http = FuchsiaHyperHttpRequest::new();
@@ -86,10 +87,18 @@ fn main() -> Result<(), Error> {
         let stash_ref = Rc::new(Mutex::new(stash));
 
         // Policy
-        let policy_engine = policy::FuchsiaPolicyEngineBuilder
+        let mut policy_engine_builder = policy::FuchsiaPolicyEngineBuilder
             .time_source(StandardTimeSource)
-            .load_config_from("/config/data")
-            .build();
+            .load_config_from("/config/data");
+
+        if let Some(channel_config) = channel_data.config {
+            if let Some(interval_secs) = channel_config.check_interval_secs {
+                policy_engine_builder = policy_engine_builder
+                    .periodic_interval(std::time::Duration::from_secs(interval_secs));
+            }
+        }
+
+        let policy_engine = policy_engine_builder.build();
         futures.push(policy_engine.start_watching_ui_activity().boxed_local());
         let policy_config = policy_engine.get_config();
         let _policy_config_node =
@@ -103,14 +112,14 @@ fn main() -> Result<(), Error> {
             timer::FuchsiaTimer,
             metrics_reporter,
             stash_ref.clone(),
-            config.clone(),
+            platform_config.clone(),
             app_set.clone(),
         )
         .start()
         .await;
 
         // Notify Cobalt current channel
-        let notify_cobalt = channel_source == ChannelSource::VbMeta;
+        let notify_cobalt = channel_data.source == ChannelSource::VbMeta;
         if notify_cobalt {
             futures.push(
                 cobalt::notify_cobalt_current_software_distribution(app_set.clone()).boxed_local(),

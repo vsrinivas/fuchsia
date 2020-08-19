@@ -228,6 +228,12 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
         Self { time_source: self.time_source, config: PolicyConfigJson::load_from(path).into() }
     }
 
+    /// Override the PolicyConfig periodic interval with a different value.
+    pub fn periodic_interval(mut self, periodic_interval: Duration) -> Self {
+        self.config.periodic_interval = periodic_interval;
+        self
+    }
+
     pub fn build(self) -> FuchsiaPolicyEngine<T> {
         FuchsiaPolicyEngine {
             time_source: self.time_source,
@@ -1220,5 +1226,15 @@ mod tests {
                 allow_reboot_when_idle: true,
             }
         );
+    }
+
+    #[test]
+    fn test_policy_engine_builder_interval_override() {
+        let policy_config = FuchsiaPolicyEngineBuilder
+            .time_source(MockTimeSource::new_from_now())
+            .periodic_interval(Duration::from_secs(345678))
+            .build()
+            .config;
+        assert_eq!(Duration::from_secs(345678), policy_config.periodic_interval);
     }
 }

@@ -9,6 +9,9 @@ use std::io;
 
 const CHANNEL_CONFIG_PATH: &str = "/config/data/channel_config.json";
 
+/// The `channel` module contains the implementation for reading the `channel_config.json`
+/// configuration file.
+
 /// Wrapper for deserializing channel configurations to the on-disk JSON format.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
@@ -59,19 +62,55 @@ pub struct ChannelConfig {
     pub name: String,
     pub repo: String,
     pub appid: Option<String>,
+    pub check_interval_secs: Option<u64>,
 }
 
 #[cfg(test)]
 impl ChannelConfig {
     pub fn new(name: &str) -> Self {
-        ChannelConfig { name: name.to_string(), repo: name.to_string() + "-repo", appid: None }
+        ChannelConfigBuilder::new(name, name.to_owned() + "-repo").build()
     }
 
     pub fn with_appid(name: &str, appid: &str) -> Self {
+        ChannelConfigBuilder::new(name, name.to_owned() + "-repo").appid(appid).build()
+    }
+}
+
+#[cfg(test)]
+#[derive(Debug, Default)]
+pub struct ChannelConfigBuilder {
+    name: String,
+    repo: String,
+    appid: Option<String>,
+    check_interval_secs: Option<u64>,
+}
+
+#[cfg(test)]
+impl ChannelConfigBuilder {
+    pub fn new(name: impl Into<String>, repo: impl Into<String>) -> Self {
+        ChannelConfigBuilder {
+            name: name.into(),
+            repo: repo.into(),
+            ..ChannelConfigBuilder::default()
+        }
+    }
+
+    pub fn appid(mut self, appid: impl Into<String>) -> Self {
+        self.appid = Some(appid.into());
+        self
+    }
+
+    pub fn check_interval_secs(mut self, check_interval_secs: u64) -> Self {
+        self.check_interval_secs = Some(check_interval_secs);
+        self
+    }
+
+    pub fn build(self) -> ChannelConfig {
         ChannelConfig {
-            name: name.to_string(),
-            repo: name.to_string() + "-repo",
-            appid: Some(appid.to_string()),
+            name: self.name,
+            repo: self.repo,
+            appid: self.appid,
+            check_interval_secs: self.check_interval_secs,
         }
     }
 }
@@ -227,5 +266,26 @@ mod tests {
     fn test_missing_channel_configs_file_behavior() {
         let config = get_configs_from_path("/config/data/invalid.path");
         assert!(config.is_err());
+    }
+
+    #[test]
+    fn test_channel_cfg_builder_app_id() {
+        let config = ChannelConfigBuilder::new("name", "repo").appid("appid").build();
+        assert_eq!("name", config.name);
+        assert_eq!("repo", config.repo);
+        assert_eq!(Some("appid".to_owned()), config.appid);
+        assert_eq!(None, config.check_interval_secs);
+    }
+
+    #[test]
+    fn test_channel_cfg_builder_check_interval() {
+        let config = ChannelConfigBuilder::new("name", "repo")
+            .appid("appid")
+            .check_interval_secs(3600)
+            .build();
+        assert_eq!("name", config.name);
+        assert_eq!("repo", config.repo);
+        assert_eq!(Some("appid".to_owned()), config.appid);
+        assert_eq!(Some(3600), config.check_interval_secs);
     }
 }
