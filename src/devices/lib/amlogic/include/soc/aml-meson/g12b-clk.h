@@ -34,6 +34,10 @@ constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, clk_type::kMesonPll);
 constexpr uint32_t CLK_SYS_PLL = AmlClkId(SYS_PLL, clk_type::kMesonPll);
 constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, clk_type::kMesonPll);
 
+// Cpu Clocks.
+constexpr uint32_t CLK_SYS_CPU_BIG_CLK    = AmlClkId(0, clk_type::kMesonCpuClk);
+constexpr uint32_t CLK_SYS_CPU_LITTLE_CLK = AmlClkId(1, clk_type::kMesonCpuClk);
+
 }  // namespace g12b_clk
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_MESON_G12B_CLK_H_

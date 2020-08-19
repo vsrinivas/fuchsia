@@ -409,6 +409,13 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
 
       InitHiu();
 
+      constexpr size_t cpu_clk_count = countof(g12b_cpu_clks);
+      cpu_clks_.reserve(cpu_clk_count);
+      for (size_t i = 0; i < cpu_clk_count; i++) {
+        cpu_clks_.emplace_back(&hiu_mmio_, g12b_cpu_clks[i].reg, &*pllclk_[g12b_cpu_clks[i].pll],
+                               g12b_cpu_clks[i].initial_hz);
+      }
+
       break;
     }
     case PDEV_DID_AMLOGIC_SM1_CLK: {
@@ -819,6 +826,7 @@ zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out
       return ZX_OK;
     case aml_clk_common::aml_clk_type::kMesonCpuClk:
       if (clkid >= cpu_clks_.size()) {
+        zxlogf(ERROR, "%s: cpu clk out of range, clkid = %hu.", __func__, clkid);
         return ZX_ERR_INVALID_ARGS;
       }
 

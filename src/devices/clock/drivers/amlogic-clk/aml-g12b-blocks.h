@@ -21,26 +21,26 @@
 #define MSR_RUN BIT(19)
 #define MSR_BUSY BIT(31)
 
-#define G12B_HHI_SYS_CPU_CLK_CNTL1 (0x57 << 2)
-#define G12B_HHI_SYS_CPUB_CLK_CNTL1 (0x80 << 2)
-#define G12B_HHI_TS_CLK_CNTL (0x64 << 2)
-#define G12B_HHI_XTAL_DIVN_CNTL (0x2f << 2)
-
-#define G12B_DOS_GCLK_EN0 (0x3f01 << 2)
+constexpr uint32_t kG12bHhiSysCpuClkCntl1  = (0x57 << 2);
+constexpr uint32_t kG12bHhiSysCpubClkCntl1 = (0x80 << 2);
+constexpr uint32_t kG12bHhiSysCpubClkCntl  = (0x82 << 2);
+constexpr uint32_t kG12bHhiTsClkCntl       = (0x64 << 2);
+constexpr uint32_t kG12bHhiXtalDivnCntl    = (0x2f << 2);
+constexpr uint32_t kG12bDosGclkEn0         = (0x3f01 << 2);
 
 // NOTE: This list only contains the clocks in use currently and
 //       not all available clocks.
 static constexpr meson_clk_gate_t g12b_clk_gates[] = {
     // SYS CPU Clock gates.
-    {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 24},  // G12B_CLK_SYS_PLL_DIV16
-    {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},   // G12B_CLK_SYS_CPU_CLK_DIV16
-    {.reg = G12B_HHI_XTAL_DIVN_CNTL, .bit = 11},     // G12B_CLK_CAM_INCK_24M
+    {.reg = kG12bHhiSysCpuClkCntl1, .bit = 24},  // G12B_CLK_SYS_PLL_DIV16
+    {.reg = kG12bHhiSysCpuClkCntl1, .bit = 1},   // G12B_CLK_SYS_CPU_CLK_DIV16
+    {.reg = kG12bHhiXtalDivnCntl, .bit = 11},     // G12B_CLK_CAM_INCK_24M
 
     // SYS CPUB Clock gates.
-    {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 24},  // G12B_CLK_SYS_PLLB_DIV16
-    {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 1},   // G12B_CLK_SYS_CPUB_CLK_DIV16
+    {.reg = kG12bHhiSysCpubClkCntl1, .bit = 24},  // G12B_CLK_SYS_PLLB_DIV16
+    {.reg = kG12bHhiSysCpubClkCntl1, .bit = 1},   // G12B_CLK_SYS_CPUB_CLK_DIV16
 
-    {.reg = G12B_DOS_GCLK_EN0,
+    {.reg = kG12bDosGclkEn0        ,
      .bit = 0,
      .register_set = kMesonRegisterSetDos,
      .mask = 0x3ff},  // G12B_CLK_DOS_GCLK_VDEC
@@ -53,6 +53,11 @@ static_assert(g12b_clk::CLK_G12B_COUNT == countof(g12b_clk_gates),
 static meson_clk_msr_t g12b_clk_msr = {
     .reg0_offset = (0x1 << 2),
     .reg2_offset = (0x3 << 2),
+};
+
+static constexpr meson_cpu_clk_t g12b_cpu_clks[] = {
+    {.reg = kG12bHhiSysCpubClkCntl, .pll = SYS_PLL,  .initial_hz = 1'000'000'000},  // Big Cluster
+    {.reg = kHhiSysCpuClkCntl0,     .pll = SYS1_PLL, .initial_hz = 1'200'000'000},  // Little Cluster
 };
 
 // This clock table is meant only for CLK-MEASURE

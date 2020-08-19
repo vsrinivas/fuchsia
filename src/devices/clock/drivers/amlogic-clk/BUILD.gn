@@ -48,7 +48,6 @@ driver_module("amlogic-clk") {
 
 test("amlogic-clk-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "amlogic-clk-test"
   sources = [
     "aml-clk-test.cc",
     "aml-clk.cc",

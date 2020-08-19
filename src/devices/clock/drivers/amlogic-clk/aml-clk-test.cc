@@ -17,6 +17,7 @@
 
 #include "aml-axg-blocks.h"
 #include "aml-g12a-blocks.h"
+#include "aml-g12b-blocks.h"
 #include "aml-sm1-blocks.h"
 
 namespace amlogic_clock {
@@ -406,6 +407,41 @@ TEST(ClkTestAml, TestCpuClkGetRate) {
   st = clk.ClockImplGetRate(kTestCpuClk, &rate);
   EXPECT_OK(st);
   EXPECT_EQ(rate, kOneGHz);
+}
+
+TEST(ClkTestAml, TestCpuClkG12b) {
+  constexpr uint32_t kTestCpuBigClk = g12b_clk::CLK_SYS_CPU_BIG_CLK;
+  constexpr uint32_t kTestCpuLittleClk = g12b_clk::CLK_SYS_CPU_LITTLE_CLK;
+  constexpr uint32_t kBigClockTestFreq = gigahertz(1);
+  constexpr uint32_t kLittleClockTestFreq = megahertz(1800);
+
+  auto regs = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(regs.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12B_CLK);
+  zx_status_t st;
+
+  st = clk.ClockImplSetRate(kTestCpuBigClk, kBigClockTestFreq);
+  EXPECT_OK(st);
+
+  uint64_t rate;
+  st = clk.ClockImplGetRate(kTestCpuBigClk, &rate);
+  EXPECT_OK(st);
+  EXPECT_EQ(rate, kBigClockTestFreq);
+
+
+  st = clk.ClockImplSetRate(kTestCpuLittleClk, kLittleClockTestFreq);
+  EXPECT_OK(st);
+
+  st = clk.ClockImplGetRate(kTestCpuLittleClk, &rate);
+  EXPECT_OK(st);
+  EXPECT_EQ(rate, kLittleClockTestFreq);
 }
 
 }  // namespace amlogic_clock
