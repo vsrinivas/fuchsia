@@ -53,7 +53,7 @@ fn add_service(profile: &ProfileHarness) -> Result<ConnectionReceiverRequestStre
         &mut service_defs.into_iter(),
         ChannelParameters::new_empty(),
         connect_client,
-    )?;
+    );
     Ok(connect_requests)
 }
 

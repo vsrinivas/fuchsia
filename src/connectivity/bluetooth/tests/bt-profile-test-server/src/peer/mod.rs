@@ -356,7 +356,7 @@ mod tests {
     /// a way to drop them (to simulate disconnection).
     struct TestEnvironment {
         search: Vec<bredr::SearchResultsProxy>,
-        adv: Vec<bredr::ConnectionReceiverProxy>,
+        adv: Vec<(bredr::ConnectionReceiverProxy, bredr::ProfileAdvertiseResponder)>,
     }
 
     impl TestEnvironment {
@@ -368,8 +368,12 @@ mod tests {
             self.search.push(search);
         }
 
-        pub fn add_advertisement(&mut self, adv: ConnectionReceiverProxy) {
-            self.adv.push(adv);
+        pub fn add_advertisement(
+            &mut self,
+            adv: bredr::ConnectionReceiverProxy,
+            responder: bredr::ProfileAdvertiseResponder,
+        ) {
+            self.adv.push((adv, responder));
         }
 
         pub fn clear_searches(&mut self) {
@@ -391,10 +395,10 @@ mod tests {
             while let Some(request) = stream.next().await {
                 if let Ok(req) = request {
                     match req {
-                        ProfileRequest::Advertise { receiver, .. } => {
+                        ProfileRequest::Advertise { receiver, responder, .. } => {
                             let proxy = receiver.into_proxy().unwrap();
                             let mut w_env = env.lock().await;
-                            w_env.add_advertisement(proxy);
+                            w_env.add_advertisement(proxy, responder);
                         }
                         ProfileRequest::Search { results, .. } => {
                             let proxy = results.into_proxy().unwrap();

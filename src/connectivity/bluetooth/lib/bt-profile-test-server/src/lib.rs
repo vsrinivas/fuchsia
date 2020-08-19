@@ -184,11 +184,11 @@ impl MockPeer {
     ) -> Result<ConnectionReceiverRequestStream, Error> {
         let (connect_client, connect_requests) =
             create_request_stream().context("ConnectionReceiver creation")?;
-        self.profile_svc.advertise(
+        let _ = self.profile_svc.advertise(
             &mut service_defs.into_iter(),
             ChannelParameters::new_empty(),
             connect_client,
-        )?;
+        );
 
         Ok(connect_requests)
     }

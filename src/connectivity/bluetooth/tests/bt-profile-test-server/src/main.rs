@@ -12,8 +12,9 @@ use {
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr::{
         Channel, ConnectParameters, ConnectionReceiverProxy, MockPeerRequest, PeerObserverMarker,
-        ProfileRequest, ProfileRequestStream, ProfileTestRequest, ProfileTestRequestStream,
-        SearchResultsProxy, ServiceClassProfileIdentifier, ServiceDefinition,
+        ProfileAdvertiseResponder, ProfileRequest, ProfileRequestStream, ProfileTestRequest,
+        ProfileTestRequestStream, SearchResultsProxy, ServiceClassProfileIdentifier,
+        ServiceDefinition,
     },
     fidl_fuchsia_sys::EnvironmentOptions,
     fuchsia_async as fasync,
@@ -115,9 +116,10 @@ impl TestProfileServer {
         id: PeerId,
         services: Vec<ServiceDefinition>,
         receiver: ConnectionReceiverProxy,
+        responder: ProfileAdvertiseResponder,
     ) {
         let mut inner = self.inner.lock();
-        inner.new_advertisement(id, services, receiver);
+        inner.new_advertisement(id, services, receiver, responder);
     }
 
     fn new_connection(
@@ -143,9 +145,9 @@ impl TestProfileServer {
 
     fn handle_profile_request(&self, id: PeerId, request: ProfileRequest) {
         match request {
-            ProfileRequest::Advertise { services, receiver, .. } => {
+            ProfileRequest::Advertise { services, receiver, responder, .. } => {
                 let proxy = receiver.into_proxy().expect("couldn't get connection receiver");
-                self.new_advertisement(id, services, proxy);
+                self.new_advertisement(id, services, proxy, responder);
             }
             ProfileRequest::Connect { peer_id, connection, responder, .. } => {
                 let mut channel = self
@@ -355,6 +357,7 @@ impl TestProfileServerInner {
         id: PeerId,
         services: Vec<ServiceDefinition>,
         receiver: ConnectionReceiverProxy,
+        responder: ProfileAdvertiseResponder,
     ) {
         let res = match self.peers.entry(id) {
             Entry::Vacant(_) => {
@@ -366,7 +369,12 @@ impl TestProfileServerInner {
 
         match res {
             Ok((svc_ids, adv_fut)) => {
-                fasync::Task::spawn(adv_fut).detach();
+                fasync::Task::spawn(async move {
+                    adv_fut.await;
+                    // Reply to the hanging-get responder when the advertisement completes.
+                    let _ = responder.send(&mut Ok(()));
+                })
+                .detach();
                 self.find_matching_searches(id, svc_ids);
             }
             Err(e) => fx_log_info!("Peer {} error advertising service: {:?}", id, e),
@@ -524,10 +532,11 @@ async fn main() -> Result<(), anyhow::Error> {
 mod tests {
     use super::*;
 
+    use fidl::encoding::Decodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_bluetooth_bredr::{
-        MockPeerMarker, MockPeerProxy, PeerObserverMarker, PeerObserverRequestStream,
-        ProfileTestMarker,
+        ChannelParameters, ConnectionReceiverMarker, MockPeerMarker, MockPeerProxy,
+        PeerObserverMarker, PeerObserverRequestStream, ProfileMarker, ProfileTestMarker,
     };
     use futures::pin_mut;
 
@@ -586,5 +595,46 @@ mod tests {
         assert!(!pts.contains_peer(&id));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_advertisement_request_resolves_when_terminated() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let pts = TestProfileServer::new();
+        let (mut sender, receiver) = mpsc::channel(0);
+
+        // The main handler - this is under test.
+        let pts_fut = pts.handle_fidl_requests(receiver);
+        pin_mut!(pts_fut);
+        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+
+        // Register a mock peer.
+        let id = PeerId(123);
+        let (mock_peer, _observer, request) = generate_register_peer_request(&mut exec, id);
+
+        // Forward the request to the handler. After running the main `pts_fut`, the peer
+        // should be registered.
+        assert!(exec.run_until_stalled(&mut sender.send(request)).is_pending());
+        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+
+        // Connect the ProfileProxy.
+        let (c, s) = create_proxy::<ProfileMarker>().unwrap();
+        let connect_fut = mock_peer.connect_proxy_(s);
+        pin_mut!(connect_fut);
+        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut connect_fut).is_ready());
+
+        // Advertise - the hanging-get request shouldn't resolve.
+        let (target, receiver) = create_request_stream::<ConnectionReceiverMarker>().unwrap();
+        let services = vec![];
+        let mut adv_fut =
+            c.advertise(&mut services.into_iter(), ChannelParameters::new_empty(), target);
+        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+
+        // We decide to stop advertising.
+        drop(receiver);
+        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut adv_fut).is_ready());
     }
 }

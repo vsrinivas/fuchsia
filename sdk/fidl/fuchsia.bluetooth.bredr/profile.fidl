@@ -139,16 +139,23 @@ const uint8 MAX_SERVICES_PER_ADVERTISEMENT = 32;
 /// advertised records, and can open new connections on peers.
 [Discoverable] protocol Profile {
     /// Register a set of services.
+    ///
+    /// The call will resolve when the service advertisement terminates or if there was an error
+    /// when advertising.
+    ///
     /// These services will be discoverable via Service Discovery Protocol server.
     /// All services advertising the same channel must be added at once - if services are already
-    /// registered on any channel advertised, registration will fail and the receiver will be closed
-    /// with ZX_ERR_ALREADY_BOUND.
+    /// registered on any channel advertised, registration will fail, the receiver will be closed
+    /// with ZX_ERR_ALREADY_BOUND and an error will be returned.
     /// The ConnectionReceiver will get calls for connections to the channels included in the
     /// `protocol_descriptor` or `alternative_protocol_descriptors` in the services advertised.
-    /// The receiver will be closed if the advertisement cannot be made for any reason with a
-    /// suitable epitaph.
+    /// The receiver will be closed if there are any errors advertising.
+    ///
+    /// If the advertisement cannot be made for any reason, an error of `INVALID_ARGUMENTS`
+    /// will be returned and the receiver will be closed with a suitable epitaph.
     Advertise(vector<ServiceDefinition>:MAX_SERVICES_PER_ADVERTISEMENT services,
-              ChannelParameters parameters, ConnectionReceiver receiver);
+              ChannelParameters parameters, ConnectionReceiver receiver)
+        -> () error fuchsia.bluetooth.ErrorCode;
 
     /// Register a search for services on newly connected peers.  The SearchResults protocol will be
     /// used to report results for this search.  Any service result with a service matching

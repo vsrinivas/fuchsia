@@ -231,16 +231,14 @@ async fn main() -> Result<(), Error> {
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
-    profile_svc
-        .advertise(
-            &mut service_defs.into_iter(),
-            bredr::ChannelParameters {
-                channel_mode: Some(signaling_channel_mode),
-                ..Decodable::new_empty()
-            },
-            connect_client,
-        )
-        .context("advertising A2DP service")?;
+    let _ = profile_svc.advertise(
+        &mut service_defs.into_iter(),
+        bredr::ChannelParameters {
+            channel_mode: Some(signaling_channel_mode),
+            ..Decodable::new_empty()
+        },
+        connect_client,
+    );
 
     const ATTRS: [u16; 4] = [
         bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
