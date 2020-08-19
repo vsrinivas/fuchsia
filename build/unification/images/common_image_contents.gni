@@ -136,7 +136,6 @@ common_image_contents = [
   "//src/devices/nand/drivers/nandpart",
   "//src/devices/nand/drivers/ram-nand",
   "//src/devices/nand/drivers/skip-block",
-  "//src/devices/pci/drivers/amlogic-pcie",
   "//src/devices/power/bin/lspwr",
   "//src/devices/power/drivers/aml-meson-power",
   "//src/devices/power/drivers/power",
