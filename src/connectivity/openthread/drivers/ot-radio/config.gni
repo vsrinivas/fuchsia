@@ -32,7 +32,7 @@ template("ot_radio_driver") {
       "//sdk/banjo/ddk.protocol.gpio",
       "//sdk/banjo/ddk.protocol.spi",
       "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
-      "//src/connectivity/openthread/third_party",
+      "//src/connectivity/openthread/third_party/openthread:spinel-framer",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
       "//src/lib/ddktl",
