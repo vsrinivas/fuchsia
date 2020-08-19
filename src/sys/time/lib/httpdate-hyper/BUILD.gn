@@ -6,6 +6,11 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":httpdate-hyper-tests" ]
+}
+
 rustc_library("httpdate-hyper") {
   name = "httpdate-hyper"
   version = "0.1.0"

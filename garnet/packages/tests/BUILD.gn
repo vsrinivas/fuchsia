@@ -71,7 +71,6 @@ group("all") {
     "//garnet/lib/profiler/tests:profiler_tests",
     "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
     "//garnet/lib/rust/files_async:files_async_tests",
-    "//garnet/lib/rust/httpdate-hyper:httpdate-hyper-tests",
     "//garnet/lib/rust/io_util:io_util_tests",
     "//garnet/lib/rust/netfilter:netfilter_tests",
     "//garnet/lib/rust/sysconfig-client:sysconfig-client-test",

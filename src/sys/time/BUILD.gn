@@ -13,6 +13,7 @@ group("recovery") {
 group("tests") {
   testonly = true
   deps = [
+    "lib/httpdate-hyper:tests",
     "lib/network_time:tests",
     "network_time_service:tests",
     "timekeeper:tests",
