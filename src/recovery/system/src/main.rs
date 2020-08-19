@@ -7,8 +7,8 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{
-        path_for_rectangle, path_for_rounded_rectangle, DisplayAligned, DisplayRotation, FontFace,
-        GlyphMap, Text,
+        path_for_circle, DisplayAligned, DisplayRotation, DisplayTransform2D, FontFace, GlyphMap,
+        Text,
     },
     geometry::IntVector,
     input, make_message,
@@ -20,8 +20,8 @@ use carnelian::{
     Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{
-    default::{Point2D, SideOffsets2D, Vector2D},
-    point2, vec2,
+    default::{Point2D, Transform2D, Vector2D},
+    point2,
 };
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
@@ -29,11 +29,14 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
 use futures::StreamExt;
-use png;
 use std::fs::File;
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.png";
+const BG_COLOR: Color = Color::white();
+const HEADING_COLOR: Color = Color::new();
+const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
+const COUNTDOWN_COLOR: Color = Color { r: 0x42, g: 0x85, b: 0xf4, a: 0xff };
 
 #[cfg(feature = "http_setup_server")]
 mod setup;
@@ -51,7 +54,7 @@ mod fdr;
 use fdr::{FactoryResetState, ResetEvent};
 
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
+    include_bytes!("../../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf");
 
 fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
     match s {
@@ -61,6 +64,18 @@ fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
         "270" => Ok(DisplayRotation::Deg270),
         _ => Err(format!("Invalid DisplayRotation {}", s)),
     }
+}
+
+fn raster_for_circle(
+    center: Point,
+    radius: Coord,
+    transform: Option<&Transform2D<f32>>,
+    render_context: &mut RenderContext,
+) -> Raster {
+    let path = path_for_circle(center, radius, render_context);
+    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+    raster_builder.add(&path, transform);
+    raster_builder.build()
 }
 
 /// FDR
@@ -88,8 +103,15 @@ enum RecoveryMessages {
 
 struct PngImage {
     file: String,
-    loaded_info: Option<(Size, Image, Raster, Point2D<f32>)>,
+    loaded_info: Option<(Size, Image, Point2D<f32>)>,
 }
+
+const RECOVERY_MODE_HEADLINE: &'static str = "Recovery Mode";
+const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
+
+const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
+const COUNTDOWN_MODE_BODY: &'static str = "Continue holding the keys to the end of the countdown. \
+This will wipe all of your data from this device and reset it to factory settings.";
 
 struct RecoveryAppAssistant {
     app_context: AppContext,
@@ -112,206 +134,96 @@ impl AppAssistant for RecoveryAppAssistant {
             &self.app_context,
             args.rotation.unwrap_or(DisplayRotation::Deg0),
             view_key,
-            "Fuchsia System Recovery",
-            "Waiting...",
+            RECOVERY_MODE_HEADLINE,
+            RECOVERY_MODE_BODY,
         )?))
     }
-}
-
-fn raster_for_rounded_rectangle(
-    bounds: &Rect,
-    target_size: Size,
-    corner_radius: Coord,
-    display_rotation: &DisplayRotation,
-    render_context: &mut RenderContext,
-) -> Raster {
-    let rotation_transform =
-        display_rotation.transform(&target_size).and_then(|transform| Some(transform.to_untyped()));
-    let path = path_for_rounded_rectangle(bounds, corner_radius, render_context);
-    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path, rotation_transform.as_ref());
-    raster_builder.build()
 }
 
 fn to_raster_translation_vector(pt: euclid::Point2D<Coord, DisplayAligned>) -> IntVector {
     pt.cast_unit::<euclid::UnknownUnit>().to_vector().to_i32()
 }
 
-struct DataResetOverlay {
-    headline_text: Text,
-    headline_text_size: f32,
-    headline_wrap: usize,
-    display_headline_position: euclid::Point2D<Coord, DisplayAligned>,
-    body_text: Text,
-    display_body_position: euclid::Point2D<Coord, DisplayAligned>,
-    background: Raster,
+struct SizedText {
+    text: Text,
+    #[allow(unused)]
+    glyphs: GlyphMap,
 }
 
-const MARGIN: f32 = 20.0;
-
-impl DataResetOverlay {
-    fn new(
-        render_context: &mut RenderContext,
+impl SizedText {
+    pub fn new(
+        context: &mut RenderContext,
         display_rotation: DisplayRotation,
-        size: Size,
-        face: &FontFace<'_>,
-        glyphs: &mut GlyphMap,
-        small_glyphs: &mut GlyphMap,
-    ) -> Self {
-        let transform = display_rotation.transform(&size);
-        let min_dimension = size.width.min(size.height);
-        let headline_text_size = min_dimension / 12.0;
-        let inset = size * 0.25;
-        let bounds = Rect::from_size(size).inner_rect(SideOffsets2D::new(
-            inset.height,
-            inset.width,
-            inset.height,
-            inset.width,
-        ));
-
-        let headline_wrap =
-            ((bounds.size.width - MARGIN * 2.0) / headline_text_size * 2.5) as usize;
-
-        let headline_text = Self::make_headline_text(
-            render_context,
-            headline_text_size,
-            headline_wrap,
-            face,
-            glyphs,
-            FACTORY_RESET_TIMER_IN_SECONDS,
-        );
-
-        let headline_position = bounds.origin + vec2(MARGIN, MARGIN);
-        let display_headline_position = if let Some(transform) = transform {
-            transform.transform_point(headline_position)
-        } else {
-            headline_position.cast_unit::<DisplayAligned>()
-        };
-
-        let overlay_body_text_size = min_dimension / 18.0;
-        let overlay_body_wrap = (bounds.size.width - MARGIN * 2.0) / overlay_body_text_size * 2.5;
-
-        let body_text = Text::new(
-            render_context,
-            "This will wipe all of your data from this device and reset it to factory default settings",
-            overlay_body_text_size,
-            overlay_body_wrap as usize,
-            face,
-            small_glyphs,
-        );
-
-        let body_position = point2(bounds.origin.x, bounds.max_y())
-            + vec2(MARGIN, -body_text.bounding_box.size.height - MARGIN * 2.0);
-        let display_body_position = if let Some(transform) = transform {
-            transform.transform_point(body_position)
-        } else {
-            body_position.cast_unit::<DisplayAligned>()
-        };
-
-        let background =
-            raster_for_rounded_rectangle(&bounds, size, 14.0, &display_rotation, render_context);
-
-        Self {
-            headline_text,
-            headline_text_size,
-            headline_wrap,
-            display_headline_position,
-            body_text,
-            display_body_position,
-            background,
-        }
-    }
-
-    fn make_headline_text(
-        render_context: &mut RenderContext,
-        headline_text_size: f32,
+        label: &str,
+        size: f32,
         wrap: usize,
         face: &FontFace<'_>,
-        glyphs: &mut GlyphMap,
-        time_left: u8,
-    ) -> Text {
-        Text::new(
-            render_context,
-            &format!("Device will be factory reset in {} seconds", time_left),
-            headline_text_size,
-            wrap as usize,
-            face,
-            glyphs,
-        )
+    ) -> Self {
+        let mut glyphs = GlyphMap::new_with_rotation(display_rotation);
+        let text = Text::new(context, label, size, wrap, face, &mut glyphs);
+        Self { text, glyphs }
     }
+}
 
-    fn update(
-        &mut self,
-        render_context: &mut RenderContext,
+struct RenderResources {
+    heading_label: SizedText,
+    body_label: SizedText,
+    countdown_label: SizedText,
+    countdown_text_size: f32,
+}
+
+impl RenderResources {
+    fn new(
+        context: &mut RenderContext,
+        display_rotation: DisplayRotation,
+        min_dimension: f32,
+        heading: &str,
+        body: &str,
+        countdown_ticks: u8,
         face: &FontFace<'_>,
-        glyphs: &mut GlyphMap,
-        time_left: u8,
-    ) {
-        self.headline_text = Self::make_headline_text(
-            render_context,
-            self.headline_text_size,
-            self.headline_wrap,
+    ) -> Self {
+        let text_size = min_dimension / 10.0;
+        let heading_label =
+            SizedText::new(context, display_rotation, heading, text_size, 100, face);
+        let heading_label_size = heading_label.text.bounding_box.size;
+
+        let body_text_size = min_dimension / 18.0;
+        let body_wrap = heading_label_size.width / body_text_size * 3.0;
+        let body_label = SizedText::new(
+            context,
+            display_rotation,
+            body,
+            body_text_size,
+            body_wrap as usize,
             face,
-            glyphs,
-            time_left,
         );
-    }
 
-    fn layers(&self) -> Vec<Layer> {
-        let overlay_headline_layer = Layer {
-            raster: self
-                .headline_text
-                .raster
-                .clone()
-                .translate(to_raster_translation_vector(self.display_headline_position)),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(Color::new()),
-                blend_mode: BlendMode::Over,
-            },
-        };
+        let countdown_text_size = min_dimension / 4.0;
+        let countdown_label = SizedText::new(
+            context,
+            display_rotation,
+            &format!("{:02}", countdown_ticks),
+            countdown_text_size,
+            100,
+            face,
+        );
 
-        let overlay_body_layer = Layer {
-            raster: self
-                .body_text
-                .raster
-                .clone()
-                .translate(to_raster_translation_vector(self.display_body_position)),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(Color::new()),
-                blend_mode: BlendMode::Over,
-            },
-        };
-        let overlay_layer = Layer {
-            raster: self.background.clone(),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(Color::white()),
-                blend_mode: BlendMode::Over,
-            },
-        };
-        vec![overlay_headline_layer, overlay_body_layer, overlay_layer]
+        Self { heading_label, body_label, countdown_label, countdown_text_size }
     }
 }
 
 struct RecoveryViewAssistant<'a> {
     display_rotation: DisplayRotation,
     face: FontFace<'a>,
-    bg_color: Color,
-    composition: Composition,
-    glyphs: GlyphMap,
-    small_glyphs: GlyphMap,
     heading: String,
-    heading_label: Option<Text>,
     body: String,
-    body_label: Option<Text>,
     reset_state_machine: fdr::FactoryResetStateMachine,
     app_context: AppContext,
     view_key: ViewKey,
     countdown_task: Option<Task<()>>,
-    data_reset_overlay: Option<DataResetOverlay>,
     countdown_ticks: u8,
+    composition: Composition,
+    render_resources: Option<RenderResources>,
     logo_image: PngImage,
 }
 
@@ -325,29 +237,23 @@ impl<'a> RecoveryViewAssistant<'a> {
     ) -> Result<RecoveryViewAssistant<'a>, Error> {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
-        let bg_color = Color::white();
-        let composition = Composition::new(bg_color);
+        let composition = Composition::new(BG_COLOR);
         let face = FontFace::new(FONT_DATA)?;
-        let logo = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
+        let logo_image = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
             display_rotation,
             face,
-            bg_color,
             composition,
-            glyphs: GlyphMap::new_with_rotation(display_rotation),
-            small_glyphs: GlyphMap::new_with_rotation(display_rotation),
             heading: heading.to_string(),
-            heading_label: None,
             body: body.to_string(),
-            body_label: None,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
             app_context: app_context.clone(),
             view_key: 0,
             countdown_task: None,
-            data_reset_overlay: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
-            logo_image: logo,
+            render_resources: None,
+            logo_image,
         })
     }
 
@@ -428,152 +334,163 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
     ) -> Result<(), Error> {
         // Emulate the size that Carnelian passes when the display is rotated
         let target_size = self.target_size(context.size);
-
-        // Create a presentation to display tranformation
-        let transform = self.display_rotation.transform(&target_size);
-
         let min_dimension = target_size.width.min(target_size.height);
 
-        if self.data_reset_overlay.is_none() && self.reset_state_machine.is_counting_down() {
-            // since a render context is needed to create an overlay, this
-            // creation must be done lazily.
-            self.data_reset_overlay = Some(DataResetOverlay::new(
+        if self.render_resources.is_none() {
+            self.render_resources = Some(RenderResources::new(
                 render_context,
                 self.display_rotation,
-                target_size,
+                min_dimension,
+                &self.heading,
+                &self.body,
+                self.countdown_ticks,
                 &self.face,
-                &mut self.glyphs,
-                &mut self.small_glyphs,
             ));
         }
 
-        let background_color = self.bg_color.clone();
-        let clear_background_ext = RenderExt {
-            pre_clear: Some(PreClear { color: background_color }),
-            ..Default::default()
-        };
+        let render_resources = self.render_resources.as_ref().unwrap();
+
+        // Create a presentation to display tranformation
+        let transform =
+            self.display_rotation.transform(&target_size).unwrap_or(DisplayTransform2D::identity());
+
+        let clear_background_ext =
+            RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };
         let image = render_context.get_current_image(context);
 
-        if self.reset_state_machine.is_counting_down() {
-            let overlay_layers = if let Some(overlay) = self.data_reset_overlay.as_mut() {
-                overlay.update(render_context, &self.face, &mut self.glyphs, self.countdown_ticks);
-                overlay.layers()
-            } else {
-                vec![]
-            };
+        let (logo_size, png_image, logo_position) =
+            self.logo_image.loaded_info.take().unwrap_or_else(|| {
+                let file = File::open(&self.logo_image.file).expect("failed to load logo png");
+                let decoder = png::Decoder::new(file);
+                let (info, mut reader) = decoder.read_info().unwrap();
+                let image = render_context
+                    .new_image_from_png(&mut reader)
+                    .expect(&format!("failed to decode file {}", &self.logo_image.file));
+                let size = Size::new(info.width as f32, info.height as f32);
 
-            self.composition.replace(.., overlay_layers.into_iter());
-
-            render_context.render(&self.composition, None, image, &clear_background_ext);
-        } else {
-            let text_size = min_dimension / 12.0;
-
-            let fg_color = Color::new();
-
-            let heading_label_layer = {
-                self.heading_label = Some(Text::new(
-                    render_context,
-                    &self.heading,
-                    text_size,
-                    100,
-                    &self.face,
-                    &mut self.glyphs,
-                ));
-
-                let heading_label = self.heading_label.as_ref().expect("label");
-                let heading_label_size = heading_label.bounding_box.size;
-                let heading_label_offset = Point::new(
-                    (target_size.width / 2.0) - (heading_label_size.width / 2.0),
-                    (target_size.height / 4.0) - (heading_label_size.height / 2.0),
-                );
-
-                let display_heading_label_offset = if let Some(transform) = transform {
-                    transform.transform_point(heading_label_offset)
-                } else {
-                    heading_label_offset.cast_unit::<DisplayAligned>()
+                // Calculate position for centering the logo image
+                let logo_position = {
+                    let x = (target_size.width - size.width) / 2.0;
+                    let y = target_size.height / 2.0 - size.height;
+                    point2(x, y)
                 };
 
+                (size, image, logo_position)
+            });
+
+        // Cache loaded png info and position
+        self.logo_image.loaded_info.replace((logo_size, png_image, logo_position));
+
+        let (heading_label_layer, heading_label_offset, heading_label_size) = {
+            let heading_label_size = render_resources.heading_label.text.bounding_box.size;
+            let heading_label_offset = Point::new(
+                (target_size.width / 2.0) - (heading_label_size.width / 2.0),
+                logo_position.y + logo_size.height,
+            );
+
+            let display_heading_label_offset = transform.transform_point(heading_label_offset);
+
+            (
                 Layer {
-                    raster: heading_label
+                    raster: render_resources
+                        .heading_label
+                        .text
                         .raster
                         .clone()
                         .translate(to_raster_translation_vector(display_heading_label_offset)),
                     style: Style {
                         fill_rule: FillRule::NonZero,
-                        fill: Fill::Solid(fg_color),
+                        fill: Fill::Solid(HEADING_COLOR),
                         blend_mode: BlendMode::Over,
                     },
-                }
+                },
+                heading_label_offset,
+                heading_label_size,
+            )
+        };
+
+        let body_label_layer = {
+            let body_label_size = render_resources.body_label.text.bounding_box.size;
+            let body_label_offset = Point::new(
+                (target_size.width / 2.0) - (body_label_size.width / 2.0),
+                heading_label_offset.y + heading_label_size.height * 1.5,
+            );
+            let display_body_label_offset = transform.transform_point(body_label_offset);
+
+            Layer {
+                raster: render_resources
+                    .body_label
+                    .text
+                    .raster
+                    .clone()
+                    .translate(to_raster_translation_vector(display_body_label_offset)),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(BODY_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
+            }
+        };
+
+        if self.reset_state_machine.is_counting_down() {
+            let logo_center = Rect::new(logo_position, logo_size).center();
+            // TODO: Don't recreate this raster every frame
+            let circle_raster = raster_for_circle(
+                logo_center,
+                logo_size.width.min(logo_size.height) / 2.0,
+                Some(&transform.to_untyped()),
+                render_context,
+            );
+            let circle_layer = Layer {
+                raster: circle_raster,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(COUNTDOWN_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
             };
 
-            let body_label_layer = {
-                self.body_label = Some(Text::new(
-                    render_context,
-                    &self.body,
-                    text_size,
-                    100,
-                    &self.face,
-                    &mut self.glyphs,
-                ));
+            let countdown_label_layer =
+                {
+                    let countdown_label_size =
+                        render_resources.countdown_label.text.bounding_box.size;
+                    let countdown_label_offset = Point::new(
+                        logo_center.x - countdown_label_size.width / 2.0,
+                        logo_center.y - (render_resources.countdown_text_size / 2.0),
+                    );
+                    let display_countdown_label_offset =
+                        transform.transform_point(countdown_label_offset);
 
-                let body_label = self.body_label.as_ref().expect("body_label");
-                let body_label_size = body_label.bounding_box.size;
-                let body_label_offset = Point::new(
-                    (target_size.width / 2.0) - (body_label_size.width / 2.0),
-                    (target_size.height * 0.75) - (body_label_size.height / 2.0),
-                );
-                let display_body_label_offset = if let Some(transform) = transform {
-                    transform.transform_point(body_label_offset)
-                } else {
-                    body_label_offset.cast_unit::<DisplayAligned>()
+                    Layer {
+                        raster: render_resources.countdown_label.text.raster.clone().translate(
+                            to_raster_translation_vector(display_countdown_label_offset),
+                        ),
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(Color::white()),
+                            blend_mode: BlendMode::Over,
+                        },
+                    }
                 };
 
-                Layer {
-                    raster: body_label
-                        .raster
-                        .clone()
-                        .translate(to_raster_translation_vector(display_body_label_offset)),
-                    style: Style {
-                        fill_rule: FillRule::NonZero,
-                        fill: Fill::Solid(fg_color),
-                        blend_mode: BlendMode::Over,
-                    },
-                }
-            };
-
-            let (logo_size, png_image, png_raster, logo_position) =
-                self.logo_image.loaded_info.take().unwrap_or_else(|| {
-                    let file = File::open(&self.logo_image.file).expect("failed to load logo png");
-                    let decoder = png::Decoder::new(file);
-                    let (info, mut reader) = decoder.read_info().unwrap();
-                    let image = render_context
-                        .new_image_from_png(&mut reader)
-                        .expect(&format!("failed to decode file {}", &self.logo_image.file));
-                    let size = Size::new(info.width as f32, info.height as f32);
-                    let mut raster_builder =
-                        render_context.raster_builder().expect("raster_builder");
-                    raster_builder.add(
-                        &path_for_rectangle(&Rect::new(Point2D::zero(), size), render_context),
-                        None,
-                    );
-
-                    // Calculate position for centering the logo image
-                    let logo_position = {
-                        let x = (context.size.width - size.width) / 2.0;
-                        let y = (context.size.height - size.height) / 2.0;
-                        Point2D::new(x, y)
-                    };
-
-                    (size, image, raster_builder.build(), logo_position)
-                });
-
+            self.composition.replace(
+                ..,
+                std::iter::once(body_label_layer)
+                    .chain(std::iter::once(heading_label_layer))
+                    .chain(std::iter::once(countdown_label_layer))
+                    .chain(std::iter::once(circle_layer)),
+            );
+            render_context.render(&self.composition, None, image, &clear_background_ext);
+        } else {
             // Determine visible rect and copy |png_image| to |image|.
-            let dst_rect = Rect::new(logo_position, logo_size);
-            let output_rect = Rect::new(Point2D::zero(), context.size);
+            let dst_rect =
+                transform.transform_rect(&Rect::new(logo_position, logo_size)).to_untyped();
+            let output_rect =
+                transform.transform_rect(&Rect::new(Point2D::zero(), target_size)).to_untyped();
             let png_ext = RenderExt {
                 post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
                     image,
-                    color: self.bg_color,
+                    color: BG_COLOR,
                     exposure_distance: Vector2D::zero(),
                     copy_region: CopyRegion {
                         src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
@@ -587,12 +504,8 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 ..,
                 std::iter::once(body_label_layer).chain(std::iter::once(heading_label_layer)),
             );
-
             render_context.render(&self.composition, None, image, &clear_background_ext);
             render_context.render(&self.composition, None, png_image, &png_ext);
-
-            // Cache loaded png info and position
-            self.logo_image.loaded_info.replace((logo_size, png_image, png_raster, logo_position));
         }
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
@@ -621,7 +534,9 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 RecoveryMessages::ResetMessage(state) => {
                     match state {
                         FactoryResetState::Waiting => {
-                            self.body = "Waiting...".to_string();
+                            self.heading = RECOVERY_MODE_HEADLINE.to_string();
+                            self.body = RECOVERY_MODE_BODY.to_string();
+                            self.render_resources = None;
                             self.app_context.request_render(self.view_key);
                         }
                         FactoryResetState::StartCountdown => {
@@ -659,7 +574,6 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                                 .reset_state_machine
                                 .handle_event(ResetEvent::CountdownCancelled);
                             assert_eq!(state, fdr::FactoryResetState::Waiting);
-                            self.data_reset_overlay = None;
                             self.app_context.queue_message(
                                 self.view_key,
                                 make_message(RecoveryMessages::ResetMessage(state)),
@@ -677,7 +591,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                     };
                 }
                 RecoveryMessages::CountdownTick(count) => {
-                    self.heading = "Factory Reset".to_string();
+                    self.heading = COUNTDOWN_MODE_HEADLINE.to_string();
                     self.countdown_ticks = *count;
                     if *count == 0 {
                         self.body = "Resetting device...".to_string();
@@ -689,13 +603,15 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
                     } else {
-                        self.body = String::from(" ");
+                        self.body = COUNTDOWN_MODE_BODY.to_string();
                     }
+                    self.render_resources = None;
                     self.app_context.request_render(self.view_key);
                 }
                 RecoveryMessages::ResetFailed => {
                     self.heading = "Reset failed".to_string();
                     self.body = "Please restart device to try again".to_string();
+                    self.render_resources = None;
                     self.app_context.request_render(self.view_key);
                 }
             }

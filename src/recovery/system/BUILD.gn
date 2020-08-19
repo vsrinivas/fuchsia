@@ -90,7 +90,7 @@ rustc_binary("bin") {
     "src/storage.rs",
   ]
 
-  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
+  inputs = [ "//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf" ]
 }
 
 rustc_binary("bin_fdr") {
@@ -126,7 +126,7 @@ rustc_binary("bin_fdr") {
     "src/main.rs",
   ]
 
-  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
+  inputs = [ "//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf" ]
 }
 
 config_data("config") {

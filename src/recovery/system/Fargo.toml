@@ -30,3 +30,7 @@ additional_static_libraries = [
     "spinel_vk_spn_intel_gen8",
     "spinel_vk_spn_nvidia_sm50",
 ]
+
+data_files = [
+    { src = "res/fuchsia-logo.png", dst = "data/logo.png"},
+]
