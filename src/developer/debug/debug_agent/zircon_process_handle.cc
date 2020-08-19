@@ -119,7 +119,6 @@ ZirconProcessHandle::GetHandles() const {
     result[i].type = handles[i].type;
     result[i].handle_value = handles[i].handle_value;
     result[i].rights = handles[i].rights;
-    result[i].props = handles[i].props;
     result[i].koid = handles[i].koid;
     result[i].related_koid = handles[i].related_koid;
     result[i].peer_owner_koid = handles[i].peer_owner_koid;

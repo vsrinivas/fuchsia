@@ -741,7 +741,7 @@ zx_status_t ProcessDispatcher::GetHandleInfo(fbl::Array<zx_info_handle_extended_
         entry = {disp->get_type(),
                  handle,
                  rights,
-                 disp->is_waitable() ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
+                 0u,
                  disp->get_koid(),
                  disp->get_related_koid(),
                  0u};

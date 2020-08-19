@@ -44,7 +44,6 @@ TEST(HandleInfoTest, DupAndInfoRights) {
   EXPECT_GT(info.koid, 0ULL, "object id should be positive");
   EXPECT_EQ(info.type, ZX_OBJ_TYPE_EVENT, "handle should be an event");
   EXPECT_EQ(info.rights, evr, "wrong set of rights");
-  EXPECT_EQ(info.props, ZX_OBJ_PROP_WAITABLE);
   EXPECT_EQ(info.related_koid, 0ULL, "events don't have associated koid");
 }
 

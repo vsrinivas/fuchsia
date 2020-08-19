@@ -155,21 +155,6 @@ void KtraceControlActionName(uint32_t action, fidl_codec::PrettyPrinter& printer
   }
 }
 
-#define ObjPropsNameCase(name) \
-  case name:                   \
-    printer << #name;          \
-    return
-
-void ObjPropsName(zx_obj_props_t obj_props, fidl_codec::PrettyPrinter& printer) {
-  switch (obj_props) {
-    ObjPropsNameCase(ZX_OBJ_PROP_NONE);
-    ObjPropsNameCase(ZX_OBJ_PROP_WAITABLE);
-    default:
-      printer << obj_props;
-      return;
-  }
-}
-
 #define PolicyNameCase(name) \
   case name:                 \
     printer << #name;        \
@@ -597,8 +582,6 @@ std::string_view TypeName(SyscallType type) {
       return "zx_time_t";
     case SyscallType::kObjectInfoTopic:
       return "zx_object_info_topic_t";
-    case SyscallType::kObjProps:
-      return "zx_obj_props_t";
     case SyscallType::kObjType:
       return "zx_obj_type_t";
     case SyscallType::kPacketGuestVcpuType:

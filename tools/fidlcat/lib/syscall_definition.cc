@@ -303,7 +303,7 @@ class ZxInfoHandleBasic : public Class<zx_info_handle_basic_t> {
   static zx_rights_t rights(const zx_info_handle_basic_t* from) { return from->rights; }
   static zx_obj_type_t type(const zx_info_handle_basic_t* from) { return from->type; }
   static zx_koid_t related_koid(const zx_info_handle_basic_t* from) { return from->related_koid; }
-  static zx_obj_props_t props(const zx_info_handle_basic_t* from) { return from->props; }
+  static uint32_t reserved(const zx_info_handle_basic_t* from) { return from->reserved; }
 
  private:
   ZxInfoHandleBasic() : Class("zx_info_handle_basic_t") {
@@ -315,8 +315,6 @@ class ZxInfoHandleBasic : public Class<zx_info_handle_basic_t> {
         "type", SyscallType::kObjType, type));
     AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_koid_t>>(
         "related_koid", SyscallType::kKoid, related_koid));
-    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_obj_props_t>>(
-        "props", SyscallType::kObjProps, props));
   }
   ZxInfoHandleBasic(const ZxInfoHandleBasic&) = delete;
   ZxInfoHandleBasic& operator=(const ZxInfoHandleBasic&) = delete;

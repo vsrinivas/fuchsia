@@ -64,7 +64,6 @@ OutputBuffer FormatHandle(const debug_ipc::InfoHandleExtended& handle, bool hex)
       AppendTwoEltRow(std::string(), rights[i], rows);
   }
 
-  AppendTwoEltRow("Properties", debug_ipc::HandlePropsToString(handle.props), rows);
   AppendTwoEltRow("Koid", NumToString(handle.koid, hex), rows);
   if (handle.related_koid)
     AppendTwoEltRow("Related koid", NumToString(handle.related_koid, hex), rows);

@@ -74,18 +74,6 @@ std::string HandleTypeToString(uint32_t handle_type) {
   }
 }
 
-std::string HandlePropsToString(uint32_t handle_props) {
-  if (handle_props == 0)
-    return "ZX_OBJ_PROP_NONE";
-
-  // Currently this is just one possible value. It may be extended to be a bitfield in the future.
-  // In that case, we probably want a version that returns an array like the "handle rights" one.
-  if (handle_props == 1)
-    return "ZX_OBJ_PROP_WAITABLE";
-
-  return "<unknown (" + std::to_string(handle_props) + ")>";
-}
-
 std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights) {
   std::vector<std::string> result;
   if (handle_rights == 0) {

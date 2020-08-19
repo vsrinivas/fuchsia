@@ -386,8 +386,6 @@ TEST_F(ProcessGetInfoTest, InfoProcessHandleTable) {
   EXPECT_EQ(avail, 2);
   EXPECT_EQ(handle_info[0].type, ZX_OBJ_TYPE_VMO);
   EXPECT_EQ(handle_info[1].type, ZX_OBJ_TYPE_CHANNEL);
-  EXPECT_EQ(handle_info[0].props, ZX_OBJ_PROP_WAITABLE);
-  EXPECT_EQ(handle_info[1].props, ZX_OBJ_PROP_WAITABLE);
   EXPECT_NE(handle_info[0].handle_value, ZX_HANDLE_INVALID);
   EXPECT_NE(handle_info[1].handle_value, ZX_HANDLE_INVALID);
   EXPECT_EQ(handle_info[0].related_koid, 0);

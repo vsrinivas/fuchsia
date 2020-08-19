@@ -14,8 +14,6 @@ object-specific) are defined in the header[`zircon/types.h`](/zircon/system/publ
 The typedef `zx_signals_t` is used to refer to signal bitmasks in syscalls and other APIs.
 
 Most objects are waitable.  Ports are an example of a non-waitable object.
-To determine if an object is waitable, call [`zx_object_get_info()`].
-with **ZX_INFO_HANDLE_BASIC** topic and test for **ZX_OBJ_PROP_WAITABLE**.
 
 ## State, State Changes and their Terminology
 

@@ -47,7 +47,6 @@ enum class SyscallType {
   kKoid,
   kKtraceControlAction,
   kMonotonicTime,
-  kObjProps,
   kObjType,
   kObjectInfoTopic,
   kPacketGuestVcpuType,
@@ -112,7 +111,6 @@ void InfoMapsTypeName(zx_info_maps_type_t type, fidl_codec::PrettyPrinter& print
 void InterruptFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer);
 void IommuTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
 void KtraceControlActionName(uint32_t action, fidl_codec::PrettyPrinter& printer);
-void ObjPropsName(zx_obj_props_t obj_props, fidl_codec::PrettyPrinter& printer);
 void PacketGuestVcpuTypeName(uint8_t type, fidl_codec::PrettyPrinter& printer);
 void PacketPageRequestCommandName(uint16_t command, fidl_codec::PrettyPrinter& printer);
 void PciBarTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);

@@ -48,7 +48,6 @@ TEST(FormatHandle, BasicDetails) {
   handle.type = 2;  // Thread.
   handle.handle_value = 1234;
   handle.rights = 3;
-  handle.props = 0;
   handle.koid = 7890;
   handle.related_koid = 1111;
   handle.peer_owner_koid = 2222;
@@ -59,7 +58,6 @@ TEST(FormatHandle, BasicDetails) {
       "            Value  1234\n"
       "           Rights  ZX_RIGHT_DUPLICATE\n"
       "                   ZX_RIGHT_TRANSFER\n"
-      "       Properties  ZX_OBJ_PROP_NONE\n"
       "             Koid  7890\n"
       "     Related koid  1111\n"
       "  Peer-owner koid  2222\n",
@@ -67,17 +65,15 @@ TEST(FormatHandle, BasicDetails) {
 
   // Related and peer owner koid should be omitted when 0 (not all handle types have these and
   // it looks confusing). This one also tests hex formatting.
-  handle.props = 1;
   handle.related_koid = 0;
   handle.peer_owner_koid = 0;
   out = FormatHandle(handle, true);
   EXPECT_EQ(
-      "        Type  ZX_OBJ_TYPE_THREAD\n"
-      "       Value  0x4d2\n"
-      "      Rights  ZX_RIGHT_DUPLICATE\n"
-      "              ZX_RIGHT_TRANSFER\n"
-      "  Properties  ZX_OBJ_PROP_WAITABLE\n"
-      "        Koid  0x1ed2\n",
+      "    Type  ZX_OBJ_TYPE_THREAD\n"
+      "   Value  0x4d2\n"
+      "  Rights  ZX_RIGHT_DUPLICATE\n"
+      "          ZX_RIGHT_TRANSFER\n"
+      "    Koid  0x1ed2\n",
       out.AsString());
 }
 

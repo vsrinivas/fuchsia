@@ -728,7 +728,6 @@ OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
                   ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT;                                           \
   buffer.type = ZX_OBJ_TYPE_LOG;                                                              \
   buffer.related_koid = 0;                                                                    \
-  buffer.props = ZX_OBJ_PROP_WAITABLE;                                                        \
   auto value =                                                                                \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_HANDLE_BASIC,                         \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr);    \
@@ -757,7 +756,6 @@ OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
     "ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT\x1B[0m\n"
     "      type: \x1B[32mzx_obj_type_t\x1B[0m = \x1B[34mZX_OBJ_TYPE_LOG\x1B[0m\n"
     "      related_koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m0\x1B[0m\n"
-    "      props: \x1B[32mzx_obj_props_t\x1B[0m = \x1B[34mZX_OBJ_PROP_WAITABLE\x1B[0m\n"
     "    }\n");
 
 #define OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST_CONTENT(result, expected)                \

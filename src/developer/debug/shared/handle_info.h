@@ -15,9 +15,6 @@ namespace debug_ipc {
 // Converts a uint32_t handle type to a string. Returns "<unknown>" on failure.
 std::string HandleTypeToString(uint32_t handle_type);
 
-// Returns "<none>" when unset, and "<unknown>" if unknown.
-std::string HandlePropsToString(uint32_t handle_props);
-
 // Returns a vector of strings, one for each right set.
 std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights);
 

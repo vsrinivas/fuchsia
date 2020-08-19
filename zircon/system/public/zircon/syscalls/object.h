@@ -49,10 +49,6 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_GUEST_STATS             ((zx_object_info_topic_t) 29u) // zx_info_guest_stats_t[1]
 #define ZX_INFO_TASK_RUNTIME            ((zx_object_info_topic_t) 30u) // zx_info_task_runtime_t[1]
 
-typedef uint32_t zx_obj_props_t;
-#define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
-#define ZX_OBJ_PROP_WAITABLE            ((zx_obj_props_t) 1u)
-
 // Return codes set when a task is killed.
 #define ZX_TASK_RETCODE_SYSCALL_KILL            ((int64_t) -1024)   // via zx_task_kill().
 #define ZX_TASK_RETCODE_OOM_KILL                ((int64_t) -1025)   // by the OOM killer.
@@ -85,9 +81,7 @@ typedef struct zx_info_handle_basic {
     // not change even if the related object no longer exists.
     zx_koid_t related_koid;
 
-    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
-    // handle can be waited on; zero otherwise.
-    zx_obj_props_t props;
+    uint32_t reserved;
 
     uint8_t padding1[4];
 } zx_info_handle_basic_t;
@@ -105,9 +99,7 @@ typedef struct zx_info_handle_extended {
     // interchangeable.
     zx_rights_t rights;
 
-    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
-    // handle can be waited on; zero otherwise.
-    zx_obj_props_t props;
+    uint32_t reserved;
 
     // The unique id assigned by kernel to the object referenced by the
     // handle.

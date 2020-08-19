@@ -2328,11 +2328,6 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
     case SyscallType::kObjectInfoTopic:
       printer.DisplayObjectInfoTopic(value);
       break;
-    case SyscallType::kObjProps:
-      printer << fidl_codec::Blue;
-      ObjPropsName(value, printer);
-      printer << fidl_codec::ResetColor;
-      break;
     case SyscallType::kObjType:
       printer << fidl_codec::Blue;
       fidl_codec::ObjTypeName(value, printer);

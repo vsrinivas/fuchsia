@@ -14,7 +14,6 @@ pub type zx_guest_trap_t = u32;
 pub type zx_handle_t = u32;
 pub type zx_handle_op_t = u32;
 pub type zx_koid_t = u64;
-pub type zx_obj_props_t = u32;
 pub type zx_obj_type_t = u32;
 pub type zx_object_info_topic_t = u32;
 pub type zx_off_t = u64;
@@ -318,11 +317,6 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_EXCEPTION           = 29;
     ZX_OBJ_TYPE_CLOCK               = 30;
     ZX_OBJ_TYPE_STREAM              = 31;
-]);
-
-multiconst!(zx_obj_props_t, [
-    ZX_OBJ_PROP_NONE                  = 0;
-    ZX_OBJ_PROP_WAITABLE              = 1;
 ]);
 
 // TODO: add an alias for this type in the C headers.
@@ -736,7 +730,7 @@ pub struct zx_info_handle_basic_t {
     pub rights: zx_rights_t,
     pub type_: zx_obj_type_t,
     pub related_koid: zx_koid_t,
-    pub props: zx_obj_props_t,
+    pub reserved: u32,
 }
 
 // Don't need struct_decl_macro for this, the wrapper is different.

@@ -151,7 +151,6 @@ TEST(ChannelWriteEtcTest, SentHandleReferrsToSameObject) {
     EXPECT_EQ(event_info.koid, incoming_event_info.koid, "%s", test_case_str[op].c_str());
     EXPECT_EQ(event_info.rights, incoming_event_info.rights, "%s", test_case_str[op].c_str());
     EXPECT_EQ(event_info.type, incoming_event_info.type, "%s", test_case_str[op].c_str());
-    EXPECT_EQ(event_info.props, incoming_event_info.props, "%s", test_case_str[op].c_str());
     EXPECT_OK(zx_handle_close(incoming_handle), "%s", test_case_str[op].c_str());
   };
 

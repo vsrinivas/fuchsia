@@ -360,9 +360,6 @@ class BasicInfoController : public GetInfoController {
                           JS_NewInt32(ctx_, basic_info_.related_koid)) != 1) {
       return JS_ThrowInternalError(ctx_, "Unable to set related_koid");
     }
-    if (JS_SetPropertyStr(ctx_, object, "props", JS_NewInt32(ctx_, basic_info_.props)) != 1) {
-      return JS_ThrowInternalError(ctx_, "Unable to set props");
-    }
     return object;
   }
 

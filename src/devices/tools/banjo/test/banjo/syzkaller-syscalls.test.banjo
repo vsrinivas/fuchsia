@@ -242,11 +242,6 @@ union zx_object_info_handles {
     handle<job> type23;         // ZX_INFO_JOB
 };
 
-enum zx_obj_props : uint32 {
-    ZX_OBJ_PROP_NONE = 0;
-    ZX_OBJ_PROP_WAITABLE = 1;
-};
-
 enum zx_obj_types : uint32 {
     ZX_OBJ_TYPE_NONE = 0;
     ZX_OBJ_TYPE_PROCESS = 1;

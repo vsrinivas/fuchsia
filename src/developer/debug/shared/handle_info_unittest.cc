@@ -15,12 +15,6 @@ TEST(HandleInfo, HandleTypeToString) {
   EXPECT_EQ("<unknown (9999)>", a);
 }
 
-TEST(HandleInfo, HandlePropsToString) {
-  EXPECT_EQ("ZX_OBJ_PROP_NONE", HandlePropsToString(0));
-  EXPECT_EQ("ZX_OBJ_PROP_WAITABLE", HandlePropsToString(1));
-  EXPECT_EQ("<unknown (999)>", HandlePropsToString(999));
-}
-
 TEST(HandleInfo, HandleRightsToString) {
   EXPECT_EQ("ZX_RIGHT_NONE", HandleRightsToString(0));
   EXPECT_EQ("ZX_RIGHT_DUPLICATE", HandleRightsToString(1));

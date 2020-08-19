@@ -77,10 +77,6 @@ typedef struct zx_info_handle_basic {
     // This relationship is immutable: an object's |related_koid| does
     // not change even if the related object no longer exists.
     zx_koid_t related_koid;
-
-    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
-    // handle can be waited on; zero otherwise.
-    uint32_t props;               // zx_obj_props_t;
 } zx_info_handle_basic_t;
 ```
 
@@ -139,9 +135,7 @@ typedef struct zx_info_handle_extended {
     // interchangeable.
     zx_rights_t rights;
 
-    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
-    // handle can be waited on; zero otherwise.
-    zx_obj_props_t props;
+    uint32_t reserved;
 
     // The unique id assigned by kernel to the object referenced by the
     // handle.

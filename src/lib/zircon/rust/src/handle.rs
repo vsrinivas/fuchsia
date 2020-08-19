@@ -10,7 +10,6 @@ use crate::{
     WaitAsyncOpts,
 };
 
-use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
@@ -376,17 +375,6 @@ assoc_values!(ObjectType, [
     EXCEPTION       = sys::ZX_OBJ_TYPE_EXCEPTION;
 ]);
 
-bitflags! {
-    /// Properties associated with an object type.
-    ///
-    /// Wrapper type for [sys::zx_obj_prop_t], returned from [Handle::basic_info()].
-    #[repr(C)]
-    pub struct ObjectTypeProperties: sys::zx_obj_props_t {
-        const NONE     = sys::ZX_OBJ_PROP_NONE;
-        const WAITABLE = sys::ZX_OBJ_PROP_WAITABLE;
-    }
-}
-
 /// Basic information about a handle.
 ///
 /// Wrapper for data returned from [Handle::basic_info()].
@@ -396,7 +384,7 @@ pub struct HandleBasicInfo {
     pub rights: Rights,
     pub object_type: ObjectType,
     pub related_koid: Koid,
-    pub props: ObjectTypeProperties,
+    pub reserved: u32,
 }
 
 impl Default for HandleBasicInfo {
@@ -407,7 +395,7 @@ impl Default for HandleBasicInfo {
 
 impl From<sys::zx_info_handle_basic_t> for HandleBasicInfo {
     fn from(info: sys::zx_info_handle_basic_t) -> Self {
-        let sys::zx_info_handle_basic_t { koid, rights, type_, related_koid, props } = info;
+        let sys::zx_info_handle_basic_t { koid, rights, type_, related_koid, reserved } = info;
 
         // Note lossy conversion of Rights and HandleProperty here if either of those types are out
         // of date or incomplete.
@@ -416,7 +404,7 @@ impl From<sys::zx_info_handle_basic_t> for HandleBasicInfo {
             rights: Rights::from_bits_truncate(rights),
             object_type: ObjectType(type_),
             related_koid: Koid(related_koid),
-            props: ObjectTypeProperties::from_bits_truncate(props),
+            reserved: reserved,
         }
     }
 }
@@ -434,9 +422,7 @@ mod tests {
     use super::*;
     // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
     // fuchsia_zircon::Vmar that we need to use.
-    use fuchsia_zircon::{
-        AsHandleRef, Channel, HandleBased, ObjectType, ObjectTypeProperties, Rights, Status, Vmo,
-    };
+    use fuchsia_zircon::{AsHandleRef, Channel, HandleBased, ObjectType, Rights, Status, Vmo};
 
     #[test]
     fn set_get_name() {
@@ -476,15 +462,12 @@ mod tests {
             assert!(info.koid.raw_koid() >= sys::ZX_KOID_FIRST);
             assert_eq!(info.object_type, ObjectType::CHANNEL);
             assert!(info.rights.contains(Rights::READ | Rights::WRITE | Rights::WAIT));
-            assert_eq!(info.props, ObjectTypeProperties::WAITABLE);
         }
 
         let side1_repl = side1.replace_handle(Rights::READ).expect("side1 replace_handle failed");
         let info1_repl = side1_repl.basic_info().expect("side1_repl basic_info failed");
         assert_eq!(info1_repl.koid, info1.koid);
         assert_eq!(info1_repl.rights, Rights::READ);
-        // Handle not having WAIT right doesn't affect these properties.
-        assert_eq!(info1_repl.props, ObjectTypeProperties::WAITABLE);
     }
 
     #[test]
@@ -494,6 +477,5 @@ mod tests {
         let info = root_vmar.basic_info().expect("vmar basic_info failed");
         assert_eq!(info.object_type, ObjectType::VMAR);
         assert!(!info.rights.contains(Rights::WAIT));
-        assert_eq!(info.props, ObjectTypeProperties::NONE);
     }
 }

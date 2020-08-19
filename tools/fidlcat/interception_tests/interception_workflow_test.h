@@ -322,7 +322,6 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
         .handle_value = kHandle,
         .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
                   ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
-        .props = ZX_OBJ_PROP_WAITABLE,
         .koid = kHandleKoid,
         .related_koid = kHandle2Koid,
         .peer_owner_koid = 0});
@@ -331,7 +330,6 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
         .handle_value = kHandle2,
         .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
                   ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
-        .props = ZX_OBJ_PROP_WAITABLE,
         .koid = kHandle2Koid,
         .related_koid = kHandleKoid,
         .peer_owner_koid = 0});

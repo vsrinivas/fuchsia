@@ -170,7 +170,7 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, koid, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, rights, 8, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, type, 12, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, related_koid, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, props, 24, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, reserved, 24, 4);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_job_t, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_job_t, return_code, 0, 8);
