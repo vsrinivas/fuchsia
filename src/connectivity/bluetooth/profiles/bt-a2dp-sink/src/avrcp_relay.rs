@@ -11,9 +11,9 @@ use {
     fidl_table_validation::ValidFidlTable,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::{self, fx_log_info, fx_vlog},
     fuchsia_zircon as zx,
     futures::{select, StreamExt},
+    log::{info, trace},
     std::fmt::Debug,
 };
 
@@ -80,7 +80,7 @@ impl AvrcpRelay {
         let session_fut = Self::session_relay(avrcp_svc, peer_id, player_request_stream);
         Ok(fasync::Task::spawn(async move {
             if let Err(e) = session_fut.await {
-                fx_log_info!("Session completed with error: {:?}", e);
+                info!("Session completed with error: {:?}", e);
             }
         }))
     }
@@ -136,7 +136,7 @@ impl AvrcpRelay {
             select! {
                 request = player_request_fut => {
                     if request.is_none() {
-                        fx_vlog!(1, "Player request stream is closed, quitting AVRCP.");
+                        trace!("Player request stream is closed, quitting AVRCP.");
                         break;
                     }
                     match request.unwrap().context("request from player")? {
@@ -161,16 +161,16 @@ impl AvrcpRelay {
                         sessions2::PlayerRequest::PrevItem { .. } => {
                             let _ = controller.send_command(avrcp::AvcPanelCommand::Backward).await;
                         },
-                        x => fx_log_info!("Unhandled request from Player: {:?}", x),
+                        x => info!("Unhandled request from Player: {:?}", x),
                     }
                 }
                 event = avrcp_notify_fut => {
                     if event.is_none() {
-                        fx_log_info!("{} AVRCP relay stop: notification stream gone", peer_id);
+                        info!("{} AVRCP relay stop: notification stream gone", peer_id);
                         break;
                     }
                     let avrcp::ControllerEvent::OnNotification { timestamp, notification } = event.unwrap()?;
-                    fx_vlog!(1, "Got Notification from AVRCP: {:?}", notification);
+                    trace!("Got Notification from AVRCP: {:?}", notification);
 
                     let mut player_status_updated = false;
 
@@ -182,7 +182,7 @@ impl AvrcpRelay {
                     if notification.status.is_some() || notification.track_id.is_some() {
                         let mut building = staged_info.get_or_insert_with(sessions2::PlayerInfoDelta::new_empty);
                         if let Err(e) = update_attributes(&controller, &mut building, &mut last_player_status).await {
-                            fx_log_info!("Couldn't update AVRCP attributes: {:?}", e);
+                            info!("Couldn't update AVRCP attributes: {:?}", e);
                         }
                         player_status_updated = true;
 
@@ -190,7 +190,7 @@ impl AvrcpRelay {
 
                     if notification.status.is_some() {
                         if let Err(e) = update_status(&controller, &mut last_player_status).await {
-                            fx_log_info!("Couldn't update AVRCP status: {:?}", e);
+                            info!("Couldn't update AVRCP status: {:?}", e);
                         }
                         player_status_updated = true;
                     }
@@ -207,7 +207,7 @@ impl AvrcpRelay {
             }
 
             if staged_info.is_some() && hanging_watcher.is_some() {
-                fx_vlog!(1, "Sending watcher info: {:?}", staged_info.as_ref().unwrap());
+                trace!("Sending watcher info: {:?}", staged_info.as_ref().unwrap());
                 hanging_watcher.take().unwrap().send(staged_info.take().unwrap())?;
             }
         }

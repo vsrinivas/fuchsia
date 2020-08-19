@@ -17,7 +17,6 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_audio_codec::StreamProcessor,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{
@@ -29,6 +28,7 @@ use {
         task::{Context, Poll},
         Future, StreamExt, TryFutureExt,
     },
+    log::{info, warn},
     std::collections::HashSet,
     std::{convert::TryInto, io, pin::Pin},
 };
@@ -109,7 +109,7 @@ impl AudioConsumerSink {
                 Ok(index) => {
                     self.buffers_free.insert(index);
                 }
-                Err(e) => fx_log_warn!("Failed to send packet: {}", e),
+                Err(e) => warn!("Failed to send packet: {}", e),
             };
         }
         if !self.buffers_free.is_empty() {
@@ -361,12 +361,12 @@ impl Player {
                     let decoded = match decoded {
                         Ok(decoded) => decoded,
                         Err(e) => {
-                            fx_log_info!("Decoded stream failed to produce: {:?}", e);
+                            info!("Decoded stream failed to produce: {:?}", e);
                             break;
                         }
                     };
                     if let Err(e) = sink.write_all(&decoded).await {
-                        fx_log_info!("AudioConsumer failed to write: {:?}", e);
+                        info!("AudioConsumer failed to write: {:?}", e);
                         break;
                     }
                 }
@@ -376,7 +376,7 @@ impl Player {
             let abortable_task_fut = Abortable::new(decoding_task_fut, stop_registration);
             fuchsia_async::Task::local(async move {
                 if let Err(Aborted) = abortable_task_fut.await {
-                    fx_log_info!("Decoder forwarding task completed.");
+                    info!("Decoder forwarding task completed.");
                 }
             })
             .detach();
@@ -461,7 +461,7 @@ impl Player {
 
                     if let Err(e) = self.audio_sink.write_all(&payload[offset..offset + len]).await
                     {
-                        fx_log_info!("Failed to push packet to audio: {:?}", e);
+                        info!("Failed to push packet to audio: {:?}", e);
                     }
                     offset += len;
                 }
@@ -469,7 +469,7 @@ impl Player {
                     let element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
                     let frame = element.get_payload(0).ok_or(format_err!("Payload not found"))?;
                     if let Err(e) = self.audio_sink.write_all(frame).await {
-                        fx_log_info!("Failed to write packet to sink: {:?}", e);
+                        info!("Failed to write packet to sink: {:?}", e);
                     }
                     // Only one payload per AAC RTP Pakcet.
                     break;
@@ -478,7 +478,7 @@ impl Player {
             }
         }
         if let Err(e) = self.audio_sink.flush().await {
-            fx_log_info!("Failed to flush audio packets: {:?}", e);
+            info!("Failed to flush audio packets: {:?}", e);
         }
         self.playing = true;
         trace::duration_end!("bt-a2dp-sink", "Media:PacketReceived");

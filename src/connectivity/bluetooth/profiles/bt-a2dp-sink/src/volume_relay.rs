@@ -9,13 +9,13 @@ use {
     fidl_fuchsia_bluetooth_avrcp as avrcp, fidl_fuchsia_media as media,
     fidl_fuchsia_settings as settings,
     fuchsia_async::{self as fasync, DurationExt, Timer},
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
         channel::oneshot::Sender,
         future::{Fuse, FusedFuture},
         pin_mut, select, Future, FutureExt, StreamExt,
     },
+    log::{info, trace, warn},
     std::fmt::Debug,
 };
 
@@ -111,7 +111,7 @@ impl VolumeRelay {
                 Ok(vol) => vol.0,
             },
         };
-        fx_vlog!(1, "Initial system media volume level is {:?} in AVRCP", current_volume);
+        trace!("Initial system media volume level is {:?} in AVRCP", current_volume);
         let mut staged_volume = Some(current_volume);
 
         let mut last_onchanged = None;
@@ -129,7 +129,7 @@ impl VolumeRelay {
 
             select! {
                 _ = stop_signal => {
-                    fx_vlog!(1, "AVRCP volume relay ending on stop signal");
+                    trace!("AVRCP volume relay ending on stop signal");
                     break Ok(());
                 },
                 avrcp_request = avrcp_request_fut => {
@@ -141,9 +141,9 @@ impl VolumeRelay {
                     match request {
                         avrcp::AbsoluteVolumeHandlerRequest::SetVolume { requested_volume, responder } => {
                             let settings = AvrcpVolume(requested_volume).as_audio_settings(media::AudioRenderUsage::Media);
-                            fx_vlog!(1, "AVRCP Setting system volume to {} -> {:?}", requested_volume, settings);
+                            trace!("AVRCP Setting system volume to {} -> {:?}", requested_volume, settings);
                             if let Err(e) = audio.set(settings).await {
-                                fx_log_warn!("Couldn't set media volume: {:?}", e);
+                                warn!("Couldn't set media volume: {:?}", e);
                                 let _ = responder.send(current_volume);
                                 continue;
                             }
@@ -163,7 +163,7 @@ impl VolumeRelay {
                 },
                 _ = setvolume_timeout => {
                     for responder in hanging_setvolumes.drain(..) {
-                        fx_vlog!(1, "Timed out - reporting result of SetVolume as {}", current_volume);
+                        trace!("Timed out - reporting result of SetVolume as {}", current_volume);
                         let _  = responder.send(current_volume);
                     }
                 },
@@ -176,16 +176,16 @@ impl VolumeRelay {
 
                     current_volume = match AvrcpVolume::from_media_volume(settings) {
                         Err(e) => {
-                            fx_log_warn!("Volume Relay can't get volume: {:?}", e);
+                            warn!("Volume Relay can't get volume: {:?}", e);
                             continue;
                         },
                         Ok(vol) => vol.0,
                     };
 
-                    fx_vlog!(1, "System media volume level now at {:?} in AVRCP", current_volume);
+                    trace!("System media volume level now at {:?} in AVRCP", current_volume);
                     if hanging_setvolumes.len() > 0 {
                         for responder in hanging_setvolumes.drain(..) {
-                            fx_vlog!(1, "Reporting result of SetVolume as {}", current_volume);
+                            trace!("Reporting result of SetVolume as {}", current_volume);
                             let _  = responder.send(current_volume);
                         }
                         // When the change is the result of a setvolume command, the onchanged
@@ -200,14 +200,14 @@ impl VolumeRelay {
             if !hanging_onchanged.is_empty() && staged_volume.is_some() {
                 let next_volume = staged_volume.take().unwrap();
                 if Some(next_volume) == last_onchanged {
-                    fx_vlog!(1, "Not reporting unchanged volume {} to AVRCP", next_volume);
+                    trace!("Not reporting unchanged volume {} to AVRCP", next_volume);
                     continue;
                 }
 
                 for responder in hanging_onchanged.drain(..) {
                     let _ = responder.send(next_volume);
                 }
-                fx_vlog!(1, "Reporting changed system volume {} to AVRCP", next_volume);
+                trace!("Reporting changed system volume {} to AVRCP", next_volume);
                 last_onchanged = Some(next_volume);
             }
         }
@@ -221,7 +221,7 @@ where
 {
     fasync::Task::spawn(async move {
         if let Some(e) = future.await.err() {
-            fx_log_info!("{} Completed with Error: {:?}", label, e);
+            info!("{} Completed with Error: {:?}", label, e);
         }
     })
     .detach();
@@ -233,7 +233,7 @@ async fn connect_avrcp_volume(
     let (client, request_stream) = endpoints::create_request_stream()?;
 
     if let Err(e) = avrcp.set_absolute_volume_handler(client).await? {
-        fx_log_info!("failed to set absolute volume handler");
+        info!("failed to set absolute volume handler");
         return Err(format_err!("Failed setting absolute volume handler: {}", e));
     }
 

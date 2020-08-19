@@ -10,13 +10,13 @@ use {
     fuchsia_async,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_syslog::{self, fx_log_info, fx_vlog},
     fuchsia_trace as trace,
     futures::{
         future::{AbortHandle, Abortable, Aborted},
         lock::Mutex,
         select, FutureExt, StreamExt,
     },
+    log::{info, trace},
     std::{sync::Arc, vec::IntoIter},
     thiserror::Error,
 };
@@ -104,7 +104,7 @@ impl MediaTask for ConfiguredSinkTask {
             let start_time = fuchsia_async::Time::now();
             trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
             if let Err(Aborted) = player_fut.await {
-                fx_log_info!("Player stopped via stop signal");
+                info!("Player stopped via stop signal");
             }
             trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
             let end_time = fuchsia_async::Time::now();
@@ -154,20 +154,20 @@ async fn media_stream_task(
         let mut player = match player_gen() {
             Ok(v) => v,
             Err(e) => {
-                fx_log_info!("Can't setup player: {:?}", e);
+                info!("Can't setup player: {:?}", e);
                 break;
             }
         };
         // Get the first status from the player to confirm it is setup.
         if let player::PlayerEvent::Closed = player.next_event().await {
-            fx_log_info!("Player failed during startup");
+            info!("Player failed during startup");
             break;
         }
 
         match decode_media_stream(&mut stream, player, inspect.clone()).await {
-            StreamingError::PlayerClosed => fx_log_info!("Player closed, rebuilding.."),
+            StreamingError::PlayerClosed => info!("Player closed, rebuilding.."),
             e => {
-                fx_log_info!("Unrecoverable streaming error: {:?}", e);
+                info!("Unrecoverable streaming error: {:?}", e);
                 break;
             }
         };
@@ -253,23 +253,23 @@ async fn decode_media_stream(
                         preload.push(pkt);
                         continue;
                     }
-                    fx_log_info!("Starting with {:} packets..", len);
+                    info!("Starting with {:} packets..", len);
                     for past_pkt in preload.drain() {
                         if let Err(e) = player.push_payload(&past_pkt.as_slice()).await {
-                            fx_log_info!("can't push packet: {:?}", e);
+                            info!("can't push packet: {:?}", e);
                         }
                     }
                 }
 
                 if let Err(e) = player.push_payload(&pkt.as_slice()).await {
-                    fx_log_info!("can't push packet: {:?}", e);
+                    info!("can't push packet: {:?}", e);
                 }
             },
             player_event = player.next_event().fuse() => {
                 match player_event {
                     player::PlayerEvent::Closed => return StreamingError::PlayerClosed,
                     player::PlayerEvent::Status(s) => {
-                        fx_vlog!(1, "PlayerEvent Status happened: {:?}", s);
+                        trace!("PlayerEvent Status happened: {:?}", s);
                     },
                 }
             },
@@ -386,7 +386,7 @@ mod tests {
         loop {
             match exec.run_until_stalled(&mut sink_requests.select_next_some()) {
                 Poll::Pending => {}
-                x => fx_log_info!("Got sink request: {:?}", x),
+                x => info!("Got sink request: {:?}", x),
             };
             match exec.run_until_stalled(&mut decode_fut) {
                 Poll::Ready(StreamingError::PlayerClosed) => break,

@@ -16,7 +16,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
-    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
+    log::{info, trace, warn},
     std::{collections::HashMap, convert::TryInto, sync::Arc},
 };
 
@@ -122,7 +122,7 @@ impl ConnectedPeers {
     pub async fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
         if let Some(peer) = self.get(&id) {
             if let Err(e) = peer.receive_channel(channel) {
-                fx_log_warn!("{} failed to connect channel: {}", id, e);
+                warn!("{} failed to connect channel: {}", id, e);
             }
             return;
         }
@@ -130,14 +130,14 @@ impl ConnectedPeers {
         let (streams, session_task) = match (self.peer_session_gen)(&id).await {
             Ok(x) => x,
             Err(e) => {
-                fx_log_warn!("Couldn't generate peer session for {}: {:?}", id, e);
+                warn!("Couldn't generate peer session for {}: {:?}", id, e);
                 return;
             }
         };
 
         let entry = self.connected.lazy_entry(&id);
 
-        fx_log_info!("Adding new peer for {}", id);
+        info!("Adding new peer for {}", id);
         let avdtp_peer = avdtp::Peer::new(channel);
 
         let mut peer = Peer::create(
@@ -153,13 +153,13 @@ impl ConnectedPeers {
         }
 
         if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
-            fx_log_warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
+            warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
         }
 
         let closed_fut = peer.closed();
         let peer = match entry.try_insert(peer) {
             Err(_peer) => {
-                fx_log_warn!("Peer connected while we were setting up peer: {}", id);
+                warn!("Peer connected while we were setting up peer: {}", id);
                 return;
             }
             Ok(weak_peer) => weak_peer,
@@ -169,7 +169,7 @@ impl ConnectedPeers {
             let peer_clone = peer.clone();
             fuchsia_async::Task::local(async move {
                 if let Err(e) = ConnectedPeers::start_streaming(&peer_clone).await {
-                    fx_vlog!(1, "Streaming ended with error: {:?}", e);
+                    trace!("Streaming ended with error: {:?}", e);
                     peer_clone.detach();
                 }
             })
@@ -179,7 +179,6 @@ impl ConnectedPeers {
         // Remove the peer when we disconnect.
         fasync::Task::local(async move {
             closed_fut.await;
-            fx_log_info!("Peer {:?} disconnected", peer.key());
             peer.detach();
             // Captures the session task to extend the task lifetime.
             drop(session_task);

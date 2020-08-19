@@ -25,9 +25,9 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{select, StreamExt, TryStreamExt},
+    log::{info, trace, warn},
     parking_lot::Mutex,
     std::{convert::TryFrom, convert::TryInto, sync::Arc},
 };
@@ -105,7 +105,7 @@ impl StreamsBuilder {
         let codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
         let sbc_config = MediaCodecConfig::try_from(codec_cap)?;
         if let Err(e) = player::Player::test_playable(&sbc_config).await {
-            fx_log_warn!("Can't play required SBC audio: {}", e);
+            warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
 
@@ -129,7 +129,7 @@ impl StreamsBuilder {
             SbcCodecInfo::BITPOOL_MIN,
             SbcCodecInfo::BITPOOL_MAX,
         )?;
-        fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
+        trace!("Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
         avdtp::StreamEndpoint::new(
             SBC_SEID,
@@ -157,7 +157,7 @@ impl StreamsBuilder {
             0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
         )?;
 
-        fx_vlog!(1, "Supported codec parameters: {:?}.", aac_codec_info);
+        trace!("Supported codec parameters: {:?}.", aac_codec_info);
 
         avdtp::StreamEndpoint::new(
             AAC_SEID,
@@ -201,7 +201,7 @@ impl StreamsBuilder {
             let aac_available = self.aac_available.clone();
             let gen_fut = async move {
                 let (player_request_stream, session_id) = Self::setup_audio_session(domain).await?;
-                fx_log_info!("Session ID: {}", session_id);
+                info!("Session ID: {}", session_id);
                 let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_request_stream)
                     .unwrap_or(fasync::Task::spawn(async {}));
 
@@ -229,8 +229,7 @@ async fn connect_after_timeout(
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
-    fx_vlog!(
-        1,
+    trace!(
         "A2DP sink - waiting {}s before connecting to peer {}.",
         INITIATOR_DELAY.into_seconds(),
         peer_id
@@ -240,7 +239,7 @@ async fn connect_after_timeout(
         return;
     }
 
-    fx_vlog!(1, "Peer has not established connection. A2DP sink assuming the INT role.");
+    trace!("Peer has not established connection. A2DP sink assuming the INT role.");
     let channel = match profile_svc
         .connect(
             &mut peer_id.into(),
@@ -256,11 +255,11 @@ async fn connect_after_timeout(
         .await
     {
         Err(e) => {
-            fx_log_warn!("FIDL error creating channel: {:?}", e);
+            warn!("FIDL error creating channel: {:?}", e);
             return;
         }
         Ok(Err(e)) => {
-            fx_log_warn!("Couldn't connect to {}: {:?}", peer_id, e);
+            warn!("Couldn't connect to {}: {:?}", peer_id, e);
             return;
         }
         Ok(Ok(channel)) => channel,
@@ -268,7 +267,7 @@ async fn connect_after_timeout(
 
     let channel = match channel.try_into() {
         Err(e) => {
-            fx_log_warn!("Didn't get channel from peer {}: {}", peer_id, e);
+            warn!("Didn't get channel from peer {}: {}", peer_id, e);
             return;
         }
         Ok(chan) => chan,
@@ -292,7 +291,7 @@ async fn handle_connection(
     peers: &mut ConnectedPeers,
     controller_pool: &mut ControllerPool,
 ) {
-    fx_log_info!("Connection from {}: {:?}!", peer_id, channel);
+    info!("Connection from {}: {:?}!", peer_id, channel);
     peers.connected(peer_id.clone(), channel, initiate).await;
     if let Some(peer) = peers.get_weak(&peer_id) {
         // Add the controller to the peers
@@ -310,12 +309,12 @@ fn handle_services_found(
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
-    fx_log_info!("Audio Source found on {}, attributes: {:?}", peer_id, attributes);
+    info!("Audio Source found on {}, attributes: {:?}", peer_id, attributes);
 
     let profile = match find_profile_descriptors(attributes) {
         Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
         Err(_) => {
-            fx_log_info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
+            info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
             return;
         }
     };
@@ -384,13 +383,13 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
 
     if let Err(e) = fs.take_and_serve_directory_handle() {
-        fx_log_warn!("Unable to serve service directory: {}", e);
+        warn!("Unable to serve service directory: {}", e);
     }
     let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
     let abs_vol_relay = volume_relay::VolumeRelay::start();
     if let Err(e) = &abs_vol_relay {
-        fx_log_info!("Failed to start AbsoluteVolume Relay: {:?}", e);
+        info!("Failed to start AbsoluteVolume Relay: {:?}", e);
     }
 
     let cobalt_logger: CobaltSender = {
@@ -411,7 +410,7 @@ async fn main() -> Result<(), Error> {
         cobalt_logger.clone(),
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
-        fx_log_info!("Failed to attach to inspect: {:?}", e);
+        info!("Failed to attach to inspect: {:?}", e);
     }
 
     let peers = Arc::new(Mutex::new(peers));
