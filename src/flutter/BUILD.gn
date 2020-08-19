@@ -2,39 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
+
+runner_config_file = "flutter_runner_config"
+runner_types = [
+  "jit",
+  "jit_product",
+  "aot",
+  "aot_product",
+]
+
+# Generate targets to package together the runner and its configuration data for
+# each runner type.
+#
+# The runner configuration is located in `flutter_runner_config` and shared by
+# all runner types.
+all_flutter_runners = []
+foreach(type, runner_types) {
+  runner_target = "flutter_$type"
+  config_target = "runner_config_for_" + runner_target
+  all_flutter_runners += [ ":" + runner_target ]
+
+  config_data(config_target) {
+    for_pkg = runner_target + "_runner"
+    sources = [ rebase_path(runner_config_file) ]
+    outputs = [ runner_config_file ]
+  }
+
+  group(runner_target) {
+    public_deps = [
+      ":" + config_target,
+      "//src/lib/icu/tzdata:icu_tzdata_for_flutter_${type}_runner",
+      "//topaz/runtime/flutter_runner:flutter_${type}_runner",
+    ]
+  }
+}
+
 group("flutter") {
-  public_deps = [
-    ":flutter_aot",
-    ":flutter_aot_product",
-    ":flutter_jit",
-    ":flutter_jit_product",
-  ]
-}
-
-group("flutter_aot") {
-  public_deps = [
-    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_aot_runner",
-    "//topaz/runtime/flutter_runner:flutter_aot_runner",
-  ]
-}
-
-group("flutter_aot_product") {
-  public_deps = [
-    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_aot_product_runner",
-    "//topaz/runtime/flutter_runner:flutter_aot_product_runner",
-  ]
-}
-
-group("flutter_jit") {
-  public_deps = [
-    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_jit_runner",
-    "//topaz/runtime/flutter_runner:flutter_jit_runner",
-  ]
-}
-
-group("flutter_jit_product") {
-  public_deps = [
-    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_jit_product_runner",
-    "//topaz/runtime/flutter_runner:flutter_jit_product_runner",
-  ]
+  public_deps = all_flutter_runners
 }
