@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::{health::Reporter, Inspector, Node},
-    fuchsia_inspect_derive::{IValue, Inspect},
+    fuchsia_inspect::{health::Reporter, Inspector, IntProperty, Node, Property, UintProperty},
     fuchsia_zircon as zx,
     futures::FutureExt,
     lazy_static::lazy_static,
@@ -20,16 +19,6 @@ lazy_static! {
     pub static ref INSPECTOR: Inspector = Inspector::new();
 }
 
-/// Attempts to call `iattach` to attach `$inspectable` under node `$parent` with name `$name`,
-/// logging a warning on failure.
-macro_rules! attempt_iattach {
-    ($inspectable:expr, $parent:expr, $name:expr) => {
-        if let Err(err) = $inspectable.iattach($parent, $name) {
-            warn!("Failed to attach inspect node {}: {}", $name, err);
-        }
-    };
-}
-
 fn monotonic_time() -> i64 {
     zx::Time::get(zx::ClockId::Monotonic).into_nanos()
 }
@@ -39,66 +28,56 @@ fn utc_time() -> i64 {
 }
 
 /// A representation of a point in time as measured by all pertinent clocks.
-#[derive(Inspect)]
 pub struct TimeSet {
     /// The kernel ZX_CLOCK_MONOTONIC time, in ns.
-    monotonic: IValue<i64>,
+    monotonic: i64,
     /// The kernel ZX_CLOCK_UTC time, in ns.
-    kernel_utc: IValue<i64>,
+    kernel_utc: i64,
     /// The UTC zx::Clock time, in ns.
-    clock_utc: IValue<i64>,
-    /// The inspect Node these fields are exported to.
-    inspect_node: fuchsia_inspect::Node,
+    clock_utc: i64,
 }
 
 impl TimeSet {
-    /// Returns a new `TimeSet` representing current time, using the inspect `Node` supplied by the
-    /// caller where present, or creating a new one otherwise.
-    pub fn now(clock: &zx::Clock, node: Option<&fuchsia_inspect::Node>) -> Self {
+    /// Creates a new `TimeSet` set to current time.
+    pub fn now(clock: &zx::Clock) -> Self {
         TimeSet {
-            monotonic: IValue::new(monotonic_time()),
-            kernel_utc: IValue::new(utc_time()),
-            clock_utc: IValue::new(clock.read().map(zx::Time::into_nanos).unwrap_or(FAILED_TIME)),
-            inspect_node: node
-                .map_or_else(fuchsia_inspect::Node::default, |node| node.clone_weak()),
+            monotonic: monotonic_time(),
+            kernel_utc: utc_time(),
+            clock_utc: clock.read().map(zx::Time::into_nanos).unwrap_or(FAILED_TIME),
         }
     }
 
-    /// Uses the Inspect record_* API to store the contents of this `TimeSet` to its node. Unlike
-    /// the create_* API used by the Inspect trait implementation, this lets the fields outlive the
-    /// livetime of the `TimeSet` and is useful when asynchronously adding lazy children.
-    pub fn record(&self) {
-        self.inspect_node.record_int("monotonic", *self.monotonic);
-        self.inspect_node.record_int("kernel_utc", *self.kernel_utc);
-        self.inspect_node.record_int("clock_utc", *self.clock_utc);
+    /// Writes the contents of the `TimeSet` to the supplied node using the inspect record_* methods
+    /// TODO(jsankey): This method could be placed in a trait (`Recordable`?) and generated with a
+    /// procedural macro.
+    pub fn record(self, node: &Node) {
+        node.record_int("monotonic", self.monotonic);
+        node.record_int("kernel_utc", self.kernel_utc);
+        node.record_int("clock_utc", self.clock_utc);
     }
 }
 
-/// A representation of a single update to the UTC zx::Clock for export via Inspect.
-#[derive(Default, Inspect)]
+/// A representation of a single update to the UTC zx::Clock.
 pub struct ClockDetails {
     /// The monotonic time at which the details were retrieved. Note this is the time the Rust
     /// object was created, which may not exactly match the time its contents were supplied by
     /// the kernel.
-    retrieval_monotonic: IValue<i64>,
+    retrieval_monotonic: i64,
     /// The generation counter as documented in the zx::Clock.
-    generation_counter: IValue<u32>,
+    generation_counter: u32,
     /// The monotonic time from the monotonic-UTC correspondence pair, in ns.
-    monotonic_offset: IValue<i64>,
+    monotonic_offset: i64,
     /// The UTC time from the monotonic-UTC correspondence pair, in ns.
-    utc_offset: IValue<i64>,
+    utc_offset: i64,
     /// The ratio between UTC tick rate and monotonic tick rate in parts per million, where
     /// a value above one million means UTC is ticking faster than monotonic.
-    rate_ppm: IValue<u32>,
+    rate_ppm: u32,
     /// The error bounds as documented in the zx::Clock.
-    error_bounds: IValue<u64>,
-    /// The inspect Node these fields are exported to.
-    inspect_node: fuchsia_inspect::Node,
+    error_bounds: u64,
 }
 
-impl ClockDetails {
-    /// Sets the content of this `ClockDetails` based on the supplied `zx::ClockDetails`.
-    pub fn set(&mut self, details: zx::ClockDetails) {
+impl From<zx::ClockDetails> for ClockDetails {
+    fn from(details: zx::ClockDetails) -> ClockDetails {
         // Handle the potential for a divide by zero in an unset rate.
         let rate_ppm = match (
             details.mono_to_synthetic.rate.synthetic_ticks,
@@ -108,34 +87,74 @@ impl ClockDetails {
             (_, 0) => std::i64::MAX,
             (synthetic, reference) => (synthetic as i64 * ONE_MILLION as i64) / (reference as i64),
         };
-        self.retrieval_monotonic.iset(monotonic_time());
-        self.generation_counter.iset(details.generation_counter);
-        self.monotonic_offset.iset(details.mono_to_synthetic.reference_offset);
-        self.utc_offset.iset(details.mono_to_synthetic.synthetic_offset);
-        self.rate_ppm.iset(rate_ppm as u32);
-        self.error_bounds.iset(details.error_bounds);
+        ClockDetails {
+            retrieval_monotonic: monotonic_time(),
+            generation_counter: details.generation_counter,
+            monotonic_offset: details.mono_to_synthetic.reference_offset,
+            utc_offset: details.mono_to_synthetic.synthetic_offset,
+            rate_ppm: rate_ppm as u32,
+            error_bounds: details.error_bounds,
+        }
     }
 }
 
-impl From<zx::ClockDetails> for ClockDetails {
-    fn from(details: zx::ClockDetails) -> ClockDetails {
-        let mut ret = ClockDetails::default();
-        ret.set(details);
-        ret
+/// An inspect `Node` and properties used to export the contents of a `ClockDetails`.
+/// TODO(jsankey): Auto generate this struct and the impl from a procedural macro.
+struct ClockDetailsNode {
+    /// The monotonic time at which the details were retrieved. Note this is the time the Rust
+    /// object was created, which may not exactly match the time its contents were supplied by
+    /// the kernel.
+    _retrieval_monotonic: IntProperty,
+    /// The generation counter as documented in the zx::Clock.
+    _generation_counter: UintProperty,
+    /// The monotonic time from the monotonic-UTC correspondence pair, in ns.
+    _monotonic_offset: IntProperty,
+    /// The UTC time from the monotonic-UTC correspondence pair, in ns.
+    _utc_offset: IntProperty,
+    /// The ratio between UTC tick rate and monotonic tick rate in parts per million, where
+    /// a value above one million means UTC is ticking faster than monotonic.
+    _rate_ppm: UintProperty,
+    /// The error bounds as documented in the zx::Clock.
+    _error_bounds: UintProperty,
+    /// The inspect Node these fields are exported to.
+    _node: Node,
+}
+
+impl ClockDetailsNode {
+    /// Constructs a new `ClockDetails` using the inspect create_* methods (meaning the properties
+    /// are bound to the lifetime of the `ClockDetailsNode`) with fields set to the supplied
+    /// `ClockDetails`.
+    pub fn create(node: Node, data: ClockDetails) -> Self {
+        ClockDetailsNode {
+            _retrieval_monotonic: node.create_int("retrieval_monotonic", data.retrieval_monotonic),
+            _generation_counter: node
+                .create_uint("generation_counter", data.generation_counter as u64),
+            _monotonic_offset: node.create_int("monotonic_offset", data.monotonic_offset),
+            _utc_offset: node.create_int("utc_offset", data.utc_offset),
+            _rate_ppm: node.create_uint("rate_ppm", data.rate_ppm as u64),
+            _error_bounds: node.create_uint("error_bounds", data.error_bounds),
+            _node: node,
+        }
+    }
+
+    /// Sets the `ClockDetailsNode` inspect fields to the contents of the supplied `ClockDetails`.
+    pub fn update(&self, data: ClockDetails) {
+        self._retrieval_monotonic.set(data.retrieval_monotonic);
+        self._generation_counter.set(data.generation_counter as u64);
+        self._monotonic_offset.set(data.monotonic_offset);
+        self._utc_offset.set(data.utc_offset);
+        self._rate_ppm.set(data.rate_ppm as u64);
+        self._error_bounds.set(data.error_bounds);
     }
 }
 
 /// The complete set of Timekeeper information exported through Inspect.
 // Note: The inspect trait is implemented manually since some nodes are lazily created.
 pub struct InspectDiagnostics {
-    /// The clock times at initialization.
-    initialization: TimeSet,
-    /// The backstop time in nanoseconds.
-    backstop: IValue<i64>,
     /// The monotonic time at which the network became available, in nanoseconds.
-    network_available_monotonic: Option<IValue<i64>>,
+    network_available_monotonic: Option<IntProperty>,
     /// The details of the most recent update to the UTC zx::Clock.
-    last_update: Option<ClockDetails>,
+    last_update: Option<ClockDetailsNode>,
     /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
     clock: Arc<zx::Clock>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
@@ -148,13 +167,14 @@ impl InspectDiagnostics {
     /// Construct a new `InspectDiagnostics` exporting at the supplied `Node` using data from
     /// the supplied clock.
     pub fn new(node: &Node, clock: Arc<zx::Clock>) -> Self {
-        let initialization = TimeSet::now(&clock, None);
-        let backstop = IValue::new(
+        // Record fixed data directly into the node without retaining any references.
+        node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
+        node.record_int(
+            "backstop",
             clock.get_details().map_or(FAILED_TIME, |details| details.backstop.into_nanos()),
         );
+
         let mut diagnostics = InspectDiagnostics {
-            initialization,
-            backstop,
             network_available_monotonic: None,
             last_update: None,
             clock: Arc::clone(&clock),
@@ -162,16 +182,11 @@ impl InspectDiagnostics {
             health: fuchsia_inspect::health::Node::new(node),
         };
         diagnostics.health.set_starting_up();
-        // Following the general inspect API philosophy we make our best effort at exporting data
-        // without raising errors that would lead branching logic (i.e. "if inspect is available do
-        // this, otherwise do that" in the operational code.
-        attempt_iattach!(diagnostics.initialization, &node, "initialization");
-        attempt_iattach!(diagnostics.backstop, &node, "backstop");
         node.record_lazy_child("current", move || {
             let clock_clone = Arc::clone(&clock);
             async move {
                 let inspector = Inspector::new();
-                TimeSet::now(&clock_clone, Some(&inspector.root())).record();
+                TimeSet::now(&clock_clone).record(inspector.root());
                 Ok(inspector)
             }
             .boxed()
@@ -182,9 +197,8 @@ impl InspectDiagnostics {
     /// Records the fact that network is now available.
     pub fn network_available(&mut self) {
         if self.network_available_monotonic.is_none() {
-            let mut monotonic = IValue::new(monotonic_time());
-            attempt_iattach!(monotonic, &self.node, "network_available_monotonic");
-            self.network_available_monotonic = Some(monotonic);
+            self.network_available_monotonic =
+                Some(self.node.create_int("network_available_monotonic", monotonic_time()));
         }
     }
 
@@ -194,11 +208,12 @@ impl InspectDiagnostics {
         match self.clock.get_details() {
             Ok(details) => {
                 if let Some(last_update) = &mut self.last_update {
-                    last_update.set(details);
+                    last_update.update(details.into());
                 } else {
-                    let mut update = ClockDetails::from(details);
-                    attempt_iattach!(update, &self.node, "last_update");
-                    self.last_update = Some(update);
+                    self.last_update = Some(ClockDetailsNode::create(
+                        self.node.create_child("last_update"),
+                        details.into(),
+                    ));
                 }
             }
             Err(err) => {
@@ -249,11 +264,11 @@ mod tests {
     #[test]
     fn valid_clock_details_conversion() {
         let details = ClockDetails::from(zx::ClockDetails::from(VALID_DETAILS));
-        assert_eq!(*details.generation_counter, GENERATION_COUNTER);
-        assert_eq!(*details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
-        assert_eq!(*details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
-        assert_eq!(*details.rate_ppm, ONE_MILLION + RATE_ADJUST);
-        assert_eq!(*details.error_bounds, ERROR_BOUNDS);
+        assert_eq!(details.generation_counter, GENERATION_COUNTER);
+        assert_eq!(details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
+        assert_eq!(details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
+        assert_eq!(details.rate_ppm, ONE_MILLION + RATE_ADJUST);
+        assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
     #[test]
@@ -262,11 +277,11 @@ mod tests {
         zx_details.mono_to_synthetic.rate.synthetic_ticks = 1000;
         zx_details.mono_to_synthetic.rate.reference_ticks = 0;
         let details = ClockDetails::from(zx::ClockDetails::from(zx_details));
-        assert_eq!(*details.generation_counter, GENERATION_COUNTER);
-        assert_eq!(*details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
-        assert_eq!(*details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
-        assert_eq!(*details.rate_ppm, std::u32::MAX);
-        assert_eq!(*details.error_bounds, ERROR_BOUNDS);
+        assert_eq!(details.generation_counter, GENERATION_COUNTER);
+        assert_eq!(details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
+        assert_eq!(details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
+        assert_eq!(details.rate_ppm, std::u32::MAX);
+        assert_eq!(details.error_bounds, ERROR_BOUNDS);
     }
 
     #[test]
