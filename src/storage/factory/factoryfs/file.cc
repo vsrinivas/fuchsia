@@ -5,9 +5,10 @@
 #include "src/storage/factory/factoryfs/file.h"
 
 namespace factoryfs {
-File::File(fbl::RefPtr<Directory> root_dir, std::unique_ptr<DirectoryEntryManager> entry)
-    : root_dir_(std::move(root_dir)), directory_entry_(std::move(entry)) {
-  root_dir_->OpenFile(directory_entry_->GetName().data(), this);
+
+File::File(Factoryfs& factoryfs, std::unique_ptr<DirectoryEntryManager> entry)
+    : factoryfs_(factoryfs), directory_entry_(std::move(entry)) {
+  factoryfs_.DidOpen(directory_entry_->GetName(), *this);
 }
 
 uint32_t File::GetSize() const { return directory_entry_->GetDataSize(); }
@@ -30,14 +31,14 @@ zx_status_t File::InitFileVmo() {
   // TODO(manalib) append filename to make property-name unique for different files.
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "factoryfs-file", strlen("factoryfs-file"));
 
-  if ((status = root_dir_->Device().BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
+  if ((status = factoryfs_.Device().BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
     FS_TRACE_INFO("factoryfs:File::Failed to attach vmo to block device: %s\n",
                   zx_status_get_string(status));
     vmo_.reset();
     return status;
   }
 
-  uint32_t dev_block_size = root_dir_->GetDeviceBlockInfo().block_size;
+  uint32_t dev_block_size = factoryfs_.GetDeviceBlockInfo().block_size;
   uint32_t dev_blocks =
       fbl::round_up(directory_entry_->GetDataSize(), dev_block_size) / dev_block_size;
   // TODO manalib check if directory_entry_->GetDataSize() is within file size
@@ -49,7 +50,7 @@ zx_status_t File::InitFileVmo() {
       .dev_offset = FsToDeviceBlocks(directory_entry_->GetDataStart(), dev_block_size),
   };
 
-  return root_dir_->Device().FifoTransaction(&request, 1);
+  return factoryfs_.Device().FifoTransaction(&request, 1);
 }
 
 zx_status_t File::Read(void* data, size_t len, size_t offset, size_t* out_actual) {
@@ -99,8 +100,8 @@ zx_status_t File::GetAttributes(fs::VnodeAttributes* attributes) {
 }
 
 File::~File() {
-  root_dir_->CloseFile(GetName().data());
-  root_dir_->Device().BlockDetachVmo(std::move(vmoid_));
+  factoryfs_.DidClose(GetName());
+  factoryfs_.Device().BlockDetachVmo(std::move(vmoid_));
 }
 
 zx_status_t File::Close() { return ZX_OK; }

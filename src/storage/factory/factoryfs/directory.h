@@ -26,13 +26,12 @@ class Factoryfs;
 
 class Directory final : public fs::Vnode {
  public:
+  explicit Directory(factoryfs::Factoryfs& fs) : factoryfs_(fs) {}
+
   Directory(const Directory&) = delete;
   Directory(Directory&&) = delete;
   Directory& operator=(const Directory&) = delete;
   Directory& operator=(Directory&&) = delete;
-
-  explicit Directory(factoryfs::Factoryfs* fs);
-  ~Directory() final;
 
   // Vnode routines.
   fs::VnodeProtocolSet GetProtocols() const override { return fs::VnodeProtocol::kDirectory; }
@@ -66,35 +65,8 @@ class Directory final : public fs::Vnode {
   //
   const factoryfs::Superblock& Info() const;
 
-  block_client::BlockDevice& Device() const;
-
-  const fuchsia_hardware_block_BlockInfo& GetDeviceBlockInfo() const;
-
-  size_t GetSize() const;
-  zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
-
-  // Vmo related operations
-  zx_status_t InitDirectoryVmo(void);
-
-  // Parses the directory and calls |callback| for each directory |entry|.
-  // The callback compares filename of file to be searched and returns ZX_OK if found.
-  // If a callback returns ZX_OK, the iteration stops.
-  using Callback = fbl::Function<zx_status_t(const DirectoryEntry* entry)>;
-
-  // Parses all entries in the container directory from offset 0.
-  // |parse_data| is guarenteed to be 4 byte aligned.
-  zx_status_t ParseEntries(Callback callback, void* parse_data);
-
  private:
-  zx_status_t LookupInternal(std::string_view filename,
-                             std::unique_ptr<DirectoryEntryManager>* out_entry);
-  static zx_status_t IsValidDirectoryEntry(const DirectoryEntry& entry);
-
-  Factoryfs* const factoryfs_;
-  std::map<std::string, Vnode*> open_vnodes_cache_;
-  zx::vmo vmo_{};
-  uint64_t vmo_size_ = 0;
-  storage::Vmoid vmoid_;
+  Factoryfs& factoryfs_;
 };
 
 }  // namespace factoryfs

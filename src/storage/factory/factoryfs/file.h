@@ -15,6 +15,8 @@ namespace factoryfs {
 
 class File final : public fs::Vnode {
  public:
+  explicit File(Factoryfs& factoryfs, std::unique_ptr<DirectoryEntryManager> entry);
+
   File(const File&) = delete;
   File(File&&) = delete;
   File& operator=(const File&) = delete;
@@ -42,10 +44,9 @@ class File final : public fs::Vnode {
   std::string_view GetName() const;
 
   zx_status_t InitFileVmo();
-  explicit File(fbl::RefPtr<Directory> root_dir, std::unique_ptr<DirectoryEntryManager> entry);
 
  private:
-  fbl::RefPtr<Directory> root_dir_;
+  Factoryfs& factoryfs_;
   zx::vmo vmo_{};
   uint64_t vmo_size_ = 0;
   storage::Vmoid vmoid_;
