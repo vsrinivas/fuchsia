@@ -79,6 +79,6 @@ group("runtime_library_group") {
 }
 
 config("sdk_lib_dirs_config") {
-  visibility = [ ":*" ]
+  visibility = [ "${fuchsia_sdk}/*" ]
   lib_dirs = [ "arch/${target_cpu}/lib" ]
 }
