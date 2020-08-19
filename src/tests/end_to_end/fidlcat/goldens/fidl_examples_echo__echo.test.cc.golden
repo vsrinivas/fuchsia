@@ -1,0 +1,4 @@
+TEST(echo_client_cpp, fidl_examples_echo__echo) {
+  Proxy proxy;
+  proxy.run();
+}

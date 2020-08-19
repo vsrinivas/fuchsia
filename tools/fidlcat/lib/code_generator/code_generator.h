@@ -15,6 +15,8 @@
 
 namespace fidlcat {
 
+std::string ToSnakeCase(std::string_view str);
+
 class FidlCallInfo {
  public:
   FidlCallInfo(bool crashed, std::string_view enclosing_interface_name, zx_handle_t handle_id,

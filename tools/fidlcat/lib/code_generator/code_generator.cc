@@ -54,4 +54,21 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
                                         handle_id, syscall_kind, message->method()->name());
 }
 
+std::string ToSnakeCase(std::string_view str) {
+  std::ostringstream result;
+  std::string separator = "";
+  for (char c : str) {
+    if (c == '.' || c == '/') {
+      result << separator;
+    } else if (isupper(c)) {
+      result << separator << static_cast<char>(std::tolower(c));
+      separator = "";
+    } else {
+      result << c;
+      separator = "_";
+    }
+  }
+  return result.str();
+}
+
 }  // namespace fidlcat

@@ -69,14 +69,17 @@ if (is_host) {
   source_set("host_tests") {
     testonly = true
     sources = [
+      "code_generator/code_generator_test.cc",
       "code_generator/cpp_visitor_test.cc",
       "comparator_test.cc",
     ]
 
     deps = [
       ":host_lib",
+      "//src/developer/debug/zxdb/client",
       "//src/lib/fidl_codec",
       "//third_party/googletest:gtest",
+      "//third_party/protobuf:protobuf_full",
       "//zircon/public/lib/fidl_base",
 
       # TODO(57392): Move it back to //third_party once unification completes.

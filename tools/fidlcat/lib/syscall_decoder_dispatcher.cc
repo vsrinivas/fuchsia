@@ -762,27 +762,30 @@ void SyscallDisplayDispatcher::SessionEnded() {
           break;
         }
         case ExtraGeneration::Kind::kCpp:
-          GenerateTests(std::to_string(std::time(0)));
+          GenerateTests("/tmp/fidlcat-generated-tests/" + std::to_string(std::time(0)));
           break;
       }
       separator = "\n";
     } else {
-      std::fstream output(extra_generation.path, std::ios::out | std::ios::trunc);
-      if (output.fail()) {
-        FX_LOGS(ERROR) << "Can't open <" << extra_generation.path << "> for writing.";
+      if (extra_generation.kind == ExtraGeneration::Kind::kCpp) {
+        GenerateTests(extra_generation.path);
       } else {
-        switch (extra_generation.kind) {
-          case ExtraGeneration::Kind::kSummary:
-            DisplaySummary(output);
-            break;
-          case ExtraGeneration::Kind::kTop: {
-            Top top(this);
-            top.Display(output);
-            break;
+        std::fstream output(extra_generation.path, std::ios::out | std::ios::trunc);
+        if (output.fail()) {
+          FX_LOGS(ERROR) << "Can't open <" << extra_generation.path << "> for writing.";
+        } else {
+          switch (extra_generation.kind) {
+            case ExtraGeneration::Kind::kSummary:
+              DisplaySummary(output);
+              break;
+            case ExtraGeneration::Kind::kTop: {
+              Top top(this);
+              top.Display(output);
+              break;
+            }
+            case ExtraGeneration::Kind::kCpp:
+              break;
           }
-          case ExtraGeneration::Kind::kCpp:
-            GenerateTests(extra_generation.path);
-            break;
         }
       }
     }
@@ -795,8 +798,8 @@ std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
                                           std::make_unique<SyscallCompare>(this, comparator_, os_));
 }
 
-void SyscallDisplayDispatcher::GenerateTests(std::string session_id) {
-  auto test_generator = TestGenerator(this, session_id);
+void SyscallDisplayDispatcher::GenerateTests(const std::string& output_directory) {
+  auto test_generator = TestGenerator(this, output_directory);
   test_generator.GenerateTests();
 }
 

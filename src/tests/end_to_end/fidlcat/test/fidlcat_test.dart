@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io' show Directory, Platform, Process, ProcessResult;
+import 'dart:io' show Directory, File, Platform, Process, ProcessResult;
 
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
@@ -242,9 +242,13 @@ void main(List<String> arguments) {
     test('Test --with=generate-tests (more than one proces)', () async {
       final String echoProto =
           Platform.script.resolve('runtime_deps/echo.proto').toFilePath();
+
+      var systemTempDir = Directory.systemTemp;
+      var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
+
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
-          ['--with=generate-tests=e2e', '--from=$echoProto']);
+          ['--with=generate-tests=${fidlcatTemp.path}', '--from=$echoProto']);
 
       expect(
           instance.stdout,
@@ -257,44 +261,120 @@ void main(List<String> arguments) {
       final String echoClientProto = Platform.script
           .resolve('runtime_deps/echo_client.proto')
           .toFilePath();
+
+      var systemTempDir = Directory.systemTemp;
+      var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
+
       var instance = RunFidlcat();
-      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
-          ['--with=generate-tests=e2e', '--from=$echoClientProto']);
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent, [
+        '--with=generate-tests=${fidlcatTemp.path}',
+        '--from=$echoClientProto'
+      ]);
 
       expect(
           instance.stdout,
-          equals(
-              'Writing tests on disk (session id: e2e, process name: echo_client_cpp)\n'
+          equals('Writing tests on disk\n'
+              '  process name: echo_client_cpp\n'
+              '  output directory: "${fidlcatTemp.path}"\n'
               '1412899975 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_0.cc"\n'
+              '\n'
               '1416045099 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_1.cc"\n'
+              '\n'
               '1428628083 zx_channel_write fidl.examples.echo/Echo.EchoString\n'
               '1428628083 zx_channel_read fidl.examples.echo/Echo.EchoString\n'
+              '... Writing to "${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc"\n'
+              '\n'
               '1430725227 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_2.cc"\n'
+              '\n'
               '1435967747 zx_channel_write fuchsia.io/Node.OnOpen\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__node_0.cc"\n'
+              '\n'
               '1457988959 zx_channel_write fuchsia.sys/Launcher.CreateComponent\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_sys__launcher_0.cc"\n'
+              '\n'
               '1466376519 zx_channel_read fuchsia.sys/ComponentController.OnDirectoryReady\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_sys__component_controller_0.cc"\n'
+              '\n'
               '1492595047 zx_channel_read fuchsia.io/Node.Clone\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__node_1.cc"\n'
+              '\n'
               ''),
           reason: instance.additionalResult);
+
+      // Checks that files exist on disk
+      expect(
+          File('${fidlcatTemp.path}/fuchsia_io__directory_0.cc').existsSync(),
+          isTrue);
+      expect(
+          File('${fidlcatTemp.path}/fuchsia_io__directory_1.cc').existsSync(),
+          isTrue);
+      expect(
+          File('${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc')
+              .existsSync(),
+          isTrue);
+      expect(
+          File('${fidlcatTemp.path}/fuchsia_io__directory_2.cc').existsSync(),
+          isTrue);
+      expect(File('${fidlcatTemp.path}/fuchsia_io__node_0.cc').existsSync(),
+          isTrue);
+      expect(
+          File('${fidlcatTemp.path}/fuchsia_sys__launcher_0.cc').existsSync(),
+          isTrue);
+      expect(
+          File('${fidlcatTemp.path}/fuchsia_sys__component_controller_0.cc')
+              .existsSync(),
+          isTrue);
+      expect(File('${fidlcatTemp.path}/fuchsia_io__node_1.cc').existsSync(),
+          isTrue);
+
+      // Checks that the generated code is identical to the golden file
+      expect(
+          File('${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc')
+              .readAsStringSync(),
+          equals(File(Platform.script
+                  .resolve(
+                      'runtime_deps/fidl_examples_echo__echo.test.cc.golden')
+                  .toFilePath())
+              .readAsStringSync()));
     });
 
     test('Test --with=generate-tests (server crashing)', () async {
       final String echoCrashProto = Platform.script
           .resolve('runtime_deps/echo_sync_crash.proto')
           .toFilePath();
+
+      var systemTempDir = Directory.systemTemp;
+      var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
+
       var instance = RunFidlcat();
-      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
-          ['--with=generate-tests=e2e', '--from=$echoCrashProto']);
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent, [
+        '--with=generate-tests=${fidlcatTemp.path}',
+        '--from=$echoCrashProto'
+      ]);
 
       expect(
           instance.stdout,
-          equals(
-              'Writing tests on disk (session id: e2e, process name: echo_client_cpp_synchronous)\n'
+          equals('Writing tests on disk\n'
+              '  process name: echo_client_cpp_synchronous\n'
+              '  output directory: "${fidlcatTemp.path}"\n'
               '1150113659 zx_channel_write fuchsia.sys/Launcher.CreateComponent\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_sys__launcher_0.cc"\n'
+              '\n'
               '2223856655 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_0.cc"\n'
+              '\n'
               '2224905275 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_1.cc"\n'
+              '\n'
               '2243779711 zx_channel_write fuchsia.io/Directory.Open\n'
+              '... Writing to "${fidlcatTemp.path}/fuchsia_io__directory_2.cc"\n'
+              '\n'
               '2674743383 zx_channel_call (crashed) fidl.examples.echo/Echo.EchoString\n'
+              '... Writing to "${fidlcatTemp.path}/fidl_examples_echo__echo_0.cc"\n'
+              '\n'
               ''),
           reason: instance.additionalResult);
     });
