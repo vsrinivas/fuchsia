@@ -5,14 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_VERSIONED_TIMELINE_FUNCTION_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_VERSIONED_TIMELINE_FUNCTION_H_
 
-#include <lib/media/cpp/timeline_function.h>
-
 #include <mutex>
 
 #include <fbl/ref_counted.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

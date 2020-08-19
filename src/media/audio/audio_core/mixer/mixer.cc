@@ -6,11 +6,11 @@
 
 #include <lib/trace/event.h>
 
-#include "lib/media/cpp/timeline_rate.h"
 #include "src/media/audio/audio_core/mixer/linear_sampler.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/mixer/point_sampler.h"
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
 

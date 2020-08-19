@@ -7,11 +7,12 @@
 
 #include <lib/affine/transform.h>
 #include <lib/fit/result.h>
-#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/clock.h>
 #include <zircon/types.h>
 
 #include <string>
+
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio::clock {
 

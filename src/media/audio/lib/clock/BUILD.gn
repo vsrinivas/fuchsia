@@ -51,7 +51,7 @@ source_set("utils") {
   ]
 
   public_deps = [
-    "//sdk/lib/media/cpp:no_converters",
+    "//src/media/audio/lib/timeline",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",

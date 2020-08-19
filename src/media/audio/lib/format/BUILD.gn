@@ -19,9 +19,9 @@ source_set("format") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/media/audio/lib/timeline",
     "//zircon/public/lib/ffl",
     "//zircon/system/ulib/trace",
   ]

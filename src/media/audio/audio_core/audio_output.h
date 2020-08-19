@@ -7,7 +7,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
-#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
 #include <optional>
@@ -15,6 +14,7 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

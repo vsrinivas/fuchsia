@@ -8,8 +8,6 @@
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/media/cpp/timeline_function.h>
-#include <lib/media/cpp/timeline_rate.h>
 #include <lib/zx/clock.h>
 
 #include <atomic>
@@ -28,6 +26,8 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
 

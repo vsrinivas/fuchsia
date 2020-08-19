@@ -5,7 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_OUTPUT_PIPELINE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_OUTPUT_PIPELINE_H_
 
-#include <lib/media/cpp/timeline_function.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
@@ -20,6 +19,7 @@
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

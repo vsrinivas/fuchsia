@@ -4,10 +4,9 @@
 
 #include "src/media/audio/lib/test/virtual_device.h"
 
-#include <lib/media/cpp/timeline_function.h>
-
 #include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio::test {
 

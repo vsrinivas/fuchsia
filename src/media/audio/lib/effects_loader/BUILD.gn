@@ -25,7 +25,7 @@ source_set("effects_loader") {
   ]
 
   deps = [
-    "//sdk/lib/media/cpp:no_converters",
+    "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/trace",
   ]
 }

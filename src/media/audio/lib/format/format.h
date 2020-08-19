@@ -6,8 +6,9 @@
 #define SRC_MEDIA_AUDIO_LIB_FORMAT_FORMAT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/media/cpp/timeline_rate.h>
 #include <stdint.h>
+
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
 

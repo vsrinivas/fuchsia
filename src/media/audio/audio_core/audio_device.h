@@ -7,7 +7,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/promise.h>
-#include <lib/media/cpp/timeline_function.h>
 #include <zircon/device/audio.h>
 
 #include <memory>
@@ -24,6 +23,7 @@
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

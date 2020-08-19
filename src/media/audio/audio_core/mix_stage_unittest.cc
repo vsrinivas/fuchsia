@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/mix_stage.h"
 
+#include <zircon/syscalls.h>
+
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/audio_clock.h"
@@ -495,27 +497,24 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
     upper_limit = Fixed::FromRaw(rate_adjust_ppm * -16);
     lower_limit = Fixed::FromRaw(rate_adjust_ppm * 8);
   }
-  //
-  // At VERY low-magnitude rate adjustment (1-2 ppm), our worst-case initial-response desync is
-  // slightly worse than linear -- as much as +/-40nanosec (16 fractional frames).
-  if (rate_adjust_ppm != 0) {
-    upper_limit = std::max(upper_limit, Fixed::FromRaw(16));
-    lower_limit = std::min(lower_limit, Fixed::FromRaw(-16));
-  }
 
   // Once we've settled back to steady state, our desync ripple is +/-20nsec (8 fractional frames).
   constexpr Fixed kUpperLimitLastTen = Fixed::FromRaw(8);
   constexpr Fixed kLowerLimitLastTen = Fixed::FromRaw(-8);
 
-  // We will measure long-running position across 500 mixes of 5ms each.
-  constexpr int kTotalMixCount = 400;
+  // We will measure long-running position across 150 mixes of 5ms each.
+  constexpr int kTotalMixCount = 150;
   constexpr zx::duration kMixDuration = zx::msec(5);
   constexpr uint32_t dest_frames_per_mix = kBlockSizeFrames;
+
+  // We measure worst-case desync (both ahead and behind [positive and negative]), as well as
+  // "desync ripple" measured during the final 10 mixes, after synch should have converged.
   Fixed max_frac_error{0}, max_frac_error_last_ten{0};
   Fixed min_frac_error{0}, min_frac_error_last_ten{0};
   int mix_count_of_max_error = 0, mix_count_of_min_error = 0;
 
   for (auto mix_count = 0; mix_count < kTotalMixCount; ++mix_count) {
+    zx_nanosleep(zx_deadline_after(kMixDuration.get()));
     mix_stage_->ReadLock(time_until(kMixDuration * mix_count), dest_frames_per_mix * mix_count,
                          dest_frames_per_mix);
     EXPECT_EQ(info.next_dest_frame, dest_frames_per_mix * (mix_count + 1));
@@ -533,24 +532,22 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
       max_frac_error_last_ten = std::max(info.frac_source_error, max_frac_error_last_ten);
       min_frac_error_last_ten = std::min(info.frac_source_error, min_frac_error_last_ten);
     }
+    FX_LOGS(TRACE) << rate_adjust_ppm << ": [" << mix_count << "], error "
+                   << info.frac_source_error.raw_value();
   }
 
-  EXPECT_LE(max_frac_error, upper_limit)
-      << "For rate_adjust_ppm " << rate_adjust_ppm << ": error " << max_frac_error.raw_value()
-      << " <= limit " << upper_limit.raw_value() << " at mix_count " << mix_count_of_max_error
+  EXPECT_LE(max_frac_error.raw_value(), upper_limit.raw_value())
+      << "for rate_adjust_ppm " << rate_adjust_ppm << " at mix_count " << mix_count_of_max_error
       << " (" << mix_count_of_max_error * kMixDuration.to_msecs() << " msec)";
   EXPECT_GE(min_frac_error, lower_limit)
-      << "For rate_adjust_ppm " << rate_adjust_ppm << ": error " << min_frac_error.raw_value()
-      << " >= limit " << lower_limit.raw_value() << " at mix_count " << mix_count_of_min_error
+      << "for rate_adjust_ppm " << rate_adjust_ppm << " at mix_count " << mix_count_of_min_error
       << " (" << mix_count_of_min_error * kMixDuration.to_msecs() << " msec)";
 
   if (rate_adjust_ppm != 0) {
-    EXPECT_LE(max_frac_error_last_ten, kUpperLimitLastTen)
-        << "for rate_adjust_ppm " << rate_adjust_ppm << ": final error "
-        << max_frac_error_last_ten.raw_value() << " <= limit " << kUpperLimitLastTen.raw_value();
-    EXPECT_GE(min_frac_error_last_ten, kLowerLimitLastTen)
-        << "For rate_adjust_ppm " << rate_adjust_ppm << ": final error "
-        << min_frac_error_last_ten.raw_value() << " >= limit " << kLowerLimitLastTen.raw_value();
+    EXPECT_LE(max_frac_error_last_ten.raw_value(), kUpperLimitLastTen.raw_value())
+        << "for rate_adjust_ppm " << rate_adjust_ppm;
+    EXPECT_GE(min_frac_error_last_ten.raw_value(), kLowerLimitLastTen.raw_value())
+        << "for rate_adjust_ppm " << rate_adjust_ppm;
   }
 }
 

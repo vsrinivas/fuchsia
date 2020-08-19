@@ -6,17 +6,21 @@
 
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+#include <iomanip>
+
 #include "src/media/audio/lib/clock/pid_control.h"
 
 namespace media::audio {
 
 // These values were determined empirically based on one accepted rule-of-thumb for setting PID
 // factors. First discover the P factor (without I or D factors) that leads to steady-state
-// oscillation, then half that value. Set the I factor to approximately (2P)/OscillationPeriod.
-// Set the D factor to approximately (P/8)*OscillationPeriod.
-constexpr double kMicroSrcTypicalOscillationPeriod = 6000;  // 480
-                                                            // (frames in typical oscillation cycle)
-constexpr double kMicroSrcPFactor = -0.0000000312;
+// non-divergent oscillation, then half that value. Set the I factor to approximately
+// (2P)/OscillationPeriod. Set the D factor to approximately (P/8)*OscillationPeriod.
+//
+constexpr double kMicroSrcTypicalOscillationPeriod = 6000;
+
+constexpr double kMicroSrcPFactor = -0.000000125;
 constexpr double kMicroSrcIFactor = kMicroSrcPFactor * 2 / kMicroSrcTypicalOscillationPeriod;
 constexpr double kMicroSrcDFactor = kMicroSrcPFactor * kMicroSrcTypicalOscillationPeriod / 8;
 
@@ -28,6 +32,7 @@ AudioClock AudioClock::CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain
   auto audio_clock = AudioClock(std::move(clock), Source::Device, Type::Adjustable, domain);
 
   // Next: set HW-response PID coefficients approprately for a tuned hardware clock.
+
   return audio_clock;
 }
 
@@ -48,7 +53,7 @@ AudioClock AudioClock::CreateAsOptimal(zx::clock clock) {
 AudioClock AudioClock::CreateAsCustom(zx::clock clock) {
   auto audio_clock = AudioClock(std::move(clock), Source::Client, Type::NonAdjustable);
 
-  // Next: set micro-SRC PID coefficients approprately for a software-tuned clock.
+  // Set micro-SRC PID coefficients approprately for a software-tuned clock.
   audio_clock.ConfigureAdjustment(kPidFactorsMicroSrc);
 
   return audio_clock;
@@ -167,13 +172,12 @@ void AudioClock::TuneRateForError(Fixed frac_src_error, int64_t dest_frame) {
     // Convert this to a (truncated) PPM value, set_rate_adjust and update the client clock
   } else {
     // Else if custom: we've already absorbed the rate adjustment; it can be retrieved now.
+    adjustment = std::clamp(adjustment, -0.002, 0.002);
     auto adjustment_rate = 1.0 + adjustment;
-    rate_adjustment_ = TimelineRate(static_cast<float>(adjustment_rate));
+    rate_adjustment_ = TimelineRate(adjustment_rate);
 
-    FX_LOGS(TRACE) << "Micro-SRC adjustment: adjustment " << adjustment << ", adjustment_rate "
-                   << adjustment_rate << " (" << rate_adjustment_.subject_delta() << "/"
-                   << rate_adjustment_.reference_delta() << "), error "
-                   << frac_src_error.raw_value();
+    FX_LOGS(TRACE) << "Micro-SRC:" << std::fixed << std::setprecision(2) << std::setw(8)
+                   << adjustment * 1'000'000.0 << " ppm; frac_error " << frac_src_error.raw_value();
   }
 }
 

@@ -7,7 +7,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
-#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -16,6 +15,7 @@
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
 #include "src/media/audio/lib/format/format.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

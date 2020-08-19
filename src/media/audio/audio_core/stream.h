@@ -7,7 +7,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
 #include <optional>
@@ -16,6 +15,7 @@
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/format/format.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 

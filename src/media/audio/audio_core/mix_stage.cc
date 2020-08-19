@@ -641,6 +641,16 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
         TimelineRate micro_src_factor = client_clock.rate_adjustment();
         frac_src_frames_per_dest_frame =
             TimelineRate::Product(frac_src_frames_per_dest_frame, micro_src_factor, false);
+
+        while (frac_src_frames_per_dest_frame.subject_delta() >
+                   std::numeric_limits<uint32_t>::max() ||
+               frac_src_frames_per_dest_frame.reference_delta() >
+                   std::numeric_limits<uint32_t>::max()) {
+          frac_src_frames_per_dest_frame =
+              TimelineRate((frac_src_frames_per_dest_frame.subject_delta() + 1) >> 1,
+                           frac_src_frames_per_dest_frame.reference_delta() >> 1);
+          // clock::DisplayTimelineRate(frac_src_frames_per_dest_frame,"Reduced frac-to-dest:");
+        }
       }
     }
   }
@@ -667,8 +677,10 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     if (old_denominator) {
       bookkeeping.src_pos_modulo *= bookkeeping.denominator;
       info.next_src_pos_modulo *= bookkeeping.denominator;
-      bookkeeping.src_pos_modulo /= old_denominator;
-      info.next_src_pos_modulo /= old_denominator;
+      bookkeeping.src_pos_modulo =
+          std::round(static_cast<float>(bookkeeping.src_pos_modulo) / old_denominator);
+      info.next_src_pos_modulo =
+          std::round(static_cast<float>(info.next_src_pos_modulo) / old_denominator);
     } else {
       bookkeeping.src_pos_modulo = info.next_src_pos_modulo = 0;
     }
