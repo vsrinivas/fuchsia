@@ -27,7 +27,9 @@ use {
     parking_lot::Mutex,
     std::cmp,
     std::sync::Arc,
-    time_metrics_registry::{self, TimeMetricDimensionEventType},
+    time_metrics_registry::{
+        self, TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
+    },
 };
 
 /// URL of the time source. In the future, this value belongs in a config file.
@@ -150,10 +152,10 @@ async fn maintain_utc(
     info!("record the state at initialization.");
     match initial_utc_source(&*utc_clock) {
         ftime::UtcSource::Backstop => {
-            cobalt.log_lifecycle_event(TimeMetricDimensionEventType::InitializedBeforeUtcStart)
+            cobalt.log_lifecycle_event(LifecycleEventType::InitializedBeforeUtcStart)
         }
         ftime::UtcSource::External => {
-            cobalt.log_lifecycle_event(TimeMetricDimensionEventType::InitializedAfterUtcStart)
+            cobalt.log_lifecycle_event(LifecycleEventType::InitializedAfterUtcStart)
         }
     }
 
@@ -181,9 +183,7 @@ async fn maintain_utc(
                     monotonic_before, utc_now, monotonic_after,
                 );
                 if notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before) {
-                    cobalt.log_lifecycle_event(
-                        TimeMetricDimensionEventType::StartedUtcFromTimeSource,
-                    );
+                    cobalt.log_lifecycle_event(LifecycleEventType::StartedUtcFromTimeSource);
                 }
                 break;
             }
@@ -390,7 +390,7 @@ mod tests {
             cobalt_receiver.next().await,
             Some(CobaltEvent {
                 metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-                event_codes: vec![TimeMetricDimensionEventType::InitializedBeforeUtcStart as u32],
+                event_codes: vec![LifecycleEventType::InitializedBeforeUtcStart as u32],
                 component: None,
                 payload: EventPayload::Event(Event),
             })
@@ -423,7 +423,7 @@ mod tests {
             cobalt_receiver.next().await,
             Some(CobaltEvent {
                 metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-                event_codes: vec![TimeMetricDimensionEventType::StartedUtcFromTimeSource as u32],
+                event_codes: vec![LifecycleEventType::StartedUtcFromTimeSource as u32],
                 component: None,
                 payload: EventPayload::Event(Event),
             })
