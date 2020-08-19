@@ -115,7 +115,7 @@ pub(crate) async fn serve_provider_requests(
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
                     pending_scans.push(scan::perform_scan(
                         Arc::clone(&iface_manager),
-                        Some(output_iterator), scan::successful_scan_observer, Arc::clone(&network_selector)));
+                        Some(output_iterator), Arc::clone(&network_selector), Arc::new(scan::LocationSensorUpdater {})));
                 }
             },
             // Progress scans.
@@ -448,7 +448,8 @@ pub(crate) async fn scan_for_network_selector(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<network_selection::NetworkSelector>,
 ) {
-    scan::perform_scan(iface_manager, None, scan::successful_scan_observer, selector).await;
+    scan::perform_scan(iface_manager, None, selector, Arc::new(scan::LocationSensorUpdater {}))
+        .await;
 }
 
 /// Handle events from client state machines.
@@ -502,7 +503,7 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            client::{network_selection::ScanResultUpdate, sme_credential_from_policy},
+            client::{scan::ScanResultUpdate, sme_credential_from_policy},
             config_management::{Credential, NetworkConfig, SecurityType, PSK_BYTE_LEN},
             mode_management::iface_manager::IfaceManagerApi,
             util::logger::set_logger_for_test,
@@ -1992,7 +1993,7 @@ mod tests {
 
         let selector =
             Arc::new(network_selection::NetworkSelector::new(test_values.saved_networks));
-        selector.update_scan_results(vec![types::ScanResult {
+        let scan_results = vec![types::ScanResult {
             id: types::NetworkIdentifier {
                 ssid: b"foobar".to_vec(),
                 type_: types::SecurityType::None,
@@ -2004,7 +2005,10 @@ mod tests {
                 timestamp_nanos: 0,
             }],
             compatibility: types::Compatibility::Supported,
-        }]);
+        }];
+        let mut update_fut = selector.update_scan_results(&scan_results);
+        assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
+        drop(update_fut);
 
         let fut = connect_to_best_network(test_values.iface_manager, selector);
         pin_mut!(fut);

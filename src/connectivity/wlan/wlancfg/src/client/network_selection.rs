@@ -4,15 +4,17 @@
 
 use {
     crate::{
-        client::types,
+        client::{scan::ScanResultUpdate, types},
         config_management::{Credential, SavedNetworksManager},
     },
-    log::{error, trace, warn},
+    async_trait::async_trait,
+    futures::lock::Mutex,
+    log::{error, trace},
     std::{
         cmp::Ordering,
         collections::HashMap,
         convert::TryInto,
-        sync::{Arc, Mutex, MutexGuard},
+        sync::Arc,
         time::{Duration, SystemTime},
     },
 };
@@ -22,10 +24,6 @@ const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minute
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     latest_scan_results: Mutex<Vec<types::ScanResult>>,
-}
-
-pub trait ScanResultUpdate: Sync + Send {
-    fn update_scan_results(&self, scan_results: Vec<types::ScanResult>) -> ();
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,16 +38,6 @@ struct InternalNetworkData {
 impl NetworkSelector {
     pub fn new(saved_network_manager: Arc<SavedNetworksManager>) -> Self {
         Self { saved_network_manager, latest_scan_results: Mutex::new(Vec::new()) }
-    }
-
-    fn take_scan_result_mutex(&self) -> MutexGuard<'_, Vec<types::ScanResult>> {
-        match self.latest_scan_results.lock() {
-            Ok(scan_result_guard) => scan_result_guard,
-            Err(poisoned_guard) => {
-                warn!("Mutex was poisoned");
-                poisoned_guard.into_inner()
-            }
-        }
     }
 
     /// Insert all saved networks into a hashmap with this module's internal data representation
@@ -89,11 +77,11 @@ impl NetworkSelector {
     }
 
     /// Augment the networks hash map with data from scan results
-    fn augment_networks_with_scan_data(
+    async fn augment_networks_with_scan_data(
         &self,
         mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData>,
     ) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
-        let scan_result_guard = self.take_scan_result_mutex();
+        let scan_result_guard = self.latest_scan_results.lock().await;
         for scan_result in &*scan_result_guard {
             if let Some(hashmap_entry) = networks.get_mut(&scan_result.id) {
                 // Extract the max RSSI from all the BSS in scan_result.entries
@@ -124,14 +112,16 @@ impl NetworkSelector {
         &self,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<(types::NetworkIdentifier, Credential)> {
-        let networks = self.augment_networks_with_scan_data(self.load_saved_networks().await);
+        let networks = self.augment_networks_with_scan_data(self.load_saved_networks().await).await;
         find_best_network(&networks, ignore_list)
     }
 }
 
+#[async_trait]
 impl ScanResultUpdate for NetworkSelector {
-    fn update_scan_results(&self, scan_results: Vec<types::ScanResult>) {
-        let mut scan_result_guard = self.take_scan_result_mutex();
+    async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>) {
+        let scan_results = scan_results.clone();
+        let mut scan_result_guard = self.latest_scan_results.lock().await;
         *scan_result_guard = scan_results;
     }
 }
@@ -286,7 +276,7 @@ mod tests {
         let network_selector = test_values.network_selector;
 
         // check there are 0 scan results to start with
-        let guard = network_selector.latest_scan_results.lock().unwrap();
+        let guard = network_selector.latest_scan_results.lock().await;
         assert_eq!(guard.len(), 0);
         drop(guard);
 
@@ -337,10 +327,10 @@ mod tests {
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
-        network_selector.update_scan_results(mock_scan_results.clone());
+        network_selector.update_scan_results(&mock_scan_results).await;
 
         // check that the scan results are stored
-        let guard = network_selector.latest_scan_results.lock().unwrap();
+        let guard = network_selector.latest_scan_results.lock().await;
         assert_eq!(*guard, mock_scan_results);
     }
 
@@ -421,7 +411,7 @@ mod tests {
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
-        network_selector.update_scan_results(mock_scan_results.clone());
+        network_selector.update_scan_results(&mock_scan_results).await;
 
         // build our expected result
         let mut expected_result = HashMap::new();
@@ -447,7 +437,7 @@ mod tests {
         );
 
         // validate the function works
-        let result = network_selector.augment_networks_with_scan_data(saved_networks);
+        let result = network_selector.augment_networks_with_scan_data(saved_networks).await;
         assert_eq!(result, expected_result);
     }
 
@@ -836,7 +826,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
         ];
-        network_selector.update_scan_results(mock_scan_results.clone());
+        network_selector.update_scan_results(&mock_scan_results).await;
 
         // Check that we pick a network
         assert_eq!(
