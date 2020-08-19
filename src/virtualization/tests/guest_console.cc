@@ -108,7 +108,9 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
   status = WaitForMarker(footer + "\n", result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command footer: " << zx_status_get_string(status);
-    FX_LOGS(ERROR) << "Received: \"" << result << "\"";
+    if (result != nullptr) {
+      FX_LOGS(ERROR) << "Received: \"" << *result << "\"";
+    }
     return status;
   }
 
@@ -150,7 +152,9 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* 
     std::string buff;
     zx_status_t status = socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
     if (status != ZX_OK) {
-      *result = output;
+      if (result != nullptr) {
+        *result = output;
+      }
       return status;
     }
     Logger::Get().Write(buff);
