@@ -64,8 +64,33 @@ class MutatingInputCopier : public InputCopier {
   uint32_t total_read_bytes_ = 0;
 };
 
+// This class modifies a specific byte offset from the start of the stream.
+class SimpleMutatingInputCopier : public InputCopier {
+ public:
+  explicit SimpleMutatingInputCopier(uint32_t stream_start_offset, uint8_t modified_value)
+      : stream_start_offset_(stream_start_offset), modified_value_(modified_value) {}
+
+  uint32_t PaddingLength() const override { return 0; }
+  int DecryptVideo(void* data, uint32_t data_len, const zx::vmo& vmo) override {
+    vmo.write(data, 0, data_len);
+    if (total_read_bytes_ <= stream_start_offset_ &&
+        stream_start_offset_ < total_read_bytes_ + data_len) {
+      uint32_t offset_to_modify = stream_start_offset_ - total_read_bytes_;
+
+      vmo.write(&modified_value_, offset_to_modify, 1);
+    }
+    total_read_bytes_ += data_len;
+    return 0;
+  }
+
+ private:
+  uint32_t stream_start_offset_;
+  uint8_t modified_value_;
+  uint32_t total_read_bytes_ = 0;
+};
+
 int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunction use_video_decoder,
-                             int instance, int loc, uint8_t random_value) {
+                             std::unique_ptr<InputCopier> input_copier) {
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
@@ -101,8 +126,6 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
   sysmem.set_error_handler(
       [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
-
-  auto input_copier = std::make_unique<MutatingInputCopier>(instance, loc, random_value);
 
   UseVideoDecoderParams params{.fidl_loop = &fidl_loop,
                                .fidl_thread = fidl_thread,
@@ -151,12 +174,20 @@ int video_fuzzer_test(std::string input_file_path, UseVideoDecoderFunction use_v
 
     fprintf(stderr, "%d: Trying instance %d location %d value %d\n", i, random_instance,
             random_location, random_value);
-    if (run_fuzzer_test_instance(input_file_path, use_video_decoder, random_instance,
-                                 random_location, random_value) < 0) {
+    auto input_copier =
+        std::make_unique<MutatingInputCopier>(random_instance, random_location, random_value);
+    if (run_fuzzer_test_instance(input_file_path, use_video_decoder, std::move(input_copier)) < 0) {
       fprintf(stderr, "Fuzz instance returned error\n");
 
       return -1;
     }
   }
   return 0;
+}
+
+int run_fuzzer_test_instance_for_offset(std::string input_file_path,
+                                        UseVideoDecoderFunction use_video_decoder,
+                                        uint32_t stream_offset, uint8_t modified_value) {
+  auto input_copier = std::make_unique<SimpleMutatingInputCopier>(stream_offset, modified_value);
+  return run_fuzzer_test_instance(input_file_path, use_video_decoder, std::move(input_copier));
 }

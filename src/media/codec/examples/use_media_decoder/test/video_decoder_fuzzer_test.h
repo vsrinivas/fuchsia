@@ -28,4 +28,8 @@
 int video_fuzzer_test(std::string input_file_path, UseVideoDecoderFunction use_video_decoder,
                       uint32_t iteration_count, fxl::CommandLine command_line);
 
+int run_fuzzer_test_instance_for_offset(std::string input_file_path,
+                                        UseVideoDecoderFunction use_video_decoder,
+                                        uint32_t stream_offset, uint8_t modified_value);
+
 #endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_TEST_VIDEO_DECODER_FUZZER_TEST_H_

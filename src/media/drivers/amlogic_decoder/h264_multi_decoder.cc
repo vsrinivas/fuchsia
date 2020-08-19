@@ -1544,6 +1544,11 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   // Set up to decode the current slice.
   if (!current_frame_) {
     current_frame_ = current_metadata_frame_;
+    if (!current_frame_) {
+      LOG(ERROR, "HandleSliceDecode with no metadata frame available");
+      OnFatalError();
+      return;
+    }
 
     uint64_t offset_delimiter = params_.data[HardwareRenderParams::kOffsetDelimiterHi] << 16 |
                                 params_.data[HardwareRenderParams::kOffsetDelimiterLo];

@@ -284,6 +284,20 @@ test("h264_decoder_fuzzer_test") {
   deps = [ ":decoder_fuzzer" ]
 }
 
+test("h264_decoder_malformed_stream_test") {
+  testonly = true
+
+  output_name = "h264_decoder_malformed_stream_test"
+
+  sources = [ "test/h264_decoder_malformed_stream_test.cc" ]
+
+  deps = [
+    ":decoder_fuzzer",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test("h264_multi_decoder_fuzzer_test") {
   testonly = true
 
