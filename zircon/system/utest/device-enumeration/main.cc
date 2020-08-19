@@ -25,6 +25,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fsl/io/device_watcher.h"
+#include "zircon/system/utest/device-enumeration/aemu.h"
 
 namespace {
 
@@ -72,7 +73,7 @@ void WaitForOne(fbl::Span<const char*> device_paths) {
 
 fbl::String GetTestFilter() {
   constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
-  fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
+  fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDONLY));
   if (!sysinfo) {
     return "Unknown";
   }
@@ -124,6 +125,9 @@ fbl::String GetTestFilter() {
     return "*Vs680Evk*";
   } else if (!strcmp(board_name, "luis")) {
     return "*Luis*";
+  } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
+    // QEMU and AEMU with emulated Q35 boards have this board name.
+    return "*QemuX64Q35*";
   }
 
   return "Unknown";
@@ -683,6 +687,40 @@ TEST_F(DeviceEnumerationTest, C18Test) {
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
+  static const char* kDevicePaths[] = {
+      "class/sysmem/000",
+
+      "sys/pci/00:00.0",
+      "sys/pci/00:1f.2/ahci",
+
+      "sys/platform/acpi",
+      "sys/platform/acpi/acpi-pwrbtn",
+      "sys/platform/acpi/i8042/i8042-keyboard",
+      "sys/platform/acpi/i8042/i8042-mouse",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+
+  if (!device_enumeration::IsAemuBoard()) {
+    return;
+  }
+  printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
+
+  static const char* kAemuDevicePaths[] = {
+      "sys/pci/00:01.0/virtio-input",
+      "sys/pci/00:02.0/virtio-input",
+      "sys/pci/00:0b.0/goldfish-address-space",
+
+      "sys/platform/acpi/goldfish",
+      "sys/platform/acpi/goldfish/goldfish-pipe",
+      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-control",
+      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-control/goldfish-display",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
 }
 
 }  // namespace

@@ -18,8 +18,13 @@ import("//build/test/test_package.gni")
 test("device-enumeration") {
   output_name = "device-enumeration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "main.cc" ]
+  sources = [
+    "aemu.cc",
+    "aemu.h",
+    "main.cc",
+  ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
