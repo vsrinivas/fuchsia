@@ -15,6 +15,7 @@
 
 namespace fidlcat {
 
+std::string FidlMethodToIncludePath(std::string_view identifier);
 std::string ToSnakeCase(std::string_view str);
 
 class FidlCallInfo {
@@ -68,8 +69,18 @@ class CodeGenerator {
     call_log_[call_info->handle_id()].emplace_back(std::move(call_info));
   }
 
+  void AddFidlHeaderForInterface(std::string_view enclosing_interface_name) {
+    fidl_headers_.insert(FidlMethodToIncludePath(enclosing_interface_name));
+  }
+
+  void GenerateIncludes(std::ostream& os);
+
+  void GenerateFidlIncludes(std::ostream& os);
+
  private:
   std::map<zx_handle_t, std::vector<std::unique_ptr<FidlCallInfo>>> call_log_;
+
+  std::set<std::string> fidl_headers_;
 };
 
 }  // namespace fidlcat

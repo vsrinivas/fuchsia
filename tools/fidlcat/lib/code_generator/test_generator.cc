@@ -13,6 +13,7 @@ void TestGenerator::GenerateTests() {
     if (output_event) {
       auto call_info = OutputEventToFidlCallInfo(output_event);
       if (call_info) {
+        AddFidlHeaderForInterface(call_info->enclosing_interface_name());
         AddEventToLog(std::move(call_info));
       }
     }
@@ -65,6 +66,8 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
 
   std::ofstream target_file;
   target_file.open(file_name, std::ofstream::out);
+
+  GenerateIncludes(target_file);
 
   target_file << "TEST(" << ToSnakeCase(dispatcher_->processes().begin()->second->name()) << ", "
               << ToSnakeCase(protocol_name) << ") {\n";

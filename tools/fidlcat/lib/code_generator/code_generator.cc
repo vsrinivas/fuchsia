@@ -1,6 +1,30 @@
+#include <sstream>
+
 #include "tools/fidlcat/lib/code_generator/test_generator.h"
 
 namespace fidlcat {
+
+void CodeGenerator::GenerateIncludes(std::ostream& os) {
+  os << "#include <lib/async-loop/cpp/loop.h>\n";
+  os << "#include <lib/async-loop/default.h>\n";
+  os << "#include <lib/async/default.h>\n";
+  os << "#include <lib/syslog/cpp/macros.h>\n";
+  os << "\n";
+  os << "#include <gtest/gtest.h>\n";
+  os << "\n";
+  os << "#include \"lib/sys/cpp/component_context.h\"\n";
+  os << "\n";
+
+  GenerateFidlIncludes(os);
+
+  os << "\n";
+}
+
+void CodeGenerator::GenerateFidlIncludes(std::ostream& os) {
+  for (const auto& fidl_include : fidl_headers_) {
+    os << "#include <" << fidl_include << ">\n";
+  }
+}
 
 std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_event) {
   const Syscall* syscall = output_event->syscall();
@@ -52,6 +76,13 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
 
   return std::make_unique<FidlCallInfo>(crashed, message->method()->enclosing_interface().name(),
                                         handle_id, syscall_kind, message->method()->name());
+}
+
+std::string FidlMethodToIncludePath(std::string_view identifier) {
+  std::string result = std::string(identifier.substr(0, identifier.find('/')));
+  std::replace(result.begin(), result.end(), '.', '/');
+  result.append("/cpp/fidl.h");
+  return result;
 }
 
 std::string ToSnakeCase(std::string_view str) {
