@@ -37,8 +37,11 @@ pub struct LowpanCtlInvocation {
     )]
     pub server_url: String,
 
-    #[argh(option, long = "iface", description = "interface/device name")]
+    #[argh(option, short = 'I', long = "iface", description = "interface/device name")]
     pub device_name: Option<String>,
+
+    #[argh(switch, description = "do a `mfg start` before continuing")]
+    pub mfg_start: bool,
 
     #[argh(subcommand)]
     pub command: CommandEnumWithRepeat,
@@ -134,6 +137,13 @@ impl CommandEnum {
 
 impl LowpanCtlInvocation {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
+        if self.mfg_start {
+            MfgCommand::from_args(&["mfg"], &["start"])
+                .expect("argument parse failure")
+                .exec(context)
+                .await?;
+        }
+
         self.command.exec(context).await
     }
 }
