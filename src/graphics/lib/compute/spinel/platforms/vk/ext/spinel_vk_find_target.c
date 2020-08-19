@@ -10,14 +10,22 @@
 // Spinel targets
 //
 
+#ifdef SPN_VK_TARGET_AMD_GCN3
 #include "targets/vendors/amd/gcn3/hotsort/hs_target.h"
 #include "targets/vendors/amd/gcn3/spn_target.h"
+#endif
+#ifdef SPN_VK_TARGET_ARM_BIFROST8
 #include "targets/vendors/arm/bifrost8/hotsort/hs_target.h"
 #include "targets/vendors/arm/bifrost8/spn_target.h"
+#endif
+#ifdef SPN_VK_TARGET_INTEL_GEN8
 #include "targets/vendors/intel/gen8/hotsort/hs_target.h"
 #include "targets/vendors/intel/gen8/spn_target.h"
+#endif
+#ifdef SPN_VK_TARGET_NVIDIA_SM50
 #include "targets/vendors/nvidia/sm50/hotsort/hs_target.h"
 #include "targets/vendors/nvidia/sm50/spn_target.h"
+#endif
 
 //
 //
@@ -33,6 +41,7 @@ spn_vk_find_target(uint32_t const                          vendor_id,
 {
   switch (vendor_id)
     {
+#ifdef SPN_VK_TARGET_NVIDIA_SM50
         case 0x10DE:  // NVIDIA
         {
           //
@@ -44,6 +53,8 @@ spn_vk_find_target(uint32_t const                          vendor_id,
           *hotsort_target = hs_nvidia_sm35_u64;
           return true;
         }
+#endif
+#ifdef SPN_VK_TARGET_AMD_GCN3
         case 0x1002:  // AMD
         {
           //
@@ -53,6 +64,8 @@ spn_vk_find_target(uint32_t const                          vendor_id,
           *hotsort_target = hs_amd_gcn3_u64;
           return true;
         }
+#endif
+#ifdef SPN_VK_TARGET_INTEL_GEN8
         case 0x8086:  // INTEL
         {
           //
@@ -66,10 +79,12 @@ spn_vk_find_target(uint32_t const                          vendor_id,
           *hotsort_target = hs_intel_gen8_u64;
           return true;
         }
+#endif
         case 0x13B5: {
           //
           // ARM
           //
+#ifdef SPN_VK_TARGET_ARM_BIFROST8
           if (device_id == 0x72120000)
             {
               //
@@ -79,6 +94,7 @@ spn_vk_find_target(uint32_t const                          vendor_id,
               *hotsort_target = hs_arm_bifrost8_u64;
               return true;
             }
+#endif
         }
         default: {
           break;

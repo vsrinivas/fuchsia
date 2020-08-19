@@ -14,21 +14,6 @@ use vk_sys as vk;
 
 use crate::render::generic::Backend;
 
-// Required spinel libraries.
-#[link(name = "spinel", kind = "static")]
-#[link(name = "compute_common", kind = "static")]
-#[link(name = "compute_common_vk", kind = "static")]
-#[link(name = "hotsort_vk", kind = "static")]
-#[link(name = "hotsort_vk_hs_nvidia_sm35_u64", kind = "static")]
-#[link(name = "hotsort_vk_hs_intel_gen8_u64", kind = "static")]
-#[link(name = "hotsort_vk_hs_amd_gcn3_u64", kind = "static")]
-#[link(name = "spinel_vk", kind = "static")]
-#[link(name = "spinel_vk_find_target", kind = "static")]
-#[link(name = "spinel_vk_spn_nvidia_sm50", kind = "static")]
-#[link(name = "spinel_vk_spn_intel_gen8", kind = "static")]
-#[link(name = "spinel_vk_spn_amd_gcn3", kind = "static")]
-extern "C" {}
-
 macro_rules! spn {
     ( $result:expr ) => {{
         let result = $result;
