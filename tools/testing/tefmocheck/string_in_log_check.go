@@ -143,7 +143,10 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	allLogTypes := []logType{serialLogType, swarmingOutputType, syslogType}
 	for _, lt := range allLogTypes {
 		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
-		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt})
+		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, ExceptBlocks: []*logBlock{
+			// Kernel out-of-memory test "OOMHard" may report false positive leaks.
+			{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
+		}})
 		ret = append(ret, &stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt})
 		ret = append(ret, &stringInLogCheck{
 			String: "ZIRCON KERNEL OOPS",
