@@ -179,7 +179,6 @@ zedboot_deps += [
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
-  "//src/devices/usb/drivers/dwc3",
   "//src/devices/usb/drivers/usb-bus",
   "//src/devices/usb/drivers/usb-composite",
   "//src/devices/usb/drivers/usb-dfu",
