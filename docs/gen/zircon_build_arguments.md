@@ -67,6 +67,15 @@ From //public/gn/config/BUILD.zircon.gn:14
 
 **Current value (from the default):** `""`
 
+### debuginfo
+* `none` means no debugging information
+* `backtrace` means sufficient debugging information to symbolize backtraces
+* `debug` means debugging information suited for debugging
+
+**Current value (from the default):** `"debug"`
+
+From //public/gn/config/levels.gni:47
+
 ### default_deps
 Defines the `//:default` target: what `ninja` with no arguments does.
 TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
@@ -333,7 +342,7 @@ From //third_party/ulib/musl/BUILD.zircon.gn:6
 
 **Current value (from the default):** `"default"`
 
-From //public/gn/config/levels.gni:31
+From //public/gn/config/levels.gni:26
 
 ### output_breakpad_syms
 If true, produce a Breakpad symbol file for each binary.
@@ -381,15 +390,6 @@ From //kernel/params.gni:37
 **Current value (from the default):** `16`
 
 From //kernel/params.gni:14
-
-### symbol_level
-* 0 means no debugging information.
-* 1 means minimal debugging information sufficient to symbolize backtraces.
-* 2 means full debugging information for use with a symbolic debugger.
-
-**Current value (from the default):** `2`
-
-From //public/gn/config/levels.gni:18
 
 ### sysroot
 The `--sysroot` directory for host compilations.

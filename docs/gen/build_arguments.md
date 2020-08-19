@@ -564,7 +564,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -577,13 +577,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b4724081350eff0a732a6be80dd9f6c5143fe259/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/45ca490687af63766240e5a113f231b0e14473d7/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b4724081350eff0a732a6be80dd9f6c5143fe259/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/45ca490687af63766240e5a113f231b0e14473d7/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -610,7 +610,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -618,14 +618,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -647,6 +647,15 @@ Package the rootfs as a QCOW image (as opposed to a flat file).
 **Current value (from the default):** `true`
 
 From //src/virtualization/packages/debian_guest/BUILD.gn:9
+
+### debuginfo
+* `none` means no debugging information
+* `backtrace` means sufficient debugging information to symbolize backtraces
+* `debug` means debugging information suited for debugging
+
+**Current value (from the default):** `"debug"`
+
+From //build/config/compiler.gni:43
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -682,7 +691,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:21
+From //build/config/BUILD.gn:23
 
 ### enable_gfx_subsystem
 
@@ -853,7 +862,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -868,14 +877,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/a37226711bd9f59f046db82c58549ed1116445ba/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/01a93a61733a076cb2001efba9025cc794cfeb2d/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1170,38 +1179,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1721,7 +1730,7 @@ From //build/unification/images/common_image_contents.gni:22
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:33
+From //build/config/compiler.gni:22
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -1915,7 +1924,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:29
+From //build/config/BUILD.gn:31
 
 ### rustc_lib_dir
 Path to rustc lib directory.
@@ -2172,19 +2181,6 @@ size_checker_input = {
 **Current value (from the default):** `{ }`
 
 From //tools/size_checker/cmd/BUILD.gn:52
-
-### symbol_level
-How many symbols to include in the build. This affects the performance of
-the build since the symbols are large and dealing with them is slow.
-  2 means regular build with symbols.
-  1 means minimal symbols, usually enough for backtraces only. Symbols with
-internal linkage (static functions or those in anonymous namespaces) may not
-appear when using this level.
-  0 means no symbols.
-
-**Current value (from the default):** `2`
-
-From //build/config/compiler.gni:20
 
 ### sysmgr_golden_warn_override
 Used by config_package().
@@ -2538,35 +2534,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/4c65e37a8a3e2b8a0f5cb970b3e2c4a73697f927/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/b1b69c0dba5fdf1a3b138347e1b58113c0995c14/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
@@ -2652,7 +2648,7 @@ From //BUILD.gn:108
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:193
+From //build/config/fuchsia/BUILD.gn:198
 
 ### zircon_b_partition
 
@@ -2717,35 +2713,6 @@ Partition name from where image will be verified
 **Current value (from the default):** `"zircon"`
 
 From //build/images/vbmeta.gni:36
-
-### zxcrypt_key_source
-This argument specifies from where the system should obtain the zxcrypt
-master key to the system data partition.
-
-This value be reified as /boot/config/zxcrypt in both the zircon boot image
-and the zedboot boot image, for consumption by fshost and the paver,
-respectively.
-
-Acceptable values are:
-* "null": the device should use an all-0's master key, as we lack support
-for any secure on-device storage.
-* "tee": the device is required to have a Trusted Execution Environment
-(TEE) which includes the "keysafe" Trusted Application (associated with the
-KMS service).  The zxcrypt master key should be derived from a per-device
-key accessible only to trusted apps running in the TEE.
-* "tee-opportunistic": the device will attempt to use keys from the TEE if
-available, but will fall back to using the null key if the key from the TEE
-does not work, or if the TEE is not functional on this device.
-* "tee-transitional": the device will require the use of a key from the TEE
-for new volume creation, but will continue to try both a TEE-sourced key and
-the null key when unsealing volumes.
-
-In the future, we may consider adding support for TPMs, or additional logic
-to explicitly support other fallback behavior.
-
-**Current value (from the default):** `"null"`
-
-From //build/images/zxcrypt.gni:29
 
 ## `target_cpu = "arm64"`
 
