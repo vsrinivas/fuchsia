@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/factoryfs.h"
 
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -17,9 +17,9 @@
 #include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "factoryfs/directory.h"
-#include "factoryfs/format.h"
-#include "factoryfs/superblock.h"
+#include "src/storage/factory/factoryfs/directory.h"
+#include "src/storage/factory/factoryfs/format.h"
+#include "src/storage/factory/factoryfs/superblock.h"
 
 namespace factoryfs {
 

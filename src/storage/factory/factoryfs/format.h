@@ -4,8 +4,8 @@
 
 // This file describes the on-disk structure of Factoryfs.
 
-#ifndef FACTORYFS_FORMAT_H_
-#define FACTORYFS_FORMAT_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_FORMAT_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_FORMAT_H_
 
 #include <assert.h>
 #include <stdbool.h>
@@ -94,4 +94,4 @@ constexpr uint64_t TotalBlocks(const Superblock& info) {
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_FORMAT_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_FORMAT_H_

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_DIRECTORY_ENTRY_H_
-#define FACTORYFS_DIRECTORY_ENTRY_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_ENTRY_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_ENTRY_H_
 
 #include <string>
 #include <string_view>
 
-#include "factoryfs/format.h"
+#include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {
 
@@ -43,4 +43,4 @@ class DirectoryEntryManager final {
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_DIRECTORY_ENTRY_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_ENTRY_H_

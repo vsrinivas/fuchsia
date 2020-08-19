@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/factory/factoryfs/format.h"
+
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/format.h>
-#include <factoryfs/mkfs.h>
-#include <factoryfs/superblock.h>
 #include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
+
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/mkfs.h"
+#include "src/storage/factory/factoryfs/superblock.h"
 
 namespace factoryfs {
 namespace {

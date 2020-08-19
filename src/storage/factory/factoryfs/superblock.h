@@ -5,8 +5,8 @@
 // This file contains functions that are shared between host
 // and target implementations of .
 
-#ifndef FACTORYFS_SUPERBLOCK_H_
-#define FACTORYFS_SUPERBLOCK_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_SUPERBLOCK_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_SUPERBLOCK_H_
 
 #include <assert.h>
 #include <limits.h>
@@ -14,9 +14,10 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <factoryfs/format.h>
 #include <fbl/macros.h>
 #include <fbl/string_buffer.h>
+
+#include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {
 
@@ -28,4 +29,4 @@ void InitializeSuperblock(uint64_t block_count, Superblock* info);
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_SUPERBLOCK_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_SUPERBLOCK_H_

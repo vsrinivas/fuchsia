@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/factory/factoryfs/query.h"
+
 #include <lib/fidl-async/cpp/bind.h>
 
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/format.h>
-#include <factoryfs/query.h>
-#include <factoryfs/runner.h>
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/format.h"
+#include "src/storage/factory/factoryfs/runner.h"
 
 namespace factoryfs {
 

@@ -61,7 +61,6 @@ common_test_contents = [
   "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils",
   "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit",
   "//zircon/system/ulib/elf-search/test:elf-search",
-  "//zircon/system/ulib/factoryfs/test:factoryfs-unit",
   "//sdk/lib/fdio/test:fdio",
   "//sdk/lib/fdio/test/constructors:fdio-constructor",
   "//zircon/system/ulib/fidl-async/test:fidl-async-test",

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factoryfs/runner.h"
+#include "src/storage/factory/factoryfs/runner.h"
 
 #include <fuchsia/fs/llcpp/fidl.h>
 
-#include <factoryfs/query.h>
 #include <fbl/auto_lock.h>
 #include <fs/pseudo_dir.h>
+
+#include "src/storage/factory/factoryfs/query.h"
 
 namespace factoryfs {
 

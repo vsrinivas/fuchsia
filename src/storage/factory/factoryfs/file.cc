@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factoryfs/file.h"
+#include "src/storage/factory/factoryfs/file.h"
 
 namespace factoryfs {
 File::File(fbl::RefPtr<Directory> root_dir, std::unique_ptr<DirectoryEntryManager> entry)

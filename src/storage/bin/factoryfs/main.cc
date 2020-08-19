@@ -20,15 +20,16 @@
 #include <utility>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <factoryfs/fsck.h>
-#include <factoryfs/mkfs.h>
-#include <factoryfs/mount.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
+
+#include "src/storage/factory/factoryfs/fsck.h"
+#include "src/storage/factory/factoryfs/mkfs.h"
+#include "src/storage/factory/factoryfs/mount.h"
 
 namespace {
 

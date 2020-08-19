@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_QUERY_H_
-#define FACTORYFS_QUERY_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_QUERY_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_QUERY_H_
 
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/runner.h>
 #include <fs/service.h>
+
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/runner.h"
 
 namespace factoryfs {
 
@@ -30,4 +31,4 @@ class QueryService final : public llcpp::fuchsia::fs::Query::Interface, public f
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_QUERY_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_QUERY_H_

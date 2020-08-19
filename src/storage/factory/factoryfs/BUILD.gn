@@ -1,27 +1,12 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/zx_library.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
-zx_library("factoryfs") {
-  sdk = "source"
-  sdk_headers = [
-    "factoryfs/directory.h",
-    "factoryfs/directory_entry.h",
-    "factoryfs/factoryfs.h",
-    "factoryfs/file.h",
-    "factoryfs/format.h",
-    "factoryfs/mkfs.h",
-    "factoryfs/mount.h",
-    "factoryfs/superblock.h",
-    "factoryfs/runner.h",
-    "factoryfs/query.h",
-  ]
-  host = false
-  static = true
+source_set("factoryfs") {
   sources = [
     "directory.cc",
     "directory_entry.cc",
@@ -59,4 +44,44 @@ zx_library("factoryfs") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+test("factoryfs_unit") {
+  testonly = true
+  sources = [
+    "create_tests.cc",
+    "format_test.cc",
+    "fsck_test.cc",
+    "utils.cc",
+  ]
+  deps = [
+    ":factoryfs",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test_support",
+    "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
+  ]
+}
+
+fuchsia_unittest_component("factoryfs-unit") {
+  executable_path = "test/factoryfs_unit"
+  deps = [ ":factoryfs_unit" ]
+}
+
+fuchsia_test_package("factoryfs-tests") {
+  test_components = [ ":factoryfs-unit" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":factoryfs-tests" ]
 }

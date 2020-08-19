@@ -10,11 +10,11 @@
 #include <climits>
 
 #include <block-client/cpp/fake-device.h>
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/format.h>
-#include <factoryfs/mkfs.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/format.h"
+#include "src/storage/factory/factoryfs/mkfs.h"
 #include "utils.h"
 
 using block_client::FakeBlockDevice;

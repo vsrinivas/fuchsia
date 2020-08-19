@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/factory/factoryfs/superblock.h"
+
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -9,7 +11,6 @@
 
 #include <limits>
 
-#include <factoryfs/superblock.h>
 #include <fs/trace.h>
 
 #ifdef __Fuchsia__

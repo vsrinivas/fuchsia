@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/factory/factoryfs/fsck.h"
+
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/async-loop/default.h>
 #include <zircon/status.h>
 
 #include <memory>
 
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/fsck.h>
-#include <factoryfs/superblock.h>
 #include <fs/trace.h>
+
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/superblock.h"
 
 namespace factoryfs {
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factoryfs/directory_entry.h"
+#include "src/storage/factory/factoryfs/directory_entry.h"
 
-#include "factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/factoryfs.h"
 
 namespace factoryfs {
 

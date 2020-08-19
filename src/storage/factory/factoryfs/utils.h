@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FACTORYFS_TEST_UNIT_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_FACTORYFS_TEST_UNIT_UTILS_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_UTILS_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_UTILS_H_
 
 #include <memory>
 #include <optional>
 
 #include <block-client/cpp/block-device.h>
-#include <factoryfs/format.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <fs/transaction/legacy_transaction_handler.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {
 
@@ -79,4 +80,4 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
 
 }  // namespace factoryfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_FACTORYFS_TEST_UNIT_UTILS_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_UTILS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_MOUNT_H_
-#define FACTORYFS_MOUNT_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_MOUNT_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_MOUNT_H_
 
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
@@ -46,4 +46,4 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_MOUNT_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_MOUNT_H_

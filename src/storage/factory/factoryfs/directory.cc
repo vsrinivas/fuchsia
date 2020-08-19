@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "factoryfs/directory.h"
+#include "src/storage/factory/factoryfs/directory.h"
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 #include <zircon/assert.h>
 
-#include "factoryfs/file.h"
-#include "factoryfs/superblock.h"
+#include "src/storage/factory/factoryfs/file.h"
+#include "src/storage/factory/factoryfs/superblock.h"
 
 namespace factoryfs {
 

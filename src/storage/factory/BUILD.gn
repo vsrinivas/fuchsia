@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "export_ffs:tests" ]
+  deps = [
+    "export_ffs:tests",
+    "factoryfs:tests",
+  ]
 }

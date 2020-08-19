@@ -4,11 +4,12 @@
 
 // This file contains functionality for checking the consistency of Factoryfs.
 
-#ifndef FACTORYFS_FSCK_H_
-#define FACTORYFS_FSCK_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_FSCK_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_FSCK_H_
 
 #include <block-client/cpp/block-device.h>
-#include <factoryfs/mount.h>
+
+#include "src/storage/factory/factoryfs/mount.h"
 
 namespace factoryfs {
 
@@ -16,4 +17,4 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_FSCK_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_FSCK_H_

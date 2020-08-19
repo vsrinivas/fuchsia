@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_RUNNER_H_
-#define FACTORYFS_RUNNER_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_RUNNER_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_RUNNER_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 
-#include <factoryfs/factoryfs.h>
-#include <factoryfs/mount.h>
 #include <fs/managed_vfs.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/mount.h"
 
 namespace factoryfs {
 
@@ -58,4 +59,4 @@ class Runner : public fs::ManagedVfs {
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_RUNNER_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_RUNNER_H_

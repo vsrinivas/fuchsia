@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_DIRECTORY_H_
-#define FACTORYFS_DIRECTORY_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
@@ -16,9 +16,9 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 
-#include "factoryfs/directory_entry.h"
-#include "factoryfs/factoryfs.h"
-#include "factoryfs/format.h"
+#include "src/storage/factory/factoryfs/directory_entry.h"
+#include "src/storage/factory/factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/format.h"
 
 namespace factoryfs {
 
@@ -99,4 +99,4 @@ class Directory final : public fs::Vnode {
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_DIRECTORY_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_DIRECTORY_H_

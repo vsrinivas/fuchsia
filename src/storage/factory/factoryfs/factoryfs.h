@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_FACTORYFS_H_
-#define FACTORYFS_FACTORYFS_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_FACTORYFS_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_FACTORYFS_H_
 
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -18,9 +18,9 @@
 #include <fs/vfs.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "factoryfs/directory.h"
-#include "factoryfs/format.h"
-#include "factoryfs/mount.h"
+#include "src/storage/factory/factoryfs/directory.h"
+#include "src/storage/factory/factoryfs/format.h"
+#include "src/storage/factory/factoryfs/mount.h"
 
 namespace factoryfs {
 
@@ -74,4 +74,4 @@ class Factoryfs {
   zx::event fs_id_;
 };
 }  // namespace factoryfs
-#endif  // FACTORYFS_FACTORYFS_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_FACTORYFS_H_

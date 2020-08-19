@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FACTORYFS_FILE_H_
-#define FACTORYFS_FILE_H_
+#ifndef SRC_STORAGE_FACTORY_FACTORYFS_FILE_H_
+#define SRC_STORAGE_FACTORY_FACTORYFS_FILE_H_
 
 #include <fbl/ref_ptr.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "factoryfs/directory_entry.h"
-#include "factoryfs/factoryfs.h"
+#include "src/storage/factory/factoryfs/directory_entry.h"
+#include "src/storage/factory/factoryfs/factoryfs.h"
 
 namespace factoryfs {
 
@@ -54,4 +54,4 @@ class File final : public fs::Vnode {
 
 }  // namespace factoryfs
 
-#endif  // FACTORYFS_FILE_H_
+#endif  // SRC_STORAGE_FACTORY_FACTORYFS_FILE_H_
