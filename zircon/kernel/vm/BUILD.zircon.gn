@@ -59,6 +59,8 @@ zx_library("vm") {
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
     "$zx/kernel/lib/crypto:headers",
   ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 

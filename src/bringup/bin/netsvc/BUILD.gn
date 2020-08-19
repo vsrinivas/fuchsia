@@ -114,6 +114,7 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/inet6",
   ]
 
+  # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 }
 
@@ -153,6 +154,8 @@ test("netsvc-test") {
     "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 }
 

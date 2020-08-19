@@ -25,5 +25,7 @@ executable("vkext") {
   ]
 
   deps += [ "//src/lib/vulkan" ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

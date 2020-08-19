@@ -42,6 +42,8 @@ executable("memory_metrics_unittests") {
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 

@@ -15,5 +15,7 @@ zx_library("console") {
     # <lib/console.h> has #include <lib/special-sections/special-sections.h>.
     "$zx/kernel/lib/special-sections:headers",
   ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

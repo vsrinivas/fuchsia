@@ -532,12 +532,46 @@ config("default_warnings") {
   ]
 }
 
+# TODO(fxb/58160): clean up instances of this outside of third party code.
 config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
+  visibility = [
+    "//garnet/examples/intl/wisdom/test/*",
+    "//src/developer/memory/metrics/tests/*",
+    "//src/graphics/examples/vkcube/*",
+    "//src/graphics/lib/compute/tests/*",
+    "//src/graphics/tests/vkext/*",
+    "//src/lib/elflib/*",
+    "//src/lib/vulkan/tests/*",
+    "//src/modular/bin/basemgr/*",
+    "//src/modular/tests/*",
+    "//third_party/*",
+  ]
 }
 
+# TODO(fxb/58161): clean up instances of this outside of third party code.
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
+  visibility = [
+    "//third_party/*",
+    "//zircon/third_party/*",
+    "//sdk/lib/fdio/*",
+    "//src/bringup/bin/netsvc/*",
+    "//zircon/system/ulib/fs-management/*",
+    "//zircon/kernel/vm/*",
+    "//zircon/kernel/lib/console/*",
+    "//zircon/system/ulib/fs/metrics/*",
+    "//src/media/audio/drivers/usb-audio/*",
+  ]
+}
+
+# TODO(fxb/58162): clean up instances of this outside of third party code.
+config("Wno-conversion") {
+  cflags = [ "-Wno-conversion" ]
+  visibility = [
+    "//third_party/*",
+    # TODO(fxb/58162): use this as needed and populate this list
+  ]
 }
 
 config("symbol_visibility_hidden") {

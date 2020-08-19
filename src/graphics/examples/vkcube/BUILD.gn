@@ -102,6 +102,8 @@ executable("vkcube-on-scenic-executable") {
     "third_party/vkcube/cube.cc",
     "third_party/vkcube/cube.h",
   ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [
     "VK_USE_PLATFORM_FUCHSIA",
@@ -116,6 +118,8 @@ executable("vkcube-on-scenic-executable") {
     "//src/lib/vulkan/imagepipe_view",
     "//zircon/system/ulib/syslog",
   ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
@@ -127,6 +131,8 @@ executable("vkcube-on-fb-executable") {
     "third_party/vkcube/cube.cc",
     "third_party/vkcube/cube.h",
   ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
   deps = [
@@ -138,6 +144,8 @@ executable("vkcube-on-fb-executable") {
     "//zircon/system/ulib/syslog",
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
@@ -149,6 +157,8 @@ executable("vkcube-skip-present-executable") {
     "third_party/vkcube/cube.cc",
     "third_party/vkcube/cube.h",
   ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [
     "VK_USE_PLATFORM_FUCHSIA",
@@ -163,5 +173,7 @@ executable("vkcube-skip-present-executable") {
     "//zircon/system/ulib/syslog",
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
+
+  # TODO(fxb/58160): delete the below and fix compiler warnings
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

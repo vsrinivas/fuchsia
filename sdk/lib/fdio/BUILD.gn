@@ -97,6 +97,8 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/system/ulib/zxio",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
+
+    # TODO(fxb/58161): delete the below and fix compiler warnings
     public_configs = [ "//build/config:Wno-unused-function" ]
   }
 } else {

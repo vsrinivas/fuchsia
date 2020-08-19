@@ -4,10 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 
-config("Wno-unused-function") {
-  cflags = [ "-Wno-unused-function" ]
-}
-
 driver_module("usb-audio") {
   configs += [
     "//build/config:all_source",
@@ -52,5 +48,7 @@ driver_module("usb-audio") {
     "//zircon/system/ulib/digest",
     "//zircon/system/ulib/dispatcher-pool",
   ]
-  public_configs = [ ":Wno-unused-function" ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
+  public_configs = [ "//build/config:Wno-unused-function" ]
 }

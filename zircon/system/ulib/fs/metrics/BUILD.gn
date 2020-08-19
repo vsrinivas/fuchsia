@@ -57,6 +57,8 @@ zx_library("metrics-inspect") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
+
+  # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 }
 
