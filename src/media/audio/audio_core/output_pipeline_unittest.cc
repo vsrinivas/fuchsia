@@ -576,7 +576,8 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 480,
                                                        kDefaultTransform, device_clock_, resampler);
 
-  pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), resampler);
+  pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
+                     resampler);
 
   bool packet_released[2] = {};
   {

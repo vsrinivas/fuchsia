@@ -16,23 +16,26 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
   FX_DCHECK(source_gain_db <= kMaxGainDb);
   FX_DCHECK(duration.get() >= 0) << "Ramp duration cannot be negative";
 
-  source_ramp_duration_ = duration;
+  if (duration <= zx::nsec(0)) {
+    SetSourceGain(source_gain_db);
+    return;
+  }
 
-  float current_src_gain_db = target_src_gain_db_.load();
-  if (source_gain_db != current_src_gain_db) {
-    if (duration.get() > 0) {
-      start_src_gain_db_ = current_src_gain_db;
-      start_src_scale_ = DbToScale(current_src_gain_db);
+  if (source_gain_db != target_src_gain_db_) {
+    // Start ramping.
+    source_ramp_duration_ = duration;
+    frames_ramped_ = 0;
 
-      end_src_gain_db_ = source_gain_db;
-      end_src_scale_ = DbToScale(source_gain_db);
-    } else {
-      SetSourceGain(source_gain_db);
-    }
+    start_src_gain_db_ = target_src_gain_db_;
+    start_src_scale_ = DbToScale(target_src_gain_db_);
+
+    end_src_gain_db_ = source_gain_db;
+    end_src_scale_ = DbToScale(source_gain_db);
   } else {
     // Already at the ramp destination: we are done.
-    ClearSourceRamp();
+    source_ramp_duration_ = zx::nsec(0);
   }
+
   if constexpr (kVerboseRampDebug) {
     FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
                   << duration.to_nsecs() << " nsec)";
@@ -61,12 +64,12 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_p
     src_gain_db = ScaleToDb(src_scale);
 
   } else {
-    ClearSourceRamp();
+    source_ramp_duration_ = zx::nsec(0);
     frames_ramped_ = 0;
     src_gain_db = end_src_gain_db_;
   }
 
-  target_src_gain_db_.store(src_gain_db);
+  target_src_gain_db_ = src_gain_db;
 
   if constexpr (kVerboseRampDebug) {
     FX_LOGS(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
@@ -101,7 +104,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
 
     // Compose the ramp, in pieces
     TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
-    AScale dest_scale = DbToScale(target_dest_gain_db_.load());
+    AScale dest_scale = DbToScale(target_dest_gain_db_);
     AScale start_scale = start_src_scale_ * dest_scale;
     AScale end_scale = end_src_scale_ * dest_scale;
 

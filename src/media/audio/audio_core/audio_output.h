@@ -48,8 +48,8 @@ class AudioOutput : public AudioDevice {
   // If we're initializing a source link, then we're connecting a renderer to this output. Else
   // if we're initializing a dest link, then we're being connected as a loopback so we should return
   // our loopback stream.
-  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
+  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
   void CleanupSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
   fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;

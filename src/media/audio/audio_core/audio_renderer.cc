@@ -137,7 +137,8 @@ fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
 
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
   context().link_matrix().ForEachDestLink(
-      *this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+      *this, [this, volume_command](LinkMatrix::LinkHandle link) {
+        FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
         float gain_db = link.loudness_transform->Evaluate<3>({
             VolumeValue{volume_command.volume},
             GainDbFsValue{volume_command.gain_db_adjustment},
@@ -150,16 +151,18 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
                       << "Vol(" << volume_command.volume << ") + GainAdjustment("
                       << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_
                       << "db)";
-        auto& gain = link.mixer->bookkeeping().gain;
 
         REPORT(SettingRendererFinalGain(*this, gain_db));
 
-        if (volume_command.ramp.has_value()) {
-          gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                     volume_command.ramp->ramp_type);
-        } else {
-          gain.SetSourceGain(gain_db);
-        }
+        link.mix_domain->PostTask([link, volume_command, gain_db]() {
+          auto& gain = link.mixer->bookkeeping().gain;
+          if (volume_command.ramp.has_value()) {
+            gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                       volume_command.ramp->ramp_type);
+          } else {
+            gain.SetSourceGain(gain_db);
+          }
+        });
       });
 }
 

@@ -22,6 +22,18 @@ AudioBuffer<SampleFormat> GenerateSilentAudio(TypedFormat<SampleFormat> format, 
   return buf;
 }
 
+// Construct a stream of synthetic audio data that is uses a fixed constant value.
+//
+// As this does not create a meaningful sound, this is intended to be used in test scenarios that
+// perform bit-for-bit comparisons on the output of an audio pipeline.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioBuffer<SampleFormat> GenerateConstantAudio(TypedFormat<SampleFormat> format, size_t num_frames,
+                                                typename AudioBuffer<SampleFormat>::SampleT val) {
+  AudioBuffer out(format, num_frames);
+  std::fill(out.samples().begin(), out.samples().end(), val);
+  return out;
+}
+
 // Construct a stream of synthetic audio data that is sequentially incremented. For integer types,
 // payload data values increase by 1. For FLOAT, data increases by 2^-16, which is about 10^-5.
 //

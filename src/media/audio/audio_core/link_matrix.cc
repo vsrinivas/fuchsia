@@ -43,12 +43,12 @@ zx_status_t LinkMatrix::LinkObjects(std::shared_ptr<AudioObject> source,
   if (source_link_init_result.is_error()) {
     return source_link_init_result.error();
   }
-  auto mixer = source_link_init_result.take_value();
+  auto [mixer, mix_domain] = source_link_init_result.take_value();
 
   {
     std::lock_guard<std::mutex> lock(lock_);
-    DestLinkSet(source.get()).insert(Link(dest, loudness_transform, stream, mixer));
-    SourceLinkSet(dest.get()).insert(Link(source, loudness_transform, stream, mixer));
+    DestLinkSet(source.get()).insert(Link(dest, loudness_transform, stream, mixer, mix_domain));
+    SourceLinkSet(dest.get()).insert(Link(source, loudness_transform, stream, mixer, mix_domain));
   }
 
   source->OnLinkAdded();
@@ -110,7 +110,8 @@ void LinkMatrix::ForEachDestLink(const AudioObject& object, fit::function<void(L
       f(LinkHandle{.object = ptr,
                    .loudness_transform = link.loudness_transform,
                    .stream = link.stream,
-                   .mixer = link.mixer});
+                   .mixer = link.mixer,
+                   .mix_domain = link.mix_domain});
     }
   }
 }
@@ -126,7 +127,8 @@ void LinkMatrix::ForEachSourceLink(const AudioObject& object, fit::function<void
       f(LinkHandle{.object = ptr,
                    .loudness_transform = link.loudness_transform,
                    .stream = link.stream,
-                   .mixer = link.mixer});
+                   .mixer = link.mixer,
+                   .mix_domain = link.mix_domain});
     }
   }
 }
@@ -177,7 +179,8 @@ void LinkMatrix::OnlyStrongLinks(LinkSet& link_set, std::vector<LinkHandle>* sto
       store->push_back(LinkHandle{.object = ptr,
                                   .loudness_transform = link.loudness_transform,
                                   .stream = link.stream,
-                                  .mixer = link.mixer});
+                                  .mixer = link.mixer,
+                                  .mix_domain = link.mix_domain});
     }
   }
 }

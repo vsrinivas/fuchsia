@@ -14,25 +14,33 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
+using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
 
 namespace media::audio::test {
 
 namespace {
 constexpr size_t kNumPacketsInPayload = 50;
 constexpr size_t kFrameRate = 48000;
-constexpr size_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
+constexpr size_t kPacketFrames = kFrameRate * RendererShimImpl::kPacketMs / 1000;
 constexpr size_t kPayloadFrames = kPacketFrames * kNumPacketsInPayload;
+// This is kPayloadFrames rounded down to the nearest power of 2.
+static const size_t kPayloadFramesPow2 = std::pow(2, std::floor(std::log2(kPayloadFrames)));
+// The length of gain ramp for each volume change.
+// Must match the constant in audio_core.
+constexpr zx::duration kVolumeRampDuration = zx::msec(5);
 }  // namespace
 
+template <ASF SampleType>
 class AudioRendererPipelineTest : public HermeticAudioTest {
  protected:
-  AudioRendererPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
+  AudioRendererPipelineTest() : format_(Format::Create<SampleType>(2, kFrameRate).value()) {}
 
   void SetUp() {
     HermeticAudioTest::SetUp();
@@ -60,13 +68,16 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
     return n;
   }
 
-  const TypedFormat<ASF::SIGNED_16> format_;
-  VirtualOutput<ASF::SIGNED_16>* output_ = nullptr;
-  AudioRendererShim<ASF::SIGNED_16>* renderer_ = nullptr;
+  const TypedFormat<SampleType> format_;
+  VirtualOutput<SampleType>* output_ = nullptr;
+  AudioRendererShim<SampleType>* renderer_ = nullptr;
 };
 
+using AudioRendererPipelineTestInt16 = AudioRendererPipelineTest<ASF::SIGNED_16>;
+using AudioRendererPipelineTestFloat = AudioRendererPipelineTest<ASF::FLOAT>;
+
 // Validate that timestamped packets play through renderer to ring buffer as expected.
-TEST_F(AudioRendererPipelineTest, RenderWithPts) {
+TEST_F(AudioRendererPipelineTestInt16, RenderWithPts) {
   const auto num_packets = NumPacketsPerBatch();
   const auto num_frames = num_packets * kPacketFrames;
 
@@ -89,7 +100,7 @@ TEST_F(AudioRendererPipelineTest, RenderWithPts) {
 }
 
 // If we issue DiscardAllPackets during Playback, PTS should not change.
-TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
+TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxb/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
@@ -193,7 +204,119 @@ TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
-class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTest {
+// During playback, gain changes should be ramped.
+TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
+  fuchsia::media::audio::VolumeControlPtr volume;
+  audio_core_->BindUsageVolumeControl(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), volume.NewRequest());
+  volume->SetVolume(0.5);
+
+  auto num_packets = kNumPacketsInPayload;
+  auto num_frames = num_packets * kPacketFrames;
+
+  const int16_t kSampleFullVolume = 0x0200;
+  const int16_t kSampleHalfVolume = 0x0010;
+
+  auto input_buffer = GenerateConstantAudio<ASF::SIGNED_16>(format_, num_frames, kSampleFullVolume);
+  auto packets = renderer_->AppendPackets({&input_buffer});
+  auto start_time = renderer_->PlaySynchronized(this, output_, 0);
+
+  // Wait until a few packets are rendered, then raise the volume to 1.0.
+  auto start_delay = zx::time(start_time) - zx::clock::get_monotonic();
+  RunLoopWithTimeout(start_delay + zx::msec((num_packets / 2) * RendererShimImpl::kPacketMs));
+  volume->SetVolume(1.0);
+
+  // Now wait for all packets to be rendered.
+  renderer_->WaitForPackets(this, packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  // The output should contain a sequence at half volume, followed by a ramp,
+  // followed by a sequence at full volume. Verify that the length of the ramp
+  // matches the expected ramp duration.
+  size_t start = ring_buffer.NumFrames() - 1;
+  for (;; start--) {
+    if (ring_buffer.SampleAt(start, 0) == kSampleHalfVolume) {
+      break;
+    }
+    if (start == 0) {
+      ADD_FAILURE() << "could not find half volume sample 0x" << std::hex << kSampleHalfVolume;
+      ring_buffer.Display(0, 3 * kPacketFrames);
+      return;
+    }
+  }
+  size_t end = start + 1;
+  for (;; end++) {
+    if (ring_buffer.SampleAt(end, 0) == kSampleFullVolume) {
+      break;
+    }
+    if (end == ring_buffer.NumFrames() - 1) {
+      ADD_FAILURE() << "could not find full volume sample 0x" << std::hex << kSampleFullVolume
+                    << " after frame " << std::dec << start;
+      ring_buffer.Display(start, kPacketFrames);
+      return;
+    }
+  }
+
+  // The exact length can be off by a fractional frame due to rounding.
+  const auto ns_per_frame = format_.frames_per_ns().Inverse();
+  const auto dt = zx::nsec(ns_per_frame.Scale(end - start));
+  const auto tol = zx::nsec(ns_per_frame.Scale(1));
+  EXPECT_NEAR(kVolumeRampDuration.get(), dt.get(), tol.get())
+      << "ramp has length " << (end - start) << " frames, from frame " << start << " to " << end;
+}
+
+// During playback, gain changes should not introduce high-frequency distortion.
+TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
+  fuchsia::media::audio::VolumeControlPtr volume;
+  audio_core_->BindUsageVolumeControl(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), volume.NewRequest());
+  volume->SetVolume(0.5);
+
+  size_t num_frames = kPayloadFramesPow2;
+
+  // At 48kHz, this is 5.33ms per sinusoidal period. This is chosen intentionally to
+  // (a) not align with volume updates, which happen every 10ms, and (b) include a
+  // power-of-2 number of frames, to simplify the FFT comparison.
+  const size_t kFramesPerPeriod = 256;
+  const size_t freq = num_frames / kFramesPerPeriod;
+  auto input_buffer = GenerateCosineAudio(format_, num_frames, freq);
+  auto packets = renderer_->AppendPackets({&input_buffer});
+  auto start_time = renderer_->PlaySynchronized(this, output_, 0);
+
+  // Wait until the first packet will be rendered, then make a few gain toggles.
+  RunLoopWithTimeout(zx::time(start_time) - zx::clock::get_monotonic());
+  for (size_t k = 0; k < num_frames / kPacketFrames; k++) {
+    volume->SetVolume((k % 2) == 0 ? 1.0 : 0.5);
+    RunLoopWithTimeout(zx::msec(RendererShimImpl::kPacketMs));
+  }
+
+  // Now wait for all packets to be rendered.
+  renderer_->WaitForPackets(this, packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+  auto output_buffer = AudioBufferSlice(&ring_buffer, 0, input_buffer.NumFrames()).GetChannel(0);
+
+  // If we properly ramp gain changes, there should not be very much high-frequency noise.
+  // For the purpose of this test, we'll define "high-frequency" to be anything at least 4
+  // octaves above the base frequency.
+  //
+  // The precise amount of noise depends on exactly when the gain toggles are applied,
+  // which is not deterministic. The noise signature also depends on the length and shape
+  // of the gain ramp -- any intentional ramping change may break this test.
+  //
+  // As of early Aug 2020, typical noise_ratio values are:
+  // * 0.05-0.07 without ramping
+  // * 0.001-0.015 with ramping
+  std::unordered_set<size_t> highfreqs;
+  for (size_t f = freq << 4; f < output_buffer.NumFrames() / 2; f++) {
+    highfreqs.insert(f);
+  }
+  auto result = MeasureAudioFreqs(AudioBufferSlice(&output_buffer), highfreqs);
+  auto noise_ratio = result.total_magn_signal / result.total_magn_other;
+  EXPECT_LT(noise_ratio, 0.02) << "\ntotal_magn_highfreq_noise = " << result.total_magn_signal
+                               << "\ntotal_magn_other = " << result.total_magn_other;
+}
+
+class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
  protected:
   // Matches the value in audio_core_config_with_inversion_filter.json
   static constexpr const char* kInverterEffectName = "inverter";
@@ -206,7 +329,7 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTest {
   }
 
   void SetUp() override {
-    AudioRendererPipelineTest::SetUp();
+    AudioRendererPipelineTestInt16::SetUp();
     environment()->ConnectToService(effects_controller_.NewRequest());
   }
 
@@ -293,7 +416,7 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
-class AudioRendererPipelineTuningTest : public AudioRendererPipelineTest {
+class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {
  protected:
   // Matches the value in audio_core_config_with_inversion_filter.json
   static constexpr const char* kInverterEffectName = "inverter";
@@ -306,7 +429,7 @@ class AudioRendererPipelineTuningTest : public AudioRendererPipelineTest {
   }
 
   void SetUp() override {
-    AudioRendererPipelineTest::SetUp();
+    AudioRendererPipelineTestInt16::SetUp();
     environment()->ConnectToService(audio_tuner_.NewRequest());
   }
 

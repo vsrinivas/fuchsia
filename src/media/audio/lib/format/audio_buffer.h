@@ -48,7 +48,10 @@ class AudioBuffer {
 
   // For debugging, display the given range of frames.
   void Display(size_t start_frame, size_t end_frame) const {
+    start_frame = std::min(start_frame, NumFrames());
+    end_frame = std::min(end_frame, NumFrames());
     printf("\n\n Frames %zu to %zu: ", start_frame, end_frame);
+
     for (auto frame = start_frame; frame < end_frame; ++frame) {
       if (frame % 16 == 0) {
         printf("\n [%6lu] ", frame);
@@ -118,7 +121,7 @@ class AudioBufferSlice {
                           .take_value();
     AudioBuffer<SampleFormat> out(new_format, NumFrames());
     for (size_t frame = 0; frame < NumFrames(); frame++) {
-      out.buf_[frame] = SampleAt(frame, chan);
+      out.samples()[frame] = SampleAt(frame, chan);
     }
     return out;
   }

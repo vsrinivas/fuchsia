@@ -119,8 +119,9 @@ void AudioOutput::Process() {
   }
 }
 
-fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
-    const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
+fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+AudioOutput::InitializeSourceLink(const AudioObject& source,
+                                  std::shared_ptr<ReadableStream> stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
   auto usage = source.usage();
@@ -130,20 +131,18 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
   }
 
   if (stream) {
-    auto mixer = pipeline_->AddInput(std::move(stream), *usage);
-    const auto& settings = device_settings();
-    if (settings != nullptr) {
-      auto [flags, cur_gain_state] = settings->SnapshotGainState();
-
-      mixer->bookkeeping().gain.SetDestGain(
-          cur_gain_state.muted
-              ? fuchsia::media::audio::MUTED_GAIN_DB
-              : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+    float gain_db = Gain::kUnityGainDb;
+    if (device_settings()) {
+      auto [flags, cur_gain_state] = device_settings()->SnapshotGainState();
+      gain_db = cur_gain_state.muted
+                    ? fuchsia::media::audio::MUTED_GAIN_DB
+                    : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb);
     }
-    return fit::ok(std::move(mixer));
+    auto mixer = pipeline_->AddInput(std::move(stream), *usage, gain_db);
+    return fit::ok(std::make_pair(std::move(mixer), &mix_domain()));
   }
 
-  return fit::ok(std::make_shared<audio::mixer::NoOp>());
+  return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
 }
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source,

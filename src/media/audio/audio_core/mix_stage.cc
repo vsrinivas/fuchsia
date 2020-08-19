@@ -55,6 +55,7 @@ MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
       output_ref_clock_(output_stream_->reference_clock()) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
+                                          std::optional<float> initial_dest_gain_db,
                                           Mixer::Resampler resampler_hint) {
   TRACE_DURATION("audio", "MixStage::AddInput");
   if (!stream) {
@@ -67,6 +68,10 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
           .release());
   if (!mixer) {
     mixer = std::make_unique<audio::mixer::NoOp>();
+  }
+
+  if (initial_dest_gain_db) {
+    mixer->bookkeeping().gain.SetDestGain(*initial_dest_gain_db);
   }
 
   stream->SetMinLeadTime(GetMinLeadTime() + LeadTimeForMixer(stream->format(), *mixer));

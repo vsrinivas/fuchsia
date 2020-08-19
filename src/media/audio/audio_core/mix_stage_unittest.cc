@@ -296,7 +296,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
       kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames);
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
-  mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
+  mix_stage_->AddInput(ring_buffer_endpoints.reader, std::nullopt, Mixer::Resampler::WindowedSinc);
 
   // Fill up the ring buffer with non-empty samples so we can observe them in the mix output.
   // The first half of the ring is one value, the second half is another.

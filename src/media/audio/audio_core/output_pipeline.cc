@@ -57,10 +57,11 @@ OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve
 
 std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStream> stream,
                                                     const StreamUsage& usage,
+                                                    std::optional<float> initial_dest_gain_db,
                                                     Mixer::Resampler sampler_hint) {
   TRACE_DURATION("audio", "OutputPipelineImpl::AddInput", "stream", stream.get());
   state_.streams.emplace_back(stream, usage);
-  return LookupStageForUsage(usage).AddInput(std::move(stream), sampler_hint);
+  return LookupStageForUsage(usage).AddInput(std::move(stream), initial_dest_gain_db, sampler_hint);
 }
 
 void OutputPipelineImpl::RemoveInput(const ReadableStream& stream) {
@@ -134,7 +135,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
         TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
     auto substage = CreateMixStage(input, volume_curve, max_block_size_frames, function,
                                    audio_clock, usage_mask, sampler);
-    stage->AddInput(substage, sampler);
+    stage->AddInput(substage, std::nullopt, sampler);
   }
   return root;
 }

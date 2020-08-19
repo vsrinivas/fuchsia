@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 
 #include "lib/media/cpp/timeline_rate.h"
@@ -23,6 +22,7 @@ constexpr bool kVerboseMuteDebug = false;
 constexpr bool kVerboseRampDebug = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
+// Not thread safe.
 class Gain {
  public:
   // Audio gains for AudioRenderers/AudioCapturers and output devices are
@@ -78,8 +78,6 @@ class Gain {
   static constexpr AScale kUnityScale = 1.0f;
   static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
 
-  // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
-  //
   // The Gain object specifies the volume scaling to be performed for a given
   // Mix operation, when mixing a single stream into some combined resultant
   // audio stream. Restated, a Mix has one or more Sources, and it combines
@@ -93,12 +91,9 @@ class Gain {
   // These SetGain calls set the source's or destination's contribution to a
   // link's overall software gain control. For stream gain, we allow values in
   // the range [-inf, 24.0]. Callers must guarantee single-threaded semantics
-  // for each Gain instance. This is guaranteed today because only API-side
-  // components (not mixer) call this from their execution domain (guaranteeing
-  // single-threadedness). This value is stored in atomic float -- the Mixer can
-  // consume it at any time without needing a lock for synchronization.
+  // for each Gain instance.
   void SetSourceGain(float gain_db) {
-    target_src_gain_db_.store(gain_db);
+    target_src_gain_db_ = gain_db;
     if constexpr (kVerboseGainDebug) {
       FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
     }
@@ -109,24 +104,25 @@ class Gain {
       float gain_db, zx::duration duration,
       fuchsia::media::audio::RampType ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR);
 
-  void ClearSourceRamp() { source_ramp_duration_ = zx::nsec(0); }
+  // Stop ramping the source gain: advance immediately to the final source gain.
+  void CompleteSourceRamp() {
+    if (source_ramp_duration_ > zx::nsec(0)) {
+      source_ramp_duration_ = zx::nsec(0);
+      SetSourceGain(end_src_gain_db_);
+    }
+  }
 
-  // The atomics for target_src_gain_db and target_dest_gain_db are meant to
-  // defend a Mix thread's gain READs, against gain WRITEs by another thread in
-  // response to SetGain calls. For playback, this generally always means writes
-  // of the SOURCE gain (for capture, generally this means DEST gain changes --
-  // either way we are talking about changes to the Stream's gain). DEST gain is
-  // provided to Gain objects, but those objects don't own this setting. Gain
-  // objects correspond to stream mixes, so they are 1-1 with source gains;
+  // DEST gain is provided to Gain objects, but those objects don't own this setting.
+  // Gain objects correspond to stream mixes, so they are 1-1 with source gains;
   // however, there are many stream mixes for a single destination -- thus many
   // gain objects share the same destination (share the same dest gain). So,
   // gain objects don't contain the definitive value of any dest gain.
-
+  //
   // The DEST gain "written" to a Gain object is just a snapshot of the dest
   // gain held by the audio_capturer_impl or output device. We use this snapshot
   // when performing the current Mix operation for that particular source.
   void SetDestGain(float gain_db) {
-    target_dest_gain_db_.store(gain_db);
+    target_dest_gain_db_ = gain_db;
     if constexpr (kVerboseGainDebug) {
       FX_LOGS(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
     }
@@ -135,9 +131,7 @@ class Gain {
   float GetGainDb() { return CombineGains(current_src_gain_db_, current_dest_gain_db_); }
 
   // Calculate the stream's gain-scale, from cached source and dest values.
-  AScale GetGainScale() {
-    return GetGainScale(target_src_gain_db_.load(), target_dest_gain_db_.load());
-  }
+  AScale GetGainScale() { return GetGainScale(target_src_gain_db_, target_dest_gain_db_); }
 
   void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
 
@@ -148,7 +142,7 @@ class Gain {
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() {
-    float temp_db = target_src_gain_db_.load() + target_dest_gain_db_.load();
+    float temp_db = target_src_gain_db_ + target_dest_gain_db_;
 
     return (temp_db == 0) && !IsRamping();
   }
@@ -168,15 +162,12 @@ class Gain {
 
   // Used internally only -- the instananeous gain state
   bool IsSilentNow() {
-    return (target_src_gain_db_.load() <= kMinGainDb) ||
-           (target_dest_gain_db_.load() <= kMinGainDb) ||
-           (target_src_gain_db_.load() + target_dest_gain_db_.load() <= kMinGainDb);
+    return (target_src_gain_db_ <= kMinGainDb) || (target_dest_gain_db_ <= kMinGainDb) ||
+           (target_src_gain_db_ + target_dest_gain_db_ <= kMinGainDb);
   }
 
-  // TODO(mpuryear): at some point, examine whether using a lock provides better
-  // performance and scalability than using these two atomics.
-  std::atomic<float> target_src_gain_db_;
-  std::atomic<float> target_dest_gain_db_;
+  float target_src_gain_db_ = kUnityGainDb;
+  float target_dest_gain_db_ = kUnityGainDb;
 
   float current_src_gain_db_ = kUnityGainDb;
   float current_dest_gain_db_ = kUnityGainDb;

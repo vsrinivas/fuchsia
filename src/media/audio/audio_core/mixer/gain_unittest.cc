@@ -382,36 +382,51 @@ TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   EXPECT_FALSE(gain_.IsUnity());
 }
 
-// Clearing a ramp should reset any in-process ramps.
-TEST_F(ScaleArrayTest, ClearSourceRamp) {
+// Completing a ramp should fast-forward any in-process ramps.
+TEST_F(ScaleArrayTest, CompleteSourceRamp) {
   Gain::AScale scale_arr[6];
   Gain::AScale scale_arr2[6];
 
-  gain_.SetSourceGainWithRamp(-30.1029995, zx::msec(5));
+  constexpr float target_gain_db = -30.1029995;
+  const float target_gain_scale = Gain::DbToScale(target_gain_db);
+
+  // With a 5ms duration and 1 frame per ms, scale_arr will perfectly fit
+  // each frame such that scale_arr[5] == target_gain_scale.
+  gain_.SetSourceGainWithRamp(target_gain_db, zx::msec(5));
   gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
-  EXPECT_THAT(scale_arr, Not(Each(FloatEq(Gain::kUnityScale))));
+  for (size_t k = 0; k < std::size(scale_arr); k++) {
+    const float diff = Gain::kUnityScale - target_gain_scale;
+    const float want = Gain::kUnityScale - diff * static_cast<float>(k) / 5.0;
+    EXPECT_FLOAT_EQ(want, scale_arr[k]) << "index " << k;
+  }
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
+  EXPECT_EQ(Gain::kUnityGainDb, gain_.GetGainDb());
+  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 
   // After clearing the ramp, scale_arr should be constant.
-  gain_.ClearSourceRamp();
+  gain_.CompleteSourceRamp();
   gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
-  EXPECT_THAT(scale_arr, Each(FloatEq(Gain::kUnityScale)));
+  EXPECT_THAT(scale_arr, Each(FloatEq(target_gain_scale)));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
-  EXPECT_TRUE(gain_.IsUnity());
+  EXPECT_FALSE(gain_.IsUnity());
+  EXPECT_EQ(target_gain_db, gain_.GetGainDb());
+  EXPECT_EQ(target_gain_scale, gain_.GetGainScale());
 
   // Without a ramp, scale_arr should be constant even after Advance.
   gain_.Advance(10, rate_1khz_output_);
   gain_.GetScaleArray(scale_arr2, std::size(scale_arr2), rate_1khz_output_);
 
-  EXPECT_THAT(scale_arr2, Each(FloatEq(Gain::kUnityScale)));
+  EXPECT_THAT(scale_arr, Each(FloatEq(target_gain_scale)));
   EXPECT_FALSE(gain_.IsRamping());
-  EXPECT_TRUE(gain_.IsUnity());
+  EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
+  EXPECT_EQ(target_gain_db, gain_.GetGainDb());
+  EXPECT_EQ(target_gain_scale, gain_.GetGainScale());
 }
 
 // After partial Advance through a ramp, instantaneous gain should be accurate.
@@ -452,6 +467,37 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
+}
+
+// After partial Advance through a ramp, followed by a second ramp, the second ramp
+// ramp should start where the first ramp left off.
+TEST_F(ScaleArrayTest, TwoRamps) {
+  gain_.SetSourceGainWithRamp(-20.0f, zx::msec(10));
+
+  auto scale_start = Gain::kUnityScale;
+  EXPECT_FLOAT_EQ(scale_start, gain_.GetGainScale());
+  EXPECT_TRUE(gain_.IsRamping());
+
+  // Advance only partially through the duration of the ramp.
+  gain_.Advance(2, rate_1khz_output_); // 1 frame == 1ms
+
+  auto expect_scale = scale_start + (Gain::DbToScale(-20.f) - scale_start) * 2.0/10.0;
+  EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
+  EXPECT_TRUE(gain_.IsRamping());
+
+  // A new ramp should start at the same spot.
+  gain_.SetSourceGainWithRamp(-80.0f, zx::msec(10));
+
+  scale_start = expect_scale;
+  EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
+  EXPECT_TRUE(gain_.IsRamping());
+
+  // Advance again.
+  gain_.Advance(2, rate_1khz_output_);
+
+  expect_scale = scale_start + (Gain::DbToScale(-80.f) - scale_start) * 2.0/10.0;
+  EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
+  EXPECT_TRUE(gain_.IsRamping());
 }
 
 }  // namespace media::audio::test

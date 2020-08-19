@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "src/media/audio/lib/format/audio_buffer.h"
 
@@ -63,7 +64,8 @@ struct AudioFreqResult {
 // |freq| is the number of **complete sinusoidal periods** that should perfectly fit into the
 // buffer.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vector<size_t> freqs);
+AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
+                                  std::unordered_set<size_t> freqs);
 
 // Shorthand that analyzes a single frequency.
 template <fuchsia::media::AudioSampleFormat SampleFormat>

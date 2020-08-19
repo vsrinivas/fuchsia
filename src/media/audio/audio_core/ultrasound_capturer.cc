@@ -16,8 +16,9 @@ UltrasoundCapturer::UltrasoundCapturer(
   FX_DCHECK(create_callback_);
 }
 
-fit::result<std::shared_ptr<Mixer>, zx_status_t> UltrasoundCapturer::InitializeSourceLink(
-    const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
+fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+UltrasoundCapturer::InitializeSourceLink(const AudioObject& source,
+                                         std::shared_ptr<ReadableStream> stream) {
   if (!create_callback_) {
     return fit::error(ZX_ERR_BAD_STATE);
   }

@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 #include "src/media/audio/lib/format/format.h"
 
@@ -51,13 +52,13 @@ class AudioObject {
   // override InitializeSourceLink in order to choose and initialize an appropriate resampling
   // filter.
   //
-  // When initializing a source link, an implementor must provide a mixer. The source object
-  // and their stream are provided.
+  // When initializing a source link, an implementor must provide a mixer and an ExecutionDomain
+  // for that mixer to run in. The source object and their stream are provided.
   //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
-  virtual fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
-    return fit::ok(std::make_shared<audio::mixer::NoOp>());
+  virtual fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
+    return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
   }
   virtual fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) {

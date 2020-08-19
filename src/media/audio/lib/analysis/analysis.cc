@@ -233,8 +233,9 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 // length). Also return the magnitude of all other content. Useful for frequency response and
 // signal-to-noise. Internally uses an FFT, so slice.NumFrames() must be a power-of-two.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vector<size_t> freqs) {
-  FX_DCHECK(fbl::is_pow2(slice.NumFrames()));
+AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
+                                  std::unordered_set<size_t> freqs) {
+  FX_CHECK(fbl::is_pow2(slice.NumFrames()));
   FX_CHECK(slice.format().channels() == 1);
 
   const size_t buf_size = slice.NumFrames();
@@ -288,8 +289,8 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vec
   // Calculate magnitude of all other frequencies
   double sum_sq_magn_other = 0.0;
   for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
-    if (std::find(freqs.begin(), freqs.end(), bin) == freqs.end()) {
-      sum_sq_magn_other += (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
+    if (freqs.count(bin) == 0) {
+      sum_sq_magn_other += reals[bin] * reals[bin] + imags[bin] * imags[bin];
     }
   }
   out.total_magn_other = std::sqrt(sum_sq_magn_other);
@@ -299,7 +300,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice, std::vec
 
 // Explicitly instantiate all possible implementations.
 #define INSTANTIATE(T) \
-  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::vector<size_t>);
+  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::unordered_set<size_t>);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 

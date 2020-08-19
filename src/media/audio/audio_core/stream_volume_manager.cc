@@ -12,6 +12,11 @@
 namespace media::audio {
 namespace {
 
+const auto kRendererVolumeRamp = Ramp{
+    .duration = zx::msec(5),
+    .ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR,
+};
+
 std::string ToString(const fuchsia::media::Usage& usage) {
   return StreamUsageFromFidlUsage(usage).ToString();
 }
@@ -124,7 +129,13 @@ void StreamVolumeManager::SetUsageVolume(fuchsia::media::Usage usage, float volu
 void StreamVolumeManager::UpdateStreamsWithUsage(fuchsia::media::Usage usage) {
   for (auto& stream : stream_volumes_) {
     if (fidl::Equals(stream->GetStreamUsage(), usage)) {
-      UpdateStream(stream, std::nullopt);
+      if (usage.is_render_usage()) {
+        UpdateStream(stream, kRendererVolumeRamp);
+      } else {
+        // Because destination gain ramping is not implemented, capturer volume ramping is
+        // unsupported.
+        UpdateStream(stream, std::nullopt);
+      }
     }
   }
 }

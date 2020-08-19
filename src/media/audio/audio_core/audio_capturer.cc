@@ -190,11 +190,11 @@ fuchsia::media::Usage AudioCapturer::GetStreamUsage() const {
 void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
   if (volume_command.ramp.has_value()) {
     FX_LOGS(WARNING)
-        << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
+        << "Capturer gain ramping is not implemented";
   }
 
   context().link_matrix().ForEachSourceLink(
-      *this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+      *this, [this, volume_command](LinkMatrix::LinkHandle link) {
         float gain_db = link.loudness_transform->Evaluate<3>({
             VolumeValue{volume_command.volume},
             GainDbFsValue{volume_command.gain_db_adjustment},
@@ -210,7 +210,8 @@ void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
                         << stream_gain_db_ << "db)";
         }
 
-        link.mixer->bookkeeping().gain.SetDestGain(gain_db);
+        mix_domain().PostTask(
+            [link, gain_db]() { link.mixer->bookkeeping().gain.SetDestGain(gain_db); });
       });
 }
 

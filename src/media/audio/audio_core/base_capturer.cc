@@ -159,8 +159,9 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
   }
 }
 
-fit::result<std::shared_ptr<Mixer>, zx_status_t> BaseCapturer::InitializeSourceLink(
-    const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
+fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+BaseCapturer::InitializeSourceLink(const AudioObject& source,
+                                   std::shared_ptr<ReadableStream> stream) {
   TRACE_DURATION("audio", "BaseCapturer::InitializeSourceLink");
 
   switch (state_.load()) {
@@ -170,7 +171,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> BaseCapturer::InitializeSourceL
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
     case State::WaitingForVmo:
-      return fit::ok(mix_stage_->AddInput(std::move(stream)));
+      return fit::ok(std::make_pair(mix_stage_->AddInput(std::move(stream)), &mix_domain()));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.

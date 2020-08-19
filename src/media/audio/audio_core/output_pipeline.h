@@ -35,6 +35,7 @@ class OutputPipeline : public ReadableStream {
   // this stream will be routed.
   virtual std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      std::optional<float> initial_dest_gain_db = std::nullopt,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) = 0;
 
   // Removes |stream| from the pipeline.
@@ -74,6 +75,7 @@ class OutputPipelineImpl : public OutputPipeline {
   std::shared_ptr<ReadableStream> loopback() const override { return state_.loopback; }
   std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      std::optional<float> initial_dest_gain_db = std::nullopt,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override;
   void RemoveInput(const ReadableStream& stream) override;
   fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(

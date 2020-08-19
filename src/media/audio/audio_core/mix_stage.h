@@ -36,6 +36,7 @@ class MixStage : public ReadableStream {
   void SetMinLeadTime(zx::duration min_lead_time) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
+                                  std::optional<float> initial_dest_gain_db = std::nullopt,
                                   Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
   void RemoveInput(const ReadableStream& stream);
 

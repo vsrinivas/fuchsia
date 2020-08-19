@@ -14,6 +14,7 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
+#include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
 
@@ -26,6 +27,10 @@ class LinkMatrix {
     std::shared_ptr<const LoudnessTransform> loudness_transform;
     std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<Mixer> mixer;
+    // This pointer remains valid as long as both sides of the link are valid.
+    // As soon as one side of the link is destructed, this pointer may be destructed.
+    // It's guaranteed to live for the duration of ForEach{Dest,Source}Link.
+    ExecutionDomain* mix_domain;
   };
 
   zx_status_t LinkObjects(std::shared_ptr<AudioObject> source, std::shared_ptr<AudioObject> dest,
@@ -53,12 +58,14 @@ class LinkMatrix {
 
     Link(std::shared_ptr<AudioObject> _object,
          std::shared_ptr<const LoudnessTransform> _loudness_transform,
-         std::shared_ptr<ReadableStream> _stream, std::shared_ptr<Mixer> _mixer)
+         std::shared_ptr<ReadableStream> _stream, std::shared_ptr<Mixer> _mixer,
+         ExecutionDomain* _mix_domain)
         : key(_object.get()),
           object(std::move(_object)),
           loudness_transform(std::move(_loudness_transform)),
           stream(std::move(_stream)),
-          mixer(std::move(_mixer)) {}
+          mixer(std::move(_mixer)),
+          mix_domain(_mix_domain) {}
 
     bool operator==(const Link& rhs) const noexcept { return key == rhs.key; }
 
@@ -67,6 +74,10 @@ class LinkMatrix {
     std::shared_ptr<const LoudnessTransform> loudness_transform;
     std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<Mixer> mixer;
+    // This may be owned by key or object.
+    // - If owned by key, then this field is valid until the key is unlinked.
+    // - If owned by object, we must obtain a strong reference to object before using this field.
+    ExecutionDomain* mix_domain;
   };
 
   struct LinkHash {

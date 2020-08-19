@@ -202,7 +202,7 @@ class Mixer {
     // long-running positions. This is called upon a source discontinuity.
     void Reset() {
       src_pos_modulo = 0;
-      gain.ClearSourceRamp();
+      gain.CompleteSourceRamp();
     }
   };
 

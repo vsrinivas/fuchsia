@@ -47,6 +47,7 @@ class TestOutputPipeline : public OutputPipeline {
   std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
   std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      std::optional<float> initial_dest_gain_db = std::nullopt,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override {
     return nullptr;
   }

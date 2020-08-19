@@ -18,7 +18,8 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
       : AudioDevice(type, threading_model, registry, link_matrix,
-                    std::make_unique<AudioDriverV1>(this)) {}
+                    std::make_unique<AudioDriverV1>(this)),
+        mix_domain_(threading_model->AcquireMixDomain()) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
   bool driver_config_complete() { return driver_config_complete_; }
@@ -38,6 +39,9 @@ class FakeAudioDevice : public AudioDevice {
     driver_plug_state_ = plugged;
     driver_plug_time_ = plug_time;
   }
+
+ protected:
+  ThreadingModel::OwnedDomainPtr mix_domain_;
 
  private:
   bool driver_info_fetched_ = false;
@@ -71,11 +75,11 @@ class FakeAudioOutput : public FakeAudioDevice {
                   LinkMatrix* link_matrix)
       : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix) {}
 
-  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
+  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     stream->SetMinLeadTime(min_lead_time_);
     stream_ = std::move(stream);
-    return fit::ok(mixer_);
+    return fit::ok(std::make_pair(mixer_, mix_domain_.get()));
   }
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
