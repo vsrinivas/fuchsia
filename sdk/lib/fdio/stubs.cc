@@ -38,13 +38,20 @@ static int checkfileat(int fd, const char* path, int flags, int err) {
   return seterr(err);
 }
 
+static bool fdok(int fd) {
+  fdio_t* io = fd_to_io(fd);
+  if (io) {
+    fdio_release(io);
+    return true;
+  }
+  return false;
+}
+
 static int checkfd(int fd, int err) {
-  fdio_t* io;
-  if ((io = fd_to_io(fd)) == nullptr) {
+  if (!fdok(fd)) {
     errno = EBADF;
     return -1;
   }
-  fdio_release(io);
   return seterr(err);
 }
 
@@ -217,12 +224,12 @@ __EXPORT
 long telldir(DIR* dir) { return checkdir(dir, ENOSYS); }
 
 __EXPORT
-int posix_fadvise(int fd, off_t base, off_t len, int advice) { return checkfd(fd, ENOSYS); }
+int posix_fadvise(int fd, off_t base, off_t len, int advice) { return fdok(fd) ? ENOSYS : EBADF; }
 
 __EXPORT
-int posix_fallocate(int fd, off_t base, off_t len) { return checkfd(fd, ENOSYS); }
+int posix_fallocate(int fd, off_t base, off_t len) { return fdok(fd) ? ENOSYS : EBADF; }
 
 __EXPORT
 int readdir_r(DIR* dir, struct dirent* entry, struct dirent** result) {
-  return checkdir(dir, ENOSYS);
+  return dirfd(dir) < 0 ? EBADF : ENOSYS;
 }
