@@ -76,6 +76,8 @@ void FillBlock(uint32_t block_number, size_t block_offset, fbl::Span<uint8_t> bl
 // Each block is of |kBlockSize|.
 class FakeContentReader final : public Reader {
  public:
+  uint64_t GetMaximumOffset() const override { return 0; }
+
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     // Calculate the block the offset is in.
     uint32_t first_block = GetBlockFromBytes(offset, kBlockSize);

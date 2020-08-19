@@ -54,6 +54,9 @@ struct VolumeDescriptor {
 
   // Arbitrary options to tweak the tools behavior for the respective image.
   std::unordered_set<Option> options;
+
+  // The target size of the device/partition that this image is destined for.
+  uint64_t size = 0;
 };
 
 }  // namespace storage::volume_image

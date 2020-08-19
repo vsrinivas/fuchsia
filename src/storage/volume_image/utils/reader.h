@@ -22,6 +22,8 @@ class Reader {
  public:
   virtual ~Reader() = default;
 
+  virtual uint64_t GetMaximumOffset() const = 0;
+
   // On success data at [|offset|, |offset| + |buffer.size()|] are read into
   // |buffer|.
   //

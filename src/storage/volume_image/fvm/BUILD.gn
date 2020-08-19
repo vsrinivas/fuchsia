@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/fvm.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
 source_set("options") {
   public = [ "options.h" ]
   public_deps = [ "//src/storage/volume_image:volume-descriptor" ]
@@ -22,7 +27,10 @@ source_set("fvm-descriptor") {
 }
 
 source_set("fvm-sparse-image") {
-  sources = [ "fvm_sparse_image.cc" ]
+  sources = [
+    "fvm_sparse_image.cc",
+    "fvm_sparse_image_reader.cc",
+  ]
   public = [ "fvm_sparse_image.h" ]
   public_deps = [
     ":fvm-descriptor",
@@ -36,6 +44,7 @@ source_set("fvm-sparse-image") {
   ]
 }
 
+# This source set is included in the volume image test package in the directory above.
 source_set("fvm-test") {
   testonly = true
   sources = [
@@ -56,7 +65,75 @@ source_set("fvm-test") {
   ]
 }
 
+test_data_image_path = "$target_out_dir/test_data.blk"
+
+compiled_action("test_data.blk") {
+  testonly = true
+  tool = "//zircon/tools/minfs"
+  outputs = [ test_data_image_path ]
+  args = [
+    rebase_path(test_data_image_path, root_build_dir),
+    "create",
+  ]
+}
+
+test_fvm_data_partition = {
+  type = "data"
+  dep = ":test_data.blk"
+  minimum_inodes = "32768"
+  minimum_data_bytes = "10M"
+  maximum_bytes = "100M"
+}
+
+generate_fvm("test_fvm.sparse.blk") {
+  testonly = true
+  output_name = "$target_out_dir/test_fvm.sparse.blk"
+  deps = [ ":test_data.blk" ]
+  args = fvm_sparse_args
+  partitions = [ test_fvm_data_partition ]
+}
+
+resource("test_fvm.sparse.blk-resource") {
+  testonly = true
+  sources = [ "$target_out_dir/test_fvm.sparse.blk" ]
+  outputs = [ "data/{{source_file_part}}" ]
+  deps = [ ":test_fvm.sparse.blk" ]
+}
+
+test("fvm_sparse_image_reader_test") {
+  testonly = true
+  sources = [ "fvm_sparse_image_reader_test.cc" ]
+  deps = [
+    ":fvm-sparse-image",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/volume_image/ftl:ftl-image",
+    "//src/storage/volume_image/utils:fd-io",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fs-management",
+  ]
+}
+
+fuchsia_component("fvm-sparse-image-reader-tests-component") {
+  component_name = "fvm-sparse-image-reader-tests"
+  testonly = true
+  manifest = "meta/fvm-sparse-image-reader-tests.cml"
+  deps = [
+    ":fvm_sparse_image_reader_test",
+    ":test_fvm.sparse.blk-resource",
+  ]
+}
+
+fuchsia_test_package("fvm-sparse-image-reader-tests") {
+  test_components = [ ":fvm-sparse-image-reader-tests-component" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":fvm-test" ]
+  deps = [
+    ":fvm-sparse-image-reader-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
 }

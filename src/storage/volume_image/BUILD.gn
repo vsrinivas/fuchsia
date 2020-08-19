@@ -109,7 +109,7 @@ test("storage-volume-image-test") {
   deps = [
     ":volume-descriptor-test",
     "ftl:tests",
-    "fvm:tests",
+    "fvm:fvm-test",
     "serialization:tests",
     "utils:tests",
     "//src/lib/fxl/test:gtest_main",
@@ -137,5 +137,6 @@ group("tests") {
     ":storage-volume-image-integration-test($host_toolchain)",
     ":storage-volume-image-test($host_toolchain)",
     ":storage-volume-image-tests",
+    "fvm:tests",
   ]
 }

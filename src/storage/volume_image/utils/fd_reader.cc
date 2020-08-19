@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/fit/result.h>
+#include <sys/stat.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -14,6 +15,13 @@
 #include <fbl/unique_fd.h>
 
 namespace storage::volume_image {
+
+FdReader::FdReader(fbl::unique_fd fd, std::string_view name) : fd_(std::move(fd)), name_(name) {
+  struct stat stat_buf;
+  if (fstat(fd_.get(), &stat_buf) == 0) {
+    maximum_offset_ = stat_buf.st_size;
+  }
+}
 
 fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
   if (path.empty()) {

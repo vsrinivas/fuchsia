@@ -73,6 +73,8 @@ class FakeReader final : public Reader {
  public:
   ~FakeReader() final = default;
 
+  uint64_t GetMaximumOffset() const override { return 0; }
+
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     return fit::ok();
   }
