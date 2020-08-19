@@ -5,5 +5,7 @@
 mod cobalt;
 mod inspect;
 
-pub use self::cobalt::CobaltDiagnostics;
+#[cfg(test)]
+pub use self::cobalt::fake::{FakeCobaltDiagnostics, FakeCobaltMonitor};
+pub use self::cobalt::{CobaltDiagnostics, CobaltDiagnosticsImpl};
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};

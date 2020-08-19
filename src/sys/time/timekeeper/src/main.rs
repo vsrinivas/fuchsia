@@ -10,7 +10,7 @@ mod diagnostics;
 mod rtc;
 
 use {
-    crate::diagnostics::{CobaltDiagnostics, InspectDiagnostics},
+    crate::diagnostics::{CobaltDiagnostics, CobaltDiagnosticsImpl, InspectDiagnostics},
     anyhow::{anyhow, Context as _, Error},
     chrono::prelude::*,
     fidl_fuchsia_deprecatedtimezone as ftz,
@@ -57,7 +57,7 @@ async fn main() -> Result<(), Error> {
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
     info!("initializing Cobalt");
-    let cobalt = CobaltDiagnostics::new();
+    let cobalt = CobaltDiagnosticsImpl::new();
     let source = initial_utc_source(&*utc_clock);
     let notifier = Notifier::new(source);
 
@@ -141,13 +141,13 @@ async fn wait_for_network_available(
 ///
 /// Actual updates are performed by calls to  `fuchsia.deprecatedtimezone.TimeService` which we
 /// plan to deprecate.
-async fn maintain_utc(
+async fn maintain_utc<C: CobaltDiagnostics>(
     utc_clock: Arc<zx::Clock>,
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
     netstack_service: fnetstack::NetstackProxy,
     mut inspect: InspectDiagnostics,
-    mut cobalt: CobaltDiagnostics,
+    mut cobalt: C,
 ) {
     info!("record the state at initialization.");
     match initial_utc_source(&*utc_clock) {
@@ -293,7 +293,6 @@ impl NotifyInner {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload},
         fuchsia_inspect::Inspector,
         fuchsia_zircon as zx,
         matches::assert_matches,
@@ -349,7 +348,7 @@ mod tests {
         let inspector = Inspector::new();
         let inspect_diagnostics =
             diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock));
-        let (cobalt_diagnostics, mut cobalt_receiver) = CobaltDiagnostics::new_mock();
+        let (cobalt_diagnostics, mut cobalt_monitor) = diagnostics::FakeCobaltDiagnostics::new();
         info!("starting single notification test");
 
         let (utc, utc_requests) =
@@ -385,22 +384,15 @@ mod tests {
         })
         .detach();
 
-        info!("checking that the initial state was logged to Cobalt");
-        assert_eq!(
-            cobalt_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-                event_codes: vec![LifecycleEventType::InitializedBeforeUtcStart as u32],
-                component: None,
-                payload: EventPayload::Event(Event),
-            })
-        );
-
         info!("checking that the time source has not been externally initialized yet");
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
 
         info!("checking that the clock has not been updated yet");
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
+
+        info!("checking that the initial state was logged to Cobalt");
+        cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
+        cobalt_monitor.reset();
 
         let task_waker = futures::future::poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
         let mut cx = Context::from_waker(&task_waker);
@@ -419,15 +411,7 @@ mod tests {
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
 
         info!("checking that the started clock was logged to Cobalt");
-        assert_eq!(
-            cobalt_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-                event_codes: vec![LifecycleEventType::StartedUtcFromTimeSource as u32],
-                component: None,
-                payload: EventPayload::Event(Event),
-            })
-        );
+        cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::StartedUtcFromTimeSource]);
     }
 
     #[fasync::run_singlethreaded(test)]
