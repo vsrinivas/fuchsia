@@ -28,6 +28,7 @@ test("zbitl-unittests") {
     "checking-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
+    "memory-tests.cc",
     "stdio-tests.cc",
     "view-tests.cc",
   ]
