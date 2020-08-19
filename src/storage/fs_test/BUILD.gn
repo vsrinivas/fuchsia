@@ -15,8 +15,7 @@ group("tests") {
   ]
 }
 
-shared_library("fs_test") {
-  output_name = "fs_test"
+static_library("fs_test") {
   testonly = true
   sources = [
     "fs_test.cc",
@@ -31,6 +30,7 @@ shared_library("fs_test") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",

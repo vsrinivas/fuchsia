@@ -23,16 +23,19 @@
 #include <minfs/format.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/storage/blobfs/include/blobfs/format.h"
 
 namespace fs_test {
 
 class Filesystem;
 
 struct TestFilesystemOptions {
-  __EXPORT static TestFilesystemOptions DefaultMinfs();
-  __EXPORT static TestFilesystemOptions MinfsWithoutFvm();
-  __EXPORT static TestFilesystemOptions DefaultMemfs();
-  __EXPORT static TestFilesystemOptions DefaultFatfs();
+  static TestFilesystemOptions DefaultMinfs();
+  static TestFilesystemOptions MinfsWithoutFvm();
+  static TestFilesystemOptions DefaultMemfs();
+  static TestFilesystemOptions DefaultFatfs();
+  static TestFilesystemOptions DefaultBlobfs();
+  static TestFilesystemOptions BlobfsWithoutFvm();
 
   std::string description;
   bool use_fvm = false;
@@ -42,11 +45,11 @@ struct TestFilesystemOptions {
   const Filesystem* filesystem = nullptr;
 };
 
-__EXPORT std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
+std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
 
-__EXPORT std::vector<TestFilesystemOptions> AllTestFilesystems();
+std::vector<TestFilesystemOptions> AllTestFilesystems();
 // Provides the ability to map and filter all test file systems, using the supplied function.
-__EXPORT std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
+std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
     std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>);
 
 // A file system instance is a specific instance created for test purposes.
@@ -163,8 +166,29 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
   }
 };
 
+// Support for blobfs.
+class BlobfsFilesystem : public FilesystemImpl<BlobfsFilesystem> {
+ public:
+  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
+  const Traits& GetTraits() const override {
+    static Traits traits{
+        .can_unmount = true,
+        .timestamp_granularity = zx::nsec(1),
+        .supports_hard_links = false,
+        .supports_mmap = true,
+        .supports_resize = false,
+        .max_file_size = blobfs::kBlobfsMaxFileSize,
+        .in_memory = false,
+        .is_case_sensitive = true,
+        .supports_sparse_files = false,
+    };
+    return traits;
+  }
+};
+
 // Helper that creates a test file system with the given options and will clean-up upon destruction.
-class __EXPORT TestFilesystem {
+class TestFilesystem {
  public:
   // Creates and returns a mounted test file system.
   static zx::status<TestFilesystem> Create(const TestFilesystemOptions& options);

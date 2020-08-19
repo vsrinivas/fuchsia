@@ -20,12 +20,11 @@ struct ExpectedDirectoryEntry {
   unsigned char d_type;  // Same as the d_type entry from struct dirent.
 };
 
-__EXPORT void CheckDirectoryContents(DIR* dir, fbl::Span<const ExpectedDirectoryEntry> entries);
-__EXPORT void CheckDirectoryContents(const char* dirname,
-                                     fbl::Span<const ExpectedDirectoryEntry> entries);
+void CheckDirectoryContents(DIR* dir, fbl::Span<const ExpectedDirectoryEntry> entries);
+void CheckDirectoryContents(const char* dirname, fbl::Span<const ExpectedDirectoryEntry> entries);
 
 // Checks the contents of a file are what we expect.
-__EXPORT void CheckFileContents(int fd, fbl::Span<const uint8_t> expected);
+void CheckFileContents(int fd, fbl::Span<const uint8_t> expected);
 
 }  // namespace fs_test
 

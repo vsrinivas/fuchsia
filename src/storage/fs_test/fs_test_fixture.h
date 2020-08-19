@@ -16,7 +16,7 @@
 
 namespace fs_test {
 
-class __EXPORT BaseFilesystemTest : public testing::Test {
+class BaseFilesystemTest : public testing::Test {
  public:
   BaseFilesystemTest(const TestFilesystemOptions& options)
       : fs_(TestFilesystem::Create(options).value()) {}

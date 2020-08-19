@@ -128,10 +128,28 @@ TestFilesystemOptions TestFilesystemOptions::DefaultFatfs() {
                                .filesystem = &FatFilesystem::SharedInstance()};
 }
 
+TestFilesystemOptions TestFilesystemOptions::DefaultBlobfs() {
+  return TestFilesystemOptions{.description = "Blobfs",
+                               .use_fvm = true,
+                               .device_block_size = 512,
+                               .device_block_count = 196'608,
+                               .fvm_slice_size = 1'048'576,
+                               .filesystem = &BlobfsFilesystem::SharedInstance()};
+}
+
+TestFilesystemOptions TestFilesystemOptions::BlobfsWithoutFvm() {
+  TestFilesystemOptions blobfs_with_no_fvm = TestFilesystemOptions::DefaultBlobfs();
+  blobfs_with_no_fvm.description = "BlobfsWithoutFvm";
+  blobfs_with_no_fvm.use_fvm = false;
+  return blobfs_with_no_fvm;
+}
+
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
   return out << options.description;
 }
 
+// Note: blobfs is intentionally absent, since it is not intended to run as part of the
+// fs_test suite.
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
   return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
                                             TestFilesystemOptions::MinfsWithoutFvm(),
@@ -361,6 +379,54 @@ zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
     return status.take_error();
   }
   return zx::ok(std::make_unique<FatfsInstance>(std::move(ram_disk), device_path));
+}
+
+// -- Blobfs --
+
+class BlobfsInstance : public FilesystemInstance {
+ public:
+  BlobfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
+      : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
+
+  zx::status<> Mount(const std::string& mount_path) override {
+    return FsMount(device_path_, mount_path, DISK_FORMAT_BLOBFS, default_mount_options);
+  }
+
+  zx::status<> Unmount(const std::string& mount_path) override {
+    return zx::make_status(umount(mount_path.c_str()));
+  }
+
+  zx::status<> Fsck() override {
+    fsck_options_t options{
+        .verbose = false,
+        .never_modify = true,
+        .always_modify = false,
+        .force = true,
+        .apply_journal = false,
+    };
+    return zx::make_status(
+        fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &options, launch_stdio_sync));
+  }
+
+  isolated_devmgr::RamDisk* GetRamDisk() override { return &ram_disk_; }
+
+ private:
+  isolated_devmgr::RamDisk ram_disk_;
+  std::string device_path_;
+};
+
+zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Make(
+    const TestFilesystemOptions& options) const {
+  auto ram_disk_or = CreateRamDisk(options);
+  if (ram_disk_or.is_error()) {
+    return ram_disk_or.take_error();
+  }
+  auto [ram_disk, device_path] = std::move(ram_disk_or).value();
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_BLOBFS);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::make_unique<BlobfsInstance>(std::move(ram_disk), device_path));
 }
 
 // --

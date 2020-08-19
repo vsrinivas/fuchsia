@@ -41,6 +41,7 @@ constexpr uint32_t kBlobfsSuperblockBlocks = 1;
 constexpr uint32_t kBlobfsBlockMapStart    = 1;
 constexpr uint32_t kBlobfsInodeSize        = 64;
 constexpr uint32_t kBlobfsInodesPerBlock   = (kBlobfsBlockSize / kBlobfsInodeSize);
+constexpr uint64_t kBlobfsMaxFileSize      = kBlobfsBlockSize * sizeof(uint32_t);
 
 // Known Blobfs metadata locations. Unit of the location is blobfs block.
 constexpr size_t kSuperblockOffset = 0;
