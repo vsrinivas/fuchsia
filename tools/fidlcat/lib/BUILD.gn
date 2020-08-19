@@ -9,6 +9,7 @@ if (is_host) {
   static_library("host_lib") {
     public = [
       "code_generator/code_generator.h",
+      "code_generator/cpp_visitor.h",
       "code_generator/test_generator.h",
       "comparator.h",
       "decoder.h",
@@ -27,6 +28,7 @@ if (is_host) {
 
     sources = [
       "code_generator/code_generator.cc",
+      "code_generator/cpp_visitor.cc",
       "code_generator/test_generator.cc",
       "comparator.cc",
       "decoder.cc",
@@ -66,11 +68,19 @@ if (is_host) {
 
   source_set("host_tests") {
     testonly = true
-    sources = [ "comparator_test.cc" ]
+    sources = [
+      "code_generator/cpp_visitor_test.cc",
+      "comparator_test.cc",
+    ]
 
     deps = [
       ":host_lib",
+      "//src/lib/fidl_codec",
       "//third_party/googletest:gtest",
+      "//zircon/public/lib/fidl_base",
+
+      # TODO(57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/rapidjson",
     ]
   }
 

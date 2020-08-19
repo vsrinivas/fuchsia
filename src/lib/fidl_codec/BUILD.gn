@@ -83,6 +83,7 @@ executable("fidl_codec_test_bin") {
     "semantic_parser_test.cc",
     "wire_object_test.cc",
     "wire_parser_test.cc",
+    "wire_types_test.cc",
   ]
 
   deps = [

@@ -159,6 +159,16 @@ class ToStringVisitor : public TypeVisitor {
 
 }  // namespace
 
+std::string FidlMethodNameToCpp(std::string_view identifier) {
+  std::string result(identifier);
+  size_t start = 0;
+  while ((start = result.find_first_of("./", start)) != std::string::npos) {
+    result.replace(start, 1, "::");
+    start += 2;
+  }
+  return result;
+}
+
 std::string Type::ToString(bool expand) const {
   std::string ret;
   ToStringVisitor visitor(
@@ -518,13 +528,19 @@ void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(th
 
 std::string Float32Type::Name() const { return "float32"; }
 
+std::string Float32Type::CppName() const { return "float"; }
+
 void Float32Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat32Type(this); }
 
 std::string Float64Type::Name() const { return "float64"; }
 
+std::string Float64Type::CppName() const { return "double"; }
+
 void Float64Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat64Type(this); }
 
 std::string StringType::Name() const { return "string"; }
+
+std::string StringType::CppName() const { return "std::string"; }
 
 size_t StringType::InlineSize() const { return sizeof(uint64_t) + sizeof(uint64_t); }
 
@@ -556,6 +572,8 @@ void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(th
 
 std::string HandleType::Name() const { return "handle"; }
 
+std::string HandleType::CppName() const { return "zx::handle"; }
+
 size_t HandleType::InlineSize() const { return sizeof(zx_handle_t); }
 
 std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -582,6 +600,8 @@ void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(th
 
 std::string EnumType::Name() const { return enum_definition_.name(); }
 
+std::string EnumType::CppName() const { return FidlMethodNameToCpp(enum_definition_.name()); }
+
 size_t EnumType::InlineSize() const { return enum_definition_.size(); }
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -602,6 +622,8 @@ void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this);
 
 std::string BitsType::Name() const { return bits_definition_.name(); }
 
+std::string BitsType::CppName() const { return FidlMethodNameToCpp(bits_definition_.name()); }
+
 size_t BitsType::InlineSize() const { return bits_definition_.size(); }
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -621,6 +643,8 @@ void BitsType::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }
 
 std::string UnionType::Name() const { return union_definition_.name(); }
+
+std::string UnionType::CppName() const { return FidlMethodNameToCpp(union_definition_.name()); }
 
 size_t UnionType::InlineSize() const {
   // In v1, unions are encoded as xunion. The inline size is the size of an envelope which
@@ -660,6 +684,8 @@ void UnionType::Visit(TypeVisitor* visitor) const { visitor->VisitUnionType(this
 
 std::string StructType::Name() const { return struct_definition_.name(); }
 
+std::string StructType::CppName() const { return FidlMethodNameToCpp(struct_definition_.name()); }
+
 size_t StructType::InlineSize() const {
   return nullable_ ? sizeof(uintptr_t) : struct_definition_.size();
 }
@@ -696,6 +722,11 @@ std::string ArrayType::Name() const {
   return std::string("array<") + component_type_->Name() + ">";
 }
 
+std::string ArrayType::CppName() const {
+  return std::string("std::array<") + component_type_->CppName() + ", " + std::to_string(count()) +
+         ">";
+}
+
 void ArrayType::PrettyPrint(PrettyPrinter& printer) const {
   printer << "array<" << Green << component_type_->Name() << ResetColor << ">";
 }
@@ -715,6 +746,10 @@ void ArrayType::Visit(TypeVisitor* visitor) const { visitor->VisitArrayType(this
 
 std::string VectorType::Name() const {
   return std::string("vector<") + component_type_->Name() + ">";
+}
+
+std::string VectorType::CppName() const {
+  return std::string("std::vector<") + component_type_->CppName() + ">";
 }
 
 void VectorType::PrettyPrint(PrettyPrinter& printer) const {
@@ -752,6 +787,8 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
 void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(this); }
 
 std::string TableType::Name() const { return table_definition_.name(); }
+
+std::string TableType::CppName() const { return FidlMethodNameToCpp(table_definition_.name()); }
 
 size_t TableType::InlineSize() const {
   // A table is always implemented as a size + a pointer.
