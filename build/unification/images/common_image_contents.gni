@@ -279,7 +279,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/tests/sysdev",
     "//src/devices/usb/bin/xdc-test",
-    "//src/devices/usb/drivers/nelson-usb-phy",
     "//src/devices/usb/drivers/usb-bus:usb-device",
     "//src/devices/usb/drivers/usb-test/flash-programmer",
     "//src/graphics/display/drivers/fake:fake-display",
@@ -302,8 +301,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda",
     "//src/media/audio/drivers/max98927",
-    "//src/media/audio/drivers/nelson-pdm-input",
-    "//src/media/audio/drivers/nelson-tdm-output",
     "//src/media/audio/drivers/sherlock-pdm-input",
     "//src/media/audio/tools/audio-driver-ctl:test",
     "//src/ui/input/drivers/cypress",
@@ -314,7 +311,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
 
   if (target_cpu == "arm64") {
     common_image_contents += [
-      "//src/devices/board/drivers/nelson",
       "//src/devices/board/drivers/qemu-arm64",
       "//src/devices/board/drivers/vim2",
       "//src/devices/board/drivers/vim3",
