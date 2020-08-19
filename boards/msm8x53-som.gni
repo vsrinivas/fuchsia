@@ -6,6 +6,21 @@ import("//boards/arm64.gni")
 
 board_name = "msm8x53-som"
 
+_common_bootfs_deps = [
+  "//src/devices/block/drivers/msm8x53-sdhci",
+  "//src/devices/board/drivers/msm8x53-som",
+  "//src/devices/clock/drivers/msm8x53-clk",
+  "//src/devices/fw/drivers/qcom-pil",
+  "//src/devices/gpio/drivers/qcom-gpio",
+  "//src/devices/power/drivers/msm8x53-power",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/msm8x53-som/package-image.sh"
 
