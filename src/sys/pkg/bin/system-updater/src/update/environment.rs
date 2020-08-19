@@ -32,18 +32,29 @@ pub trait BuildInfo {
     async fn version(&self) -> Result<Option<String>, Error>;
 }
 
+pub trait EnvironmentConnector {
+    fn connect() -> Result<Environment, Error>;
+}
+
+pub struct NamespaceEnvironmentConnector;
+impl EnvironmentConnector for NamespaceEnvironmentConnector {
+    fn connect() -> Result<Environment, Error> {
+        Environment::connect_in_namespace()
+    }
+}
+
 /// The collection of external data files and services an update attempt will utilize to perform
 /// the update.
 pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
-    pub(super) data_sink: DataSinkProxy,
-    pub(super) boot_manager: BootManagerProxy,
-    pub(super) pkg_resolver: PackageResolverProxy,
-    pub(super) pkg_cache: PackageCacheProxy,
-    pub(super) space_manager: SpaceManagerProxy,
-    pub(super) power_state_control: PowerStateControlProxy,
-    pub(super) build_info: B,
-    pub(super) cobalt_connector: C,
-    pub(super) pkgfs_system: Option<pkgfs::system::Client>,
+    pub data_sink: DataSinkProxy,
+    pub boot_manager: BootManagerProxy,
+    pub pkg_resolver: PackageResolverProxy,
+    pub pkg_cache: PackageCacheProxy,
+    pub space_manager: SpaceManagerProxy,
+    pub power_state_control: PowerStateControlProxy,
+    pub build_info: B,
+    pub cobalt_connector: C,
+    pub pkgfs_system: Option<pkgfs::system::Client>,
 }
 
 impl Environment {
@@ -51,7 +62,7 @@ impl Environment {
     /// update installation attempt. While this method can detect missing services, it is possible
     /// for this method to succeed but for the first interaction with a service to observe that the
     /// connection has since been closed.
-    pub fn connect_in_namespace() -> Result<Self, Error> {
+    fn connect_in_namespace() -> Result<Self, Error> {
         let (data_sink, boot_manager) = paver::connect_in_namespace()?;
         Ok(Self {
             data_sink,

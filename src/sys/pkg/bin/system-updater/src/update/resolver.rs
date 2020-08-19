@@ -54,16 +54,14 @@ async fn resolve_package(
     url: &PkgUrl,
 ) -> Result<DirectoryProxy, Error> {
     let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
-    let res = pkg_resolver
-        .resolve(
-            &url.to_string(),
-            &mut std::iter::empty(),
-            &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-            dir_server_end,
-        )
-        .await
-        .map_err(ResolveError::Fidl)
-        .with_context(|| format!("resolving {}", url))?;
+    let res = pkg_resolver.resolve(
+        &url.to_string(),
+        &mut std::iter::empty(),
+        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+        dir_server_end,
+    );
+    let res =
+        res.await.map_err(ResolveError::Fidl).with_context(|| format!("resolving {}", url))?;
 
     let () = res
         .map_err(|raw| ResolveError::Status(fuchsia_zircon::Status::from_raw(raw)))

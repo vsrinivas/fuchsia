@@ -5,6 +5,7 @@
 //! Wrapper types for the State union.
 
 use {
+    event_queue::Event,
     fidl_fuchsia_update_installer as fidl, fuchsia_inspect as inspect,
     proptest::prelude::*,
     proptest_derive::Arbitrary,
@@ -30,8 +31,10 @@ pub enum State {
     FailStage(UpdateInfoAndProgress),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum StateId {
+/// The variant names for each state, with data stripped.
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum StateId {
     Prepare,
     Fetch,
     Stage,
@@ -114,7 +117,8 @@ pub struct UpdateInfoAndProgressBuilderWithInfoAndProgress {
 }
 
 impl State {
-    fn id(&self) -> StateId {
+    /// Obtain the variant name (strip out the data).
+    pub fn id(&self) -> StateId {
         match self {
             State::Prepare => StateId::Prepare,
             State::Fetch(_) => StateId::Fetch,
@@ -185,6 +189,29 @@ impl State {
                 info_progress.write_to_inspect(node);
             }
         }
+    }
+
+    /// Extracts progress, if the state supports it.
+    pub fn progress(&self) -> Option<&Progress> {
+        let info_and_progress = match self {
+            State::Prepare | State::FailPrepare => return None,
+            State::Fetch(data)
+            | State::Stage(data)
+            | State::WaitToReboot(data)
+            | State::Reboot(data)
+            | State::DeferReboot(data)
+            | State::Complete(data)
+            | State::FailFetch(data)
+            | State::FailStage(data) => data,
+        };
+        let UpdateInfoAndProgress { info: _, progress } = info_and_progress;
+        Some(progress)
+    }
+}
+
+impl Event for State {
+    fn can_merge(&self, other: &Self) -> bool {
+        self.id() == other.id()
     }
 }
 
@@ -818,6 +845,37 @@ mod tests {
                 Err(DecodeStateError::InconsistentUpdateInfoAndProgress(BytesFetchedExceedsDownloadSize))
             );
         }
+
+        // States can merge with identical states.
+        #[test]
+        fn state_can_merge_reflexive(state: State) {
+            prop_assert!(state.can_merge(&state));
+        }
+
+        // States with the same ids can merge, even if the data is different.
+        #[test]
+        fn states_with_same_ids_can_merge(state: State, different_data: UpdateInfoAndProgress) {
+            let state_with_different_data = match state.clone() {
+                 State::Prepare => State::Prepare,
+                    State::Fetch(_) => State::Fetch(different_data),
+                    State::Stage(_) => State::Stage(different_data),
+                    State::WaitToReboot(_) => State::WaitToReboot(different_data),
+                    State::Reboot(_) => State::Reboot(different_data),
+                    State::DeferReboot(_) => State::DeferReboot(different_data),
+                    State::Complete(_) => State::Complete(different_data),
+                    State::FailPrepare => State::FailPrepare,
+                    State::FailFetch(_) => State::FailFetch(different_data),
+                    State::FailStage(_) => State::FailStage(different_data),
+            };
+            prop_assert!(state.can_merge(&state_with_different_data));
+        }
+
+        #[test]
+        fn states_with_different_ids_cannot_merge(state0: State, state1: State) {
+            prop_assume!(state0.id() != state1.id());
+            prop_assert!(!state0.can_merge(&state1));
+        }
+
     }
 
     #[test]

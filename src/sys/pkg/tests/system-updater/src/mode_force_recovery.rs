@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::*, pretty_assertions::assert_eq};
+use {
+    super::*,
+    fidl_fuchsia_update_installer_ext::{start_update, StateId},
+    pretty_assertions::assert_eq,
+};
 
 fn force_recovery_json() -> String {
     json!({
@@ -105,33 +109,37 @@ async fn reboots_regardless_of_reboot_arg() {
     .await
     .expect("run system updater");
 
+    // Verify we made a reboot call.
+    assert_eq!(env.take_interactions().last().unwrap(), &Reboot);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn reboots_regardless_of_reboot_controller() {
+    let env = TestEnv::builder().build();
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages", "")
+        .add_file("update-mode", &force_recovery_json());
+
+    // Start the system update.
+    let (reboot_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    let attempt = start_update(
+        &UPDATE_PKG_URL.parse().unwrap(),
+        default_options(),
+        env.installer_proxy(),
+        Some(server_end),
+    )
+    .await
+    .unwrap();
+    let () = reboot_proxy.detach().unwrap();
+
+    // Ensure the update attempt has completed.
     assert_eq!(
-        env.take_interactions(),
-        vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::VerifiedBootMetadata
-            }),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel
-            }),
-            Gc,
-            PackageResolve(UPDATE_PKG_URL.to_string()),
-            Gc,
-            Paver(PaverEvent::QueryActiveConfiguration),
-            Paver(PaverEvent::SetConfigurationUnbootable {
-                configuration: paver::Configuration::A
-            }),
-            Paver(PaverEvent::SetConfigurationUnbootable {
-                configuration: paver::Configuration::B
-            }),
-            Paver(PaverEvent::DataSinkFlush),
-            Paver(PaverEvent::BootManagerFlush),
-            Reboot,
-        ]
+        attempt.map(|res| res.unwrap()).collect::<Vec<_>>().await.last().unwrap().id(),
+        StateId::Reboot
     );
+    assert_eq!(env.take_interactions().last().unwrap(), &Reboot);
 }
 
 #[fasync::run_singlethreaded(test)]

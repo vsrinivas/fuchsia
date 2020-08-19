@@ -133,6 +133,10 @@ impl PendingAttempt {
         &self.source_version
     }
 
+    pub fn attempt_id(&self) -> &str {
+        &self.attempt_id
+    }
+
     pub fn finish(self, target_version: Version, state: State) -> UpdateAttempt {
         UpdateAttempt {
             attempt_id: self.attempt_id,

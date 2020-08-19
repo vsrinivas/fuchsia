@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, bail, Context, Error},
+    async_trait::async_trait,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::PackageCacheProxy,
@@ -12,9 +13,9 @@ use {
     fuchsia_async::Task,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
-    futures::prelude::*,
+    futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::{pin::Pin, sync::Arc},
     update_package::{Image, UpdateMode, UpdatePackage},
 };
 
@@ -30,17 +31,26 @@ mod reboot;
 mod resolver;
 mod state;
 
-use genutil::GeneratorExt;
 pub(super) use {
     config::Config,
-    environment::{BuildInfo, CobaltConnector, Environment},
+    environment::{
+        BuildInfo, CobaltConnector, Environment, EnvironmentConnector,
+        NamespaceEnvironmentConnector,
+    },
+    genutil::GeneratorExt,
     history::{UpdateAttempt, UpdateHistory},
-    reboot::RebootController,
+    reboot::{ControlRequest, RebootController},
     resolver::ResolveError,
 };
 
+#[cfg(test)]
+pub(super) use {
+    config::ConfigBuilder,
+    environment::{NamespaceBuildInfo, NamespaceCobaltConnector},
+};
+
 #[derive(Debug)]
-enum CommitAction {
+pub enum CommitAction {
     /// A reboot is required to apply the update, which should be performed by the system updater.
     Reboot,
 
@@ -49,24 +59,64 @@ enum CommitAction {
     RebootDeferred,
 }
 
+/// A trait to update the system in the given `Environment` using the provided config options.
+#[async_trait(?Send)]
+pub trait Updater {
+    type UpdateStream: FusedStream<Item = State>;
+
+    async fn update(
+        &mut self,
+        config: Config,
+        env: Environment,
+        reboot_controller: Option<RebootController>,
+    ) -> (String, Self::UpdateStream);
+}
+
+pub struct RealUpdater {
+    history: Arc<Mutex<UpdateHistory>>,
+}
+
+impl RealUpdater {
+    pub fn new(history: Arc<Mutex<UpdateHistory>>) -> Self {
+        Self { history }
+    }
+}
+
+#[async_trait(?Send)]
+impl Updater for RealUpdater {
+    type UpdateStream = Pin<Box<dyn FusedStream<Item = State>>>;
+
+    async fn update(
+        &mut self,
+        config: Config,
+        env: Environment,
+        reboot_controller: Option<RebootController>,
+    ) -> (String, Self::UpdateStream) {
+        let (attempt_id, attempt) =
+            update(config, env, Arc::clone(&self.history), reboot_controller).await;
+        (attempt_id, Box::pin(attempt))
+    }
+}
+
 /// Updates the system in the given `Environment` using the provided config options.
 ///
-/// If a reboot is required to complete the update and `Config::should_reboot` is true, this task
-/// will initiate the reboot without any delay.  However, if `Config::should_reboot` is false and a
-/// `reboot_controller` is provided, this task will wait in the WaitToReboot state until the
-/// controller unblocks the reboot.  If `Config::should_reboot` is false and no controller is
-/// provided, this task will skip the reboot step, requiring the initiator to perform the reboot.
-pub async fn update(
+/// Reboot vs RebootDeferred behavior is determined in the following priority order:
+/// * is mode ForceRecovery? If so, reboot.
+/// * is there a reboot controller? If so, yield reboot to the controller.
+/// * if none of the above are true, reboot depending on the value of `Config::should_reboot`.
+///
+/// If a reboot is deferred, the initiator of the update is responsible for triggering
+/// the reboot.
+async fn update(
     config: Config,
     env: Environment,
     history: Arc<Mutex<UpdateHistory>>,
     reboot_controller: Option<RebootController>,
-) -> impl Stream<Item = State> {
+) -> (String, impl FusedStream<Item = State>) {
     let attempt_fut = history.lock().start_update_attempt(
-        // TODO(fxb/55408): replace with the real options
         Options {
             initiator: config.initiator.into(),
-            allow_attach_to_existing_attempt: false,
+            allow_attach_to_existing_attempt: config.allow_attach_to_existing_attempt,
             should_write_recovery: config.should_write_recovery,
         },
         config.update_url.clone(),
@@ -81,7 +131,8 @@ pub async fn update(
     let power_state_control = env.power_state_control.clone();
 
     let history_clone = Arc::clone(&history);
-    async_generator::generate(move |mut co| async move {
+    let attempt_id = attempt.attempt_id().to_string();
+    let stream = async_generator::generate(move |mut co| async move {
         let history = history_clone;
         // The only operation allowed to fail in this function is update_attempt. The rest of the
         // functionality here sets up the update attempt and takes the appropriate actions based on
@@ -124,26 +175,40 @@ pub async fn update(
         // wait for all cobalt events to be flushed to the service.
         let () = cobalt_forwarder_task.await;
 
-        let (state, commit_action, _packages) = match attempt_res {
-            Ok((state, commit_action, packages)) => (state, commit_action, packages),
+        let (state, mode, _packages) = match attempt_res {
+            Ok(ok) => ok,
             Err(e) => {
                 fx_log_err!("system update failed: {:#}", anyhow!(e));
                 return target_version;
             }
         };
 
-        match (commit_action, reboot_controller) {
-            (CommitAction::Reboot, _) => {
+        // Figure out if we should reboot.
+        match (mode, reboot_controller, config.should_reboot) {
+            // First priority: Always reboot on ForceRecovery success, even if the caller
+            // asked to defer the reboot.
+            (UpdateMode::ForceRecovery, _, _) => {
+                fx_log_info!("system update in ForceRecovery mode complete, rebooting...");
+            }
+            // Second priority: Use the attached reboot controller.
+            (UpdateMode::Normal, Some(mut reboot_controller), _) => {
+                fx_log_info!("system update complete, waiting for initiator to signal reboot.");
+                match reboot_controller.wait_to_reboot().await {
+                    CommitAction::Reboot => {
+                        fx_log_info!("initiator ready to reboot, rebooting...");
+                    }
+                    CommitAction::RebootDeferred => {
+                        fx_log_info!("initiator deferred reboot to caller.");
+                        state.enter_defer_reboot(&mut co).await;
+                        return target_version;
+                    }
+                }
+            }
+            // Last priority: Reboot depending on the config.
+            (UpdateMode::Normal, None, true) => {
                 fx_log_info!("system update complete, rebooting...");
             }
-            (CommitAction::RebootDeferred, Some(mut reboot_controller)) => {
-                fx_log_info!(
-                    "system update complete, waiting for initiator to signal ready for reboot."
-                );
-                reboot_controller.wait_to_reboot().await;
-                fx_log_info!("initiator ready to reboot, rebooting...");
-            }
-            (CommitAction::RebootDeferred, None) => {
+            (UpdateMode::Normal, None, false) => {
                 fx_log_info!("system update complete, reboot to new version deferred to caller.");
                 state.enter_defer_reboot(&mut co).await;
                 return target_version;
@@ -166,7 +231,8 @@ pub async fn update(
         if should_reboot {
             reboot::reboot(&power_state_control).await;
         }
-    })
+    });
+    (attempt_id, stream)
 }
 
 struct Attempt<'a> {
@@ -180,7 +246,7 @@ impl<'a> Attempt<'a> {
         co: &mut async_generator::Yield<State>,
         phase: &mut metrics::Phase,
         target_version: &mut history::Version,
-    ) -> Result<(state::WaitToReboot, CommitAction, Vec<DirectoryProxy>), Error> {
+    ) -> Result<(state::WaitToReboot, UpdateMode, Vec<DirectoryProxy>), Error> {
         // Prepare
         let state = state::Prepare::enter(co).await;
 
@@ -226,20 +292,7 @@ impl<'a> Attempt<'a> {
         let state = state.enter_wait_to_reboot(co).await;
         *phase = metrics::Phase::SuccessPendingReboot;
 
-        let commit_action = match mode {
-            UpdateMode::Normal => {
-                if self.config.should_reboot {
-                    CommitAction::Reboot
-                } else {
-                    CommitAction::RebootDeferred
-                }
-            }
-            UpdateMode::ForceRecovery => {
-                // Always reboot on success, even if the caller asked to defer the reboot.
-                CommitAction::Reboot
-            }
-        };
-        Ok((state, commit_action, packages))
+        Ok((state, mode, packages))
     }
 
     /// Acquire the necessary data to perform the update.

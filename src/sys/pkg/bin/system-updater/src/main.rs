@@ -3,8 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::{args::Args, fidl::FidlServer, update::UpdateHistory},
+    crate::{
+        args::Args,
+        fidl::{FidlServer, UpdateStateNotifier},
+        install_manager::start_install_manager,
+        update::{
+            EnvironmentConnector, NamespaceEnvironmentConnector, RealUpdater, UpdateHistory,
+            Updater,
+        },
+    },
     anyhow::anyhow,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::prelude::*,
@@ -14,9 +23,10 @@ use {
 
 mod args;
 mod fidl;
+mod install_manager;
 pub(crate) mod update;
 
-#[fuchsia_async::run_singlethreaded]
+#[fasync::run_singlethreaded]
 async fn main() {
     fuchsia_syslog::init_with_tags(&["system-updater"]).expect("can't init logger");
     fx_log_info!("starting system updater");
@@ -42,7 +52,7 @@ async fn main() {
 async fn oneshot_update(args: Args, history: Arc<Mutex<UpdateHistory>>) {
     let config = update::Config::from_args(args);
 
-    let env = match update::Environment::connect_in_namespace() {
+    let env = match NamespaceEnvironmentConnector::connect() {
         Ok(env) => env,
         Err(e) => {
             fx_log_err!("Error connecting to services: {:#}", anyhow!(e));
@@ -52,7 +62,7 @@ async fn oneshot_update(args: Args, history: Arc<Mutex<UpdateHistory>>) {
 
     let mut done = false;
     let mut failed = false;
-    let attempt = update::update(config, env, history, None).await;
+    let (_, attempt) = RealUpdater::new(history).update(config, env, None).await;
     futures::pin_mut!(attempt);
     while let Some(state) = attempt.next().await {
         assert!(!done, "update stream continued after a terminal state");
@@ -88,6 +98,18 @@ async fn serve_fidl(history: Arc<Mutex<UpdateHistory>>, inspector: fuchsia_inspe
         fx_log_warn!("Couldn't serve inspect: {:#}", anyhow!(e));
     }
 
-    let server = FidlServer::new(history);
-    server.run(fs).await;
+    // The install manager task will run the update attempt task,
+    // listen for FIDL events, and notify monitors of update attempt progress.
+    let updater = RealUpdater::new(Arc::clone(&history));
+    let (install_manager_ch, install_manager_fut) =
+        start_install_manager::<UpdateStateNotifier, RealUpdater, NamespaceEnvironmentConnector>(
+            updater,
+        )
+        .await;
+
+    // The FIDL server will forward requests to the install manager task via the control handle.
+    let server_fut = FidlServer::new(history, install_manager_ch).run(fs);
+
+    // Start the tasks.
+    futures::join!(fasync::Task::local(install_manager_fut), fasync::Task::local(server_fut));
 }

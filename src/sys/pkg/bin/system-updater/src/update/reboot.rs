@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::update::CommitAction,
     anyhow::{anyhow, Context},
     fidl_fuchsia_hardware_power_statecontrol::AdminProxy as PowerStateControlProxy,
     fuchsia_syslog::fx_log_err,
@@ -12,18 +13,24 @@ use {
 /// External controller that determines when the update attempt should reboot into the new system.
 pub struct RebootController(mpsc::Receiver<ControlRequest>);
 
-enum ControlRequest {
-    #[allow(dead_code)]
+pub enum ControlRequest {
     Unblock,
+    Detach,
 }
 
 impl RebootController {
+    pub fn new(receiver: mpsc::Receiver<ControlRequest>) -> Self {
+        Self(receiver)
+    }
+
     /// Wait for the external controller to signal it is time for the reboot.
-    pub(super) async fn wait_to_reboot(&mut self) {
+    pub(super) async fn wait_to_reboot(&mut self) -> CommitAction {
         match self.0.next().await {
-            Some(ControlRequest::Unblock) => {}
+            Some(ControlRequest::Unblock) => CommitAction::Reboot,
+            Some(ControlRequest::Detach) => CommitAction::RebootDeferred,
             None => {
-                // unexpected, but the only reasonable action is to still unblock the reboot.
+                // Unexpected, but the only reasonable action is to still unblock the reboot.
+                CommitAction::Reboot
             }
         }
     }

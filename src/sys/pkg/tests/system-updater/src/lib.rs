@@ -9,6 +9,8 @@ use {
     cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
+    fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy},
+    fidl_fuchsia_update_installer_ext::Options,
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -39,6 +41,8 @@ mod history;
 mod mode_force_recovery;
 mod mode_normal;
 mod options;
+mod progress_reporting;
+mod reboot_controller;
 mod update_package;
 mod writes_firmware;
 mod writes_images;
@@ -386,6 +390,12 @@ impl TestEnv {
 
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
         output.ok()
+    }
+
+    /// Opens a connection to the installer fidl service, panicking if the system updater was not
+    /// started as a fidl service.
+    fn installer_proxy(&self) -> InstallerProxy {
+        self.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap()
     }
 }
 
@@ -792,4 +802,12 @@ fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
             _ => None,
         })
         .collect()
+}
+
+fn default_options() -> Options {
+    Options {
+        initiator: fidl_fuchsia_update_installer_ext::Initiator::User,
+        allow_attach_to_existing_attempt: true,
+        should_write_recovery: true,
+    }
 }

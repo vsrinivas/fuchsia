@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    fidl_fuchsia_update_installer_ext::Initiator as ExtInitiator,
     fuchsia_url::pkg_url::PkgUrl,
     std::time::{Duration, SystemTime},
 };
@@ -57,11 +58,20 @@ pub enum Initiator {
     Manual,
 }
 
-impl From<Initiator> for fidl_fuchsia_update_installer_ext::Initiator {
+impl From<Initiator> for ExtInitiator {
     fn from(args_initiator: Initiator) -> Self {
         match args_initiator {
-            Initiator::Manual => fidl_fuchsia_update_installer_ext::Initiator::User,
-            Initiator::Automatic => fidl_fuchsia_update_installer_ext::Initiator::Service,
+            Initiator::Manual => ExtInitiator::User,
+            Initiator::Automatic => ExtInitiator::Service,
+        }
+    }
+}
+
+impl From<ExtInitiator> for Initiator {
+    fn from(ext_initiator: ExtInitiator) -> Self {
+        match ext_initiator {
+            ExtInitiator::User => Initiator::Manual,
+            ExtInitiator::Service => Initiator::Automatic,
         }
     }
 }

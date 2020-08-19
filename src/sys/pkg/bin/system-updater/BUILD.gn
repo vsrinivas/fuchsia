@@ -30,6 +30,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/async-generator",
     "//src/sys/pkg/lib/bounded-node",
+    "//src/sys/pkg/lib/event-queue",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/pkgfs",
@@ -59,6 +60,7 @@ rustc_binary("bin") {
   sources = [
     "src/args.rs",
     "src/fidl.rs",
+    "src/install_manager.rs",
     "src/main.rs",
     "src/update.rs",
     "src/update/channel.rs",
