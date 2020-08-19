@@ -29,7 +29,7 @@ CORE_DEPS = [
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:rental",
   "//third_party/rust_crates:thiserror",
-  "//third_party/rust_crates/transitional/quiche",
+  "//third_party/rust-mirrors/quiche",
   "//third_party/boringssl",
 ]
 
