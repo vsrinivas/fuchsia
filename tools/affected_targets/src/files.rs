@@ -37,7 +37,7 @@ impl FromStr for FileType {
         }
         let file_type = match &path.extension().and_then(OsStr::to_str) {
             Some(extension) => match *extension {
-                "h" | "c" | "cc" | "cpp" => FileType::Cpp,
+                "c" | "cc" | "cpp" => FileType::Cpp,
                 "fidl" => FileType::Fidl,
                 "gni" => FileType::Gn,
                 "rs" => FileType::Rust,
@@ -79,7 +79,9 @@ mod tests {
 
     #[test]
     fn cpp_files_parsed_correctly() {
-        assert_matches!(FileType::from_str("this/test.h"), Ok(FileType::Cpp));
+        // Headers are not currently supported.
+        assert_matches!(FileType::from_str("this/test.h"), Ok(FileType::Unknown(_)));
+
         assert_matches!(FileType::from_str("test.c"), Ok(FileType::Cpp));
         assert_matches!(FileType::from_str("test.cc"), Ok(FileType::Cpp));
         assert_matches!(FileType::from_str("test.cpp"), Ok(FileType::Cpp));
@@ -118,25 +120,20 @@ mod tests {
 
     #[test]
     fn test_file_types_are_supported() {
-        assert!(file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl", "test.rs"]));
+        assert!(file_types_are_supported(&["BUILD.gn", "test.fidl", "test.rs"]));
         assert!(!file_types_are_supported(&[
-            "test.h",
             "BUILD.gn",
             "test.fidl",
             "test.unsupported",
             "test.rs"
         ]));
-        assert!(!file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl", "no_extension"]));
+        assert!(!file_types_are_supported(&["BUILD.gn", "test.fidl", "no_extension"]));
     }
 
     #[test]
     fn test_disabled_file_types() {
         assert!(contains_disabled_file_types(
-            &["test.h", "BUILD.gn", "test.fidl"],
-            vec![FileType::Cpp]
-        ));
-        assert!(contains_disabled_file_types(
-            &["test.h", "BUILD.cc", "test.cc"],
+            &["test.cc", "BUILD.gn", "test.fidl"],
             vec![FileType::Cpp]
         ));
         assert!(!contains_disabled_file_types(
