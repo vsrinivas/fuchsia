@@ -6,8 +6,7 @@ use {
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_select_args::SelectCommand,
-    fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, ServiceMatch},
-    selectors,
+    fidl_fuchsia_developer_remotecontrol as rc, selectors,
     std::io::{stdout, Write},
 };
 
@@ -17,13 +16,13 @@ Example: 'remote-control:out:*' would return all services in 'out' for the compo
 Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 #[ffx_plugin()]
-pub async fn select_cmd(remote_proxy: RemoteControlProxy, cmd: SelectCommand) -> Result<()> {
+pub async fn select_cmd(remote_proxy: rc::RemoteControlProxy, cmd: SelectCommand) -> Result<()> {
     let writer = Box::new(stdout());
     select(remote_proxy, writer, &cmd.selector).await
 }
 
 async fn select<W: Write>(
-    remote_proxy: RemoteControlProxy,
+    remote_proxy: rc::RemoteControlProxy,
     mut write: W,
     selector: &str,
 ) -> Result<()> {
@@ -64,11 +63,11 @@ fn format_service<W: Write>(writer: &mut W, service: &str) -> Result<()> {
     Ok(())
 }
 
-fn format_matches<W: Write>(writer: &mut W, matches: Vec<ServiceMatch>) -> Result<()> {
-    let mut sorted_paths = matches.iter().collect::<Vec<&ServiceMatch>>();
+fn format_matches<W: Write>(writer: &mut W, matches: Vec<rc::ServiceMatch>) -> Result<()> {
+    let mut sorted_paths = matches.iter().collect::<Vec<&rc::ServiceMatch>>();
     sorted_paths.sort();
 
-    let mut prev_opt: Option<&ServiceMatch> = None;
+    let mut prev_opt: Option<&rc::ServiceMatch> = None;
 
     for m in sorted_paths.iter() {
         if let Some(prev) = prev_opt {
@@ -99,12 +98,7 @@ fn format_matches<W: Write>(writer: &mut W, matches: Vec<ServiceMatch>) -> Resul
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlRequest},
-        futures::TryStreamExt,
-        std::io::BufWriter,
-    };
+    use {super::*, std::io::BufWriter};
 
     const DEFAULT_MATCH_STR: &str = "\
 core/test
@@ -113,28 +107,19 @@ core/test
    |
    --fuchsia.myservice\n";
 
-    fn setup_fake_remote_server() -> RemoteControlProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    RemoteControlRequest::Select { selector: _, responder } => {
-                        let _ = responder
-                            .send(&mut Ok(vec![ServiceMatch {
-                                moniker: vec![String::from("core"), String::from("test")],
-                                subdir: String::from("out"),
-                                service: String::from("fuchsia.myservice"),
-                            }]))
-                            .unwrap();
-                    }
-                    _ => assert!(false, format!("got unexpected request: {:?}", req)),
-                }
+    fn setup_fake_remote_server() -> rc::RemoteControlProxy {
+        setup_fake_remote_proxy(|req| match req {
+            rc::RemoteControlRequest::Select { selector: _, responder } => {
+                let _ = responder
+                    .send(&mut Ok(vec![rc::ServiceMatch {
+                        moniker: vec![String::from("core"), String::from("test")],
+                        subdir: String::from("out"),
+                        service: String::from("fuchsia.myservice"),
+                    }]))
+                    .unwrap();
             }
+            _ => assert!(false, format!("got unexpected request: {:?}", req)),
         })
-        .detach();
-
-        proxy
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -189,27 +174,27 @@ test
             format_matches(
                 &mut writer,
                 vec![
-                    ServiceMatch {
+                    rc::ServiceMatch {
                         moniker: vec![String::from("core"), String::from("test")],
                         subdir: String::from("out"),
                         service: String::from("fuchsia.myservice3"),
                     },
-                    ServiceMatch {
+                    rc::ServiceMatch {
                         moniker: vec![String::from("core"), String::from("test")],
                         subdir: String::from("in"),
                         service: String::from("fuchsia.myservice"),
                     },
-                    ServiceMatch {
+                    rc::ServiceMatch {
                         moniker: vec![String::from("core"), String::from("test")],
                         subdir: String::from("in"),
                         service: String::from("fuchsia.myservice2"),
                     },
-                    ServiceMatch {
+                    rc::ServiceMatch {
                         moniker: vec![String::from("test")],
                         subdir: String::from("out"),
                         service: String::from("fuchsia.myservice5"),
                     },
-                    ServiceMatch {
+                    rc::ServiceMatch {
                         moniker: vec![String::from("test")],
                         subdir: String::from("in"),
                         service: String::from("fuchsia.myservice4"),

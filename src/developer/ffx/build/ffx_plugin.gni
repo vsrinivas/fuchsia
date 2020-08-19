@@ -185,6 +185,7 @@ template("ffx_plugin") {
       "//src/developer/ffx/config:lib",
       "//src/diagnostics/lib/selectors",
       "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",

@@ -6,17 +6,17 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_echo_args::EchoCommand,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge as bridge,
     std::io::{stdout, Write},
 };
 
 #[ffx_plugin()]
-pub async fn echo(daemon_proxy: DaemonProxy, cmd: EchoCommand) -> Result<()> {
+pub async fn echo(daemon_proxy: bridge::DaemonProxy, cmd: EchoCommand) -> Result<()> {
     echo_impl(daemon_proxy, cmd, Box::new(stdout())).await
 }
 
 async fn echo_impl<W: Write>(
-    daemon_proxy: DaemonProxy,
+    daemon_proxy: bridge::DaemonProxy,
     cmd: EchoCommand,
     mut writer: W,
 ) -> Result<()> {
@@ -36,36 +36,19 @@ async fn echo_impl<W: Write>(
 #[cfg(test)]
 mod test {
     use {
-        super::*,
-        anyhow::Context,
-        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
-        futures::TryStreamExt,
-        std::io::BufWriter,
+        super::*, anyhow::Context, fidl_fuchsia_developer_bridge::DaemonRequest, std::io::BufWriter,
     };
 
-    fn setup_fake_daemon_server() -> DaemonProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    DaemonRequest::EchoString { value, responder } => {
-                        responder
-                            .send(value.as_ref())
-                            .context("error sending response")
-                            .expect("should send");
-                    }
-                    _ => assert!(false),
-                }
-                // We should only get one request per stream. We want subsequent calls to fail
-                // if more are made.
-                break;
+    fn setup_fake_daemon_server() -> bridge::DaemonProxy {
+        setup_fake_daemon_proxy(|req| match req {
+            DaemonRequest::EchoString { value, responder } => {
+                responder
+                    .send(value.as_ref())
+                    .context("error sending response")
+                    .expect("should send");
             }
+            _ => assert!(false),
         })
-        .detach();
-
-        proxy
     }
 
     async fn run_echo_test(cmd: EchoCommand) -> String {

@@ -18,28 +18,15 @@ pub async fn off(admin_proxy: fpower::AdminProxy, _cmd: OffCommand) -> Result<()
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest, futures::TryStreamExt};
+    use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest};
 
     fn setup_fake_admin_server() -> fpower::AdminProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<fpower::AdminMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    AdminRequest::Poweroff { responder } => {
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    _ => assert!(false),
-                }
-                // We should only get one request per stream. We want subsequent calls to fail if more are
-                // made.
-                break;
+        setup_fake_admin_proxy(|req| match req {
+            AdminRequest::Poweroff { responder } => {
+                responder.send(&mut Ok(())).unwrap();
             }
+            _ => assert!(false),
         })
-        .detach();
-
-        proxy
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

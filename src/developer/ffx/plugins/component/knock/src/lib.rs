@@ -7,8 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_knock_args::KnockCommand,
     fidl::handle::Channel,
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-    fuchsia_zircon_status as zx_status, selectors,
+    fidl_fuchsia_developer_remotecontrol as rc, fuchsia_zircon_status as zx_status, selectors,
     std::io::{stdout, Write},
 };
 
@@ -18,13 +17,13 @@ Example: 'remote-control:out:*' would return all services in 'out' for the compo
 Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 #[ffx_plugin()]
-pub async fn knock_cmd(remote_proxy: RemoteControlProxy, cmd: KnockCommand) -> Result<()> {
+pub async fn knock_cmd(remote_proxy: rc::RemoteControlProxy, cmd: KnockCommand) -> Result<()> {
     let writer = Box::new(stdout());
     knock(remote_proxy, writer, &cmd.selector).await
 }
 
 async fn knock<W: Write>(
-    remote_proxy: RemoteControlProxy,
+    remote_proxy: rc::RemoteControlProxy,
     mut write: W,
     selector: &str,
 ) -> Result<()> {
@@ -92,9 +91,6 @@ mod test {
         fidl::endpoints::RequestStream,
         fidl::handle::AsyncChannel,
         fidl_fuchsia_developer_bridge::{DaemonRequest, DaemonRequestStream},
-        fidl_fuchsia_developer_remotecontrol::{
-            RemoteControlMarker, RemoteControlRequest, ServiceMatch,
-        },
         futures::TryStreamExt,
         std::io::BufWriter,
     };
@@ -116,34 +112,25 @@ mod test {
         .detach();
     }
 
-    fn setup_fake_remote_server(connect_chan: bool) -> RemoteControlProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
-                        if connect_chan {
-                            setup_fake_daemon_service(DaemonRequestStream::from_channel(
-                                AsyncChannel::from_channel(service_chan).unwrap(),
-                            ));
-                        }
-
-                        let _ = responder
-                            .send(&mut Ok(ServiceMatch {
-                                moniker: vec![String::from("core"), String::from("test")],
-                                subdir: String::from("out"),
-                                service: String::from("fuchsia.myservice"),
-                            }))
-                            .unwrap();
-                    }
-                    _ => assert!(false, format!("got unexpected {:?}", req)),
+    fn setup_fake_remote_server(connect_chan: bool) -> rc::RemoteControlProxy {
+        setup_fake_remote_proxy(move |req| match req {
+            rc::RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
+                if connect_chan {
+                    setup_fake_daemon_service(DaemonRequestStream::from_channel(
+                        AsyncChannel::from_channel(service_chan).unwrap(),
+                    ));
                 }
-            }
-        })
-        .detach();
 
-        proxy
+                let _ = responder
+                    .send(&mut Ok(rc::ServiceMatch {
+                        moniker: vec![String::from("core"), String::from("test")],
+                        subdir: String::from("out"),
+                        service: String::from("fuchsia.myservice"),
+                    }))
+                    .unwrap();
+            }
+            _ => assert!(false, format!("got unexpected {:?}", req)),
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

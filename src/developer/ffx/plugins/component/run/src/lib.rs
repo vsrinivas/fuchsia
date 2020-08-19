@@ -133,43 +133,31 @@ pub async fn run_component(
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl_fuchsia_sys::LauncherRequest, futures::TryStreamExt};
+    use {super::*, fidl_fuchsia_sys::LauncherRequest};
 
     fn setup_fake_launcher_service() -> fidl_fuchsia_sys::LauncherProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_sys::LauncherMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    LauncherRequest::CreateComponent {
-                        launch_info:
-                            LaunchInfo {
-                                url: _,
-                                arguments: _,
-                                out: _,
-                                err: _,
-                                additional_services: _,
-                                directory_request: _,
-                                flat_namespace: _,
-                            },
-                        controller,
-                        control_handle: _,
-                    } => {
-                        let (_, handle) =
-                            controller.unwrap().into_stream_and_control_handle().unwrap();
-                        handle.send_on_terminated(0, Exited).unwrap();
-                        // TODO: Add test coverage for FE behavior once fxbug.dev/49063 is resolved.
-                    }
+        setup_oneshot_fake_launcher_proxy(|req| {
+            match req {
+                LauncherRequest::CreateComponent {
+                    launch_info:
+                        LaunchInfo {
+                            url: _,
+                            arguments: _,
+                            out: _,
+                            err: _,
+                            additional_services: _,
+                            directory_request: _,
+                            flat_namespace: _,
+                        },
+                    controller,
+                    control_handle: _,
+                } => {
+                    let (_, handle) = controller.unwrap().into_stream_and_control_handle().unwrap();
+                    handle.send_on_terminated(0, Exited).unwrap();
+                    // TODO: Add test coverage for FE behavior once fxbug.dev/49063 is resolved.
                 }
-                // We should only get one request per stream. We want subsequent calls to fail if more are
-                // made.
-                break;
             }
         })
-        .detach();
-
-        proxy
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

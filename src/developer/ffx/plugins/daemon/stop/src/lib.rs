@@ -4,11 +4,11 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_stop_args::StopCommand,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge as bridge,
 };
 
 #[ffx_plugin()]
-async fn stop(daemon_proxy: DaemonProxy, _cmd: StopCommand) -> Result<()> {
+async fn stop(daemon_proxy: bridge::DaemonProxy, _cmd: StopCommand) -> Result<()> {
     daemon_proxy.quit().await?;
     println!("Stopped daemon.");
     Ok(())
@@ -19,36 +19,15 @@ async fn stop(daemon_proxy: DaemonProxy, _cmd: StopCommand) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        anyhow::Context,
-        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
-        futures::TryStreamExt,
-    };
+    use {super::*, anyhow::Context, fidl_fuchsia_developer_bridge::DaemonRequest};
 
-    fn setup_fake_daemon_server() -> DaemonProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    DaemonRequest::Quit { responder } => {
-                        responder
-                            .send(true)
-                            .context("error sending response")
-                            .expect("should send");
-                    }
-                    _ => assert!(false),
-                }
-                // We should only get one request per stream. We want subsequent calls to fail
-                // if more are made.
-                break;
+    fn setup_fake_daemon_server() -> bridge::DaemonProxy {
+        setup_fake_daemon_proxy(|req| match req {
+            DaemonRequest::Quit { responder } => {
+                responder.send(true).context("error sending response").expect("should send");
             }
+            _ => assert!(false),
         })
-        .detach();
-
-        proxy
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

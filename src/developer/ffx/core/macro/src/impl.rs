@@ -58,6 +58,59 @@ fn qualified_name(path: &syn::Path) -> String {
         .fold(String::new(), |accum, elem| format!("{}{}", accum, elem))
 }
 
+fn replace_proxy(path: &syn::Path, name: String, replace: &str) -> Punctuated<Ident, Token!(::)> {
+    let mut result = format!("{}", name);
+    let _ = result.split_off(result.len() - 5);
+    result.push_str(replace);
+    qualified(path, result)
+}
+
+fn generate_fake_test_proxy_method(
+    proxy_name: Ident,
+    qualified_proxy_type: &syn::Path,
+    qualified_proxy_marker_type: Punctuated<Ident, Token!(::)>,
+    qualified_proxy_request_type: Punctuated<Ident, Token!(::)>,
+) -> TokenStream {
+    let method_name = Ident::new(&format!("setup_fake_{}", proxy_name), Span::call_site());
+    // Oneshot method is needed only for the 'component run' unit tests that leaks memory
+    // everywhere unless shut down from the server side.
+    let oneshot_method_name =
+        Ident::new(&format!("setup_oneshot_fake_{}", proxy_name), Span::call_site());
+    quote! {
+        #[cfg(test)]
+        fn #method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
+            where R: FnOnce(#qualified_proxy_request_type) + std::marker::Send + Copy
+        {
+            use futures::TryStreamExt;
+            let (proxy, mut stream) =
+                fidl::endpoints::create_proxy_and_stream::<#qualified_proxy_marker_type>().unwrap();
+            fuchsia_async::Task::spawn(async move {
+                while let Ok(Some(req)) = stream.try_next().await {
+                    handle_request(req);
+                }
+            })
+            .detach();
+            proxy
+        }
+
+        #[cfg(test)]
+        fn #oneshot_method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
+            where R: FnOnce(#qualified_proxy_request_type) + std::marker::Send + Copy
+        {
+            use futures::TryStreamExt;
+            let (proxy, mut stream) =
+                fidl::endpoints::create_proxy_and_stream::<#qualified_proxy_marker_type>().unwrap();
+            fuchsia_async::Task::spawn(async move {
+                if let Ok(Some(req)) = stream.try_next().await {
+                    handle_request(req);
+                }
+            })
+            .detach();
+            proxy
+        }
+    }
+}
+
 pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
     let mut uses_daemon = false;
     let mut uses_remote = false;
@@ -65,6 +118,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     let mut args: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut futures: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut proxies_to_generate = Vec::new();
+    let mut test_fake_methods_to_generate = Vec::<TokenStream>::new();
     let mut cmd_arg = None;
     let method = input.sig.ident.clone();
     for arg in input.sig.inputs.clone() {
@@ -82,19 +136,37 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                             if t.ident == Ident::new("RemoteControlProxy", Span::call_site()) {
                                 args.push(Ident::new("remote_proxy", Span::call_site()));
                                 uses_remote = true;
+                                if let Pat::Ident(pat_ident) = pat.as_ref() {
+                                    test_fake_methods_to_generate.push(
+                                        generate_fake_test_proxy_method(
+                                            pat_ident.ident.clone(),
+                                            path,
+                                            replace_proxy(path, t.ident.to_string(), "Marker"),
+                                            replace_proxy(path, t.ident.to_string(), "Request"),
+                                        ),
+                                    );
+                                }
                             } else if t.ident == Ident::new("DaemonProxy", Span::call_site()) {
                                 args.push(Ident::new("daemon_proxy", Span::call_site()));
                                 uses_daemon = true;
+                                if let Pat::Ident(pat_ident) = pat.as_ref() {
+                                    test_fake_methods_to_generate.push(
+                                        generate_fake_test_proxy_method(
+                                            pat_ident.ident.clone(),
+                                            path,
+                                            replace_proxy(path, t.ident.to_string(), "Marker"),
+                                            replace_proxy(path, t.ident.to_string(), "Request"),
+                                        ),
+                                    );
+                                }
                             } else {
                                 // try to find ident in the proxy map
-                                let qualified_name = qualified_name(path);
-                                match proxies.map.get(&qualified_name) {
+                                let qualified_proxy_name = qualified_name(path);
+                                match proxies.map.get(&qualified_proxy_name) {
                                     Some(mapping) => {
                                         uses_map = true;
-                                        let mut marker_name = t.ident.to_string();
-                                        let _ = marker_name.split_off(marker_name.len() - 5);
-                                        marker_name.push_str("Marker");
-                                        let qualified_marker = qualified(path, marker_name);
+                                        let qualified_marker =
+                                            replace_proxy(path, t.ident.to_string(), "Marker");
                                         let mapping_lit = LitStr::new(mapping, Span::call_site());
                                         if let Pat::Ident(pat_ident) = pat.as_ref() {
                                             let output = pat_ident.ident.clone();
@@ -120,6 +192,22 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                             });
                                             args.push(output);
                                             futures.push(output_fut);
+                                            test_fake_methods_to_generate.push(
+                                                generate_fake_test_proxy_method(
+                                                    pat_ident.ident.clone(),
+                                                    path,
+                                                    replace_proxy(
+                                                        path,
+                                                        t.ident.to_string(),
+                                                        "Marker",
+                                                    ),
+                                                    replace_proxy(
+                                                        path,
+                                                        t.ident.to_string(),
+                                                        "Request",
+                                                    ),
+                                                ),
+                                            );
                                         }
                                     }
                                     None => {
@@ -240,6 +328,8 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         {
             #gated_impl
         }
+
+        #(#test_fake_methods_to_generate)*
     })
 }
 
@@ -290,9 +380,7 @@ impl Parse for ProxyMap {
                         ));
                     } else {
                         experiment_key = Some(format!("{}", found_key.value()));
-                        let lookahead = input.lookahead1();
-                        // check for trailing comma
-                        if lookahead.peek(Token!(,)) {
+                        if input.peek(Token!(,)) {
                             // Parse the trailing comma
                             let _: Punct = input.parse()?;
                         }
@@ -334,11 +422,18 @@ mod test {
     struct WrappedFunction {
         original: ItemFn,
         plugin: ItemFn,
+        fake_tests: Vec<ItemFn>,
     }
 
     impl Parse for WrappedFunction {
         fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
-            Ok(WrappedFunction { original: input.parse()?, plugin: input.parse()? })
+            let original = input.parse()?;
+            let plugin = input.parse()?;
+            let mut fake_tests = Vec::new();
+            while !input.is_empty() {
+                fake_tests.push(input.parse()?);
+            }
+            Ok(WrappedFunction { original, plugin, fake_tests })
         }
     }
 
@@ -385,6 +480,7 @@ mod test {
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(0, result.fake_tests.len());
         Ok(())
     }
 
@@ -421,9 +517,46 @@ mod test {
                 echo(daemon_proxy, _cmd).await
             }
         };
+        let fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
+                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let oneshot_fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_oneshot_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
+                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    if let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(2, result.fake_tests.len());
+        assert_eq!(fake_test, result.fake_tests[0]);
+        assert_eq!(oneshot_fake_test, result.fake_tests[1]);
         Ok(())
     }
 
@@ -460,9 +593,28 @@ mod test {
                 echo(remote_proxy, _cmd).await
             }
         };
+        let fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
+                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
-        assert_eq!(plugin, result.plugin);
+        assert_eq!(plugin, result.plugin, "{:?}", result.plugin);
+        assert_eq!(2, result.fake_tests.len());
+        assert_eq!(fake_test, result.fake_tests[0]);
         Ok(())
     }
 
@@ -501,9 +653,46 @@ mod test {
                 echo(daemon_proxy, remote_proxy, _cmd).await
             }
         };
+        let fake_daemon_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
+                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let fake_remote_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
+                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(4, result.fake_tests.len());
+        assert_eq!(fake_daemon_test, result.fake_tests[0]);
+        assert_eq!(fake_remote_test, result.fake_tests[2]);
         Ok(())
     }
 
@@ -543,9 +732,46 @@ mod test {
                 echo(remote_proxy, _cmd, daemon_proxy).await
             }
         };
+        let fake_daemon_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
+                where R: FnOnce(DaemonRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let fake_remote_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
+                where R: FnOnce(RemoteControlRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(4, result.fake_tests.len());
+        assert_eq!(fake_remote_test, result.fake_tests[0]);
+        assert_eq!(fake_daemon_test, result.fake_tests[2]);
         Ok(())
     }
 
@@ -598,9 +824,28 @@ mod test {
                 }
             }
         };
+        let fake_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
+                where R: FnOnce(TestRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<TestMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(2, result.fake_tests.len());
+        assert_eq!(fake_test, result.fake_tests[0]);
         Ok(())
     }
 
@@ -660,9 +905,46 @@ mod test {
                 }
             }
         };
+        let fake_foo_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_foo<R:'static>(handle_request: R) -> FooProxy
+                where R: FnOnce(FooRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<FooMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
+        let fake_test_test: ItemFn = parse_quote! {
+            #[cfg(test)]
+            fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
+                where R: FnOnce(TestRequest) + std::marker::Send + Copy
+            {
+                use futures::TryStreamExt;
+                let (proxy, mut stream) =
+                    fidl::endpoints::create_proxy_and_stream::<TestMarker>().unwrap();
+                fuchsia_async::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        handle_request(req);
+                    }
+                })
+                .detach();
+                proxy
+            }
+        };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
         assert_eq!(original, result.original);
         assert_eq!(plugin, result.plugin);
+        assert_eq!(4, result.fake_tests.len());
+        assert_eq!(fake_foo_test, result.fake_tests[0]);
+        assert_eq!(fake_test_test, result.fake_tests[2]);
         Ok(())
     }
 

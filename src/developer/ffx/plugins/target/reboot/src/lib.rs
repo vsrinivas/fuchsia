@@ -30,39 +30,24 @@ pub async fn reboot(admin_proxy: fpower::AdminProxy, cmd: RebootCommand) -> Resu
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest, futures::TryStreamExt};
+    use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest};
+
     fn setup_fake_admin_server(cmd: RebootCommand) -> fpower::AdminProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<fpower::AdminMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    AdminRequest::Reboot {
-                        reason: fpower::RebootReason::UserRequest,
-                        responder,
-                    } => {
-                        assert!(!cmd.bootloader && !cmd.recovery);
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    AdminRequest::RebootToBootloader { responder } => {
-                        assert!(cmd.bootloader && !cmd.recovery);
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    AdminRequest::RebootToRecovery { responder } => {
-                        assert!(!cmd.bootloader && cmd.recovery);
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    _ => assert!(false),
-                }
-                // We should only get one request per stream. We want subsequent calls to fail if more are
-                // made.
-                break;
+        setup_fake_admin_proxy(move |req| match req {
+            AdminRequest::Reboot { reason: fpower::RebootReason::UserRequest, responder } => {
+                assert!(!cmd.bootloader && !cmd.recovery);
+                responder.send(&mut Ok(())).unwrap();
             }
+            AdminRequest::RebootToBootloader { responder } => {
+                assert!(cmd.bootloader && !cmd.recovery);
+                responder.send(&mut Ok(())).unwrap();
+            }
+            AdminRequest::RebootToRecovery { responder } => {
+                assert!(!cmd.bootloader && cmd.recovery);
+                responder.send(&mut Ok(())).unwrap();
+            }
+            _ => assert!(false),
         })
-        .detach();
-
-        proxy
     }
 
     async fn run_reboot_test(cmd: RebootCommand) {

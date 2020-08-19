@@ -7,7 +7,7 @@ use {
     anyhow::{anyhow, Result},
     ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge as bridge,
     std::convert::TryFrom,
     std::io::{stdout, Write},
 };
@@ -15,12 +15,12 @@ use {
 mod target_formatter;
 
 #[ffx_plugin()]
-pub async fn list_targets(daemon_proxy: DaemonProxy, cmd: ListCommand) -> Result<()> {
+pub async fn list_targets(daemon_proxy: bridge::DaemonProxy, cmd: ListCommand) -> Result<()> {
     list_impl(daemon_proxy, cmd, Box::new(stdout())).await
 }
 
 async fn list_impl<W: Write>(
-    daemon_proxy: DaemonProxy,
+    daemon_proxy: bridge::DaemonProxy,
     cmd: ListCommand,
     mut writer: W,
 ) -> Result<()> {
@@ -60,10 +60,8 @@ mod test {
         super::*,
         ffx_daemon::target::TargetAddr,
         fidl_fuchsia_developer_bridge::{
-            DaemonMarker, DaemonRequest, RemoteControlState, Target as FidlTarget, TargetState,
-            TargetType,
+            DaemonRequest, RemoteControlState, Target as FidlTarget, TargetState, TargetType,
         },
-        futures::TryStreamExt,
         regex::Regex,
         std::io::BufWriter,
         std::net::IpAddr,
@@ -82,36 +80,25 @@ mod test {
         }
     }
 
-    fn setup_fake_daemon_server(num_tests: usize) -> DaemonProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    DaemonRequest::ListTargets { value, responder } => {
-                        let fidl_values: Vec<FidlTarget> = if value.is_empty() {
-                            (0..num_tests)
-                                .map(|i| format!("Test {}", i))
-                                .map(|name| to_fidl_target(name))
-                                .collect()
-                        } else {
-                            (0..num_tests)
-                                .map(|i| format!("Test {}", i))
-                                .filter(|t| *t == value)
-                                .map(|name| to_fidl_target(name))
-                                .collect()
-                        };
-                        responder.send(&mut fidl_values.into_iter().by_ref().take(512)).unwrap();
-                    }
-                    _ => assert!(false),
-                }
-                break;
+    fn setup_fake_daemon_server(num_tests: usize) -> bridge::DaemonProxy {
+        setup_fake_daemon_proxy(move |req| match req {
+            DaemonRequest::ListTargets { value, responder } => {
+                let fidl_values: Vec<FidlTarget> = if value.is_empty() {
+                    (0..num_tests)
+                        .map(|i| format!("Test {}", i))
+                        .map(|name| to_fidl_target(name))
+                        .collect()
+                } else {
+                    (0..num_tests)
+                        .map(|i| format!("Test {}", i))
+                        .filter(|t| *t == value)
+                        .map(|name| to_fidl_target(name))
+                        .collect()
+                };
+                responder.send(&mut fidl_values.into_iter().by_ref().take(512)).unwrap();
             }
+            _ => assert!(false),
         })
-        .detach();
-
-        proxy
     }
 
     async fn run_list_test(num_tests: usize, cmd: ListCommand) -> String {

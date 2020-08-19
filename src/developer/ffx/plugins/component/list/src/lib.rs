@@ -9,8 +9,7 @@ use {
     async_trait::async_trait,
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     std::io::{stdout, Write},
 };
@@ -19,12 +18,12 @@ mod component;
 mod io;
 
 #[ffx_plugin()]
-pub async fn list(rcs_proxy: RemoteControlProxy, cmd: ComponentListCommand) -> Result<()> {
+pub async fn list(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentListCommand) -> Result<()> {
     list_impl(rcs_proxy, cmd, Box::new(stdout())).await
 }
 
 async fn list_impl<W: Write>(
-    rcs_proxy: RemoteControlProxy,
+    rcs_proxy: rc::RemoteControlProxy,
     _cmd: ComponentListCommand,
     mut writer: W,
 ) -> Result<()> {
