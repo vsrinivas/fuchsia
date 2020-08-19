@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "buildstats:buildstats_tests($host_toolchain)",
     "compdb:compdb_tests($host_toolchain)",
     "ninjagraph:ninjagraph_tests($host_toolchain)",
     "ninjalog:ninjalog_tests($host_toolchain)",

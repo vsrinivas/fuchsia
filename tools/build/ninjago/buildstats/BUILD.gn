@@ -1,0 +1,46 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("main") {
+  deps = [
+    "//tools/build/ninjago/compdb",
+    "//tools/build/ninjago/ninjagraph",
+    "//tools/build/ninjago/ninjalog",
+    "//tools/lib/color",
+    "//tools/lib/logger",
+  ]
+}
+
+go_binary("buildstats") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/buildstats"
+  deps = [ ":main" ]
+}
+
+if (is_host) {
+  _testdata_path = "$target_gen_dir/testdata"
+
+  host_test_data("testdata") {
+    sources = [ "//tools/build/ninjago/test_data" ]
+    outputs = [ _testdata_path ]
+  }
+
+  go_test("buildstats_tests") {
+    output_name = "buildstats_tests"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/buildstats" ]
+    args = [
+      "--test_data_dir",
+      rebase_path(_testdata_path, root_build_dir),
+    ]
+    deps = [
+      ":main",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
+    non_go_deps = [ ":testdata" ]
+  }
+}
