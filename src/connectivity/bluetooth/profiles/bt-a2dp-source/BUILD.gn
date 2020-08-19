@@ -42,6 +42,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
@@ -129,6 +130,7 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [

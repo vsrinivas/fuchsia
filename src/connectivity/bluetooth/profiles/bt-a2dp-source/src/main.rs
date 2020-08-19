@@ -22,8 +22,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     futures::{self, select, StreamExt, TryStreamExt},
+    log::{error, info, trace, warn},
     std::{convert::TryInto, sync::Arc},
 };
 
@@ -87,7 +87,7 @@ pub fn build_sbc_endpoint(
         SbcCodecInfo::BITPOOL_MIN,
         SbcCodecInfo::BITPOOL_MAX,
     )?;
-    fx_vlog!(1, "Supported SBC codec parameters: {:?}.", sbc_codec_info);
+    trace!("Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
     avdtp::StreamEndpoint::new(
         SBC_SEID,
@@ -115,7 +115,7 @@ pub fn build_aac_endpoint(
         MAX_BITRATE_AAC,
     )?;
 
-    fx_vlog!(1, "Supported AAC codec parameters: {:?}.", aac_codec_info);
+    trace!("Supported AAC codec parameters: {:?}.", aac_codec_info);
 
     avdtp::StreamEndpoint::new(
         AAC_SEID,
@@ -143,13 +143,13 @@ fn build_local_streams(source_type: AudioSourceType) -> avdtp::Result<stream::St
         build_sbc_endpoint(avdtp::EndpointType::Source)?,
         source_task_builder.clone(),
     ));
-    fx_vlog!(1, "SBC Stream added at SEID {}", SBC_SEID);
+    trace!("SBC Stream added at SEID {}", SBC_SEID);
 
     streams.insert(stream::Stream::build(
         build_aac_endpoint(avdtp::EndpointType::Source)?,
         source_task_builder,
     ));
-    fx_vlog!(1, "AAC stream added at SEID {}", AAC_SEID);
+    trace!("AAC stream added at SEID {}", AAC_SEID);
 
     Ok(streams)
 }
@@ -202,7 +202,7 @@ async fn main() -> Result<(), Error> {
     // Check to see that we can encode SBC audio.
     // This is a requireement of A2DP 1.3: Section 4.2
     if let Err(e) = test_encode_sbc().await {
-        fx_log_err!("Can't encode SBC Audio: {:?}", e);
+        error!("Can't encode SBC Audio: {:?}", e);
         return Ok(());
     }
     let controller_pool = Arc::new(ControllerPool::new());
@@ -219,7 +219,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |s| pool_clone.connected(s));
 
     if let Err(e) = fs.take_and_serve_directory_handle() {
-        fx_log_warn!("Unable to serve service directory: {}", e);
+        warn!("Unable to serve service directory: {}", e);
     }
     let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
@@ -255,7 +255,7 @@ async fn main() -> Result<(), Error> {
     let streams = build_local_streams(opts.source)?;
     let mut peers = Peers::new(streams, profile_svc, signaling_channel_mode, controller_pool);
     if let Err(e) = peers.iattach(inspect.root(), "connected") {
-        fx_log_info!("Failed to attach peers to inspect: {:?}", e);
+        info!("Failed to attach peers to inspect: {:?}", e);
     }
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
@@ -277,16 +277,16 @@ async fn handle_profile_events(
                 };
                 let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
                 let peer_id: PeerId = peer_id.into();
-                fx_log_info!("Connected sink {}", peer_id);
+                info!("Connected sink {}", peer_id);
                 let channel = match channel.try_into() {
                     Ok(chan) => chan,
                     Err(e) => {
-                        fx_log_info!("Peer {}: channel is not usable: {:?}", peer_id, e);
+                        info!("Peer {}: channel is not usable: {:?}", peer_id, e);
                         continue;
                     }
                 };
                 if let Err(e) = peers.connected(peer_id, channel) {
-                    fx_log_info!("Error connecting peer {}: {:?}", peer_id, e);
+                    info!("Error connecting peer {}: {:?}", peer_id, e);
                     continue;
                 }
             },
@@ -297,17 +297,12 @@ async fn handle_profile_events(
                 };
                 let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
                 let peer_id: PeerId = peer_id.into();
-                fx_log_info!(
-                    "Discovered sink {} - protocol {:?}: {:?}",
-                    peer_id,
-                    protocol,
-                    attributes
-                );
+                info!("Discovered sink {} - protocol {:?}: {:?}", peer_id, protocol, attributes);
                 responder.send()?;
                 let profile = match find_profile_descriptors(&attributes) {
                     Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
                     Err(_) => {
-                        fx_log_info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
+                        info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
                         continue;
                     }
                 };

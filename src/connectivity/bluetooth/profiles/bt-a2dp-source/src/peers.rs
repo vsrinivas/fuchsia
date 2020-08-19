@@ -15,8 +15,8 @@ use {
     },
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
+    log::{info, warn},
     std::{
         convert::{TryFrom, TryInto},
         sync::Arc,
@@ -77,7 +77,7 @@ impl Peers {
         let avdtp_peer = avdtp::Peer::new(channel);
         let mut peer = Peer::create(id.clone(), avdtp_peer, streams, profile, None);
         if let Err(e) = peer.iattach(inspect, inspect::unique_name("peer_")) {
-            fx_log_info!("Couldn't attach peer to inspect: {:?}", e);
+            info!("Couldn't attach peer to inspect: {:?}", e);
         }
         // Start the streaming task if the profile information is populated.
         // Otherwise, `self.discovered()` will do so.
@@ -90,7 +90,7 @@ impl Peers {
         let detached_peer = match entry.try_insert(peer) {
             Ok(detached_peer) => detached_peer,
             Err(_peer) => {
-                fx_log_info!("Peer connected to us, aborting.");
+                info!("Peer connected to us, aborting.");
                 return Err(format_err!("Couldn't start peer"));
             }
         };
@@ -105,7 +105,7 @@ impl Peers {
         let peer_id = id.clone();
         fasync::Task::local(async move {
             closed_fut.await;
-            fx_log_info!("Detaching closed peer {}", peer_id);
+            info!("Detaching closed peer {}", peer_id);
             detached_peer.detach();
         })
         .detach();
@@ -121,10 +121,10 @@ impl Peers {
         let controller_pool = self.controller.clone();
         let inspect = self.inspect.clone_weak();
         fasync::Task::local(async move {
-            fx_log_info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
+            info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
             fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
             if let Some(peer) = entry.get() {
-                fx_log_info!("After initiator delay, {} was connected, not connecting..", id);
+                info!("After initiator delay, {} was connected, not connecting..", id);
                 if let Some(peer) = peer.upgrade() {
                     if peer.set_descriptor(desc.clone()).is_none() {
                         // TODO(50465): maybe check to see if we should start streaming.
@@ -148,11 +148,11 @@ impl Peers {
                 .await
             {
                 Err(e) => {
-                    fx_log_warn!("FIDL error connecting to peer {}: {:?}", id, e);
+                    warn!("FIDL error connecting to peer {}: {:?}", id, e);
                     return;
                 }
                 Ok(Err(code)) => {
-                    fx_log_info!("Couldn't connect to peer {}: {:?}", id, code);
+                    info!("Couldn't connect to peer {}: {:?}", id, code);
                     return;
                 }
                 Ok(Ok(channel)) => channel,
@@ -160,7 +160,7 @@ impl Peers {
             let channel = match channel.try_into() {
                 Ok(chan) => chan,
                 Err(e) => {
-                    fx_log_warn!("No channel from peer {}: {:?}", id, e);
+                    warn!("No channel from peer {}: {:?}", id, e);
                     return;
                 }
             };
@@ -173,7 +173,7 @@ impl Peers {
                 controller_pool,
                 &inspect,
             ) {
-                fx_log_warn!("Error adding control connection for {}: {:?}", id, e);
+                warn!("Error adding control connection for {}: {:?}", id, e);
             }
         })
         .detach();
@@ -186,7 +186,7 @@ impl Peers {
         if let Some(peer) = entry.get() {
             if let Some(peer) = peer.upgrade() {
                 if let Err(e) = peer.receive_channel(channel) {
-                    fx_log_warn!("{} connected an unexpected channel: {}", id, e);
+                    warn!("{} connected an unexpected channel: {}", id, e);
                 }
             }
             return Ok(());
@@ -210,7 +210,7 @@ impl Peers {
         };
         fuchsia_async::Task::local(async move {
             if let Err(e) = start_streaming(&weak_peer).await {
-                fx_log_info!("Failed to stream: {:?}", e);
+                info!("Failed to stream: {:?}", e);
                 weak_peer.detach();
             }
         })

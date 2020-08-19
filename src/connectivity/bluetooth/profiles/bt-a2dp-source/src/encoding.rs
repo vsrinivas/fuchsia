@@ -7,7 +7,6 @@ use bt_a2dp as a2dp;
 use fidl_fuchsia_media::{AudioFormat, AudioUncompressedFormat, DomainFormat, PcmFormat};
 use fuchsia_async as fasync;
 use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
-use fuchsia_syslog::fx_log_info;
 use fuchsia_trace as trace;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
@@ -16,6 +15,7 @@ use futures::{
     task::{Context, Poll},
     FutureExt, Stream, StreamExt,
 };
+use log::info;
 use std::{collections::VecDeque, pin::Pin};
 
 pub struct EncodedStream {
@@ -101,7 +101,7 @@ impl Stream for EncodedStream {
         while let Poll::Ready(item) = self.source.poll_next_unpin(cx) {
             match item {
                 None => {
-                    fx_log_info!("Audio stream closed.");
+                    info!("Audio stream closed.");
                     return Poll::Ready(None);
                 }
                 Some(Err(e)) => return Poll::Ready(Some(Err(e.into()))),

@@ -9,13 +9,13 @@ use {
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_trace as trace,
     futures::{
         future::{AbortHandle, Abortable},
         lock::Mutex,
         AsyncWriteExt, TryStreamExt,
     },
+    log::{info, trace, warn},
     std::sync::Arc,
 };
 
@@ -70,7 +70,7 @@ impl SourceTaskBuilder {
         };
         let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)?;
         if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
-            fx_vlog!(2, "SourceTaskBuilder: can't build encoded stream: {:?}", e);
+            trace!("SourceTaskBuilder: can't build encoded stream: {:?}", e);
             return Err(e);
         }
         Ok(ConfiguredSourceTask::build(
@@ -122,7 +122,7 @@ impl ConfiguredSourceTask {
             };
             let packets = match packet_builder.add_frame(encoded, frames_per_encoded) {
                 Err(e) => {
-                    fx_log_warn!("Can't add packet to RTP packet: {:?}", e);
+                    warn!("Can't add packet to RTP packet: {:?}", e);
                     continue;
                 }
                 Ok(packets) => packets,
@@ -131,7 +131,7 @@ impl ConfiguredSourceTask {
             for packet in packets {
                 trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
                 if let Err(e) = media_stream.write(&packet).await {
-                    fx_log_info!("Failed sending packet to peer: {}", e);
+                    info!("Failed sending packet to peer: {}", e);
                     let _ = data_stream_inspect.try_lock().map(|mut l| {
                         l.record_transferred(packet.len(), fasync::Time::now());
                     });
@@ -183,7 +183,7 @@ impl MediaTask for ConfiguredSourceTask {
             trace::instant!("bt-a2dp-source", "Media:Start", trace::Scope::Thread);
             match stream_fut.await {
                 Err(_) | Ok(Ok(())) => {}
-                Ok(Err(e)) => fx_log_warn!("ConfiguredSourceTask ended with error: {:?}", e),
+                Ok(Err(e)) => warn!("ConfiguredSourceTask ended with error: {:?}", e),
             };
         })
         .detach();
