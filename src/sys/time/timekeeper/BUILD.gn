@@ -45,6 +45,7 @@ rustc_binary("bin") {
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",
     "src/main.rs",
+    "src/network.rs",
     "src/rtc.rs",
   ]
 
