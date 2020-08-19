@@ -275,7 +275,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/block/drivers/virtio:virtio_scsi",
     "//src/devices/board/drivers/qemu-arm64",
     "//src/devices/clock/drivers/msm8x53-clk",
-    "//src/devices/clock/drivers/vs680-clk",
     "//src/devices/gpio/drivers/gpio-test",
     "//src/devices/gpio/drivers/qcom-gpio",
     "//src/devices/i2c/drivers/dw-i2c",
@@ -283,12 +282,9 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/devices/misc/drivers/virtio-rng:virtio_rng",
     "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/power/drivers/msm8x53-power",
-    "//src/devices/power/drivers/vs680-power",
     "//src/devices/serial/bin/serial-test",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
-    "//src/devices/spi/drivers/dw-spi",
     "//src/devices/tests/sysdev",
-    "//src/devices/thermal/drivers/vs680-thermal",
     "//src/devices/usb/bin/xdc-test",
     "//src/devices/usb/drivers/nelson-usb-phy",
     "//src/devices/usb/drivers/usb-bus:usb-device",
@@ -332,7 +328,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
       "//src/devices/board/drivers/qemu-arm64",
       "//src/devices/board/drivers/vim2",
       "//src/devices/board/drivers/vim3",
-      "//src/devices/board/drivers/vs680-evk",
     ]
 
     if (factory_mode) {

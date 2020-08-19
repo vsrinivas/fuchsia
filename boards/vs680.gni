@@ -4,6 +4,20 @@
 
 import("//boards/arm64.gni")
 
+_common_bootfs_deps = [
+  "//src/devices/board/drivers/vs680-evk",
+  "//src/devices/clock/drivers/vs680-clk",
+  "//src/devices/power/drivers/vs680-power",
+  "//src/devices/spi/drivers/dw-spi",
+  "//src/devices/thermal/drivers/vs680-thermal",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 # serial console
 board_bootfs_labels += [ "//boards/kernel_cmdline:vs680" ]
 board_zedboot_cmdline_args = [ "kernel.bypass-debuglog=true" ]
