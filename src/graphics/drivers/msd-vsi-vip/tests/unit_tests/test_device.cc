@@ -117,14 +117,8 @@ TEST_F(MsdVsiDeviceTest, FetchEngineDma) {
   EXPECT_TRUE(device_->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
   EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  while (!device_->IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::high_resolution_clock::now() - start)
-                                       .count() < 1000) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
-
-  EXPECT_TRUE(device_->IsIdle());
+  constexpr uint32_t kTimeoutMs = 100;
+  EXPECT_TRUE(device_->WaitUntilIdle(kTimeoutMs));
 
   auto dma_addr = registers::DmaAddress::Get().ReadFrom(device_->register_io());
   EXPECT_EQ(dma_addr.reg_value(), bus_mapping->Get()[0] + prefetch * sizeof(uint64_t));
@@ -197,14 +191,8 @@ TEST_F(MsdVsiDeviceTest, LoadAddressSpace) {
     EXPECT_TRUE(device->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
     EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    while (!device->IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::high_resolution_clock::now() - start)
-                                        .count() < 1000) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    EXPECT_TRUE(device->IsIdle());
+    constexpr uint32_t kTimeoutMs = 100;
+    EXPECT_TRUE(device->WaitUntilIdle(kTimeoutMs));
 
     auto dma_addr = registers::DmaAddress::Get().ReadFrom(device->register_io());
     EXPECT_EQ(dma_addr.reg_value(), bus_mapping->Get()[0] + prefetch * sizeof(uint64_t));

@@ -653,12 +653,15 @@ bool MsdVsiDevice::StopRingbuffer() {
 
 bool MsdVsiDevice::WaitUntilIdle(uint32_t timeout_ms) {
   auto start = std::chrono::high_resolution_clock::now();
-  while (!IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                          std::chrono::high_resolution_clock::now() - start)
-                              .count() < timeout_ms) {
+  while (std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::high_resolution_clock::now() - start)
+             .count() < timeout_ms) {
+    if (IsIdle()) {
+      return true;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  return IsIdle();
+  return false;
 }
 
 bool MsdVsiDevice::LoadInitialAddressSpace(std::shared_ptr<MsdVsiContext> context,
