@@ -66,6 +66,11 @@
             to: [ "#core" ],
         },
         {
+            directory: "/factory",
+            from: "#bootstrap",
+            to: [ "#core" ],
+        },
+        {
             directory: "/minfs",
             from: "#bootstrap",
             to: [ "#core" ],

@@ -338,6 +338,10 @@
             from: "#fshost",
         },
         {
+            directory: "/factory",
+            from: "#fshost",
+        },
+        {
             directory: "/minfs",
             from: "#fshost",
         },

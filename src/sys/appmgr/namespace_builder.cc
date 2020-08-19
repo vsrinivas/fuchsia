@@ -157,6 +157,8 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
+    } else if (feature == "factory-data") {
+      PushDirectoryFromPath("/factory");
       // Begin allowlisted namespace features
     } else if (feature == "build-info") {
       // fxb/50308

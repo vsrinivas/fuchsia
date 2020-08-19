@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/has-factory-data"
+    },
+    "sandbox": {
+        "features": [
+            "factory-data"
+        ],
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

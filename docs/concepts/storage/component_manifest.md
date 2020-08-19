@@ -241,6 +241,9 @@ The set of currently known features are as follows:
 - `deprecated-ambient-replace-as-executable`, which provides legacy support for
   using the invalid handle with replace_as_executable.
 
+- `factory-data`, which requests access to the read-only factory partition for
+  the device and places it at `/factory` in the component's namespace.
+
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
