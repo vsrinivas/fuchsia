@@ -154,6 +154,16 @@ __CONSTEXPR static inline struct timespec zx_timespec_from_duration(zx_duration_
   return ts;
 }
 
+__CONSTEXPR static inline zx_time_t zx_time_from_timespec(struct timespec ts) {
+  // implicit converstion of the return type (zx_time_t and zx_duration_t are the same)
+  return zx_duration_from_timespec(ts);
+}
+
+__CONSTEXPR static inline struct timespec zx_timespec_from_time(zx_time_t time) {
+  // implicit conversion of the parameter type (zx_time_t and zx_duration_t are the same)
+  return zx_timespec_from_duration(time);
+}
+
 #endif  // __has_include(<time.h>)
 
 // Similar to the functions above, these macros perform overflow-safe unit conversion. Prefer to use

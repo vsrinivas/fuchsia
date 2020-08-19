@@ -6,6 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
+namespace {
+
 TEST(TimeTest, TimeAddDuration) {
   EXPECT_EQ(0, zx_time_add_duration(0, 0));
 
@@ -57,6 +59,19 @@ TEST(TimeTest, TimeSubTime) {
   EXPECT_EQ((ZX_TIME_INFINITE - 1), zx_time_sub_time(ZX_TIME_INFINITE, 1));
 
   EXPECT_EQ(918716798, zx_time_sub_time(918729180, 12382));
+}
+
+TEST(TimeTest, TimeFrom) {
+  // overflow saturates to ZX_TIME_INFINITE
+  EXPECT_EQ(zx_time_from_timespec({9223372036, 1}), 9223372036000000001);
+  EXPECT_EQ(zx_time_from_timespec({9223372036, 900000000}), ZX_TIME_INFINITE);
+
+  // underflow saturates to ZX_TIME_INFINITE_PAST
+  EXPECT_EQ(zx_time_from_timespec({9223372036, 1}), 9223372036000000001);
+  EXPECT_EQ(zx_time_from_timespec({-9223372036, -900000000}), ZX_TIME_INFINITE_PAST);
+
+  // Verify that when the argument is a constexpr the function can evaluated at compile time.
+  static_assert(zx_time_from_timespec({123, 456}) == 123000000456);
 }
 
 TEST(TimeTest, DurationAddDuration) {
@@ -158,6 +173,30 @@ static constexpr const zx_duration_t durations[] = {
     ZX_NSEC(1), ZX_USEC(1), ZX_MSEC(1), ZX_SEC(1), ZX_MIN(1), ZX_HOUR(1),
 };
 
+// Equality operator to make tests more legible.
+constexpr bool operator==(const timespec& a, const timespec& b) {
+  return a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec;
+}
+
+TEST(TimeTest, TimeSpecFrom) {
+  EXPECT_EQ(zx_timespec_from_time(ZX_SEC(123) + ZX_NSEC(456)), (timespec{123, 456}));
+  EXPECT_EQ(zx_timespec_from_duration(ZX_SEC(123) + ZX_NSEC(456)), (timespec{123, 456}));
+
+  // ZX_TIME_INFINITE converts to max timespec.
+  const timespec kInfiniteTimeSpec{INT64_MAX / 1000000000, INT64_MAX % 1000000000};
+  EXPECT_EQ(zx_timespec_from_time(ZX_TIME_INFINITE), kInfiniteTimeSpec);
+  EXPECT_EQ(zx_timespec_from_duration(ZX_TIME_INFINITE), kInfiniteTimeSpec);
+
+  // ZX_TIME_INFINITE_PAST converts to min timespec.
+  const timespec kInfinitePastTimeSpec{INT64_MIN / 1000000000, INT64_MIN % 1000000000};
+  EXPECT_EQ(zx_timespec_from_time(ZX_TIME_INFINITE_PAST), kInfinitePastTimeSpec);
+  EXPECT_EQ(zx_timespec_from_duration(ZX_TIME_INFINITE_PAST), kInfinitePastTimeSpec);
+
+  // Verify that when the argument is a constexpr the function can evaluated at compile time.
+  static_assert(zx_timespec_from_time(ZX_SEC(123) + ZX_NSEC(456)) == timespec{123, 456});
+  static_assert(zx_timespec_from_duration(ZX_SEC(123) + ZX_NSEC(456)) == timespec{123, 456});
+}
+
 TEST(TimeTest, MacroConversion) {
   // Verify a few values just shy of overflow.
   EXPECT_EQ(ZX_NSEC(INT64_MAX), ZX_TIME_INFINITE);
@@ -204,3 +243,5 @@ TEST(TimeTest, MacroConversion) {
   EXPECT_EQ(durations[4], ZX_MIN(1));
   EXPECT_EQ(durations[5], ZX_HOUR(1));
 }
+
+}  // namespace

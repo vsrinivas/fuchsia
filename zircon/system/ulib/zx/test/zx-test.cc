@@ -256,6 +256,17 @@ TEST(ZxTestCase, TimeConstruction) {
   ASSERT_EQ(zx::time::infinite().get(), ZX_TIME_INFINITE);
   ASSERT_EQ(zx::time(-1).get(), -1);
   ASSERT_EQ(zx::time(ZX_TIME_INFINITE_PAST).get(), ZX_TIME_INFINITE_PAST);
+#if __cplusplus >= 201703L
+  ASSERT_EQ(zx::time(timespec{123, 456}).get(), ZX_SEC(123) + ZX_NSEC(456));
+#endif
+}
+
+TEST(ZxTestCase, TimeConversions) {
+#if __cplusplus >= 201703L
+  const timespec ts = zx::time(timespec{123, 456}).to_timespec();
+  ASSERT_EQ(ts.tv_sec, 123);
+  ASSERT_EQ(ts.tv_nsec, 456);
+#endif
 }
 
 TEST(ZxTestCase, DurationConstruction) {

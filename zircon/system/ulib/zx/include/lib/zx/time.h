@@ -22,8 +22,7 @@ class duration final {
   explicit constexpr duration(zx_duration_t value) : value_(value) {}
 
 #if __cplusplus >= 201703L
-  explicit constexpr duration(std::timespec ts)
-      : value_(zx_time_add_duration(ZX_SEC(ts.tv_sec), ZX_NSEC(ts.tv_nsec))) {}
+  explicit constexpr duration(std::timespec ts) : value_(zx_duration_from_timespec(ts)) {}
 #endif
 
   static constexpr duration infinite() { return duration(ZX_TIME_INFINITE); }
@@ -227,6 +226,10 @@ class basic_time final {
 
   explicit constexpr basic_time(zx_time_t value) : value_(value) {}
 
+#if __cplusplus >= 201703L
+  explicit constexpr basic_time(std::timespec ts) : value_(zx_time_from_timespec(ts)) {}
+#endif
+
   static constexpr basic_time<kClockId> infinite() {
     return basic_time<kClockId>(ZX_TIME_INFINITE);
   }
@@ -267,6 +270,10 @@ class basic_time final {
   constexpr bool operator<=(basic_time<kClockId> other) const { return value_ <= other.value_; }
   constexpr bool operator>(basic_time<kClockId> other) const { return value_ > other.value_; }
   constexpr bool operator>=(basic_time<kClockId> other) const { return value_ >= other.value_; }
+
+#if __cplusplus >= 201703L
+  constexpr std::timespec to_timespec() const { return zx_timespec_from_time(value_); }
+#endif
 
  private:
   zx_time_t value_ = 0;
