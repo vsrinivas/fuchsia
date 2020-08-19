@@ -6,6 +6,14 @@ import("//boards/arm64.gni")
 
 board_name = "msm8998"
 
+_common_bootfs_deps = [ "//src/devices/board/drivers/msm8998" ]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/msm8998/package-image.sh"
 
