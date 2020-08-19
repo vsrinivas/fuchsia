@@ -40,7 +40,7 @@ impl Shell {
         let stdin = stdin();
         let mut stdout = stdout();
 
-        write!(stdout, "{reset}{yellow_bg}{black_fg}{arrow}{reset}{black_fg}{yellow_bg} scrutiny⚫{reset}{yellow_fg}{arrow}{reset} ",
+        write!(stdout, "{reset}{yellow_bg}{black_fg}{arrow}{reset}{black_fg}{yellow_bg} scrutiny {reset}{yellow_fg}{arrow}{reset} ",
             black_fg = color::Fg(color::Black),
             yellow_fg = color::Fg(color::Yellow),
             yellow_bg = color::Bg(color::Yellow),
