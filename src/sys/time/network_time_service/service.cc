@@ -22,6 +22,7 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
       push_source_binding_(this),
       status_watcher_(time_external::Status::OK),
       dispatcher_(dispatcher),
+      consecutive_poll_failures_(0),
       retry_config_(retry_config) {
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
 
@@ -93,6 +94,7 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
     sample_watcher_.Update(std::move(sample));
     dispatcher_last_success_time_.emplace(async::Now(dispatcher));
     status = time_external::Status::OK;
+    consecutive_poll_failures_ = 0;
   } else {
     switch (ret.first) {
       case time_server::OK:
@@ -110,13 +112,13 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
         status = time_external::Status::UNKNOWN_UNHEALTHY;
         break;
     }
-  }
-  status_watcher_.Update(status);
-  if (status != time_external::Status::OK) {
     zx::time next_poll_time =
-        async::Now(dispatcher_) + zx::nsec(retry_config_.nanos_between_failures);
+        async::Now(dispatcher_) + retry_config_.WaitAfterFailure(consecutive_poll_failures_);
     ScheduleAsyncPoll(next_poll_time);
+    consecutive_poll_failures_++;
   }
+
+  status_watcher_.Update(status);
 }
 
 void TimeServiceImpl::ScheduleAsyncPoll(zx::time dispatch_time) {

@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <algorithm>
 #include <vector>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -17,22 +18,41 @@
 #include "src/sys/time/lib/network_time/time_server_config.h"
 #include "src/sys/time/network_time_service/watcher.h"
 
-const uint64_t kNanosBetweenFailures = 1 * 1'000'000'000u;
+const uint64_t kMinNanosBetweenFailures = 1 * 1'000'000'000u;
+const uint32_t kMaxRetryExponent = 3;
+const uint32_t kTriesPerExponent = 3;
 const uint64_t kNanosBetweenSuccesses = 30 * 60 * 1'000'000'000u;
 
 namespace time_external = fuchsia::time::external;
 namespace network_time_service {
 
-// Defines how the |TimeServiceImpl| PushSource polls for updates.
+// Defines how the |TimeServiceImpl| PushSource polls for updates. Retry time for
+// errors begins with |min_nanos_between_failures|, and doubles after |tries_per_exponent|
+// failures.
 class RetryConfig {
  public:
-  RetryConfig(uint64_t nanos_between_failures = kNanosBetweenFailures,
+  RetryConfig(uint64_t min_nanos_between_failures = kMinNanosBetweenFailures,
+              uint32_t max_exponent = kMaxRetryExponent,
+              uint32_t tries_per_exponent = kTriesPerExponent,
               uint64_t nanos_between_successes = kNanosBetweenSuccesses)
-      : nanos_between_failures(nanos_between_failures),
-        nanos_between_successes(nanos_between_successes){};
+      : nanos_between_successes(nanos_between_successes),
+        min_nanos_between_failures_(min_nanos_between_failures),
+        max_exponent_(max_exponent),
+        tries_per_exponent_(tries_per_exponent){};
 
-  uint64_t nanos_between_failures;
+  // Returns the duration to wait for the |retry_number|th retry. The first retry
+  // is denoted 0.
+  zx::duration WaitAfterFailure(uint32_t retry_number) {
+    uint32_t exponent = std::min(retry_number / tries_per_exponent_, max_exponent_);
+    return zx::nsec(min_nanos_between_failures_ << exponent);
+  }
+
   uint64_t nanos_between_successes;
+
+ private:
+  uint64_t min_nanos_between_failures_;
+  uint32_t max_exponent_;
+  uint32_t tries_per_exponent_;
 };
 
 // Implementation of the FIDL time services.
@@ -90,6 +110,7 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
   async_dispatcher_t* dispatcher_;
   // Time of last successful update. Reported in the dispatcher's clock which may not be monotonic.
   std::optional<zx::time> dispatcher_last_success_time_;
+  uint32_t consecutive_poll_failures_;
   async::TaskMethod<TimeServiceImpl, &TimeServiceImpl::AsyncPollSamples> sample_poll_task_{this};
   RetryConfig retry_config_;
 };

@@ -69,9 +69,10 @@ class PushSourceTest : public gtest::TestLoopFixture {
       time_server::TimeServerConfig config = ConfigForLocalServer(roughtime_port);
       time_server::RoughTimeServer server = config.ServerList()[0];
       time_server::SystemTimeUpdater updater;
-      time_service_.reset(
-          new TimeServiceImpl(provider_.TakeContext(), updater, server, dispatcher(),
-                              RetryConfig(kTestNanosAfterPoll, kTestNanosAfterPoll)));
+      network_time_service::RetryConfig retry_config(kTestNanosAfterPoll, 0, 1,
+                                                     kTestNanosAfterPoll);
+      time_service_.reset(new TimeServiceImpl(provider_.TakeContext(), updater, server,
+                                              dispatcher(), retry_config));
     }
     time_external::PushSourcePtr push_source;
     provider_.ConnectToPublicService(push_source.NewRequest());
@@ -252,6 +253,17 @@ TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchSample) {
   proxy->WatchSample([&](time_external::TimeSample sample) { FAIL(); });
   RunLoopUntilIdle();
   EXPECT_TRUE(error_handler_called);
+}
+
+class RetryConfigTest : public gtest::TestLoopFixture {};
+
+TEST_F(RetryConfigTest, DefaultConfigTest) {
+  RetryConfig config;
+
+  std::vector<uint32_t> expected_durations_sec{1, 1, 1, 2, 2, 2, 4, 4, 4, 8, 8, 8, 8};
+  for (uint32_t failure_num = 0; failure_num < expected_durations_sec.size(); failure_num++) {
+    EXPECT_EQ(zx::sec(expected_durations_sec[failure_num]), config.WaitAfterFailure(failure_num));
+  }
 }
 
 }  // namespace network_time_service
