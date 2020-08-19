@@ -30,6 +30,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 fx-warn "Consider fx snapshot. fx bugreport is being deprecated and will take longer and longer."
-sleep 1
+sleep 2
 fx-command-run snapshot "$@"
 exit $?
