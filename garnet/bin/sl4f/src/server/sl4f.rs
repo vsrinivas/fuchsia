@@ -428,18 +428,6 @@ impl Sl4fClients {
         }
     }
 
-    fn store_response(&mut self, client_id: &str, command_response: ClientData) {
-        match self.clients.get_mut(client_id) {
-            Some(client_responses) => {
-                client_responses.push(command_response);
-                fx_log_info!(tag: "store_response", "Stored response. Updated clients: {:?}", self.clients);
-            }
-            None => {
-                fx_log_err!(tag: "store_response", "Client doesn't exist in server database: {:?}", client_id)
-            }
-        }
-    }
-
     fn cleanup_clients(&mut self) {
         self.clients.clear();
     }
@@ -459,7 +447,7 @@ pub fn serve(
         (GET) (/) => {
             // Parse the command request
             fx_log_info!(tag: "serve", "Received command request.");
-            client_request(&clients, &request, &rouille_sender)
+            client_request(&request, &rouille_sender)
         },
         (GET) (/init) => {
             // Initialize a client
@@ -489,7 +477,6 @@ pub fn serve(
 /// Given the request, map the test request to a FIDL query and execute
 /// asynchronously
 fn client_request(
-    clients: &Arc<RwLock<Sl4fClients>>,
     request: &Request,
     rouille_sender: &mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
@@ -506,19 +493,13 @@ fn client_request(
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
     let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
-    let req = AsyncCommandRequest::new(async_sender, method_id, method_params);
+    let req = AsyncCommandRequest::new(async_sender, method_id.clone(), method_params);
     rouille_sender
         .unbounded_send(AsyncRequest::Command(req))
         .expect("Failed to send request to async thread.");
     let resp: AsyncResponse = rouille_receiver.recv().unwrap();
 
-    if let Some(session_id) = request_id.session_id() {
-        clients.write().store_response(
-            session_id,
-            ClientData::new(request_id.response_id().clone(), resp.clone()),
-        );
-    }
-    fx_log_info!(tag: "client_request", "Received async thread response: {:?}", resp);
+    fx_log_info!(tag: "client_request", "Received async thread response for {:?}: {:?}", method_id.method, resp);
 
     // If the response has a return value, package into response, otherwise use error code
     match resp.result {
