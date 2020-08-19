@@ -988,6 +988,58 @@ func TestParseDartSystemTest(t *testing.T) {
 	testCase(t, stdout, want)
 }
 
+func TestParseVulkanCts(t *testing.T) {
+	stdout := `
+Writing test log into /data/TestResults.qpa
+dEQP Core git-6c86ad6eade572a70482771aa1c4d466fe7106ef (0x6c86ad6e) starting..
+  target implementation = 'Fuchsia'
+Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_8'..
+Pass (Pass)
+Test case 'dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32.test_stencil'..
+NotSupported (Image type not supported at vktRenderPassMultisampleTests.cpp:270)
+Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9'..
+Fail (bad)
+Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10'..
+`
+	want := `
+[
+	{
+		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_8",
+		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+		"case_name": "samples_8",
+		"status": "Pass",
+		"duration_nanos": 0,
+		"format": "VulkanCtsTest"
+	},
+	{
+		"display_name": "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32.test_stencil",
+		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32",
+		"case_name": "test_stencil",
+		"status": "Skip",
+		"duration_nanos": 0,
+		"format": "VulkanCtsTest"
+	},
+	{
+		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9",
+		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+		"case_name": "samples_9",
+		"status": "Fail",
+		"duration_nanos": 0,
+		"format": "VulkanCtsTest"
+	},
+	{
+		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10",
+		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+		"case_name": "samples_10",
+		"status": "Fail",
+		"duration_nanos": 0,
+		"format": "VulkanCtsTest"
+	}
+]
+`
+	testCase(t, stdout, want)
+}
+
 // If no test cases can be parsed, the output should be an empty slice, not a
 // nil slice, so it gets serialized as an empty JSON array instead of as null.
 func TestParseNoTestCases(t *testing.T) {
