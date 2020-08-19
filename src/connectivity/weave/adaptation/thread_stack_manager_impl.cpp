@@ -20,6 +20,7 @@ using fuchsia::lowpan::ConnectivityState;
 using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
 using fuchsia::lowpan::ProvisioningParams;
+using fuchsia::lowpan::Role;
 using fuchsia::lowpan::device::DeviceExtraSyncPtr;
 using fuchsia::lowpan::device::DeviceState;
 using fuchsia::lowpan::device::DeviceSyncPtr;
@@ -331,11 +332,33 @@ void ThreadStackManagerImpl::_ClearThreadProvision() {
 }
 
 ThreadDeviceType ThreadStackManagerImpl::_GetThreadDeviceType() {
-  return ThreadDeviceType::kThreadDeviceType_NotSupported;  // TODO(fxbug.dev/55855)
+  DeviceState device_state;
+  zx_status_t status;
+
+  // Get the device state.
+  status = GetDeviceState(&device_state);
+  if (status != ZX_OK) {
+    return ThreadDeviceType::kThreadDeviceType_NotSupported;
+  }
+
+  // Determine device type by role.
+  switch (device_state.role()) {
+    case Role::END_DEVICE:
+      return ThreadDeviceType::kThreadDeviceType_FullEndDevice;
+    case Role::SLEEPY_END_DEVICE:
+      return ThreadDeviceType::kThreadDeviceType_SleepyEndDevice;
+    case Role::ROUTER:
+    case Role::SLEEPY_ROUTER:
+    case Role::LEADER:
+    case Role::COORDINATOR:
+      return ThreadDeviceType::kThreadDeviceType_Router;
+    default:
+      return ThreadDeviceType::kThreadDeviceType_NotSupported;
+  };
 }
 
 bool ThreadStackManagerImpl::_HaveMeshConnectivity() {
-  return false;  // TODO(fxbug.dev/55855)
+  return _IsThreadAttached();
 }
 
 WEAVE_ERROR ThreadStackManagerImpl::_GetAndLogThreadStatsCounters() {

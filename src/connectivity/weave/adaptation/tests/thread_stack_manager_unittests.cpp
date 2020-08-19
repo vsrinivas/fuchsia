@@ -38,6 +38,8 @@ using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
+using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
+
 const char kFakeInterfaceName[] = "fake0";
 
 // Helper to format bytes in log messages.
@@ -444,6 +446,30 @@ TEST_F(ThreadStackManagerTest, ClearProvision) {
   ThreadStackMgrImpl()._ClearThreadProvision();
   EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
 }
+
+TEST_F(ThreadStackManagerTest, GetThreadDeviceType) {
+  // Sanity check starting state.
+  ASSERT_EQ(fake_lookup_.device().role(), Role::DETACHED);
+
+  // Test various roles and associated device type.
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_NotSupported);
+
+  fake_lookup_.device().set_role(Role::LEADER);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+
+  fake_lookup_.device().set_role(Role::END_DEVICE);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_FullEndDevice);
+
+  fake_lookup_.device().set_role(Role::SLEEPY_ROUTER);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+
+  fake_lookup_.device().set_role(Role::SLEEPY_END_DEVICE);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_SleepyEndDevice);
+
+  fake_lookup_.device().set_role(Role::ROUTER);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
+}
+
 
 }  // namespace testing
 }  // namespace Internal
