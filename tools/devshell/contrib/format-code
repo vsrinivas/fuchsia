@@ -165,7 +165,11 @@ readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 readonly JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
 readonly JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
 readonly MARKDOWN_FMT_CMD="${FUCHSIA_OUT_DIR}/default/dart-tools/doc-checker"
-readonly PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
+read -r -d '' PY_CMD <<EOF
+  ${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython3
+     -vpython-interpreter ${PREBUILT_PYTHON3_DIR}/bin/python3.8
+     ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place
+EOF
 readonly RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
 readonly RUST_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 
