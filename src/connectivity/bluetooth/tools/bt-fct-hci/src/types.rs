@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {std::convert::TryFrom, thiserror::Error};
+use {anyhow::Error, std::convert::TryFrom, std::ops::Range, thiserror::Error};
 
 /// Decoding error type
 #[derive(Error, Debug, PartialEq)]
@@ -150,5 +150,114 @@ pub_decodable_enum! {
         UnknownAdvertisingIdentifier                 => 0x42,
         LimitReached                                 => 0x43,
         OperationCancelledByHost                     => 0x44,
+    }
+}
+
+/// Decode opcode from slice (2 bytes as u16 LE)
+pub fn decode_opcode(bytes: &[u8]) -> u16 {
+    assert!(bytes.len() >= 2);
+    return ((bytes[1] as u16) << 8) + bytes[0] as u16;
+}
+
+#[derive(Debug)]
+pub struct Command {
+    /// HCI opcode
+    pub opcode: u16,
+
+    /// Payload length
+    pub paramater_total_length: u8,
+
+    /// Range of the entire HCI command, relative to the original buffer
+    pub range: Range<usize>,
+}
+
+/// Decode commands from a buffer. Validates the commands are intact and valid.
+pub fn split_commands(bytes: &[u8]) -> Result<Vec<Command>, Error> {
+    let mut offset = 0;
+    let mut commands = vec![];
+
+    loop {
+        if bytes.len() < offset + 3 {
+            return Err(Error::msg("Invalid packet length"));
+        }
+
+        let opcode = decode_opcode(&bytes[offset..]);
+        let paramater_total_length = bytes[offset + 2];
+        let end = offset + 3 + paramater_total_length as usize;
+
+        if bytes.len() < end {
+            return Err(Error::msg(format!(
+                "Packet too short: {} {}",
+                paramater_total_length,
+                end - offset
+            )));
+        }
+
+        commands.push(Command { opcode, paramater_total_length, range: (offset..end) });
+
+        offset = end;
+        if bytes.len() == end {
+            break;
+        }
+    }
+
+    Ok(commands)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_commands_noargs() {
+        let _ = split_commands(&[]).expect_err("Split error");
+    }
+
+    #[test]
+    fn test_invalid_arg_too_short() {
+        let _ = split_commands(&[0x01, 0x02]).expect_err("Split error");
+    }
+
+    #[test]
+    fn test_invalid_arg_invalid_second_packet() {
+        // first cmd with no params. second is truncated.
+        let _ = split_commands(&[0x01, 0x02, 0x00, 0x01]).expect_err("Split error");
+    }
+
+    #[test]
+    fn test_split_commands_one_arg() {
+        let mut cmds = split_commands(&[0x03, 0x0c, 0x00]).expect("Split error");
+        // single command, no payload
+        assert_eq!(cmds.len(), 1);
+        let cmd = cmds.pop().expect("Expected command");
+        assert_eq!(cmd.opcode, 0x0c03);
+        assert_eq!(cmd.range, (0..3));
+        assert_eq!(cmd.paramater_total_length, 0);
+    }
+
+    #[test]
+    fn test_split_commands_multiple_arg() {
+        let mut cmds = split_commands(&[0x03, 0x0c, 0x00, 0xff, 0x22, 0x03, 0x0a, 0x0b, 0xc])
+            .expect("Split error");
+
+        // 2 commands. first command zero payload. second command 3 param payload.
+
+        assert_eq!(cmds.len(), 2);
+
+        let cmd = cmds.pop().expect("Expected command");
+        assert_eq!(cmd.opcode, 0x22ff);
+        assert_eq!(cmd.range, (3..9));
+        assert_eq!(cmd.paramater_total_length, 3);
+
+        let cmd = cmds.pop().expect("Expected command");
+        assert_eq!(cmd.opcode, 0xc03);
+        assert_eq!(cmd.range, (0..3));
+        assert_eq!(cmd.paramater_total_length, 0);
+    }
+
+    #[test]
+    fn test_decode_opcode() {
+        assert_eq!(decode_opcode(&[0x02, 0x01]), 0x0102);
+        assert_eq!(decode_opcode(&[0xff, 0x00]), 0x00ff);
     }
 }

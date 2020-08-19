@@ -67,16 +67,10 @@ fn parse_payload(payload: &[&str]) -> Result<Vec<u8>, String> {
     Vec::from_hex(payload).map_err(|e| format!("Invalid payload: {}", e))
 }
 
-/// decode opcode from slice (2 bytes as u16 using network byte order)
-fn decode_opcode(bytes: &[u8]) -> u16 {
-    assert!(bytes.len() >= 2);
-    return ((bytes[1] as u16) << 8) + bytes[0] as u16;
-}
-
 /// Pumps the command channel stream, printing each event packet received.
 async fn print_response_loop(
     verbose: bool,
-    command_channel: CommandChannel,
+    command_channel: &mut CommandChannel,
     match_opcode: u16,
     continue_listening: bool,
 ) -> Result<(), Error> {
@@ -109,7 +103,7 @@ async fn print_response_loop(
 async fn raw_command(
     verbose: bool,
     rawcmd: RawSubcommand,
-    command_channel: CommandChannel,
+    mut command_channel: CommandChannel,
 ) -> Result<(), Error> {
     let ref_vec: Vec<&str> = rawcmd.payload.iter().map(AsRef::as_ref).collect();
     let payload = match parse_payload(&ref_vec[..]) {
@@ -120,24 +114,39 @@ async fn raw_command(
         }
     };
 
-    if payload.len() < 3 {
-        eprintln!("Packet payload too short");
+    let commands = types::split_commands(&payload)?;
+
+    if commands.len() == 0 {
+        eprintln!("No packets passed");
         return Ok(());
     }
 
-    let out_opcode = decode_opcode(&payload[0..2]);
+    for (n, command) in commands.iter().enumerate() {
+        let out_opcode = command.opcode;
 
-    if verbose {
-        println!("Sending opcode: {} packet: {}", out_opcode, hex::encode(&payload));
+        if verbose {
+            println!(
+                "Sending opcode: {} packet: {}",
+                out_opcode,
+                hex::encode(&payload[command.range.start..command.range.end])
+            );
+        }
+
+        command_channel
+            .send_command_packet(&payload[command.range.start..command.range.end])
+            .context("Error sending HCI packet")?;
+
+        if verbose {
+            println!("Awaiting response");
+        }
+
+        // only continue listening on the ack of the final command
+        let is_last_command = n == commands.len() - 1;
+        let continue_listening = rawcmd.continue_listening && is_last_command;
+        print_response_loop(verbose, &mut command_channel, out_opcode, continue_listening).await?;
     }
 
-    command_channel.send_command_packet(&payload[..]).context("Error sending HCI packet")?;
-
-    if verbose {
-        println!("Awaiting response");
-    }
-
-    print_response_loop(verbose, command_channel, out_opcode, rawcmd.continue_listening).await
+    Ok(())
 }
 
 /// Handles a simple HCI command target from the front end. Typically used for simple commands
@@ -145,17 +154,29 @@ async fn raw_command(
 async fn basic_command(
     verbose: bool,
     payload: &[u8],
-    command_channel: CommandChannel,
+    mut command_channel: CommandChannel,
 ) -> Result<(), Error> {
-    let out_opcode = decode_opcode(&payload[0..2]);
+    let commands = types::split_commands(&payload)?;
 
-    if verbose {
-        println!("Sending opcode: {} packet: {}", out_opcode, hex::encode(&payload));
+    for command in commands {
+        let out_opcode = command.opcode;
+
+        if verbose {
+            println!(
+                "Sending opcode: {} packet: {}",
+                out_opcode,
+                hex::encode(&payload[command.range.start..command.range.end])
+            );
+        }
+
+        command_channel
+            .send_command_packet(&payload[command.range.start..command.range.end])
+            .context("Error sending HCI packet")?;
+
+        print_response_loop(verbose, &mut command_channel, out_opcode, false).await?;
     }
 
-    command_channel.send_command_packet(payload).context("Error sending HCI packet")?;
-
-    print_response_loop(verbose, command_channel, out_opcode, false).await
+    Ok(())
 }
 
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
@@ -198,10 +219,5 @@ mod tests {
     #[test]
     fn test_raw_packet_parsing_04() {
         assert_eq!(parse_payload(&["0xaa", "0xaa", "0x1234"]), Ok(vec![0xaa, 0xaa, 0x12, 0x34]));
-    }
-
-    #[test]
-    fn test_decode_opcode() {
-        assert_eq!(decode_opcode(&[02, 01]), 258);
     }
 }

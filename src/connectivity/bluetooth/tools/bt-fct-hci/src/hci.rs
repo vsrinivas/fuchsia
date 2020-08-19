@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::types::StatusCode,
+    crate::types::{decode_opcode, StatusCode},
     anyhow::Error,
     fidl_fuchsia_hardware_bluetooth::HciProxy,
     fuchsia_async as fasync,
@@ -93,7 +93,7 @@ impl EventPacket {
             if self.payload.len() < 5 {
                 return Err(Error::msg("Incomplete Complete Packet"));
             }
-            let opcode = ((self.payload[4] as u16) << 8) + self.payload[3] as u16;
+            let opcode = decode_opcode(&self.payload[3..=4]);
             return Ok((
                 format!("Event: 0x0e (HCI_COMMAND_COMPLETE) Opcode: {} Payload: {}", opcode, self),
                 Some(opcode),
@@ -102,7 +102,7 @@ impl EventPacket {
             if self.payload.len() < 6 {
                 return Err(Error::msg("Incomplete Status Packet"));
             }
-            let opcode = ((self.payload[5] as u16) << 8) + self.payload[4] as u16;
+            let opcode = decode_opcode(&self.payload[4..=5]);
             let status_code = StatusCode::try_from(self.payload[3]).map_err(|e| Error::from(e))?;
             return Ok((
                 format!(
@@ -172,9 +172,17 @@ mod tests {
         match packet {
             Poll::Ready(packet) => {
                 let pkt = packet.expect("no packet");
-                assert_eq!(pkt.payload, vec![0x0e, 0x04, 0x01, 0x03, 0x0c, 0x00]);
+                assert_eq!(
+                    pkt.payload,
+                    vec![
+                        0x0e, // HCI_COMMAND_COMPLETE
+                        0x04, 0x01, //
+                        0x03, 0x0c, // opcode (little endian)
+                        0x00  // payload len
+                    ]
+                );
                 let (_pretty_string, opcode) = pkt.decode().expect("unable to decode");
-                assert_eq!(opcode, Some(3075));
+                assert_eq!(opcode, Some(0x0c03));
             }
             _ => panic!("failed to decode packets from stream"),
         }
@@ -185,9 +193,16 @@ mod tests {
 
     #[test]
     fn test_event_packet_decode() {
-        let pkt = EventPacket { payload: vec![0x0e, 0x04, 0x01, 0x03, 0x0c, 0x00] };
+        let pkt = EventPacket {
+            payload: vec![
+                0x0e, // HCI_COMMAND_COMPLETE
+                0x04, 0x01, //
+                0x03, 0x0c, // opcode (little endian)
+                0x00, // payload len
+            ],
+        };
         let (pretty_string, opcode) = pkt.decode().expect("unable to decode");
-        assert_eq!(opcode, Some(3075));
+        assert_eq!(opcode, Some(0x0c03));
         assert_eq!(
             pretty_string,
             "Event: 0x0e (HCI_COMMAND_COMPLETE) Opcode: 3075 Payload: 0e0401030c00".to_string()

@@ -48,6 +48,13 @@ package("bt-fct-hci") {
       shell = true
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-fct-hci.cmx")
+      dest = "bt-fct-hci.cmx"
+    },
+  ]
 }
 
 test_package("tests") {
