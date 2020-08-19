@@ -34,9 +34,9 @@ class SpinelFramer {
 
   ddk::SpiProtocolClient spi_;
   bool interrupt_fired_ = false;
-  uint16_t spi_rx_payload_size_;
+  uint16_t spi_rx_payload_size_ = 0;
   uint8_t spi_rx_frame_buffer_[kMaxFrameSize + kSpiRxAllignAllowanceMax];
-  uint16_t spi_tx_payload_size_;
+  uint16_t spi_tx_payload_size_ = 0;
   uint8_t spi_tx_frame_buffer_[kMaxFrameSize + kSpiRxAllignAllowanceMax];
   bool spi_tx_is_ready_ = false;
   int spi_tx_refused_count_ = 0;
