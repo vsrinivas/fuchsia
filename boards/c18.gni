@@ -18,6 +18,7 @@ board_package_labels += [ "//tools/vboot_reference:futility_host" ]
 
 _common_bootfs_deps = [
   "//src/devices/block/drivers/mtk-sdmmc",
+  "//src/devices/board/drivers/c18",
   "//src/devices/gpio/drivers/mt-8167",
   "//src/devices/spi/drivers/mtk-spi",
 ]

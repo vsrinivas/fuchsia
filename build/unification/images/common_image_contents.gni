@@ -314,7 +314,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
 
   if (target_cpu == "arm64") {
     common_image_contents += [
-      "//src/devices/board/drivers/c18",
       "//src/devices/board/drivers/msm8998",
       "//src/devices/board/drivers/nelson",
       "//src/devices/board/drivers/qemu-arm64",
