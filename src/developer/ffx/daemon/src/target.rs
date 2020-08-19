@@ -4,7 +4,7 @@
 
 use {
     crate::events::{self, DaemonEvent, EventSynthesizer},
-    crate::net::IsLinkLocal,
+    crate::net::IsLocalAddr,
     crate::onet::HostPipeConnection,
     crate::target_task::*,
     crate::task::{SingleFlight, TaskSnapshot},
@@ -429,13 +429,9 @@ impl TargetAddr {
 impl Display for TargetAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.ip())?;
-        match self.ip {
-            IpAddr::V6(addr) => {
-                if addr.is_ll() && self.scope_id() > 0 {
-                    write!(f, "%{}", self.scope_id())?;
-                }
-            }
-            _ => (),
+
+        if self.ip.is_link_local_addr() && self.scope_id() > 0 {
+            write!(f, "%{}", self.scope_id())?;
         }
 
         Ok(())

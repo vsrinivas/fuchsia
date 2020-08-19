@@ -94,7 +94,7 @@ impl Daemon {
 
         let config =
             TargetFinderConfig { broadcast_interval: Duration::from_secs(120), mdns_ttl: 255 };
-        let mdns = MdnsTargetFinder::new(&config)?;
+        let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue })
     }

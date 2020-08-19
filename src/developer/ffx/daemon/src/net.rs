@@ -1,145 +1,295 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::net::IpAddr;
-use std::net::Ipv6Addr;
+use anyhow::{Context as _, Result};
+use itertools::Itertools;
+use nix::{
+    ifaddrs::{getifaddrs, InterfaceAddress},
+    net::if_::InterfaceFlags,
+    sys::socket::SockAddr,
+};
+use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use libc;
+pub trait IsLocalAddr {
+    /// is_local_addr returns true if the address is not globally routable.
+    fn is_local_addr(&self) -> bool;
 
-pub trait IsLinkLocal {
-    fn is_ll(&self) -> bool;
+    /// is_link_local_addr returns true if the address is an IPv6 link local address.
+    fn is_link_local_addr(&self) -> bool;
 }
 
-impl IsLinkLocal for Ipv6Addr {
-    /// Returns true if this is a link local address:
-    /// https://tools.ietf.org/html/rfc4291
-    fn is_ll(&self) -> bool {
-        self.segments()[0] == 0xfe80
-            && self.segments()[1] == 0x0000
-            && self.segments()[2] == 0x0000
-            && self.segments()[3] == 0x0000
+impl IsLocalAddr for IpAddr {
+    fn is_local_addr(&self) -> bool {
+        match self {
+            IpAddr::V4(ref ip) => ip.is_local_addr(),
+            IpAddr::V6(ref ip) => ip.is_local_addr(),
+        }
+    }
+
+    fn is_link_local_addr(&self) -> bool {
+        match self {
+            IpAddr::V4(ref ip) => ip.is_link_local_addr(),
+            IpAddr::V6(ref ip) => ip.is_link_local_addr(),
+        }
     }
 }
 
-pub trait IsMcast {
-    /// Determines if some kind of flags or some interface is multicast.
-    fn is_mcast(&self) -> bool;
+impl IsLocalAddr for Ipv4Addr {
+    fn is_local_addr(&self) -> bool {
+        // TODO(58517): add the various RFC reserved addresses and ranges too
+        match self.octets() {
+            [10, _, _, _] => true,
+            [172, 16..=31, _, _] => true,
+            [192, 168, _, _] => true,
+            [169, 254, 1..=254, _] => true,
+            _ => false,
+        }
+    }
+
+    fn is_link_local_addr(&self) -> bool {
+        false
+    }
 }
 
-impl IsMcast for i32 {
-    /// Tests if the ifa_flags portion of an ifaddrs struct is deemed usable
-    /// for multicast:
-    /// -- The interface is up.
-    /// -- Mcast bit is set.
-    /// -- The interface is not a loopback.
-    fn is_mcast(&self) -> bool {
-        self & libc::IFF_UP != 0
-            && self & libc::IFF_LOOPBACK == 0
-            && self & libc::IFF_MULTICAST != 0
+impl IsLocalAddr for Ipv6Addr {
+    fn is_local_addr(&self) -> bool {
+        let segments = self.segments();
+
+        // ULA
+        if segments[0] & 0xfe00 == 0xfc00 {
+            return true;
+        }
+
+        self.is_link_local_addr()
+    }
+
+    fn is_link_local_addr(&self) -> bool {
+        let segments = self.segments();
+
+        return segments[0] & 0xffff == 0xfe80
+            && segments[1] & 0xffff == 0
+            && segments[2] & 0xffff == 0
+            && segments[3] & 0xffff == 0;
     }
 }
 
 /// An Mcast interface is:
-/// -- Not a loopback
+/// -- Not a loopback.
 /// -- Up (as opposed to down).
-/// -- Has mcast enabled
+/// -- Has mcast enabled.
+/// -- Has at least one non-globally routed address.
 #[derive(Debug, Hash, Clone, Eq, PartialEq)]
 pub struct McastInterface {
     pub name: String,
-    pub id: u32,
-    pub addrs: Vec<IpAddr>,
+    pub addrs: Vec<SocketAddr>,
 }
 
+fn is_local_multicast_addr(addr: &InterfaceAddress) -> bool {
+    let inet_addr = match addr.address {
+        Some(SockAddr::Inet(inet)) => inet,
+        _ => return false,
+    };
+
+    if !(addr.flags.contains(InterfaceFlags::IFF_UP)
+        && addr.flags.contains(InterfaceFlags::IFF_MULTICAST)
+        && !addr.flags.contains(InterfaceFlags::IFF_LOOPBACK))
+    {
+        return false;
+    }
+
+    inet_addr.ip().to_std().is_local_addr()
+}
+
+// ifaddr_to_socketaddr returns Some(std::net::SocketAddr) if ifaddr contains an inet addr, none otherwise.
+fn ifaddr_to_socketaddr(ifaddr: InterfaceAddress) -> Option<std::net::SocketAddr> {
+    match ifaddr.address {
+        Some(SockAddr::Inet(sockaddr)) => Some(sockaddr.to_std()),
+        _ => None,
+    }
+}
+
+// select_mcast_interfaces iterates over a set of IterfaceAddresses,
+// selecting only those that meet the McastInterface criteria (see
+// McastInterface), and returns them in a McastInterface representation.
+fn select_mcast_interfaces(
+    iter: &mut dyn Iterator<Item = InterfaceAddress>,
+) -> Vec<McastInterface> {
+    iter.filter(is_local_multicast_addr)
+        .sorted_by_key(|ifaddr| ifaddr.interface_name.to_string())
+        .group_by(|ifaddr| ifaddr.interface_name.to_string())
+        .into_iter()
+        .map(|(name, ifaddrs)| McastInterface {
+            name: name.to_string(),
+            addrs: ifaddrs.filter_map(ifaddr_to_socketaddr).collect(),
+        })
+        .collect()
+}
+
+/// get_mcast_interfaces retrieves all local interfaces that are local
+/// multicast enabled. See McastInterface for more detials.
 // TODO(fxb/44855): This needs to be e2e tested.
-#[cfg(target_os = "linux")]
-pub mod linux {
-    use super::*;
-    use std::collections::HashMap;
-    use std::io;
-    use std::mem;
-
-    pub fn sockaddr_to_ip(sockaddr: *const libc::sockaddr) -> Option<IpAddr> {
-        if sockaddr.is_null() {
-            return None;
-        }
-        let family = i32::from(unsafe { *sockaddr }.sa_family);
-        match family {
-            libc::AF_INET => {
-                let sockaddr = &unsafe { *(sockaddr as *const libc::sockaddr_in) };
-                let addr_raw = sockaddr.sin_addr.s_addr;
-                // `to_be()` should be a no-op here, but just in case.
-                Some(IpAddr::V4(addr_raw.to_be().into()))
-            }
-            libc::AF_INET6 => {
-                let sockaddr = &unsafe { *(sockaddr as *const libc::sockaddr_in6) };
-                let ip: Ipv6Addr = sockaddr.sin6_addr.s6_addr.into();
-                // Only link-local is supported for the kind of mcast we're going
-                // to be doing. Globally routable addresses appear to panic when
-                // calling bind() in UdpBuilder.
-                if ip.is_ll() {
-                    Some(IpAddr::V6(ip))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    pub unsafe fn get_mcast_interfaces() -> io::Result<Vec<McastInterface>> {
-        let mut res = HashMap::<u32, McastInterface>::new();
-        let mut ifaddrs = mem::MaybeUninit::uninit().as_mut_ptr();
-        if -1 == libc::getifaddrs(&mut ifaddrs) {
-            return Err(io::Error::last_os_error());
-        }
-
-        let mut ifaddrs_iter = ifaddrs;
-        loop {
-            if ifaddrs_iter.is_null() {
-                break;
-            }
-            if let Some(ip) = sockaddr_to_ip((*ifaddrs_iter).ifa_addr) {
-                let name = std::ffi::CStr::from_ptr((*ifaddrs_iter).ifa_name as *const _)
-                    .to_string_lossy()
-                    .into_owned();
-                let id = libc::if_nametoindex((*ifaddrs_iter).ifa_name as *const _);
-                let flags = (*ifaddrs_iter).ifa_flags as i32;
-
-                if flags.is_mcast() {
-                    match res.get_mut(&id) {
-                        Some(iface) => iface.addrs.push(ip),
-                        None => {
-                            res.insert(id, McastInterface { name, id, addrs: vec![ip] });
-                        }
-                    }
-                }
-            }
-            ifaddrs_iter = (*ifaddrs_iter).ifa_next;
-        }
-        libc::freeifaddrs(ifaddrs);
-        Ok(res.iter().map(|(_, v)| v.clone()).collect())
-    }
+pub fn get_mcast_interfaces() -> Result<Vec<McastInterface>> {
+    Ok(select_mcast_interfaces(&mut getifaddrs().context("Failed to get all interface addresses")?))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nix::sys::socket::InetAddr;
+    use std::str::FromStr;
 
-    #[test]
-    fn test_is_link_local() {
-        let is_ll = Ipv6Addr::new(0xfe80, 0, 0, 0, 1, 6, 7, 8);
-        let is_not_ll = Ipv6Addr::new(0xfe81, 2, 3, 4, 5, 6, 7, 8);
-        assert!(is_ll.is_ll());
-        assert!(!is_not_ll.is_ll());
+    fn sockaddr(s: &str) -> SockAddr {
+        SockAddr::new_inet(InetAddr::from_std(&SocketAddr::from_str(s).unwrap()))
     }
 
     #[test]
-    fn test_mcast_flags() {
-        // Expected interface.
-        assert!((libc::IFF_UP | libc::IFF_MULTICAST).is_mcast());
-        // Loopback.
-        assert!(!(libc::IFF_UP | libc::IFF_MULTICAST | libc::IFF_LOOPBACK).is_mcast());
-        // Down interface.
-        assert!(!(libc::IFF_MULTICAST).is_mcast());
+    fn test_select_mcast_interfaces() {
+        let multicast_interface = InterfaceAddress {
+            interface_name: "test-interface".to_string(),
+            flags: InterfaceFlags::IFF_UP | InterfaceFlags::IFF_MULTICAST,
+            address: Some(sockaddr("192.168.0.1:1234")),
+            netmask: Some(sockaddr("255.255.255.0:0")),
+            broadcast: None,
+            destination: None,
+        };
+
+        let mut down_interface = multicast_interface.clone();
+        down_interface.interface_name = "down-interface".to_string();
+        down_interface.flags.remove(InterfaceFlags::IFF_UP);
+
+        let mut mult_disabled = multicast_interface.clone();
+        mult_disabled.interface_name = "no_multi-interface".to_string();
+        mult_disabled.flags.remove(InterfaceFlags::IFF_MULTICAST);
+
+        let mut no_addr = multicast_interface.clone();
+        no_addr.interface_name = "no_addr-interface".to_string();
+        no_addr.address = None;
+
+        let mut mult2 = multicast_interface.clone();
+        mult2.interface_name = "test-interface2".to_string();
+
+        let mut addr2 = multicast_interface.clone();
+        addr2.address = Some(sockaddr("192.168.0.2:1234"));
+
+        let interfaces =
+            vec![multicast_interface, mult2, addr2, down_interface, mult_disabled, no_addr];
+
+        let result = select_mcast_interfaces(&mut interfaces.into_iter());
+        assert_eq!(2, result.len());
+
+        let ti = result.iter().find(|mcast| mcast.name == "test-interface");
+        assert!(ti.is_some());
+        assert!(result.iter().find(|mcast| mcast.name == "test-interface2").is_some());
+
+        let ti_addrs =
+            ti.unwrap().addrs.iter().map(|addr| addr.to_string()).sorted().collect::<Vec<String>>();
+        assert_eq!(ti_addrs, ["192.168.0.1:1234", "192.168.0.2:1234"]);
+    }
+
+    #[test]
+    fn test_is_local_multicast_addr() {
+        let multicast_interface = InterfaceAddress {
+            interface_name: "test-interface".to_string(),
+            flags: InterfaceFlags::IFF_UP | InterfaceFlags::IFF_MULTICAST,
+            address: Some(sockaddr("192.168.0.1:1234")),
+            netmask: Some(sockaddr("255.255.255.0:0")),
+            broadcast: None,
+            destination: None,
+        };
+
+        assert!(is_local_multicast_addr(&multicast_interface));
+
+        let mut down_interface = multicast_interface.clone();
+        down_interface.flags.remove(InterfaceFlags::IFF_UP);
+        assert!(!is_local_multicast_addr(&down_interface));
+
+        let mut mult_disabled = multicast_interface.clone();
+        mult_disabled.flags.remove(InterfaceFlags::IFF_MULTICAST);
+        assert!(!is_local_multicast_addr(&mult_disabled));
+
+        let mut no_addr = multicast_interface.clone();
+        no_addr.address = None;
+        assert!(!is_local_multicast_addr(&no_addr));
+    }
+
+    #[test]
+    fn test_is_local_addr() {
+        let local_addresses = vec![
+            IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+            IpAddr::V6(Ipv6Addr::new(0xfe80, 0, 0, 0, 1, 6, 7, 8)),
+        ];
+        let not_local_addresses = vec![
+            IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
+            IpAddr::V6(Ipv6Addr::new(0x2607, 0xf8b0, 0x4005, 0x805, 0, 0, 0, 0x200e)),
+        ];
+
+        for addr in local_addresses {
+            assert!(&addr.is_local_addr());
+        }
+        for addr in not_local_addresses {
+            assert!(!&addr.is_local_addr());
+        }
+    }
+
+    #[test]
+    fn test_is_link_local_addr() {
+        let link_local_addresses = vec![IpAddr::V6(Ipv6Addr::new(0xfe80, 0, 0, 0, 1, 6, 7, 8))];
+        let not_link_local_addresses = vec![
+            IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+            IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
+            IpAddr::V6(Ipv6Addr::new(0x2607, 0xf8b0, 0x4005, 0x805, 0, 0, 0, 0x200e)),
+        ];
+
+        for addr in link_local_addresses {
+            assert!(&addr.is_link_local_addr());
+        }
+        for addr in not_link_local_addresses {
+            assert!(!&addr.is_link_local_addr());
+        }
+    }
+
+    #[test]
+    fn test_is_local_v4() {
+        let local_addresses = vec![
+            Ipv4Addr::new(192, 168, 0, 1),
+            Ipv4Addr::new(10, 0, 0, 1),
+            Ipv4Addr::new(172, 16, 0, 1),
+        ];
+
+        let not_local_addresses = vec![
+            Ipv4Addr::new(8, 8, 8, 8),
+            Ipv4Addr::new(4, 4, 4, 4),
+            Ipv4Addr::new(1, 1, 1, 1),
+            Ipv4Addr::new(224, 1, 1, 1),
+        ];
+
+        for addr in local_addresses {
+            assert!(&addr.is_local_addr());
+        }
+        for addr in not_local_addresses {
+            assert!(!&addr.is_local_addr());
+        }
+    }
+
+    #[test]
+    fn test_is_local_v6() {
+        let local_addresses = vec![
+            Ipv6Addr::new(0xfe80, 0, 0, 0, 1, 6, 7, 8),
+            Ipv6Addr::new(0xfc07, 0, 0, 0, 1, 6, 7, 8),
+        ];
+
+        let not_local_addresses = vec![
+            Ipv6Addr::new(0xfe81, 0, 0, 0, 1, 6, 7, 8),
+            Ipv6Addr::new(0xfe79, 0, 0, 0, 1, 6, 7, 8),
+            Ipv6Addr::new(0x2607, 0xf8b0, 0x4005, 0x805, 0, 0, 0, 0x200e),
+        ];
+
+        for addr in local_addresses {
+            assert!(&addr.is_local_addr());
+        }
+        for addr in not_local_addresses {
+            assert!(!&addr.is_local_addr());
+        }
     }
 }
