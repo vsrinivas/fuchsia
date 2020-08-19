@@ -65,6 +65,7 @@ class SpinelFramer {
   bool CheckAndClearInterrupt(void);
   void DebugSpiHeader(const char* hint);
   bool has_inbound_allowance_ = false;
+  bool did_print_rate_limit_log_ = false;
 };
 
 }  // namespace ot

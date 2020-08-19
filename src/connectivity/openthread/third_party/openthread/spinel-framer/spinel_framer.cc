@@ -33,6 +33,12 @@
 
 namespace ot {
 
+const int kImmediateRetryCnt = 5;
+const int kFastRetryCnt = 15;
+const uint32_t kImmediateRetryTimeoutMSec = 1;
+const uint32_t kFastRetryTimeoutMSec = 10;
+const uint32_t kSlowRetryTimeoutMSec = 33;
+
 /* ------------------------------------------------------------------------- */
 /* MARK: Statistics */
 
@@ -217,7 +223,7 @@ zx_status_t SpinelFramer::PushPullSpi(void) {
         (slave_header == spiRxFrameBuffer[3]) && (slave_header == spiRxFrameBuffer[4])) {
       // Device is off or in a bad state.
       // In some cases may be induced by flow control.
-      zxlogf(ERROR, "Slave did not respond to frame. (Header was all 0x%02X)", slave_header);
+      zxlogf(DEBUG, "Slave did not respond to frame. (Header was all 0x%02X)", slave_header);
       spi_unresponsive_frame_count_++;
     } else {
       // Header is full of garbage
@@ -339,6 +345,44 @@ uint32_t SpinelFramer::GetTimeoutMs(void) {
     // We have more data to read from the radio
     timeout_ms = 5;
   }
+
+  if (spi_tx_refused_count_) {
+    int min_timeout = 0;
+
+    // Spinel framer is rate-limited by the Ncp. This is
+    // fairly normal behavior. Based on number of times
+    // Ncp has refused a transmission, we apply a
+    // minimum timeout.
+
+    if (spi_tx_refused_count_ < kImmediateRetryCnt) {
+      min_timeout = kImmediateRetryTimeoutMSec;
+    } else if (spi_tx_refused_count_ < kFastRetryCnt) {
+      min_timeout = kFastRetryTimeoutMSec;
+    } else {
+      min_timeout = kSlowRetryTimeoutMSec;
+    }
+
+    if (timeout_ms < min_timeout) {
+      timeout_ms = min_timeout;
+    }
+
+    if (spi_tx_is_ready_ && !did_print_rate_limit_log_ && (spi_tx_refused_count_ > 1)) {
+      zxlogf(INFO, "Ncp is rate limiting transactions");
+      // Print it only once
+      did_print_rate_limit_log_ = true;
+    }
+
+    if (spi_tx_refused_count_ == 30) {
+      zxlogf(WARNING, "Ncp seems stuck.");
+    }
+
+    if (spi_tx_refused_count_ == 100) {
+      zxlogf(WARNING, "Ncp seems REALLY stuck.");
+    }
+  } else {
+    did_print_rate_limit_log_ = false;
+  }
+
   return timeout_ms;
 }
 
@@ -431,8 +475,7 @@ void SpinelFramer::TrySpiTransaction() {
     dump_stats_ = false;
     zxlogf(DEBUG, "STATS: slave_reset_count_=%llu", (unsigned long long)slave_reset_count_);
     zxlogf(DEBUG, "STATS: spi_frame_count_=%llu", (unsigned long long)spi_frame_count_);
-    zxlogf(DEBUG, "STATS: spi_valid_frame_count_=%llu",
-           (unsigned long long)spi_valid_frame_count_);
+    zxlogf(DEBUG, "STATS: spi_valid_frame_count_=%llu", (unsigned long long)spi_valid_frame_count_);
     zxlogf(DEBUG, "STATS: spi_duplex_frame_count_=%llu",
            (unsigned long long)spi_duplex_frame_count_);
     zxlogf(DEBUG, "STATS: spi_unresponsive_frame_count_=%llu",
