@@ -121,13 +121,7 @@ impl KeyValueFetcher {
     pub fn fetch(&self, key: &str) -> MetricValue {
         match self.map.get(key) {
             Some(value) => MetricValue::from(value),
-            None => {
-                println!("Dict len is {}", self.map.len());
-                for (key, value) in self.map.iter() {
-                    println!("Dict dump: {:?}:{:?}", key, value);
-                }
-                MetricValue::Missing(format!("Key '{}' not found in annotations", key))
-            }
+            None => MetricValue::Missing(format!("Key '{}' not found in annotations", key)),
         }
     }
 }
@@ -201,9 +195,8 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         }
 
         fn moniker_from(path_string: &String) -> Result<Vec<String>, Error> {
-            let res = selectors::parse_path_to_moniker(path_string)
-                .context("Path string needs to be a moniker");
-            res
+            selectors::parse_path_to_moniker(path_string)
+                .context("Path string needs to be a moniker")
         }
 
         let components: Vec<_> = component_vec
@@ -274,11 +267,14 @@ impl InspectFetcher {
                 values.push(value)
             }
         }
-        if !found_component || values.is_empty() {
+        if !found_component {
             return Ok(vec![MetricValue::Missing(format!(
-                "No value found matching selector {}",
+                "No component found matching selector {}",
                 selector_string.to_string()
             ))]);
+        }
+        if values.is_empty() {
+            return Ok(Vec::new());
         }
         Ok(values.into_iter().map(|value| MetricValue::from(value.property)).collect())
     }
@@ -301,7 +297,7 @@ impl InspectFetcher {
 
 #[cfg(test)]
 mod test {
-    use {super::*, anyhow::Error};
+    use {super::*, crate::assert_missing, anyhow::Error};
 
     #[test]
     fn inspect_fetcher_new_works() -> Result<(), Error> {
@@ -341,10 +337,9 @@ mod test {
             );
             macro_rules! assert_wrong {
                 ($selector:expr, $error:expr) => {
-                    assert_eq!(
-                        inspect.fetch_str($selector),
-                        vec![MetricValue::Missing($error.to_string())]
-                    )
+                    let error = inspect.fetch_str($selector);
+                    assert_eq!(error.len(), 1);
+                    assert_missing!(&error[0], &$error);
                 };
             }
             assert_wrong!("INSPET:*/foo/*:root:dataInt", "Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
@@ -360,24 +355,23 @@ mod test {
                 inspect.fetch_str("INSPECT:zxcv/*/hjk*:base:yes"),
                 vec![MetricValue::Bool(true)]
             );
-            assert_wrong!(
-                "INSPECT:*/foo/*:root.dataInt",
-                "No value found matching selector */foo/*:root.dataInt"
-            );
+            assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root.dataInt"), vec![]);
             assert_wrong!(
                 "INSPECT:*/fo/*:root.dataInt",
-                "No value found matching selector */fo/*:root.dataInt"
+                "No component found matching selector */fo/*:root.dataInt"
             );
-            assert_wrong!("INSPECT:*/foo/*:root:data:Int", "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
-            assert_wrong!(
-                "INSPECT:*/foo/*:root/kid:dataInt",
-                "No value found matching selector */foo/*:root/kid:dataInt"
+            assert_wrong!("INSPECT:*/foo/*:root:data:Int",
+                "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+            assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
+            assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
+            assert_eq!(
+                inspect.fetch_str("INSPECT:*/bar/*:base:array"),
+                vec![MetricValue::Vector(vec![
+                    MetricValue::Int(2),
+                    MetricValue::Int(3),
+                    MetricValue::Int(4)
+                ])]
             );
-            assert_wrong!(
-                "INSPECT:*/bar/*:base/array:dataInt",
-                "No value found matching selector */bar/*:base/array:dataInt"
-            );
-            assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         }
         Ok(())
     }

@@ -7,11 +7,11 @@ pub mod fetch;
 use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
     fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
-    fuchsia_inspect_node_hierarchy::Property as DiagnosticProperty,
+    fuchsia_inspect_node_hierarchy::{ArrayContent, Property as DiagnosticProperty},
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
-    std::{clone::Clone, collections::HashMap, convert::TryFrom},
+    std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
 };
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
@@ -120,20 +120,10 @@ impl<'a> FileDataFetcher<'a> {
 
     fn fetch(&self, selector: &SelectorString) -> MetricValue {
         match selector.selector_type {
-            SelectorType::Inspect => {
-                let values = self.inspect.fetch(&selector);
-                match values.len() {
-                    0 => MetricValue::Missing(format!(
-                        "{} not found in Inspect data",
-                        selector.body()
-                    )),
-                    1 => values[0].clone(),
-                    _ => MetricValue::Missing(format!(
-                        "Multiple {} found in Inspect data",
-                        selector.body()
-                    )),
-                }
-            }
+            // Selectors return a vector. Non-wildcarded Inspect selectors will return a
+            // single element, except in the case of multiple components with the same
+            // entry in the "moniker" field, where multiple matches are possible.
+            SelectorType::Inspect => MetricValue::Vector(self.inspect.fetch(&selector)),
         }
     }
 
@@ -210,17 +200,19 @@ impl<'a> TrialDataFetcher<'a> {
 /// The calculated or selected value of a Metric.
 ///
 /// Missing means that the value could not be calculated; its String tells
-/// the reason. Array and String are not used in v0.1 but will be useful later.
+/// the reason.
 #[derive(Deserialize, Debug, Clone)]
 pub enum MetricValue {
+    // Ensure every variant of MetricValue is tested in metric_value_traits().
     // TODO(cphoenix): Support u64.
     Int(i64),
     Float(f64),
     String(String),
     Bool(bool),
-    Array(Vec<MetricValue>),
+    Vector(Vec<MetricValue>),
     Bytes(Vec<u8>),
     Missing(String),
+    Lambda(Box<Lambda>),
 }
 
 impl PartialEq for MetricValue {
@@ -228,12 +220,12 @@ impl PartialEq for MetricValue {
         match (self, other) {
             (MetricValue::Int(l), MetricValue::Int(r)) => l == r,
             (MetricValue::Float(l), MetricValue::Float(r)) => l == r,
+            (MetricValue::Bytes(l), MetricValue::Bytes(r)) => l == r,
             (MetricValue::Int(l), MetricValue::Float(r)) => *l as f64 == *r,
             (MetricValue::Float(l), MetricValue::Int(r)) => *l == *r as f64,
             (MetricValue::String(l), MetricValue::String(r)) => l == r,
             (MetricValue::Bool(l), MetricValue::Bool(r)) => l == r,
-            (MetricValue::Array(l), MetricValue::Array(r)) => l == r,
-            (MetricValue::Missing(l), MetricValue::Missing(r)) => l == r,
+            (MetricValue::Vector(l), MetricValue::Vector(r)) => l == r,
             _ => false,
         }
     }
@@ -248,9 +240,10 @@ impl std::fmt::Display for MetricValue {
             MetricValue::Float(n) => write!(f, "Float({})", n),
             MetricValue::Bool(n) => write!(f, "Bool({})", n),
             MetricValue::String(n) => write!(f, "String({})", n),
-            MetricValue::Array(n) => write!(f, "Array({:?})", n),
+            MetricValue::Vector(n) => write!(f, "Vector({:?})", n),
             MetricValue::Bytes(n) => write!(f, "Bytes({:?})", n),
             MetricValue::Missing(n) => write!(f, "Missing({})", n),
+            MetricValue::Lambda(n) => write!(f, "Fn({:?})", n),
         }
     }
 }
@@ -276,11 +269,20 @@ impl From<DiagnosticProperty> for MetricValue {
             DiagnosticProperty::Uint(_name, value) => Self::Int(value as i64),
             DiagnosticProperty::Double(_name, value) => Self::Float(value),
             DiagnosticProperty::Bool(_name, value) => Self::Bool(value),
-            // TODO(cphoenix): Support arrays - need to figure out what to do about histograms.
-            DiagnosticProperty::DoubleArray(_name, _)
-            | DiagnosticProperty::IntArray(_name, _)
-            | DiagnosticProperty::UintArray(_name, _) => {
-                Self::Missing("Arrays not supported yet".to_owned())
+            // TODO(cphoenix): Figure out what to do about histograms.
+            DiagnosticProperty::DoubleArray(_name, ArrayContent::Values(values)) => {
+                Self::Vector(map_vec(&values, |value| Self::Float(*value)))
+            }
+            DiagnosticProperty::IntArray(_name, ArrayContent::Values(values)) => {
+                Self::Vector(map_vec(&values, |value| Self::Int(*value)))
+            }
+            DiagnosticProperty::UintArray(_name, ArrayContent::Values(values)) => {
+                Self::Vector(map_vec(&values, |value| Self::Int(*value as i64)))
+            }
+            DiagnosticProperty::DoubleArray(_name, ArrayContent::Buckets(_))
+            | DiagnosticProperty::IntArray(_name, ArrayContent::Buckets(_))
+            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
+                Self::Missing("Histograms aren't supported (yet)".to_string())
             }
         }
     }
@@ -291,14 +293,9 @@ impl From<JsonValue> for MetricValue {
         match value {
             JsonValue::String(value) => Self::String(value),
             JsonValue::Bool(value) => Self::Bool(value),
-            JsonValue::Number(value) => {
-                if value.is_i64() {
-                    Self::Int(value.as_i64().unwrap())
-                } else if value.is_f64() {
-                    Self::Float(value.as_f64().unwrap())
-                } else {
-                    Self::Missing("Unable to convert JSON number".to_owned())
-                }
+            JsonValue::Number(_) => Self::from(&value),
+            JsonValue::Array(values) => {
+                Self::Vector(values.into_iter().map(|v| Self::from(v)).collect())
             }
             _ => Self::Missing("Unsupported JSON type".to_owned()),
         }
@@ -313,11 +310,16 @@ impl From<&JsonValue> for MetricValue {
             JsonValue::Number(value) => {
                 if value.is_i64() {
                     Self::Int(value.as_i64().unwrap())
+                } else if value.is_u64() {
+                    Self::Int(value.as_u64().unwrap() as i64)
                 } else if value.is_f64() {
                     Self::Float(value.as_f64().unwrap())
                 } else {
                     Self::Missing("Unable to convert JSON number".to_owned())
                 }
+            }
+            JsonValue::Array(values) => {
+                Self::Vector(values.iter().map(|v| Self::from(v)).collect())
             }
             _ => Self::Missing("Unsupported JSON type".to_owned()),
         }
@@ -347,6 +349,62 @@ pub enum Function {
     BootlogHas,
     Missing,
     Annotation,
+    Lambda,
+    Map,
+    Fold,
+    Filter,
+    Count,
+}
+
+/// Lambda stores a function; its parameters and body are evaluated lazily.
+/// Lambda's are created by evaluating the "Fn()" expression.
+#[derive(Deserialize, Debug, Clone)]
+pub struct Lambda {
+    parameters: Vec<String>,
+    body: Expression,
+}
+
+impl Lambda {
+    fn valid_parameters(parameters: &Expression) -> Result<Vec<String>, MetricValue> {
+        match parameters {
+            Expression::Vector(parameters) => parameters
+                .iter()
+                .map(|param| match param {
+                    Expression::Metric(name) => {
+                        if name.contains(':') {
+                            Err(MetricValue::Missing(
+                                "Namespaces not allowed in function params".to_string(),
+                            ))
+                        } else {
+                            Ok(name.clone())
+                        }
+                    }
+                    _ => Err(MetricValue::Missing(
+                        "Function params must be valid identifier names".to_string(),
+                    )),
+                })
+                .collect::<Result<Vec<_>, _>>(),
+            _ => {
+                return Err(MetricValue::Missing(
+                    "Function params must be a vector of names".to_string(),
+                ))
+            }
+        }
+    }
+
+    fn as_metric_value(definition: &Vec<Expression>) -> MetricValue {
+        if definition.len() != 2 {
+            return MetricValue::Missing(
+                "Function needs two parameters, list of params and expression".to_string(),
+            );
+        }
+        let parameters = match Self::valid_parameters(&definition[0]) {
+            Ok(names) => names,
+            Err(problem) => return problem,
+        };
+        let body = definition[1].clone();
+        MetricValue::Lambda(Box::new(Lambda { parameters, body }))
+    }
 }
 
 // Behavior for short circuiting execution when applying operands.
@@ -388,21 +446,21 @@ fn demand_both_numeric(value1: &MetricValue, value2: &MetricValue) -> MetricValu
 /// The macro handles type promotion and promotion to the specified type.
 macro_rules! apply_math_operands {
     ($left:expr, $right:expr, $function:expr, $ty:ty) => {
-        match ($left, $right) {
+        match (unwrap_for_math(&$left), unwrap_for_math(&$right)) {
             (MetricValue::Int(int1), MetricValue::Int(int2)) => {
                 // TODO(cphoenix): Instead of converting to float, use int functions.
-                ($function(int1 as f64, int2 as f64) as $ty).into()
+                ($function(*int1 as f64, *int2 as f64) as $ty).into()
             }
             (MetricValue::Int(int1), MetricValue::Float(float2)) => {
-                $function(int1 as f64, float2).into()
+                $function(*int1 as f64, *float2).into()
             }
             (MetricValue::Float(float1), MetricValue::Int(int2)) => {
-                $function(float1, int2 as f64).into()
+                $function(*float1, *int2 as f64).into()
             }
             (MetricValue::Float(float1), MetricValue::Float(float2)) => {
-                $function(float1, float2).into()
+                $function(*float1, *float2).into()
             }
-            (value1, value2) => demand_both_numeric(&value1, &value2),
+            (value1, value2) => demand_both_numeric(value1, value2),
         }
     };
 }
@@ -420,16 +478,49 @@ macro_rules! extract_and_apply_math_operands {
 
 /// Expression represents the parsed body of an Eval Metric. It applies
 /// a function to sub-expressions, or stores a Missing error, the name of a
-/// Metric, or a basic Value.
+/// Metric, a vector of expressions, or a basic Value.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Expression {
     // Some operators have arity 1 or 2, some have arity N.
     // For symmetry/readability, I use the same operand-spec Vec<Expression> for all.
     // TODO(cphoenix): Check on load that all operators have a legal number of operands.
     Function(Function, Vec<Expression>),
+    Vector(Vec<Expression>),
     IsMissing(Vec<Expression>),
     Metric(String),
     Value(MetricValue),
+}
+
+// Selectors return a vec of values. Typically they will select a single
+// value which we want to use for math without lots of boilerplate.
+// So we "promote" a 1-entry vector into the value it contains.
+// Other vectors will be passed through unchanged (and cause an error later).
+fn unwrap_for_math<'b>(value: &'b MetricValue) -> &'b MetricValue {
+    match value {
+        MetricValue::Vector(v) if v.len() == 1 => &v[0],
+        v => v,
+    }
+}
+
+// Condense the visual clutter of iter() and collect::<Vec<_>>().
+fn map_vec<T, U, F>(vec: &Vec<T>, f: F) -> Vec<U>
+where
+    F: FnMut(&T) -> U,
+{
+    vec.iter().map(f).collect::<Vec<U>>()
+}
+
+// Condense visual clutter of iterating over vec of references.
+fn map_vec_r<'a, T, U, F>(vec: &'a [T], f: F) -> Vec<&'a U>
+where
+    F: FnMut(&'a T) -> &'a U,
+{
+    vec.iter().map(f).collect::<Vec<&'a U>>()
+}
+
+// Construct Missing() metric from a message
+fn missing(message: &str) -> MetricValue {
+    MetricValue::Missing(message.to_string())
 }
 
 impl<'a> MetricState<'a> {
@@ -588,6 +679,187 @@ impl<'a> MetricState<'a> {
             }
             Function::Missing => self.is_missing(namespace, operands),
             Function::Annotation => self.annotation(namespace, operands),
+            Function::Lambda => Lambda::as_metric_value(operands),
+            Function::Map => self.map(namespace, operands),
+            Function::Fold => self.fold(namespace, operands),
+            Function::Filter => self.filter(namespace, operands),
+            Function::Count => self.count(namespace, operands),
+        }
+    }
+
+    fn apply_lambda(&self, namespace: &str, lambda: &Lambda, args: &[&MetricValue]) -> MetricValue {
+        fn substitute_all(
+            expressions: &[Expression],
+            bindings: &HashMap<String, &MetricValue>,
+        ) -> Vec<Expression> {
+            expressions.iter().map(|e| substitute(e, bindings)).collect::<Vec<_>>()
+        }
+
+        fn substitute(
+            expression: &Expression,
+            bindings: &HashMap<String, &MetricValue>,
+        ) -> Expression {
+            match expression {
+                Expression::Function(function, expressions) => {
+                    Expression::Function(function.clone(), substitute_all(expressions, bindings))
+                }
+                Expression::Vector(expressions) => {
+                    Expression::Vector(substitute_all(expressions, bindings))
+                }
+                // TODO(cphoenix): IsMissing belongs in the Function's, not in Expression.
+                Expression::IsMissing(expressions) => {
+                    Expression::IsMissing(substitute_all(expressions, bindings))
+                }
+                Expression::Metric(name) => match bindings.get(name) {
+                    None => Expression::Metric(name.to_string()),
+                    Some(value) => Expression::Value(value.clone().clone()),
+                },
+                Expression::Value(value) => Expression::Value(value.clone()),
+            }
+        }
+
+        let parameters = &lambda.parameters;
+        if parameters.len() != args.len() {
+            return MetricValue::Missing(format!(
+                "Function has {} parameters and needs {} arguments, but has {}.",
+                parameters.len(),
+                parameters.len(),
+                args.len()
+            ));
+        }
+        let mut bindings = HashMap::new();
+        for (name, value) in parameters.iter().zip(args.iter()) {
+            bindings.insert(name.clone(), value.clone());
+        }
+        let expression = substitute(&lambda.body, &bindings);
+        self.evaluate(namespace, &expression)
+    }
+
+    fn unpack_lambda(
+        &self,
+        namespace: &str,
+        operands: &'a [Expression],
+    ) -> Result<(Box<Lambda>, Vec<MetricValue>), ()> {
+        if operands.len() == 0 {
+            return Err(());
+        }
+        let lambda = match self.evaluate(namespace, &operands[0]) {
+            MetricValue::Lambda(lambda) => lambda,
+            _ => return Err(()),
+        };
+        let arguments =
+            operands[1..].iter().map(|expr| self.evaluate(namespace, expr)).collect::<Vec<_>>();
+        Ok((lambda, arguments))
+    }
+
+    /// This implements the Map() function.
+    fn map(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+            Ok((lambda, arguments)) => (lambda, arguments),
+            Err(()) => return missing("Map needs a function in its first argument."),
+        };
+        let vector_args = arguments
+            .iter()
+            .filter(|item| match item {
+                MetricValue::Vector(_) => true,
+                _ => false,
+            })
+            .collect::<Vec<_>>();
+        let result_length = match vector_args.len() {
+            0 => 0,
+            _ => {
+                let start = match vector_args[0] {
+                    MetricValue::Vector(vec) => vec.len(),
+                    _ => unreachable!(),
+                };
+                vector_args.iter().fold(start, |accum, item| {
+                    min(
+                        accum,
+                        match item {
+                            MetricValue::Vector(items) => items.len(),
+                            _ => 0,
+                        },
+                    )
+                })
+            }
+        };
+        let mut result = Vec::new();
+        for index in 0..result_length {
+            let call_args = arguments
+                .iter()
+                .map(|arg| match arg {
+                    MetricValue::Vector(vec) => &vec[index],
+                    other => other,
+                })
+                .collect::<Vec<_>>();
+            result.push(self.apply_lambda(namespace, &lambda, &call_args));
+        }
+        MetricValue::Vector(result)
+    }
+
+    /// This implements the Fold() function.
+    fn fold(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+            Ok((lambda, arguments)) => (lambda, arguments),
+            Err(()) => return missing("Fold needs a function as the first argument."),
+        };
+        if arguments.is_empty() {
+            return missing("Fold needs a second argument, a vector");
+        }
+        let vector = match &arguments[0] {
+            MetricValue::Vector(items) => items,
+            _ => return missing("Second argument of Fold must be a vector"),
+        };
+        let (first, rest) = match arguments.len() {
+            1 => match vector.split_first() {
+                Some(first_rest) => first_rest,
+                None => return missing("Fold needs at least one value"),
+            },
+            2 => (&arguments[1], &vector[..]),
+            _ => return missing("Fold needs (function, vec) or (function, vec, start)"),
+        };
+        let mut result = first.clone();
+        for item in rest {
+            result = self.apply_lambda(namespace, &lambda, &[&result, item]);
+        }
+        result
+    }
+
+    /// This implements the Filter() function.
+    fn filter(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+            Ok((lambda, arguments)) => (lambda, arguments),
+            Err(()) => return missing("Filter needs a function"),
+        };
+        if arguments.len() != 1 {
+            return missing("Filter needs (function, vector)");
+        }
+        let result = match &arguments[0] {
+            MetricValue::Vector(items) => items
+                .iter()
+                .filter_map(|item| match self.apply_lambda(namespace, &lambda, &[&item]) {
+                    MetricValue::Bool(true) => Some(item.clone()),
+                    MetricValue::Bool(false) => None,
+                    MetricValue::Missing(message) => Some(MetricValue::Missing(message.clone())),
+                    bad_type => Some(MetricValue::Missing(format!(
+                        "Bad value {:?} from filter function should be true, false, or Missing",
+                        bad_type
+                    ))),
+                })
+                .collect(),
+            _ => return missing("Filter second argument must be a vector"),
+        };
+        MetricValue::Vector(result)
+    }
+
+    /// This implements the Count() function.
+    fn count(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+        if operands.len() != 1 {
+            return missing("Count requires one argument, a vector");
+        }
+        match self.evaluate(namespace, &operands[0]) {
+            MetricValue::Vector(items) => MetricValue::Int(items.len() as i64),
+            bad => MetricValue::Missing(format!("Count only works on vectors, not {}", bad)),
         }
     }
 
@@ -597,6 +869,9 @@ impl<'a> MetricState<'a> {
             Expression::IsMissing(operands) => self.is_missing(namespace, operands),
             Expression::Metric(name) => self.metric_value_by_name(namespace, name),
             Expression::Value(value) => value.clone(),
+            Expression::Vector(values) => {
+                MetricValue::Vector(map_vec(values, |value| self.evaluate(namespace, value)))
+            }
         }
     }
 
@@ -675,8 +950,8 @@ impl<'a> MetricState<'a> {
     }
 
     // Applies a given function to two values, handling type-promotion.
-    // This function will return a MetricValue::Int if both values are ints
-    // and a MetricValue::Float if not.
+    // This function will return a MetricValue::Int if all values are ints
+    // and a MetricValue::Float if any argument is a float.
     fn apply_math(
         &self,
         namespace: &str,
@@ -724,16 +999,17 @@ impl<'a> MetricState<'a> {
                 operands
             ));
         }
-        let result = match (
-            self.evaluate(namespace, &operands[0]),
-            self.evaluate(namespace, &operands[1]),
-        ) {
+        let operand_values = map_vec(&operands, |operand| self.evaluate(namespace, operand));
+        let numbers = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
+        let result = match (numbers[0], numbers[1]) {
             // TODO(cphoenix): Instead of converting two ints to float, use int functions.
-            (MetricValue::Int(int1), MetricValue::Int(int2)) => function(int1 as f64, int2 as f64),
-            (MetricValue::Int(int1), MetricValue::Float(float2)) => function(int1 as f64, float2),
-            (MetricValue::Float(float1), MetricValue::Int(int2)) => function(float1, int2 as f64),
-            (MetricValue::Float(float1), MetricValue::Float(float2)) => function(float1, float2),
-            (value1, value2) => return demand_both_numeric(&value1, &value2),
+            (MetricValue::Int(int1), MetricValue::Int(int2)) => {
+                function(*int1 as f64, *int2 as f64)
+            }
+            (MetricValue::Int(int1), MetricValue::Float(float2)) => function(*int1 as f64, *float2),
+            (MetricValue::Float(float1), MetricValue::Int(int2)) => function(*float1, *int2 as f64),
+            (MetricValue::Float(float1), MetricValue::Float(float2)) => function(*float1, *float2),
+            (value1, value2) => return demand_both_numeric(value1, value2),
         };
         MetricValue::Bool(result)
     }
@@ -753,14 +1029,13 @@ impl<'a> MetricState<'a> {
                 operands
             ));
         }
-        let left = self.evaluate(namespace, &operands[0]);
-        let right = self.evaluate(namespace, &operands[1]);
-
-        match (&left, &right) {
+        let operand_values = map_vec(&operands, |operand| self.evaluate(namespace, operand));
+        let bools = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
+        match (bools[0], bools[1]) {
             // We forward ::Missing for better error messaging.
             (MetricValue::Missing(reason), _) => MetricValue::Missing(reason.to_string()),
             (_, MetricValue::Missing(reason)) => MetricValue::Missing(reason.to_string()),
-            _ => MetricValue::Bool(function(&left, &right)),
+            _ => MetricValue::Bool(function(bools[0], bools[1])),
         }
     }
 
@@ -774,10 +1049,11 @@ impl<'a> MetricState<'a> {
         if operands.len() == 0 {
             return MetricValue::Missing("No operands in boolean expression".into());
         }
-        let mut result: bool = match self.evaluate(namespace, &operands[0]) {
-            MetricValue::Bool(value) => value,
+        let first = self.evaluate(namespace, &operands[0]);
+        let mut result: bool = match unwrap_for_math(&first) {
+            MetricValue::Bool(value) => *value,
             MetricValue::Missing(reason) => {
-                return MetricValue::Missing(reason);
+                return MetricValue::Missing(reason.to_string());
             }
             bad => return MetricValue::Missing(format!("{:?} is not boolean", bad)),
         };
@@ -791,10 +1067,11 @@ impl<'a> MetricState<'a> {
                 }
                 _ => {}
             };
-            result = match self.evaluate(namespace, operand) {
-                MetricValue::Bool(value) => function(result, value),
+            let nth = self.evaluate(namespace, operand);
+            result = match unwrap_for_math(&nth) {
+                MetricValue::Bool(value) => function(result, *value),
                 MetricValue::Missing(reason) => {
-                    return MetricValue::Missing(reason);
+                    return MetricValue::Missing(reason.to_string());
                 }
                 bad => return MetricValue::Missing(format!("{:?} is not boolean", bad)),
             }
@@ -805,7 +1082,7 @@ impl<'a> MetricState<'a> {
     fn not_bool(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
             return MetricValue::Missing(format!(
-                "Wrong number of args ({}) for unary bool operator",
+                "Wrong number of arguments ({}) for unary bool operator",
                 operands.len()
             ));
         }
@@ -838,9 +1115,25 @@ impl<'a> MetricState<'a> {
 //   $ fx test triage_lib_test
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use super::*;
-    use {anyhow::Error, lazy_static::lazy_static};
+    use {
+        anyhow::Error,
+        lazy_static::lazy_static,
+        serde_json::{json, Number as JsonNumber},
+    };
+
+    /// Missing should never equal anything, even an identical Missing. Code (tests) can use
+    /// assert_missing!(MetricValue::Missing("foo".to_string()), "foo") to test error messages.
+    #[macro_export]
+    macro_rules! assert_missing {
+        ($missing:expr, $message:expr) => {
+            match $missing {
+                MetricValue::Missing(actual_message) => assert_eq!(&actual_message, $message),
+                _ => assert!(false, "Non-Missing type"),
+            }
+        };
+    }
 
     #[test]
     fn test_equality() {
@@ -851,31 +1144,40 @@ mod test {
         assert_eq!(MetricValue::Bool(true), MetricValue::Bool(true));
         assert_eq!(MetricValue::Bool(false), MetricValue::Bool(false));
         assert_eq!(
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(1),
                 MetricValue::Float(1.0),
                 MetricValue::String("A".to_string()),
                 MetricValue::Bool(true),
             ]),
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(1),
                 MetricValue::Float(1.0),
                 MetricValue::String("A".to_string()),
                 MetricValue::Bool(true),
             ])
         );
+        assert_eq!(MetricValue::Bytes(vec![1, 2, 3]), MetricValue::Bytes(vec![1, 2, 3]));
 
+        // Floats and ints interconvert. Test both ways for full code coverage.
         assert_eq!(MetricValue::Int(1), MetricValue::Float(1.0));
+        assert_eq!(MetricValue::Float(1.0), MetricValue::Int(1));
+
+        // Numbers, vectors, and byte arrays do not interconvert when compared with Rust ==.
+        // Note, though, that the expression "1 == [1]" will evaluate to true.
+        assert!(MetricValue::Int(1) != MetricValue::Vector(vec![MetricValue::Int(1)]));
+        assert!(MetricValue::Bytes(vec![1]) != MetricValue::Vector(vec![MetricValue::Int(1)]));
+        assert!(MetricValue::Int(1) != MetricValue::Bytes(vec![1]));
 
         // Nested array
         assert_eq!(
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(1),
                 MetricValue::Float(1.0),
                 MetricValue::String("A".to_string()),
                 MetricValue::Bool(true),
             ]),
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(1),
                 MetricValue::Float(1.0),
                 MetricValue::String("A".to_string()),
@@ -884,10 +1186,11 @@ mod test {
         );
 
         // Missing should never be equal
-        assert_eq!(
-            MetricValue::Missing("err".to_string()),
-            MetricValue::Missing("err".to_string())
-        );
+        assert!(MetricValue::Missing("err".to_string()) != MetricValue::Missing("err".to_string()));
+        // Use assert_missing() macro to test error messages.
+        assert_missing!(MetricValue::Missing("err".to_string()), "err");
+
+        // We don't have a contract for Lambda equality. We probably don't need one.
     }
 
     #[test]
@@ -898,13 +1201,13 @@ mod test {
         assert_ne!(MetricValue::String("A".to_string()), MetricValue::String("B".to_string()));
         assert_ne!(MetricValue::Bool(true), MetricValue::Bool(false));
         assert_ne!(
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(1),
                 MetricValue::Float(1.0),
                 MetricValue::String("A".to_string()),
                 MetricValue::Bool(true),
             ]),
-            MetricValue::Array(vec![
+            MetricValue::Vector(vec![
                 MetricValue::Int(2),
                 MetricValue::Float(2.0),
                 MetricValue::String("B".to_string()),
@@ -929,8 +1232,8 @@ mod test {
         assert_eq!(format!("{}", MetricValue::Bool(false)), "Bool(false)");
         assert_eq!(format!("{}", MetricValue::String("cat".to_string())), "String(cat)");
         assert_eq!(
-            format!("{}", MetricValue::Array(vec![MetricValue::Int(1), MetricValue::Float(2.5)])),
-            "Array([Int(1), Float(2.5)])"
+            format!("{}", MetricValue::Vector(vec![MetricValue::Int(1), MetricValue::Float(2.5)])),
+            "Vector([Int(1), Float(2.5)])"
         );
         assert_eq!(format!("{}", MetricValue::Bytes(vec![1u8, 2u8])), "Bytes([1, 2])");
         assert_eq!(
@@ -974,7 +1277,9 @@ mod test {
             SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
     }
 
-    fn assert_missing(value: MetricValue, message: &'static str) {
+    // Unlike the assert_missing macro, this matches any Missing() regardless of its payload
+    // message. It flags `message` if `value` is not Missing(_).
+    fn require_missing(value: MetricValue, message: &'static str) {
         match value {
             MetricValue::Missing(_) => {}
             _ => assert!(false, message),
@@ -983,11 +1288,11 @@ mod test {
 
     #[test]
     fn test_file_fetch() {
-        assert_eq!(BAR_99_FILE_FETCHER.fetch(&BAR_SELECTOR), MetricValue::Int(99));
-        assert_missing(
-            BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR),
-            "File fetcher found bogus selector",
+        assert_eq!(
+            BAR_99_FILE_FETCHER.fetch(&BAR_SELECTOR),
+            MetricValue::Vector(vec![MetricValue::Int(99)])
         );
+        assert_eq!(BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR), MetricValue::Vector(vec![]),);
     }
 
     #[test]
@@ -997,7 +1302,7 @@ mod test {
         assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("a:b"));
         assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("oops"));
         assert_eq!(FOO_42_AB_7_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
-        assert_missing(
+        require_missing(
             FOO_42_AB_7_TRIAL_FETCHER.fetch("oops"),
             "Trial fetcher found bogus selector",
         );
@@ -1019,13 +1324,13 @@ mod test {
             file_state.metric_value_by_name("bar_file", &"bar_plus_one".to_owned()),
             MetricValue::Int(100)
         );
-        assert_missing(
+        require_missing(
             file_state.metric_value_by_name("bar_file", &"oops_plus_one".to_owned()),
             "File found nonexistent name",
         );
         assert_eq!(
             file_state.metric_value_by_name("bar_file", &"bar".to_owned()),
-            MetricValue::Int(99)
+            MetricValue::Vector(vec![MetricValue::Int(99)])
         );
         assert_eq!(
             file_state.metric_value_by_name("other_file", &"bar".to_owned()),
@@ -1037,17 +1342,17 @@ mod test {
         );
         assert_eq!(
             file_state.metric_value_by_name("other_file", &"bar_file::bar".to_owned()),
-            MetricValue::Int(99)
+            MetricValue::Vector(vec![MetricValue::Int(99)])
         );
-        assert_missing(
+        require_missing(
             file_state.metric_value_by_name("other_file", &"bar_plus_one".to_owned()),
             "Shouldn't have found bar_plus_one in other_file",
         );
-        assert_missing(
+        require_missing(
             file_state.metric_value_by_name("missing_file", &"bar_plus_one".to_owned()),
             "Shouldn't have found bar_plus_one in missing_file",
         );
-        assert_missing(
+        require_missing(
             file_state.metric_value_by_name("bar_file", &"other_file::bar_plus_one".to_owned()),
             "Shouldn't have found other_file::bar_plus_one",
         );
@@ -1085,7 +1390,7 @@ mod test {
         // foo can shadow eval as well as selector.
         assert_eq!(trial_state.metric_value_by_name("a", &"foo".to_owned()), MetricValue::Int(42));
         // A value that's not there should be "Missing" (e.g. not crash)
-        assert_missing(
+        require_missing(
             trial_state.metric_value_by_name("foo_file", &"oops_plus_one".to_owned()),
             "Trial found nonexistent name",
         );
@@ -1095,7 +1400,7 @@ mod test {
             MetricValue::Int(8)
         );
         // a::c should return Missing, not look up c in file a.
-        assert_missing(
+        require_missing(
             trial_state.metric_value_by_name("foo_file", &"ac_plus_one".to_owned()),
             "Trial should not have read c from file a",
         );
@@ -1153,17 +1458,17 @@ mod test {
             MetricValue::String("chromebook-x64".to_string())
         );
         assert_eq!(state.eval_value("", "Annotation('answer')"), MetricValue::Int(42));
-        assert_eq!(
+        assert_missing!(
             state.eval_value("", "Annotation('bogus')"),
-            MetricValue::Missing("Key 'bogus' not found in annotations".to_string())
+            "Key 'bogus' not found in annotations"
         );
-        assert_eq!(
+        assert_missing!(
             state.eval_value("", "Annotation('bogus', 'Double bogus')"),
-            MetricValue::Missing("Annotation() needs 1 string argument".to_string())
+            "Annotation() needs 1 string argument"
         );
-        assert_eq!(
+        assert_missing!(
             state.eval_value("", "Annotation(42)"),
-            MetricValue::Missing("Annotation() needs a string argument".to_string())
+            "Annotation() needs a string argument"
         );
         Ok(())
     }
@@ -1230,20 +1535,20 @@ mod test {
         assert_eq!(state.eval_value("root", "isOk"), MetricValue::String("OK".to_string()));
 
         // Missing value
-        assert_eq!(
+        assert_missing!(
             state.eval_value("root", "missing"),
-            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+            "Metric 'missing' Not Found in 'root'"
         );
 
         // Booleans short circuit
-        assert_eq!(
+        assert_missing!(
             state.eval_value("root", "Or(is42 != 42, missing)"),
-            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+            "Metric 'missing' Not Found in 'root'"
         );
         assert_eq!(state.eval_value("root", "Or(is42 == 42, missing)"), MetricValue::Bool(true));
-        assert_eq!(
+        assert_missing!(
             state.eval_value("root", "And(is42 == 42, missing)"),
-            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+            "Metric 'missing' Not Found in 'root'"
         );
 
         assert_eq!(state.eval_value("root", "And(is42 != 42, missing)"), MetricValue::Bool(false));
@@ -1266,6 +1571,119 @@ mod test {
         assert_eq!(
             state.eval_value("root", "Or(Missing(missing), missing == 'Hello')"),
             MetricValue::Bool(true)
+        );
+    }
+
+    #[test]
+    fn metric_value_from_json() {
+        /*
+            JSON subtypes:
+                Bool(bool),
+                Number(Number),
+                String(String),
+                Array(Vec<Value>),
+                Object(Map<String, Value>),
+        */
+        macro_rules! test_from {
+            ($json:path, $metric:path, $value:expr) => {
+                test_from_to!($json, $metric, $value, $value);
+            };
+        }
+        macro_rules! test_from_int {
+            ($json:path, $metric:path, $value:expr) => {
+                test_from_to!($json, $metric, JsonNumber::from($value), $value);
+            };
+        }
+        macro_rules! test_from_float {
+            ($json:path, $metric:path, $value:expr) => {
+                test_from_to!($json, $metric, JsonNumber::from_f64($value).unwrap(), $value);
+            };
+        }
+        macro_rules! test_from_to {
+            ($json:path, $metric:path, $json_value:expr, $metric_value:expr) => {
+                let metric_value = $metric($metric_value);
+                let json_value = $json($json_value);
+                assert_eq!(metric_value, MetricValue::from(json_value));
+            };
+        }
+        test_from!(JsonValue::String, MetricValue::String, "Hi World".to_string());
+        test_from_int!(JsonValue::Number, MetricValue::Int, 3);
+        test_from_int!(JsonValue::Number, MetricValue::Int, std::i64::MAX);
+        test_from_int!(JsonValue::Number, MetricValue::Int, std::i64::MIN);
+        test_from_to!(JsonValue::Number, MetricValue::Int, JsonNumber::from(std::u64::MAX), -1);
+        test_from_float!(JsonValue::Number, MetricValue::Float, 3.14);
+        test_from_float!(JsonValue::Number, MetricValue::Float, std::f64::MAX);
+        test_from_float!(JsonValue::Number, MetricValue::Float, std::f64::MIN);
+        test_from!(JsonValue::Bool, MetricValue::Bool, true);
+        test_from!(JsonValue::Bool, MetricValue::Bool, false);
+        let json_vec = vec![json!(1), json!(2), json!(3)];
+        let metric_vec = vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)];
+        test_from_to!(JsonValue::Array, MetricValue::Vector, json_vec, metric_vec);
+        assert_missing!(
+            MetricValue::from(JsonValue::Object(serde_json::Map::new())),
+            "Unsupported JSON type"
+        );
+    }
+
+    #[test]
+    fn metric_value_from_diagnostic_property() {
+        /*
+            DiagnosticProperty subtypes:
+                String(Key, String),
+                Bytes(Key, Vec<u8>),
+                Int(Key, i64),
+                Uint(Key, u64),
+                Double(Key, f64),
+                Bool(Key, bool),
+                DoubleArray(Key, ArrayContent<f64>),
+                IntArray(Key, ArrayContent<i64>),
+                UintArray(Key, ArrayContent<u64>),
+        */
+        macro_rules! test_from {
+            ($diagnostic:path, $metric:path, $value:expr) => {
+                test_from_to!($diagnostic, $metric, $value, $value);
+            };
+        }
+        macro_rules! test_from_to {
+            ($diagnostic:path, $metric:path, $diagnostic_value:expr, $metric_value:expr) => {
+                assert_eq!(
+                    $metric($metric_value),
+                    MetricValue::from($diagnostic("foo".to_string(), $diagnostic_value))
+                );
+            };
+        }
+        test_from!(DiagnosticProperty::String, MetricValue::String, "Hi World".to_string());
+        test_from!(DiagnosticProperty::Bytes, MetricValue::Bytes, vec![1, 2, 3]);
+        test_from!(DiagnosticProperty::Int, MetricValue::Int, 3);
+        test_from!(DiagnosticProperty::Int, MetricValue::Int, std::i64::MAX);
+        test_from!(DiagnosticProperty::Int, MetricValue::Int, std::i64::MIN);
+        test_from!(DiagnosticProperty::Uint, MetricValue::Int, 3);
+        test_from_to!(DiagnosticProperty::Uint, MetricValue::Int, std::u64::MAX, -1);
+        test_from!(DiagnosticProperty::Double, MetricValue::Float, 3.14);
+        test_from!(DiagnosticProperty::Double, MetricValue::Float, std::f64::MAX);
+        test_from!(DiagnosticProperty::Double, MetricValue::Float, std::f64::MIN);
+        test_from!(DiagnosticProperty::Bool, MetricValue::Bool, true);
+        test_from!(DiagnosticProperty::Bool, MetricValue::Bool, false);
+        let diagnostic_array = ArrayContent::Values(vec![1.5, 2.5, 3.5]);
+        test_from_to!(
+            DiagnosticProperty::DoubleArray,
+            MetricValue::Vector,
+            diagnostic_array,
+            vec![MetricValue::Float(1.5), MetricValue::Float(2.5), MetricValue::Float(3.5)]
+        );
+        let diagnostic_array = ArrayContent::Values(vec![1, 2, 3]);
+        test_from_to!(
+            DiagnosticProperty::IntArray,
+            MetricValue::Vector,
+            diagnostic_array,
+            vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
+        );
+        let diagnostic_array = ArrayContent::Values(vec![1, 2, 3]);
+        test_from_to!(
+            DiagnosticProperty::UintArray,
+            MetricValue::Vector,
+            diagnostic_array,
+            vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
         );
     }
 

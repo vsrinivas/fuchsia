@@ -50,7 +50,8 @@ file is:
 Select, Eval, Action, Test, and config file names consist of one
 alphabetic-or-underscore character followed by zero or more
 alphanumeric-or-underscore characters. Thus, "abc123" and "_abc_123" are valid
-names, but "123abc" and "abc-123" are not.
+names, but "123abc", "a.b.c", and "abc-123" are not. In particular, file names
+are not allowed to contain periods except for the `.triage` extension.
 
 Evals, Tests, and Actions in one file can refer to Selectors, Evals, and Actions
 in another file. The file basename is used as a namespace. `::` is used as the
@@ -82,7 +83,7 @@ Eval strings are infix math expressions with normal operator precedence.
 Arithmetic operators are + - * / //. / is float division; // is int division.
 
 Functions are a function name, '(', comma-separated expression list, ')'.
-Supported functions include:
+Provided functions include:
 
 *   Boolean
     *   And (1+ args)
@@ -91,19 +92,64 @@ Supported functions include:
 *   Numeric
     *   Min (1+ args)
     *   Max (1+ args)
+*   Functional
+    *   Fn([name1, name2, ...], expression)
+    *   Map(function, vector1, vector2, ...)
+    *   Fold(function, vector, optional_start_value)
+    *   Filter(function, vector)
+    *   Count(vector)
 
 Metric type follows the type read from the Inspect file. Currently, UInt is
-converted to Int upon reading. Operating on an Int and Float promotes the result
-to Float.
+converted to Int upon reading. Operating on mixed Int and Float promotes the
+result to Float.
 
-Boolean operations are > < >= <= == !=. The expression should have only 0 or 1
-of them.
+Boolean operations are > < >= <= == !=. The equality tests == and != compare
+numbers, Booleans, strings, and vectors. > < >= <= only compare numbers.
 
-Arrays / vectors are not supported (yet).
-
-Whitespace is optional.
+Whitespace is optional everywhere, but recommended around infix operators.
 
 Metric names, including namespaced names, do not need to be specially delimited.
+
+#### Functional programming and vectors
+
+Every selector actually returns a vector, but one-item vectors are
+automatically unwrapped for the purposes of arithmetic and boolean
+calculations. Inspect selectors without wildcards return a one-item
+vector unless the same moniker occurs multiple times in inspect.json.
+
+Selectors with wildcards, selectors for `bootstrap/driver_manager` and
+`netstack.cmx`, and (eventually) selectors on logs, may return
+multiple items in a vector. To process such values, Triage provides the
+following functions:
+
+*   Fn(parameters, expression) - for example, "Fn([a, b], a+b)"
+*   Map(function, vector1, vector2...)
+*   Fold(function, vector) or Fold(function, vector, start_value)
+*   Filter(function, vector)
+*   Count(vector)
+
+Vectors of values are written `[ expr, expr, expr ]`.
+
+If a `values` argument to Map is not a vector, its value is applied to each
+iteration. If all `values` are not vectors, or no `values` are supplied, an
+empty vector is returned. If the vector `values` are different lengths, the
+shortest one determines the result length and remaining values are not used.
+
+Count() does not check the type of items in a vector `values`. Count() of a
+non-vector `values` returns Missing.
+
+If a Fn expression is the entirety of an 'eval' expression, the name of that
+expression can be used as the first argument to Map, Fold, or Filter.
+
+If a function has the wrong arity for its arguments, the function it was passed
+to returns Missing. If the function's evaluation fails, for example due to
+inappropriate types, the function it was passed to may return a partial value:
+
+*   Map returns a vector, some elements of which may be Missing.
+*   Fold returns Missing.
+*   Filter expects its filter function to return Boolean true or false. If that
+    function returns anything else, including Missing, Filter adds a Missing
+    value at that point in its result list.
 
 ## Actions
 
@@ -131,16 +177,18 @@ required field, specifies a string to output when the warning is raised.
 ### Gauge Type
 
 A `Gauge` is a snapshot of a particular value at the time Triage is invoked.
-`Gauge` supports the following fields: * `value`, a required field, specifies a
-numerical value to display. * `format`, an optional field, specifies formatting
-rules for the gauge's value.
+`Gauge` supports the following fields:
+
+* `value`, a required field, specifies a value to display.
+* `format`, an optional field, specifies formatting rules for the gauge's value.
 
 #### Format
 
 The `format` field allows users to control how the gauge value is displayed. If
 this field isn't provided, or if an invalid value is given, then value will be
-displayed as is. `format` supports the following values: * `percentage`: prints
-a float as a percentage value.
+displayed as is. `format` supports the following values:
+
+* `percentage`: prints a float as a percentage value.
 
 ```JSON
     "actions": {

@@ -20,6 +20,7 @@ if (is_host) {
       "annotation_tests.triage",
       "error_rate.triage",
       "log_tests.triage",
+      "map_fold.triage",
       "other.triage",
       "sample.triage",
       "sample_tags.triage",

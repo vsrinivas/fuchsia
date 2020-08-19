@@ -542,6 +542,18 @@ Triage provides predefined functions for use in `eval` expressions:
 Note: Since logs are not structured, selectors can't be applied to them, so we
 supply regex matching functions instead.
 
+#### Functional programming
+
+Triage can apply functions to vectors of values. Vectors have the format
+`"[expr, expr, expr...]"`. Some selectors return multi-element vectors.
+
+Triage provides the functions `Map()`, `Fold()`, `Filter()`, and `Count()` to
+process vectors, and `Fn()` to define functions or lambdas for Map, Fold, and
+Filter to apply.
+
+For more information see [Configuring fx triage][triage-config-reference].
+
+
 ## Further Reading
 
 See [`fx triage`][fx-triage] for the latest features and options - Triage will
@@ -551,3 +563,4 @@ keep improving!
 [triage-inspect-example]: /src/diagnostics/examples/triage/snapshot/inspect.json
 [triage-rules-example]: /src/diagnostics/examples/triage/rules.triage
 [triage-codelab-solution]: /src/diagnostics/examples/triage/solution
+[triage-config-reference]: /src/diagnostics/triage/config.md

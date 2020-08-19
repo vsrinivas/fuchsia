@@ -111,13 +111,13 @@ impl Gauge {
         match metric_value {
             MetricValue::Float(value) => match &self.format {
                 Some(format) => match format.as_str() {
-                    "percentage" => format!("{:.2}%", value * 100.0f64).to_owned(),
-                    _ => format!("{}", value).to_owned(),
+                    "percentage" => format!("{:.2}%", value * 100.0f64),
+                    _ => format!("{}", value),
                 },
-                _ => format!("{}", value).to_owned(),
+                _ => format!("{}", value),
             },
-            MetricValue::Int(value) => format!("{}", value).to_owned(),
-            _ => "Value is not numeric.".to_owned(),
+            MetricValue::Int(value) => format!("{}", value),
+            value => format!("{:?}", value),
         }
     }
 }
@@ -274,9 +274,6 @@ mod test {
 
         let results = context.process();
 
-        for value in results.get_gauges().iter() {
-            println!("{}", value);
-        }
         assert!(includes(results.get_gauges(), "gauge1: 0.4"));
         assert!(includes(results.get_gauges(), "gauge2: 80.00%"));
         assert!(includes(results.get_gauges(), "gauge3: 1.2"));

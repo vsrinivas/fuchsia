@@ -40,6 +40,7 @@ copy("copy_configs") {
     "test_data/config/annotation_tests.triage",
     "test_data/config/error_rate.triage",
     "test_data/config/log_tests.triage",
+    "test_data/config/map_fold.triage",
     "test_data/config/other.triage",
     "test_data/config/sample.triage",
     "test_data/config/sample_tags.triage",

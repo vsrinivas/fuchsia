@@ -1,0 +1,71 @@
+{
+    eval: {
+        // Vectors are equal if their members are equal. Heterogenous types are OK.
+        basics_ok1: "[1, 2, 'c'] == [1, 2, 'c']",
+
+        // Unequal vectors are in fact evaluated unequal.
+        basics_ok2: "[1, 2, 'c'] != [1, 2, 'd']",
+
+        // We need to generate "Missing" for some of the tests
+        //missing: "1 + 'a'",
+        basics_ok3: "Missing(missing)",
+
+        // "Missing" always causes "Missing"
+        basics_ok4: "Missing(missing == missing)",
+
+        // A vector containing Missing isn't Missing
+        basics_ok5: "Not(Missing( [missing] ))",
+        basics_ok: "And(basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5)",
+        double: "Fn([a], a * 2)",
+        map_ok1: "Map(double, [1, 2, 3]) == [2, 4, 6]",
+        zip2: "Fn([a, b], [a, b])",
+        map_ok2: "Map(zip2, [1, 2], [3, 4]) == [[1, 3], [2, 4]]",
+        map_ok3: "Map(zip2, [1, 2], 3) == [[1, 3], [2, 3]]",
+        map_ok4: "Map(zip2, [1, 2], [3]) == [[1, 3]]",
+        map_ok5: "Map(zip2, 1, 3) == []",
+        map_ok: "And(map_ok1, map_ok2, map_ok3, map_ok4, map_ok5)",
+        fold_ok1: "Fold(Fn([a, b], a), [4, 8]) == 4",
+        fold_ok2: "Fold(Fn([a, b], a + b), [1, 2, 3], 9) == 15",
+        fold_ok: "And(fold_ok1, fold_ok2)",
+        count_ok1: "Count([1, 'b', 2 == 2, missing]) == 4",
+        count_ok2: "Count([]) == 0",
+        count_ok3: "Missing(Count(5))",
+        count_ok: "And(count_ok1, count_ok2, count_ok3)",
+        even: "Fn([a], a // 2 * 2 == a)",
+        filter_ok1: "And(count_ok1, count_ok2, count_ok3)",
+        filter_ok1: "Filter(even, [1, 2, 3, 4, 5]) == [2, 4]",
+        missing_element: "Filter(even, [1, 2, missing, 4, 5])",
+        filter_ok2: "Count(missing_element) == 3",
+        filter_ok3: "Count(Filter(Fn([a], Missing(a)), missing_element)) == 1",
+        filter_ok: "And(filter_ok1, filter_ok2, filter_ok3)",
+    },
+    act: {
+        all_ok: {
+            type: "Warning",
+            trigger: "And(basics_ok, map_ok, fold_ok, count_ok, filter_ok)",
+            print: "Everything worked as expected.",
+        },
+
+        // The gauges really help in debugging this file.
+        basics: {
+            type: "Gauge",
+            value: "[basics_ok, basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5]",
+        },
+        map: {
+            type: "Gauge",
+            value: "[map_ok, map_ok1, map_ok2, map_ok3, map_ok4, map_ok5]",
+        },
+        fold: {
+            type: "Gauge",
+            value: "[fold_ok, fold_ok1, fold_ok2]",
+        },
+        count: {
+            type: "Gauge",
+            value: "[count_ok, count_ok1, count_ok2, count_ok3]",
+        },
+        filter: {
+            type: "Gauge",
+            value: "[filter_ok, filter_ok1, filter_ok2, filter_ok3]",
+        },
+    },
+}

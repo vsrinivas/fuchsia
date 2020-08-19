@@ -25,8 +25,10 @@ use {
 // to right) returning the result of the parse and the remainder of the sequence.
 //
 // This parser parses infix math expressions with operators
-// + - * / > < >= <= == () following standard order of operations.
+// + - * / > < >= <= == () [] following standard order of operations.
 // It also supports functions like FuncName(expr, expr, expr...)
+// () must contain one expression, except when it's part of a function.
+// [] contains a comma-separated list of expressions.
 //
 // Combinators (parse-function builders) used in this parser:
 // alt: Allows backtracking and trying an alternative parse.
@@ -202,6 +204,11 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
         function!("BootlogHas", BootlogHas),
         function!("Missing", Missing),
         function!("Annotation", Annotation),
+        function!("Fn", Lambda),
+        function!("Map", Map),
+        function!("Fold", Fold),
+        function!("Filter", Filter),
+        function!("Count", Count),
     ))(i)
 }
 
@@ -215,12 +222,26 @@ fn function_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseEr
     })(i)
 }
 
+fn vector_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    let open_bracket = spaced(char('['));
+    let expressions = separated_list(spaced(char(',')), expression_top);
+    let close_bracket = spaced(char(']'));
+    let vector_sequence = tuple((open_bracket, expressions, close_bracket));
+    map(vector_sequence, move |(_, items, _)| Expression::Vector(items))(i)
+}
+
 // I use "primitive" to mean an expression that is not an infix operator pair:
 // a primitive value, a metric name, a function (simple name followed by
-// parenthesized expression list), or any expression contained by ( ).
+// parenthesized expression list), or any expression contained by ( ) or [ ].
 fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     let paren_expr = delimited(char('('), terminated(expression_top, whitespace), char(')'));
-    let res = spaced(alt((paren_expr, function_expression, name, alt((number, string)))))(i);
+    let res = spaced(alt((
+        paren_expr,
+        function_expression,
+        vector_expression,
+        name,
+        alt((number, string)),
+    )))(i);
     res
 }
 
@@ -403,7 +424,10 @@ pub fn parse_expression(i: &str) -> Result<Expression, Error> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::metrics::MetricState};
+    use {
+        super::*,
+        crate::{assert_missing, metrics::MetricState},
+    };
 
     // Res, simplify_fn, and get_parse are necessary because IResult can't be compared and can't
     //   easily be matched/decomposed. Res can be compared and debug-formatted.
@@ -440,6 +464,43 @@ mod test {
                 Res::Ok(_, _) => false,
             }
         }
+    }
+
+    #[test]
+    fn parse_vectors() {
+        fn v(i: i64) -> Expression {
+            Expression::Value(MetricValue::Int(i))
+        }
+
+        assert_eq!(
+            get_parse!(expression_primitive, "[1,2]"),
+            Res::Ok("", Expression::Vector(vec![v(1), v(2)]))
+        );
+        assert_eq!(
+            get_parse!(expression_primitive, " [ 1 , 2 ] "),
+            Res::Ok(" ", Expression::Vector(vec![v(1), v(2)]))
+        );
+        assert_eq!(
+            get_parse!(expression_primitive, "[1]"),
+            Res::Ok("", Expression::Vector(vec![v(1)]))
+        );
+        assert_eq!(
+            get_parse!(expression_primitive, "[]"),
+            Res::Ok("", Expression::Vector(Vec::new()))
+        );
+        let first = Expression::Function(Function::Add, vec![v(1), v(2)]);
+        let second = Expression::Function(Function::Sub, vec![v(2), v(1)]);
+        assert_eq!(
+            get_parse!(expression_primitive, "[1+2, 2-1]"),
+            Res::Ok("", Expression::Vector(vec![first, second]))
+        );
+        // Verify that we reject un-closed braces.
+        assert!(get_parse!(expression_primitive, "[1+2, 2-1").is_err());
+        // Verify that it's just the unclosed brace that was the problem in the previous line.
+        // (The parser will only look for the first complete primitive expression.)
+        assert_eq!(get_parse!(expression_primitive, "1+2, 2-1"), Res::Ok("+2, 2-1", v(1)));
+        assert!(get_parse!(expression_primitive, "]").is_err());
+        assert!(get_parse!(expression_primitive, "[").is_err());
     }
 
     #[test]
@@ -736,24 +797,15 @@ mod test {
     fn parser_boolean_functions_args() -> Result<(), Error> {
         assert_eq!(eval!("And(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("And(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_eq!(
-            eval!("And()"),
-            MetricValue::Missing("No operands in boolean expression".to_string())
-        );
+        assert_missing!(eval!("And()"), "No operands in boolean expression");
         assert_eq!(eval!("Or(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("Or(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_eq!(
-            eval!("Or()"),
-            MetricValue::Missing("No operands in boolean expression".to_string())
-        );
-        assert_eq!(
+        assert_missing!(eval!("Or()"), "No operands in boolean expression");
+        assert_missing!(
             eval!("Not(2>1, 2>1)"),
-            MetricValue::Missing("Wrong number of args (2) for unary bool operator".to_string())
+            "Wrong number of arguments (2) for unary bool operator"
         );
-        assert_eq!(
-            eval!("Not()"),
-            MetricValue::Missing("Wrong number of args (0) for unary bool operator".to_string())
-        );
+        assert_missing!(eval!("Not()"), "Wrong number of arguments (0) for unary bool operator");
         Ok(())
     }
 
@@ -763,14 +815,8 @@ mod test {
         assert_eq!(eval!("Min(2, 5, 3, -1)"), MetricValue::Int(-1));
         assert_eq!(eval!("Min(2)"), MetricValue::Int(2));
         assert_eq!(eval!("Max(2)"), MetricValue::Int(2));
-        assert_eq!(
-            eval!("Max()"),
-            MetricValue::Missing("No operands in math expression".to_string())
-        );
-        assert_eq!(
-            eval!("Min()"),
-            MetricValue::Missing("No operands in math expression".to_string())
-        );
+        assert_missing!(eval!("Max()"), "No operands in math expression");
+        assert_missing!(eval!("Min()"), "No operands in math expression");
         Ok(())
     }
 
@@ -778,6 +824,38 @@ mod test {
     fn parser_nested_function() -> Result<(), Error> {
         assert_eq!(eval!("Max(2, Min(4-1, 5))"), MetricValue::Int(3));
         assert_eq!(eval!("And(Max(1, 2+3)>1, Or(1>2, 2>1))"), MetricValue::Bool(true));
+        Ok(())
+    }
+
+    #[test]
+    fn singleton_vecs_promote() -> Result<(), Error> {
+        assert_eq!(eval!("Max([1+1], Min([4]-1, 4+[1]))"), MetricValue::Int(3));
+        assert_eq!(eval!("And(Max(1, 2+[3])>1, Or([1]>2, [1>2], 2>[1]))"), MetricValue::Bool(true));
+        Ok(())
+    }
+
+    #[test]
+    fn functional_programming() -> Result<(), Error> {
+        fn i(i: i64) -> MetricValue {
+            MetricValue::Int(i)
+        }
+        fn v(v: &[MetricValue]) -> MetricValue {
+            MetricValue::Vector(v.to_vec())
+        }
+        assert_eq!(eval!("Map(Fn([a], a*2), [1,2,3])"), v(&[i(2), i(4), i(6)]));
+        assert_eq!(
+            eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], [4, 5, 6])"),
+            v(&[v(&[i(1), i(4)]), v(&[i(2), i(5)]), v(&[i(3), i(6)])])
+        );
+        assert_eq!(eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], [4])"), v(&[v(&[i(1), i(4)])]));
+        assert_eq!(
+            eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], 4)"),
+            v(&[v(&[i(1), i(4)]), v(&[i(2), i(4)]), v(&[i(3), i(4)])])
+        );
+        assert_eq!(eval!("Fold(Fn([a, b], a + b), [1, 2, 3])"), i(6));
+        assert_eq!(eval!("Fold(Fn([a, b], a + 1), ['a', 'b', 'c', 'd'], 0)"), i(4));
+        assert_eq!(eval!("Filter(Fn([a], a > 5), [2, 4, 6, 8])"), v(&[i(6), i(8)]));
+        assert_eq!(eval!("Count([1,'a', 3, 2])"), i(4));
         Ok(())
     }
 }

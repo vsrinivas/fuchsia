@@ -328,4 +328,13 @@ integration_test!(
     not "[WARNING] Not using a chromebook"
 );
 
+integration_test!(
+    map_fold_test,
+    vec!["map_fold.triage"],
+    vec![],
+    vec![],
+    1,
+    "Everything worked as expected"
+);
+
 integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");
