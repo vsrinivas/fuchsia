@@ -6,6 +6,21 @@ import("//boards/arm64.gni")
 
 board_name = "vim3"
 
+_common_bootfs_deps = [
+  "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
+  "//src/connectivity/ethernet/drivers/dwmac",
+  "//src/connectivity/ethernet/drivers/realtek-8211f",
+  "//src/devices/board/drivers/vim3",
+  "//src/devices/mcu/drivers/vim3-mcu",
+  "//src/devices/rtc/drivers/nxp",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 board_package_labels += [ "//garnet/packages/prod:magma-vsi-vip" ]
 
 # partitions for fx flash to flash
