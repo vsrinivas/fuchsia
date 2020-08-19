@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{self as fasync, Time, TimeoutExt},
     fuchsia_component::{client, fuchsia_single_component_package_url, server::ServiceFs},
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::BoxFuture,
@@ -21,6 +21,7 @@ use {
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
         FutureExt,
     },
+    log::{error, warn},
 };
 
 #[cfg(test)]
@@ -102,10 +103,7 @@ impl Handler {
             .map(|r: Result<client::ExitStatus, Error>| {
                 r.and_then(|e| {
                     if e.code() != zx::sys::ZX_TASK_RETCODE_SYSCALL_KILL {
-                        syslog::fx_log_warn!(
-                            "Unexpected return code on child component exit: {:?}",
-                            e
-                        );
+                        warn!("Unexpected return code on child component exit: {:?}", e);
                     }
                     Ok(())
                 })
@@ -178,7 +176,7 @@ async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launche
                             let _ = responder.send();
                         }
                         Err(e) => {
-                            syslog::fx_log_err!("Failed to set role {:?}: {}", role, e);
+                            error!("Failed to set role {:?}: {}", role, e);
                             responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
                         }
                     }
@@ -188,7 +186,7 @@ async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launche
                 }
             }
             exit_status = handler.supervise().fuse() => {
-                syslog::fx_log_err!("Active role {:?} exited unexpectedly: {}", handler.active_role, exit_status);
+                error!("Active role {:?} exited unexpectedly: {}", handler.active_role, exit_status);
                 break;
             }
         }
@@ -204,7 +202,7 @@ fn handle_client_connection(
         while let Some(request) = stream.next().await {
             match request {
                 Ok(request) => sender.send(request).await.expect("send to handler failed"),
-                Err(e) => syslog::fx_log_err!("Client connection failed: {}", e),
+                Err(e) => error!("Client connection failed: {}", e),
             }
         }
     })
@@ -213,7 +211,7 @@ fn handle_client_connection(
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    syslog::init_with_tags(&["a2dp-manager"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&["a2dp-manager"]).expect("Can't init logger");
     let launcher = client::launcher().expect("connect to Launcher service");
     let (sender, receiver) = mpsc::channel(0);
 
