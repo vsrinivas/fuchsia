@@ -20,6 +20,7 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
       time_updater_(std::move(time_updater)),
       rough_time_server_(std::move(rough_time_server)),
       push_source_binding_(this),
+      status_watcher_(time_external::Status::OK),
       dispatcher_(dispatcher),
       retry_config_(retry_config) {
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
@@ -38,6 +39,8 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
         }
       };
   context_->outgoing()->AddPublicService(std::move(handler));
+  // TODO: trigger a check for when network becomes available so we can properly
+  // report the INITIALIZING state rather than starting on OK.
 }
 
 TimeServiceImpl::~TimeServiceImpl() = default;
@@ -82,20 +85,38 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
   auto ret = rough_time_server_.GetTimeFromServer();
   zx_time_t after = zx_clock_get_monotonic();
 
+  time_external::Status status;
   if (ret.first == time_server::OK && ret.second) {
     time_external::TimeSample sample;
     sample.set_monotonic((before + after) / 2);
     sample.set_utc(ret.second->get());
     sample_watcher_.Update(std::move(sample));
     dispatcher_last_success_time_.emplace(async::Now(dispatcher));
-    return;
+    status = time_external::Status::OK;
+  } else {
+    switch (ret.first) {
+      case time_server::OK:
+        status = time_external::Status::UNKNOWN_UNHEALTHY;
+        FX_LOGS(ERROR) << "Time server indicated OK status but did not return a time";
+        break;
+      case time_server::BAD_RESPONSE:
+        status = time_external::Status::PROTOCOL;
+        break;
+      case time_server::NETWORK_ERROR:
+        status = time_external::Status::NETWORK;
+        break;
+      case time_server::NOT_SUPPORTED:
+      default:
+        status = time_external::Status::UNKNOWN_UNHEALTHY;
+        break;
+    }
   }
-  if (ret.first == time_server::OK) {
-    FX_LOGS(ERROR) << "Time server indicated OK status but did not return a time";
+  status_watcher_.Update(status);
+  if (status != time_external::Status::OK) {
+    zx::time next_poll_time =
+        async::Now(dispatcher_) + zx::nsec(retry_config_.nanos_between_failures);
+    ScheduleAsyncPoll(next_poll_time);
   }
-  zx::time next_poll_time =
-      async::Now(dispatcher_) + zx::nsec(retry_config_.nanos_between_failures);
-  ScheduleAsyncPoll(next_poll_time);
 }
 
 void TimeServiceImpl::ScheduleAsyncPoll(zx::time dispatch_time) {
@@ -128,14 +149,19 @@ void TimeServiceImpl::WatchSample(TimeServiceImpl::WatchSampleCallback callback)
 }
 
 void TimeServiceImpl::WatchStatus(TimeServiceImpl::WatchStatusCallback callback) {
-  // TODO(satsukiu) - unimplemented.
-  ResetPushSourceClient(ZX_ERR_NOT_SUPPORTED);
+  if (!status_watcher_.Watch(std::move(callback))) {
+    // failure to watch indicates we have multiple concurrent WatchSample calls so close the
+    // channel.
+    ResetPushSourceClient(ZX_ERR_BAD_STATE);
+    return;
+  }
 }
 
 void TimeServiceImpl::ResetPushSourceClient(zx_status_t epitaph) {
   push_source_binding_.Close(epitaph);
   push_source_binding_.Unbind();
   sample_watcher_.ResetClient();
+  status_watcher_.ResetClient();
 }
 
 }  // namespace network_time_service

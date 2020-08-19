@@ -84,7 +84,8 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
   time_server::RoughTimeServer rough_time_server_;
 
   fidl::Binding<time_external::PushSource> push_source_binding_;
-  SampleWatcher sample_watcher_;
+  Watcher<time_external::Status> status_watcher_;
+  Watcher<time_external::TimeSample> sample_watcher_;
 
   async_dispatcher_t* dispatcher_;
   // Time of last successful update. Reported in the dispatcher's clock which may not be monotonic.

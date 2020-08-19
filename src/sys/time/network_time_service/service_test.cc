@@ -180,6 +180,64 @@ TEST_F(PushSourceTest, WatchSample) {
   EXPECT_TRUE(second_call_complete);
 }
 
+TEST_F(PushSourceTest, WatchStatus) {
+  uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kTestPrivateKey);
+  auto proxy = ConnectToService(roughtime_port);
+  bool call_complete = false;
+  proxy->WatchStatus([&](time_external::Status status) {
+    EXPECT_EQ(status, time_external::Status::OK);
+    call_complete = true;
+  });
+  RunLoopUntilIdle();
+
+  // Second call should not complete since status should not change.
+  // A call to WatchSample made afterwards should complete while the status watch is active.
+  proxy->WatchStatus([&](time_external::Status status) { FAIL(); });
+  bool sample_call_complete = false;
+  proxy->WatchSample([&](time_external::TimeSample sample) { sample_call_complete = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(sample_call_complete);
+}
+
+TEST_F(PushSourceTest, WatchStatusUnhealthy) {
+  // Connect to a roughtime server signing with a bad key to simulate unhealthy.
+  uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
+  auto proxy = ConnectToService(roughtime_port);
+  // First call always indicates OK
+  proxy->WatchStatus(
+      [&](time_external::Status status) { EXPECT_EQ(status, time_external::Status::OK); });
+  RunLoopUntilIdle();
+
+  // Obtaining a sample should fail and result in reporting an unhealthy status.
+  proxy->WatchSample([&](time_external::TimeSample sample) { FAIL(); });
+  bool second_call_complete = false;
+  proxy->WatchStatus([&](time_external::Status status) {
+    EXPECT_EQ(status, time_external::Status::PROTOCOL);
+    second_call_complete = true;
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(second_call_complete);
+}
+
+TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchStatus) {
+  uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
+  bool error_handler_called = false;
+  auto proxy = ConnectToService(roughtime_port);
+  proxy.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+    error_handler_called = true;
+  });
+  // first call always completes immediately
+  proxy->WatchStatus(
+      [&](time_external::Status status) { EXPECT_EQ(status, time_external::Status::OK); });
+  RunLoopUntilIdle();
+
+  proxy->WatchStatus([&](time_external::Status sample) { FAIL(); });
+  proxy->WatchStatus([&](time_external::Status sample) { FAIL(); });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(error_handler_called);
+}
+
 TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchSample) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
   bool error_handler_called = false;

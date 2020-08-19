@@ -10,7 +10,10 @@
 using namespace fuchsia::time::external;
 namespace network_time_service {
 
+// Tests Watcher using TimeSample as the contained value.
 class SampleWatcherTest : public gtest::TestLoopFixture {};
+
+using SampleWatcher = Watcher<TimeSample>;
 
 TEST_F(SampleWatcherTest, FirstWatch) {
   SampleWatcher watcher;
@@ -25,6 +28,21 @@ TEST_F(SampleWatcherTest, FirstWatch) {
   initial_sample.set_monotonic(20);
   initial_sample.set_utc(40);
   watcher.Update(std::move(initial_sample));
+  EXPECT_TRUE(initial_called);
+}
+
+TEST_F(SampleWatcherTest, FirstWatchWithInitial) {
+  TimeSample initial_sample;
+  initial_sample.set_monotonic(20);
+  initial_sample.set_utc(40);
+  SampleWatcher watcher(std::move(initial_sample));
+
+  bool initial_called = false;
+  EXPECT_TRUE(watcher.Watch([&](TimeSample sample) {
+    EXPECT_EQ(sample.monotonic(), 20);
+    EXPECT_EQ(sample.utc(), 40);
+    initial_called = true;
+  }));
   EXPECT_TRUE(initial_called);
 }
 
@@ -137,4 +155,5 @@ TEST_F(SampleWatcherTest, ResetClient) {
   }));
   EXPECT_TRUE(third_called);
 }
+
 }  // namespace network_time_service

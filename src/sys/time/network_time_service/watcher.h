@@ -5,36 +5,68 @@
 #ifndef SRC_SYS_TIME_NETWORK_TIME_SERVICE_WATCHER_H_
 #define SRC_SYS_TIME_NETWORK_TIME_SERVICE_WATCHER_H_
 
-#include <fuchsia/time/external/cpp/fidl.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/comparison.h>
+#include <lib/fit/function.h>
 
-namespace time_external = fuchsia::time::external;
 namespace network_time_service {
 
 // A hanging get handler that allows parking callbacks, then invoking them
 // later when a new value is available. This class is not thread safe.
-class SampleWatcher {
+template <class T>
+class Watcher {
  public:
-  SampleWatcher() {}
+  using Callback = fit::function<void(T)>;
 
-  // Register a callback that is executed when a new sample is produced and
+  Watcher() {}
+
+  Watcher(T initial_value) : current_(std::move(initial_value)) {}
+
+  // Register a callback that is executed when a new value is produced and
   // return if successful. Returns false without registering the callback if
   // another callback is already registered.
-  bool Watch(time_external::PushSource::WatchSampleCallback callback);
+  bool Watch(Callback callback) {
+    if (!callback_) {
+      callback_ = std::move(callback);
+      CallbackIfNeeded();
+      return true;
+    }
+    return false;
+  }
 
-  // Push a new sample. Any registered callback is invoked if the sample has changed.
-  void Update(time_external::TimeSample new_sample);
+  // Push a new value. Any registered callback is invoked if the value has changed.
+  void Update(T new_value) {
+    current_ = std::move(new_value);
+    CallbackIfNeeded();
+  }
 
   // Clears any registered callback and last sent state.
-  void ResetClient();
+  void ResetClient() {
+    last_sent_.reset();
+    callback_.reset();
+  }
 
  private:
-  time_external::TimeSample CloneTimeSample(const time_external::TimeSample& sample);
+  T CloneValue(const T& sample) {
+    T clone;
+    fidl::Clone(sample, &clone);
+    return clone;
+  }
 
-  void CallbackIfNeeded();
+  void CallbackIfNeeded() {
+    if (!callback_) {
+      return;
+    }
+    if (current_ && (!last_sent_ || !fidl::Equals(*current_, *last_sent_))) {
+      callback_.value()(CloneValue(current_.value()));
+      callback_.reset();
+      last_sent_ = CloneValue(current_.value());
+    }
+  }
 
-  std::optional<time_external::PushSource::WatchSampleCallback> callback_;
-  std::optional<time_external::TimeSample> last_sent_;
-  std::optional<time_external::TimeSample> current_;
+  std::optional<Callback> callback_;
+  std::optional<T> last_sent_;
+  std::optional<T> current_;
 };
 
 }  // namespace network_time_service
