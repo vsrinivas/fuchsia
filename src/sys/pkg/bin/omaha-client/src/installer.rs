@@ -86,7 +86,7 @@ impl Installer for FuchsiaInstaller {
             self.reboot_controller = Some(reboot_controller);
 
             let mut update_attempt =
-                start_update(&pkgurl, options, proxy, Some(reboot_controller_server_end))
+                start_update(&pkgurl, options, &proxy, Some(reboot_controller_server_end))
                     .await
                     .map_err(|_| FuchsiaInstallError::Installer)?;
 
