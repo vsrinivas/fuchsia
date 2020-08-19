@@ -123,7 +123,6 @@ group("tests") {
     "//zircon/system/utest/inspector:inspector-package",
     "//zircon/system/utest/int-types:int-types-package",
     "//zircon/system/utest/kernel-unittests:kernel-unittests-package",
-    "//zircon/system/utest/loader-service:loader-service-package",
     "//zircon/system/utest/logger:logger-package",
     "//zircon/system/utest/miscsvc:miscsvc-package",
     "//zircon/system/utest/namespace:namespace-package",

@@ -15,7 +15,6 @@ executable("runtests") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/runtests-utils",
   ]
 }

@@ -39,7 +39,6 @@ test("sanitizer-utils") {
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/loader-service",
   ]
   data_deps = [ ":sanitizer-exit-hook-test-helper" ]
 }

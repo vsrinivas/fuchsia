@@ -73,7 +73,6 @@ zx_library("runtests-utils") {
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/loader-service",
       "//zircon/system/ulib/unittest",
     ]
     if (false) {  # is_gcc
