@@ -41,6 +41,7 @@ sdk://fidl/fuchsia.hardware.audio
 sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hardware.light
+sdk://fidl/fuchsia.hardware.network
 sdk://fidl/fuchsia.hardware.power.statecontrol
 sdk://fidl/fuchsia.hwinfo
 sdk://fidl/fuchsia.images
@@ -72,6 +73,7 @@ sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
+sdk://fidl/fuchsia.net.interfaces
 sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.oldhttp
 sdk://fidl/fuchsia.net.routes

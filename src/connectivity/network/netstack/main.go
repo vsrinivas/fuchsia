@@ -32,6 +32,7 @@ import (
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
+	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/routes"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -292,6 +293,8 @@ func Main() {
 	}
 
 	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
+	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
+	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
 	cobaltClient := NewCobaltClient()
 	ndpDisp.ns = ns
@@ -454,6 +457,19 @@ func Main() {
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(routes.StateName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := interfaces.StateWithCtxStub{Impl: &interfaceStateImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			interfaces.StateName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
 				})
 				return nil
 			},

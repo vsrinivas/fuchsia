@@ -385,6 +385,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				}
 
 				n.ns.onInterfacesChanged()
+				n.ns.onPropertiesChange(event.nicID)
 
 			case *ndpDiscoveredRouterEvent:
 				nicID, addr := event.nicID, event.addr
@@ -436,6 +437,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
 				_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
 				n.ns.onInterfacesChanged()
+				n.ns.onPropertiesChange(event.nicID)
 
 			case *ndpRecursiveDNSServerEvent:
 				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime

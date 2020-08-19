@@ -5,6 +5,8 @@
 package netstack
 
 import (
+	"fidl/fuchsia/hardware/network"
+
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -95,6 +97,10 @@ func (*noopController) Down() error {
 
 func (*noopController) SetPromiscuousMode(v bool) error {
 	return nil
+}
+
+func (*noopController) DeviceClass() network.DeviceClass {
+	return network.DeviceClassUnknown
 }
 
 var _ link.Observer = (*noopObserver)(nil)

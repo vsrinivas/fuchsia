@@ -4,7 +4,7 @@
 
 library fuchsia.net;
 
-/// A unique interface identifier;
+/// A unique non-zero interface identifier.
 using interface_id = uint64;
 
 /// Ipv4Address is expressed in network byte order, so the most significant byte

@@ -20,6 +20,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/hardware/network"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
@@ -426,6 +427,10 @@ func (c *Client) ListenTX() error {
 		return err
 	}
 	return nil
+}
+
+func (*Client) DeviceClass() network.DeviceClass {
+	return network.DeviceClassEthernet
 }
 
 func (c *Client) RxStats() *fifo.RxStats {

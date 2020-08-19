@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 
+	"fidl/fuchsia/hardware/network"
+
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -107,6 +109,10 @@ func (ep *Endpoint) Down() error {
 // work.
 func (ep *Endpoint) SetPromiscuousMode(bool) error {
 	return nil
+}
+
+func (*Endpoint) DeviceClass() network.DeviceClass {
+	return network.DeviceClassBridge
 }
 
 func (ep *Endpoint) MTU() uint32 {

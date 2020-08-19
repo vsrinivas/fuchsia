@@ -1,0 +1,109 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.interfaces;
+
+using fuchsia.hardware.network;
+using fuchsia.net;
+
+struct Empty {
+};
+
+/// An interface-state change event.
+union Event {
+    /// Properties of an existing interface.
+    1: Properties exists;
+    /// Properties of an interface that was added.
+    2: Properties added;
+    /// ID of the interface that was removed.
+    3: fuchsia.net.interface_id removed;
+    /// Properties of an interface that have changed.
+    4: Properties changed;
+    /// Sentinel value indicating there is no event to report.
+    5: Empty idle;
+};
+
+/// An interface's device class.
+union DeviceClass {
+    /// The interface is loopback.
+    1: Empty loopback;
+    /// The interface's network device class.
+    2: fuchsia.hardware.network.DeviceClass device;
+};
+
+/// An address and its properties.
+// This address type is expected to grow to include additional properties such
+// as IPv6 address state.
+table Address {
+    /// The address and prefix length.
+    1: fuchsia.net.Subnet addr;
+};
+
+/// Properties of a network interface.
+table Properties {
+    /// An opaque identifier for the interface. Its value will not be reused
+    /// even if the device is removed and subsequently re-added.
+    1: fuchsia.net.interface_id id;
+    /// The addresses currently assigned to the interface.
+    2: vector<Address>:MAX addresses;
+    /// The online status of the interface.
+    3: bool online;
+    /// The device class of the interface.
+    4: DeviceClass device_class;
+    /// Whether there is a default IPv4 route through this interface.
+    5: bool has_default_ipv4_route;
+    /// Whether there is a default IPv6 route through this interface.
+    6: bool has_default_ipv6_route;
+};
+
+/// Options for configuring the interface state watcher.
+// This type is currently empty, but may grow to allow behavior tuning of the
+// watcher, e.g. allow subscribing to a subset of the available events.
+table WatcherOptions {
+};
+
+/// Network interface state inspection and observation.
+[Discoverable]
+protocol State {
+    /// Initialize a watcher for interface state.
+    ///
+    /// The server enqueues interface addition, deletion and property changes as
+    /// they occur, which can then be retrieved via the pipelined protocol. If
+    /// the queue cannot be allocated, the channel will be closed. Also, if the
+    /// queue is full and a change event cannot be enqueued, the channel will be
+    /// closed.
+    ///
+    /// + request `watcher` the protocol channel over which changes can be
+    ///   observed.
+    GetWatcher(WatcherOptions options, request<Watcher> watcher);
+};
+
+/// Observer protocol for changes to network interfaces (addition, deletion, and
+/// interface property changes).
+protocol Watcher {
+    /// Hanging get for an interface addition/deletion change.
+    ///
+    /// Clients should only have one call of this method at a time; a second
+    /// call to this method while a call is already pending will cause
+    /// the channel to be closed.
+    ///
+    /// If there are N interfaces present at the time the channel was
+    /// initialized, then the first N invocations of this method will return
+    /// each existing interface, followed by an idle value indicating that
+    /// all existing interfaces have been sent. Subsequent calls will
+    /// immediately return if there is a change to be reported, or block until a
+    /// change occurs.
+    ///
+    /// The server may choose to coalesce property change events, e.g. when
+    /// multiple independent property changes occur. As a result, clients cannot
+    /// assume that the order in which they observe the interface changes is the
+    /// order in which the changes occurred.
+    ///
+    /// - response `event` the interface change event. Properties of an added or
+    ///   existing interface will have all fields present. Property change
+    ///   events will always have the interface ID field present (the ID never
+    ///   changes); while other fields will only be present with the new value
+    ///   if the property has changed.
+    Watch() -> (Event event);
+};

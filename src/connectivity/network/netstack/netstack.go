@@ -320,6 +320,8 @@ type Netstack struct {
 		}
 	}
 
+	interfaceWatchers interfaceWatcherCollection
+
 	stack      *stack.Stack
 	routeTable routes.RouteTable
 
@@ -469,6 +471,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 		metricTracksInterface = true
 	}
 
+	var defaultRouteAdded bool
 	for _, r := range rs {
 		// If we don't have an interface set, find it using the gateway address.
 		if r.NIC == 0 {
@@ -495,8 +498,15 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 
 		ns.routeTable.AddRoute(r, metric, metricTracksInterface, dynamic, enabled)
 		ifs.mu.Unlock()
+
+		if util.IsAny(r.Destination.ID()) && enabled {
+			defaultRouteAdded = true
+		}
 	}
 	ns.routeTable.UpdateStack(ns.stack)
+	if defaultRouteAdded {
+		ns.onDefaultRouteChange()
+	}
 	return nil
 }
 
@@ -508,6 +518,9 @@ func (ns *Netstack) DelRoute(r tcpip.Route) error {
 	}
 
 	ns.routeTable.UpdateStack(ns.stack)
+	if util.IsAny(r.Destination.ID()) {
+		ns.onDefaultRouteChange()
+	}
 	return nil
 }
 
@@ -521,6 +534,9 @@ func (ns *Netstack) GetExtendedRouteTable() []routes.ExtendedRoute {
 func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Action) {
 	ns.routeTable.UpdateRoutesByInterface(nicid, action)
 	ns.routeTable.UpdateStack(ns.stack)
+	// ifState may be locked here, so run the default route change handler in a
+	// goroutine to prevent deadlock.
+	go ns.onDefaultRouteChange()
 }
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
@@ -549,6 +565,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 	}
 
 	ns.onInterfacesChanged()
+	ns.onPropertiesChange(nic)
 	return true, nil
 }
 
@@ -583,6 +600,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 	}
 
 	ns.onInterfacesChanged()
+	ns.onPropertiesChange(nic)
 	return true, nil
 }
 
@@ -630,10 +648,13 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				}
 			}
 		}
-		// Dispatch onInterfacesChanged on another goroutine to prevent a
+		// Dispatch interface change handlers on another goroutine to prevent a
 		// deadlock while holding ifState.mu since dhcpAcquired is called on
 		// cancellation.
-		go ifs.ns.onInterfacesChanged()
+		go func() {
+			ifs.ns.onInterfacesChanged()
+			ifs.ns.onPropertiesChange(ifs.nicid)
+		}()
 	}
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
@@ -802,6 +823,7 @@ func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	_ = syslog.Infof("NIC %s: observed linkOnline=%t interfacesChanged=%t", name, linkOnline, changed)
 	if changed {
 		ifs.ns.onInterfacesChanged()
+		ifs.ns.onPropertiesChange(ifs.nicid)
 	}
 }
 
@@ -836,6 +858,7 @@ func (ifs *ifState) setState(enabled bool) error {
 
 	if changed {
 		ifs.ns.onInterfacesChanged()
+		ifs.ns.onPropertiesChange(ifs.nicid)
 	}
 
 	return nil
@@ -865,6 +888,7 @@ func (ifs *ifState) Remove() {
 	_ = syslog.Infof("NIC %s: removed", name)
 
 	ifs.ns.onInterfacesChanged()
+	ifs.ns.interfaceWatchers.onInterfaceRemove(ifs.nicid)
 }
 
 var nameProviderErrorLogged uint32 = 0
@@ -1116,6 +1140,7 @@ func (ns *Netstack) addEndpoint(
 	}
 
 	ns.onInterfacesChanged()
+	ns.onInterfaceAdd(ifs.nicid)
 
 	return ifs, nil
 }

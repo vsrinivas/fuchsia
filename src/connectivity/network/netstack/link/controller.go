@@ -4,10 +4,13 @@
 
 package link
 
+import "fidl/fuchsia/hardware/network"
+
 type Controller interface {
 	Up() error
 	Down() error
 	SetPromiscuousMode(bool) error
+	DeviceClass() network.DeviceClass
 }
 
 type Observer interface {

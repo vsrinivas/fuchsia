@@ -19,6 +19,7 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
+	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
@@ -804,6 +805,8 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		// DNS configuration.
 		dnsConfig: dns.MakeServersConfig(stk.Clock()),
 	}
+	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
+	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 	t.Cleanup(func() {
 		for _, nic := range ns.stack.NICInfo() {
 			ifs := nic.Context.(*ifState)

@@ -335,6 +335,10 @@ func (c *Client) SetPromiscuousMode(bool) error {
 	return fmt.Errorf("promiscuous mode not supported on device")
 }
 
+func (c *Client) DeviceClass() network.DeviceClass {
+	return c.info.Class
+}
+
 // Closes the client and disposes of all its resources.
 func (c *Client) Close() error {
 	c.state.mu.Lock()

@@ -55,6 +55,7 @@ test_package("netstack_gotests") {
     ":netstack_bench_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
+    ":netstack_link_bridge_test",
     ":netstack_link_eth_test",
     ":netstack_link_fifo_test",
     ":netstack_link_netdevice_test",
@@ -81,6 +82,10 @@ test_package("netstack_gotests") {
     },
     {
       name = "netstack_filter_test"
+      environments = [ emu_env ]
+    },
+    {
+      name = "netstack_link_bridge_test"
       environments = [ emu_env ]
     },
     {
@@ -151,6 +156,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.net($go_toolchain)",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.interfaces($go_toolchain)",
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
     "//sdk/fidl/fuchsia.net.neighbor($go_toolchain)",
     "//sdk/fidl/fuchsia.net.routes($go_toolchain)",
@@ -187,6 +193,13 @@ go_test("netstack_fidlconv_test") {
 go_test("netstack_filter_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter" ]
+  deps = [ ":netstack_lib" ]
+}
+
+go_test("netstack_link_bridge_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge" ]
+
   deps = [ ":netstack_lib" ]
 }
 
@@ -234,7 +247,6 @@ group("tests") {
     "dhcp:netstack_dhcp_gotests",
     "dns:netstack_dns_gotests",
     "inspect/validator:tests",
-    "link/bridge:netstack_link_bridge_test($host_toolchain)",
     "routes:netstack_routes_gotests",
     "tests",
     "util:netstack_util_test($host_toolchain)",
