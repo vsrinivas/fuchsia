@@ -149,16 +149,6 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   // Populated internal structures based on predefined tables
   CopyDisplaySettings();
 
-  // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
-  // part of code assumes a clock factor of 1. All the LCD tables from Amlogic have this
-  // relationship established. We'll have to revisit the calculation if this ratio cannot
-  // be met.
-  if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
-    DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
-  }
-
   if (!skip_disp_init) {
     vpu_->PowerOff();
     vpu_->PowerOn();

@@ -115,9 +115,9 @@ const display_setting_t kDisplaySettingSt7701s = {
 };
 const display_setting_t kDisplaySettingTV080WXM_FT = {
     .lane_num = 4,
-    .bit_rate_max = 625,
-    .clock_factor = 8,
-    .lcd_clock = 77967000,
+    .bit_rate_max = 498,
+    .clock_factor = 6,
+    .lcd_clock = 77967360,
     .h_active = 800,
     .v_active = 1280,
     .h_period = 864,
