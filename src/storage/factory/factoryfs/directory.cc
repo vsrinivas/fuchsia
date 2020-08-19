@@ -9,9 +9,18 @@
 #include <sys/stat.h>
 #include <zircon/assert.h>
 
+#include <string_view>
+
 #include "src/storage/factory/factoryfs/superblock.h"
 
 namespace factoryfs {
+
+Directory::Directory(factoryfs::Factoryfs& fs, std::string_view path)
+    : factoryfs_(fs), path_(path) {
+  factoryfs_.DidOpen(path_, *this);
+}
+
+Directory::~Directory() { factoryfs_.DidClose(path_); }
 
 zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name_view,
                               uint32_t mode) {
@@ -38,8 +47,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 
 void Directory::Sync(SyncCallback closure) {}
 
-zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name_view) {
-  std::string name(name_view);
+zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
   ZX_ASSERT(name.find('/') == std::string::npos);
 
   if (name == ".") {
@@ -47,7 +55,16 @@ zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     return ZX_OK;
   }
 
-  auto result = factoryfs_.Lookup(name_view);
+  std::string full_path;
+  if (!path_.empty()) {
+    full_path.reserve(path_.size() + 1 + name.size());
+    full_path = path_;
+    full_path.push_back('/');
+    full_path.append(name);
+    name = full_path;
+  }
+
+  auto result = factoryfs_.Lookup(name);
   if (result.is_error()) {
     return result.status_value();
   }

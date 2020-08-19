@@ -26,12 +26,14 @@ class Factoryfs;
 
 class Directory final : public fs::Vnode {
  public:
-  explicit Directory(factoryfs::Factoryfs& fs) : factoryfs_(fs) {}
+  explicit Directory(factoryfs::Factoryfs& fs, std::string_view path);
 
   Directory(const Directory&) = delete;
   Directory(Directory&&) = delete;
   Directory& operator=(const Directory&) = delete;
   Directory& operator=(Directory&&) = delete;
+
+  ~Directory();
 
   // Vnode routines.
   fs::VnodeProtocolSet GetProtocols() const override { return fs::VnodeProtocol::kDirectory; }
@@ -67,6 +69,7 @@ class Directory final : public fs::Vnode {
 
  private:
   Factoryfs& factoryfs_;
+  const std::string path_;
 };
 
 }  // namespace factoryfs

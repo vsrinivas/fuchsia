@@ -23,7 +23,8 @@ zx_status_t File::InitFileVmo() {
   zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetSize(), kFactoryfsBlockSize);
   if ((status = zx::vmo::create(vmo_size, 0, &vmo_)) != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: Failed to initialize vmo; error: %d\n", status);
+    FS_TRACE_ERROR("factoryfs: Failed to initialize vmo; error: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
   vmo_size_ = vmo_size;
@@ -69,11 +70,11 @@ zx_status_t File::Read(void* data, size_t len, size_t offset, size_t* out_actual
 
   zx_status_t status = ZX_OK;
   if ((status = InitFileVmo()) != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error:%s", zx_status_get_string(status));
+    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error: %s\n", zx_status_get_string(status));
     return status;
   }
   if ((status = vmo_.read(data, offset, len)) != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: Failed to read VMO error:%s", zx_status_get_string(status));
+    FS_TRACE_ERROR("factoryfs: Failed to read VMO error: %s\n", zx_status_get_string(status));
     return status;
   }
   *out_actual = len;

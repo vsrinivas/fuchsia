@@ -9,7 +9,7 @@
 namespace factoryfs {
 
 DirectoryEntryManager::DirectoryEntryManager(const DirectoryEntry* directory_entry) {
-  buffer_ = std::make_unique<uint8_t>(DirentSize(directory_entry->name_len));
+  buffer_ = std::make_unique<uint32_t[]>(DirentSize(directory_entry->name_len) / sizeof(uint32_t));
   memcpy(buffer_.get(), directory_entry, DirentSize(directory_entry->name_len));
 }
 

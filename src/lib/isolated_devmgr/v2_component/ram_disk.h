@@ -34,6 +34,8 @@ class RamDisk {
       ramdisk_destroy(client_);
   }
 
+  ramdisk_client_t* client() const { return client_; }
+
   // Returns the path to the device.
   std::string path() const { return ramdisk_get_path(client_); }
 

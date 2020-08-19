@@ -77,8 +77,31 @@ fuchsia_unittest_component("factoryfs-unit") {
   deps = [ ":factoryfs_unit" ]
 }
 
+test("integration_test") {
+  sources = [ "integration_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component:client",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fs-management",
+  ]
+}
+
+fuchsia_component("factoryfs-integration-test") {
+  testonly = true
+  manifest = "meta/factory_integration_tests.cml"
+  deps = [
+    ":integration_test",
+    "//src/storage/bin/factoryfs",
+    "//src/storage/factory/export_ffs:bin",
+  ]
+}
+
 fuchsia_test_package("factoryfs-tests") {
-  test_components = [ ":factoryfs-unit" ]
+  test_components = [
+    ":factoryfs-unit",
+    ":factoryfs-integration-test",
+  ]
 }
 
 group("tests") {

@@ -35,7 +35,7 @@ static zx_status_t IsValidDirectoryEntry(const DirectoryEntry& entry) {
 }
 
 static void DumpDirectoryEntry(const DirectoryEntry* entry) {
-#if FS_TRACE_DEBUG_ENABLED
+#ifdef FS_TRACE_DEBUG_ENABLED
   if (true) {
 #else
   if (false) {
@@ -51,17 +51,17 @@ uint32_t FsToDeviceBlocks(uint32_t fs_block, uint32_t disk_block_size) {
 };
 
 zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
-  fbl::RefPtr<Directory> vn = fbl::AdoptRef(new Directory(*this));
-  auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+  auto root = fbl::MakeRefCounted<Directory>(*this, std::string_view());
+  auto validated_options = root->ValidateOptions(fs::VnodeConnectionOptions());
   if (validated_options.is_error()) {
     return validated_options.error();
   }
-  zx_status_t status = vn->Open(validated_options.value(), nullptr);
+  zx_status_t status = root->Open(validated_options.value(), nullptr);
   if (status != ZX_OK) {
     return status;
   }
 
-  *out = std::move(vn);
+  *out = std::move(root);
   return ZX_OK;
 }
 
@@ -83,14 +83,14 @@ zx_status_t Factoryfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Bl
   Superblock superblock;
   zx_status_t status = device->ReadBlock(0, kFactoryfsBlockSize, &superblock);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: could not read info block\n");
+    FS_TRACE_ERROR("factoryfs: could not read info block: %s\n", zx_status_get_string(status));
     return status;
   }
 
   fuchsia_hardware_block_BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: cannot acquire block info: %d\n", status);
+    FS_TRACE_ERROR("factoryfs: cannot acquire block info: %s\n", zx_status_get_string(status));
     return status;
   }
   // TODO(manalib).
@@ -182,10 +182,13 @@ zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
   // Hence it is safe to use reinterpret cast.
   while (avail > sizeof(DirectoryEntry)) {
     DirectoryEntry* entry = reinterpret_cast<DirectoryEntry*>(buffer);
+    if (entry->name_len == 0) {
+      break;
+    }
     DumpDirectoryEntry(entry);
     size_t size = DirentSize(entry->name_len);
     if (size > avail) {
-      FS_TRACE_ERROR("factoryfs: invalid directory entry!\n");
+      FS_TRACE_ERROR("factoryfs: invalid directory entry: size > avail!\n");
       return ZX_ERR_IO;
     }
     if ((status = IsValidDirectoryEntry(*entry)) != ZX_OK) {
@@ -217,7 +220,7 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
 
   zx_status_t status = ZX_OK;
   if ((status = InitDirectoryVmo()) != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error:%s", zx_status_get_string(status));
+    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -230,7 +233,9 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
   status = ParseEntries(
       [&](const DirectoryEntry* entry) {
         std::string_view entry_name(entry->name, entry->name_len);
-        if (path == entry_name) {
+        // Perform a partial match.
+        if (entry_name.compare(0, path.size(), path) == 0 &&
+            (entry_name.size() == path.size() || entry_name[path.size()] == '/')) {
           return DirectoryEntryManager::Create(entry, &out_entry);
         }
         return ZX_ERR_NOT_FOUND;
@@ -238,10 +243,12 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
       block.data());
 
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs:  Directory::LookupInternal failed with error:%s",
+    FS_TRACE_ERROR("factoryfs:  Directory::LookupInternal failed with error: %s\n",
                    zx_status_get_string(status));
+    return zx::error(status);
   }
 
+  ZX_ASSERT(out_entry);
   return zx::ok(std::move(out_entry));
 }
 
@@ -251,12 +258,20 @@ zx::status<fbl::RefPtr<fs::Vnode>> Factoryfs::Lookup(const std::string_view path
     return zx::ok(fbl::RefPtr(iter->second));
   }
 
-  auto dir_entry_or = LookupInternal(path);
-  if (dir_entry_or.is_error()) {
+  std::unique_ptr<DirectoryEntryManager> dir_entry;
+  if (auto dir_entry_or = LookupInternal(path); dir_entry_or.is_error()) {
     return dir_entry_or.take_error();
+  } else {
+    dir_entry = std::move(dir_entry_or).value();
   }
 
-  return zx::ok(fbl::MakeRefCounted<File>(*this, std::move(dir_entry_or).value()));
+  // If we got a partial match, then we need to create a directory node rather than
+  // a file node.
+  if (path.size() < dir_entry->GetName().size()) {
+    return zx::ok(fbl::MakeRefCounted<Directory>(*this, path));
+  } else {
+    return zx::ok(fbl::MakeRefCounted<File>(*this, std::move(dir_entry)));
+  }
 }
 
 void Factoryfs::DidOpen(std::string_view path, fs::Vnode& vnode) {

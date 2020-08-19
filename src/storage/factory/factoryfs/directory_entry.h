@@ -38,7 +38,7 @@ class DirectoryEntryManager final {
   DirectoryEntryManager(const DirectoryEntry* entry);
   const DirectoryEntry& entry() const;
 
-  std::unique_ptr<uint8_t> buffer_;
+  std::unique_ptr<uint32_t[]> buffer_;
 };
 
 }  // namespace factoryfs
