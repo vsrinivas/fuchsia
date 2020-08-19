@@ -73,7 +73,7 @@ class FsManager {
   // Flushes FsHostMetrics to cobalt.
   void FlushMetrics();
 
-  devmgr::FshostBootArgs* boot_args() { return &boot_args_; }
+  std::shared_ptr<devmgr::FshostBootArgs> boot_args() { return boot_args_; }
 
   zx::event* event() { return &event_; }
 
@@ -122,7 +122,7 @@ class FsManager {
   InspectManager inspect_;
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
-  devmgr::FshostBootArgs boot_args_;
+  std::shared_ptr<devmgr::FshostBootArgs> boot_args_;
 
   // TODO(fxb/39588): delete this
   // A RemoteDir in the outgoing directory that ignores requests until Start is

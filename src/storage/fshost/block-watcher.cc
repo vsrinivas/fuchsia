@@ -39,7 +39,6 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
-#include <loader-service/loader-service.h>
 #include <minfs/minfs.h>
 #include <zxcrypt/fdio-volume.h>
 

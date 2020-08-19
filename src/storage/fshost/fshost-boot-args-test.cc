@@ -19,7 +19,7 @@
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-// Create a subclass to access the protected test-only constructor on FshostBootArgs.
+// Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public devmgr::FshostBootArgs {
  public:
   explicit FshostBootArgsForTest(llcpp::fuchsia::boot::Arguments::SyncClient boot_args)
@@ -75,16 +75,14 @@ TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
 TEST_F(FshostBootArgsTest, GetPkgfsFile) {
   std::map<std::string, std::string> config = {
       {"zircon.system.pkgfs.file.foobar", "aaa"},
-      {"zircon.system.pkgfs.file.foobaz", "bbb"},
-      {"zircon.system.pkgfs.file.111", "ccc"},
-      {"zircon.system.pkgfs.file.222", "ddd"},
+      {"zircon.system.pkgfs.file.bin/foobaz", "bbb"},
+      {"zircon.system.pkgfs.file.lib/foobar", "ccc"},
   };
   ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  EXPECT_EQ("aaa", boot_args().pkgfs_file_with_prefix_and_name("foo", "bar"));
-  EXPECT_EQ("bbb", boot_args().pkgfs_file_with_prefix_and_name("foo", "baz"));
-  EXPECT_EQ("ccc", boot_args().pkgfs_file_with_prefix_and_name("111", ""));
-  EXPECT_EQ("ddd", boot_args().pkgfs_file_with_prefix_and_name("", "222"));
+  EXPECT_EQ("aaa", boot_args().pkgfs_file_with_path("foobar"));
+  EXPECT_EQ("bbb", boot_args().pkgfs_file_with_path("bin/foobaz"));
+  EXPECT_EQ("ccc", boot_args().pkgfs_file_with_path("lib/foobar"));
 }
 
 TEST_F(FshostBootArgsTest, GetPkgfsCmd) {

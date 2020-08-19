@@ -5,12 +5,14 @@
 #ifndef SRC_STORAGE_FSHOST_PKGFS_LAUNCHER_H_
 #define SRC_STORAGE_FSHOST_PKGFS_LAUNCHER_H_
 
-#include "filesystem-mounter.h"
+#include <lib/zx/status.h>
+
+#include "src/storage/fshost/filesystem-mounter.h"
 
 namespace devmgr {
 
-// Launches pkgfs from within blobfs by parsing environment variables.
-void LaunchPkgfs(FilesystemMounter* filesystems);
+// Launches pkgfs from blobfs. (More details on PkgfsLoaderService)
+zx::status<> LaunchPkgfs(FilesystemMounter* filesystems);
 
 }  // namespace devmgr
 

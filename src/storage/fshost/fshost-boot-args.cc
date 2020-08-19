@@ -10,7 +10,7 @@
 namespace devmgr {
 
 // static
-FshostBootArgs FshostBootArgs::Create() {
+std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   zx::channel remote, local;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -20,7 +20,7 @@ FshostBootArgs FshostBootArgs::Create() {
             "fshost: failed to get boot arguments (%s), assuming test "
             "environment and continuing\n",
             zx_status_get_string(status));
-    return FshostBootArgs(std::nullopt);
+    return std::make_shared<FshostBootArgs>(std::nullopt);
   }
   auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
   status = fdio_service_connect(path.data(), remote.release());
@@ -31,9 +31,10 @@ FshostBootArgs FshostBootArgs::Create() {
             "fshost: failed to get boot arguments (%s), assuming test "
             "environment and continuing\n",
             zx_status_get_string(status));
-    return FshostBootArgs(std::nullopt);
+    return std::make_shared<FshostBootArgs>(std::nullopt);
   }
-  return FshostBootArgs(llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local)));
+  return std::make_shared<FshostBootArgs>(
+      llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local)));
 }
 
 FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args)
@@ -86,9 +87,8 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
   return zx::ok(std::string(value.data(), value.size()));
 }
 
-zx::status<std::string> FshostBootArgs::pkgfs_file_with_prefix_and_name(std::string prefix,
-                                                                        std::string name) {
-  return GetStringArgument(std::string("zircon.system.pkgfs.file.") + prefix + name);
+zx::status<std::string> FshostBootArgs::pkgfs_file_with_path(std::string path) {
+  return GetStringArgument(std::string("zircon.system.pkgfs.file.") + path);
 }
 
 zx::status<std::string> FshostBootArgs::pkgfs_cmd() {

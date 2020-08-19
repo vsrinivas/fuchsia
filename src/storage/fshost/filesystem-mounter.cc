@@ -197,7 +197,13 @@ void FilesystemMounter::TryMountPkgfs() {
   // TODO(fxbug.dev/38621): In the future, this mechanism may be replaced with a feed-forward
   // design to the mounted filesystems.
   if (!pkgfs_mounted_ && blob_mounted_ && (data_mounted_ || !WaitForData())) {
-    LaunchPkgfs(this);
+    // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the cause
+    // of a launch failure is unlikely to be transient.
+    // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
+    auto status = LaunchPkgfs(this);
+    if (status.is_error()) {
+      printf("fshost: failed to launch pkgfs: %s\n", status.status_string());
+    }
     pkgfs_mounted_ = true;
   }
 }

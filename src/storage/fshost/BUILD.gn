@@ -39,6 +39,7 @@ source_set("fshost-registry") {
     ":inspect",
     ":launcher",
     ":metrics",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/vfs/cpp",
@@ -52,13 +53,11 @@ source_set("fshost-registry") {
     "//zircon/system/ulib/memfs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 }
@@ -108,6 +107,7 @@ source_set("block-watcher") {
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
     "pkgfs-launcher.cc",
+    "pkgfs-loader-service.cc",
   ]
   public_deps = [
     ":fshost-registry",
@@ -133,6 +133,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/lib/fdio",
+    "//src/lib/loader_service",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -143,7 +144,6 @@ source_set("block-watcher") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/gpt",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
@@ -178,7 +178,6 @@ executable("fshost") {
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zbi-bootfs",
   ]
@@ -201,7 +200,6 @@ test("fshost_test") {
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
 
@@ -216,18 +214,22 @@ fuchsia_unittest_component("fshost-test") {
 
 # This is a separate test executable because loader_service_test_fixture uses gtest, but other
 # tests here use zxtest.
-test("deprecated_loader_service_test") {
-  sources = [ "deprecated-loader-service-test.cc" ]
+test("fshost_loader_service_test") {
+  sources = [
+    "deprecated-loader-service-test.cc",
+    "pkgfs-loader-service-test.cc",
+  ]
   deps = [
     ":block-watcher",
     ":fshost-registry",
     "//src/lib/loader_service:loader_service_test_fixture",
+    "//zircon/system/ulib/mock-boot-arguments",
   ]
 }
 
-fuchsia_unittest_component("deprecated-loader-service-test") {
-  manifest = "meta/deprecated-loader-service-test.cmx"
-  deps = [ ":deprecated_loader_service_test" ]
+fuchsia_unittest_component("fshost-loader-service-test") {
+  manifest = "meta/fshost-loader-service-test.cmx"
+  deps = [ ":fshost_loader_service_test" ]
 }
 
 test("fshost_inspect_test") {
@@ -282,7 +284,6 @@ test("block_watcher_test") {
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
-    "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
   ]
@@ -303,10 +304,10 @@ isolated_devmgr_unittest_component("block-watcher-test") {
 fuchsia_test_package("fshost-tests") {
   test_components = [
     ":block-watcher-test",
-    ":deprecated-loader-service-test",
     ":fshost-test",
     ":fshost-inspect-test",
     ":fshost-metrics-test",
+    ":fshost-loader-service-test",
   ]
 }
 

@@ -25,7 +25,11 @@ class FshostBootArgs {
   // namespace. If the service connection fails, this creates an object that returns default values.
   // TODO: This probably shouldn't automatically fall back to defaults just to accomodate test
   // environments. The test environment should provide the services fshost needs, faking if needed.
-  static FshostBootArgs Create();
+  static std::shared_ptr<FshostBootArgs> Create();
+
+  // Constructor for FshostBootArgs that allows injecting a different BootArgs member. Intended for
+  // use in unit tests; use Create for non-test code.
+  explicit FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args);
 
   bool netboot() { return netsvc_netboot_ || zircon_system_disable_automount_; }
   bool check_filesystems() { return zircon_system_filesystem_check_; }
@@ -33,7 +37,7 @@ class FshostBootArgs {
   bool blobfs_enable_userpager() { return blobfs_userpager_; }
 
   zx::status<std::string> pkgfs_cmd();
-  zx::status<std::string> pkgfs_file_with_prefix_and_name(std::string prefix, std::string name);
+  zx::status<std::string> pkgfs_file_with_path(std::string path);
 
   // Returns the write compression algorithm to pass to blobfs (via the --compression flag).
   std::optional<std::string> blobfs_write_compression_algorithm() const {
@@ -41,10 +45,6 @@ class FshostBootArgs {
   }
 
  protected:
-  // Protected constructor for FshostBootArgs that allows injecting a
-  // different BootArgs member, for use in unit tests.
-  explicit FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args);
-
  private:
   zx::status<std::string> GetStringArgument(std::string key);
 

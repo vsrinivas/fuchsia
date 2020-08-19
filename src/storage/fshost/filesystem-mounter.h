@@ -67,7 +67,7 @@ class FilesystemMounter {
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
 
-  devmgr::FshostBootArgs* boot_args() { return fshost_->boot_args(); }
+  std::shared_ptr<devmgr::FshostBootArgs> boot_args() { return fshost_->boot_args(); }
 
   void FlushMetrics() { fshost_->FlushMetrics(); }
 

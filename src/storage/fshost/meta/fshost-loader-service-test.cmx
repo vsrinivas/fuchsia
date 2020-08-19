@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/deprecated_loader_service_test"
+        "binary": "test/fshost_loader_service_test"
     },
     "sandbox": {
         "services": [
