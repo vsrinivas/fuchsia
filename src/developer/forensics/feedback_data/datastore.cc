@@ -143,7 +143,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 
         // Make sure all attachments are correctly categorized. Any complete or partial attachments
         // that have empty values should be categorized as missing to not be included in the final
-        // bugreport and marked as such in the integrity manifest.
+        // snapshot and marked as such in the integrity manifest.
         for (auto& [_, attachment] : ok_attachments) {
           if (attachment.HasValue() && attachment.Value().empty()) {
             // In case there is an error and a value, i.e. a partial attachment, preserve the error.

@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
   if (component.IsFirstInstance()) {
     // We file the crash report with a 90s delay to increase the likelihood that Inspect data (at
-    // all and specifically the data from memory_monitor) is included in the bugreport.zip generated
+    // all and specifically the data from memory_monitor) is included in the snapshot.zip generated
     // by the Feedback service. The memory_monitor Inspect data is critical to debug OOM crash
     // reports.
     // TODO(fxb/46216, fxb/48485): remove delay.

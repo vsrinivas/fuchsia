@@ -23,7 +23,7 @@ class IntegrityReporter {
                     const AttachmentKeys& attachment_allowlist);
 
   // Returns a JSON integrity report. No report is returned if no annotations or attachments will be
-  // in the bugreport.
+  // in the snapshot.
   //
   // |missing_non_platform_annotations| indicates whether some non-platform annotations are
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
