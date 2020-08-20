@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::controller::DataController,
+    crate::model::controller::{ConnectionMode, DataController},
     crate::model::model::DataModel,
     anyhow::{Error, Result},
     serde_json::value::Value,
@@ -19,6 +19,8 @@ pub enum DispatcherError {
     NamespaceInUse(String),
     #[error("namespace: {0} does not exist, query failing.")]
     NamespaceDoesNotExist(String),
+    #[error("namespace: {0} does not support this connection mode.")]
+    ConnectionModeDenied(String),
 }
 
 /// `ControllerInstance` holds all the additional book-keeping information
@@ -64,10 +66,21 @@ impl ControllerDispatcher {
     }
 
     /// Attempts to service the query if the namespace has a mapping.
-    pub fn query(&self, namespace: String, query: Value) -> Result<Value> {
+    pub fn query(
+        &self,
+        connection_mode: ConnectionMode,
+        namespace: String,
+        query: Value,
+    ) -> Result<Value> {
         let controllers = self.controllers.read().unwrap();
         if let Some(instance) = controllers.get(&namespace) {
-            instance.controller.query(Arc::clone(&self.model), query)
+            // Only allow this controller query to go through if the ConnectionMode is greater or
+            // equal to the query.
+            if instance.controller.connection_mode() >= connection_mode {
+                instance.controller.query(Arc::clone(&self.model), query)
+            } else {
+                Err(Error::new(DispatcherError::ConnectionModeDenied(namespace)))
+            }
         } else {
             Err(Error::new(DispatcherError::NamespaceDoesNotExist(namespace)))
         }
@@ -123,11 +136,16 @@ mod tests {
 
     struct FakeController {
         pub result: String,
+        pub mode: ConnectionMode,
     }
 
     impl FakeController {
         pub fn new(result: impl Into<String>) -> Self {
-            Self { result: result.into() }
+            Self { result: result.into(), mode: ConnectionMode::Remote }
+        }
+
+        pub fn new_local(result: impl Into<String>) -> Self {
+            Self { result: result.into(), mode: ConnectionMode::Local }
         }
     }
 
@@ -142,6 +160,10 @@ mod tests {
 
         fn usage(&self) -> String {
             "bar".to_string()
+        }
+
+        fn connection_mode(&self) -> ConnectionMode {
+            self.mode.clone()
         }
     }
 
@@ -158,7 +180,10 @@ mod tests {
         let fake = Arc::new(FakeController::new("fake_result"));
         let namespace = "/foo/bar".to_string();
         dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
-        assert_eq!(dispatcher.query(namespace, json!("")).unwrap(), json!("fake_result"));
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Remote, namespace, json!("")).unwrap(),
+            json!("fake_result")
+        );
     }
 
     #[test]
@@ -169,9 +194,12 @@ mod tests {
         let namespace = "/foo/bar".to_string();
         let inst_id = Uuid::new_v4();
         dispatcher.add(inst_id.clone(), namespace.clone(), fake).unwrap();
-        assert_eq!(dispatcher.query(namespace.clone(), json!("")).unwrap(), json!("fake_result"));
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Remote, namespace.clone(), json!("")).unwrap(),
+            json!("fake_result")
+        );
         dispatcher.remove(inst_id);
-        assert!(dispatcher.query(namespace, json!("")).is_err());
+        assert!(dispatcher.query(ConnectionMode::Remote, namespace, json!("")).is_err());
     }
 
     #[test]
@@ -184,8 +212,14 @@ mod tests {
         let namespace_two = "/foo/baz".to_string();
         dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
         dispatcher.add(Uuid::new_v4(), namespace_two.clone(), fake_two).unwrap();
-        assert_eq!(dispatcher.query(namespace, json!("")).unwrap(), json!("fake_result"));
-        assert_eq!(dispatcher.query(namespace_two, json!("")).unwrap(), json!("fake_result_two"));
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Remote, namespace, json!("")).unwrap(),
+            json!("fake_result")
+        );
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Remote, namespace_two, json!("")).unwrap(),
+            json!("fake_result_two")
+        );
     }
 
     #[test]
@@ -207,4 +241,16 @@ mod tests {
         dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
         assert_eq!(dispatcher.usage(namespace).unwrap(), "bar");
     }
+
+    #[test]
+    fn test_local_only() {
+        let data_model = test_model();
+        let mut dispatcher = ControllerDispatcher::new(data_model);
+        let fake = Arc::new(FakeController::new_local("fake_result"));
+        let namespace = "/foo/bar".to_string();
+        dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
+        assert_eq!(dispatcher.query(ConnectionMode::Remote, namespace.clone(), json!("")).is_ok(), false);
+        assert_eq!(dispatcher.query(ConnectionMode::Local, namespace.clone(), json!("")).is_ok(), true);
+    }
+
 }

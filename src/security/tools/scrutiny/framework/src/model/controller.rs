@@ -4,6 +4,13 @@
 
 use {super::model::DataModel, anyhow::Result, serde_json::value::Value, std::sync::Arc};
 
+/// The type of connection that is allowed to access this data controller.
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy)]
+pub enum ConnectionMode {
+    Local = 1,
+    Remote = 2,
+}
+
 /// The DataController trait is responsible for querying the data model.
 pub trait DataController: Send + Sync {
     /// Takes an immutable copy of the model and some query specific to this
@@ -19,5 +26,12 @@ pub trait DataController: Send + Sync {
     /// does.
     fn usage(&self) -> String {
         "No usage information available.".to_string()
+    }
+
+    /// An optional configuration that prevents this controller being called
+    /// over the remote API. This is important to set if the query in any way
+    /// modifies the local system.
+    fn connection_mode(&self) -> ConnectionMode {
+        ConnectionMode::Remote
     }
 }

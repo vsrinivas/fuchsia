@@ -10,13 +10,16 @@ use {
     },
     anyhow::{Error, Result},
     log::info,
-    scrutiny::engine::{
-        dispatcher::{ControllerDispatcher, DispatcherError},
-        manager::{PluginManager, PluginState},
-        plugin::PluginDescriptor,
+    scrutiny::{
+        engine::{
+            dispatcher::{ControllerDispatcher, DispatcherError},
+            manager::{PluginManager, PluginState},
+            plugin::PluginDescriptor,
+        },
+        model::controller::ConnectionMode,
     },
     serde_json::{self, json, Value},
-    std::collections::VecDeque,
+    std::collections::{HashMap, VecDeque},
     std::io::{stdin, stdout, Write},
     std::process,
     std::sync::{Arc, Mutex, RwLock},
@@ -176,7 +179,8 @@ impl Shell {
         };
 
         // Parse the command arguments.
-        let mut query = json!("");
+        let empty_command: HashMap<String, String> = HashMap::new();
+        let mut query = json!(empty_command);
         if !tokens.is_empty() {
             if tokens.front().unwrap().starts_with("`") {
                 let mut body = Vec::from(tokens).join(" ");
@@ -218,7 +222,7 @@ impl Shell {
         }
         let (namespace, query) = command_result.unwrap();
 
-        let result = self.dispatcher.read().unwrap().query(namespace, query);
+        let result = self.dispatcher.read().unwrap().query(ConnectionMode::Local, namespace, query);
         match result {
             Err(e) => {
                 if let Some(dispatch_error) = e.downcast_ref::<DispatcherError>() {

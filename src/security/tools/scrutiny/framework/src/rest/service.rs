@@ -4,6 +4,7 @@
 
 use {
     crate::engine::dispatcher::{ControllerDispatcher, DispatcherError},
+    crate::model::controller::ConnectionMode,
     crate::rest::visualizer::*,
     anyhow::Error,
     log::{info, warn},
@@ -134,7 +135,7 @@ impl RestService {
 
         let dispatch = dispatcher.read().unwrap();
         if let Ok(json_val) = query_val {
-            match dispatch.query(request.url(), json_val) {
+            match dispatch.query(ConnectionMode::Remote, request.url(), json_val) {
                 Ok(result) => Response {
                     status_code: 200,
                     headers: vec![("Content-Type".into(), "application/json".into())],

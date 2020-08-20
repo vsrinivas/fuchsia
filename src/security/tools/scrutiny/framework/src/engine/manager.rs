@@ -253,7 +253,11 @@ mod tests {
         super::*,
         crate::{
             engine::hook::PluginHooks,
-            model::{collector::DataCollector, controller::DataController, model::DataModel},
+            model::{
+                collector::DataCollector,
+                controller::{ConnectionMode, DataController},
+                model::DataModel,
+            },
         },
         serde_json::{json, value::Value},
         tempfile::tempdir,
@@ -434,26 +438,46 @@ mod tests {
         manager.register_and_load(plugin_one).expect("failed to load plugin one");
 
         assert_eq!(
-            dispatcher.read().unwrap().query("/api/foo/bar".to_string(), json!("")).unwrap(),
+            dispatcher
+                .read()
+                .unwrap()
+                .query(ConnectionMode::Remote, "/api/foo/bar".to_string(), json!(""))
+                .unwrap(),
             json!("foo")
         );
         assert_eq!(
-            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).unwrap(),
+            dispatcher
+                .read()
+                .unwrap()
+                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .unwrap(),
             json!("foo")
         );
 
         manager.unload(&plugin_one_desc).expect("failed to unload plugin one");
         assert_eq!(
-            dispatcher.read().unwrap().query("/api/foo/bar".to_string(), json!("")).is_err(),
+            dispatcher
+                .read()
+                .unwrap()
+                .query(ConnectionMode::Remote, "/api/foo/bar".to_string(), json!(""))
+                .is_err(),
             true
         );
         assert_eq!(
-            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).unwrap(),
+            dispatcher
+                .read()
+                .unwrap()
+                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .unwrap(),
             json!("foo")
         );
         manager.unload(&plugin_two_desc).expect("failed to unload plugin two");
         assert_eq!(
-            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).is_err(),
+            dispatcher
+                .read()
+                .unwrap()
+                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .is_err(),
             true
         );
     }
