@@ -84,7 +84,8 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     std::string name;
   };
 
-  TouchInputBase(std::vector<LaunchableService> extra_services) : response_listener_(this) {
+  explicit TouchInputBase(const std::vector<LaunchableService>& extra_services)
+      : response_listener_(this) {
     bool trace_provider_already_started = false;
     if (!trace::TraceProviderWithFdio::CreateSynchronously(
             dispatcher(), "touch-input-test", &trace_provider_, &trace_provider_already_started)) {
@@ -174,7 +175,8 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
   // Returns the timestamp on the first injected InputReport.
-  zx_time_t InjectInput(zx_clock_t clock_id) {
+  template <typename TimeT>
+  TimeT InjectInput() {
     using fuchsia::ui::input::InputReport;
     // Device parameters
     auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -190,7 +192,7 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     FX_LOGS(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
                   << "and y touch range = (-1000, 1000).";
 
-    zx_time_t injection_time = 0;
+    TimeT injection_time;
 
     {
       // Inject one input report, then a conclusion (empty) report.
@@ -199,15 +201,16 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
       *touch = {
           .touches = {{.finger_id = 1, .x = 500, .y = -500}}};  // center of top right quadrant
       // Use system clock, instead of dispatcher clock, for measurement purposes.
-      InputReport report{.event_time = RealNow(clock_id), .touchscreen = std::move(touch)};
-      injection_time = report.event_time;
+      injection_time = RealNow<TimeT>();
+      InputReport report{.event_time = TimeToUint(injection_time), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
       FX_LOGS(INFO) << "Dispatching touch report at (500, -500)";
     }
 
     {
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      InputReport report{.event_time = RealNow(clock_id), .touchscreen = std::move(touch)};
+      InputReport report{.event_time = TimeToUint(RealNow<TimeT>()),
+                         .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
 
@@ -217,7 +220,7 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     return injection_time;
   }
 
-  int injection_count() { return injection_count_; }
+  int injection_count() const { return injection_count_; }
 
   static bool IsViewPropertiesChangedEvent(const ScenicEvent& event) {
     return event.Which() == ScenicEvent::Tag::kGfx &&
@@ -235,12 +238,17 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
   }
 
  private:
-  // Returns `uint64_t` for compatibility with `InputReport::event_time`.
-  uint64_t RealNow(zx_clock_t clock_id) {
-    zx_time_t now = ZX_TIME_INFINITE_PAST;
-    FX_CHECK(zx_clock_get(clock_id, &now) == ZX_OK);
-    FX_CHECK(now >= 0);
-    return static_cast<uint64_t>(now);
+  template <typename TimeT>
+  TimeT RealNow() {
+    TimeT now(ZX_TIME_INFINITE_PAST);
+    FX_CHECK(zx::clock::get(&now) == ZX_OK);
+    return now;
+  };
+
+  template <typename TimeT>
+  uint64_t TimeToUint(const TimeT& time) {
+    FX_CHECK(time.get() >= 0);
+    return static_cast<uint64_t>(time.get());
   };
 
   fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
@@ -278,7 +286,8 @@ TEST_F(TouchInputTest, FlutterTap) {
   RunLoopUntil(
       [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
 
-  zx_time_t input_injection_time = 0;
+  // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
+  zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
   // Define test expectations for when Flutter calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
@@ -297,15 +306,15 @@ TEST_F(TouchInputTest, FlutterTap) {
     FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                   << ").";
 
-    zx_duration_t elapsed_time =
-        zx_time_sub_time(pointer_data.time_received(), input_injection_time);
-    EXPECT_TRUE(elapsed_time > 0 && elapsed_time != ZX_TIME_INFINITE);
-    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
+    zx::duration elapsed_time =
+        zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) - input_injection_time;
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
     FX_LOGS(INFO) << "Flutter Received Time (ns): " << pointer_data.time_received();
-    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
     TRACE_INSTANT("touch-input-test", "input_latency", TRACE_SCOPE_PROCESS, "input_injection_time",
-                  input_injection_time, "flutter_received_time", pointer_data.time_received(),
-                  "elapsed_time", elapsed_time);
+                  input_injection_time.get(), "flutter_received_time", pointer_data.time_received(),
+                  "elapsed_time", elapsed_time.to_nsecs());
 
     // Allow for minor rounding differences in coordinates.
     EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
@@ -316,30 +325,31 @@ TEST_F(TouchInputTest, FlutterTap) {
   });
 
   // Define when to set size for Flutter's view, and when to inject input against Flutter's view.
-  scenic::Session::EventHandler handler = [this, &input_injection_time](
-                                              std::vector<fuchsia::ui::scenic::Event> events) {
-    for (const auto& event : events) {
-      if (IsViewPropertiesChangedEvent(event)) {
-        auto properties = event.gfx().view_properties_changed().properties;
-        FX_VLOGS(1) << "Test received its view properties; transfer to child view: " << properties;
-        FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
-        view_holder()->SetViewProperties(properties);
-        session()->Present(zx_clock_get_monotonic(), [](auto info) {});
+  scenic::Session::EventHandler handler =
+      [this, &input_injection_time](const std::vector<fuchsia::ui::scenic::Event>& events) {
+        for (const auto& event : events) {
+          if (IsViewPropertiesChangedEvent(event)) {
+            auto properties = event.gfx().view_properties_changed().properties;
+            FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
+                        << properties;
+            FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
+            view_holder()->SetViewProperties(properties);
+            session()->Present(zx_clock_get_monotonic(), [](auto info) {});
 
-      } else if (IsViewStateChangedEvent(event)) {
-        bool hittable = event.gfx().view_state_changed().state.is_rendering;
-        FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
-        if (hittable) {
-          input_injection_time = InjectInput(ZX_CLOCK_MONOTONIC);
+          } else if (IsViewStateChangedEvent(event)) {
+            bool hittable = event.gfx().view_state_changed().state.is_rendering;
+            FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
+            if (hittable) {
+              input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
+            }
+
+          } else if (IsViewDisconnectedEvent(event)) {
+            // Save time, terminate the test immediately if we know that Flutter's view is borked.
+            FX_CHECK(injection_count() > 0)
+                << "Expected to have completed input injection, but Flutter view terminated early.";
+          }
         }
-
-      } else if (IsViewDisconnectedEvent(event)) {
-        // Save time, terminate the test immediately if we know that Flutter's view is borked.
-        FX_CHECK(injection_count() > 0)
-            << "Expected to have completed input injection, but Flutter view terminated early.";
-      }
-    }
-  };
+      };
 
   auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
   auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> Flutter
@@ -360,7 +370,7 @@ TEST_F(TouchInputTest, FlutterTap) {
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
   session()->Present(zx_clock_get_monotonic(), [](auto info) {
-    FX_LOGS(INFO) << "test's view and view holder created by Scenic.";
+    FX_VLOGS(1) << "test's view and view holder created by Scenic.";
   });
 
   // Start Flutter app inside the test environment.
@@ -400,7 +410,8 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
   RunLoopUntil(
       [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
 
-  zx_time_t input_injection_time = 0;
+  // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
+  zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
   // Define test expectations for when CppGfxClient calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
@@ -419,12 +430,12 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
     FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                   << ").";
 
-    zx_duration_t elapsed_time =
-        zx_time_sub_time(pointer_data.time_received(), input_injection_time);
-    EXPECT_TRUE(elapsed_time > 0 && elapsed_time != ZX_TIME_INFINITE);
-    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
+    zx::duration elapsed_time =
+        zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) - input_injection_time;
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
     FX_LOGS(INFO) << "CppGfxClient Received Time (ns): " << pointer_data.time_received();
-    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
 
     // Allow for minor rounding differences in coordinates.
     EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
@@ -436,30 +447,32 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
 
   // Define when to set size for CppGfxClient's view, and when to inject input against
   // CppGfxClient's view.
-  scenic::Session::EventHandler handler = [this, &input_injection_time](
-                                              std::vector<fuchsia::ui::scenic::Event> events) {
-    for (const auto& event : events) {
-      if (IsViewPropertiesChangedEvent(event)) {
-        auto properties = event.gfx().view_properties_changed().properties;
-        FX_VLOGS(1) << "Test received its view properties; transfer to child view: " << properties;
-        FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
-        view_holder()->SetViewProperties(properties);
-        session()->Present(zx_clock_get_monotonic(), [](auto info) {});
+  scenic::Session::EventHandler handler =
+      [this, &input_injection_time](const std::vector<fuchsia::ui::scenic::Event>& events) {
+        for (const auto& event : events) {
+          if (IsViewPropertiesChangedEvent(event)) {
+            auto properties = event.gfx().view_properties_changed().properties;
+            FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
+                        << properties;
+            FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
+            view_holder()->SetViewProperties(properties);
+            session()->Present(zx_clock_get_monotonic(), [](auto info) {});
 
-      } else if (IsViewStateChangedEvent(event)) {
-        bool hittable = event.gfx().view_state_changed().state.is_rendering;
-        FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
-        if (hittable) {
-          input_injection_time = InjectInput(ZX_CLOCK_MONOTONIC);
+          } else if (IsViewStateChangedEvent(event)) {
+            bool hittable = event.gfx().view_state_changed().state.is_rendering;
+            FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
+            if (hittable) {
+              input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
+            }
+
+          } else if (IsViewDisconnectedEvent(event)) {
+            // Save time, terminate the test immediately if we know that CppGfxClient's view is
+            // borked.
+            FX_CHECK(injection_count() > 0) << "Expected to have completed input injection, but "
+                                               "CppGfxClient's view terminated early.";
+          }
         }
-
-      } else if (IsViewDisconnectedEvent(event)) {
-        // Save time, terminate the test immediately if we know that CppGfxClient's view is borked.
-        FX_CHECK(injection_count() > 0) << "Expected to have completed input injection, but "
-                                           "CppGfxClient's view terminated early.";
-      }
-    }
-  };
+      };
 
   auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
   auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> CppGfxClient
@@ -540,8 +553,8 @@ class WebEngineTest : public TouchInputBase {
   // For more detals, see fxbug.dev/57268.
   //
   // TODO(fxbug.dev/58322): Improve synchronization when we move to Flatland.
-  void TryInject(zx_time_t* input_injection_time) {
-    *input_injection_time = InjectInput(ZX_CLOCK_UTC);
+  void TryInject(zx::basic_time<ZX_CLOCK_UTC>* input_injection_time) {
+    *input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_UTC>>();
     async::PostDelayedTask(
         dispatcher(), [this, input_injection_time] { TryInject(input_injection_time); },
         kTapRetryInterval);
@@ -587,7 +600,8 @@ TEST_F(WebEngineTest, ChromiumTap) {
   RunLoopUntil(
       [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
 
-  zx_time_t input_injection_time = 0;
+  // Use `ZX_CLOCK_UTC` for compatibility with the time reported by `Date.now()` in web-engine.
+  zx::basic_time<ZX_CLOCK_UTC> input_injection_time(0);
 
   // Define test expectations for when Chromium calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
@@ -615,12 +629,12 @@ TEST_F(WebEngineTest, ChromiumTap) {
     FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                   << ").";
 
-    zx_duration_t elapsed_time =
-        zx_time_sub_time(pointer_data.time_received(), input_injection_time);
-    EXPECT_TRUE(elapsed_time > 0 && elapsed_time != ZX_TIME_INFINITE);
-    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
+    zx::duration elapsed_time =
+        zx::basic_time<ZX_CLOCK_UTC>(pointer_data.time_received()) - input_injection_time;
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
     FX_LOGS(INFO) << "Chromium Received Time (ns): " << pointer_data.time_received();
-    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
 
     // Allow for minor rounding differences in coordinates. As noted above, `device_x` and
     // `device_y` may have an error of up to `device_pixel_ratio` physical pixels.
@@ -632,7 +646,8 @@ TEST_F(WebEngineTest, ChromiumTap) {
 
   // Define when to set size for Chromium's view, and when to inject input against Chromium's view.
   scenic::Session::EventHandler handler = [this, &input_injection_time](
-                                              std::vector<fuchsia::ui::scenic::Event> events) {
+                                              const std::vector<fuchsia::ui::scenic::Event>&
+                                                  events) {
     for (const auto& event : events) {
       if (IsViewPropertiesChangedEvent(event)) {
         auto properties = event.gfx().view_properties_changed().properties;
@@ -676,7 +691,7 @@ TEST_F(WebEngineTest, ChromiumTap) {
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
   session()->Present(zx_clock_get_monotonic(), [](auto info) {
-    FX_LOGS(INFO) << "test's view and view holder created by Scenic.";
+    FX_VLOGS(1) << "test's view and view holder created by Scenic.";
   });
 
   // Start Chromium app inside the test environment.
