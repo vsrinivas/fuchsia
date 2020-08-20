@@ -11,8 +11,8 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{
-        make_font_description, path_for_corner_knockouts, path_for_rectangle, DisplayAligned,
-        DisplayRotation, GlyphMap, Paint, Text,
+        path_for_corner_knockouts, path_for_rectangle, DisplayAligned, DisplayRotation, FontFace,
+        GlyphMap, Paint, Text,
     },
     input::{self},
     make_app_assistant, make_message,
@@ -25,6 +25,17 @@ use carnelian::{
 };
 use euclid::Transform2D;
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
+use lazy_static::lazy_static;
+
+// This font creation method isn't ideal. The correct method would be to ask the Fuchsia
+// font service for the font data.
+static FONT_DATA: &'static [u8] =
+    include_bytes!("../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
+
+lazy_static! {
+    pub static ref FONT_FACE: FontFace<'static> =
+        FontFace::new(&FONT_DATA).expect("Failed to create font");
+}
 
 /// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
@@ -142,14 +153,12 @@ impl Button {
             Paint { fg: self.fg_color_disabled, bg: self.bg_color_disabled }
         };
 
-        let font_description = make_font_description(self.font_size, 0);
-
         self.label = Some(Text::new(
             render_context,
             &self.label_text,
             self.font_size as f32,
             100,
-            font_description.face,
+            &FONT_FACE,
             &mut self.glyphs,
         ));
 

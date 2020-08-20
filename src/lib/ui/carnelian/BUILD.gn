@@ -114,6 +114,7 @@ rustc_binary("button_example") {
   edition = "2018"
   source_root = "examples/button.rs"
   sources = [ "examples/button.rs" ]
+  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
@@ -125,6 +126,7 @@ rustc_binary("button_example") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:thiserror",

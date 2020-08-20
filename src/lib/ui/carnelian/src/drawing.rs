@@ -17,7 +17,6 @@ use euclid::{
     default::{Box2D, Size2D, Vector2D},
     vec2, Angle,
 };
-use lazy_static::lazy_static;
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
 use std::collections::BTreeMap;
 use textwrap::wrap_iter;
@@ -72,21 +71,6 @@ impl From<DisplayRotation> for Angle<Coord> {
         };
         Angle::degrees(degrees)
     }
-}
-
-// This font creation method isn't ideal. The correct method would be to ask the Fuchsia
-// font service for the font data.
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
-
-lazy_static! {
-    pub static ref FONT_FACE: FontFace<'static> =
-        FontFace::new(&FONT_DATA).expect("Failed to create font");
-}
-
-/// Make a font description for the one included font
-pub fn make_font_description<'a, 'b>(size: u32, baseline: i32) -> FontDescription<'a, 'b> {
-    FontDescription { face: &FONT_FACE, size: size, baseline: baseline }
 }
 
 /// Create a render path for the specified rectangle.
@@ -486,8 +470,9 @@ impl Text {
 
 #[cfg(test)]
 mod tests {
-    use super::{make_font_description, GlyphMap, Text};
+    use super::{GlyphMap, Text};
     use crate::{
+        drawing::FontFace,
         geometry::{Point, UintSize},
         render::{
             generic::{self, Backend},
@@ -497,8 +482,20 @@ mod tests {
     use euclid::{approxeq::ApproxEq, Vector2D};
     use fuchsia_async::{self as fasync, Time, TimeoutExt};
     use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameUsage};
+    use lazy_static::lazy_static;
 
     const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(5);
+
+    // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
+    // font service for the font data.
+    static FONT_DATA: &'static [u8] = include_bytes!(
+        "../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf"
+    );
+
+    lazy_static! {
+        pub static ref FONT_FACE: FontFace<'static> =
+            FontFace::new(&FONT_DATA).expect("Failed to create font");
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_text_bounding_box() {
@@ -526,16 +523,9 @@ mod tests {
             })
             .await;
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
-        let font_description = make_font_description(20, 0);
         let mut glyphs = GlyphMap::new();
-        let text = Text::new(
-            &mut render_context,
-            "Good Morning",
-            20.0,
-            200,
-            font_description.face,
-            &mut glyphs,
-        );
+        let text =
+            Text::new(&mut render_context, "Good Morning", 20.0, 200, &FONT_FACE, &mut glyphs);
 
         let expected_origin = Point::new(0.0, 3.4487228);
         let expected_size = Vector2D::new(100.486115, 14.787117);
