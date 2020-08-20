@@ -78,7 +78,7 @@ impl Blob {
         let path = root_path.join(&merkle_root_hash);
         let mut file = File::create(&path).unwrap();
         file.set_len(data.len() as u64).unwrap();
-        let result = file.write(&data);
+        let result = file.write_all(&data);
 
         // The only error we will forward is running out of storage space.
         // Note that blobfs will return this error code for running out of inodes as well.
