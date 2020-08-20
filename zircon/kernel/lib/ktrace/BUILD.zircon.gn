@@ -29,7 +29,15 @@ group("suppress-warning") {
 }
 
 config("suppress-warning.config") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+
+    # TODO(44971): Referenced in environment configs.
+    "$zx/kernel/*",
+    "$zx/system/ulib/*",
+    "$zx/third_party/lib/*",
+    "$zx/third_party/ulib/*",
+  ]
   if (!is_gcc) {
     # Silence warning in Clang about GNU extension used in string_ref.h.
     cflags_cc = [ "-Wno-gnu-string-literal-operator-template" ]
