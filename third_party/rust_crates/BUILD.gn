@@ -658,6 +658,11 @@ if (current_os == "fuchsia") {
     deps = [ ":trust-dns-resolver-v0_19_2" ]
   }
 }
+if (!(current_os == "fuchsia")) {
+  group("tui") {
+    deps = [ ":tui-v0_10_0" ]
+  }
+}
 group("unic-char-range") {
   deps = [ ":unic-char-range-v0_9_0" ]
 }
@@ -1658,6 +1663,27 @@ rust_library("cargo_metadata-v0_9_1") {
     "-Cmetadata=cc51a76810d0c63c",
     "-Cextra-filename=-cc51a76810d0c63c",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("cassowary-v0_3_0") {
+  crate_name = "cassowary"
+  crate_root = "//third_party/rust_crates/vendor/cassowary/src/lib.rs"
+  output_name = "cassowary-554c4b407c5a77fa"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=554c4b407c5a77fa",
+    "-Cextra-filename=-554c4b407c5a77fa",
   ]
 }
 
@@ -8566,6 +8592,34 @@ rust_library("try-lock-v0_2_2") {
     "--edition=2015",
     "-Cmetadata=d2aa576612eef943",
     "-Cextra-filename=-d2aa576612eef943",
+  ]
+}
+
+rust_library("tui-v0_10_0") {
+  crate_name = "tui"
+  crate_root = "//third_party/rust_crates/vendor/tui/src/lib.rs"
+  output_name = "tui-5761e34de280b46c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":cassowary-v0_3_0" ]
+  deps += [ ":termion-v1_5_3" ]
+  deps += [ ":unicode-segmentation-v1_2_1" ]
+  deps += [ ":unicode-width-v0_1_5" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5761e34de280b46c",
+    "-Cextra-filename=-5761e34de280b46c",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"termion\"",
   ]
 }
 
