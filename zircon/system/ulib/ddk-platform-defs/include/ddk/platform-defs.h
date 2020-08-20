@@ -197,6 +197,7 @@ __BEGIN_CDECLS
 // Sony
 #define PDEV_VID_SONY               0x0E
 #define PDEV_PID_SONY_IMX227        0x01
+#define PDEV_PID_SONY_IMX355        0x02
 
 // Hisilicon
 #define PDEV_VID_HISILICON          0x0F

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/imx355_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
