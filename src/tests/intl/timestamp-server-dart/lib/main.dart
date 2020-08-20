@@ -23,12 +23,14 @@ class _EchoImpl extends fidl_echo.Echo {
 
   @override
   Future<String> echoString(String value) async {
-    log.fine('Request: $value');
-    final now = DateTime.now().toLocal();
-    log.fine('Local time: $now');
+    log.info('Request: $value');
+    var now = DateTime.now().toLocal();
+    log.info('Local time: $now');
     // Example: 2020-2-26-14, hour 14 of February 26.
-    final dateTime = DateFormat('y-M-d-H').format(now);
-    log.info('Reporting time as: "$dateTime"');
+    var dateTime = DateFormat('y-M-d-H').format(now);
+    log.info(
+        'Reporting dateTime: "$dateTime", timezone: "${now.timeZoneName}", '
+        'offset: "${now.timeZoneOffset}"');
     return dateTime;
   }
 }

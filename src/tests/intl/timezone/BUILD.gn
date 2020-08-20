@@ -33,7 +33,6 @@ rustc_test("timezone_bin_test") {
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
