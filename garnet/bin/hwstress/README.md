@@ -46,6 +46,14 @@ Flash test options:
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager.
   -m, --memory=<size>    Amount of flash memory to test, in megabytes.
 
+Light test options:
+  --light-on-time=<seconds>
+                         Time in seconds each "on" blink should be.
+                         Defaults to 0.5.
+  --light-off-time=<seconds>
+                         Time in seconds each "off" blink should be.
+                         Defaults to 0.5.
+
 Memory test options:
   -m, --memory=<size>    Amount of RAM to test, in megabytes.
   --percent-memory=<percent>

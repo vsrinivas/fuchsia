@@ -22,24 +22,39 @@ namespace {
 
 std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   auto parser = std::make_unique<cmdline::ArgsParser<CommandLineArgs>>();
-  parser->AddSwitch("cleanup-test-partitions", 'c', "Cleanup all existing flash test partitions.",
-                    &CommandLineArgs::destroy_partitions);
+
+  // General flags.
   parser->AddSwitch("duration", 'd', "Test duration in seconds.",
                     &CommandLineArgs::test_duration_seconds);
-  parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
   parser->AddSwitch("logging-level", 'l', "Level of logging: terse, normal or verbose.",
                     &CommandLineArgs::log_level);
   parser->AddSwitch("memory", 'm', "Amount of memory to test in megabytes.",
                     &CommandLineArgs::mem_to_test_megabytes);
+
+  // Flash test flags.
+  parser->AddSwitch("cleanup-test-partitions", 'c', "Cleanup all existing flash test partitions.",
+                    &CommandLineArgs::destroy_partitions);
+  parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
+
+  // Memory test flags.
   parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
                     &CommandLineArgs::ram_to_test_percent);
+
+  // CPU test flags.
   parser->AddSwitch("utilization", 'u', "Target CPU utilization percent.",
                     &CommandLineArgs::utilization_percent);
   parser->AddSwitch("workload", 'w',
                     "Name of a CPU workload to use. If not specified, "
                     "all available workloads will be used.",
                     &CommandLineArgs::cpu_workload);
+
+  // Light test flags.
+  parser->AddSwitch("light-on-time", 0, "Time in seconds the light should be on for each blink.",
+                    &CommandLineArgs::light_on_time_seconds);
+  parser->AddSwitch("light-off-time", 0, "Time in seconds the light should be off for each blink.",
+                    &CommandLineArgs::light_off_time_seconds);
+
   return parser;
 }
 
@@ -85,6 +100,14 @@ Flash test options:
                          previous flash tests which did not exit cleanly.
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager.
   -m, --memory=<size>    Amount of flash memory to test, in megabytes.
+
+Light test options:
+  --light-on-time=<seconds>
+                         Time in seconds each "on" blink should be.
+                         Defaults to 0.5.
+  --light-off-time=<seconds>
+                         Time in seconds each "off" blink should be.
+                         Defaults to 0.5.
 
 Memory test options:
   -m, --memory=<size>    Amount of RAM to test, in megabytes.
@@ -169,6 +192,14 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   // Validate utilization.
   if (result.utilization_percent <= 0.0 || result.utilization_percent > 100.0) {
     return fitx::error("--utilization must be greater than 0%%, and no more than 100%%.");
+  }
+
+  // Validate light settings.
+  if (result.light_on_time_seconds < 0) {
+    return fitx::error("'--light-on-time' cannot be negative.");
+  }
+  if (result.light_off_time_seconds < 0) {
+    return fitx::error("'--light-off-time' cannot be negative.");
   }
 
   // Ensure mandatory flash test argument is provided

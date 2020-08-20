@@ -13,6 +13,7 @@
 #include "args.h"
 #include "device.h"
 #include "status.h"
+#include "util.h"
 
 namespace hwstress {
 
@@ -140,7 +141,7 @@ bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration d
       }
     }
 
-    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    zx::nanosleep(zx::deadline_after(SecsToDuration(args.light_on_time_seconds)));
 
     // Turn all lights off.
     for (const LightInfo& light : lights) {
@@ -151,7 +152,7 @@ bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration d
       }
     }
 
-    zx::nanosleep(zx::deadline_after(zx::msec(25)));
+    zx::nanosleep(zx::deadline_after(SecsToDuration(args.light_off_time_seconds)));
   }
 
   return true;

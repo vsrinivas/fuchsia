@@ -78,6 +78,14 @@ struct CommandLineArgs {
 
   // CPU workload to use.
   std::string cpu_workload;
+
+  //
+  // LED-specific arguments.
+  //
+
+  // Amount of time the light should be on/off during LED tests.
+  double light_on_time_seconds = 0.5;
+  double light_off_time_seconds = 0.5;
 };
 
 // Print usage information to stdout.

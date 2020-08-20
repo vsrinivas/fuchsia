@@ -109,5 +109,16 @@ TEST(Args, ParseLogLevel) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-l", "Bad"}}).is_error());
 }
 
+TEST(Args, ParseLight) {
+  EXPECT_TRUE(ParseArgs({{"hwstress", "light"}}).is_ok());
+  EXPECT_EQ(ParseArgs({{"hwstress", "light", "--light-on-time=0.25"}})->light_on_time_seconds,
+            0.25);
+  EXPECT_EQ(ParseArgs({{"hwstress", "light", "--light-off-time=0.25"}})->light_off_time_seconds,
+            0.25);
+
+  EXPECT_TRUE(ParseArgs({{"hwstress", "light", "--light-on-time=-3"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "light", "--light-off-time=-3"}}).is_error());
+}
+
 }  // namespace
 }  // namespace hwstress
