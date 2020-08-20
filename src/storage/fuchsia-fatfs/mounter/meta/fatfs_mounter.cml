@@ -1,0 +1,31 @@
+{
+    program: {
+        binary: "bin/fatfs_mounter",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+        {
+            directory: "/dev/class/block",
+            rights: [ "rw*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.fs.Query",
+            from: "self",
+            as: "/svc/fuchsia.fat.Query",
+        },
+        {
+            protocol: "/svc/fuchsia.fs.Admin",
+            from: "self",
+            as: "/svc/fuchsia.fat.Admin",
+        },
+        {
+            directory: "/root",
+            from: "self",
+            as: "/fatfs",
+            rights: [ "rw*" ],
+        },
+    ],
+}

@@ -6,9 +6,10 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
-rustc_library("fuchsia-fatfs") {
+rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
+  name = "fuchsia_fatfs"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -41,7 +42,7 @@ rustc_library("fuchsia-fatfs") {
 
 fuchsia_component("fuchsia-fatfs-test") {
   testonly = true
-  deps = [ ":fuchsia-fatfs_test" ]
+  deps = [ ":lib_test" ]
   manifest = "meta/fuchsia_fatfs_lib_test.cml"
 }
 
@@ -51,14 +52,17 @@ fuchsia_test_package("fuchsia-fatfs-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-fatfs-tests" ]
+  deps = [
+    ":fuchsia-fatfs-tests",
+    "//src/storage/fuchsia-fatfs/mounter:tests",
+  ]
 }
 
 rustc_binary("fatfs") {
   edition = "2018"
 
   deps = [
-    ":fuchsia-fatfs",
+    ":lib",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -74,4 +78,8 @@ rustc_binary("fatfs") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_package("fuchsia-fatfs") {
+  deps = [ "//src/storage/fuchsia-fatfs/mounter:fatfs-mounter" ]
 }

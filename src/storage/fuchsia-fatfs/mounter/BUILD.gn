@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "fatfs_mounter"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/block_client/rust:remote-block-device",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/fuchsia-fatfs:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
+    "//src/lib/storage/ramdevice_client",
+    "//third_party/rust_crates:fatfs",
+  ]
+
+  sources = [
+    "src/device.rs",
+    "src/main.rs",
+  ]
+}
+
+fuchsia_component("fatfs-mounter") {
+  deps = [ ":bin" ]
+  manifest = "meta/fatfs_mounter.cml"
+}
+
+fuchsia_component("fatfs-mounter-test") {
+  testonly = true
+  deps = [ ":bin_test" ]
+  manifest = "meta/fatfs_mounter_test.cml"
+}
+
+fuchsia_test_package("fatfs-mounter-tests") {
+  test_components = [ ":fatfs-mounter-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fatfs-mounter-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
+}
