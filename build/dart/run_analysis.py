@@ -80,9 +80,15 @@ def main():
         '--fatal-lints',
     ] + sources
 
+    # Call Dart anaylzer.
     call = subprocess.Popen(
         call_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = call.communicate()
+
+    # Convert output to strings, assuming UTF-8 output from dart.
+    stdout = stdout.decode('utf-8')
+    stderr = stderr.decode('utf-8')
+
     if call.returncode:
         print(stdout + stderr)
         return 1
