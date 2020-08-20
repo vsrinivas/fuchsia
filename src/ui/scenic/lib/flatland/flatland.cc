@@ -52,7 +52,8 @@ Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback callback) {
+void Flatland::Present(std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
+                       PresentCallback callback) {
   auto root_handle = GetRoot();
 
   // TODO(fxbug.dev/40818): Decide on a proper limit on compute time for topological sorting.
@@ -138,9 +139,11 @@ void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback ca
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
     fence_queue_->QueueTask(
         [this, uber_struct = std::move(uber_struct),
-         link_operations = std::move(pending_link_operations_)]() mutable {
+         link_operations = std::move(pending_link_operations_),
+         release_fences = std::move(release_fences)]() mutable {
           // Register a present and allow the UberStructSystem to handle the actual session update.
-          auto present_id = flatland_presenter_->RegisterPresent(session_id_, {});
+          auto present_id =
+              flatland_presenter_->RegisterPresent(session_id_, std::move(release_fences));
           uber_struct_queue_->Push(present_id, std::move(uber_struct));
 
           // Finalize Link destruction operations after publishing the new UberStruct. This

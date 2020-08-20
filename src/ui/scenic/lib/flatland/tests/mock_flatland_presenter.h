@@ -24,21 +24,28 @@ class MockFlatlandPresenter : public FlatlandPresenter {
                                         std::vector<zx::event> release_fences) override {
     const auto next_present_id = scheduling::GetNextPresentId();
 
-    // Only store the latest Present, since the real FrameScheduler only delivers the latest Present
-    // to SessionUpdaters.
-    pending_session_updates_[session_id] = next_present_id;
+    // Store all release fences.
+    pending_release_fences_[{session_id, next_present_id}] = std::move(release_fences);
+
     return next_present_id;
   }
 
   // For access from testing only.
-  void ApplySessionUpdates() {
-    uber_struct_system_->UpdateSessions(pending_session_updates_);
-    pending_session_updates_.clear();
+  void ApplySessionUpdatesAndSignalFences() {
+    uber_struct_system_->ForceUpdateAllSessions();
+
+    for (auto& fences_kv : pending_release_fences_) {
+      for (auto& event : fences_kv.second) {
+        event.signal(0, ZX_EVENT_SIGNALED);
+      }
+    }
+
+    pending_release_fences_.clear();
   }
 
  private:
   UberStructSystem* uber_struct_system_;
-  std::unordered_map<scheduling::SessionId, scheduling::PresentId> pending_session_updates_;
+  std::unordered_map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;
 };
 
 }  // namespace flatland

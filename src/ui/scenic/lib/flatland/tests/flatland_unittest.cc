@@ -66,6 +66,7 @@ namespace {
 // a new argument is added to Flatland::Present().
 struct PresentArgs {
   std::vector<zx::event> acquire_fences;
+  std::vector<zx::event> release_fences;
 };
 
 }  // namespace
@@ -82,22 +83,24 @@ struct PresentArgs {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                  \
-  {                                                                                        \
-    bool processed_callback = false;                                                       \
-    flatland.Present(std::move(args.acquire_fences), [&](Flatland_Present_Result result) { \
-      EXPECT_EQ(!expect_success, result.is_err());                                         \
-      if (expect_success) {                                                                \
-        EXPECT_EQ(1u, result.response().num_presents_remaining);                           \
-      } else {                                                                             \
-        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, result.err());      \
-      }                                                                                    \
-      processed_callback = true;                                                           \
-    });                                                                                    \
-    EXPECT_TRUE(processed_callback);                                                       \
-    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */        \
-    RunLoopUntilIdle();                                                                    \
-    mock_flatland_presenter_->ApplySessionUpdates();                                       \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                               \
+  {                                                                                     \
+    bool processed_callback = false;                                                    \
+    flatland.Present(std::move(args.acquire_fences), std::move(args.release_fences),    \
+                     [&](Flatland_Present_Result result) {                              \
+                       EXPECT_EQ(!expect_success, result.is_err());                     \
+                       if (expect_success) {                                            \
+                         EXPECT_EQ(1u, result.response().num_presents_remaining);       \
+                       } else {                                                         \
+                         EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, \
+                                   result.err());                                       \
+                       }                                                                \
+                       processed_callback = true;                                       \
+                     });                                                                \
+    EXPECT_TRUE(processed_callback);                                                    \
+    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */     \
+    RunLoopUntilIdle();                                                                 \
+    mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                     \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -152,6 +155,12 @@ zx::event CopyEvent(const zx::event& event) {
     FX_LOGS(ERROR) << "Copying zx::event failed.";
   }
   return event_copy;
+}
+
+bool IsEventSignaled(const zx::event& fence, zx_signals_t signal) {
+  zx_signals_t pending = 0u;
+  fence.wait_one(signal, zx::time(), &pending);
+  return (pending & signal) != 0u;
 }
 
 const float kDefaultSize = 1.f;
@@ -345,35 +354,45 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // Create two events to serve as acquire fences.
   PresentArgs args;
   args.acquire_fences = CreateEventArray(2);
-  auto event1_copy = CopyEvent(args.acquire_fences[0]);
-  auto event2_copy = CopyEvent(args.acquire_fences[1]);
+  auto acquire1_copy = CopyEvent(args.acquire_fences[0]);
+  auto acquire2_copy = CopyEvent(args.acquire_fences[1]);
+
+  // Create an event to serve as a release fence.
+  args.release_fences = CreateEventArray(1);
+  auto release_copy = CopyEvent(args.release_fences[0]);
 
   // The UberStructSystem shouldn't update when the Present includes acquire fences that haven't
-  // been reached.
+  // been reached, and the release fence shouldn't be signaled.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
   RunLoopUntilIdle();
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
-  // Signal the second fence and ensure the UberStructSystem doesn't update. Signal order doesn't
-  // matter.
-  event2_copy.signal(0, ZX_EVENT_SIGNALED);
+  EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+
+  // Signal the second fence and ensure the UberStructSystem doesn't update and the release fence
+  // isn't signaled. Signal order doesn't matter.
+  acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdates();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
+  EXPECT_FALSE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+
   // Signal the first fence and ensure the UberStructSystem contains an UberStruct for the
-  // instance.
-  event1_copy.signal(0, ZX_EVENT_SIGNALED);
+  // instance and the release fence is signaled.
+  acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdates();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
   EXPECT_NE(snapshot.find(flatland.GetRoot().GetInstanceId()), snapshot.end());
+
+  EXPECT_TRUE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
@@ -382,34 +401,47 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
   // Create an event to serve as the acquire fence.
   PresentArgs args;
   args.acquire_fences = CreateEventArray(1);
-  auto event_copy = CopyEvent(args.acquire_fences[0]);
+  auto acquire_copy = CopyEvent(args.acquire_fences[0]);
+
+  // Create an event to serve as a release fence.
+  args.release_fences = CreateEventArray(1);
+  auto release_copy = CopyEvent(args.release_fences[0]);
 
   // Signal the event before the Present() call.
-  event_copy.signal(0, ZX_EVENT_SIGNALED);
+  acquire_copy.signal(0, ZX_EVENT_SIGNALED);
 
-  // The UberStructSystem should update immediately.
+  // The UberStructSystem should update immediately and the release fence should be signaled.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
   RunLoopUntilIdle();
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
   EXPECT_NE(snapshot.find(flatland.GetRoot().GetInstanceId()), snapshot.end());
+
+  EXPECT_TRUE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   Flatland flatland = CreateFlatland();
 
   // Create an event to serve as the acquire fence for the first Present().
-  PresentArgs args;
-  args.acquire_fences = CreateEventArray(1);
-  auto event1_copy = CopyEvent(args.acquire_fences[0]);
+  PresentArgs args1;
+  args1.acquire_fences = CreateEventArray(1);
+  auto acquire1_copy = CopyEvent(args1.acquire_fences[0]);
 
-  // Present, but do not signal the fence, and ensure the UberStructSystem is empty.
-  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  // Create an event to serve as a release fence.
+  args1.release_fences = CreateEventArray(1);
+  auto release1_copy = CopyEvent(args1.release_fences[0]);
+
+  // Present, but do not signal the fence, and ensure the UberStructSystem is empty and the release
+  // fence is unsignaled.
+  PRESENT_WITH_ARGS(flatland, std::move(args1), true);
   RunLoopUntilIdle();
 
   auto snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
+
+  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
 
   // Create a transform and make it the root.
   const TransformId kId = 1;
@@ -419,30 +451,41 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   // Create another event to serve as the acquire fence for the second Present().
   PresentArgs args2;
-  args.acquire_fences = CreateEventArray(1);
-  auto event2_copy = CopyEvent(args.acquire_fences[0]);
+  args2.acquire_fences = CreateEventArray(1);
+  auto acquire2_copy = CopyEvent(args2.acquire_fences[0]);
 
-  // Present, but do not signal the fence, and ensure the UberStructSystem is still empty.
+  // Create an event to serve as a release fence.
+  args2.release_fences = CreateEventArray(1);
+  auto release2_copy = CopyEvent(args2.release_fences[0]);
+
+  // Present, but do not signal the fence, and ensure the UberStructSystem is still empty and both
+  // release fences are unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args2), true);
   RunLoopUntilIdle();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
+  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
+
   // Signal the fence for the second Present(). Since the first one is not done, there should still
-  // be no UberStruct for the instance.
-  event2_copy.signal(0, ZX_EVENT_SIGNALED);
+  // be no UberStruct for the instance, and neither fence should be signaled.
+  acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdates();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
+  EXPECT_FALSE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
+
   // Signal the fence for the first Present(). This should trigger both Presents(), resulting in an
   // UberStruct with a 2-element topology: the local root, and kId.
-  event1_copy.signal(0, ZX_EVENT_SIGNALED);
+  acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdates();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -450,6 +493,9 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   auto uber_struct_kv = snapshot.find(flatland.GetRoot().GetInstanceId());
   EXPECT_NE(uber_struct_kv, snapshot.end());
   EXPECT_EQ(uber_struct_kv->second->local_topology.size(), 2ul);
+
+  EXPECT_TRUE(IsEventSignaled(release1_copy, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(IsEventSignaled(release2_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
