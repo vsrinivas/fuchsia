@@ -32,7 +32,10 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
 
   uint64_t total_bytes;
   if (query & fuchsia_fs::FilesystemInfoQuery::TOTAL_BYTES) {
-    total_bytes = factoryfs_->Info().data_blocks * factoryfs_->Info().block_size;
+    // Account for 1 block for superblock.
+    uint64_t num_blocks = 1 + factoryfs_->Info().data_blocks +
+                          factoryfs_->Info().directory_ent_blocks;
+    total_bytes = num_blocks * factoryfs_->Info().block_size;
     builder.set_total_bytes(fidl::unowned_ptr(&total_bytes));
   }
 
