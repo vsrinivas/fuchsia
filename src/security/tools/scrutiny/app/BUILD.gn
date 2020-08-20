@@ -26,6 +26,7 @@ if (!is_fuchsia) {
     ]
 
     sources = [
+      "src/args.rs",
       "src/builtin.rs",
       "src/error.rs",
       "src/logo.rs",

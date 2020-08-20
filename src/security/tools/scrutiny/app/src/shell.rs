@@ -4,6 +4,7 @@
 
 use {
     super::{
+        args::args_to_json,
         builtin::{Builtin, BuiltinCommand},
         error::ShellError,
     },
@@ -153,6 +154,8 @@ impl Shell {
                 } else {
                     return Err(Error::new(ShellError::unescaped_json_string(body)));
                 }
+            } else if tokens.front().unwrap().starts_with("--") {
+                query = args_to_json(&tokens);
             }
         }
         Ok((namespace, query))
