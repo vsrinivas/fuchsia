@@ -558,7 +558,7 @@ TEXT ·Sys_pc_firmware_tables(SB),NOSPLIT,$0
 TEXT ·Sys_pci_get_nth_device(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_get_nth_device(SB)
 
-// func Sys_pci_enable_bus_master(handle Handle, enable bool) Status
+// func Sys_pci_enable_bus_master(handle Handle, enable uint32) Status
 TEXT ·Sys_pci_enable_bus_master(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_enable_bus_master(SB)
 
@@ -574,7 +574,7 @@ TEXT ·Sys_pci_config_read(SB),NOSPLIT,$0
 TEXT ·Sys_pci_config_write(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_config_write(SB)
 
-// func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write bool) Status
+// func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write uint32) Status
 TEXT ·Sys_pci_cfg_pio_rw(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_cfg_pio_rw(SB)
 
@@ -598,7 +598,7 @@ TEXT ·Sys_pci_set_irq_mode(SB),NOSPLIT,$0
 TEXT ·Sys_pci_init(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_init(SB)
 
-// func Sys_pci_add_subtract_io_range(handle Handle, mmio bool, base uint64, len uint64, add bool) Status
+// func Sys_pci_add_subtract_io_range(handle Handle, mmio uint32, base uint64, len uint64, add uint32) Status
 TEXT ·Sys_pci_add_subtract_io_range(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_add_subtract_io_range(SB)
 
@@ -1298,7 +1298,7 @@ func Sys_pci_get_nth_device(handle Handle, index uint32, out_info *uintptr, out_
 
 //go:noescape
 //go:nosplit
-func Sys_pci_enable_bus_master(handle Handle, enable bool) Status
+func Sys_pci_enable_bus_master(handle Handle, enable uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -1314,7 +1314,7 @@ func Sys_pci_config_write(handle Handle, offset uint16, width uint, val uint32) 
 
 //go:noescape
 //go:nosplit
-func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write bool) Status
+func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -1338,7 +1338,7 @@ func Sys_pci_init(handle Handle, init_buf *uintptr, len uint32) Status
 
 //go:noescape
 //go:nosplit
-func Sys_pci_add_subtract_io_range(handle Handle, mmio bool, base uint64, len uint64, add bool) Status
+func Sys_pci_add_subtract_io_range(handle Handle, mmio uint32, base uint64, len uint64, add uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -2032,7 +2032,7 @@ TEXT ·Sys_pc_firmware_tables(SB),NOSPLIT,$0
 TEXT ·Sys_pci_get_nth_device(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_get_nth_device(SB)
 
-// func Sys_pci_enable_bus_master(handle Handle, enable bool) Status
+// func Sys_pci_enable_bus_master(handle Handle, enable uint32) Status
 TEXT ·Sys_pci_enable_bus_master(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_enable_bus_master(SB)
 
@@ -2048,7 +2048,7 @@ TEXT ·Sys_pci_config_read(SB),NOSPLIT,$0
 TEXT ·Sys_pci_config_write(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_config_write(SB)
 
-// func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write bool) Status
+// func Sys_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write uint32) Status
 TEXT ·Sys_pci_cfg_pio_rw(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_cfg_pio_rw(SB)
 
@@ -2072,7 +2072,7 @@ TEXT ·Sys_pci_set_irq_mode(SB),NOSPLIT,$0
 TEXT ·Sys_pci_init(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_init(SB)
 
-// func Sys_pci_add_subtract_io_range(handle Handle, mmio bool, base uint64, len uint64, add bool) Status
+// func Sys_pci_add_subtract_io_range(handle Handle, mmio uint32, base uint64, len uint64, add uint32) Status
 TEXT ·Sys_pci_add_subtract_io_range(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pci_add_subtract_io_range(SB)
 
@@ -4033,8 +4033,8 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$0-28
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
-// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable bool) int32
-TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$0-20
+// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable uint32) int32
+TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$0-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
@@ -4042,9 +4042,9 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$0-20
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
-	MOVD enable+8(FP), R1
+	MOVW enable+4(FP), R1
 	BL vdso_zx_pci_enable_bus_master(SB)
-	MOVW R0, ret+16(FP)
+	MOVW R0, ret+8(FP)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -4100,7 +4100,7 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$0-28
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
-// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
 TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	GO_ARGS
 	NO_LOCAL_POINTERS
@@ -4115,7 +4115,7 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	MOVD offset+32(FP), R4
 	MOVD val+40(FP), R5
 	MOVD width+48(FP), R6
-	MOVD write+56(FP), R7
+	MOVW write+56(FP), R7
 	BL vdso_zx_pci_cfg_pio_rw(SB)
 	MOVW R0, ret+64(FP)
 	MOVD g_m(g), R21
@@ -4208,8 +4208,8 @@ TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$0-28
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
-// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio bool, base uint64, len uint64, add bool) int32
-TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$0-44
+// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio uint32, base uint64, len uint64, add uint32) int32
+TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$0-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	MOVD g_m(g), R21
@@ -4217,12 +4217,12 @@ TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$0-44
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
-	MOVD mmio+8(FP), R1
-	MOVD base+16(FP), R2
-	MOVD len+24(FP), R3
-	MOVD add+32(FP), R4
+	MOVW mmio+4(FP), R1
+	MOVD base+8(FP), R2
+	MOVD len+16(FP), R3
+	MOVW add+24(FP), R4
 	BL vdso_zx_pci_add_subtract_io_range(SB)
-	MOVW R0, ret+40(FP)
+	MOVW R0, ret+32(FP)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -6518,7 +6518,7 @@ func vdsoCall_zx_pci_get_nth_device(handle uint32, index uint32, out_info unsafe
 
 //go:noescape
 //go:nosplit
-func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable bool) int32
+func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable uint32) int32
 
 //go:noescape
 //go:nosplit
@@ -6534,7 +6534,7 @@ func vdsoCall_zx_pci_config_write(handle uint32, offset uint16, width uint, val 
 
 //go:noescape
 //go:nosplit
-func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
 
 //go:noescape
 //go:nosplit
@@ -6558,7 +6558,7 @@ func vdsoCall_zx_pci_init(handle uint32, init_buf unsafe.Pointer, len uint32) in
 
 //go:noescape
 //go:nosplit
-func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio bool, base uint64, len uint64, add bool) int32
+func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio uint32, base uint64, len uint64, add uint32) int32
 
 //go:noescape
 //go:nosplit
@@ -9191,8 +9191,8 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable bool) int32
-TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-9
+// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable uint32) int32
+TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -9204,10 +9204,10 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-9
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVQ enable+4(FP), SI
+	MOVL enable+4(FP), SI
 	MOVQ vdso_zx_pci_enable_bus_master(SB), AX
 	CALL AX
-	MOVL AX, ret+5(FP)
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -9278,8 +9278,8 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
-TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
+// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
+TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -9297,7 +9297,7 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	MOVQ offset+7(FP), R8
 	MOVQ val+8(FP), R9
 	MOVQ width+16(FP), R12
-	MOVQ write+24(FP), R13
+	MOVL write+24(FP), R13
 	MOVQ SP, BP   // BP is preserved across vsdo call by the x86-64 ABI
 	ANDQ $~15, SP // stack alignment for x86-64 ABI
 	PUSHQ R13
@@ -9307,7 +9307,7 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	POPQ R12
 	POPQ R13
 	MOVQ BP, SP
-	MOVL AX, ret+25(FP)
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -9423,8 +9423,8 @@ TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio bool, base uint64, len uint64, add bool) int32
-TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-29
+// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio uint32, base uint64, len uint64, add uint32) int32
+TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -9436,13 +9436,13 @@ TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-29
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVQ mmio+4(FP), SI
+	MOVL mmio+4(FP), SI
 	MOVQ base+8(FP), DX
 	MOVQ len+16(FP), CX
-	MOVQ add+24(FP), R8
+	MOVL add+24(FP), R8
 	MOVQ vdso_zx_pci_add_subtract_io_range(SB), AX
 	CALL AX
-	MOVL AX, ret+25(FP)
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -14966,7 +14966,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         },
         {
           "name": "enable",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]
@@ -15141,7 +15141,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         },
         {
           "name": "write",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]
@@ -15352,7 +15352,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         },
         {
           "name": "mmio",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]
@@ -15373,7 +15373,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         },
         {
           "name": "add",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]
@@ -19015,7 +19015,7 @@ KERNEL_SYSCALL(pci_get_nth_device, zx_status_t, /* no attributes */, 4,
 KERNEL_SYSCALL(pci_enable_bus_master, zx_status_t, /* no attributes */, 2,
     (handle, enable), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool enable))
+    uint32_t enable))
 
 KERNEL_SYSCALL(pci_reset_device, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -19044,7 +19044,7 @@ KERNEL_SYSCALL(pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
     uint8_t offset,
     user_inout_ptr<uint32_t> val,
     size_t width,
-    bool write))
+    uint32_t write))
 
 KERNEL_SYSCALL(pci_get_bar, zx_status_t, /* no attributes */, 4,
     (handle, bar_num, out_bar, out_handle), (
@@ -19080,10 +19080,10 @@ KERNEL_SYSCALL(pci_init, zx_status_t, /* no attributes */, 3,
 KERNEL_SYSCALL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
     (handle, mmio, base, len, add), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool mmio,
+    uint32_t mmio,
     uint64_t base,
     uint64_t len,
-    bool add))
+    uint32_t add))
 
 KERNEL_SYSCALL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -20242,7 +20242,7 @@ syscall_result wrapper_pci_get_nth_device(zx_handle_t handle, uint32_t index, zx
         return result;
     });
 }
-syscall_result wrapper_pci_enable_bus_master(zx_handle_t handle, bool enable, uint64_t pc) {
+syscall_result wrapper_pci_enable_bus_master(zx_handle_t handle, uint32_t enable, uint64_t pc) {
     return do_syscall(ZX_SYS_pci_enable_bus_master, pc, &VDso::ValidSyscallPC::pci_enable_bus_master, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_pci_enable_bus_master(handle, enable);
         return result;
@@ -20266,7 +20266,7 @@ syscall_result wrapper_pci_config_write(zx_handle_t handle, uint16_t offset, siz
         return result;
     });
 }
-syscall_result wrapper_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t* val, size_t width, bool write, uint64_t pc) {
+syscall_result wrapper_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t* val, size_t width, uint32_t write, uint64_t pc) {
     return do_syscall(ZX_SYS_pci_cfg_pio_rw, pc, &VDso::ValidSyscallPC::pci_cfg_pio_rw, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_pci_cfg_pio_rw(handle, bus, dev, func, offset, make_user_inout_ptr(val), width, write);
         return result;
@@ -20314,7 +20314,7 @@ syscall_result wrapper_pci_init(zx_handle_t handle, const zx_pci_init_arg_t* ini
         return result;
     });
 }
-syscall_result wrapper_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add, uint64_t pc) {
+syscall_result wrapper_pci_add_subtract_io_range(zx_handle_t handle, uint32_t mmio, uint64_t base, uint64_t len, uint32_t add, uint64_t pc) {
     return do_syscall(ZX_SYS_pci_add_subtract_io_range, pc, &VDso::ValidSyscallPC::pci_add_subtract_io_range, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_pci_add_subtract_io_range(handle, mmio, base, len, add);
         return result;
@@ -21501,7 +21501,7 @@ KERNEL_SYSCALL(pci_get_nth_device, zx_status_t, /* no attributes */, 4,
 KERNEL_SYSCALL(pci_enable_bus_master, zx_status_t, /* no attributes */, 2,
     (handle, enable), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool enable))
+    uint32_t enable))
 
 KERNEL_SYSCALL(pci_reset_device, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -21530,7 +21530,7 @@ KERNEL_SYSCALL(pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
     uint8_t offset,
     uint32_t* val,
     size_t width,
-    bool write))
+    uint32_t write))
 
 KERNEL_SYSCALL(pci_get_bar, zx_status_t, /* no attributes */, 4,
     (handle, bar_num, out_bar, out_handle), (
@@ -21566,10 +21566,10 @@ KERNEL_SYSCALL(pci_init, zx_status_t, /* no attributes */, 3,
 KERNEL_SYSCALL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
     (handle, mmio, base, len, add), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool mmio,
+    uint32_t mmio,
     uint64_t base,
     uint64_t len,
-    bool add))
+    uint32_t add))
 
 KERNEL_SYSCALL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -22660,7 +22660,7 @@ _ZX_SYSCALL_DECL(pci_get_nth_device, zx_status_t, /* no attributes */, 4,
 _ZX_SYSCALL_DECL(pci_enable_bus_master, zx_status_t, /* no attributes */, 2,
     (handle, enable), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool enable))
+    uint32_t enable))
 
 _ZX_SYSCALL_DECL(pci_reset_device, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -22689,7 +22689,7 @@ _ZX_SYSCALL_DECL(pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
     uint8_t offset,
     uint32_t* val,
     size_t width,
-    bool write))
+    uint32_t write))
 
 _ZX_SYSCALL_DECL(pci_get_bar, zx_status_t, /* no attributes */, 4,
     (handle, bar_num, out_bar, out_handle), (
@@ -22725,10 +22725,10 @@ _ZX_SYSCALL_DECL(pci_init, zx_status_t, /* no attributes */, 3,
 _ZX_SYSCALL_DECL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
     (handle, mmio, base, len, add), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    bool mmio,
+    uint32_t mmio,
     uint64_t base,
     uint64_t len,
-    bool add))
+    uint32_t add))
 
 _ZX_SYSCALL_DECL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
@@ -23746,7 +23746,7 @@ extern {
 
     pub fn zx_pci_enable_bus_master(
         handle: zx_handle_t,
-        enable: bool
+        enable: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_reset_device(
@@ -23775,7 +23775,7 @@ extern {
         offset: u8,
         val: *mut u32,
         width: usize,
-        write: bool
+        write: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_get_bar(
@@ -23811,10 +23811,10 @@ extern {
 
     pub fn zx_pci_add_subtract_io_range(
         handle: zx_handle_t,
-        mmio: bool,
+        mmio: u32,
         base: u64,
         len: u64,
-        add: bool
+        add: u32
         ) -> zx_status_t;
 
     pub fn zx_pmt_unpin(

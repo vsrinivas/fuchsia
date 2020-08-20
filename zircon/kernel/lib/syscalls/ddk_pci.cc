@@ -106,10 +106,12 @@ static void pci_irq_swizzle_lut_remove_irq(zx_pci_irq_swizzle_lut_t* lut, uint32
 }
 
 // zx_status_t zx_pci_add_subtract_io_range
-zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base,
-                                          uint64_t len, bool add) {
-  LTRACEF("handle %x mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len,
-          add);
+zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, uint32_t mmio, uint64_t base,
+                                          uint64_t len, uint32_t add) {
+  bool is_add = (add > 0);
+  bool is_mmio = (mmio > 0);
+  LTRACEF("handle %x mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, is_mmio, base,
+          len, is_add);
 
   // TODO(ZX-971): finer grained validation
   // TODO(security): Add additional access checks
@@ -123,9 +125,9 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
     return ZX_ERR_BAD_STATE;
   }
 
-  PciAddrSpace addr_space = mmio ? PciAddrSpace::MMIO : PciAddrSpace::PIO;
+  PciAddrSpace addr_space = is_mmio ? PciAddrSpace::MMIO : PciAddrSpace::PIO;
 
-  if (add) {
+  if (is_add) {
     return pcie->AddBusRegion(base, len, addr_space);
   } else {
     return pcie->SubtractBusRegion(base, len, addr_space);
@@ -542,7 +544,7 @@ zx_status_t sys_pci_config_write(zx_handle_t handle, uint16_t offset, size_t wid
 // zx_status_t zx_pci_cfg_pio_rw
 zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
                                uint8_t offset, user_inout_ptr<uint32_t> val, size_t width,
-                               bool write) {
+                               uint32_t write) {
 #if ARCH_X86
   uint32_t val_;
   zx_status_t status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
@@ -550,7 +552,8 @@ zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uin
     return status;
   }
 
-  if (write) {
+  bool is_write = (write > 0);
+  if (is_write) {
     status = val.copy_from_user(&val_);
     if (status != ZX_OK) {
       return status;
@@ -570,7 +573,7 @@ zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uin
 }
 
 // zx_status_t zx_pci_enable_bus_master
-zx_status_t sys_pci_enable_bus_master(zx_handle_t dev_handle, bool enable) {
+zx_status_t sys_pci_enable_bus_master(zx_handle_t dev_handle, uint32_t enable) {
   /**
    * Enables or disables bus mastering for the PCI device associated with the handle.
    * @param handle Handle associated with a PCI device
@@ -585,7 +588,7 @@ zx_status_t sys_pci_enable_bus_master(zx_handle_t dev_handle, bool enable) {
   if (status != ZX_OK)
     return status;
 
-  return pci_device->EnableBusMaster(enable);
+  return pci_device->EnableBusMaster(enable > 0);
 }
 
 // zx_status_t zx_pci_reset_device
@@ -768,8 +771,8 @@ zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint
 }
 
 // zx_status_t zx_pci_add_subtract_io_range
-zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base,
-                                          uint64_t len, bool add) {
+zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, uint32_t mmio, uint64_t base,
+                                          uint64_t len, uint32_t add) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -787,7 +790,7 @@ zx_status_t sys_pci_config_write(zx_handle_t handle, uint16_t offset, size_t wid
 // zx_status_t zx_pci_cfg_pio_rw
 zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
                                uint8_t offset, user_inout_ptr<uint32_t> val, size_t width,
-                               bool write) {
+                               uint32_t write) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -798,7 +801,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_inout_ptr<zx_pcie
 }
 
 // zx_status_t zx_pci_enable_bus_master
-zx_status_t sys_pci_enable_bus_master(zx_handle_t, bool) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t sys_pci_enable_bus_master(zx_handle_t, uint32_t) { return ZX_ERR_NOT_SUPPORTED; }
 
 // zx_status_t zx_pci_reset_device
 zx_status_t sys_pci_reset_device(zx_handle_t) { return ZX_ERR_NOT_SUPPORTED; }

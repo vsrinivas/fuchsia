@@ -68,7 +68,7 @@ protocol pci {
         -> (status status, PcieDeviceInfo out_info, handle out_handle);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_enable_bus_master(handle:PCI_DEVICE handle, bool enable) -> (status status);
+    pci_enable_bus_master(handle:PCI_DEVICE handle, uint32 enable) -> (status status);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
     pci_reset_device(handle:PCI_DEVICE handle) -> (status status);
@@ -93,7 +93,7 @@ protocol pci {
                    uint8 offset,
                    mutable_uint32 val,
                    usize width,
-                   bool write)
+                   uint32 write)
         -> (status status);
 
     // TODO(scottmg): type of out_handle?
@@ -121,6 +121,6 @@ protocol pci {
     pci_init(handle:RESOURCE handle, PciInitArg init_buf, uint32 len) -> (status status);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_add_subtract_io_range(handle:RESOURCE handle, bool mmio, uint64 base, uint64 len, bool add)
+    pci_add_subtract_io_range(handle:RESOURCE handle, uint32 mmio, uint64 base, uint64 len, uint32 add)
         -> (status status);
 };
