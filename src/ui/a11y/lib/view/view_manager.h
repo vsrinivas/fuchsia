@@ -19,17 +19,6 @@
 
 namespace a11y {
 
-// Factory class to build a new Semantic Tree Service.
-class SemanticTreeServiceFactory {
- public:
-  SemanticTreeServiceFactory() = default;
-  virtual ~SemanticTreeServiceFactory() = default;
-
-  virtual std::unique_ptr<SemanticTreeService> NewService(
-      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback);
-};
-
 // A service to manage producing and consuming of semantics.
 //
 // Semantic Providers connect to this service to start supplying semantic

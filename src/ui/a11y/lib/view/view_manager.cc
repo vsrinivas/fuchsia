@@ -14,15 +14,6 @@
 
 namespace a11y {
 
-std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
-    zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback) {
-  auto semantic_tree = std::make_unique<SemanticTreeService>(
-      std::make_unique<SemanticTree>(), koid, std::move(semantic_listener), debug_dir,
-      std::move(close_channel_callback));
-  return semantic_tree;
-}
-
 ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                          std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,

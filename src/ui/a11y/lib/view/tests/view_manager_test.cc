@@ -24,6 +24,7 @@
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
@@ -35,24 +36,6 @@ using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::NodePtr;
 using fuchsia::accessibility::semantics::Role;
 using fuchsia::accessibility::semantics::SemanticsManager;
-
-class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
- public:
-  std::unique_ptr<a11y::SemanticTreeService> NewService(
-      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir,
-      a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) override {
-    auto service = a11y::SemanticTreeServiceFactory::NewService(
-        koid, std::move(semantic_listener), debug_dir, std::move(close_channel_callback));
-    service_ = service.get();
-    return service;
-  }
-
-  a11y::SemanticTreeService* service() { return service_; }
-
- private:
-  a11y::SemanticTreeService* service_ = nullptr;
-};
 
 class ViewManagerTest : public gtest::TestLoopFixture {
  public:
@@ -227,24 +210,24 @@ TEST_F(ViewManagerTest, SemanticsSourceGetNeighboringNodes) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
 
-  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
-  node_updates.emplace_back(CreateTestNode(0u, "test_label_0", {1u, 2u, 3u}));
-  node_updates.emplace_back(CreateTestNode(1u, "test_label_1"));
-  node_updates.emplace_back(CreateTestNode(2u, "test_label_2"));
-  node_updates.emplace_back(CreateTestNode(3u, "test_label_3"));
-  ApplyNodeUpdates(std::move(node_updates));
+  auto mock_tree = tree_service_factory_ptr_->semantic_tree();
+  ASSERT_TRUE(mock_tree);
+  auto next_node = CreateTestNode(3u, "test_label_3");
+  mock_tree->SetNextNode(&next_node);
+  auto previous_node = CreateTestNode(1u, "test_label_1");
+  mock_tree->SetPreviousNode(&previous_node);
 
-  const auto next_node = view_manager_->GetNextNode(
+  const auto returned_next_node = view_manager_->GetNextNode(
       semantic_provider_->koid(), 2u,
       [](const fuchsia::accessibility::semantics::Node* node) { return true; });
-  const auto previous_node = view_manager_->GetPreviousNode(
+  const auto returned_previous_node = view_manager_->GetPreviousNode(
       semantic_provider_->koid(), 2u,
       [](const fuchsia::accessibility::semantics::Node* node) { return true; });
 
-  EXPECT_TRUE(next_node);
-  EXPECT_EQ(next_node->node_id(), 3u);
-  EXPECT_TRUE(previous_node);
-  EXPECT_EQ(previous_node->node_id(), 1u);
+  EXPECT_TRUE(returned_next_node);
+  EXPECT_EQ(returned_next_node->node_id(), 3u);
+  EXPECT_TRUE(returned_previous_node);
+  EXPECT_EQ(returned_previous_node->node_id(), 1u);
 }
 
 TEST_F(ViewManagerTest, SemanticsSourceHitTest) {

@@ -23,6 +23,7 @@
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
@@ -37,24 +38,6 @@ class MockSemanticTreeService : public a11y::SemanticTreeService {
 
  private:
   bool enabled_ = false;
-};
-
-class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
- public:
-  std::unique_ptr<a11y::SemanticTreeService> NewService(
-      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir,
-      a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) override {
-    auto service = a11y::SemanticTreeServiceFactory::NewService(
-        koid, std::move(semantic_listener), debug_dir, std::move(close_channel_callback));
-    service_ = service.get();
-    return service;
-  }
-
-  a11y::SemanticTreeService* service() { return service_; }
-
- private:
-  a11y::SemanticTreeService* service_ = nullptr;
 };
 
 class ViewWrapperTest : public gtest::TestLoopFixture {

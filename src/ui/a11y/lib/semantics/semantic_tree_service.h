@@ -114,6 +114,18 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   std::unique_ptr<fxl::WeakPtrFactory<::a11y::SemanticTree>> semantic_tree_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTreeService);
 };
+
+// Factory class to build a new Semantic Tree Service.
+class SemanticTreeServiceFactory {
+ public:
+  SemanticTreeServiceFactory() = default;
+  virtual ~SemanticTreeServiceFactory() = default;
+
+  virtual std::unique_ptr<SemanticTreeService> NewService(
+      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback);
+};
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_SERVICE_H_

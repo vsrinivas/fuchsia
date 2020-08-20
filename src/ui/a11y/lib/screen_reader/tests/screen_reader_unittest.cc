@@ -23,6 +23,7 @@
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -44,30 +45,6 @@ constexpr char kListenerUtterance[] = "Gesture Performed";
 constexpr uint32_t kRootNodeId = 0;
 constexpr uint32_t kChildNodeId = 1;
 constexpr accessibility_test::PointerId kPointerId = 1;
-
-class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
- public:
-  std::unique_ptr<a11y::SemanticTreeService> NewService(
-      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir,
-      a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) override {
-    semantic_tree_ = std::make_unique<MockSemanticTree>();
-    semantic_tree_ptr_ = semantic_tree_.get();
-    auto service = std::make_unique<a11y::SemanticTreeService>(
-        std::move(semantic_tree_), koid, std::move(semantic_listener), debug_dir,
-        std::move(close_channel_callback));
-    service_ = service.get();
-    return service;
-  }
-
-  a11y::SemanticTreeService* service() { return service_; }
-  MockSemanticTree* semantic_tree() { return semantic_tree_ptr_; }
-
- private:
-  a11y::SemanticTreeService* service_ = nullptr;
-  std::unique_ptr<MockSemanticTree> semantic_tree_;
-  MockSemanticTree* semantic_tree_ptr_ = nullptr;
-};
 
 class ScreenReaderTest : public gtest::TestLoopFixture {
  public:

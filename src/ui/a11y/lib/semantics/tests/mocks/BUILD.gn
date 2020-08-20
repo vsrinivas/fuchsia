@@ -9,6 +9,7 @@ source_set("mocks") {
     "mock_semantic_listener.h",
     "mock_semantic_provider.h",
     "mock_semantic_tree.h",
+    "mock_semantic_tree_service_factory.h",
     "mock_semantics_source.h",
   ]
 
@@ -19,6 +20,8 @@ source_set("mocks") {
     "mock_semantic_provider.h",
     "mock_semantic_tree.cc",
     "mock_semantic_tree.h",
+    "mock_semantic_tree_service_factory.cc",
+    "mock_semantic_tree_service_factory.h",
     "mock_semantics_source.cc",
     "mock_semantics_source.h",
   ]
