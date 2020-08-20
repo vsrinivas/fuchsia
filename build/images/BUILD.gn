@@ -1420,6 +1420,26 @@ action("flash_script") {
 
 default_image_deps += [ recovery_label ]
 
+action("flash_script_archive") {
+  script = "//build/images/generate_flash_script.sh"
+  outputs = [ "$root_out_dir/flash-archive.sh" ]
+  image = "$root_out_dir/zircon-r.zbi"
+  args = [
+    "--image=" + rebase_path(image, root_build_dir),
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--zircon-a=${zircon_a_partition}",
+    "--zircon-b=${zircon_b_partition}",
+    "--zircon-r=${zircon_r_partition}",
+    "--vbmeta-a=${vbmeta_a_partition}",
+    "--vbmeta-b=${vbmeta_b_partition}",
+    "--vbmeta-r=${vbmeta_r_partition}",
+    "--active=${active_partition}",
+    "--signed=${signed_image}",
+    "--product=${fastboot_product}",
+    "--pre-erase-flash=${pre_erase_flash}",
+  ]
+}
+
 paver_targets = [
   {
     name = "netboot-script"
@@ -1512,7 +1532,7 @@ foreach(format, archive_formats) {
       extra_bootserver_arguments = ""
       deps = [
         ":archive-extras",
-        ":flash_script",
+        ":flash_script_archive",
         ":paver-script",
         "zedboot",
       ]
@@ -2104,6 +2124,12 @@ group("archive-extras") {
         name = "buildargs"
         type = "gn"
         path = "args.gn"
+      },
+      {
+        archive = true
+        name = "flash"
+        type = "sh"
+        path = "flash-archive.sh"
       },
     ]
   }

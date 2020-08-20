@@ -4,33 +4,32 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Other
-### Remotely build, fetch and pave
+### Remotely build, fetch and flash
 
-## usage: fx pave-remote HOST [DIR] [--no-pave] [--no-build] [-- PAVE_ARGS]
+## usage: fx flash-remote HOST [DIR] [--no-flash] [--no-build]
 ##
 ## Connect to HOST, run a build using fx from DIR, fetch the artifacts and
-## start the paver.
+## start the flash.
 ##
 ##  --no-build    do not build, just pull artifacts already present
-##  --no-pave     do not start the paver, just pull the artifacts
-##  --            pass any arguments after the -- to the fx pave command
+##  --no-flash    do not start the fastboot, just pull the artifacts
+##   -s           Serial of device you wish to flash to (only necessary if multiple
+##                devices in fastboot mode)
 ##
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
-##  PAVE_ARGS     arguments for the fx pave command
-##
-## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
-## defaults in future invocations of any 'fx *-remote' tools.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-flash.sh || exit $?
 fx-config-read
 
 build=true
-pave=true
+flash=true
 host=""
 dir=""
-args=()
+serial=
+device=$(get-device-name)
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -40,13 +39,16 @@ while [[ $# -ne 0 ]]; do
   --no-build)
     build=false
     ;;
-  --no-pave)
-    pave=false
+  --no-flash)
+    flash=false
     ;;
-  --)
+  -s)
     shift
-    args+=("$@")
-    break
+    serial="$1"
+    ;;
+  -device)
+    shift
+    device="$1"
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -92,18 +94,8 @@ save_remote_info "$host" "$dir"
 
 fetch_remote_build_archive "${host}" "${dir}"
 
-if "${pave}"; then
-  cd out/fetched
+if "${flash}"; then
+  cd "${FUCHSIA_DIR}/out/fetched"
 
-  if [[ $(uname) = "Darwin" ]]; then
-    # HACK!
-    rm -f bootserver.exe.linux-x64
-    cp "${FUCHSIA_BUILD_DIR}/host_x64/bootserver" ./bootserver.exe.linux-x64
-  fi
-
-  if [[ -n "$(get-device-name)" ]]; then
-    args+=(-n $(get-device-name))
-  fi
-
-  ./pave.sh --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "${args[@]}"
+  fx-flash "${serial}" "${device}"
 fi

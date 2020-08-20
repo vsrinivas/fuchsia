@@ -33,3 +33,24 @@ function save_remote_info {
   echo "${host}:${dir}" > "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}"
 }
 
+function fetch_remote_build_archive {
+  local host="$1"
+  local dir="$2"
+
+  local build_dir=$(ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
+  if [[ -z "${build_dir}" ]]; then
+    return 1
+  fi
+
+  rsync -z -P "${host}":"${build_dir}/build-archive.tar" "${FUCHSIA_DIR}/out/build-archive.tar"
+  if [[ $? -ne 0 ]]; then
+    return 1
+  fi
+
+  mkdir -p "${FUCHSIA_DIR}/out/fetched"
+  tar xf "${FUCHSIA_DIR}/out/build-archive.tar" -C "${FUCHSIA_DIR}/out/fetched"
+  if [[ $? -ne 0 ]]; then
+    return 1
+  fi
+  echo >&2 "Build archive expanded into out/fetched"
+}
