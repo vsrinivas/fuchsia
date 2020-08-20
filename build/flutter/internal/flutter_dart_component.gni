@@ -105,6 +105,11 @@ template("_flutter_asset_manifest") {
 #     The name of the package containing the main_dart
 #     Type: string
 #
+#   component_name (optional)
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
 #   runtime_meta (required)
 #     The path to the runtime meta which will be merged with the manifest
 #     Type: path
@@ -115,10 +120,6 @@ template("_flutter_asset_manifest") {
 #
 #   main_dart (required)
 #     File containing the main function of the component.
-#     Type: string
-#
-#   main_package (required)
-#     The package containing the main_dart
 #     Type: string
 #
 #  deps

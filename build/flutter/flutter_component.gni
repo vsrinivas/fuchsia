@@ -57,9 +57,12 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     The component manifest
 #     Type: path
 #
-#   main_package (required)
+#   main_package (optional)
 #     The name of the package containing main_dart
 #     Type: string
+#     Default: component_name with dashes replaced by underscores, if defined.
+#       Otherwise, the target_name with dashes replaced by underscores will be
+#       used.
 #
 #   component_name (optional)
 #     The name of the component.
@@ -91,7 +94,6 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #  visibility
 template("flutter_component") {
   assert(defined(invoker.manifest), "Must define manifest")
-  assert(defined(invoker.main_package), "Must define main_package")
 
   _component_deps = []
   if (defined(invoker.deps)) {
@@ -107,7 +109,13 @@ template("flutter_component") {
       "//build/flutter/meta/${dart_compilation_mode}${_product_suffix}_runtime"
   _component_deps += [ "//topaz/runtime/flutter_runner:flutter_${dart_compilation_mode}${_product_suffix}_runner" ]
 
-  _main_package = invoker.main_package
+  if (defined(invoker.main_package)) {
+    _main_package = invoker.main_package
+  } else if (defined(invoker.component_name)) {
+    _main_package = string_replace(invoker.component_name, "-", "_")
+  } else {
+    _main_package = string_replace(target_name, "-", "_")
+  }
 
   if (defined(invoker.main_dart)) {
     _main_dart = invoker.main_dart
