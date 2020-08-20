@@ -23,6 +23,9 @@ impl DataController for BootfsPathsController {
             Ok(serde_json::to_value(empty)?)
         }
     }
+    fn description(&self) -> String {
+        "Returns all the files in bootfs.".to_string()
+    }
 }
 
 #[derive(Default)]
@@ -35,6 +38,9 @@ impl DataController for ZbiCmdlineController {
         } else {
             Ok(serde_json::to_value("")?)
         }
+    }
+    fn description(&self) -> String {
+        "Returns the zbi cmdline section as a string.".to_string()
     }
 }
 
@@ -53,6 +59,9 @@ impl DataController for ZbiSectionsController {
             let empty: Vec<String> = vec![];
             Ok(serde_json::to_value(empty)?)
         }
+    }
+    fn description(&self) -> String {
+        "Returns all the typed sections found in the zbi.".to_string()
     }
 }
 

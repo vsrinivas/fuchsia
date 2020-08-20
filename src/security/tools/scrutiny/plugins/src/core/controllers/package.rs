@@ -18,6 +18,9 @@ impl DataController for PackagesGraphController {
         packages.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
         Ok(serde_json::to_value(packages)?)
     }
+    fn description(&self) -> String {
+        "Returns all Fuchsia packages and their file index.".to_string()
+    }
 }
 
 #[cfg(test)]

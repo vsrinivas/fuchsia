@@ -46,12 +46,12 @@ Scrutiny:
   A Security auditing framework and toolset.
 
 Builtin Commands:
-  plugin.load        - Loads a registered plugin.
-  plugin.unload      - Unloads a loaded plugin.
-  clear              - Clears the screen.
-  exit               - Exits the program.
-  help               - Prints this help message.
-  history            - Prints the command history for the shell."
+  clear                     - Clears the screen.
+  plugin.load               - Loads a registered plugin.
+  plugin.unload             - Unloads a loaded plugin.
+  exit                      - Exits the program.
+  help                      - Prints help information for a command.
+  history                   - Prints the command history for the shell."
         )
     }
 }

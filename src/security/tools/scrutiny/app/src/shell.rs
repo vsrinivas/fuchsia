@@ -78,8 +78,24 @@ impl Shell {
                     }
                 }
                 Builtin::Help => {
+                    // Provide usage for a specific command.
+                    if builtin.args.len() == 1 {
+                        let mut command = builtin.args.first().unwrap().clone();
+                        command = str::replace(&command, ".", "/");
+                        if !command.starts_with("/api/") {
+                            command.insert_str(0, "/api/");
+                        }
+                        let result = self.dispatcher.read().unwrap().usage(command);
+                        if let Ok(usage) = result {
+                            println!("{}", usage);
+                        } else {
+                            println!("Error: Command does not exist.");
+                        }
+                        return true;
+                    }
+                    // Provide usage for a general command.
                     BuiltinCommand::usage();
-                    println!("\nPlugin Commands:\n");
+                    println!("");
                     let manager = self.manager.lock().unwrap();
                     let plugins = manager.plugins();
                     for plugin in plugins.iter() {
@@ -89,10 +105,34 @@ impl Shell {
                             let mut controllers =
                                 self.dispatcher.read().unwrap().controllers(instance_id);
                             controllers.sort();
-                            println!("{} Commands:", plugin);
+
+                            // Add spacing for the plugin names.
+                            let mut plugin_name = format!("{}", plugin);
+                            let mut formatted: Vec<char> = Vec::new();
+                            for c in plugin_name.chars() {
+                                if c.is_uppercase() && !formatted.is_empty() {
+                                    formatted.push(' ');
+                                }
+                                formatted.push(c);
+                            }
+                            plugin_name = formatted.into_iter().collect();
+                            println!("{} Commands:", plugin_name);
+
+                            // Print out all the plugin specific commands
                             for controller in controllers.iter() {
+                                let description = self
+                                    .dispatcher
+                                    .read()
+                                    .unwrap()
+                                    .description(controller.to_string())
+                                    .unwrap();
                                 let command = str::replace(&controller, "/api/", "");
-                                println!("  {}", str::replace(&command, "/", "."));
+                                let shell_command = str::replace(&command, "/", ".");
+                                if description.is_empty() {
+                                    println!("  {}", shell_command);
+                                } else {
+                                    println!("  {:<25} - {}", shell_command, description);
+                                }
                             }
                             println!("");
                         }
@@ -243,5 +283,11 @@ mod tests {
     fn test_parse_command_tokens() {
         assert_eq!(Shell::parse_command("foo").unwrap().0, "/api/foo");
         assert_eq!(Shell::parse_command("foo `{\"a\": 1}`").unwrap().1, json!({"a": 1}));
+    }
+
+    #[test]
+    fn test_help_ok() {
+        assert_eq!(Shell::parse_command("help").is_ok(), true);
+        assert_eq!(Shell::parse_command("help zbi.bootfs").is_ok(), true);
     }
 }

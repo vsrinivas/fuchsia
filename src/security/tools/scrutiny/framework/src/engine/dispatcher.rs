@@ -73,6 +73,26 @@ impl ControllerDispatcher {
         }
     }
 
+    /// Attempts to return the controller description if it has a namespace mapping.
+    pub fn description(&self, namespace: String) -> Result<String> {
+        let controllers = self.controllers.read().unwrap();
+        if let Some(instance) = controllers.get(&namespace) {
+            Ok(instance.controller.description())
+        } else {
+            Err(Error::new(DispatcherError::NamespaceDoesNotExist(namespace)))
+        }
+    }
+
+    /// Attempts to return the controller usage if it has a namespace mapping.
+    pub fn usage(&self, namespace: String) -> Result<String> {
+        let controllers = self.controllers.read().unwrap();
+        if let Some(instance) = controllers.get(&namespace) {
+            Ok(instance.controller.usage())
+        } else {
+            Err(Error::new(DispatcherError::NamespaceDoesNotExist(namespace)))
+        }
+    }
+
     /// Returns all of the controller namespaces.
     pub fn controllers_all(&self) -> Vec<String> {
         let controllers = self.controllers.read().unwrap();
@@ -114,6 +134,14 @@ mod tests {
     impl DataController for FakeController {
         fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
             Ok(json!(self.result))
+        }
+
+        fn description(&self) -> String {
+            "foo".to_string()
+        }
+
+        fn usage(&self) -> String {
+            "bar".to_string()
         }
     }
 
@@ -158,5 +186,25 @@ mod tests {
         dispatcher.add(Uuid::new_v4(), namespace_two.clone(), fake_two).unwrap();
         assert_eq!(dispatcher.query(namespace, json!("")).unwrap(), json!("fake_result"));
         assert_eq!(dispatcher.query(namespace_two, json!("")).unwrap(), json!("fake_result_two"));
+    }
+
+    #[test]
+    fn test_description() {
+        let data_model = test_model();
+        let mut dispatcher = ControllerDispatcher::new(data_model);
+        let fake = Arc::new(FakeController::new("fake_result"));
+        let namespace = "/foo/bar".to_string();
+        dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
+        assert_eq!(dispatcher.description(namespace).unwrap(), "foo");
+    }
+
+    #[test]
+    fn test_usage() {
+        let data_model = test_model();
+        let mut dispatcher = ControllerDispatcher::new(data_model);
+        let fake = Arc::new(FakeController::new("fake_result"));
+        let namespace = "/foo/bar".to_string();
+        dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
+        assert_eq!(dispatcher.usage(namespace).unwrap(), "bar");
     }
 }

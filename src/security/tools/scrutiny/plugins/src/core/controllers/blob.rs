@@ -58,6 +58,9 @@ impl DataController for BlobController {
             return Err(anyhow!("Unable to retrieve blobs, failed to construct getter."));
         }
     }
+    fn description(&self) -> String {
+        "Returns a base64 encoded blob for the given merkle.".to_string()
+    }
 }
 
 #[cfg(test)]

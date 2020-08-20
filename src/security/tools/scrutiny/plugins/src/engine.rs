@@ -78,6 +78,9 @@ impl DataController for HealthController {
     fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
         Ok(json!({"status" : "ok"}))
     }
+    fn description(&self) -> String {
+        "Health endpoint that always returns ok.".to_string()
+    }
 }
 
 /// Lists all the registered plugins and their states.
@@ -108,6 +111,9 @@ impl DataController for PluginListController {
         }
         plugins.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
         return Ok(json!(plugins));
+    }
+    fn description(&self) -> String {
+        "Returns a list of all plugins and their state.".to_string()
     }
 }
 
@@ -147,6 +153,9 @@ impl DataController for ModelStatsController {
         };
         Ok(json!(stats))
     }
+    fn description(&self) -> String {
+        "Returns aggregated model statistics.".to_string()
+    }
 }
 
 /// Displays a list of all the collectors.
@@ -177,6 +186,9 @@ impl DataController for CollectorListController {
         collectors.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
         Ok(json!(collectors))
     }
+    fn description(&self) -> String {
+        "Returns a list of all loaded data collectors.".to_string()
+    }
 }
 
 /// Runs all of the collectors when called.
@@ -198,6 +210,9 @@ impl DataController for CollectorSchedulerController {
             Ok(json!({"status": "failed"}))
         }
     }
+    fn description(&self) -> String {
+        "Schedules all data collectors to run.".to_string()
+    }
 }
 
 /// Lists all of the controllers.
@@ -214,6 +229,9 @@ impl ControllerListController {
 impl DataController for ControllerListController {
     fn query(&self, _model: Arc<DataModel>, _query: Value) -> Result<Value> {
         Ok(json!(self.dispatcher.read().unwrap().controllers_all()))
+    }
+    fn description(&self) -> String {
+        "Lists all loaded data collectors.".to_string()
     }
 }
 

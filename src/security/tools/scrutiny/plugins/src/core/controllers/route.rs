@@ -19,6 +19,9 @@ impl DataController for RoutesGraphController {
         let routes = model.routes().read().unwrap();
         Ok(serde_json::to_value(routes.clone())?)
     }
+    fn description(&self) -> String {
+        "Returns every route between components".to_string()
+    }
 }
 
 #[derive(Default)]
@@ -67,6 +70,9 @@ impl DataController for ComponentUsesGraphController {
 
         Ok(serde_json::to_value(resp)?)
     }
+    fn description(&self) -> String {
+        "Returns all the services a given component uses.".to_string()
+    }
 }
 
 #[derive(Default)]
@@ -114,6 +120,9 @@ impl DataController for ComponentUsedGraphController {
         }
 
         Ok(serde_json::to_value(resp)?)
+    }
+    fn description(&self) -> String {
+        "Returns all the components a given component is used by.".to_string()
     }
 }
 

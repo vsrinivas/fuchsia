@@ -23,6 +23,9 @@ impl DataController for ComponentsGraphController {
         components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
         Ok(serde_json::to_value(components)?)
     }
+    fn description(&self) -> String {
+        "Returns every component indexed by the data model.".to_string()
+    }
 }
 
 #[derive(Default)]
@@ -47,6 +50,9 @@ impl DataController for ComponentIdGraphController {
             ErrorKind::Other,
             format!("Could not find a component with component_id {}.", req.component_id),
         )));
+    }
+    fn description(&self) -> String {
+        "Returns a specific component given its internal id.".to_string()
     }
 }
 
@@ -79,6 +85,9 @@ impl DataController for ComponentFromUriGraphController {
             ErrorKind::Other,
             format!("Could not find manifest matching component uri {}.", req.uri),
         )))
+    }
+    fn description(&self) -> String {
+        "Returns the internal component id of a component from its url.".to_string()
     }
 }
 
@@ -131,15 +140,8 @@ impl DataController for RawManifestGraphController {
             format!("Could not find manifest matching component_id {}.", req.component_id),
         )))
     }
-}
-
-#[derive(Default)]
-pub struct ComponentSandboxGraphController {}
-
-impl DataController for ComponentSandboxGraphController {
-    fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
-        // TODO: Add sandbox to DataModel and implement this.
-        unimplemented!("Not yet implemented.");
+    fn description(&self) -> String {
+        "Returns the raw manifest of a given component_id.".to_string()
     }
 }
 

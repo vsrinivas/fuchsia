@@ -31,7 +31,6 @@ plugin!(
             "/component/uses" => ComponentUsesGraphController::default(),
             "/component/used" => ComponentUsedGraphController::default(),
             "/component/raw_manifest" => RawManifestGraphController::default(),
-            "/component/manifest/sandbox" => ComponentSandboxGraphController::default(),
             "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
             "/blob" => BlobController::new(),

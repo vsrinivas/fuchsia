@@ -40,6 +40,9 @@ impl DataController for ComponentSearchController {
         }
         Ok(json!(response))
     }
+    fn description(&self) -> String {
+        "Searches for matching component urls across all components.".to_string()
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -64,6 +67,9 @@ impl DataController for ManifestSearchController {
             }
         }
         Ok(json!(response))
+    }
+    fn description(&self) -> String {
+        "Searches for matching manifest file names in all packages.".to_string()
     }
 }
 
@@ -91,6 +97,9 @@ impl DataController for PackageSearchController {
         }
         Ok(json!(response))
     }
+    fn description(&self) -> String {
+        "Searches for matching file names in all packages.".to_string()
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -113,6 +122,9 @@ impl DataController for RouteSearchController {
             }
         }
         Ok(json!(response))
+    }
+    fn description(&self) -> String {
+        "Searches for matching service names across all routes.".to_string()
     }
 }
 
