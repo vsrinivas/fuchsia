@@ -20,7 +20,9 @@
 
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
+#include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
 #include "src/storage/volume_image/ftl/options.h"
+#include "src/storage/volume_image/ftl/raw_nand_image.h"
 #include "src/storage/volume_image/ftl/raw_nand_image_utils.h"
 #include "src/storage/volume_image/partition.h"
 #include "src/storage/volume_image/utils/block_utils.h"
@@ -54,9 +56,6 @@ RawNandOptions GetOptions() {
 //
 // The first test, checks that the default image, without adjusting page size will be loaded.
 // TODO(gevalentino): Once the respective logic is added, the following tests must be added.
-//
-//     * The second test, verifies that when adding the oob adapter layer(page doubler) FTL still
-//     bootstraps.
 //
 //     * The third test, verifies that the FVM in the FTL image is bootstrapped
 //     appropriately, by the FTL driver.
@@ -118,10 +117,10 @@ class InMemoryWriter final : public Writer {
     uint64_t page_number = offset / adjusted_page_size;
     // Check if its OOB or page data based on the offset.
     if (offset % adjusted_page_size == 0) {
-      auto page_view = buffer.subspan(0, kPageSize);
+      auto page_view = buffer.subspan(0, raw_nand_->options.page_size);
       raw_nand_->page_data[page_number] = std::vector<uint8_t>(page_view.begin(), page_view.end());
-    } else if (offset % adjusted_page_size == kPageSize) {
-      auto oob_view = buffer.subspan(0, kOobBytesSize);
+    } else if (offset % adjusted_page_size == raw_nand_->options.page_size) {
+      auto oob_view = buffer.subspan(0, raw_nand_->options.oob_bytes_size);
       raw_nand_->page_oob[page_number] = std::vector<uint8_t>(oob_view.begin(), oob_view.end());
     } else {
       return fit::error("Invalid Offset.");
@@ -204,10 +203,12 @@ class Ndm final : public ftl::NdmBaseDriver {
       uint32_t page_number = start_page + i;
       size_t page_offset = i * kPageSize;
       size_t oob_offset = i * kOobBytesSize;
-      auto page_view = fbl::Span<const uint8_t>(
-          reinterpret_cast<const uint8_t*>(page_buffer) + page_offset, kPageSize);
-      auto oob_view = fbl::Span<const uint8_t>(
-          reinterpret_cast<const uint8_t*>(oob_buffer) + oob_offset, kOobBytesSize);
+      auto page_view =
+          fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(page_buffer) + page_offset,
+                                   raw_nand_->options.page_size);
+      auto oob_view =
+          fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(oob_buffer) + oob_offset,
+                                   raw_nand_->options.oob_bytes_size);
 
       if (page_buffer != nullptr) {
         raw_nand_->page_data[page_number] =
@@ -215,7 +216,7 @@ class Ndm final : public ftl::NdmBaseDriver {
       }
 
       if (oob_buffer != nullptr) {
-        raw_nand_->page_oob[page_number] = std::vector<uint8_t>(page_view.begin(), page_view.end());
+        raw_nand_->page_oob[page_number] = std::vector<uint8_t>(oob_view.begin(), oob_view.end());
       }
       return ftl::kNdmOk;
     }
@@ -307,6 +308,125 @@ TEST(FtlImageBootstrapTest, FtlDriverBootstrapsFromImageIsOk) {
   ASSERT_EQ(ftl_volume.Read(1, 1, page_buffer.data()), ZX_OK);
 
   std::vector<uint8_t> expected_page_buffer(raw_nand->options.page_size, 0xFF);
+  ASSERT_TRUE(partition.reader()->Read(512, expected_page_buffer).is_ok());
+
+  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 4096),
+              testing::ElementsAreArray(fbl::Span<uint8_t>(expected_page_buffer).subspan(0, 4096)));
+  // Remainder of a mapping fitting on the same page, is filled with zeroes.
+  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(4096, 4096), testing::Each(testing::Eq(0)));
+
+  // Second mapping.
+  ASSERT_EQ(ftl_volume.Read(0, 1, page_buffer.data()), ZX_OK);
+  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 8192), testing::Each(testing::Eq(0)));
+
+  // Third mapping.
+  std::fill(expected_page_buffer.begin(), expected_page_buffer.end(), 0);
+  std::fill(page_buffer.begin(), page_buffer.end(), 0xFF);
+  expected_page_buffer.resize(81920, 0);
+  page_buffer.resize(81920, 0xFF);
+  ASSERT_TRUE(partition.reader()->Read(20000, expected_page_buffer).is_ok());
+
+  ASSERT_EQ(ftl_volume.Read(10, 10, page_buffer.data()), ZX_OK);
+  EXPECT_THAT(page_buffer, testing::ElementsAreArray(expected_page_buffer));
+}
+
+// Stitches pages in |raw_nand| into bigger pages, such that page | 2i | 2i + 1| is page content for
+// |page i| and same applies for OOB bytes. In the example, |logical_pages_per_physical_pages| is 2.
+std::unique_ptr<InMemoryRawNand> CombinePages(uint32_t logical_pages_per_physical_pages,
+                                              std::unique_ptr<InMemoryRawNand> raw_nand) {
+  std::unique_ptr<InMemoryRawNand> stitched_raw_nand = std::make_unique<InMemoryRawNand>();
+  stitched_raw_nand->options = raw_nand->options;
+  stitched_raw_nand->options.oob_bytes_size *= logical_pages_per_physical_pages;
+  stitched_raw_nand->options.page_size *= logical_pages_per_physical_pages;
+  stitched_raw_nand->options.pages_per_block /= logical_pages_per_physical_pages;
+  stitched_raw_nand->options.page_count /= logical_pages_per_physical_pages;
+
+  for (auto [key, _] : raw_nand->page_data) {
+    uint32_t page_number = key / logical_pages_per_physical_pages;
+    uint32_t page_relative_offset = key % logical_pages_per_physical_pages;
+
+    const auto& original_data = raw_nand->page_data[key];
+    const auto& original_oob = raw_nand->page_oob[key];
+
+    if (stitched_raw_nand->page_data.find(page_number) == stitched_raw_nand->page_data.end()) {
+      stitched_raw_nand->page_data[page_number].resize(stitched_raw_nand->options.page_size, 0xFF);
+      stitched_raw_nand->page_oob[page_number].resize(stitched_raw_nand->options.oob_bytes_size,
+                                                      0xFF);
+    }
+
+    auto& stitched_data = stitched_raw_nand->page_data[page_number];
+    auto& stitched_oob = stitched_raw_nand->page_oob[page_number];
+
+    memcpy(stitched_data.data() + page_relative_offset * raw_nand->options.page_size,
+           original_data.data(), raw_nand->options.page_size);
+    memcpy(stitched_oob.data() + page_relative_offset * raw_nand->options.oob_bytes_size,
+           original_oob.data(), raw_nand->options.oob_bytes_size);
+  }
+
+  return stitched_raw_nand;
+}
+
+class InMemoryWriterWithHeader : public Writer {
+ public:
+  explicit InMemoryWriterWithHeader(InMemoryWriter* writer) : writer_(writer) {}
+
+  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+    if (offset < sizeof(RawNandImageHeader)) {
+      uint32_t leading_header_bytes =
+          std::min(static_cast<size_t>(sizeof(RawNandImageHeader) - offset), buffer.size());
+      memcpy(reinterpret_cast<uint8_t*>(&header_) + offset, buffer.data(), leading_header_bytes);
+      if (leading_header_bytes == buffer.size()) {
+        return fit::ok();
+      }
+      buffer.subspan(leading_header_bytes);
+      offset = sizeof(RawNandImageHeader);
+    }
+
+    return writer_->Write(offset - sizeof(RawNandImageHeader), buffer);
+  }
+
+  const auto& header() { return header_; }
+
+ private:
+  RawNandImageHeader header_;
+  InMemoryWriter* writer_ = nullptr;
+};
+
+TEST(FtlImageBootstrapTest, FtlDriverBootstrapsFromImageWithPageDoubleIsOk) {
+  [[maybe_unused]] auto partition = MakePartition();
+  std::unique_ptr<InMemoryRawNand> raw_nand = std::make_unique<InMemoryRawNand>();
+  auto options = GetOptions();
+  options.oob_bytes_size /= 2;
+  options.page_size /= 2;
+  options.page_count *= 2;
+  options.pages_per_block *= 2;
+  raw_nand->options = options;
+
+  InMemoryWriter data_writer(raw_nand.get());
+  InMemoryWriterWithHeader writer(&data_writer);
+
+  std::vector<RawNandImageFlag> flags = {RawNandImageFlag::kRequireWipeBeforeFlash};
+  auto ftl_raw_nand_image_writer_result =
+      FtlRawNandImageWriter::Create(options, flags, ImageFormat::kRawImage, &writer);
+  ASSERT_TRUE(ftl_raw_nand_image_writer_result.is_ok()) << ftl_raw_nand_image_writer_result.error();
+  auto [ftl_raw_nand_image_writer, ftl_options] = ftl_raw_nand_image_writer_result.take_value();
+
+  auto image_write_result = FtlImageWrite(ftl_options, partition, &ftl_raw_nand_image_writer);
+  ASSERT_TRUE(image_write_result.is_ok()) << image_write_result.error();
+
+  auto stitched_raw_nand = CombinePages(2, std::move(raw_nand));
+
+  std::unique_ptr<Ndm> ndm_driver = std::make_unique<Ndm>(stitched_raw_nand.get());
+  FakeFtl fake_ftl;
+  ftl::VolumeImpl ftl_volume(&fake_ftl);
+  const char* result = ftl_volume.Init(std::move(ndm_driver));
+  ASSERT_EQ(result, nullptr) << result;
+
+  // First mapping.
+  std::vector<uint8_t> page_buffer(stitched_raw_nand->options.page_size, 0xFF);
+  ASSERT_EQ(ftl_volume.Read(1, 1, page_buffer.data()), ZX_OK);
+
+  std::vector<uint8_t> expected_page_buffer(stitched_raw_nand->options.page_size, 0xFF);
   ASSERT_TRUE(partition.reader()->Read(512, expected_page_buffer).is_ok());
 
   EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 4096),

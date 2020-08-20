@@ -63,10 +63,10 @@ struct RawNandImageHeader {
 
   // Out of band bytes used in data written in the chosen image format.
   // Must be small or equal to the target device OOB byte size.
-  uint8_t oob_size;
+  uint8_t oob_size = 0;
 
   // Reserved
-  uint8_t reserved[3];
+  uint8_t reserved[3] = {0xFF, 0xFF, 0xFF};
 } __attribute__((packed));
 
 }  // namespace storage::volume_image
