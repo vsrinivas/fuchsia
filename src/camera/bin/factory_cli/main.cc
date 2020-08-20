@@ -155,7 +155,7 @@ zx_status_t RunCommand(fuchsia::factory::camera::ControllerPtr& controller,
         return ZX_ERR_INVALID_ARGS;
       }
       isp->SetExposure(
-          std::stoi(args[0]), std::stoi(args[1]), std::stoi(args[2]),
+          std::stof(args[0]), std::stof(args[1]), std::stof(args[2]),
           [success_cb = std::move(exit_on_success_cb)]() { success_cb(std::string{kCommand8}); });
       break;
     }
