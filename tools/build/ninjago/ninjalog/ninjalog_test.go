@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 )
 
@@ -629,5 +631,141 @@ func TestCategory(t *testing.T) {
 		if got := tc.step.Category(); got != tc.want {
 			t.Errorf("Category() = %s, want: %s, step: %#v", got, tc.want, tc.step)
 		}
+	}
+}
+
+func TestStatsByType(t *testing.T) {
+	for _, tc := range []struct {
+		desc     string
+		steps    []Step
+		weighted map[string]time.Duration
+		want     []Stat
+	}{
+		{
+			desc: "empty",
+		},
+		{
+			desc: "group by category",
+			steps: []Step{
+				{
+					Start:   time.Second,
+					End:     11 * time.Second,
+					Out:     "cc1",
+					CmdHash: 1,
+					Command: &compdb.Command{Command: "gomacc"},
+				},
+				{
+					Start:   time.Second,
+					End:     2 * time.Second,
+					Out:     "rust1",
+					CmdHash: 2,
+					Command: &compdb.Command{Command: "rustc"},
+				},
+				{
+					Start:   10 * time.Second,
+					End:     21 * time.Second,
+					Out:     "rust2",
+					CmdHash: 3,
+					Command: &compdb.Command{Command: "rustc"},
+				},
+				{
+					End:     5 * time.Second,
+					Out:     "cc2",
+					CmdHash: 4,
+					Command: &compdb.Command{Command: "gomacc"},
+				},
+				{
+					End:     100 * time.Millisecond,
+					CmdHash: 5,
+					Out:     "unknown",
+				},
+				{
+					End:     42 * time.Second,
+					Out:     "cc3",
+					CmdHash: 6,
+					Command: &compdb.Command{Command: "gomacc"},
+				},
+			},
+			weighted: map[string]time.Duration{
+				"cc1":     time.Second,
+				"cc2":     2 * time.Second,
+				"cc3":     3 * time.Second,
+				"rust1":   4 * time.Second,
+				"rust2":   5 * time.Second,
+				"unknown": 6 * time.Second,
+			},
+			want: []Stat{
+				{Type: "gomacc", Count: 3, Time: 57 * time.Second, Weighted: 6 * time.Second},
+				{Type: "rustc", Count: 2, Time: 12 * time.Second, Weighted: 9 * time.Second},
+				{Type: "unknown", Count: 1, Time: 100 * time.Millisecond, Weighted: 6 * time.Second},
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := StatsByType(tc.steps, tc.weighted, func(s Step) string { return s.Category() })
+			orderByType := cmpopts.SortSlices(func(x, y Stat) bool { return x.Type < y.Type })
+			if diff := cmp.Diff(tc.want, got, orderByType); diff != "" {
+				t.Errorf("StatsByType(%#v, %#v, 'step.Category()') = %#v\nwant:\n%#v\ndiff(-want, +got):\n%s", tc.steps, tc.weighted, got, tc.want, diff)
+			}
+		})
+	}
+}
+
+func TestSlowestSteps(t *testing.T) {
+	for _, tc := range []struct {
+		desc  string
+		steps []Step
+		n     int
+		want  []Step
+	}{
+		{
+			desc: "empty",
+		},
+		{
+			desc:  "n is 0",
+			steps: []Step{{End: time.Second}},
+			n:     0,
+		},
+		{
+			desc: "top 1",
+			steps: []Step{
+				{End: time.Second},
+				{End: 20 * time.Second},
+				{End: 3 * time.Second},
+				{End: 40 * time.Second},
+				{End: 5 * time.Second},
+			},
+			n:    1,
+			want: []Step{{End: 40 * time.Second}},
+		},
+		{
+			desc: "top 3",
+			steps: []Step{
+				{End: time.Second},
+				{End: 20 * time.Second},
+				{End: 3 * time.Second},
+				{End: 40 * time.Second},
+				{End: 5 * time.Second},
+			},
+			n: 3,
+			want: []Step{
+				{End: 40 * time.Second},
+				{End: 20 * time.Second},
+				{End: 5 * time.Second},
+			},
+		},
+		{
+			desc:  "steps less than n",
+			steps: []Step{{End: time.Second}},
+			n:     100,
+			want:  []Step{{End: time.Second}},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := SlowestSteps(tc.steps, tc.n)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("SlowestSteps(%#v, %d) = %v\nwant: %v\ndiff(-want +got):\n%s", tc.steps, tc.n, got, tc.want, diff)
+			}
+		})
 	}
 }

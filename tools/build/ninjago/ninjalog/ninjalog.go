@@ -6,6 +6,7 @@ package ninjalog
 
 import (
 	"bufio"
+	"container/heap"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -85,6 +86,16 @@ func (s Steps) Less(i, j int) bool {
 		return s[i].End < s[j].End
 	}
 	return s[i].Out < s[j].Out
+}
+func (s *Steps) Push(x interface{}) { *s = append(*s, x.(Step)) }
+func (s *Steps) Pop() interface{} {
+	l := len(*s)
+	if l == 0 {
+		return Step{}
+	}
+	step := (*s)[l-1]
+	*s = (*s)[:l-1]
+	return step
 }
 
 // Reverse reverses steps.
@@ -513,14 +524,19 @@ func WeightedTime(steps []Step) map[string]time.Duration {
 
 // Stat represents statistics for build step.
 type Stat struct {
-	Type     string
-	Count    int
-	Time     time.Duration
+	// Type used to group this stat, this is determined by the grouping function
+	// provided by the caller when this stat is calculated.
+	Type string
+	// Count of builds for this type.
+	Count int
+	// Accumulative build time for this type.
+	Time time.Duration
+	// Accumulative weighted build time for this time.
 	Weighted time.Duration
 }
 
 // StatsByType summarizes build step statistics with weighted and typeOf.
-// Stats is sorted by Weighted, longer first.
+// Order of the returned slice is undefined.
 func StatsByType(steps []Step, weighted map[string]time.Duration, typeOf func(Step) string) []Stat {
 	if len(steps) == 0 {
 		return nil
@@ -544,8 +560,27 @@ func StatsByType(steps []Step, weighted map[string]time.Duration, typeOf func(St
 		})
 		m[t] = len(stats) - 1
 	}
-	sort.Slice(stats, func(i, j int) bool {
-		return stats[i].Weighted > stats[j].Weighted
-	})
 	return stats
+}
+
+// SlowestSteps returns the `n` steps that took the longest time to finish.
+//
+// Returned steps are sorted on build time in descending order (step takes the
+// longest time to build is the first element).
+func SlowestSteps(steps []Step, n int) []Step {
+	minHeap := new(Steps)
+	for _, step := range steps {
+		heap.Push(minHeap, step)
+		if minHeap.Len() > n {
+			heap.Pop(minHeap)
+		}
+	}
+	var res []Step
+	for minHeap.Len() > 0 {
+		res = append(res, heap.Pop(minHeap).(Step))
+	}
+	for left, right := 0, len(res)-1; left < right; left, right = left+1, right-1 {
+		res[left], res[right] = res[right], res[left]
+	}
+	return res
 }
