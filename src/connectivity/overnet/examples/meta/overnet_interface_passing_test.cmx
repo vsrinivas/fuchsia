@@ -29,7 +29,6 @@
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx"
                             },
-                            "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                             "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                             "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",

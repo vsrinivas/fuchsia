@@ -56,7 +56,6 @@ This block describes all ethertap networks available to this test.
     {
         "name": "dhcp_server",
         "services": {
-            "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
             "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx",
             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-debug#meta/netstack_debug.cmx"
