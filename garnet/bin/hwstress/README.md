@@ -22,7 +22,8 @@ Subcommands:
 Global options:
   -d, --duration=<secs>  Test duration in seconds. A value of "0" (the default)
                          indicates to continue testing until stopped.
-  -v, --verbose          Show additional logging.
+  -l, --logging-level    Level of logging to show: terse, normal (the default)
+                         or verbose.
   -h, --help             Show this help.
 
 CPU test options:
