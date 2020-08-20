@@ -1,0 +1,970 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/clang.gni")
+import("$zx/public/gn/toolchain/goma.gni")
+import("$zx/public/gn/toolchain/rustc.gni")
+import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
+import("levels.gni")
+
+declare_args() {
+  # Clang crash reports directory path. Use empty path to disable altogether.
+  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
+
+  # The `--sysroot` directory for host compilations.
+  # This can be a string, which only applies to $host_os-$host_cpu.
+  # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
+  # The empty list (or empty string) means don't use `--sysroot` at all.
+  sysroot = standard_sysroot
+
+  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
+  # to host or guest code.  The value is the argument to the linker's
+  # `--build-id=...` switch.  If left empty (the default), the linker's
+  # default format is used.
+  build_id_format = ""
+}
+
+# Convert a string to a list.
+if (sysroot == "") {
+  sysroot = []
+} else if (sysroot == "$sysroot") {
+  sysroot = [
+    {
+      cpu = host_cpu
+      os = host_os
+      sysroot = sysroot
+    },
+  ]
+}
+
+config("sysroot") {
+  foreach(host, sysroot) {
+    if (host.cpu == current_cpu && host.os == current_os) {
+      compiler_flags =
+          [ "--sysroot=" + rebase_path(host.sysroot, root_build_dir) ]
+      asmflags = compiler_flags
+      cflags = compiler_flags
+      ldflags = compiler_flags
+    }
+  }
+}
+
+if (current_os == "mac") {
+  # Only the native host linker works for macOS.
+  linker = ""
+} else if (is_gcc) {
+  # Assume ld.gold is available for any native Linux host, and for any ELF
+  # cross-compile target.  Use Gold for userland, and BFD ld for kernel.
+  if (current_os == "linux" ||
+      ((current_cpu != host_cpu || current_os != host_os) && !is_kernel &&
+       current_os != "win")) {
+    linker = "gold"
+  } else {
+    # For GCC on non-ELF hosts, use the system default linker.
+    linker = ""
+  }
+} else {
+  # Always use lld with Clang.
+  linker = "lld"
+}
+
+config("compiler") {
+  compiler_flags = []
+  defines = []
+  ldflags = []
+
+  # For GCC, the compiler command implies the target.
+  # For Clang, there's a single compiler command that takes `--target`.
+  if (!is_gcc && (current_cpu != host_cpu || current_os != host_os)) {
+    compiler_flags += [ "--target=${toolchain.target_tuple}" ]
+  }
+
+  if (linker != "") {
+    ldflags += [ "-fuse-ld=$linker" ]
+  }
+
+  if (defined(toolchain.version_string) && toolchain.version_string != "") {
+    # Nothing uses this define, but its presence on compilation command
+    # lines ensures that Ninja will rebuild things when a new compiler
+    # version arrives.
+    defines += [ "TOOLCHAIN_VERSION=${toolchain.version_string}" ]
+  }
+
+  # This is the default already on Fuchsia and maybe others, but never hurts.
+  cflags = [ "-fno-common" ]
+
+  configs = [
+    ":color_diagnostics",
+    # TODO: "$current_os:compiler",
+  ]
+
+  if (is_host) {
+    configs += [ ":sysroot" ]
+
+    if (current_os != "win" && current_os != "mac") {
+      ldflags += [ "-Wl,--build-id" ]
+    }
+  } else if (is_fuchsia) {
+    # TODO(mcgrathr): These should all be default in the compiler driver.
+    ldflags += [
+      "-Wl,-z,combreloc",
+      "-Wl,-z,relro",
+      "-Wl,-z,now",
+      "-Wl,-z,text",
+    ]
+
+    if (is_gcc) {
+      # This is predefined by Clang --target=*-fuchsia.
+      # But the GCC toolchain is the generic --target=*-elf one.
+      defines += [ "__Fuchsia__" ]
+
+      # These are done by default in the Clang toolchain.
+      cflags += [ "-fasynchronous-unwind-tables" ]
+      ldflags += [
+        "-Wl,--build-id",
+        "-Wl,--eh-frame-hdr",
+        "-Wl,--hash-style=gnu",
+      ]
+
+      # In the Clang toolchain assembly files with no explicit marker don't
+      # cause the presumption of executable stack as they do in GCC.
+      ldflags += [ "-Wl,-z,noexecstack" ]
+    } else {
+      # TODO(mcgrathr): This should be default in the compiler driver.
+      ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
+    }
+
+    if (current_cpu == "arm64") {
+      # Generate code for the fairly generic cortex-a53.
+      compiler_flags += [ "-mcpu=cortex-a53" ]
+
+      # x18 is reserved in the Fuchsia ABI so it can be used
+      # for things like -fsanitize=shadow-call-stack.
+      compiler_flags += [ "-ffixed-x18" ]
+
+      if (is_gcc) {
+        # By default GCC 10 will generate outcalls to libgcc functions that can
+        # do runtime switching between old and new atomic insns.  We want just
+        # old atomic insns inline instead.  Eventually we'll have builds using
+        # -march=armv8.1-a or better, which should get new atomic insns inline
+        # regardless of this switch.
+        cflags += [ "-mno-outline-atomics" ]
+      }
+    } else if (current_cpu == "x64") {
+      # Let the compiler generate the cmpxchg16b instruction.
+      compiler_flags += [
+        "-mcx16",
+        "-march=x86-64",
+      ]
+    }
+  } else if (current_os == "win") {
+    # This enables build ID-like PDB UUIDs without timestamp.
+    ldflags += [ "-Wl,/Brepro" ]
+  }
+
+  if (is_host) {
+    configs += [ ":static-libc++" ]
+
+    # For host tools without C++, ignore the unused arguments.
+    if (!is_gcc) {
+      ldflags += [ "-Wno-unused-command-line-argument" ]
+    }
+  }
+
+  if (!is_gcc && crash_diagnostics_dir != "") {
+    compiler_flags += [ "-fcrash-diagnostics-dir=" +
+                        rebase_path(crash_diagnostics_dir, root_build_dir) ]
+  }
+
+  # The toolchain-supplied headers come after include_dirs from targets and
+  # configs but before libc.
+  foreach(dir, toolchain.include_dirs) {
+    compiler_flags += [
+      "-isystem",
+      rebase_path(dir, root_build_dir),
+    ]
+  }
+
+  lib_dirs = toolchain.lib_dirs
+
+  asmflags = compiler_flags
+  cflags += compiler_flags
+  ldflags += compiler_flags
+
+  if (is_fuchsia && build_id_format != "") {
+    ldflags += [ "-Wl,--build-id=$build_id_format" ]
+  }
+}
+
+config("language") {
+  cflags_c = [ "-std=c11" ]
+  cflags_cc = [ "-std=c++17" ]
+  if (current_os == "mac") {
+    # macOS needs this to not complain about C++17isms that older macOS
+    # system libc++ doesn't support.  But we use our own toolchain's static
+    # libc++ anyway.
+    cflags_cc += [ "-faligned-allocation" ]
+
+    # libc++ headers mark some symbols as unavailable on macOS by default
+    # because the system libc++ doesn't support them.  But we use our own
+    # toolchain's static libc++ anyway.
+    defines = [ "_LIBCPP_DISABLE_AVAILABILITY" ]
+  }
+}
+
+config("color_diagnostics") {
+  # GCC correctly defaults this from the terminal, so leave it alone.
+  if (!is_gcc) {
+    compiler_flags = [ "-fcolor-diagnostics" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+
+    # The macOS linker does not support `--color-diagnostics`.
+    if (current_os != "mac") {
+      ldflags += [ "-Wl,--color-diagnostics" ]
+    }
+  }
+}
+
+config("relative_paths") {
+  # Make builds independent of absolute file path.  The file names
+  # embedded in debugging information will be expressed as relative to
+  # the build directory, e.g. "../.." for an "out/subdir" under //.
+  #
+  # See comment in the "relative_paths" config in //build/config/BUILD.gn
+  # for details.
+  #
+  # TODO(BLD-353): After build unification, the definitions in
+  # //build/config/BUILD.gn should be sufficient for Zircon.
+
+  if (is_gcc) {
+    if (use_goma) {
+      # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
+      # build commands, allowing it to reuse compilation results for users running
+      # out of different working directories. However, it only supports a single
+      # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
+      # canonicalization to fail, meaning that builds running out of different
+      # directories won't share cache results. For now, we just provide a single
+      # debug-prefix-map, even though more would be ideal.
+
+      # Map "/some/dir/fuchsia" to "../..".
+      compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+                         rebase_path("$zx/..", root_build_dir) ]
+    } else {
+      compiler_flags = [
+        # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
+        "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
+
+        # Map "/some/dir/fuchsia/out" to "..".
+        "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+
+        # Map "/some/dir/fuchsia" to "../..".
+        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+            rebase_path("$zx/..", root_build_dir),
+      ]
+    }
+  } else {
+    # Make builds independent of the absolute file path. -fdebug-prefix-map=
+    # can be used to the same effect, but it requires putting the absolute path
+    # to the build directory in the compile command, thus making it dependent
+    # on the absolute path of build directory. -fdebug-compilation-dir is
+    # designed to address this issue, making both debug info and the compile
+    # command itself independent of the absolute path of the build directory.
+    compiler_flags = [
+      "-fdebug-compilation-dir",
+      ".",
+    ]
+  }
+
+  if (!is_gcc) {
+    # This makes sure that include directories in the toolchain are
+    # represented as relative to the build directory (because that's how we
+    # invoke the compiler), rather than absolute.  This can affect __FILE__
+    # expansions (e.g. assertions in system headers).  We normally run a
+    # compiler that's someplace within the source tree, so its absolute
+    # installation path will have a prefix matching `absolute_path` and
+    # hence be mapped to `relative_path` in the debugging information, so
+    # this should actually be superfluous for purposes of the debugging
+    # information.
+    compiler_flags += [ "-no-canonical-prefixes" ]
+  }
+
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+
+  if (current_os == "win") {
+    ldflags += [
+      # This embeds just "name.pdb" in the binary instead of the absolute
+      # path to the PDB file.
+      "-Wl,/pdbaltpath:%_PDB%",
+
+      # This embeds a fake Windows-style absolute path rather than the real
+      # build-time absolute path in the PDB file.  Windows apparently
+      # requires an absolute path here, so we use an arbitrary fake one for
+      # reproducibility.
+      "-Wl,/pdbsourcepath:c:\\src",
+    ]
+  }
+}
+
+config("nolibc") {
+  ldflags = [ "-nostartfiles" ]
+
+  # Don't use -nostdlib, because the builtins (or libgcc) are what we want
+  # and are otherwise annoying to find and specify.  It's just the -lc that
+  # we really want to defeat, and that's handled by giving a -L that will
+  # find exactly nothing but a dummy libc.so.  Clang has -nolibc to kill
+  # the -lc, but for C++ it still uses -lm under -nolibc.  So this is still
+  # needed to make -lm into a dummy, though for -lc only GCC needs it.
+  lib_dirs = [ "libc-dummy" ]
+
+  if (is_gcc) {
+    # Include this in every link.
+    # Note GN requires "./" so it doesn't think this should mean a -l switch.
+    libs = [ "./dso_handle.ld" ]
+  } else {
+    # TODO(mcgrathr): GCC 9 has -nolibc, so use it when we get that toolchain.
+    ldflags += [ "-nolibc" ]
+  }
+}
+
+config("freestanding") {
+  cflags = [ "-ffreestanding" ]
+
+  # In Clang -fasynchronous-unwind-tables is the default for *-fuchsia
+  # targets.  But -ffreestanding defeats that (in target-independent logic
+  # in the Clang driver).  So add it back explicitly.  For GCC, it's
+  # already added explicitly in :compiler regardless so don't double it.
+  if (!is_gcc) {
+    cflags += [ "-fasynchronous-unwind-tables" ]
+  }
+
+  ldflags = cflags
+}
+
+config("data_sections") {
+  cflags = [ "-fdata-sections" ]
+  ldflags = cflags
+}
+
+config("linker_gc") {
+  configs = [ ":data_sections" ]
+  cflags = [ "-ffunction-sections" ]
+  ldflags = cflags
+  if (current_os == "mac") {
+    ldflags += [ "-Wl,-dead_strip" ]
+  } else if (current_os == "win") {
+    ldflags += [ "-Wl,/opt:ref" ]
+  } else {
+    ldflags += [ "-Wl,--gc-sections" ]
+  }
+}
+
+config("assert_level") {
+  assert(assert_level >= 0)
+  defines = [ "ZX_ASSERT_LEVEL=$assert_level" ]
+  if (assert_level == 0) {
+    defines += [ "NDEBUG" ]
+  }
+}
+
+config("linker_string_merging") {
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/opt:lldtailmerge" ]
+  } else if (current_os != "mac") {
+    ldflags = [ "-Wl,-O2" ]
+  }
+}
+
+# Each optimize_$optimize config below corresponds to a single setting that's
+# controlled by the optimize argument. The default_optimize level is set to
+# optimize_$optimize for convenience, but individual targets can override their
+# optimization level by remove default_optimize and manually applying one of
+# the configs below.
+#
+# The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
+# is separate from default_optimize so it can be removed separately.
+
+# NOTE: Keep in sync with //build/config/BUILD.gn
+
+config("optimize_none") {
+  cflags = [ "-O0" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=0" ]
+}
+
+config("optimize_debug") {
+  cflags = [ "-Og" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
+}
+
+config("optimize_default") {
+  cflags = [ "-O2" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=2" ]
+}
+
+config("optimize_size") {
+  if (is_gcc) {
+    cflags = [ "-Os" ]
+  } else {
+    cflags = [ "-Oz" ]
+  }
+  ldflags = cflags
+  rustflags = [ "-Copt-level=z" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("optimize_speed") {
+  cflags = [ "-O3" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=3" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("optimize_sanitizer") {
+  # Instrumentation adds overhead that is greatly improved by optimization.
+  # -O1 is well-tested with the instrumentation modes and does not degrade the
+  # comprehensibility of backtraces produced by sanitizer failures.
+  cflags = [ "-O1" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
+}
+
+config("optimize_profile") {
+  # TODO(51509): Perhaps use a different default.
+  configs = [ ":optimize_default" ]
+}
+
+config("default_optimize") {
+  configs = [ ":optimize_${optimize}" ]
+}
+
+config("linker_gc_none") {
+  # No linker GC when wholly unoptimized.
+}
+
+# Linker GC is a good default for most cases.
+config("linker_gc_debug") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_default") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_size") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_speed") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_sanitizer") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_profile") {
+  # TODO(51509): See if we can enable linker GC for profile.
+}
+
+config("default_linker_gc") {
+  configs = [ ":linker_gc_$optimize" ]
+}
+
+# This is separate from default_optimize so it can be removed.
+config("default_icf") {
+  if (optimize != "none" && optimize != "debug") {
+    # Our code should never rely on C's unique function pointer semantics,
+    # which is broken by --icf=all for sometimes substantial space savings.
+    configs = [ ":icf" ]
+  }
+}
+
+# Each of the debuginfo_$debuginfo configs below corresponds to a single setting
+# that controls the amount of debugging information used and is controlled by
+# the debuginfo argument. The default_debuginfo level is set to
+# debuginfo_$debuginfo for convenience, but individual targets can override
+# their debuginfo level by manually applying one of the configs below.
+
+# NOTE: Keep in sync with //build/config/BUILD.gn
+
+config("debuginfo_none") {
+  cflags = [ "-g0" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("debuginfo_backtrace") {
+  cflags = [ "-g1" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("debuginfo_debug") {
+  cflags = [ "-g3" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("default_debuginfo") {
+  configs = [ ":debuginfo_${debuginfo}" ]
+  if (debuginfo != "none" && current_os == "win") {
+    # TODO(55244): This produces the .pdb file, but it doesn't seem
+    # to get the DWARF data out of the main output file.
+    ldflags = [ "-Wl,/debug:full" ]
+  }
+}
+
+config("werror") {
+  cflags = [
+    "-Werror",
+
+    # Declarations marked as deprecated should not cause build failures.
+    # Rather they should emit warnings to notify developers about the use
+    # of deprecated interfaces.
+    "-Wno-error=deprecated-declarations",
+
+    # Do not add additional `-Wno-error=...` switches to this config!
+  ]
+
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/WX" ]
+  }
+}
+
+config("default_warnings") {
+  cflags = [
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-parameter",
+
+    # TODO(37765): Temporarily disable this warning to unblock the GCC roll.
+    "-Wno-address-of-packed-member",
+  ]
+  cflags_c = [
+    "-Wstrict-prototypes",
+    "-Wwrite-strings",
+  ]
+  cflags_cc = [
+    "-Wconversion",
+    "-Wno-sign-conversion",
+    "-Wextra-semi",
+
+    # TODO(38640): Temporarily disable this warning to unblock the GCC roll.
+    "-Wno-deprecated-copy",
+  ]
+  if (is_gcc) {
+    cflags += [
+      "-Wno-nonnull-compare",
+      "-Wno-format-truncation",
+    ]
+  } else {
+    cflags += [
+      "-Wnewline-eof",
+
+      # TODO(35965): Temporarily disable C99 designator warnings introduced in
+      # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
+      # and we do some cleanup, this will be re-enabled.
+      "-Wno-unknown-warning-option",
+      "-Wno-c99-designator",
+
+      # TODO(37215): Temporarily disable this warning until we roll toolchain.
+      # Then we can re-enable it and cleanup instances it appears.
+      "-Wno-int-in-bool-context",
+
+      # TODO(43681): Temporarily disable this warning until we roll toolchain,
+      # then come back and fix the instances this appears after rolling.
+      "-Wno-range-loop-analysis",
+    ]
+    cflags_cc += [
+      # TODO(45689): Temporarily disable this warning until we roll toolchain,
+      # then come back and fix the instances this appears after rolling.
+      "-Wno-non-c-typedef-for-linkage",
+    ]
+  }
+}
+
+config("Wno-unused-function") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
+config("warn-implicit-fallthrough") {
+  cflags = [ "-Wimplicit-fallthrough" ]
+}
+
+config("default_template_backtrace_limit") {
+  cflags_cc = [ "-ftemplate-backtrace-limit=0" ]
+}
+
+config("icf") {
+  # This changes C/C++ semantics and might be incompatible with third-party
+  # code that relies on function pointers comparison.
+  if (current_os == "win" && (linker == "lld" || !is_gcc)) {
+    ldflags = [ "-Wl,/opt:icf=all" ]
+  } else if (linker == "gold" || linker == "lld") {
+    ldflags = [ "-Wl,--icf=all" ]
+  }
+}
+
+config("exceptions") {
+  cflags_cc = [ "-fexceptions" ]
+  cflags_objcc = cflags_cc
+  ldflags = cflags_cc
+}
+
+config("no_exceptions") {
+  cflags_cc = [ "-fno-exceptions" ]
+  cflags_objcc = cflags_cc
+  ldflags = cflags_cc
+}
+
+config("rtti") {
+  cflags_cc = [ "-frtti" ]
+  cflags_objcc = cflags_cc
+  ldflags = cflags_cc
+}
+
+config("no_rtti") {
+  cflags_cc = [ "-fno-rtti" ]
+  cflags_objcc = cflags_cc
+  ldflags = cflags_cc
+}
+
+config("no_threadsafe_statics") {
+  cflags_cc = [ "-fno-threadsafe-statics" ]
+  cflags_objcc = cflags_cc
+}
+
+config("default_include_dirs") {
+  include_dirs = [ "$zx/system/public" ]
+}
+
+config("default_frame_pointers") {
+  if (assert_level > 0) {
+    configs = [ ":frame_pointers" ]
+  } else {
+    configs = [ ":no_frame_pointers" ]
+  }
+}
+
+config("frame_pointers") {
+  defines = [ "WITH_FRAME_POINTERS=1" ]
+  cflags = [ "-fno-omit-frame-pointer" ]
+}
+
+config("no_frame_pointers") {
+  defines = [ "WITH_FRAME_POINTERS=0" ]
+  cflags = [ "-fomit-frame-pointer" ]
+}
+
+config("thread_safety_annotations") {
+  if (!is_gcc) {
+    cflags = [ "-Wthread-safety" ]
+    defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1" ]
+  }
+}
+
+config("no_stack_protector") {
+  cflags = [ "-fno-stack-protector" ]
+}
+
+config("no_safestack") {
+  if (!is_gcc) {
+    cflags = [ "-fno-sanitize=safe-stack" ]
+  }
+  configs = [ ":no_stack_protector" ]
+}
+
+config("no-shadow-call-stack") {
+  if (current_cpu == "arm64" && !is_gcc) {
+    cflags = [ "-fno-sanitize=shadow-call-stack" ]
+  }
+}
+
+config("no_sanitizers") {
+  cflags = [ "-fno-sanitize=all" ]
+  if (!is_gcc) {
+    cflags += [ "-fsanitize-coverage=0" ]
+  }
+  configs = [ ":no_stack_protector" ]
+}
+
+config("no_fuzzer") {
+  if (!is_gcc) {
+    cflags = [ "-fno-sanitize=fuzzer" ]
+  }
+}
+
+# TODO(TC-539) Remove this once the warning with fit::variant/fit::optional is addressed.
+config("no_maybe_uninitialized") {
+  if (is_gcc) {
+    cflags = [ "-Wno-maybe-uninitialized" ]
+  }
+}
+
+# Compile code appropriately to be linked into a shared library.
+config("shared_library_config") {
+  if (current_os != "mac") {
+    # Assembly code can use `#ifdef __PIC__`.
+    compiler_flags = [ "-fPIC" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
+}
+
+# Don't allow dangling undefined references in shared libraries.
+# All references should be satisfied by link-time library dependencies.
+config("no_undefined_symbols") {
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-undefined,error" ]
+  } else {
+    ldflags = [ "-Wl,-z,defs" ]
+  }
+}
+
+config("visibility_hidden") {
+  cflags = [ "-fvisibility=hidden" ]
+  cflags_cc = [ "-fvisibility-inlines-hidden" ]
+
+  # Disable libc++ visibility annotations to make sure that the compiler option
+  # has effect on symbols defined in libc++ headers. Note that we don't want to
+  # disable these annotations altogether to ensure that our toolchain is usable
+  # outside of our build since not every user uses hidden visibility by default.
+  defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
+}
+
+config("machine") {
+  ldflags = []
+  if (current_cpu == "arm64" && current_os != "win") {
+    # The linker rewrites instructions to work around a CPU bug.
+    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+  }
+  if (is_fuchsia) {
+    # TODO(ZX-2300): Really need to get this nailed down once and for all
+    # and set by default in the compiler driver (Clang at least).
+    ldflags += [ "-Wl,-z,max-page-size=4096" ]
+  }
+}
+
+config("user") {
+  defines = [ "_ALL_SOURCE" ]
+  configs = [
+    ":nolibc",
+    "$zx/third_party/ulib/musl:headers",
+  ]
+}
+
+config("user_executable") {
+  # Fuchsia userland code is compiled as PIE by default.
+  # In Clang, this is the default in the compiler driver for *-fuchsia targets.
+  # For GCC, it must be explicit.
+  if (is_gcc) {
+    compiler_flags = [ "-fPIE" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags + [ "-Wl,-pie" ]
+  } else {
+    ldflags = []
+  }
+
+  # Specify the dynamic linker if building a variant that uses a separate
+  # set of libraries.  With GCC, the dynamic linker must be explicit even
+  # in the default case because the compiler driver is not inherently
+  # configured for Fuchsia as it is in Clang.
+  if (is_gcc || toolchain.libprefix != "") {
+    ldflags += [ "-Wl,-dynamic-linker=${toolchain.libprefix}ld.so.1" ]
+  }
+}
+
+config("integer-paranoia") {
+  cflags = [
+    "-fsanitize=integer-divide-by-zero,signed-integer-overflow",
+    "-fsanitize-undefined-trap-on-error",
+  ]
+}
+
+config("static-libc++") {
+  if (current_os == "mac") {
+    # The macOS driver doesn't support -static-libstdc++ properly, so pass
+    # the libraries directly.  This has to locate the files explicitly in
+    # the toolchain, because -lc++ would look for the shared library.
+    ldflags = [
+      "-nostdlib++",
+      rebase_path("${toolchain.tool_dir}/../lib/libc++.a", root_build_dir),
+    ]
+  } else {
+    ldflags = [ "-static-libstdc++" ]
+
+    # TODO(TC-74): The implicitly linked static libc++.a depends on these.
+    if (current_os == "linux") {
+      libs = [
+        "dl",
+        "pthread",
+      ]
+    }
+  }
+}
+
+if (is_fuchsia) {
+  toolchain_runtime_deps("static-libc++-deps") {
+    toolchain_spec = clang_toolchain_spec
+    cflags = toolchain.runtime_deps_cflags
+    ldflags = [ "-static-libstdc++" ]
+  }
+
+  toolchain_runtime_deps("shared-libc++-deps") {
+    toolchain_spec = clang_toolchain_spec
+    cflags = toolchain.runtime_deps_cflags
+    ldflags = []
+    zx_publish = true
+  }
+
+  toolchain_runtime_deps("static-ruststd-deps") {
+    toolchain_spec = rustc_toolchain_spec
+    rustflags = toolchain.runtime_deps_rustflags
+  }
+
+  toolchain_runtime_deps("shared-ruststd-deps") {
+    toolchain_spec = rustc_toolchain_spec
+    rustflags = toolchain.runtime_deps_rustflags + [ "-Cprefer-dynamic" ]
+    zx_publish = true
+  }
+}
+
+config("pure") {
+  if (!is_gcc) {
+    # TODO(48501): This disables the SwitchToLookupTable optimization,
+    # which is not PIC-friendly.
+    cflags = [ "-fno-jump-tables" ]
+  }
+}
+
+config("rodso") {
+  configs = [ ":pure" ]
+  if (is_gcc) {
+    inputs = [ "rodso.ld" ]
+    ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
+  }
+}
+
+config("auto_var_init") {
+  if (!is_gcc) {
+    # Automatically initialize variables with a pattern.
+    cflags = [ "-ftrivial-auto-var-init=pattern" ]
+  }
+}
+
+config("tiny") {
+  cflags = [ "-mcmodel=tiny" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+# TODO(42305): We will temporarily disable UBSan for a specified number of
+# instances where UBSan triggers runtime errors. This config will go away once
+# the asan-ubsan variant is in CI/CQ and we remove all instances of caught
+# undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
+config("temporarily_disable_ubsan_do_not_use") {
+  visibility = [
+    # TODO(41888): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/affine:*",
+    "$zx_build/system/ulib/affine/test:*",
+
+    # TODO(41892): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/trace-reader:*",
+
+    # TODO(41876): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/dev/block/mbr:*",
+
+    # TODO(41757): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/zstd:*",
+
+    # TODO(42488): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/dev/display/display:*",
+
+    # TODO(41887): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/uapp/nand-util:*",
+
+    # TODO(42493): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/cobalt-client/test:*",
+
+    # TODO(41890): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/gpt:*",
+
+    # TODO(41893): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/zxio/test:*",
+
+    # TODO(41894): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/zxtest:*",
+
+    # TODO(42496): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/utest/fidl-simple:*",
+
+    # TODO(41897): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/utest/fidl:*",
+
+    # TODO(41900): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/utest/trace:*",
+
+    # TODO(41663): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/lib/acpica:*",
+
+    # TODO(41901): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/uapp/dash:*",
+
+    # TODO(41766): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/lz4:*",
+
+    # TODO(41901): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/musl/ldso:*",
+
+    # TODO(42500): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/musl/src/stdio:*",
+
+    # TODO(41903): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/musl/third_party/math:*",
+
+    # TODO(41904): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/third_party/ulib/boringssl:*",
+
+    # TODO(43658): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/dev/block/sdmcc:*",
+
+    # TODO(46944): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/perftest:*",
+  ]
+
+  if (!is_gcc) {
+    cflags = [ "-fno-sanitize=undefined" ]
+  }
+}
