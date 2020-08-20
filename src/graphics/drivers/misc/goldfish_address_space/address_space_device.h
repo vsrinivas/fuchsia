@@ -23,12 +23,14 @@
 namespace goldfish {
 
 class AddressSpaceDevice;
-using DeviceType = ddk::Device<AddressSpaceDevice, ddk::UnbindableNew, ddk::Openable>;
+using DeviceType = ddk::Device<AddressSpaceDevice, ddk::Messageable>;
 
 class AddressSpaceChildDriver;
-using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable, ddk::Closable>;
+using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 
-class AddressSpaceDevice : public DeviceType {
+class AddressSpaceDevice
+    : public DeviceType,
+      public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -46,10 +48,13 @@ class AddressSpaceDevice : public DeviceType {
   uint32_t DestroyChildDriver(uint32_t handle);
   uint32_t ChildDriverPing(uint32_t handle);
 
+  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
+  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+                       zx::channel request, OpenChildDriverCompleter::Sync completer) override;
+
   // Device protocol implementation.
-  zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
  private:
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
@@ -96,7 +101,6 @@ class AddressSpaceChildDriver
             PingCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
 
   struct Block {

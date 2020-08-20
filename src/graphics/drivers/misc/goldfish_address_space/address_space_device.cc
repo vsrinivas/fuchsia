@@ -56,78 +56,6 @@ enum PciBarIds {
   PCI_AREA_BAR_ID = 1,
 };
 
-class Instance;
-using InstanceType = ddk::Device<Instance, ddk::Messageable>;
-
-// Deprecated
-// This class implements an address space instance device.
-class Instance : public InstanceType,
-                 public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
- public:
-  Instance(AddressSpaceDevice* device, uint64_t dma_region_paddr)
-      : Device(device->zxdev()), device_(device), dma_region_paddr_(dma_region_paddr) {}
-
-  ~Instance() = default;
-
-  zx_status_t Bind() {
-    TRACE_DURATION("gfx", "Instance::Bind");
-    return DdkAdd("address-space", DEVICE_ADD_INSTANCE);
-  }
-
-  // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
-  void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
-                       zx::channel request, OpenChildDriverCompleter::Sync completer) override {
-    using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
-
-    ddk::IoBuffer io_buffer;
-    uint32_t handle;
-    zx_status_t status = device_->CreateChildDriver(&io_buffer, &handle);
-    if (status != ZX_OK) {
-      completer.Close(status);
-      return;
-    }
-
-    AddressSpaceChildDriverPingMessage* ping =
-        reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer.virt());
-    memset(ping, 0, sizeof(*ping));
-    ping->offset = dma_region_paddr_;
-    ping->metadata = static_cast<uint64_t>(type);
-    device_->ChildDriverPing(handle);
-
-    auto child_driver = std::make_unique<AddressSpaceChildDriver>(type, device_, dma_region_paddr_,
-                                                                  std::move(io_buffer), handle);
-
-    status = child_driver->DdkAdd(ddk::DeviceAddArgs("address-space-child")
-                                      .set_flags(DEVICE_ADD_INSTANCE)
-                                      .set_client_remote(std::move(request)));
-
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
-      completer.Close(status);
-      return;
-    }
-
-    child_driver.release();
-
-    completer.Close(ZX_OK);
-  }
-
-  // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
-    return transaction.Status();
-  }
-  zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
-  void DdkRelease() { delete this; }
-
- private:
-  AddressSpaceDevice* const device_;
-  const uint64_t dma_region_paddr_ = 0;
-
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Instance);
-};
-
 uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
 
 uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
@@ -291,23 +219,52 @@ uint32_t AddressSpaceDevice::ChildDriverPing(uint32_t handle) {
   return ZX_OK;
 }
 
-zx_status_t AddressSpaceDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  auto instance = std::make_unique<Instance>(this, dma_region_paddr_);
+// |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
+void AddressSpaceDevice::OpenChildDriver(
+    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type, zx::channel request,
+    OpenChildDriverCompleter::Sync completer) {
+  using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
 
-  zx_status_t status = instance->Bind();
+  ddk::IoBuffer io_buffer;
+  uint32_t handle;
+  zx_status_t status = CreateChildDriver(&io_buffer, &handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to init instance: %d", kTag, status);
-    return status;
+    completer.Close(status);
+    return;
   }
 
-  Instance* instance_ptr = instance.release();
-  *dev_out = instance_ptr->zxdev();
-  return ZX_OK;
+  AddressSpaceChildDriverPingMessage* ping =
+      reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer.virt());
+  memset(ping, 0, sizeof(*ping));
+  ping->offset = dma_region_paddr_;
+  ping->metadata = static_cast<uint64_t>(type);
+  ChildDriverPing(handle);
+
+  auto child_driver = std::make_unique<AddressSpaceChildDriver>(type, this, dma_region_paddr_,
+                                                                std::move(io_buffer), handle);
+
+  status = child_driver->DdkAdd(ddk::DeviceAddArgs("address-space-child")
+                                    .set_flags(DEVICE_ADD_INSTANCE)
+                                    .set_client_remote(std::move(request)));
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
+    completer.Close(status);
+    return;
+  }
+
+  child_driver.release();
+
+  completer.Close(ZX_OK);
 }
 
-void AddressSpaceDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AddressSpaceDevice::DdkRelease() { delete this; }
+
+zx_status_t AddressSpaceDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
 
 uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
   mmio_->Write32(cmd, REGISTER_COMMAND);
@@ -451,8 +408,6 @@ zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn
   llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
-
-zx_status_t AddressSpaceChildDriver::DdkClose(uint32_t flags) { return ZX_OK; }
 
 void AddressSpaceChildDriver::DdkRelease() { delete this; }
 
