@@ -208,6 +208,16 @@ impl BlockAckPolicy {
 #[repr(C)]
 pub struct BlockAckParameters(pub u16);
 
+// IEEE Std 802.11-2016, 9.4.1.16
+#[bitfield(
+    0..=10  reserved,
+    11      initiator,
+    12..=15 tid,
+)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Default)]
+#[repr(C)]
+pub struct DelbaParameters(pub u16);
+
 // IEEE Std 802.11-2016, 9.6.5.2 & Figure 9-28
 #[bitfield(
     0..=3  fragment_number, // Always set to 0 (IEEE Std 802.11-2016, 9.6.5.2)
@@ -251,4 +261,17 @@ pub struct AddbaRespHdr {
     // Multi-band
     // TCLAS
     // ADDBA Extension
+}
+
+// IEEE Std 802.11-2016, 9.6.5.4 - DELBA stands for Delete BlockAck.
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct DelbaHdr {
+    pub action: BlockAckAction,
+    pub parameters: DelbaParameters,
+    pub reason_code: ReasonCode,
+    // TODO(29887): Evaluate the use cases and support optional fields.
+    // GCR Group Address element
+    // Multi-band
+    // TCLAS
 }

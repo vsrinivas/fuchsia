@@ -13,7 +13,7 @@ mod stats;
 use {
     crate::{
         akm_algorithm,
-        block_ack::{BlockAckTx, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
+        block_ack::BlockAckTx,
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         disconnect::LocallyInitiated,
@@ -989,53 +989,29 @@ impl<'a> BoundClient<'a> {
             None => warn!("main channel not set, cannot ensure on channel"),
         }
     }
+}
 
-    /// Sends an `ADDBA` frame (request or response).
+impl<'a> BlockAckTx for BoundClient<'a> {
+    /// Sends a BlockAck frame to the associated AP.
     ///
-    /// This function accepts an `ADDBA` frame body and a length `n`. The length is the **total
-    /// length of the complete frame**, including management headers. See `ADDBA_REQ_FRAME_LEN` and
-    /// `ADDBA_RESP_FRAME_LEN`.
-    fn send_addba_frame(&mut self, n: usize, body: &[u8]) -> Result<(), Error> {
+    /// BlockAck frames are described by 802.11-2016, section 9.6.5.2, 9.6.5.3, and 9.6.5.4.
+    fn send_block_ack_frame(&mut self, n: usize, body: &[u8]) -> Result<(), Error> {
         let mut buffer = self.ctx.buf_provider.get_buffer(n)?;
         let mut writer = BufferWriter::new(&mut buffer[..]);
-        write_addba_hdr(&mut writer, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)
+        write_block_ack_hdr(&mut writer, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)
             .and_then(|_| writer.append_bytes(body).map_err(Into::into))?;
         let n = writer.bytes_written();
         let buffer = OutBuf::from(buffer, n);
         self.send_mgmt_or_ctrl_frame(buffer)
-            .map_err(|status| Error::Status(format!("error sending addba frame"), status))
+            .map_err(|status| Error::Status(format!("error sending BlockAck frame"), status))
     }
 }
 
-impl<'a> BlockAckTx for BoundClient<'a> {
-    /// Sends an `ADDBA` request to the associated AP to begin a BlockAck session. This frame is
-    /// sent to initiate a BlockAck session with the AP and is described by 802.11-2016, 9.6.5.2.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the management frame cannot be sent to the AP.
-    fn send_addba_req_frame(&mut self, body: &[u8]) -> Result<(), Error> {
-        self.send_addba_frame(ADDBA_REQ_FRAME_LEN, body)
-    }
-
-    /// Sends an `ADDBA` response to the associated AP to begin a BlockAck session. This frame is
-    /// sent in response to an `ADDBA` request from the AP and is described by 802.11-2016,
-    /// 9.6.5.3.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the management frame cannot be sent to the AP.
-    fn send_addba_resp_frame(&mut self, body: &[u8]) -> Result<(), Error> {
-        self.send_addba_frame(ADDBA_RESP_FRAME_LEN, body)
-    }
-}
-
-/// Writes the header of the management frame for an `ADDBA` request or response to the given
-/// buffer.
+/// Writes the header of the management frame for BlockAck frames to the given buffer.
 ///
 /// The address may be that of the originator or recipient. The frame formats are described by IEEE
 /// Std 802.11-2016, 9.6.5.
-fn write_addba_hdr<B: Appendable>(
+fn write_block_ack_hdr<B: Appendable>(
     buffer: &mut B,
     bssid: Bssid,
     addr: MacAddr,
@@ -1068,7 +1044,7 @@ mod tests {
     use {
         super::{state::DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT, *},
         crate::{
-            block_ack::{self, BlockAckState, Closed},
+            block_ack::{self, BlockAckState, Closed, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
             buffer::FakeBufferProvider,
             client::lost_bss::LostBssCounter,
             device::FakeDevice,
@@ -2093,7 +2069,7 @@ mod tests {
         let mut body = [0u8; 16];
         let mut writer = BufferWriter::new(&mut body[..]);
         block_ack::write_addba_req_body(&mut writer, 1)
-            .and_then(|_| client.send_addba_req_frame(writer.into_written()))
+            .and_then(|_| client.send_block_ack_frame(ADDBA_REQ_FRAME_LEN, writer.into_written()))
             .expect("failed sending addba frame");
         assert_eq!(
             &mock.fake_device.wlan_queue[0].0[..],
@@ -2126,7 +2102,7 @@ mod tests {
         let mut body = [0u8; 16];
         let mut writer = BufferWriter::new(&mut body[..]);
         block_ack::write_addba_resp_body(&mut writer, 1)
-            .and_then(|_| client.send_addba_resp_frame(writer.into_written()))
+            .and_then(|_| client.send_block_ack_frame(ADDBA_RESP_FRAME_LEN, writer.into_written()))
             .expect("failed sending addba frame");
         assert_eq!(
             &mock.fake_device.wlan_queue[0].0[..],

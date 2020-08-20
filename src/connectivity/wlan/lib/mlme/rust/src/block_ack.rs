@@ -25,6 +25,7 @@ use {
 
 pub const ADDBA_REQ_FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaReqHdr);
 pub const ADDBA_RESP_FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaRespHdr);
+pub const DELBA_FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::DelbaHdr);
 
 // TODO(29887): Determine a better value.
 // TODO(29325): Implement QoS policy engine. See the following parts of the specification:
@@ -39,7 +40,6 @@ pub const ADDBA_RESP_FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr,
 const BLOCK_ACK_BUFFER_SIZE: u16 = 64;
 const BLOCK_ACK_TID: u16 = 0; // TODO(29325): Implement QoS policy engine.
 
-// TODO(29887): Provide a `send_delba_frame` function.
 /// BlockAck transmitter.
 ///
 /// Types that implement this trait can transmit a BlockAck frame body. Typically, this involves
@@ -50,8 +50,17 @@ const BLOCK_ACK_TID: u16 = 0; // TODO(29325): Implement QoS policy engine.
 /// certain transitions. Moreover, this trait provides the necessary side effects of BlockAck state
 /// transitions (namely transmitting frames to clients).
 pub trait BlockAckTx {
-    fn send_addba_req_frame(&mut self, body: &[u8]) -> Result<(), Error>;
-    fn send_addba_resp_frame(&mut self, body: &[u8]) -> Result<(), Error>;
+    /// Transmits a BlockAck frame with the given body.
+    ///
+    /// The `body` parameter does **not** include any management frame components. The frame length
+    /// `n` is the length of the entire management frame, including the management header, action
+    /// header, and BlockAck frame. This length can be used to allocate a buffer for the complete
+    /// management frame.
+    ///
+    /// # Errors
+    ///
+    /// An error should be returned if the frame cannot be constructed or transmitted.
+    fn send_block_ack_frame(&mut self, n: usize, body: &[u8]) -> Result<(), Error>;
 }
 
 /// Closed BlockAck state.
@@ -109,6 +118,7 @@ impl BlockAckState {
     pub fn establish(self, tx: &mut impl BlockAckTx) -> Self {
         match self {
             BlockAckState::Closed(state) => {
+                // TODO(29887): Examine `CapabilityInfo` of the remote peer.
                 // TODO(29887): It appears there is no particular rule to choose the value for
                 //              `dialog_token`. Persist the dialog token for the BlockAck session
                 //              and find a proven way to generate tokens. See IEEE Std 802.11-2016,
@@ -116,9 +126,9 @@ impl BlockAckState {
                 let dialog_token = 1;
                 let mut body = [0u8; ADDBA_REQ_FRAME_LEN];
                 let mut writer = BufferWriter::new(&mut body[..]);
-                match write_addba_req_body(&mut writer, dialog_token)
-                    .and_then(|_| tx.send_addba_req_frame(writer.into_written()))
-                {
+                match write_addba_req_body(&mut writer, dialog_token).and_then(|_| {
+                    tx.send_block_ack_frame(ADDBA_REQ_FRAME_LEN, writer.into_written())
+                }) {
                     Ok(_) => state.transition_to(Establishing { dialog_token }).into(),
                     Err(error) => {
                         error!("error sending ADDBA request frame: {}", error);
@@ -137,7 +147,7 @@ impl BlockAckState {
     ///
     /// See IEEE Std 802.11-2016, 10.24.5.
     #[allow(dead_code)] // TODO(29887): Implement the datagrams and transmission of DELBA frames.
-    pub fn close(self, _: &mut impl BlockAckTx) -> Self {
+    pub fn close(self, tx: &mut impl BlockAckTx, reason_code: mac::ReasonCode) -> Self {
         // This aggressively transitions to the `Closed` state. DELBA frames do not require an
         // exchange (as ADDBA frames do). Note that per IEEE Std 802.11-2016, 10.24.5, only the
         // initiator is meant to transmit DELBA frames. The other mechanism for closing BlockAck is
@@ -145,8 +155,25 @@ impl BlockAckState {
         match self {
             BlockAckState::Closed(_) => self,
             _ => {
-                // TODO(29887): Send a DELBA frame to end the session.
-                BlockAckState::from(State::new(Closed))
+                let is_initiator = match &self {
+                    &BlockAckState::Establishing(..) => true,
+                    &BlockAckState::Established(State {
+                        data: Established { is_initiator },
+                        ..
+                    }) => is_initiator,
+                    _ => false,
+                };
+                let mut body = [0u8; DELBA_FRAME_LEN];
+                let mut writer = BufferWriter::new(&mut body[..]);
+                match write_delba_body(&mut writer, is_initiator, reason_code)
+                    .and_then(|_| tx.send_block_ack_frame(DELBA_FRAME_LEN, writer.into_written()))
+                {
+                    Ok(_) => BlockAckState::from(State::new(Closed)),
+                    Err(error) => {
+                        error!("error sending DELBA frame: {}", error);
+                        self
+                    }
+                }
             }
         }
     }
@@ -171,12 +198,13 @@ impl BlockAckState {
                     // `Established`. See IEEE Std 802.11-2016, 10.24.2.
                     let mut frame = [0u8; ADDBA_RESP_FRAME_LEN];
                     let mut writer = BufferWriter::new(&mut frame[..]);
-                    match read_addba_req_hdr(action, body)
+                    match read_addba_req_hdr(body)
                         .and_then(|request| {
                             write_addba_resp_body(&mut writer, request.dialog_token)
                         })
-                        .and_then(|_| tx.send_addba_resp_frame(writer.into_written()))
-                    {
+                        .and_then(|_| {
+                            tx.send_block_ack_frame(ADDBA_RESP_FRAME_LEN, writer.into_written())
+                        }) {
                         Ok(_) => state.transition_to(Established { is_initiator: false }).into(),
                         Err(error) => {
                             error!("error sending ADDBA response frame: {}", error);
@@ -191,7 +219,7 @@ impl BlockAckState {
                     // Read the ADDBA response. If successful and the response is affirmative,
                     // transition to `Established`. If the response is negative, transition to
                     // `Closed`. See IEEE Std 802.11-2016, 10.24.2.
-                    match read_addba_resp_hdr(action, state.dialog_token, body) {
+                    match read_addba_resp_hdr(state.dialog_token, body) {
                         Ok(response) => {
                             if { response.status } == mac::StatusCode::SUCCESS {
                                 state.transition_to(Established { is_initiator: true }).into()
@@ -213,8 +241,11 @@ impl BlockAckState {
             },
             BlockAckState::Established(state) => match action {
                 mac::BlockAckAction::DELBA => {
-                    // TODO(29887): Parse and examine the DELBA frame as needed. See other state
-                    //              transitions for DELBA as well.
+                    // TODO(29887): Examine the DELBA frame as needed.  This is necessary for GCR
+                    //              modes, for example.
+                    if let Err(error) = read_delba_hdr(body) {
+                        error!("error processing DELBA frame: {}", error);
+                    }
                     // See IEEE Std 802.11-2016, 10.24.5.
                     state.transition_to(Closed).into()
                 }
@@ -294,6 +325,30 @@ pub fn write_addba_resp_body<B: Appendable>(
     .map(|(_, n)| n)
 }
 
+pub fn write_delba_body<B: Appendable>(
+    buffer: &mut B,
+    is_initiator: bool,
+    reason_code: mac::ReasonCode,
+) -> Result<usize, Error> {
+    let body = mac::DelbaHdr {
+        action: mac::BlockAckAction::DELBA,
+        parameters: mac::DelbaParameters(0).with_initiator(is_initiator).with_tid(BLOCK_ACK_TID),
+        reason_code,
+    };
+    write_frame_with_dynamic_buf!(
+        buffer,
+        {
+            headers: {
+                mac::ActionHdr: &mac::ActionHdr {
+                    action: mac::ActionCategory::BLOCK_ACK,
+                },
+            },
+            body: body.as_bytes(),
+        }
+    )
+    .map(|(_, n)| n)
+}
+
 /// Reads an ADDBA request header from an ADDBA frame body.
 ///
 /// This function and others in this module do **not** expect the management action byte to be
@@ -301,25 +356,12 @@ pub fn write_addba_resp_body<B: Appendable>(
 ///
 /// # Errors
 ///
-/// Returns an error if the header cannot be parsed or if its action is not the same as the given
-/// action.
-fn read_addba_req_hdr<B: ByteSlice>(
-    action: mac::BlockAckAction,
-    body: B,
-) -> Result<LayoutVerified<B, mac::AddbaReqHdr>, Error> {
+/// Returns an error if the header cannot be parsed.
+fn read_addba_req_hdr<B: ByteSlice>(body: B) -> Result<LayoutVerified<B, mac::AddbaReqHdr>, Error> {
     let mut reader = BufferReader::new(body);
-    reader
-        .read::<mac::AddbaReqHdr>()
-        .ok_or_else(|| {
-            Error::Status("error reading ADDBA request header".to_string(), zx::Status::IO)
-        })
-        .and_then(|request| {
-            if request.action == action {
-                Ok(request)
-            } else {
-                Err(Error::Status("invalid ADDBA request header".to_string(), zx::Status::IO))
-            }
-        })
+    reader.read::<mac::AddbaReqHdr>().ok_or_else(|| {
+        Error::Status("error reading ADDBA request header".to_string(), zx::Status::IO)
+    })
 }
 
 /// Reads an ADDBA response header from an ADDBA frame body.
@@ -329,10 +371,9 @@ fn read_addba_req_hdr<B: ByteSlice>(
 ///
 /// # Errors
 ///
-/// Returns an error if the header cannot be parsed or if its action and dialog token are not the
-/// same as the given parameters.
+/// Returns an error if the header cannot be parsed or if its dialog token is not the same as the
+/// given parameters.
 fn read_addba_resp_hdr<B: ByteSlice>(
-    action: mac::BlockAckAction,
     dialog_token: u8,
     body: B,
 ) -> Result<LayoutVerified<B, mac::AddbaRespHdr>, Error> {
@@ -341,13 +382,6 @@ fn read_addba_resp_hdr<B: ByteSlice>(
         .read::<mac::AddbaRespHdr>()
         .ok_or_else(|| {
             Error::Status("error reading ADDBA response header".to_string(), zx::Status::IO)
-        })
-        .and_then(|response| {
-            if response.action == action {
-                Ok(response)
-            } else {
-                Err(Error::Status("invalid ADDBA response header".to_string(), zx::Status::IO))
-            }
         })
         .and_then(|response| {
             if response.dialog_token == dialog_token {
@@ -359,6 +393,21 @@ fn read_addba_resp_hdr<B: ByteSlice>(
                 ))
             }
         })
+}
+
+/// Reads a DELBA header from a DELBA frame body.
+///
+/// This function and others in this module do **not** expect the management action byte to be
+/// present in the body. This value should be parsed and removed beforehand.
+///
+/// # Errors
+///
+/// Returns an error if the header cannot be parsed.
+fn read_delba_hdr<B: ByteSlice>(body: B) -> Result<LayoutVerified<B, mac::DelbaHdr>, Error> {
+    let mut reader = BufferReader::new(body);
+    reader
+        .read::<mac::DelbaHdr>()
+        .ok_or_else(|| Error::Status("error reading DELBA header".to_string(), zx::Status::IO))
 }
 
 #[cfg(test)]
@@ -376,24 +425,14 @@ mod tests {
         Down,
     }
 
-    impl Station {
-        fn result<T>(&self, value: T) -> Result<T, Error> {
+    impl BlockAckTx for Station {
+        fn send_block_ack_frame(&mut self, _: usize, _: &[u8]) -> Result<(), Error> {
             match *self {
-                Station::Up => Ok(value),
+                Station::Up => Ok(()),
                 Station::Down => {
                     Err(Error::Status(format!("failed to transmit BlockAck frame"), zx::Status::IO))
                 }
             }
-        }
-    }
-
-    impl BlockAckTx for Station {
-        fn send_addba_req_frame(&mut self, _: &[u8]) -> Result<(), Error> {
-            self.result(())
-        }
-
-        fn send_addba_resp_frame(&mut self, _: &[u8]) -> Result<(), Error> {
-            self.result(())
         }
     }
 
@@ -419,8 +458,21 @@ mod tests {
         (writer.bytes_written(), body)
     }
 
+    /// Creates a DELBA body.
+    ///
+    /// Note that this is not a complete DELBA frame. This function exercises `write_delba_body`.
+    fn delba_body(
+        is_initiator: bool,
+        reason_code: mac::ReasonCode,
+    ) -> (usize, [u8; DELBA_FRAME_LEN]) {
+        let mut body = [0u8; DELBA_FRAME_LEN];
+        let mut writer = BufferWriter::new(&mut body[..]);
+        super::write_delba_body(&mut writer, is_initiator, reason_code).unwrap();
+        (writer.bytes_written(), body)
+    }
+
     #[test]
-    fn initiate_block_ack() {
+    fn request_establish_block_ack() {
         let mut station = Station::Up;
         let state = BlockAckState::from(State::new(Closed));
         let state = state.establish(&mut station);
@@ -433,7 +485,17 @@ mod tests {
     }
 
     #[test]
-    fn affirm_block_ack() {
+    fn request_close_block_ack() {
+        let mut station = Station::Up;
+        let state = BlockAckState::from(statemachine::testing::new_state(Established {
+            is_initiator: true,
+        }));
+        let state = state.close(&mut station, mac::ReasonCode::UNSPECIFIED_REASON);
+        assert_variant!(state, BlockAckState::Closed(_), "not in `Closed` state");
+    }
+
+    #[test]
+    fn respond_establish_block_ack() {
         // Create a buffer describing an ADDBA request body and read the management action byte.
         let (n, body) = addba_req_body(1);
         let body = &body[..n];
@@ -454,29 +516,19 @@ mod tests {
     }
 
     #[test]
-    fn close_block_ack() {
+    fn respond_close_block_ack() {
+        // Create a buffer describing a DELBA body and read the management action byte.
+        let (n, body) = delba_body(true, mac::ReasonCode::UNSPECIFIED_REASON);
+        let body = &body[..n];
+        let (_, body) =
+            LayoutVerified::<_, mac::ActionHdr>::new_unaligned_from_prefix(body).unwrap();
+
         let mut station = Station::Up;
         let state = BlockAckState::from(statemachine::testing::new_state(Established {
-            is_initiator: true,
+            is_initiator: false,
         }));
-        let state = state.close(&mut station);
+        let state = state.on_block_ack_frame(&mut station, mac::BlockAckAction::DELBA, body);
         assert_variant!(state, BlockAckState::Closed(_), "not in `Closed` state");
-    }
-
-    #[test]
-    fn invalid_block_ack_frame() {
-        // This body is the correct length, but is not a valid BlockAck frame.
-        let body = [255u8; ADDBA_REQ_FRAME_LEN];
-
-        let mut station = Station::Up;
-        let state = BlockAckState::from(State::new(Closed));
-        let state =
-            state.on_block_ack_frame(&mut station, mac::BlockAckAction::ADDBA_REQUEST, &body[..]);
-        assert_variant!(
-            state,
-            BlockAckState::Closed(_),
-            "not in `Closed` state; transitioned on invalid input frame"
-        );
     }
 
     #[test]
@@ -486,7 +538,7 @@ mod tests {
         assert_eq!(
             body,
             &[
-                // Action frame header (Also part of ADDBA request frame)
+                // Action frame header (also part of ADDBA request frame)
                 0x03, // Action Category: block ack (0x03)
                 0x00, // block ack action: ADDBA request (0x00)
                 1,    // block ack dialog token
@@ -504,13 +556,29 @@ mod tests {
         assert_eq!(
             body,
             &[
-                // Action frame header (Also part of ADDBA response frame)
+                // Action frame header (also part of ADDBA response frame)
                 0x03, // Action Category: block ack (0x03)
                 0x01, // block ack action: ADDBA response (0x01)
                 1,    // block ack dialog token
                 0, 0, // status
                 0b00000011, 0b00010000, // block ack parameters (u16)
                 0, 0, // block ack timeout (u16) (0: disabled)
+            ][..]
+        );
+    }
+
+    #[test]
+    fn write_delba_body() {
+        let (n, body) = delba_body(true, mac::ReasonCode::UNSPECIFIED_REASON);
+        let body = &body[..n];
+        assert_eq!(
+            body,
+            &[
+                // Action frame header (also part of DELBA frame)
+                0x03, // action category: block ack (0x03)
+                0x02, // block ack action: DELBA (0x02)
+                0b00000000, 0b00001000, // DELBA block ack parameters (u16)
+                1, 0, // reason code (u16) (1: unspecified reason)
             ][..]
         );
     }
