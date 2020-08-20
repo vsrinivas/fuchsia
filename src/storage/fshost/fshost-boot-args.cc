@@ -63,7 +63,7 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
 
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");
   if (algorithm.is_error()) {
-    fprintf(stderr, "fshost: failed to get blobfs compression algorithm: %s",
+    fprintf(stderr, "fshost: failed to get blobfs compression algorithm: %s\n",
             algorithm.status_string());
   } else {
     blobfs_write_compression_algorithm_ = std::move(algorithm).value();
