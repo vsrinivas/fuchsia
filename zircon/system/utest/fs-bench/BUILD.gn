@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("fs-bench") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -47,4 +48,9 @@ test("fs-bench") {
 
   # TODO(46859): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+bootfs_test("fs-bench-bootfs-test") {
+  name = "fs-bench"
+  deps = [ ":fs-bench" ]
 }

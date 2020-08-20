@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -34,4 +35,9 @@ test("storage-metrics") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/storage-metrics",
   ]
+}
+
+bootfs_test("storage-metrics-bootfs-test") {
+  name = "storage-metrics"
+  deps = [ ":storage-metrics" ]
 }

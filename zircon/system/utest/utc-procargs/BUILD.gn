@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("utc-procargs") {
   if (is_fuchsia) {
@@ -31,4 +32,9 @@ test("utc-procargs") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+bootfs_test("utc-procargs-bootfs-test") {
+  name = "utc-procargs"
+  deps = [ ":utc-procargs" ]
 }

@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/migrated_zbi_test.gni")
 import("//build/unification/zbi/resource.gni")
@@ -89,4 +90,9 @@ zbi_input("create-zbi-image") {
 fuzzer("zbi-bootfs-fuzzer") {
   sources = [ "zbi-bootfs-fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/zbi-bootfs" ]
+}
+
+bootfs_test("zbi-bootfs-test-bootfs-test") {
+  name = "zbi-bootfs-test"
+  deps = [ ":zbi-bootfs-test" ]
 }

@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -35,4 +36,9 @@ test("minfs-allocator-unit") {
   ]
 
   include_dirs = [ ".." ]
+}
+
+bootfs_test("minfs-allocator-unit-bootfs-test") {
+  name = "minfs-allocator-unit"
+  deps = [ ":minfs-allocator-unit" ]
 }

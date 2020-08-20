@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 # Common pieces.
 source_set("common") {
@@ -89,4 +90,14 @@ test("trace-static-engine") {
     ":common",
     "//zircon/system/ulib/trace-engine",
   ]
+}
+
+bootfs_test("trace-bootfs-test") {
+  name = "trace"
+  deps = [ ":trace" ]
+}
+
+bootfs_test("trace-static-engine-bootfs-test") {
+  name = "trace-static-engine"
+  deps = [ ":trace-static-engine" ]
 }

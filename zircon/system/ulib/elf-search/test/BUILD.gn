@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -61,4 +62,9 @@ test("elf-search") {
 
   # TODO(46871): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+bootfs_test("elf-search-bootfs-test") {
+  name = "elf-search"
+  deps = [ ":elf-search" ]
 }

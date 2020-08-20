@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -46,4 +47,9 @@ test("watchdog-unit") {
   ]
 
   include_dirs = [ ".." ]
+}
+
+bootfs_test("watchdog-unit-bootfs-test") {
+  name = "watchdog-unit"
+  deps = [ ":watchdog-unit" ]
 }

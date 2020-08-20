@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("sysmem") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -31,4 +32,9 @@ test_package("sysmem-test") {
       name = "sysmem"
     },
   ]
+}
+
+bootfs_test("sysmem-bootfs-test") {
+  name = "sysmem"
+  deps = [ ":sysmem" ]
 }

@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 # Separated into own target, so it is easier to cleanup later.
 test("metrics-composite-latency-event") {
@@ -90,4 +91,19 @@ group("test") {
     ":metrics-composite-latency-event",
     ":metrics-inspect",
   ]
+}
+
+bootfs_test("metrics-cobalt-bootfs-test") {
+  name = "metrics-cobalt"
+  deps = [ ":metrics-cobalt" ]
+}
+
+bootfs_test("metrics-composite-latency-event-bootfs-test") {
+  name = "metrics-composite-latency-event"
+  deps = [ ":metrics-composite-latency-event" ]
+}
+
+bootfs_test("metrics-inspect-bootfs-test") {
+  name = "metrics-inspect"
+  deps = [ ":metrics-inspect" ]
 }

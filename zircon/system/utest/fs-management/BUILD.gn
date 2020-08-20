@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("fs-management") {
   configs += [
@@ -47,4 +48,9 @@ test("fs-management") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+}
+
+bootfs_test("fs-management-bootfs-test") {
+  name = "fs-management"
+  deps = [ ":fs-management" ]
 }

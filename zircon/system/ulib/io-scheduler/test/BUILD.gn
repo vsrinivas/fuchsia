@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -42,4 +43,9 @@ test("io-scheduler-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
   ]
+}
+
+bootfs_test("io-scheduler-test-bootfs-test") {
+  name = "iosched"
+  deps = [ ":io-scheduler-test" ]
 }

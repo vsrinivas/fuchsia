@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -199,4 +200,19 @@ fuzzer("minfs-fuzzer") {
     "//zircon/system/ulib/minfs",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
+}
+
+bootfs_test("minfs-integration-bootfs-test") {
+  name = "minfs-integration"
+  deps = [ ":minfs-integration" ]
+}
+
+bootfs_test("minfs-power-bootfs-test") {
+  name = "minfs-power"
+  deps = [ ":minfs-power" ]
+}
+
+bootfs_test("minfs-unit-bootfs-test") {
+  name = "minfs-unit"
+  deps = [ ":minfs-unit" ]
 }

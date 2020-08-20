@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("memfs") {
   output_dir = "$root_out_dir/zircon-migrated"
@@ -43,4 +44,9 @@ test("memfs") {
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/trace-engine",
   ]
+}
+
+bootfs_test("memfs-bootfs-test") {
+  name = "memfs"
+  deps = [ ":memfs" ]
 }

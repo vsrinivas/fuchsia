@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("log") {
   output_name = "log_test"
@@ -36,4 +37,9 @@ test("log") {
     "//zircon/system/ulib/log-writer-logger",
     "//zircon/system/ulib/log-writer-textfile",
   ]
+}
+
+bootfs_test("log-bootfs-test") {
+  name = "log_test"
+  deps = [ ":log" ]
 }

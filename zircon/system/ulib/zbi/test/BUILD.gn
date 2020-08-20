@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -39,4 +40,9 @@ test("zbi") {
   } else {
     output_dir = "$root_out_dir/zircon-migrated"
   }
+}
+
+bootfs_test("zbi-bootfs-test") {
+  name = "libzbi-test"
+  deps = [ ":zbi" ]
 }

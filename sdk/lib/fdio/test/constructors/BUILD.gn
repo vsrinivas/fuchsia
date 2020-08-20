@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 import("//zircon/public/gn/toolchain/c_utils.gni")
 
@@ -66,4 +67,9 @@ toolchain_utils_action("no-static-ctor") {
     rebase_path(outputs[0], root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]
+}
+
+bootfs_test("fdio-constructor-bootfs-test") {
+  name = "fdio-constructor"
+  deps = [ ":fdio-constructor" ]
 }

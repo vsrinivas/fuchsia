@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -52,4 +53,9 @@ test("lazy_init-test") {
 
   # TODO(47442): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+bootfs_test("lazy_init-test-bootfs-test") {
+  name = "lazy_init-test"
+  deps = [ ":lazy_init-test" ]
 }

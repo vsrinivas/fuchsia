@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("kcounter") {
   if (is_fuchsia) {
@@ -26,4 +27,9 @@ test("kcounter") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
+}
+
+bootfs_test("kcounter-bootfs-test") {
+  name = "kcounter"
+  deps = [ ":kcounter" ]
 }

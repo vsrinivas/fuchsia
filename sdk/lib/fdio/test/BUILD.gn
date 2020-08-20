@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -134,4 +135,9 @@ executable("null-namespace-child") {
   sources = [ "fdio_null_namespace_child.c" ]
   deps = [ "//sdk/lib/fdio" ]
   libs = [ "zircon" ]
+}
+
+bootfs_test("fdio-bootfs-test") {
+  name = "fdio-test"
+  deps = [ ":fdio" ]
 }

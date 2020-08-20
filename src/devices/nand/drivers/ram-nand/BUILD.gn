@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 driver_module("ram-nand") {
   configs += [
@@ -74,4 +75,9 @@ test("ram-nand-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]
+}
+
+bootfs_test("ram-nand-test-bootfs-test") {
+  name = "ram-nand-test"
+  deps = [ ":ram-nand-test" ]
 }

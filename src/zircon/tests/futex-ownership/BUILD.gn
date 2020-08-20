@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("futex-ownership") {
   configs += [
@@ -21,4 +22,9 @@ test("futex-ownership") {
     "//zircon/public/lib/zxtest",
   ]
   libs = [ "zircon" ]
+}
+
+bootfs_test("futex-ownership-bootfs-test") {
+  name = "futex-ownership"
+  deps = [ ":futex-ownership" ]
 }

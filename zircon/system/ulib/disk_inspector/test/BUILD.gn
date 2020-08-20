@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -53,4 +54,9 @@ test("disk_inspector_unit") {
 
   # TODO(fxb/50567): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+bootfs_test("disk_inspector_unit-bootfs-test") {
+  name = "disk-inspector-unit-test"
+  deps = [ ":disk_inspector_unit" ]
 }

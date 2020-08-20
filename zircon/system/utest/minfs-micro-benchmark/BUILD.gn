@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("minfs-micro-benchmark") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -54,4 +55,9 @@ test("minfs-micro-benchmark") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+}
+
+bootfs_test("minfs-micro-benchmark-bootfs-test") {
+  name = "minfs-micro-benchmark"
+  deps = [ ":minfs-micro-benchmark" ]
 }

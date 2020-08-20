@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -46,4 +47,9 @@ test("inspect") {
 fuzzer("inspect-reader-fuzzer") {
   sources = [ "reader_fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/inspect" ]
+}
+
+bootfs_test("inspect-bootfs-test") {
+  name = "inspect"
+  deps = [ ":inspect" ]
 }

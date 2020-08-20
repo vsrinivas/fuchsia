@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -27,4 +28,9 @@ test("unittest") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/unittest",
   ]
+}
+
+bootfs_test("unittest-bootfs-test") {
+  name = "unittest"
+  deps = [ ":unittest" ]
 }

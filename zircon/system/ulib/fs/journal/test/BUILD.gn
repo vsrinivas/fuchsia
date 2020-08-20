@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -88,4 +89,9 @@ fuzzer("journal-replay-fuzzer") {
   sources = [ "replay_fuzztest.cc" ]
   deps = [ ":fuzz-utils" ]
   include_dirs = [ "test" ]
+}
+
+bootfs_test("journal-unit-bootfs-test") {
+  name = "journal-unit"
+  deps = [ ":journal-unit" ]
 }

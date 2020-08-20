@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -37,4 +38,9 @@ test("linenoise-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/third_party/ulib/linenoise",
   ]
+}
+
+bootfs_test("linenoise-test-bootfs-test") {
+  name = "linenoise-test"
+  deps = [ ":linenoise-test" ]
 }

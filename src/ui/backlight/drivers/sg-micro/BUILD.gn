@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 driver_module("sg-micro") {
   configs += [
@@ -60,4 +61,9 @@ test("sgm37603a-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+bootfs_test("sgm37603a-test-bootfs-test") {
+  name = "sgm37603a-test"
+  deps = [ ":sgm37603a-test" ]
 }

@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("perftest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -26,4 +27,9 @@ test("perftest") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/perftest",
   ]
+}
+
+bootfs_test("perftest-bootfs-test") {
+  name = "perf-test"
+  deps = [ ":perftest" ]
 }

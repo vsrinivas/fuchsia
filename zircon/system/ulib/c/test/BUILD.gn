@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 default_stack_size_cases = [
   {
@@ -150,4 +151,19 @@ group("test") {
 }
 
 foreach(case, default_stack_size_cases) {
+}
+
+bootfs_test("atexit-bootfs-test") {
+  name = "atexit"
+  deps = [ ":atexit" ]
+}
+
+bootfs_test("debugdata-bootfs-test") {
+  name = "debugdata"
+  deps = [ ":debugdata" ]
+}
+
+bootfs_test("posix-clocks-bootfs-test") {
+  name = "posix-clocks"
+  deps = [ ":posix-clocks" ]
 }

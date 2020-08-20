@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -42,4 +43,9 @@ test("sysconfig-sync-client-test") {
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
     "//zircon/system/ulib/trace-engine",
   ]
+}
+
+bootfs_test("sysconfig-sync-client-test-bootfs-test") {
+  name = "sysconfig-sync-client-test"
+  deps = [ ":sysconfig-sync-client-test" ]
 }

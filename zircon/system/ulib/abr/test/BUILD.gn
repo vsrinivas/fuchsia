@@ -10,6 +10,7 @@
 ##########################################
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -31,4 +32,9 @@ test("libabr-test") {
     "//zircon/system/ulib/abr",
   ]
   include_dirs = [ "//zircon/system/ulib/abr" ]
+}
+
+bootfs_test("libabr-test-bootfs-test") {
+  name = "libabr-test"
+  deps = [ ":libabr-test" ]
 }

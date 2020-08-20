@@ -17,6 +17,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("mock-function-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -29,4 +30,9 @@ test("mock-function-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+bootfs_test("mock-function-test-bootfs-test") {
+  name = "mock-function-test"
+  deps = [ ":mock-function-test" ]
 }
