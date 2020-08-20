@@ -104,7 +104,6 @@ common_image_contents = [
   "//src/devices/clock/drivers/clock",
   "//src/devices/cpu/bin/cpuctl",
   "//src/devices/cpu/drivers/aml-cpu",
-  "//src/devices/cpu/drivers/aml-cpu-legacy",
   "//src/devices/gpio/bin/gpioutil",
   "//src/devices/gpio/drivers/aml-axg-gpio",
   "//src/devices/gpio/drivers/gpio",
@@ -119,7 +118,6 @@ common_image_contents = [
   "//src/devices/light-sensor/drivers/lite-on",
   "//src/devices/misc/drivers/builtin",
   "//src/devices/misc/drivers/cpu-trace",
-  "//src/devices/ml/drivers/aml-nna",
   "//src/devices/ml/drivers/usb-harriet",
   "//src/devices/nand/bin/nand-loader",
   "//src/devices/nand/bin/nand-util",
@@ -283,14 +281,12 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/media/audio/drivers/alc5514",
     "//src/media/audio/drivers/alc5663",
     "//src/media/audio/drivers/codecs/max98373",
-    "//src/media/audio/drivers/codecs/tas5720",
     "//src/media/audio/drivers/codecs/tas58xx",
     "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda",
     "//src/media/audio/drivers/max98927",
-    "//src/media/audio/drivers/sherlock-pdm-input",
     "//src/media/audio/tools/audio-driver-ctl:test",
     "//src/ui/input/drivers/cypress",
     "//src/ui/input/drivers/virtio:virtio_input",
@@ -299,16 +295,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
   ]
 
   if (target_cpu == "arm64") {
-    common_image_contents += [
-      "//src/devices/board/drivers/qemu-arm64",
-    ]
-
-    if (factory_mode) {
-      common_image_contents +=
-          [ "//src/devices/board/drivers/sherlock:sherlock-factory" ]
-    } else {
-      common_image_contents +=
-          [ "//src/devices/board/drivers/sherlock:sherlock" ]
-    }
+    common_image_contents += [ "//src/devices/board/drivers/qemu-arm64" ]
   }
 }

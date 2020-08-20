@@ -123,7 +123,6 @@ zedboot_deps += [
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/clock/drivers/clock",
   "//src/devices/cpu/drivers/aml-cpu",
-  "//src/devices/cpu/drivers/aml-cpu-legacy",
   "//src/devices/gpio/drivers/aml-axg-gpio",
   "//src/devices/gpio/drivers/gpio",
   "//src/devices/i2c/drivers/aml-i2c",
@@ -135,7 +134,6 @@ zedboot_deps += [
   "//src/devices/light-sensor/drivers/lite-on",
   "//src/devices/misc/drivers/builtin",
   "//src/devices/misc/drivers/cpu-trace",
-  "//src/devices/ml/drivers/aml-nna",
   "//src/devices/ml/drivers/usb-harriet",
   "//src/devices/nand/drivers/aml-rawnand",
   "//src/devices/nand/drivers/broker:nand-broker",
@@ -249,14 +247,12 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/media/audio/drivers/alc5514",
     "//src/media/audio/drivers/alc5663",
     "//src/media/audio/drivers/codecs/max98373",
-    "//src/media/audio/drivers/codecs/tas5720",
     "//src/media/audio/drivers/codecs/tas58xx",
     "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda",
     "//src/media/audio/drivers/max98927",
-    "//src/media/audio/drivers/sherlock-pdm-input",
     "//src/ui/input/drivers/cypress",
     "//src/ui/input/drivers/virtio:virtio_input",
     "//src/ui/light/drivers/gpio-light",
@@ -264,15 +260,6 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
   ]
 
   if (target_cpu == "arm64") {
-    zedboot_deps += [
-      "//src/devices/board/drivers/qemu-arm64",
-    ]
-
-    if (factory_mode) {
-      zedboot_deps +=
-          [ "//src/devices/board/drivers/sherlock:sherlock-factory" ]
-    } else {
-      zedboot_deps += [ "//src/devices/board/drivers/sherlock:sherlock" ]
-    }
+    zedboot_deps += [ "//src/devices/board/drivers/qemu-arm64" ]
   }
 }
