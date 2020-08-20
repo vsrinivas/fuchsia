@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::util,
     crate::{FONTS_MEDIUM_CM, FONTS_SMALL_CM},
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_fonts as fonts, fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_fonts as fonts, fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
 };
 
@@ -71,22 +70,23 @@ async fn get_font_info_basic(
     get_font_info(font_provider, name, None, '\0').await
 }
 
-// TODO: Instead of configuring fonts through a different manifest and command-line arguments,
-// offer a service or directory with the right fonts to the new component instance. This will
-// require support to dynamically offer a capability to a component.
-async fn start_provider(fonts_cm: &str) -> Result<(ScopedInstance, fonts::ProviderProxy), Error> {
-    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
-        .await
-        .context("Failed to create dynamic component")?;
-    let font_provider = app
-        .connect_to_protocol_at_exposed_dir::<fonts::ProviderMarker>()
-        .context("Failed to connect to fonts::Provider")?;
-    Ok((app, font_provider))
+async fn get_provider(fonts_cm: &'static str) -> Result<fonts::ProviderProxy, Error> {
+    util::get_provider::<fonts::ProviderMarker>(fonts_cm).await
 }
 
+// Add new tests here so we don't overload component manager with requests (58150)
 #[fasync::run_singlethreaded(test)]
+async fn test_old_api() {
+    test_basic().await.unwrap();
+    test_aliases().await.unwrap();
+    test_font_collections().await.unwrap();
+    test_fallback().await.unwrap();
+    test_fallback_group().await.unwrap();
+    test_get_family_info().await.unwrap();
+}
+
 async fn test_basic() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
+    let font_provider = get_provider(FONTS_SMALL_CM).await?;
 
     let default =
         get_font_info_basic(&font_provider, None).await.context("Failed to load default font")?;
@@ -106,9 +106,8 @@ async fn test_basic() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_aliases() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
+    let font_provider = get_provider(FONTS_SMALL_CM).await?;
 
     // Both requests should return the same font.
     let materialicons = get_font_info_basic(&font_provider, Some("MaterialIcons".to_string()))
@@ -124,9 +123,8 @@ async fn test_aliases() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_font_collections() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     // Request Japanese and Simplified Chinese versions of Noto Sans CJK. Both
     // fonts are part of the same TTC file, so font provider is expected to
@@ -162,9 +160,8 @@ async fn test_font_collections() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_fallback() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_sans_cjk_ja = get_font_info(
         &font_provider,
@@ -191,9 +188,8 @@ async fn test_fallback() -> Result<(), Error> {
 }
 
 // Verify that the fallback group of the requested font is taken into account for fallback.
-#[fasync::run_singlethreaded(test)]
 async fn test_fallback_group() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_serif_cjk_ja = get_font_info(
         &font_provider,
@@ -221,9 +217,8 @@ async fn test_fallback_group() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_get_family_info() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
+    let font_provider = get_provider(FONTS_SMALL_CM).await?;
 
     let family_info = font_provider.get_family_info("materialicons").await?;
 

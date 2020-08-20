@@ -3,29 +3,18 @@
 // found in the LICENSE file
 
 pub use {
+    crate::util,
     crate::FONTS_EPHEMERAL_CM,
     anyhow::{Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_intl::LocaleId,
     fuchsia_async as fasync,
-    fuchsia_component::client::ScopedInstance,
-    lazy_static::lazy_static,
+    futures::lock::Mutex,
 };
 
-// TODO: Instead of configuring fonts through a different manifest and command-line arguments,
-// offer a service or directory with the right fonts to the new component instance. This will
-// require support to dynamically offer a capability to a component.
-pub async fn start_provider(
-    fonts_cm: &str,
-) -> Result<(ScopedInstance, fonts_exp::ProviderProxy), Error> {
-    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
-        .await
-        .context("Failed to create dynamic component")?;
-    let font_provider = app
-        .connect_to_protocol_at_exposed_dir::<fonts_exp::ProviderMarker>()
-        .context("Failed to connect to fonts_exp::Provider")?;
-    Ok((app, font_provider))
+pub async fn get_provider(fonts_cm: &'static str) -> Result<fonts_exp::ProviderProxy, Error> {
+    util::get_provider::<fonts_exp::ProviderMarker>(fonts_cm).await
 }
 
 pub fn roboto_info(id: u32, weight: u16) -> fonts_exp::TypefaceInfo {

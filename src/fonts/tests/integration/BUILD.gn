@@ -7,8 +7,7 @@ import("//build/test/test_package.gni")
 
 group("integration") {
   testonly = true
-  # TODO(fxbug.dev/58150): Temporarily disable until component_manager_for_test port limit issue resolved
-  #deps = [ ":font_provider_integration_tests" ]
+  deps = [ ":font_provider_integration_tests" ]
 }
 
 # Integration tests without a `main()` function.
@@ -55,6 +54,7 @@ rustc_test("font_provider_integration_tests_bin") {
     "src/reviewed_api/get_typeface.rs",
     "src/reviewed_api/mod.rs",
     "src/reviewed_api/util/mod.rs",
+    "src/util.rs",
   ]
 }
 

@@ -8,9 +8,20 @@ use {
     fidl_fuchsia_fonts::{Style2, Width},
 };
 
+// Add new tests here so we don't overload component manager with requests (58150)
 #[fasync::run_singlethreaded(test)]
+async fn test_get_typeface() {
+    test_basic().await.unwrap();
+    test_aliases().await.unwrap();
+    test_aliases_with_language_overrides().await.unwrap();
+    test_aliases_with_style_overrides().await.unwrap();
+    test_font_collections().await.unwrap();
+    test_fallback().await.unwrap();
+    test_fallback_group().await.unwrap();
+}
+
 async fn test_basic() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
+    let font_provider = get_provider(FONTS_SMALL_CM).await?;
 
     let default = get_typeface_info_basic(&font_provider, None)
         .await
@@ -33,9 +44,8 @@ async fn test_basic() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_aliases() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
+    let font_provider = get_provider(FONTS_SMALL_CM).await?;
 
     // Both requests should return the same font.
     let materialicons = get_typeface_info_basic(&font_provider, Some("MaterialIcons".to_string()))
@@ -51,9 +61,8 @@ async fn test_aliases() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_aliases_with_language_overrides() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_ALIASED_CM).await?;
+    let font_provider = get_provider(FONTS_ALIASED_CM).await?;
 
     let a = get_typeface_info(
         &font_provider,
@@ -74,9 +83,8 @@ async fn test_aliases_with_language_overrides() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_aliases_with_style_overrides() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_ALIASED_CM).await?;
+    let font_provider = get_provider(FONTS_ALIASED_CM).await?;
 
     let a = get_typeface_info(
         &font_provider,
@@ -97,9 +105,8 @@ async fn test_aliases_with_style_overrides() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_font_collections() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     // Request Japanese and Simplified Chinese versions of Noto Sans CJK. Both
     // fonts are part of the same TTC file, so font provider is expected to
@@ -135,9 +142,8 @@ async fn test_font_collections() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
 async fn test_fallback() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_sans_cjk_ja = get_typeface_info(
         &font_provider,
@@ -166,9 +172,8 @@ async fn test_fallback() -> Result<(), Error> {
 }
 
 // Verify that the fallback group of the requested font is taken into account for fallback.
-#[fasync::run_singlethreaded(test)]
 async fn test_fallback_group() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
+    let font_provider = get_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_serif_cjk_ja = get_typeface_info(
         &font_provider,

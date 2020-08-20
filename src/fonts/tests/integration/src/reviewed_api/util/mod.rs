@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub use {
+    crate::util,
     crate::FONTS_ALIASED_CM,
     anyhow::{Context as _, Error},
     fidl_fuchsia_fonts as fonts,
@@ -27,19 +28,8 @@ macro_rules! assert_buf_eq {
     };
 }
 
-// TODO: Instead of configuring fonts through a different manifest and command-line arguments,
-// offer a service or directory with the right fonts to the new component instance. This will
-// require support to dynamically offer a capability to a component.
-pub async fn start_provider(
-    fonts_cm: &str,
-) -> Result<(ScopedInstance, fonts::ProviderProxy), Error> {
-    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
-        .await
-        .context("Failed to create dynamic component")?;
-    let font_provider = app
-        .connect_to_protocol_at_exposed_dir::<fonts::ProviderMarker>()
-        .context("Failed to connect to fonts::Provider")?;
-    Ok((app, font_provider))
+pub async fn get_provider(fonts_cm: &'static str) -> Result<fonts::ProviderProxy, Error> {
+    util::get_provider::<fonts::ProviderMarker>(fonts_cm).await
 }
 
 #[derive(Debug, Eq, PartialEq)]
