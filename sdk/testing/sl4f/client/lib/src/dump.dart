@@ -4,17 +4,26 @@
 
 import 'dart:io';
 
-/// Supports dumping a trace of data received in various facades as
-/// timestamped files into a directory in the filesystem.
+/// Dumps data received in various facades as timestamped files into a directory
+/// in the host filesystem.
+///
+/// This is used by various facade abstractions to dump information received
+/// from the Device Under Test (for example, screenshots from [Scenic]). I can
+/// also be used by the test to write arbitrary artifacts from the test.
 class Dump {
-  /// Environment variable for the directory to dump images in. If this var is
-  /// present, screenshots can optionally be dumped in there.
+  /// Environment variable for the directory to dump images in.
+  ///
+  /// If this var is present, data can optionally be dumped in there.
   static const _dumpDirectoryEnvVar = 'FUCHSIA_TEST_OUTDIR';
 
-  /// Directory to dump screenshots taken. This may be null if it's neither
-  /// passed nor set in the environment, in which case no dumps are written.
+  /// Directory to dump screenshots taken.
+  ///
+  /// This may be null if it's neither passed nor set in the environment, in
+  /// which case no dumps are written.
   final String _dumpDirectory;
 
+  /// Construct a Dump object which writes files to [dumpDirectory].
+  ///
   /// Not supplying a [dumpDirectory] parameter, or supplying null, or an empty
   /// string, means the dump directory specification is taken from the
   /// environment. If that's not specified, or is specified to be the empty
@@ -84,6 +93,8 @@ class Dump {
     return File([_dumpDirectory, filename].join('/'));
   }
 
+  /// Whether the dump directory is valid and dump files will be written by this
+  /// object.
   bool get hasDumpDirectory => _notEmptyString(_dumpDirectory);
 
   static bool _notEmptyString(final String value) =>

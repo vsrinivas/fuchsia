@@ -15,6 +15,12 @@ enum Rotation {
   degrees270,
 }
 
+/// Send screen interactions to the device using Scenic.
+///
+/// This operates on a physical screen coordinate system where the top left is
+/// (0,0) and the bottom right is (1000, 1000). It's possible to indicate how is
+/// the screen rotated which will transform the coordinates so that the physical
+/// (0,0) is on the top left.
 class Input {
   final Ssh ssh;
   final Rotation _screenRotation;

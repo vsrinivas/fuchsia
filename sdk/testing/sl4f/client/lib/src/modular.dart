@@ -15,9 +15,12 @@ final _log = Logger('modular');
 typedef ModularRequestFn = Future<dynamic> Function(String request,
     [dynamic params]);
 
-/// Allows controlling a Modular session and its components.
+/// Controls a Modular session and its components.
+///
+/// See https://fuchsia.dev/fuchsia-src/concepts/modular/overview for more
+/// information on Modular.
 class Modular {
-  /// The function used to make a custom request for Modular.
+  /// Function that makes a request to SL4F.
   final ModularRequestFn _request;
 
   /// The handle to a component search query issuer.
@@ -45,7 +48,12 @@ class Modular {
   Future<String> killBasemgr() async =>
       await _request('basemgr_facade.KillBasemgr');
 
-  /// Launches Basemgr.
+  /// Launches basemgr.
+  ///
+  /// This will start a modular session. Note that there can only be one global
+  /// basemgr instance running at a time. If there's a chance that basemgr is
+  /// already running use [boot] instead which refuse to launch a second
+  /// basemgr.
   ///
   /// Takes a custom [config] as JSON serialized string, or launches basemgr
   /// with system default config if not provided.
@@ -58,7 +66,7 @@ class Modular {
     }
   }
 
-  /// Launches Mod.
+  /// Launches a module in an existing modular session.
   ///
   /// Take custom parameters or launch mod with default value.
   Future<String> launchMod(String modUrl,
@@ -67,10 +75,12 @@ class Modular {
         {'mod_url': modUrl, 'mod_name': modName, 'story_name': storyName});
   }
 
-  /// Whether basemgr is running on the DUT.
+  /// Whether basemgr is currently running on the DUT.
+  ///
+  /// This works whether it was started by this class or not.
   Future<bool> get isRunning => _component.search('basemgr.cmx');
 
-  /// Starts basemgr if it isn't running yet.
+  /// Starts basemgr only if it isn't running yet.
   ///
   /// Takes a custom [config] as JSON serialized string, or launches basemgr
   /// with system default config if not provided.

@@ -21,13 +21,45 @@ import 'ssh.dart';
 
 final _log = Logger('sl4f_client');
 
-/// Diagnostics have been known to hang in some failure cases. In those cases, log
-/// and move on.
+/// Amount of time to wait for a diagnostic command to finish.
+///
+/// Diagnostics have been known to hang in some failure cases. In those cases,
+/// log and move on.
 const _diagnosticTimeout = Duration(minutes: 2);
 
 bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 
-/// Handles the SL4F server and communication with it.
+/// Starts, stops and communicates with an SL4F server on a device.
+///
+/// The recommended way of using class is creating an instance using
+/// [Sl4f.fromEnvironment] which uses the environment variable
+/// `FUCHSIA_DEVICE_ADDR` to determine the IP address of the device to connect
+/// to, and instantiates a new [Ssh] object to start SL4F on the device if it is
+/// not already running.
+///
+/// With an [Sl4f] object it's then possible to use one of the other facade
+/// abstractions, for example [Modular] or [Scenic] to talk to different aspects
+/// of a Fuchsia device, or use [Sl4f.request] to issue JSON-RPC calls to the
+/// SL4F server on the device.
+///
+/// Progress and error messages are logged using the [logging] package, so it's
+/// recommended that the entry point of the test registers a listener to help
+/// when debugging the test.
+///
+/// Example of how to use this package:
+///
+///   Logger.onRecord.listen((r) => print('${r.level}: ${r.message}'));
+///   ...
+///   final sl4fClient = Sl4f.fromEnvironment();
+///   await sl4Client.startServer();
+///   final modularFacade = Modular(sl4f);
+///   await modularFacade.boot();
+///   await modularFacade.launchMod('http://fuchsia.com');
+///   ...
+///   await modularFacade.shutdown();
+///   await sl4fClient.stopServer();
+///
+/// See also https://fuchsia.dev/fuchsia-src/concepts/testing/sl4f
 class Sl4f {
   static const diagnostics = {
     'kstats': 'kstats -c -m -n 1',
@@ -47,10 +79,21 @@ class Sl4f {
   /// Authority (IP, hostname, etc.) of the device under test.
   final String target;
 
-  /// TCP port that the SL4F HTTP server is listening on the target device
+  /// TCP port number that the SL4F HTTP server is listening on the target
+  /// device
   final int port;
+
+  /// [Ssh] client to talk to the device.
+  ///
+  /// It's used by this class to start/stop the SL4F server, and by some
+  /// facades to start commands and forward ports.
   final Ssh ssh;
 
+  /// Create a new Sl4f instance that connects to a given [target] address and
+  /// uses the [ssh] connection.
+  ///
+  /// Most of the time users should use [Sl4f.fromEnvironment] to instantiate
+  /// [Sl4f] using environment variables provided by `fx` and the CI/CQ infra.
   Sl4f(this.target, this.ssh, [this.port = _sl4fHttpDefaultPort])
       : assert(target != null && target.isNotEmpty) {
     if (_portSuffixRe.hasMatch(target)) {
@@ -151,9 +194,7 @@ class Sl4f {
   /// Closes the underlying HTTP client.
   ///
   /// If clients remain unclosed, the dart process might not terminate.
-  void close() {
-    _client.close();
-  }
+  void close() => _client.close();
 
   /// Sends a JSON-RPC request to SL4F.
   ///
@@ -182,7 +223,8 @@ class Sl4f {
   ///
   /// It will attempt to connect [tries] times, waiting at least [delay]
   /// between each attempt.
-  /// Throws a [Sl4fException] if after this SL4F failed to start.
+  ///
+  /// Throws a [Sl4fException] if SL4F failed to start after all attempts.
   Future<void> startServer(
       {int tries = 150, Duration delay = const Duration(seconds: 1)}) async {
     if (tries <= 0) {
@@ -231,9 +273,10 @@ class Sl4f {
     throw Sl4fException('Sl4f has not started.');
   }
 
-  /// SSHs into the device and starts the SL4F server.
+  /// SSHs into the device and kills the SL4F server.
   ///
-  /// If no ssh key path is given, it's taken from the FUCHSIA_SSH_KEY env var.
+  /// This should be called in the [tearDown] or [tearDownAll] of your test to
+  /// ensure that an SL4F server is not lingering after the test is done.
   Future<void> stopServer() async {
     if ((await ssh.run('killall $_sl4fComponentName')).exitCode != 0) {
       _log.warning('Could not stop sl4f. Continuing.');
@@ -261,10 +304,16 @@ class Sl4f {
     return rebootStopwatch.elapsed;
   }
 
-  /// Dumps files with useful device diagnostics.
+  /// Dumps files with useful device diagnostics:
+  ///
+  /// Processes running (ps, top), network interfaces (net-if, wlan), some io
+  /// stats (kstats).
+  ///
+  /// [dumpName] is added as a prefix to the diagnostic files.
   Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
     final dumper = dump ?? Dump();
     if (dumper.hasDumpDirectory) {
+      // TODO(isma): Switch to [Diagnostics] instead of running ssh commands.
       await Future.wait(diagnostics.entries.map((diag) => _dumpDiagnostic(
           diag.value, '$dumpName-diagnostic-${diag.key}', dumper)));
     }
@@ -291,9 +340,9 @@ class Sl4f {
 
     // Start decoding the stderr stream to ensure something consumes it,
     // otherwise it could cause dart to hang waiting for it to be consumed.
-    // We can't use systemEncoding.decodeStream here because it creates a stream
-    // subscription that we have no way to cancel in the case that the stream
-    // stops producing values without closing.
+    // We can't use [systemEncoding.decodeStream] here because it creates a
+    // stream subscription that we have no way to cancel in the case that the
+    // stream stops producing values without closing.
     final stderrController = StreamController<List<int>>();
     final stderrSubscription = proc.stderr
         .listen(stderrController.add, onDone: stderrCompleter.complete);

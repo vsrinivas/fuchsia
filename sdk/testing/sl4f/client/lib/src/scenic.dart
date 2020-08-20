@@ -10,6 +10,7 @@ import 'package:pedantic/pedantic.dart';
 import 'dump.dart';
 import 'sl4f_client.dart';
 
+/// Interact with Scenic on the device under test.
 class Scenic {
   final Sl4f _sl4f;
   final Dump _dump;

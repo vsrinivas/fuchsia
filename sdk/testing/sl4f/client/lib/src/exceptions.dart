@@ -2,41 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Wraps the error field of a JSON RPC as an [Exception].
-class JsonRpcException implements Exception {
-  final String request;
-  final dynamic error;
-
-  JsonRpcException(this.request, this.error);
-
-  @override
-  String toString() {
-    return 'JSON RPC returned error: $error\nRequest: $request';
-  }
-}
-
-/// Any exception when dealing with the SL4F server itself.
+/// Any exception when dealing with the SL4F server or with its facades.
 ///
 /// For example failing to start or terminate the server.
 class Sl4fException implements Exception {
-  String error;
+  dynamic error;
   Sl4fException(this.error);
 
   @override
-  String toString() {
-    return 'Error when handling SL4F: $error';
-  }
+  String toString() => 'Error when handling SL4F: $error';
+}
+
+/// Wraps the error field of a JSON RPC as an [Exception].
+class JsonRpcException extends Sl4fException {
+  final String request;
+
+  JsonRpcException(this.request, dynamic error) : super(error);
+
+  @override
+  String toString() => 'JSON RPC returned error: $error\nRequest: $request';
 }
 
 /// An exception when forwarding ports from or to the DUT.
-class PortForwardException implements Exception {
+class PortForwardException extends Sl4fException {
   final String from;
   final String to;
-  final String error;
-  PortForwardException(this.from, this.to, this.error);
+  PortForwardException(this.from, this.to, dynamic error) : super(error);
 
   @override
-  String toString() {
-    return 'Error forwarding $from -> $to: $error';
-  }
+  String toString() => 'Error forwarding $from -> $to: $error';
 }

@@ -25,14 +25,20 @@ extension ServiceNameExtension on InspectPipeline {
   }
 }
 
+/// Read inspect data from components running on the device.
+///
+/// Inspect (https://fuchsia.dev/fuchsia-src/development/inspect) gives you
+/// access to current state information exposed by components.
 class Inspect {
   final Sl4f sl4f;
 
   /// Construct an [Inspect] object.
-  // TODO(fxb/48733): make this take only Sl4f once all clients have been migrated.
   Inspect(this.sl4f);
 
-  /// Gets the inspect data filtering using the given selectors.
+  /// Gets the inspect data filtering using the given [selectors].
+  ///
+  /// The result is a list of deserialized JSON Maps with key value pairs for
+  /// the matching components and nodes.
   ///
   /// A selector consists of the realm path, component name and a path to a node
   /// or property.

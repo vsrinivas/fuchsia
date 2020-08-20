@@ -47,7 +47,7 @@ File _replaceExtension(File file, String newExtension) {
 // json file, so we need to remove these names in the Fuchsia trace files
 // to avoid name collision.
 //
-// Note that this function mutates the value of argument |rootTraceObject|.
+// Note that this function mutates the value of argument [rootTraceObject].
 Map<String, dynamic> _renameChromiumProcessesInFuchsiaTrace(
     Map<String, dynamic> rootTraceObject) {
   if (!rootTraceObject.containsKey('systemTraceEvents') ||
@@ -72,6 +72,15 @@ Map<String, dynamic> _renameChromiumProcessesInFuchsiaTrace(
 
 final _log = Logger('Performance');
 
+/// Manages system-wide performance tracing and processing.
+///
+/// Use [initializeTracing] to initialize the tracing subsystem on specific
+/// categories, along with [TraceSession] to start the tracing on the action you
+/// want to measure. Then use the various convert and process methods to further
+/// analyze the raw traces.
+///
+/// See https://fuchsia.dev/fuchsia-src/concepts/tracing for more on tracing
+/// concepts.
 class Performance {
   // Names of environment variables used for tagging test results when
   // uploading to the Catapult performance dashboard.
@@ -95,6 +104,10 @@ class Performance {
     _sl4f.close();
   }
 
+  /// Initialize system-wide tracing subsystem and get a [TraceSession] object
+  /// to manage the session and get the results.
+  ///
+  /// There can only be one trace session going at the same time.
   Future<TraceSession> initializeTracing(
       {List<String> categories, int bufferSize}) async {
     _log.info('Performance: Initializing trace session');
@@ -109,7 +122,7 @@ class Performance {
     return TraceSession(_sl4f, _dump);
   }
 
-  /// Terminate any existing trace session without collecting trace data.
+  /// Terminate all existing trace sessions without collecting trace data.
   Future<void> terminateExistingTraceSession() async {
     _log.info('Performance: Terminating any existing trace session');
     await _sl4f
@@ -187,9 +200,10 @@ class Performance {
   }
 
   /// A helper function that runs a process with the given args.
-  /// Required by the test to capture the parameters passed to [Process.run].
   ///
-  /// Returns [true] if the process ran successufly, [false] otherwise.
+  /// Used by the test to capture the parameters passed to [Process.run].
+  ///
+  /// Returns [true] if the process ran successfully, [false] otherwise.
   Future<bool> runProcess(String executablePath, List<String> args) async {
     _log.info('Performance: Running $executablePath ${args.join(" ")}');
     final ProcessResult results = await Process.run(executablePath, args);
@@ -255,7 +269,7 @@ class Performance {
   }
 
   /// Runs the provided [MetricsSpecSet] on the given [trace].
-  /// It sets the ouptut file location to be the same as the source.
+  /// It sets the output file location to be the same as the source.
   /// It will also run the catapult converter if the [converterPath] was provided.
   ///
   /// The [converterPath] must be relative to the script path.
@@ -374,6 +388,7 @@ class Performance {
   }
 }
 
+/// Handle a tracing session.
 class TraceSession {
   final Sl4f _sl4f;
   final Dump _dump;

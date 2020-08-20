@@ -27,6 +27,7 @@ class SetUiSl4fException implements Exception {
 }
 
 /// Converts data from json to dart data type.
+///
 /// IntlInfo models the IntlInfo struct defined in
 /// /garnet/bin/sl4f/src/setui/types.rs
 class IntlInfo {
@@ -63,6 +64,7 @@ class IntlInfo {
   }
 }
 
+/// Configures various aspects of the system.
 class SetUi {
   final Sl4f _sl4f;
 

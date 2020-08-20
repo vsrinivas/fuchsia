@@ -11,6 +11,21 @@ import 'package:retry/retry.dart';
 
 import 'exceptions.dart';
 
+/// Allows access to the device via SSH.
+///
+/// This class is used by [Sl4f] to start the SL4F server if it isn't running,
+/// but it can also be used to run arbitrary shell commands on the device, and
+/// to forward ports available only within the device.
+///
+/// Note that in general SSH and CLI shells are a hack on top of Fuchsia which
+/// doesn't really fit our process and interaction model. Before using [Ssh]
+/// to run an arbitrary command, look at the other SL4F Client classes for
+/// alternatives which often don't need SSH. For example:
+///
+///  * Instead of `run` use [Component.launch] or [Modular.startBasemgr].
+///  * Instead of `cs` to see running component names use [Component.list].
+///  * Instead of `sessionctl` look at the [Modular] class.
+///  * Instead of `trace` use the [Performance] class.
 class Ssh {
   static const _sshUser = 'fuchsia';
 
