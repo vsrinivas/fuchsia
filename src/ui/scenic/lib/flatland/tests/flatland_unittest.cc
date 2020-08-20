@@ -187,9 +187,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
   void TearDown() override {
     RunLoopUntilIdle();
 
+    // Trigger cleanup of Flatland sessions.
+    uber_struct_system_->UpdateSessions({});
+
     auto snapshot = uber_struct_system_->Snapshot();
     EXPECT_TRUE(snapshot.empty());
-    EXPECT_EQ(uber_struct_system_->GetPendingSize(), 0u);
+    EXPECT_EQ(uber_struct_system_->GetSessionCount(), 0ul);
 
     auto link_topologies = link_system_->GetResolvedTopologyLinks();
     EXPECT_TRUE(link_topologies.empty());
@@ -203,8 +206,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
     FX_DCHECK(status == ZX_OK);
-    return Flatland(scheduling::GetNextSessionId(), flatland_presenter_, renderer_, link_system_,
-                    uber_struct_system_, std::move(sysmem_allocator));
+    auto session_id = scheduling::GetNextSessionId();
+    return Flatland(session_id, flatland_presenter_, renderer_, link_system_,
+                    uber_struct_system_->AllocateQueueForSession(session_id),
+                    std::move(sysmem_allocator));
   }
 
   void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }

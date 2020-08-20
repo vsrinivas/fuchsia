@@ -50,7 +50,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
                     const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
                     const std::shared_ptr<Renderer>& renderer,
                     const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<UberStructSystem>& uber_struct_system,
+                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
                     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Flatland();
 
@@ -157,7 +157,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // An UberStructSystem shared between Flatland instances. Flatland publishes local data to the
   // UberStructSystem in order to have it seen by the global render loop.
-  std::shared_ptr<UberStructSystem> uber_struct_system_;
+  std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue_;
 
   // A Sysmem allocator to faciliate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;

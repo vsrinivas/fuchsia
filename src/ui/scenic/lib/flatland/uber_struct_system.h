@@ -5,8 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_SYSTEM_H_
 
-#include <map>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <unordered_map>
 
@@ -30,16 +30,41 @@ class UberStructSystem {
   // UberStructs in snapshots.
   TransformHandle::InstanceId GetNextInstanceId();
 
-  // Queues an UberStruct for |id_pair|. Each Flatland instance can queue multiple UberStructs up
-  // in the UberStructSystem by using different PresentIds alongside their single SessionId. Calls
-  // to UpdateSessions() will commit UberStructs to the instance map accessible via Snapshot() when
-  // the associated PresentId is presented. PresentIds must be increasing.
-  void QueueUberStruct(scheduling::SchedulingIdPair id_pair,
-                       std::unique_ptr<UberStruct> uber_struct);
+  // An UberStruct that has not been published to the visible snapshot and the PresentId it is
+  // associated with.
+  struct PendingUberStruct {
+    scheduling::PresentId present_id;
+    std::unique_ptr<UberStruct> uber_struct;
+  };
 
-  // Clears all UberStructs associated with a particular session |id|, including pending
-  // UberStructs.
-  void ClearUberStruct(scheduling::SessionId id);
+  // An interface for UberStructSystem clients to queue UberStructs to be published into the
+  // visible snapshot.
+  class UberStructQueue {
+   public:
+    // Queues an UberStruct for |present_id|. Each Flatland instance can queue multiple UberStructs
+    // in the UberStructSystem by using different PresentIds. PresentIds must be increasing between
+    // subsequent calls.
+    void Push(scheduling::PresentId present_id, std::unique_ptr<UberStruct> uber_struct);
+
+    // Pops a PendingUberStruct off of this Queue. If the queue is currently empty, returns
+    // std::nullopt.
+    std::optional<PendingUberStruct> Pop();
+
+    // Returns the number of PendingUberStructs in this queue.
+    size_t GetPendingSize();
+
+   private:
+    // TODO(57745): add a lock-free queue.
+    // Protects access to |pending_structs_|.
+    std::mutex queue_mutex_;
+    std::queue<PendingUberStruct> pending_structs_;
+  };
+
+  // Allocates a Queue for |session_id| and returns a shared reference to that Queue. When all
+  // external references to the Queue are destroyed, the UberStructSystem will erase all resources
+  // related to that session, including pending UberStructs and the current UberStruct in the
+  // snapshot. This function should only be called once for each |session_id|.
+  std::shared_ptr<UberStructQueue> AllocateQueueForSession(scheduling::SessionId session_id);
 
   // Commits a new UberStruct to the instance map for each key/value pair in |sessions_to_update|.
   // All pending UberStructs associated each SessionId with lower PresentIds will be discarded.
@@ -50,24 +75,21 @@ class UberStructSystem {
   UberStruct::InstanceMap Snapshot();
 
   // For pushing all pending UberStructs in tests.
-  void ForceUpdateAllSessions();
+  void ForceUpdateAllSessions(size_t max_updates_per_queue = 10);
 
   // For validating cleanup logic in tests.
-  size_t GetPendingSize();
+  size_t GetSessionCount();
 
  private:
-  // TODO(44335): The map of queues is modified on Flatland instance threads and read from the
-  // render thread, producing a possible priority inversion between the two threads.
-  std::mutex queues_mutex_;
+  // Cleans up sessions whose Queues have no external references.
+  void CleanupSessions();
 
-  // A Present that has reached its acquire fences, but not its presentation time.
-  struct PendingUberStruct {
-    scheduling::PresentId present_id;
-    std::shared_ptr<UberStruct> uber_struct;
-  };
-
-  // The queue of UberStructs pending for each active session.
-  std::map<scheduling::SessionId, std::queue<PendingUberStruct>> pending_structs_queues_;
+  // The queue of UberStructs pending for each active session. Flatland instances push UberStructs
+  // onto these queues using |UberStructQueue::Push()|. This UberStructSystem removes entries using
+  // |UberStructQueue::Pop()|. Both of those operations are threadsafe, but the map itself is only
+  // modified from a single thread.
+  std::unordered_map<scheduling::SessionId, std::shared_ptr<UberStructQueue>>
+      pending_structs_queues_;
 
   // The current UberStruct for each Flatland instance.
   UberStruct::InstanceMap uber_struct_map_;

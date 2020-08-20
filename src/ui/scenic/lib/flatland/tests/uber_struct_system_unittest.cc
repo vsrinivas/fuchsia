@@ -104,6 +104,22 @@ TEST(UberStructSystemTest, InstanceIdUniqueness) {
   EXPECT_EQ(handles.size(), kNumThreads * kNumInstanceIds * kNumHandles);
 }
 
+TEST(UberStructSystemTest, QueueDestructionCleansUpSession) {
+  UberStructSystem system;
+
+  {
+    auto queue = system.AllocateQueueForSession(1);
+
+    EXPECT_EQ(system.GetSessionCount(), 1ul);
+
+    // |queue| falls out of scope, which triggers session cleanup on the next session update.
+  }
+
+  system.ForceUpdateAllSessions();
+
+  EXPECT_EQ(system.GetSessionCount(), 0ul);
+}
+
 TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {
   UberStructSystem system;
 
@@ -112,8 +128,11 @@ TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {
   const scheduling::SessionId kSession1 = 1;
   const scheduling::SessionId kSession2 = 2;
 
-  system.QueueUberStruct({kSession1, 0}, std::make_unique<UberStruct>());
-  system.QueueUberStruct({kSession2, 0}, std::make_unique<UberStruct>());
+  auto queue1 = system.AllocateQueueForSession(kSession1);
+  auto queue2 = system.AllocateQueueForSession(kSession2);
+
+  queue1->Push(0, std::make_unique<UberStruct>());
+  queue2->Push(0, std::make_unique<UberStruct>());
 
   auto snapshot = system.Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -145,6 +164,38 @@ TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {
   EXPECT_NE(iter->second, nullptr);
 }
 
+TEST(UberStructSystemTest, UpdateSessionsIgnoresGfxSessionIds) {
+  UberStructSystem system;
+
+  // Queue an UberStruct for a Flatland session and pretend there is a GFX session too.
+  const scheduling::SessionId kFlatlandSession = 1;
+  const scheduling::SessionId kGfxSession = 2;
+
+  auto queue = system.AllocateQueueForSession(kFlatlandSession);
+
+  queue->Push(0, std::make_unique<UberStruct>());
+
+  auto snapshot = system.Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Call UpdateSessions, but with only the GFX session, which should update nothing.
+  system.UpdateSessions({{kGfxSession, 0}});
+
+  snapshot = system.Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Call it a second time with the Flatland session, which should result in an UberStruct in the
+  // snapshot.
+  system.UpdateSessions({{kFlatlandSession, 0}});
+
+  snapshot = system.Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+
+  auto iter = snapshot.find(kFlatlandSession);
+  EXPECT_NE(iter, snapshot.end());
+  EXPECT_NE(iter->second, nullptr);
+}
+
 TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
   UberStructSystem system;
 
@@ -162,10 +213,11 @@ TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
 
   // Queue all three in the system with incrementing PresentIds.
   const scheduling::SessionId kSession = 1;
+  auto queue = system.AllocateQueueForSession(kSession);
 
-  system.QueueUberStruct({kSession, 1}, std::move(struct1));
-  system.QueueUberStruct({kSession, 2}, std::move(struct2));
-  system.QueueUberStruct({kSession, 3}, std::move(struct3));
+  queue->Push(1, std::move(struct1));
+  queue->Push(2, std::move(struct2));
+  queue->Push(3, std::move(struct3));
 
   auto snapshot = system.Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -194,7 +246,7 @@ TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
   EXPECT_EQ(iter->second->local_topology[0].handle, kTransform3);
 
   // Ensure there are no queued updates left.
-  EXPECT_EQ(system.GetPendingSize(), 0ul);
+  EXPECT_EQ(queue->GetPendingSize(), 0ul);
 }
 
 TEST(UberStructSystemTest, BasicTopologyRetrieval) {
@@ -208,13 +260,19 @@ TEST(UberStructSystemTest, BasicTopologyRetrieval) {
                                                                             //
                                               {{{2, 0}, 1}, {{2, 1}, 0}}};  // 2:0 - 2:1
 
+  std::shared_ptr<UberStructSystem::UberStructQueue> queues[] = {
+      system.AllocateQueueForSession(0),
+      system.AllocateQueueForSession(1),
+      system.AllocateQueueForSession(2),
+  };
+
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> sessions_to_update;
   for (const auto& v : vectors) {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = v;
 
     const auto session_id = v[0].handle.GetInstanceId();
-    system.QueueUberStruct({session_id, 0}, std::move(uber_struct));
+    queues[session_id]->Push(0, std::move(uber_struct));
     sessions_to_update[session_id] = 0;
   }
 
@@ -271,7 +329,7 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
                                                 //     \
                                                 //       0:7
                                                 //
-      {{{4, 0}, 2}, {link_8, 0}, {link_9, 0}},  // 3:0 - 0:8
+      {{{4, 0}, 2}, {link_8, 0}, {link_9, 0}},  // 4:0 - 0:8
                                                 //     \
                                                 //       0:9
                                                 //
@@ -314,7 +372,7 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
                                                 //     \
                                                 //       0:5
                                                 //
-      {{{4, 0}, 2}, {link13, 0}, {link12, 0}},  // 3:0 - 0:13
+      {{{4, 0}, 2}, {link13, 0}, {link12, 0}},  // 4:0 - 0:13
                                                 //     \
                                                 //       0:12
                                                 //
@@ -335,6 +393,15 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
       {{{13, 0}, 0}},                           // 13:0
   };
 
+  std::shared_ptr<UberStructSystem::UberStructQueue> queues[] = {
+      system.AllocateQueueForSession(1),  system.AllocateQueueForSession(2),
+      system.AllocateQueueForSession(3),  system.AllocateQueueForSession(4),
+      system.AllocateQueueForSession(6),  system.AllocateQueueForSession(5),
+      system.AllocateQueueForSession(7),  system.AllocateQueueForSession(8),
+      system.AllocateQueueForSession(9),  system.AllocateQueueForSession(12),
+      system.AllocateQueueForSession(13),
+  };
+
   // Every relevant 0:X node should link to X:0.
   GlobalTopologyData::LinkTopologyMap links;
   for (uint64_t i = 2; i <= 13; ++i) {
@@ -345,13 +412,14 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> sessions_to_update;
   std::atomic<scheduling::PresentId> next_present_id = 0;
 
-  for (const auto& v : vectors) {
+  for (size_t i = 0; i < 11; ++i) {
+    const auto& v = vectors[i];
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = v;
 
     const auto session_id = v[0].handle.GetInstanceId();
     const auto present_id = next_present_id++;
-    system.QueueUberStruct({session_id, present_id}, std::move(uber_struct));
+    queues[i]->Push(present_id, std::move(uber_struct));
     sessions_to_update[session_id] = present_id;
   }
 
@@ -368,22 +436,20 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   // Only swap out the first 5 vectors, since the remaining are just leaf graphs.
   for (uint64_t t = 0; t < 5; ++t) {
     std::thread thread(
-        [&system, &run, &next_present_id, v = vectors[t], a = alternate_vectors[t]]() {
+        [&run, &next_present_id, q = queues[t], v = vectors[t], a = alternate_vectors[t]]() {
           while (run) {
             {
               auto uber_struct = std::make_unique<UberStruct>();
               uber_struct->local_topology = v;
 
-              const auto session_id = v[0].handle.GetInstanceId();
-              system.QueueUberStruct({session_id, next_present_id++}, std::move(uber_struct));
+              q->Push(next_present_id++, std::move(uber_struct));
             }
 
             {
               auto uber_struct = std::make_unique<UberStruct>();
               uber_struct->local_topology = a;
 
-              const auto session_id = a[0].handle.GetInstanceId();
-              system.QueueUberStruct({session_id, next_present_id++}, std::move(uber_struct));
+              q->Push(next_present_id++, std::move(uber_struct));
             }
           }
         });
