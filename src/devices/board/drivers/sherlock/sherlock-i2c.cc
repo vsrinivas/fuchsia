@@ -71,7 +71,7 @@ static const i2c_channel_t luis_i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
-    // IMX227 Camera Sensor
+    // IMX355 Camera Sensor
     {
         .bus_id = SHERLOCK_I2C_3,
         .address = 0x1a,
@@ -83,6 +83,14 @@ static const i2c_channel_t luis_i2c_channels[] = {
     {
         .bus_id = SHERLOCK_I2C_A0_0,
         .address = 0x39,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // IMX355 Camera EEPROM
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x51,
         .vid = 0,
         .pid = 0,
         .did = 0,

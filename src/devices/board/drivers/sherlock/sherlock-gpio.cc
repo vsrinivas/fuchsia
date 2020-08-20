@@ -102,7 +102,7 @@ static const gpio_pin_t gpio_pins[] = {
     {T931_GPIOE(4)},     {T931_GPIOE(5)},     {T931_GPIOE(6)},     {T931_GPIOE(7)},
 };
 #else
-#define GPIO_PIN_COUNT 27
+#define GPIO_PIN_COUNT 29
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {T931_WIFI_HOST_WAKE},
@@ -147,6 +147,10 @@ static const gpio_pin_t gpio_pins[] = {
 
     // Luis camera switch, unused on Sherlock
     {GPIO_CAM_MUTE},
+
+    // Luis camera supplies, unused on Sherlock
+    {GPIO_CAM_VIF_ENABLE},
+    {GPIO_CAM_VANA_ENABLE},
 };
 #endif  // FACTORY_BUILD
 
@@ -217,7 +221,7 @@ zx_status_t Sherlock::GpioInit() {
   pdev_board_info_t info;
   status = pbus_.GetBoardInfo(&info);
   if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
-      gpio_impl_.ConfigOut(GPIO_AMP_24V_EN, 1);
+    gpio_impl_.ConfigOut(GPIO_AMP_24V_EN, 1);
   }
 
   return ZX_OK;
