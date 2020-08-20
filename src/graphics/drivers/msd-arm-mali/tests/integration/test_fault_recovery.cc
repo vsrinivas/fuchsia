@@ -39,6 +39,8 @@ struct JobDescriptorHeader {
 class TestConnection : public magma::TestDeviceBase {
  public:
   TestConnection() : magma::TestDeviceBase(MAGMA_VENDOR_ID_MALI) {
+    UseStatus2();
+
     magma_create_connection2(device(), &connection_);
     DASSERT(connection_);
 
@@ -50,6 +52,12 @@ class TestConnection : public magma::TestDeviceBase {
 
     if (connection_)
       magma_release_connection(connection_);
+  }
+
+  void UseStatus2() {
+    uint64_t value_out;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_query2(device(), kMsdArmVendorQueryTodoRemoveFxb47016, &value_out));
   }
 
   bool SupportsProtectedMode() {
@@ -87,7 +95,7 @@ class TestConnection : public magma::TestDeviceBase {
     constexpr uint64_t kOneSecondPerNs = 1000000000;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_notification_channel(connection_, kOneSecondPerNs));
 
-    magma_arm_mali_status status;
+    magma_arm_mali_status2 status;
     uint64_t status_size;
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_read_notification_channel(connection_, &status, sizeof(status), &status_size));

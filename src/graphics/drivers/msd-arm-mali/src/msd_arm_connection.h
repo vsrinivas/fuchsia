@@ -58,7 +58,8 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
     }
   };
 
-  static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
+  static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner,
+                                                  bool use_status2 = false);
 
   virtual ~MsdArmConnection();
 
@@ -131,6 +132,8 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
 
   MsdArmConnection(msd_client_id_t client_id, Owner* owner);
 
+  void set_use_status2() { use_status2_ = true; }
+
   bool Init();
   PerformanceCounters* performance_counters() { return owner_->performance_counters(); }
 
@@ -149,6 +152,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   std::deque<std::pair</*gpu_va=*/uint64_t, /*len=*/uint64_t>> recently_removed_mappings_;
 
   Owner* owner_;
+  bool use_status2_ = false;
 
   // Modified and accessed only from device thread.
   bool address_space_lost_ = false;

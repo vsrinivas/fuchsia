@@ -182,11 +182,13 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
   return MAGMA_STATUS_OK;
 }
 
-std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id,
-                                                           Owner* owner) {
+std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id, Owner* owner,
+                                                           bool use_status2) {
   auto connection = std::shared_ptr<MsdArmConnection>(new MsdArmConnection(client_id, owner));
   if (!connection->Init())
     return DRETP(nullptr, "Couldn't create connection");
+  if (use_status2)
+    connection->set_use_status2();
   return connection;
 }
 
@@ -474,15 +476,25 @@ void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode 
     return;
 
   msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
-  static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
-                "notification too large");
-  notification.u.channel_send.size = sizeof(magma_arm_mali_status);
+  if (use_status2_) {
+    static_assert(sizeof(magma_arm_mali_status2) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status2);
 
-  auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
-  status->result_code = result_code;
-  status->atom_number = atom->atom_number();
-  status->data = atom->user_data();
+    auto status = reinterpret_cast<magma_arm_mali_status2*>(notification.u.channel_send.data);
+    status->result_code = result_code;
+    status->atom_number = atom->atom_number();
+    status->data = atom->user_data();
+  } else {
+    static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status);
 
+    auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
+    status->result_code = result_code;
+    status->atom_number = atom->atom_number();
+    status->data = atom->user_data();
+  }
   callback_(token_, &notification);
 }
 
@@ -495,15 +507,25 @@ void MsdArmConnection::MarkDestroyed() {
     return;
 
   msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
-  static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
-                "notification too large");
-  notification.u.channel_send.size = sizeof(magma_arm_mali_status);
+  if (use_status2_) {
+    static_assert(sizeof(magma_arm_mali_status2) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status2);
 
-  auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
-  status->result_code = kArmMaliResultTerminated;
-  status->atom_number = {};
-  status->data = {};
+    auto status = reinterpret_cast<magma_arm_mali_status2*>(notification.u.channel_send.data);
+    status->result_code = kArmMaliResultTerminated;
+    status->atom_number = {};
+    status->data = {};
+  } else {
+    static_assert(sizeof(magma_arm_mali_status) <= MSD_CHANNEL_SEND_MAX_SIZE,
+                  "notification too large");
+    notification.u.channel_send.size = sizeof(magma_arm_mali_status);
 
+    auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
+    status->result_code = kArmMaliResultTerminated;
+    status->atom_number = {};
+    status->data = {};
+  }
   callback_(token_, &notification);
 
   // Don't send any completion messages after termination.

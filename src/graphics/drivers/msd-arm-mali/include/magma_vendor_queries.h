@@ -22,6 +22,7 @@ enum MsdArmVendorQuery {
   kMsdArmVendorQueryCoherencyEnabled = MAGMA_QUERY_VENDOR_PARAM_0 + 10,
   kMsdArmVendorQueryThreadTlsAlloc = MAGMA_QUERY_VENDOR_PARAM_0 + 11,
   kMsdArmVendorQuerySupportsProtectedMode = MAGMA_QUERY_VENDOR_PARAM_0 + 12,
+  kMsdArmVendorQueryTodoRemoveFxb47016 = MAGMA_QUERY_VENDOR_PARAM_0 + 13,
 };
 
 #endif  // SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_INCLUDE_MAGMA_VENDOR_QUERIES_H_
