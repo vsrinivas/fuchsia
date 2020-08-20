@@ -18,6 +18,7 @@
 
 #include <queue>
 #include <string>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
@@ -271,7 +272,7 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
 }
 
 TemporaryFvmPartition::TemporaryFvmPartition(std::string partition_path, uuid::Uuid unique_guid)
-    : partition_path_(partition_path), unique_guid_(unique_guid) {}
+    : partition_path_(std::move(partition_path)), unique_guid_(unique_guid) {}
 
 TemporaryFvmPartition::~TemporaryFvmPartition() {
   ZX_ASSERT(destroy_partition(unique_guid_.bytes(), kTestPartGUID.bytes()) == ZX_OK);

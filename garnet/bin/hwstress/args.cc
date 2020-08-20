@@ -206,7 +206,8 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   if (result.subcommand == StressTest::kFlash) {
     if (result.destroy_partitions && !result.fvm_path.empty()) {
       return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager invalid with cleanup"));
-    } else if (!result.destroy_partitions && result.fvm_path.empty()) {
+    }
+    if (!result.destroy_partitions && result.fvm_path.empty()) {
       return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
     }
   }

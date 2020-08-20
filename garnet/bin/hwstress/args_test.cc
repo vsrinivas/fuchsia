@@ -103,9 +103,9 @@ TEST(Args, ParseCpu) {
 }
 
 TEST(Args, ParseLogLevel) {
-  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu"}})->log_level.compare("normal") == 0);
-  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "--logging-level", "Terse"}})->log_level == "Terse");
-  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-l", "Verbose"}})->log_level == "Verbose");
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu"}})->log_level, "normal");
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "--logging-level", "Terse"}})->log_level, "Terse");
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-l", "Verbose"}})->log_level, "Verbose");
   EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-l", "Bad"}}).is_error());
 }
 

@@ -20,15 +20,17 @@ namespace hwstress {
 LogLevel LogLevelFromString(const std::string& value) {
   std::string value_lower(value);
   std::for_each(value_lower.begin(), value_lower.end(), [](char& c) { c = std::tolower(c); });
+
   if (value_lower == "terse") {
     return LogLevel::kTerse;
-  } else if (value_lower == "normal") {
-    return LogLevel::kNormal;
-  } else if (value_lower == "verbose") {
-    return LogLevel::kVerbose;
-  } else {
-    return LogLevel::kInvalid;
   }
+  if (value_lower == "normal") {
+    return LogLevel::kNormal;
+  }
+  if (value_lower == "verbose") {
+    return LogLevel::kVerbose;
+  }
+  return LogLevel::kInvalid;
 }
 
 namespace {
