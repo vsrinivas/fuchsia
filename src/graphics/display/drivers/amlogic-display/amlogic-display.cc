@@ -470,6 +470,16 @@ void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
   if (osd_) {
     osd_->Disable();
   }
+
+  fbl::AutoLock l(&image_lock_);
+  for (auto& i : imported_images_) {
+    if (i.pmt) {
+      i.pmt.unpin();
+    }
+    if (i.canvas.ctx && i.canvas_idx > 0) {
+      amlogic_canvas_free(&i.canvas, i.canvas_idx);
+    }
+  }
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
