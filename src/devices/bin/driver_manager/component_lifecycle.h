@@ -12,19 +12,21 @@
 #include "coordinator.h"
 
 namespace devmgr {
-
+using SuspendCallback = fit::function<void(zx_status_t)>;
 class ComponentLifecycleServer final
     : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
  public:
-  explicit ComponentLifecycleServer(Coordinator* dev_coord) : dev_coord_(dev_coord) {}
+  explicit ComponentLifecycleServer(Coordinator* dev_coord, SuspendCallback callback)
+      : dev_coord_(dev_coord), suspend_callback_(std::move(callback)) {}
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                            zx::channel chan);
+                            zx::channel chan, SuspendCallback callback);
 
   void Stop(StopCompleter::Sync completer) override;
 
  private:
   Coordinator* dev_coord_;
+  SuspendCallback suspend_callback_;
 };
 
 }  // namespace devmgr

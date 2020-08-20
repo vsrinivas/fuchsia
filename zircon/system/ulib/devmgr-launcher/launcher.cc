@@ -182,6 +182,9 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   if (args.disable_netsvc) {
     argv.push_back("--disable-netsvc");
   }
+  if (args.no_exit_after_suspend) {
+    argv.push_back("--no-exit-after-suspend");
+  }
   argv.push_back(nullptr);
 
   fbl::Vector<fdio_spawn_action_t> actions;

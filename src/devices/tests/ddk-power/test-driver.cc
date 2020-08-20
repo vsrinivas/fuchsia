@@ -32,6 +32,7 @@ class TestPowerDriver : public DeviceType,
   void DdkRelease() { delete this; }
   void DdkSuspend(ddk::SuspendTxn txn) {
     current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());
+    suspend_complete_event_.signal(0, ZX_USER_SIGNAL_0);
     txn.Reply(ZX_OK, txn.requested_state());
   }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -39,6 +40,18 @@ class TestPowerDriver : public DeviceType,
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
+
+  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync completer) override {
+    zx::event complete;
+    zx_status_t status =
+        suspend_complete_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &complete);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+    } else {
+      completer.ReplySuccess(std::move(complete));
+    }
+  }
+
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
                               bool add_invisible,
@@ -57,9 +70,16 @@ class TestPowerDriver : public DeviceType,
   DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
   zx_status_t reply_suspend_status_ = ZX_OK;
   zx_status_t reply_resume_status_ = ZX_OK;
+  zx::event suspend_complete_event_;
 };
 
-zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
+zx_status_t TestPowerDriver::Bind() {
+  zx_status_t status = zx::event::create(0, &suspend_complete_event_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return DdkAdd("power-test");
+}
 
 void TestPowerDriver::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,

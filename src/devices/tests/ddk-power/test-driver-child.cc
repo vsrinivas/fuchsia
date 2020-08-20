@@ -25,12 +25,14 @@ using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
-using DeviceType = ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable,
-                               ddk::Suspendable, ddk::Resumable, ddk::PerformanceTunable,
-                               ddk::AutoSuspendable, ddk::Initializable>;
+using DeviceType =
+    ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable, ddk::Suspendable,
+                ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
-  TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
+  TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {
+    zx::event::create(0, &suspend_completion_event_);
+  }
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
 
@@ -69,6 +71,17 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
     perf_states_count_ = perf_states_count;
   }
 
+  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync completer) override {
+    zx::event complete;
+    zx_status_t status =
+        suspend_completion_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &complete);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    completer.ReplySuccess(std::move(complete));
+  }
+
  private:
   uint8_t current_power_state_ = 0;
   uint32_t current_performance_state_ = 0;
@@ -85,6 +98,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   uint8_t states_count_ = 0;
   std::unique_ptr<device_performance_state_info_t[]> perf_states_;
   uint8_t perf_states_count_ = 0;
+  zx::event suspend_completion_event_;
 };
 
 void TestPowerDriverChild::DdkInit(ddk::InitTxn txn) {
@@ -97,7 +111,10 @@ void TestPowerDriverChild::DdkSuspend(ddk::SuspendTxn txn) {
   }
   current_suspend_reason_ = txn.suspend_reason();
   current_power_state_ = reply_out_power_state_;
+  suspend_completion_event_.signal(0, ZX_USER_SIGNAL_0);
   txn.Reply(reply_suspend_status_, reply_out_power_state_);
+
+  // Reset for next test.
   reply_suspend_status_ = ZX_OK;
   reply_out_power_state_ = DEV_POWER_STATE_D0;
   reply_out_performance_state_ = DEV_PERFORMANCE_STATE_P0;

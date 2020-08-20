@@ -30,4 +30,6 @@ protocol TestDevice {
     GetCurrentDeviceAutoSuspendConfig() -> (bool enabled,
                                             fuchsia.device.DevicePowerState deepest_sleep_state) error zx.status;
     SetTestStatusInfo(TestStatusInfo test_info) -> () error zx.status;
+
+    GetSuspendCompletionEvent() -> (zx.handle:EVENT event) error zx.status;
 };

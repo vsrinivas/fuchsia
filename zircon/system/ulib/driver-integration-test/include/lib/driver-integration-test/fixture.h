@@ -14,6 +14,7 @@
 
 namespace driver_integration_test {
 
+using SuspendCallback = fit::function<void(zx_status_t status)>;
 class IsolatedDevmgr {
  public:
   struct Args {
@@ -44,6 +45,8 @@ class IsolatedDevmgr {
     bool disable_block_watcher = true;
     // If set to true, the netsvc will be disabled.
     bool disable_netsvc = true;
+
+    bool no_exit_after_suspend = true;
     // Where to look for driver_manager, fshost, driver_host, and drivers.
     std::string path_prefix = "/boot/";
   };
@@ -67,6 +70,8 @@ class IsolatedDevmgr {
   const zx::channel& svc_root_dir() const { return devmgr_.svc_root_dir(); }
 
   const zx::channel& fshost_outgoing_dir() const { return devmgr_.fshost_outgoing_dir(); }
+
+  const zx::channel& component_lifecycle_svc() const { return devmgr_.component_lifecycle_svc(); }
 
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;

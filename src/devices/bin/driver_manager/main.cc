@@ -115,17 +115,17 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     kLogToDebuglog,
     kPathPrefix,
     kUseDefaultLoader,
+    kNoExitAfterSuspend,
   };
-  option options[] = {
-      {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
-      {"load-driver", required_argument, nullptr, kLoadDriver},
-      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-      {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
-      {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
-      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
-      {"path-prefix", required_argument, nullptr, kPathPrefix},
-      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
-  };
+  option options[] = {{"driver-search-path", required_argument, nullptr, kDriverSearchPath},
+                      {"load-driver", required_argument, nullptr, kLoadDriver},
+                      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
+                      {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
+                      {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
+                      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
+                      {"path-prefix", required_argument, nullptr, kPathPrefix},
+                      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
+                      {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend}};
 
   auto print_usage_and_exit = [options]() {
     printf("driver_manager: supported arguments:\n");
@@ -172,6 +172,9 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
         break;
       case kUseDefaultLoader:
         out->use_default_loader = true;
+        break;
+      case kNoExitAfterSuspend:
+        out->no_exit_after_suspend = true;
         break;
       default:
         print_usage_and_exit();
@@ -221,6 +224,21 @@ int main(int argc, char** argv) {
   if (devmgr_args.sys_device_driver.empty()) {
     devmgr_args.sys_device_driver = devmgr_args.path_prefix + "driver/platform-bus.so";
   }
+
+  SuspendCallback suspend_callback = [&devmgr_args](zx_status_t status) {
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Error suspending devices while stopping the component:%s",
+           zx_status_get_string(status));
+    }
+    if (!devmgr_args.no_exit_after_suspend) {
+      LOGF(ERROR, "Exiting driver manager gracefully");
+      // TODO(fxb:52627) This event handler should teardown devices and driver hosts
+      // properly for system state transitions where driver manager needs to go down.
+      // Exiting like so, will not run all the destructors and clean things up properly.
+      // Instead the main devcoordinator loop should be quit.
+      exit(0);
+    }
+  };
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   CoordinatorConfig config;
@@ -307,7 +325,8 @@ int main(int argc, char** argv) {
   zx::channel component_lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
   if (component_lifecycle_request.is_valid()) {
     status = devmgr::ComponentLifecycleServer::Create(loop.dispatcher(), &coordinator,
-                                                      std::move(component_lifecycle_request));
+                                                      std::move(component_lifecycle_request),
+                                                      std::move(suspend_callback));
     if (status != ZX_OK) {
       LOGF(ERROR, "driver_manager: Cannot create componentlifecycleserver: %s",
            zx_status_get_string(status));

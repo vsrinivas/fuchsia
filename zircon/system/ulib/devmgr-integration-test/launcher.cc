@@ -319,6 +319,7 @@ IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
       svc_root_dir_(std::move(other.svc_root_dir_)),
       fshost_outgoing_dir_(std::move(other.fshost_outgoing_dir_)),
       devfs_root_(std::move(other.devfs_root_)),
+      component_lifecycle_client_(std::move(other.component_lifecycle_client_)),
       svc_loop_state_(std::move(other.svc_loop_state_)),
       exception_loop_state_(std::move(other.exception_loop_state_)) {}
 
@@ -326,6 +327,7 @@ __EXPORT
 IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
   Terminate();
   job_ = std::move(other.job_);
+  component_lifecycle_client_ = std::move(other.component_lifecycle_client_);
   devfs_root_ = std::move(other.devfs_root_);
   svc_root_dir_ = std::move(other.svc_root_dir_);
   fshost_outgoing_dir_ = std::move(other.fshost_outgoing_dir_);
@@ -372,6 +374,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   if (status != ZX_OK) {
     return status;
   }
+
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   zx::channel outgoing_svc_root;

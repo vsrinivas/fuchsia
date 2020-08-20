@@ -47,6 +47,7 @@ class IsolatedDevmgr {
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
   const zx::channel& svc_root_dir() const { return svc_root_dir_; }
   const zx::channel& fshost_outgoing_dir() const { return fshost_outgoing_dir_; }
+  const zx::channel& component_lifecycle_svc() const { return component_lifecycle_client_; }
 
   zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
 

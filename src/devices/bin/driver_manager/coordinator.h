@@ -143,6 +143,9 @@ class ResumeContext {
   Flags flags_ = Flags::kSuspended;
 };
 
+using ResumeCallback = std::function<void(zx_status_t)>;
+using SuspendCallback = fit::function<void(zx_status_t)>;
+
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DevmgrArgs {
   // Load drivers from these directories.  If this is empty, the default will
@@ -170,6 +173,7 @@ struct DevmgrArgs {
   std::string path_prefix = "/boot/";
   // Use the default loader rather than the one provided by fshost.
   bool use_default_loader = false;
+  bool no_exit_after_suspend = false;
 };
 
 struct CoordinatorConfig {
@@ -207,9 +211,6 @@ struct CoordinatorConfig {
   // environments this might be different.
   std::string path_prefix = "/boot/";
 };
-
-using ResumeCallback = std::function<void(zx_status_t)>;
-using SuspendCallback = fit::function<void(zx_status_t)>;
 
 struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
   SuspendCallbackInfo(SuspendCallback callback) : callback(std::move(callback)) {}

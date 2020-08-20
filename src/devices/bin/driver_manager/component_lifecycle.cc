@@ -15,9 +15,10 @@ namespace power_fidl = llcpp::fuchsia::hardware::power;
 namespace devmgr {
 
 zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                                             zx::channel chan) {
+                                             zx::channel chan, SuspendCallback callback) {
   zx_status_t status = fidl::BindSingleInFlightOnly(
-      dispatcher, std::move(chan), std::make_unique<ComponentLifecycleServer>(dev_coord));
+      dispatcher, std::move(chan),
+      std::make_unique<ComponentLifecycleServer>(dev_coord, std::move(callback)));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to bind component lifecycle service:%s", zx_status_get_string(status));
     return status;
@@ -26,22 +27,10 @@ zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coo
 }
 
 void ComponentLifecycleServer::Stop(StopCompleter::Sync completer) {
-  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Error suspending devices while stopping the component:%s",
-           zx_status_get_string(status));
-    }
-    LOGF(INFO, "Exiting driver manager gracefully");
-    // TODO(fxb:52627) This event handler should teardown devices and driver hosts
-    // properly for system state transitions where driver manager needs to go down.
-    // Exiting like so, will not run all the destructors and clean things up properly.
-    // Instead the main devcoordinator loop should be quit.
-    exit(0);
-  };
-
+  LOGF(INFO, "Received component lifecycle stop event");
   dev_coord_->Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
                                      dev_coord_->GetSuspendFlagsFromSystemPowerState(
                                          dev_coord_->shutdown_system_state())),
-                      std::move(callback));
+                      std::move(suspend_callback_));
 }
 }  // namespace devmgr

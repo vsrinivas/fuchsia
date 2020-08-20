@@ -21,7 +21,7 @@ namespace devmgr_launcher {
 
 using GetBootItemFunction = fit::inline_function<zx_status_t(uint32_t type, uint32_t extra,
                                                              zx::vmo* vmo, uint32_t* length)>;
-
+using SuspendCallback = fit::function<void(zx_status_t)>;
 struct Args {
   // A list of absolute paths (in devmgr's view of the filesystem) to search
   // for drivers in.  The search is non-recursive.  If empty, this uses
@@ -48,9 +48,11 @@ struct Args {
   // If true, the netsvc will be disabled and will not start.
   bool disable_netsvc = false;
 
+  bool no_exit_after_suspend = false;
+
   // The following arguments are for devmgr_integration_test::IsolatedDevmgr only.
-  // TODO(ZX-4590): Clean this up, devmgr-launcher shouldn't define arguments that are consumed by
-  // a different library higher up the stack.
+  // TODO(ZX-4590): Clean this up, devmgr-launcher shouldn't define arguments that are consumed
+  // by a different library higher up the stack.
 
   // Function to handle requests for boot items.
   GetBootItemFunction get_boot_item;
