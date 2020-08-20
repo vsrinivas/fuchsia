@@ -129,20 +129,6 @@ impl FatFile {
             }
             total_written += written;
             file_offset += written as u64;
-            let result = file.write(&content[total_written..]).map_err(fatfs_error_to_status);
-            match result {
-                Ok(0) => break,
-                Ok(written) => {
-                    total_written += written;
-                    file_offset += written as u64;
-                }
-                Err(e) => {
-                    if total_written > 0 {
-                        break;
-                    }
-                    return Err(e);
-                }
-            }
         }
         Ok((total_written as u64, file_offset))
     }

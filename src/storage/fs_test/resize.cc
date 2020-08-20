@@ -125,7 +125,7 @@ using MaxDataTest = ResizeTest;
 
 TEST_P(MaxDataTest, UseAllData) {
   constexpr size_t kBufSize = 1 << 20;
-  constexpr size_t kFileSize = 20 * kBufSize;
+  constexpr size_t kFileBufCount = 20;
   ASSERT_NO_FATAL_FAILURE(EnsureCanGrow());
 
   uint64_t disk_size = fs().options().device_block_count * fs().options().device_block_size;
@@ -150,15 +150,14 @@ TEST_P(MaxDataTest, UseAllData) {
     }
     f++;
     bool stop = false;
-    ASSERT_EQ(ftruncate(fd.get(), kFileSize), 0);
-    for (size_t done = 0; done < kFileSize;) {
-      ssize_t r = write(fd.get(), buf.data(), std::min(kBufSize, kFileSize - done));
-      if (r < 0) {
+    for (size_t i = 0; i < kFileBufCount; i++) {
+      ASSERT_EQ(ftruncate(fd.get(), kBufSize * kFileBufCount), 0);
+      ssize_t r = write(fd.get(), buf.data(), kBufSize);
+      if (r != kBufSize) {
         ASSERT_EQ(errno, ENOSPC);
         stop = true;
         break;
       }
-      done += r;
     }
     if (stop) {
       break;

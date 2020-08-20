@@ -506,9 +506,6 @@ static zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* ve
                             size_t actual;
                             zx_status_t status = fn(rio.control(), buffer, chunk, &actual);
                             if (status != ZX_OK) {
-                              if (total > 0) {
-                                break;
-                              }
                               return status;
                             }
                             total += actual;
