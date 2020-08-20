@@ -302,6 +302,7 @@ type Method struct {
 	ResponseTypeName        string
 	ResponseMaxHandles      int
 	ResponseMaxOutOfLine    int
+	ResponseSentMaxSize     int
 	ResponseReceivedMaxSize int
 	ResponsePadding         bool
 	ResponseFlexible        bool
@@ -1107,6 +1108,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			ResponseTypeName:        fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
 			ResponseMaxHandles:      v.ResponseTypeShapeV1.MaxHandles,
 			ResponseMaxOutOfLine:    v.ResponseTypeShapeV1.MaxOutOfLine,
+			ResponseSentMaxSize:     v.ResponseTypeShapeV1.InlineSize + v.ResponseTypeShapeV1.MaxOutOfLine,
 			ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
 			ResponsePadding:         v.ResponseTypeShapeV1.HasPadding,
 			ResponseFlexible:        v.ResponseTypeShapeV1.HasFlexibleEnvelope,

@@ -7,6 +7,10 @@
 
 #include <zircon/types.h>
 
+#ifdef __Fuchsia__
+#include <zircon/status.h>
+#endif  // !defined(_KERNEL)
+
 namespace fidl {
 
 // Class representing the result of an operation.
@@ -23,6 +27,10 @@ class Result {
   }
 
   [[nodiscard]] zx_status_t status() const { return status_; }
+#ifdef __Fuchsia__
+  // Returns the string representation of the status value.
+  [[nodiscard]] const char* status_string() const { return zx_status_get_string(status_); }
+#endif  // !defined(_KERNEL)
   [[nodiscard]] const char* error() const { return error_; }
   [[nodiscard]] bool ok() const { return status_ == ZX_OK; }
 

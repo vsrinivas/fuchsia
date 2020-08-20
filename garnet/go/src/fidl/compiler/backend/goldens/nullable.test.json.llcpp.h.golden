@@ -391,6 +391,57 @@ class SimpleProtocol final {
     };
   };
 
+  class AddUnownedResponse final {
+   public:
+    AddUnownedResponse(uint8_t* _bytes, uint32_t _byte_size, int32_t sum)
+        : message_(_bytes, _byte_size, sizeof(AddResponse), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(AddResponse)];
+      auto& _response = *new (_response_buffer) AddResponse(sum);
+      message_.LinearizeAndEncode(AddResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    AddResponse& Message() {
+      return *reinterpret_cast<AddResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class AddOwnedResponse final {
+   public:
+    explicit AddOwnedResponse(int32_t sum)
+        : message_(bytes_, sizeof(bytes_), sum) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[AddResponse::PrimarySize + AddResponse::MaxOutOfLine];
+    AddUnownedResponse message_;
+  };
+
   class AddUnownedRequest final {
    public:
     AddUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
@@ -511,8 +562,8 @@ class SimpleProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(int32_t sum);
-      zx_status_t Reply(::fidl::BytePart _buffer, int32_t sum);
+      ::fidl::Result Reply(int32_t sum);
+      ::fidl::Result Reply(::fidl::BytePart _buffer, int32_t sum);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

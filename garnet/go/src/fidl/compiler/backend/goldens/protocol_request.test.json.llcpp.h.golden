@@ -415,6 +415,64 @@ class Parent final {
     };
   };
 
+  class GetChildUnownedResponse final {
+   public:
+    GetChildUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
+                            ::zx::channel& c)
+        : message_(_bytes, _byte_size, sizeof(GetChildResponse), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                            GetChildResponse::MaxNumHandles),
+                   0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
+      auto& _response = *new (_response_buffer) GetChildResponse(c);
+      message_.LinearizeAndEncode(GetChildResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    GetChildResponse& Message() {
+      return *reinterpret_cast<GetChildResponse*>(message_.bytes().data());
+    }
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                  GetChildResponse::MaxNumHandles)];
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class GetChildOwnedResponse final {
+   public:
+    explicit GetChildOwnedResponse(::zx::channel& c)
+        : message_(bytes_, sizeof(bytes_), c) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t
+        bytes_[GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine];
+    GetChildUnownedResponse message_;
+  };
+
   class GetChildUnownedRequest final {
    public:
     GetChildUnownedRequest(uint8_t* _bytes, uint32_t _byte_size,
@@ -466,6 +524,66 @@ class Parent final {
     uint8_t
         bytes_[GetChildRequest::PrimarySize + GetChildRequest::MaxOutOfLine];
     GetChildUnownedRequest message_;
+  };
+
+  class GetChildRequestUnownedResponse final {
+   public:
+    GetChildRequestUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
+                                   ::zx::channel& r)
+        : message_(_bytes, _byte_size, sizeof(GetChildRequestResponse),
+                   handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                            GetChildRequestResponse::MaxNumHandles),
+                   0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildRequestResponse)];
+      auto& _response = *new (_response_buffer) GetChildRequestResponse(r);
+      message_.LinearizeAndEncode(GetChildRequestResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    GetChildRequestResponse& Message() {
+      return *reinterpret_cast<GetChildRequestResponse*>(
+          message_.bytes().data());
+    }
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                  GetChildRequestResponse::MaxNumHandles)];
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class GetChildRequestOwnedResponse final {
+   public:
+    explicit GetChildRequestOwnedResponse(::zx::channel& r)
+        : message_(bytes_, sizeof(bytes_), r) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[GetChildRequestResponse::PrimarySize +
+                   GetChildRequestResponse::MaxOutOfLine];
+    GetChildRequestUnownedResponse message_;
   };
 
   class GetChildRequestUnownedRequest final {
@@ -765,8 +883,8 @@ class Parent final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::zx::channel c);
-      zx_status_t Reply(::fidl::BytePart _buffer, ::zx::channel c);
+      ::fidl::Result Reply(::zx::channel c);
+      ::fidl::Result Reply(::fidl::BytePart _buffer, ::zx::channel c);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -788,8 +906,8 @@ class Parent final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::zx::channel r);
-      zx_status_t Reply(::fidl::BytePart _buffer, ::zx::channel r);
+      ::fidl::Result Reply(::zx::channel r);
+      ::fidl::Result Reply(::fidl::BytePart _buffer, ::zx::channel r);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

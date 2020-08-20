@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/types.h>
 #include <lib/fidl/txn_header.h>
@@ -22,6 +23,10 @@
 #include <utility>
 
 namespace fidl {
+
+namespace internal {
+class FidlMessage;
+}
 
 // An abstract transaction, encapsulating the logic of sending reply messages.
 // The transaction type is polymorphic, to cater to a variety of transports and usage patterns.
@@ -91,9 +96,7 @@ class Transaction {
 
   // Implementations which support a user-specified unbound hook should propagate `error` to that
   // hook. Otherwise, by default, InternalError() just closes the connection to the client.
-  virtual void InternalError(UnbindInfo error) {
-    Close(ZX_ERR_PEER_CLOSED);
-  }
+  virtual void InternalError(UnbindInfo error) { Close(ZX_ERR_PEER_CLOSED); }
 
   // Resumes the asynchronous wait on the underlying channel. This allows at least one more
   // dispatcher thread to enter the message handler for this binding in parallel.
@@ -144,24 +147,7 @@ class CompleterBase {
 
   ~CompleterBase();
 
-  // Encode and write |decoded_msg| as the reply.
-  template <typename FidlType>
-  zx_status_t SendReply(DecodedMessage<FidlType> decoded_msg) {
-    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-    EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
-    if (encode_result.status != ZX_OK) {
-      InternalError({UnbindInfo::kEncodeError, encode_result.status});
-      return encode_result.status;
-    }
-    return SendReply(std::move(encode_result.message));
-  }
-
-  // Write |encoded_msg| as the reply.
-  template <typename FidlType>
-  zx_status_t SendReply(EncodedMessage<FidlType> encoded_msg) {
-    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
-    return SendReply(encoded_msg.ToAnyMessage());
-  }
+  fidl::Result SendReply(const ::fidl::internal::FidlMessage& message);
 
   // Invokes transaction_.InternalError().
   void InternalError(UnbindInfo error);
@@ -191,8 +177,6 @@ class CompleterBase {
     std::atomic_flag& lock_;
     bool released_ = false;
   };
-
-  zx_status_t SendReply(Message msg);
 
   void EnsureHasTransaction(ScopedLock* lock);
 

@@ -557,8 +557,8 @@ correspond to the variants present in the [client API](#client). For example,
 both `MakeMoveCompleter::Sync` and `MakeMoveCompleter::Async` provide the
 following `Reply` methods:
 
-* `zx_status_t Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
-* `zx_status_t Reply(fidl::BytePart _buffer, bool success,
+* `::fidl::Result Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
+* `::fidl::Result Reply(fidl::BytePart _buffer, bool success,
   fidl::tracking_ptr<GameState> new_state)`
 
 Because the status returned by Reply is identical to the unbinding status, it can be safely

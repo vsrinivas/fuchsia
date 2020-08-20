@@ -466,80 +466,36 @@ bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t TestProtocol::Interface::
+::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  StrictXUnionHenceResponseMayBeStackAllocatedResponse _response{xu};
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse _response{xu};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t TestProtocol::Interface::
+::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl::BytePart _buffer,
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  if (_buffer.capacity() <
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  StrictXUnionHenceResponseMayBeStackAllocatedResponse _response{xu};
-  auto _encode_result = ::fidl::LinearizeAndEncode<
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse>(&_response,
-                                                            std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse _response(
+      _buffer.data(), _buffer.capacity(), xu);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t TestProtocol::Interface::
+::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse _response{xu};
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse _response{xu};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t TestProtocol::Interface::
+::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::fidl::BytePart _buffer,
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  if (_buffer.capacity() <
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse _response{xu};
-  auto _encode_result = ::fidl::LinearizeAndEncode<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
-      &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse _response(
+      _buffer.data(), _buffer.capacity(), xu);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::

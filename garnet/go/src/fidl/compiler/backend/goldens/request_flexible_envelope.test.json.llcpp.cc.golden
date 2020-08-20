@@ -374,76 +374,34 @@ bool Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t
+::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::json::FlexibleFoo f) {
-  RequestStrictResponseFlexibleResponse _response{f};
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<
-      RequestStrictResponseFlexibleResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  RequestStrictResponseFlexibleOwnedResponse _response{f};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t
+::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f) {
-  if (_buffer.capacity() < RequestStrictResponseFlexibleResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  RequestStrictResponseFlexibleResponse _response{f};
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
-          &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  RequestStrictResponseFlexibleUnownedResponse _response(_buffer.data(),
+                                                         _buffer.capacity(), f);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t
+::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::llcpp::fidl::test::json::StrictFoo f) {
-  RequestFlexibleResponseStrictResponse _response{f};
-
-  auto _encoded = ::fidl::internal::LinearizedAndEncoded<
-      RequestFlexibleResponseStrictResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  RequestFlexibleResponseStrictOwnedResponse _response{f};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t
+::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f) {
-  if (_buffer.capacity() < RequestFlexibleResponseStrictResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  RequestFlexibleResponseStrictResponse _response{f};
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
-          &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  RequestFlexibleResponseStrictUnownedResponse _response(_buffer.data(),
+                                                         _buffer.capacity(), f);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void Protocol::RequestStrictResponseFlexibleRequest::_InitHeader(

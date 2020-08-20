@@ -186,50 +186,30 @@ bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t Example::Interface::fooCompleterBase::Reply(
+::fidl::Result Example::Interface::fooCompleterBase::Reply(
     ::llcpp::fidl::test::json::Example_foo_Result result) {
-  fooResponse _response{result};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  fooOwnedResponse _response{result};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
+::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);
 
   return Reply(
       Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
-zx_status_t Example::Interface::fooCompleterBase::ReplyError(uint32_t error) {
+::fidl::Result Example::Interface::fooCompleterBase::ReplyError(
+    uint32_t error) {
   return Reply(Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
-zx_status_t Example::Interface::fooCompleterBase::Reply(
+::fidl::Result Example::Interface::fooCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::fidl::test::json::Example_foo_Result result) {
-  if (_buffer.capacity() < fooResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  fooResponse _response{result};
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<fooResponse>(&_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), result);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t Example::Interface::fooCompleterBase::ReplySuccess(
+::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer, int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);

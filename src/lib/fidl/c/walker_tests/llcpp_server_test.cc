@@ -352,7 +352,7 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request));
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request).status());
     }
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
@@ -794,7 +794,7 @@ TEST(BindServerTestCase, UnbindInfoChannelError) {
   struct WorkingServer : Simple::Interface {
     WorkingServer() = default;
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request));
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request).status());
     }
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
   };

@@ -2771,6 +2771,66 @@ class TestProtocol final {
     };
   };
 
+  class StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse final {
+   public:
+    StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse(
+        uint8_t* _bytes, uint32_t _byte_size,
+        ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+        : message_(_bytes, _byte_size,
+                   sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
+                   nullptr, 0, 0) {
+      FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedResponse
+          _response(xu);
+      message_.LinearizeAndEncode(
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type,
+          &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    StrictXUnionHenceResponseMayBeStackAllocatedResponse& Message() {
+      return *reinterpret_cast<
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse final {
+   public:
+    explicit StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse(
+        ::llcpp::fidl::test::json::StrictBoundedXUnion& xu)
+        : message_(bytes_, sizeof(bytes_), xu) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_
+        [StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
+         StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine];
+    StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse message_;
+  };
+
   class StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest final {
    public:
     StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest(
@@ -2832,6 +2892,67 @@ class TestProtocol final {
         [StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize +
          StrictXUnionHenceResponseMayBeStackAllocatedRequest::MaxOutOfLine];
     StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest message_;
+  };
+
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse final {
+   public:
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse(
+        uint8_t* _bytes, uint32_t _byte_size,
+        ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+        : message_(
+              _bytes, _byte_size,
+              sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
+              nullptr, 0, 0) {
+      FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
+          _response(xu);
+      message_.LinearizeAndEncode(
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type,
+          &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& Message() {
+      return *reinterpret_cast<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse final {
+   public:
+    explicit FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse(
+        ::llcpp::fidl::test::json::OlderSimpleUnion& xu)
+        : message_(bytes_, sizeof(bytes_), xu) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_
+        [FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize +
+         FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::MaxOutOfLine];
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse message_;
   };
 
   class FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedRequest final {
@@ -2994,9 +3115,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::StrictBoundedXUnion xu);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::json::StrictBoundedXUnion xu);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::json::StrictBoundedXUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3023,9 +3144,9 @@ class TestProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::OlderSimpleUnion xu);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::llcpp::fidl::test::json::OlderSimpleUnion xu);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::json::OlderSimpleUnion xu);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

@@ -578,6 +578,63 @@ class Protocol final {
     };
   };
 
+  class RequestStrictResponseFlexibleUnownedResponse final {
+   public:
+    RequestStrictResponseFlexibleUnownedResponse(
+        uint8_t* _bytes, uint32_t _byte_size,
+        ::llcpp::fidl::test::json::FlexibleFoo& f)
+        : message_(_bytes, _byte_size,
+                   sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
+                   0) {
+      FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response(f);
+      message_.LinearizeAndEncode(RequestStrictResponseFlexibleResponse::Type,
+                                  &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    RequestStrictResponseFlexibleResponse& Message() {
+      return *reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class RequestStrictResponseFlexibleOwnedResponse final {
+   public:
+    explicit RequestStrictResponseFlexibleOwnedResponse(
+        ::llcpp::fidl::test::json::FlexibleFoo& f)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    RequestStrictResponseFlexibleUnownedResponse message_;
+  };
+
   class RequestStrictResponseFlexibleUnownedRequest final {
    public:
     RequestStrictResponseFlexibleUnownedRequest(
@@ -633,6 +690,63 @@ class Protocol final {
     std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
         bytes_;
     RequestStrictResponseFlexibleUnownedRequest message_;
+  };
+
+  class RequestFlexibleResponseStrictUnownedResponse final {
+   public:
+    RequestFlexibleResponseStrictUnownedResponse(
+        uint8_t* _bytes, uint32_t _byte_size,
+        ::llcpp::fidl::test::json::StrictFoo& f)
+        : message_(_bytes, _byte_size,
+                   sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
+                   0) {
+      FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response(f);
+      message_.LinearizeAndEncode(RequestFlexibleResponseStrictResponse::Type,
+                                  &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    RequestFlexibleResponseStrictResponse& Message() {
+      return *reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class RequestFlexibleResponseStrictOwnedResponse final {
+   public:
+    explicit RequestFlexibleResponseStrictOwnedResponse(
+        ::llcpp::fidl::test::json::StrictFoo& f)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    RequestFlexibleResponseStrictUnownedResponse message_;
   };
 
   class RequestFlexibleResponseStrictUnownedRequest final {
@@ -788,9 +902,9 @@ class Protocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::FlexibleFoo f);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::FlexibleFoo f);
+      ::fidl::Result Reply(::llcpp::fidl::test::json::FlexibleFoo f);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::json::FlexibleFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -815,9 +929,9 @@ class Protocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::StrictFoo f);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::StrictFoo f);
+      ::fidl::Result Reply(::llcpp::fidl::test::json::StrictFoo f);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::json::StrictFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

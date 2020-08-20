@@ -177,34 +177,15 @@ bool SimpleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(AddResponse)];
-  auto& _response = *new (_response_buffer) AddResponse{sum};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<AddResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
+  AddOwnedResponse _response{sum};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t SimpleProtocol::Interface::AddCompleterBase::Reply(
+::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
     ::fidl::BytePart _buffer, int32_t sum) {
-  if (_buffer.capacity() < AddResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) AddResponse{sum};
-  _buffer.set_actual(sizeof(AddResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<AddResponse>(std::move(_buffer)));
+  AddUnownedResponse _response(_buffer.data(), _buffer.capacity(), sum);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void SimpleProtocol::AddRequest::_InitHeader(zx_txid_t _txid) {

@@ -342,6 +342,114 @@ class EmptyProtocol final {
     SendUnownedRequest message_;
   };
 
+  class ReceiveUnownedResponse final {
+   public:
+    ReceiveUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
+                           ::llcpp::fidl::test::json::Empty& e)
+        : message_(_bytes, _byte_size, sizeof(ReceiveResponse), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)];
+      auto& _response = *new (_response_buffer) ReceiveResponse(e);
+      message_.LinearizeAndEncode(ReceiveResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    ReceiveResponse& Message() {
+      return *reinterpret_cast<ReceiveResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class ReceiveOwnedResponse final {
+   public:
+    explicit ReceiveOwnedResponse(::llcpp::fidl::test::json::Empty& e)
+        : message_(bytes_, sizeof(bytes_), e) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t
+        bytes_[ReceiveResponse::PrimarySize + ReceiveResponse::MaxOutOfLine];
+    ReceiveUnownedResponse message_;
+  };
+
+  class SendAndReceiveUnownedResponse final {
+   public:
+    SendAndReceiveUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
+                                  ::llcpp::fidl::test::json::Empty& e)
+        : message_(_bytes, _byte_size, sizeof(SendAndReceiveResponse), nullptr,
+                   0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)];
+      auto& _response = *new (_response_buffer) SendAndReceiveResponse(e);
+      message_.LinearizeAndEncode(SendAndReceiveResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    SendAndReceiveResponse& Message() {
+      return *reinterpret_cast<SendAndReceiveResponse*>(
+          message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class SendAndReceiveOwnedResponse final {
+   public:
+    explicit SendAndReceiveOwnedResponse(::llcpp::fidl::test::json::Empty& e)
+        : message_(bytes_, sizeof(bytes_), e) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[SendAndReceiveResponse::PrimarySize +
+                   SendAndReceiveResponse::MaxOutOfLine];
+    SendAndReceiveUnownedResponse message_;
+  };
+
   class SendAndReceiveUnownedRequest final {
    public:
     SendAndReceiveUnownedRequest(uint8_t* _bytes, uint32_t _byte_size,
@@ -506,9 +614,9 @@ class EmptyProtocol final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::Empty e);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::Empty e);
+      ::fidl::Result Reply(::llcpp::fidl::test::json::Empty e);
+      ::fidl::Result Reply(::fidl::BytePart _buffer,
+                           ::llcpp::fidl::test::json::Empty e);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

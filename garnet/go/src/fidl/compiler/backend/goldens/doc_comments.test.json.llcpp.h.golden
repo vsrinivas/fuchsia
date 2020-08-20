@@ -538,6 +538,57 @@ class Interface final {
     MethodUnownedRequest message_;
   };
 
+  class OnEventUnownedResponse final {
+   public:
+    OnEventUnownedResponse(uint8_t* _bytes, uint32_t _byte_size)
+        : message_(_bytes, _byte_size, sizeof(OnEventResponse), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEventResponse)];
+      auto& _response = *new (_response_buffer) OnEventResponse();
+      message_.LinearizeAndEncode(OnEventResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    OnEventResponse& Message() {
+      return *reinterpret_cast<OnEventResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class OnEventOwnedResponse final {
+   public:
+    explicit OnEventOwnedResponse() : message_(bytes_, sizeof(bytes_)) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t
+        bytes_[OnEventResponse::PrimarySize + OnEventResponse::MaxOutOfLine];
+    OnEventUnownedResponse message_;
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;

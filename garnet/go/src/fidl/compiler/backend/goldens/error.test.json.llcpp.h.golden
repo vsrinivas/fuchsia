@@ -309,6 +309,56 @@ class Example final {
     };
   };
 
+  class fooUnownedResponse final {
+   public:
+    fooUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
+                       ::llcpp::fidl::test::json::Example_foo_Result& result)
+        : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+      FIDL_ALIGNDECL fooResponse _response(result);
+      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    fooResponse& Message() {
+      return *reinterpret_cast<fooResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class fooOwnedResponse final {
+   public:
+    explicit fooOwnedResponse(
+        ::llcpp::fidl::test::json::Example_foo_Result& result)
+        : message_(bytes_, sizeof(bytes_), result) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+    fooUnownedResponse message_;
+  };
+
   class fooUnownedRequest final {
    public:
     fooUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
@@ -429,12 +479,14 @@ class Example final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(::llcpp::fidl::test::json::Example_foo_Result result);
-      zx_status_t ReplySuccess(int64_t y);
-      zx_status_t ReplyError(uint32_t error);
-      zx_status_t Reply(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::Example_foo_Result result);
-      zx_status_t ReplySuccess(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(
+          ::llcpp::fidl::test::json::Example_foo_Result result);
+      ::fidl::Result ReplySuccess(int64_t y);
+      ::fidl::Result ReplyError(uint32_t error);
+      ::fidl::Result Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::fidl::test::json::Example_foo_Result result);
+      ::fidl::Result ReplySuccess(::fidl::BytePart _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

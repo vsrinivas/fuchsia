@@ -171,34 +171,15 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t super::Interface::fooCompleterBase::Reply(int64_t y) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
-  auto& _response = *new (_response_buffer) fooResponse{y};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
+  fooOwnedResponse _response{y};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                                      int64_t y) {
-  if (_buffer.capacity() < fooResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) fooResponse{y};
-  _buffer.set_actual(sizeof(fooResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
+::fidl::Result super::Interface::fooCompleterBase::Reply(
+    ::fidl::BytePart _buffer, int64_t y) {
+  fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void super::fooRequest::_InitHeader(zx_txid_t _txid) {
@@ -369,34 +350,15 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   return found;
 }
 
-zx_status_t sub::Interface::fooCompleterBase::Reply(int64_t y) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
-  auto& _response = *new (_response_buffer) fooResponse{y};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<fooResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {
+  fooOwnedResponse _response{y};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                                    int64_t y) {
-  if (_buffer.capacity() < fooResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) fooResponse{y};
-  _buffer.set_actual(sizeof(fooResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
+::fidl::Result sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
+                                                       int64_t y) {
+  fooUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void sub::fooRequest::_InitHeader(zx_txid_t _txid) {

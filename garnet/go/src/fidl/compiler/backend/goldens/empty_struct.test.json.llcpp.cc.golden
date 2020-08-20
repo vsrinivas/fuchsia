@@ -401,36 +401,17 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
-zx_status_t EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::json::Empty e) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)];
-  auto& _response = *new (_response_buffer) SendAndReceiveResponse{e};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<SendAndReceiveResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  SendAndReceiveOwnedResponse _response{e};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
-  if (_buffer.capacity() < SendAndReceiveResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) SendAndReceiveResponse{e};
-  _buffer.set_actual(sizeof(SendAndReceiveResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<SendAndReceiveResponse>(std::move(_buffer)));
+  SendAndReceiveUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                          e);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void EmptyProtocol::SendRequest::_InitHeader(zx_txid_t _txid) {

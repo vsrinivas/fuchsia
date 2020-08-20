@@ -67,11 +67,10 @@ void LoaderConnection::LoadObject(fidl::StringView object_name,
       FX_LOGS(WARNING) << log_prefix() << "could not find '" << name << "'";
     }
 
-    auto reply_status = zx::make_status(
-        completer.Reply(status.status_value(), std::move(status).value_or(zx::vmo())));
-    if (reply_status.is_error()) {
+    auto result = completer.Reply(status.status_value(), std::move(status).value_or(zx::vmo()));
+    if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to LoadObject(" << name
-                       << "): " << reply_status.status_string();
+                       << "): " << result.status_string() << " (" << result.error() << ')';
     }
   };
 
@@ -96,10 +95,10 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync com
   std::string config_str(config.data(), config.size());
 
   auto reply = [this, &config_str, &completer](zx_status_t status) {
-    auto reply_status = zx::make_status(completer.Reply(status));
-    if (reply_status.is_error()) {
+    auto result = completer.Reply(status);
+    if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to Config(" << config_str
-                       << "): " << reply_status.status_string();
+                       << "): " << result.status_string() << " (" << result.error() << ')';
     }
   };
 

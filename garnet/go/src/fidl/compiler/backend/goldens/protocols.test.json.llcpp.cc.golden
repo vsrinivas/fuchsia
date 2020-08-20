@@ -366,34 +366,15 @@ bool Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(RequestResponse)];
-  auto& _response = *new (_response_buffer) RequestResponse{y};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<RequestResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
+  RequestOwnedResponse _response{y};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t Transitional::Interface::RequestCompleterBase::Reply(
+::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t y) {
-  if (_buffer.capacity() < RequestResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) RequestResponse{y};
-  _buffer.set_actual(sizeof(RequestResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<RequestResponse>(std::move(_buffer)));
+  RequestUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
@@ -967,66 +948,28 @@ zx_status_t ChannelProtocol::SendEventAEvent(
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
-zx_status_t ChannelProtocol::Interface::MethodBCompleterBase::Reply(
+::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     int64_t result) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MethodBResponse)];
-  auto& _response = *new (_response_buffer) MethodBResponse{result};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<MethodBResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  MethodBOwnedResponse _response{result};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t ChannelProtocol::Interface::MethodBCompleterBase::Reply(
+::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t result) {
-  if (_buffer.capacity() < MethodBResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) MethodBResponse{result};
-  _buffer.set_actual(sizeof(MethodBResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<MethodBResponse>(std::move(_buffer)));
+  MethodBUnownedResponse _response(_buffer.data(), _buffer.capacity(), result);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
+::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)];
-  auto& _response = *new (_response_buffer) MutateSocketResponse{b};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<MutateSocketResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  MutateSocketOwnedResponse _response{b};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
+::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::socket b) {
-  if (_buffer.capacity() < MutateSocketResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) MutateSocketResponse{b};
-  _buffer.set_actual(sizeof(MutateSocketResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
+  MutateSocketUnownedResponse _response(_buffer.data(), _buffer.capacity(), b);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void ChannelProtocol::MethodARequest::_InitHeader(zx_txid_t _txid) {
@@ -1886,116 +1829,44 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t
-      _response_buffer[sizeof(NoRequestEmptyResponseResponse)];
-  auto& _response = *new (_response_buffer) NoRequestEmptyResponseResponse{};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<NoRequestEmptyResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  NoRequestEmptyResponseOwnedResponse _response{};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  NoRequestWithResponseResponse _response{ret};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<NoRequestWithResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  NoRequestWithResponseOwnedResponse _response{ret};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::BytePart _buffer,
                                               ::fidl::StringView ret) {
-  if (_buffer.capacity() < NoRequestWithResponseResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  NoRequestWithResponseResponse _response{ret};
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<NoRequestWithResponseResponse>(
-          &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  NoRequestWithResponseUnownedResponse _response(_buffer.data(),
+                                                 _buffer.capacity(), ret);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestEmptyResponseCompleterBase::Reply() {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t
-      _response_buffer[sizeof(WithRequestEmptyResponseResponse)];
-  auto& _response = *new (_response_buffer) WithRequestEmptyResponseResponse{};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<WithRequestEmptyResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  WithRequestEmptyResponseOwnedResponse _response{};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  WithRequestWithResponseResponse _response{ret};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<WithRequestWithResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  WithRequestWithResponseOwnedResponse _response{ret};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::BytePart _buffer,
                                                 ::fidl::StringView ret) {
-  if (_buffer.capacity() < WithRequestWithResponseResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  WithRequestWithResponseResponse _response{ret};
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<WithRequestWithResponseResponse>(
-          &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  WithRequestWithResponseUnownedResponse _response(_buffer.data(),
+                                                   _buffer.capacity(), ret);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
@@ -2576,22 +2447,12 @@ bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
-  ResponseAsStructResponse _response{result};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<ResponseAsStructResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ResponseAsStructOwnedResponse _response{result};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     int64_t a, int64_t b, int64_t c) {
   ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> response;
@@ -2602,32 +2463,21 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
   return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
       ::fidl::unowned_ptr(&response)));
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
     uint32_t error) {
   return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithErr(
       ::fidl::unowned_ptr(&error)));
 }
 
-zx_status_t WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
-  if (_buffer.capacity() < ResponseAsStructResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  ResponseAsStructResponse _response{result};
-  auto _encode_result = ::fidl::LinearizeAndEncode<ResponseAsStructResponse>(
-      &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ResponseAsStructUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                            result);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer, int64_t a, int64_t b, int64_t c) {
   ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> response;
@@ -2640,54 +2490,33 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
                    ::fidl::unowned_ptr(&response)));
 }
 
-zx_status_t WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  ErrorAsPrimitiveResponse _response{result};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<ErrorAsPrimitiveResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ErrorAsPrimitiveOwnedResponse _response{result};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
 
   return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
       ::fidl::unowned_ptr(&response)));
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
     uint32_t error) {
   return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(
       ::fidl::unowned_ptr(&error)));
 }
 
-zx_status_t WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  if (_buffer.capacity() < ErrorAsPrimitiveResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  ErrorAsPrimitiveResponse _response{result};
-  auto _encode_result = ::fidl::LinearizeAndEncode<ErrorAsPrimitiveResponse>(
-      &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ErrorAsPrimitiveUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                            result);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
@@ -2697,52 +2526,33 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
                    ::fidl::unowned_ptr(&response)));
 }
 
-zx_status_t WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
-  ErrorAsEnumResponse _response{result};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<ErrorAsEnumResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ErrorAsEnumOwnedResponse _response{result};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t
+::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
 
   return Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
       ::fidl::unowned_ptr(&response)));
 }
-zx_status_t WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(
+::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(
     ErrorEnun error) {
   return Reply(
       WithErrorSyntax_ErrorAsEnum_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
-zx_status_t WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
+::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
-  if (_buffer.capacity() < ErrorAsEnumResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  ErrorAsEnumResponse _response{result};
-  auto _encode_result = ::fidl::LinearizeAndEncode<ErrorAsEnumResponse>(
-      &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  ErrorAsEnumUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                       result);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
-zx_status_t WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
+::fidl::Result
+WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
 

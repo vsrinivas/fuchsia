@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/llcpp/errors.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 
 namespace fidl {
@@ -56,18 +58,27 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-zx_status_t CompleterBase::SendReply(Message msg) {
+fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& message) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {
     lock.release();  // Avoid crashing on death tests.
     ZX_PANIC("Repeated or unexpected Reply.");
   }
-  auto status = transaction_->Reply(std::move(msg));
+  if (!message.ok()) {
+    transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message.status()});
+    return fidl::Result(message.status(), message.error());
+  }
+  auto status = transaction_->Reply(Message(
+      BytePart(message.bytes().data(), message.bytes().capacity(), message.bytes().actual()),
+      HandlePart(message.handles().data(), message.handles().capacity(),
+                 message.handles().actual())));
   needs_to_reply_ = false;
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     transaction_->InternalError({UnbindInfo::kChannelError, status});
-  return status;
+    return fidl::Result(status, ::fidl::kErrorWriteFailed);
+  }
+  return fidl::Result(ZX_OK, nullptr);
 }
 
 void CompleterBase::InternalError(UnbindInfo error) {

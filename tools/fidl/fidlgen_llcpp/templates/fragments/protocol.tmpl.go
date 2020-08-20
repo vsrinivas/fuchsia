@@ -103,6 +103,14 @@ class {{ .Name }};
   {{- end -}}
 {{- end }}
 
+{{- define "ResponseSentSize"}}
+  {{- if gt .ResponseSentMaxSize 65536 -}}
+  ZX_CHANNEL_MAX_MSG_BYTES
+  {{- else -}}
+  {{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine
+  {{- end -}}
+{{- end }}
+
 {{- define "ResponseReceivedSize"}}
   {{- if gt .ResponseReceivedMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
@@ -366,6 +374,87 @@ class {{ .Name }} final {
   };
 
   {{ range .Methods }}
+    {{ if .HasResponse }}
+
+  class {{ .Name }}UnownedResponse final {
+   public:
+    {{ .Name }}UnownedResponse(uint8_t* _bytes, uint32_t _byte_size
+      {{- template "CommaMessagePrototype" .Response }})
+        : message_(_bytes, _byte_size, sizeof({{ .Name }}Response),
+    {{- if gt .ResponseMaxHandles 0 }}
+      handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles), 0
+    {{- else }}
+      nullptr, 0, 0
+    {{- end }}
+      ) {
+  {{- if .LLProps.LinearizeResponse }}
+  {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
+        FIDL_ALIGNDECL {{ .Name }}Response _response({{- template "PassthroughMessageParams" .Response }});
+  {{- else }}
+  {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
+  This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
+  there are pointers in the object. */}}
+        // Destructors can't be called because it will lead to handle double close
+        // (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)];
+        auto& _response = *new (_response_buffer) {{ .Name }}Response(
+        {{- template "PassthroughMessageParams" .Response -}}
+        );
+  {{- end }}
+        message_.LinearizeAndEncode({{ .Name }}Response::Type, &_response);
+      }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    {{ .Name }}Response& Message() { return *reinterpret_cast<{{ .Name }}Response*>(message_.bytes().data()); }
+
+    {{- if gt .ResponseMaxHandles 0 }}
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles)];
+    {{- end }}
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class {{ .Name }}OwnedResponse final {
+   public:
+    explicit {{ .Name }}OwnedResponse(
+      {{- template "MessagePrototype" .Response }})
+        {{- if gt .ResponseSentMaxSize 512 -}}
+      : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>>()),
+        message_(bytes_->data(), {{- template "ResponseSentSize" .}}
+        {{- else }}
+        : message_(bytes_, sizeof(bytes_)
+        {{- end }}
+        {{- template "CommaPassthroughMessageParams" .Response }}) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    {{- if gt .ResponseSentMaxSize 512 }}
+    std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>> bytes_;
+    {{- else }}
+    FIDL_ALIGNDECL
+    uint8_t bytes_[{{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine];
+    {{- end }}
+    {{ .Name }}UnownedResponse message_;
+  };
+    {{ end }}
     {{ if .HasRequest }}
 
   class {{ .Name }}UnownedRequest final {
@@ -544,15 +633,15 @@ class {{ .Name }} final {
       // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
       //
       // Because the reply status is identical to the unbinding status, it can be safely ignored.
-      zx_status_t {{ template "ReplyCFlavorMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyCFlavorMethodSignature" . }};
           {{- if .Result }}
-      zx_status_t {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
-      zx_status_t {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
           {{- end }}
           {{- if .Response }}
-      zx_status_t {{ template "ReplyCallerAllocateMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyCallerAllocateMethodSignature" . }};
             {{- if .Result }}
-      zx_status_t {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
+      ::fidl::Result {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
             {{- end }}
           {{- end }}
 

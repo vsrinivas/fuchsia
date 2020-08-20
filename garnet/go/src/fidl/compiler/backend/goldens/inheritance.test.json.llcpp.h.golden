@@ -177,6 +177,57 @@ class super final {
     };
   };
 
+  class fooUnownedResponse final {
+   public:
+    fooUnownedResponse(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
+        : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
+      auto& _response = *new (_response_buffer) fooResponse(y);
+      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    fooResponse& Message() {
+      return *reinterpret_cast<fooResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class fooOwnedResponse final {
+   public:
+    explicit fooOwnedResponse(int64_t y)
+        : message_(bytes_, sizeof(bytes_), y) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+    fooUnownedResponse message_;
+  };
+
   class fooUnownedRequest final {
    public:
     fooUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
@@ -297,8 +348,8 @@ class super final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(int64_t y);
-      zx_status_t Reply(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(int64_t y);
+      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -471,6 +522,57 @@ class sub final {
     };
   };
 
+  class fooUnownedResponse final {
+   public:
+    fooUnownedResponse(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
+        : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+      // Destructors can't be called because it will lead to handle double close
+      // (here and in fidl::Encode).
+      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
+      auto& _response = *new (_response_buffer) fooResponse(y);
+      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+    }
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() { return message_; }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    fooResponse& Message() {
+      return *reinterpret_cast<fooResponse*>(message_.bytes().data());
+    }
+    ::fidl::internal::FidlMessage message_;
+  };
+
+  class fooOwnedResponse final {
+   public:
+    explicit fooOwnedResponse(int64_t y)
+        : message_(bytes_, sizeof(bytes_), y) {}
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+    bool linearized() const { return message_.linearized(); }
+    bool encoded() const { return message_.encoded(); }
+
+    ::fidl::internal::FidlMessage& GetFidlMessage() {
+      return message_.GetFidlMessage();
+    }
+
+    void Write(zx_handle_t client) { message_.Write(client); }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+    fooUnownedResponse message_;
+  };
+
   class fooUnownedRequest final {
    public:
     fooUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
@@ -591,8 +693,8 @@ class sub final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      zx_status_t Reply(int64_t y);
-      zx_status_t Reply(::fidl::BytePart _buffer, int64_t y);
+      ::fidl::Result Reply(int64_t y);
+      ::fidl::Result Reply(::fidl::BytePart _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

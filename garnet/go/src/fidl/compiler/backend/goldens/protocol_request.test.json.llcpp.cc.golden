@@ -433,66 +433,29 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
-  auto& _response = *new (_response_buffer) GetChildResponse{c};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<GetChildResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
+    ::zx::channel c) {
+  GetChildOwnedResponse _response{c};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t Parent::Interface::GetChildCompleterBase::Reply(
+::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel c) {
-  if (_buffer.capacity() < GetChildResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) GetChildResponse{c};
-  _buffer.set_actual(sizeof(GetChildResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<GetChildResponse>(std::move(_buffer)));
+  GetChildUnownedResponse _response(_buffer.data(), _buffer.capacity(), c);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t Parent::Interface::GetChildRequestCompleterBase::Reply(
+::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::zx::channel r) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildRequestResponse)];
-  auto& _response = *new (_response_buffer) GetChildRequestResponse{r};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<GetChildRequestResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, _encode_result.status});
-    return _encode_result.status;
-  }
-  return CompleterBase::SendReply(std::move(_encode_result.message));
+  GetChildRequestOwnedResponse _response{r};
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t Parent::Interface::GetChildRequestCompleterBase::Reply(
+::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel r) {
-  if (_buffer.capacity() < GetChildRequestResponse::PrimarySize) {
-    CompleterBase::InternalError(
-        {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) GetChildRequestResponse{r};
-  _buffer.set_actual(sizeof(GetChildRequestResponse));
-  return CompleterBase::SendReply(
-      ::fidl::DecodedMessage<GetChildRequestResponse>(std::move(_buffer)));
+  GetChildRequestUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                           r);
+  return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
 void Parent::GetChildRequest::_InitHeader(zx_txid_t _txid) {

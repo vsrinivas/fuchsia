@@ -223,7 +223,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
       // Fail to send the reply due to an encoding error (the buffer is too
       // small).
       fidl::BytePart empty;
-      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(std::move(empty), std::move(in)));
+      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(std::move(empty), std::move(in)).status());
       completer.Close(ZX_OK);  // This should not panic.
     }
 
