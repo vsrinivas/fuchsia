@@ -332,7 +332,7 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L1012
 		tcpCANameMax := 16
 		// TODO(fxb/41621): should we change getsocketopt fidl to pass optlen?
-		b := []byte(v)
+		b := append([]byte(v), 0)
 		// Linux uses min(optlen, TCP_CA_NAME_MAX) for length of returned name.
 		//
 		// https://github.com/torvalds/linux/blob/33b40134e5cfbbccad7f3040d1919889537a3df7/net/ipv4/tcp.c#L3502

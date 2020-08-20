@@ -595,7 +595,6 @@ static fdio_ops_t fdio_datagram_socket_ops = {
             datalen += msg->msg_iov[i].iov_len;
           }
 
-          // TODO(fxbug.dev/21106): Support control messages.
           auto response =
               sio->client.RecvMsg2(msg->msg_namelen != 0 && msg->msg_name != nullptr,
                                    static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
@@ -643,6 +642,9 @@ static fdio_ops_t fdio_datagram_socket_ops = {
             }
             *out_actual = actual;
           }
+          // TODO(fxbug.dev/21106): Support control messages.
+          msg->msg_controllen = 0;
+
           return ZX_OK;
         },
     .sendmsg =
