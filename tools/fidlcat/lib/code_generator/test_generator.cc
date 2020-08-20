@@ -58,6 +58,13 @@ void TestGenerator::GenerateTests() {
 }
 
 void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
+  std::error_code err;
+  std::filesystem::create_directories(output_directory_, err);
+  if (err) {
+    FX_LOGS(ERROR) << err.message();
+    return;
+  }
+
   std::filesystem::path file_name =
       output_directory_ /
       std::filesystem::path(ToSnakeCase(protocol_name) + "_" +
@@ -66,6 +73,10 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
 
   std::ofstream target_file;
   target_file.open(file_name, std::ofstream::out);
+  if (target_file.fail()) {
+    FX_LOGS(ERROR) << "Could not open " << file_name << "\n";
+    return;
+  }
 
   GenerateIncludes(target_file);
 

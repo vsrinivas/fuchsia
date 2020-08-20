@@ -12,9 +12,7 @@ namespace fidlcat {
 class TestGenerator : public CodeGenerator {
  public:
   TestGenerator(SyscallDecoderDispatcher* dispatcher, const std::string& output_directory)
-      : CodeGenerator(), dispatcher_(dispatcher), output_directory_(output_directory) {
-    std::filesystem::create_directories(output_directory_);
-  }
+      : CodeGenerator(), dispatcher_(dispatcher), output_directory_(output_directory) {}
 
   void GenerateTests();
 
