@@ -136,7 +136,7 @@ void AudioCapturer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
     return;
   }
 
-  REPORT(SettingCapturerStreamType(*this, stream_type));
+  reporter().SetStreamType(stream_type);
 
   // Success, record our new format.
   UpdateFormat(format_result.take_value());
@@ -231,7 +231,7 @@ void AudioCapturer::SetGain(float gain_db) {
     return;
   }
 
-  REPORT(SettingCapturerGain(*this, gain_db));
+  reporter().SetGain(gain_db);
 
   stream_gain_db_.store(gain_db);
   if (!loopback_) {
@@ -248,7 +248,7 @@ void AudioCapturer::SetMute(bool mute) {
     return;
   }
 
-  REPORT(SettingCapturerMute(*this, mute));
+  reporter().SetMute(mute);
 
   mute_ = mute;
 

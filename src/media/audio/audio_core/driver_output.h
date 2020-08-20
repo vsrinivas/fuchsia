@@ -24,10 +24,10 @@ class DriverOutput : public AudioOutput {
   static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 
-  DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+  DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                zx::channel initial_stream_channel, LinkMatrix* link_matrix,
                VolumeCurve volume_curve);
-  DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+  DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                LinkMatrix* link_matrix, VolumeCurve volume_curve);
 

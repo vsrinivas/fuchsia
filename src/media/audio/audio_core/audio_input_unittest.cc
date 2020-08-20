@@ -35,7 +35,7 @@ class AudioInputTest : public testing::ThreadingModelFixture,
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(remote_driver_, nullptr);
 
-    input_ = AudioInput::Create(std::move(c2), &threading_model(), &context().device_manager(),
+    input_ = AudioInput::Create("", std::move(c2), &threading_model(), &context().device_manager(),
                                 &context().link_matrix());
     ASSERT_NE(input_, nullptr);
 
@@ -131,7 +131,7 @@ class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
 
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
-    input_ = AudioInput::Create(std::move(stream_config), &threading_model(),
+    input_ = AudioInput::Create("", std::move(stream_config), &threading_model(),
                                 &context().device_manager(), &context().link_matrix());
     ASSERT_NE(input_, nullptr);
 

@@ -14,7 +14,6 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -67,9 +66,9 @@ BaseCapturer::BaseCapturer(
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
       overflow_count_(0u),
-      partial_overflow_count_(0u) {
+      partial_overflow_count_(0u),
+      reporter_(Reporter::Singleton().CreateCapturer()) {
   FX_DCHECK(mix_domain_);
-  REPORT(AddingCapturer(*this));
 
   // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of
   // the device where the capturer is initially routed.
@@ -91,10 +90,7 @@ BaseCapturer::BaseCapturer(
   FX_DCHECK(status == ZX_OK) << "Failed to activate FinishBuffers wakeup signal";
 }
 
-BaseCapturer::~BaseCapturer() {
-  TRACE_DURATION("audio.debug", "BaseCapturer::~BaseCapturer");
-  REPORT(RemovingCapturer(*this));
-}
+BaseCapturer::~BaseCapturer() { TRACE_DURATION("audio.debug", "BaseCapturer::~BaseCapturer"); }
 
 void BaseCapturer::OnLinkAdded() { RecomputeMinFenceTime(); }
 
@@ -234,7 +230,7 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  REPORT(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
+  reporter_->AddPayloadBuffer(id, payload_buf_size);
 
   auto payload_buf_frames = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
   AUDIO_LOG_OBJ(DEBUG, this) << "payload buf -- size:" << payload_buf_size
@@ -481,7 +477,7 @@ void BaseCapturer::RecomputeMinFenceTime() {
     FX_LOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
                    << cur_min_fence_time.get();
 
-    REPORT(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
+    reporter_->SetMinFenceTime(cur_min_fence_time);
     min_fence_time_ = cur_min_fence_time;
   }
 }
@@ -823,7 +819,7 @@ void BaseCapturer::FinishBuffers() {
     }
 
     auto& pkt = p->stream_packet();
-    REPORT(SendingCapturerPacket(*this, pkt));
+    reporter_->SendPacket(pkt);
 
     if (p->callback() != nullptr) {
       AUDIO_LOG_OBJ(TRACE, this) << "Sync -mode -- payload size:" << pkt.payload_size

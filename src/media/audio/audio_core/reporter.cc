@@ -10,552 +10,561 @@
 
 namespace media::audio {
 
-#if ENABLE_REPORTER
+////////////////////////////////////////////////////////////////////////////////
+// Singletons
 
 namespace {
-static Reporter* singleton;
-constexpr char kPayloadNotFound[] = "Specified payload buffer not found";
+static std::mutex singleton_mutex;
+static Reporter singleton_nop;
+static std::unique_ptr<Reporter> singleton_real;
 }  // namespace
 
-// static
-Reporter* Reporter::Singleton() { return singleton; }
+////////////////////////////////////////////////////////////////////////////////
+// No-op implementations, used before the Reporter has been initialized
+
+namespace {
+class OutputDeviceNop : public Reporter::OutputDevice {
+ public:
+  void StartSession(zx::time start_time) override {}
+  void StopSession(zx::time stop_time) override {}
+
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override {}
+  void DeviceUnderflow(zx::time start_time, zx::time end_time) override {}
+  void PipelineUnderflow(zx::time start_time, zx::time end_time) override {}
+};
+
+class InputDeviceNop : public Reporter::InputDevice {
+ public:
+  void StartSession(zx::time start_time) override {}
+  void StopSession(zx::time stop_time) override {}
+
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override {}
+};
+
+class RendererNop : public Reporter::Renderer {
+ public:
+  void StartSession(zx::time start_time) override {}
+  void StopSession(zx::time stop_time) override {}
+
+  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
+  void SetGain(float gain_db) override {}
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type) override {}
+  void SetFinalGain(float gain_db) override {}
+  void SetMute(bool muted) override {}
+  void SetMinLeadTime(zx::duration min_lead_time) override {}
+  void SetPtsContinuityThreshold(float threshold_seconds) override {}
+
+  void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {}
+  void RemovePayloadBuffer(uint32_t buffer_id) override {}
+  void SendPacket(const fuchsia::media::StreamPacket& packet) override {}
+  void Underflow(zx::time start_time, zx::time end_time) override {}
+};
+
+class CapturerNop : public Reporter::Capturer {
+ public:
+  void StartSession(zx::time start_time) override {}
+  void StopSession(zx::time stop_time) override {}
+
+  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
+  void SetGain(float gain_db) override {}
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type) override {}
+  void SetMute(bool muted) override {}
+  void SetMinFenceTime(zx::duration min_fence_time) override {}
+
+  void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {}
+  void SendPacket(const fuchsia::media::StreamPacket& packet) override {}
+  void Overflow(zx::time start_time, zx::time end_time) override {}
+};
+}  // namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// Real implementations of reporting objects.
+
+class Reporter::OverflowUnderflowTracker {
+ public:
+  // Trackers begin in a "stopped" state and must move to a "started" state
+  // before metrics can be reported. The Start/Stop events are intended to
+  // mirror higher-level Play/Pause or Record/Stop events. If a session is not
+  // stopped explicitly, it's stopped automatically by our destructor.
+  void StartSession(zx::time start_time);
+  void StopSession(zx::time stop_time);
+
+  // Report an event with the given start and end times.
+  void Report(zx::time start_time, zx::time end_time);
+
+  struct Args {
+    uint32_t component;
+    std::string event_name;
+    inspect::Node& parent_node;
+    Reporter::Impl& impl;
+    bool is_underflow;
+    uint32_t cobalt_component_id;
+  };
+  OverflowUnderflowTracker(Args args);
+  ~OverflowUnderflowTracker();
+
+ private:
+  void RestartSession();
+  zx::duration ComputeDurationOfAllSessions();
+  void LogCobaltDuration(uint32_t metric_id, std::vector<uint32_t> event_codes, zx::duration d);
+
+  std::mutex mutex_;
+
+  enum class State { Stopped, Started };
+  State state_ FXL_GUARDED_BY(mutex_);
+
+  // Ideally we'd record final cobalt metrics when the component exits, however we can't
+  // be notified of component exit until we've switched to Components v2. In the interim,
+  // we automatically restart sessions every hour. Inspect metrics don't have this limitation
+  // and can use the "real" session times.
+  static constexpr auto kMaxSessionDuration = zx::hour(1);
+  async::TaskClosureMethod<OverflowUnderflowTracker, &OverflowUnderflowTracker::RestartSession>
+      restart_session_timer_ FXL_GUARDED_BY(mutex_){this};
+
+  zx::time last_event_time_ FXL_GUARDED_BY(mutex_);             // for cobalt
+  zx::time session_start_time_ FXL_GUARDED_BY(mutex_);          // for cobalt
+  zx::time session_real_start_time_ FXL_GUARDED_BY(mutex_);     // for inspect
+  zx::duration past_sessions_duration_ FXL_GUARDED_BY(mutex_);  // for inspect
+
+  inspect::Node node_;
+  inspect::UintProperty event_count_;
+  inspect::UintProperty event_duration_;
+  inspect::UintProperty session_count_;
+  inspect::LazyNode total_duration_;
+
+  Reporter::Impl& impl_;
+  const uint32_t cobalt_component_id_;
+  const uint32_t cobalt_event_duration_metric_id_;
+  const uint32_t cobalt_time_since_last_event_or_session_start_metric_id_;
+};
+
+class DeviceGainInfo {
+ public:
+  DeviceGainInfo(inspect::Node& node)
+      : gain_db_(node.CreateDouble("gain db", 0.0)),
+        muted_(node.CreateBool("muted", false)),
+        agc_supported_(node.CreateBool("agc supported", false)),
+        agc_enabled_(node.CreateBool("agc enabled", false)) {}
+
+  void Set(const fuchsia::media::AudioGainInfo& gain_info,
+           fuchsia::media::AudioGainValidFlags set_flags) {
+    if ((set_flags & fuchsia::media::AudioGainValidFlags::GAIN_VALID) ==
+        fuchsia::media::AudioGainValidFlags::GAIN_VALID) {
+      gain_db_.Set(gain_info.gain_db);
+    }
+
+    if ((set_flags & fuchsia::media::AudioGainValidFlags::MUTE_VALID) ==
+        fuchsia::media::AudioGainValidFlags::MUTE_VALID) {
+      muted_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                 fuchsia::media::AudioGainInfoFlags::MUTE);
+    }
+
+    if ((set_flags & fuchsia::media::AudioGainValidFlags::AGC_VALID) ==
+        fuchsia::media::AudioGainValidFlags::AGC_VALID) {
+      agc_supported_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED) ==
+                         fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
+      agc_enabled_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED) ==
+                       fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+    }
+  }
+
+ private:
+  inspect::DoubleProperty gain_db_;
+  inspect::BoolProperty muted_;
+  inspect::BoolProperty agc_supported_;
+  inspect::BoolProperty agc_enabled_;
+};
+
+class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
+ public:
+  OutputDeviceImpl(Reporter::Impl& impl, const std::string& name)
+      : node_(impl.outputs_node.CreateChild(name)),
+        gain_info_(node_),
+        device_underflows_(
+            std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
+                .event_name = "device underflows",
+                .parent_node = node_,
+                .impl = impl,
+                .is_underflow = true,
+                .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputDevice,
+            })),
+        pipeline_underflows_(
+            std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
+                .event_name = "pipeline underflows",
+                .parent_node = node_,
+                .impl = impl,
+                .is_underflow = true,
+                .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputPipeline,
+            })) {}
+
+  void StartSession(zx::time start_time) override {
+    device_underflows_->StartSession(start_time);
+    pipeline_underflows_->StartSession(start_time);
+  }
+
+  void StopSession(zx::time stop_time) override {
+    device_underflows_->StopSession(stop_time);
+    pipeline_underflows_->StopSession(stop_time);
+  }
+
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override {
+    gain_info_.Set(gain_info, set_flags);
+  }
+
+  void DeviceUnderflow(zx::time start_time, zx::time end_time) override {
+    device_underflows_->Report(start_time, end_time);
+  }
+
+  void PipelineUnderflow(zx::time start_time, zx::time end_time) override {
+    pipeline_underflows_->Report(start_time, end_time);
+  }
+
+ private:
+  inspect::Node node_;
+  DeviceGainInfo gain_info_;
+  std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
+  std::unique_ptr<OverflowUnderflowTracker> pipeline_underflows_;
+};
+
+class Reporter::InputDeviceImpl : public Reporter::InputDevice {
+ public:
+  InputDeviceImpl(Reporter::Impl& impl, const std::string& name)
+      : node_(impl.inputs_node.CreateChild(name)), gain_info_(node_) {}
+
+  void StartSession(zx::time start_time) override {}
+  void StopSession(zx::time stop_time) override {}
+
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override {
+    gain_info_.Set(gain_info, set_flags);
+  }
+
+ private:
+  inspect::Node node_;
+  DeviceGainInfo gain_info_;
+};
+
+class ClientPort {
+ public:
+  ClientPort(inspect::Node& node)
+      : sample_format_(node.CreateUint("sample format", 0)),
+        channels_(node.CreateUint("channels", 0)),
+        frames_per_second_(node.CreateUint("frames per second", 0)),
+        payload_buffers_node_(node.CreateChild("payload buffers")),
+        gain_db_(node.CreateDouble("gain db", 0.0)),
+        muted_(node.CreateBool("muted", false)),
+        set_gain_with_ramp_calls_(node.CreateUint("calls to SetGainWithRamp", 0)) {}
+
+  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) {
+    sample_format_.Set(static_cast<uint64_t>(stream_type.sample_format));
+    channels_.Set(stream_type.channels);
+    frames_per_second_.Set(stream_type.frames_per_second);
+  }
+
+  void SetGain(float gain_db) { gain_db_.Set(gain_db); }
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type) {
+    set_gain_with_ramp_calls_.Add(1);
+  }
+  void SetMute(bool muted) { muted_.Set(muted); }
+
+  void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    payload_buffers_.emplace(
+        buffer_id,
+        PayloadBuffer(payload_buffers_node_.CreateChild(std::to_string(buffer_id)), size));
+  }
+
+  void RemovePayloadBuffer(uint32_t buffer_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    payload_buffers_.erase(buffer_id);
+  }
+
+  void SendPacket(const fuchsia::media::StreamPacket& packet) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto b = payload_buffers_.find(packet.payload_buffer_id);
+    if (b == payload_buffers_.end()) {
+      FX_LOGS(ERROR) << "Specified payload buffer not found";
+      return;
+    }
+    b->second.packets_.Add(1);
+  }
+
+ private:
+  inspect::UintProperty sample_format_;
+  inspect::UintProperty channels_;
+  inspect::UintProperty frames_per_second_;
+
+  inspect::Node payload_buffers_node_;
+
+  struct PayloadBuffer {
+    PayloadBuffer(inspect::Node node, uint64_t size)
+        : node_(std::move(node)),
+          size_(node_.CreateUint("size", size)),
+          packets_(node_.CreateUint("packets", 0)) {}
+
+    inspect::Node node_;
+    inspect::UintProperty size_;
+    inspect::UintProperty packets_;
+  };
+  std::mutex mutex_;
+  std::unordered_map<uint32_t, PayloadBuffer> payload_buffers_ FXL_GUARDED_BY(mutex_);
+
+  inspect::DoubleProperty gain_db_;
+  inspect::BoolProperty muted_;
+  // Just counting these for now.
+  inspect::UintProperty set_gain_with_ramp_calls_;
+};
+
+class Reporter::RendererImpl : public Reporter::Renderer {
+ public:
+  RendererImpl(Reporter::Impl& impl)
+      : node_(impl.renderers_node.CreateChild(impl.NextRendererName())),
+        client_port_(node_),
+        min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
+        pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
+        final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
+        underflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
+            .event_name = "underflows",
+            .parent_node = node_,
+            .impl = impl,
+            .is_underflow = true,
+            .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Renderer,
+        })) {}
+
+  void StartSession(zx::time start_time) override { underflows_->StartSession(start_time); }
+  void StopSession(zx::time stop_time) override { underflows_->StopSession(stop_time); }
+
+  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
+    client_port_.SetStreamType(stream_type);
+  }
+  void SetGain(float gain_db) override { client_port_.SetGain(gain_db); }
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type) override {
+    client_port_.SetGainWithRamp(gain_db, duration, ramp_type);
+  }
+  void SetFinalGain(float gain_db) override { final_stream_gain_.Set(gain_db); }
+  void SetMute(bool muted) override { client_port_.SetMute(muted); }
+
+  void SetMinLeadTime(zx::duration min_lead_time) override {
+    min_lead_time_ns_.Set(min_lead_time.to_nsecs());
+  }
+  void SetPtsContinuityThreshold(float threshold_seconds) override {
+    pts_continuity_threshold_seconds_.Set(threshold_seconds);
+  }
+
+  void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {
+    client_port_.AddPayloadBuffer(buffer_id, size);
+  }
+  void RemovePayloadBuffer(uint32_t buffer_id) override {
+    client_port_.RemovePayloadBuffer(buffer_id);
+  }
+  void SendPacket(const fuchsia::media::StreamPacket& packet) override {
+    client_port_.SendPacket(packet);
+  }
+  void Underflow(zx::time start_time, zx::time end_time) override {
+    underflows_->Report(start_time, end_time);
+  }
+
+ private:
+  inspect::Node node_;
+  ClientPort client_port_;
+  inspect::UintProperty min_lead_time_ns_;
+  inspect::DoubleProperty pts_continuity_threshold_seconds_;
+  inspect::DoubleProperty final_stream_gain_;
+  std::unique_ptr<OverflowUnderflowTracker> underflows_;
+};
+
+class Reporter::CapturerImpl : public Reporter::Capturer {
+ public:
+  CapturerImpl(Reporter::Impl& impl)
+      : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
+        client_port_(node_),
+        min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
+        overflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
+            .event_name = "overflows",
+            .parent_node = node_,
+            .impl = impl,
+            .is_underflow = false,
+            .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Capturer,
+        })) {}
+
+  void StartSession(zx::time start_time) override { overflows_->StartSession(start_time); }
+  void StopSession(zx::time stop_time) override { overflows_->StopSession(stop_time); }
+
+  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
+    client_port_.SetStreamType(stream_type);
+  }
+  void SetGain(float gain_db) override { client_port_.SetGain(gain_db); }
+  void SetGainWithRamp(float gain_db, zx::duration duration,
+                       fuchsia::media::audio::RampType ramp_type) override {
+    client_port_.SetGainWithRamp(gain_db, duration, ramp_type);
+  }
+  void SetMute(bool muted) override { client_port_.SetMute(muted); }
+
+  void SetMinFenceTime(zx::duration min_fence_time) override {
+    min_fence_time_ns_.Set(min_fence_time.to_nsecs());
+  }
+
+  void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {
+    client_port_.AddPayloadBuffer(buffer_id, size);
+  }
+  void SendPacket(const fuchsia::media::StreamPacket& packet) override {
+    client_port_.SendPacket(packet);
+  }
+  void Overflow(zx::time start_time, zx::time end_time) override {
+    overflows_->Report(start_time, end_time);
+  }
+
+ private:
+  inspect::Node node_;
+  ClientPort client_port_;
+  inspect::UintProperty min_fence_time_ns_;
+  std::unique_ptr<OverflowUnderflowTracker> overflows_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Reporter implementation
 
 // static
-void Reporter::CreateSingleton(sys::ComponentContext& component_context,
-                               ThreadingModel& threading_model) {
-  FX_CHECK(!singleton);
-  singleton = new Reporter(component_context, threading_model);
+Reporter& Reporter::Singleton() {
+  std::lock_guard<std::mutex> lock(singleton_mutex);
+  if (singleton_real) {
+    return *singleton_real;
+  }
+  FX_LOGS_FIRST_N(INFO, 1)
+      << "Creating reporting objects before the Reporter singleton has been initialized";
+  return singleton_nop;
+}
+
+// static
+void Reporter::InitializeSingleton(sys::ComponentContext& component_context,
+                                   ThreadingModel& threading_model) {
+  std::lock_guard<std::mutex> lock(singleton_mutex);
+  if (singleton_real) {
+    FX_LOGS(ERROR) << "Reporter::Singleton double initialized";
+    return;
+  }
+  singleton_real = std::make_unique<Reporter>(component_context, threading_model);
 }
 
 Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model)
-    : component_context_(component_context), threading_model_(threading_model) {
+    : impl_(std::make_unique<Impl>(component_context, threading_model)) {
+  // This lock isn't necessary, but the lock analysis can't tell that.
+  std::lock_guard<std::mutex> lock(mutex_);
   InitInspect();
   InitCobalt();
 }
 
 void Reporter::InitInspect() {
-  inspector_ = std::make_unique<sys::ComponentInspector>(&component_context_);
-  inspect::Node& root_node = inspector_->root();
-  failed_to_open_device_count_ = root_node.CreateUint("count of failures to open device", 0);
-  failed_to_obtain_fdio_service_channel_count_ =
-      root_node.CreateUint("count of failures to obtain device fdio service channel", 0);
-  failed_to_obtain_stream_channel_count_ =
-      root_node.CreateUint("count of failures to obtain device stream channel", 0);
-  device_startup_failed_count_ = root_node.CreateUint("count of failures to start a device", 0);
+  impl_->inspector = std::make_unique<sys::ComponentInspector>(&impl_->component_context);
+  inspect::Node& root_node = impl_->inspector->root();
 
-  outputs_node_ = root_node.CreateChild("output devices");
-  inputs_node_ = root_node.CreateChild("input devices");
-  renderers_node_ = root_node.CreateChild("renderers");
-  capturers_node_ = root_node.CreateChild("capturers");
+  impl_->failed_to_open_device_count = root_node.CreateUint("count of failures to open device", 0);
+  impl_->failed_to_obtain_fdio_service_channel_count =
+      root_node.CreateUint("count of failures to obtain device fdio service channel", 0);
+  impl_->failed_to_obtain_stream_channel_count =
+      root_node.CreateUint("count of failures to obtain device stream channel", 0);
+  impl_->failed_to_start_device_count =
+      root_node.CreateUint("count of failures to start a device", 0);
+
+  impl_->outputs_node = root_node.CreateChild("output devices");
+  impl_->inputs_node = root_node.CreateChild("input devices");
+  impl_->renderers_node = root_node.CreateChild("renderers");
+  impl_->capturers_node = root_node.CreateChild("capturers");
 }
 
 void Reporter::InitCobalt() {
-  component_context_.svc()->Connect(cobalt_factory_.NewRequest());
-  if (!cobalt_factory_) {
+  impl_->component_context.svc()->Connect(impl_->cobalt_factory.NewRequest());
+  if (!impl_->cobalt_factory) {
     FX_LOGS(ERROR) << "audio_core could not connect to cobalt. No metrics will be captured.";
     return;
   }
 
-  cobalt_factory_->CreateLoggerFromProjectId(kProjectId, cobalt_logger_.NewRequest(),
-                                             [this](fuchsia::cobalt::Status status) {
-                                               if (status != fuchsia::cobalt::Status::OK) {
-                                                 FX_PLOGS(ERROR, fidl::ToUnderlying(status))
-                                                     << "audio_core could not create Cobalt logger";
-                                                 cobalt_logger_ = nullptr;
-                                               }
-                                             });
+  impl_->cobalt_factory->CreateLoggerFromProjectId(
+      kProjectId, impl_->cobalt_logger.NewRequest(), [this](fuchsia::cobalt::Status status) {
+        if (status != fuchsia::cobalt::Status::OK) {
+          FX_LOGS(ERROR) << "audio_core could not create Cobalt logger, status = "
+                         << fidl::ToUnderlying(status);
+          std::lock_guard<std::mutex> lock(mutex_);
+          impl_->cobalt_logger = nullptr;
+        }
+      });
+}
+
+std::unique_ptr<Reporter::OutputDevice> Reporter::CreateOutputDevice(const std::string& name) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return std::make_unique<OutputDeviceNop>();
+  }
+  return std::make_unique<Reporter::OutputDeviceImpl>(*impl_, name);
+}
+
+std::unique_ptr<Reporter::InputDevice> Reporter::CreateInputDevice(const std::string& name) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return std::make_unique<InputDeviceNop>();
+  }
+  return std::make_unique<Reporter::InputDeviceImpl>(*impl_, name);
+}
+
+std::unique_ptr<Reporter::Renderer> Reporter::CreateRenderer() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return std::make_unique<RendererNop>();
+  }
+  return std::make_unique<Reporter::RendererImpl>(*impl_);
+}
+
+std::unique_ptr<Reporter::Capturer> Reporter::CreateCapturer() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return std::make_unique<CapturerNop>();
+  }
+  return std::make_unique<Reporter::CapturerImpl>(*impl_);
 }
 
 void Reporter::FailedToOpenDevice(const std::string& name, bool is_input, int err) {
-  failed_to_open_device_count_.Add(1);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->failed_to_open_device_count.Add(1);
 }
 
 void Reporter::FailedToObtainFdioServiceChannel(const std::string& name, bool is_input,
                                                 zx_status_t status) {
-  failed_to_obtain_fdio_service_channel_count_.Add(1);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->failed_to_obtain_fdio_service_channel_count.Add(1);
 }
 
 void Reporter::FailedToObtainStreamChannel(const std::string& name, bool is_input,
                                            zx_status_t status) {
-  failed_to_obtain_stream_channel_count_.Add(1);
-}
-
-void Reporter::AddingDevice(const std::string& name, const AudioDevice& device) {
-  if (device.is_output()) {
-    outputs_.emplace(&device, Output(outputs_node_.CreateChild(name), *this));
-  } else {
-    FX_DCHECK(device.is_input());
-    inputs_.emplace(&device, inputs_node_.CreateChild(name));
-  }
-}
-
-void Reporter::RemovingDevice(const AudioDevice& device) {
-  if (device.is_output()) {
-    outputs_.erase(&device);
-  } else {
-    FX_DCHECK(device.is_input());
-    inputs_.erase(&device);
-  }
-}
-
-void Reporter::DeviceStartupFailed(const AudioDevice& device) {
-  device_startup_failed_count_.Add(1);
-}
-
-void Reporter::IgnoringDevice(const AudioDevice& device) {
-  // Not reporting this via inspect.
-}
-
-void Reporter::ActivatingDevice(const AudioDevice& device) {
-  // Not reporting this via inspect...devices not activated are quickly removed.
-}
-
-void Reporter::SettingDeviceGainInfo(const AudioDevice& device,
-                                     const fuchsia::media::AudioGainInfo& gain_info,
-                                     fuchsia::media::AudioGainValidFlags set_flags) {
-  Device* d = device.is_output() ? static_cast<Device*>(FindOutput(device))
-                                 : static_cast<Device*>(FindInput(device));
-  if (!d) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
     return;
   }
-
-  if ((set_flags & fuchsia::media::AudioGainValidFlags::GAIN_VALID) ==
-      fuchsia::media::AudioGainValidFlags::GAIN_VALID) {
-    d->gain_db_.Set(gain_info.gain_db);
-  }
-
-  if ((set_flags & fuchsia::media::AudioGainValidFlags::MUTE_VALID) ==
-      fuchsia::media::AudioGainValidFlags::MUTE_VALID) {
-    d->muted_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
-                   fuchsia::media::AudioGainInfoFlags::MUTE)
-                      ? 1
-                      : 0);
-  }
-
-  if ((set_flags & fuchsia::media::AudioGainValidFlags::AGC_VALID) ==
-      fuchsia::media::AudioGainValidFlags::AGC_VALID) {
-    d->agc_supported_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED) ==
-                           fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED)
-                              ? 1
-                              : 0);
-    d->agc_enabled_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED) ==
-                         fuchsia::media::AudioGainInfoFlags::AGC_ENABLED)
-                            ? 1
-                            : 0);
-  }
+  impl_->failed_to_obtain_stream_channel_count.Add(1);
 }
 
-void Reporter::AddingRenderer(const fuchsia::media::AudioRenderer& renderer) {
-  renderers_.emplace(&renderer, Renderer(renderers_node_.CreateChild(NextRendererName()), *this));
-}
-
-void Reporter::RemovingRenderer(const fuchsia::media::AudioRenderer& renderer) {
-  renderers_.erase(&renderer);
-}
-
-void Reporter::SettingRendererStreamType(const fuchsia::media::AudioRenderer& renderer,
-                                         const fuchsia::media::AudioStreamType& stream_type) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
+void Reporter::FailedToStartDevice(const std::string& name) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
     return;
   }
-
-  r->sample_format_.Set(static_cast<uint64_t>(stream_type.sample_format));
-  r->channels_.Set(stream_type.channels);
-  r->frames_per_second_.Set(stream_type.frames_per_second);
+  impl_->failed_to_start_device_count.Add(1);
 }
 
-void Reporter::AddingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& renderer,
-                                           uint32_t buffer_id, uint64_t size) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->payload_buffers_.emplace(
-      buffer_id,
-      PayloadBuffer(r->payload_buffers_node_.CreateChild(std::to_string(buffer_id)), size));
-}
-
-void Reporter::RemovingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& renderer,
-                                             uint32_t buffer_id) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-  r->payload_buffers_.erase(buffer_id);
-}
-
-void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& renderer,
-                                     const fuchsia::media::StreamPacket& packet) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-  auto payload_buffer = r->payload_buffers_.find(packet.payload_buffer_id);
-  if (payload_buffer == r->payload_buffers_.end()) {
-    FX_LOGS(ERROR) << kPayloadNotFound;
-    return;
-  }
-  payload_buffer->second.packets_.Add(1);
-}
-
-void Reporter::SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->gain_db_.Set(gain_db);
-}
-
-void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& renderer,
-                                           float gain_db, zx::duration duration,
-                                           fuchsia::media::audio::RampType ramp_type) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  // Just counting these for now.
-  r->set_gain_with_ramp_calls_.Add(1);
-}
-
-void Reporter::SettingRendererFinalGain(const fuchsia::media::AudioRenderer& renderer,
-                                        float gain_db) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->final_stream_gain_.Set(gain_db);
-}
-
-void Reporter::SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->muted_.Set(muted);
-}
-
-void Reporter::SettingRendererMinLeadTime(const fuchsia::media::AudioRenderer& renderer,
-                                          zx::duration min_lead_time) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->min_lead_time_ns_.Set(static_cast<uint64_t>(min_lead_time.to_nsecs()));
-}
-
-void Reporter::SettingRendererPtsContinuityThreshold(const fuchsia::media::AudioRenderer& renderer,
-                                                     float threshold_seconds) {
-  Renderer* r = FindRenderer(renderer);
-  if (r == nullptr) {
-    return;
-  }
-
-  r->pts_continuity_threshold_seconds_.Set(threshold_seconds);
-}
-
-void Reporter::AddingCapturer(const fuchsia::media::AudioCapturer& capturer) {
-  capturers_.emplace(&capturer, Capturer(capturers_node_.CreateChild(NextCapturerName()), *this));
-}
-
-void Reporter::RemovingCapturer(const fuchsia::media::AudioCapturer& capturer) {
-  capturers_.erase(&capturer);
-}
-
-void Reporter::SettingCapturerStreamType(const fuchsia::media::AudioCapturer& capturer,
-                                         const fuchsia::media::AudioStreamType& stream_type) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  c->sample_format_.Set(static_cast<uint64_t>(stream_type.sample_format));
-  c->channels_.Set(stream_type.channels);
-  c->frames_per_second_.Set(stream_type.frames_per_second);
-}
-
-void Reporter::AddingCapturerPayloadBuffer(const fuchsia::media::AudioCapturer& capturer,
-                                           uint32_t buffer_id, uint64_t size) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  c->payload_buffers_.emplace(
-      buffer_id,
-      PayloadBuffer(c->payload_buffers_node_.CreateChild(std::to_string(buffer_id)), size));
-}
-
-void Reporter::SendingCapturerPacket(const fuchsia::media::AudioCapturer& capturer,
-                                     const fuchsia::media::StreamPacket& packet) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-  auto payload_buffer = c->payload_buffers_.find(packet.payload_buffer_id);
-  if (payload_buffer == c->payload_buffers_.end()) {
-    FX_LOGS(ERROR) << kPayloadNotFound;
-    return;
-  }
-  payload_buffer->second.packets_.Add(1);
-}
-
-void Reporter::SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer, float gain_db) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  c->gain_db_.Set(gain_db);
-}
-
-void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& capturer,
-                                           float gain_db, zx::duration duration,
-                                           fuchsia::media::audio::RampType ramp_type) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  // Just counting these for now.
-  c->set_gain_with_ramp_calls_.Add(1);
-}
-
-void Reporter::SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  c->muted_.Set(muted);
-}
-
-void Reporter::SettingCapturerMinFenceTime(const fuchsia::media::AudioCapturer& capturer,
-                                           zx::duration min_fence_time) {
-  Capturer* c = FindCapturer(capturer);
-  if (c == nullptr) {
-    return;
-  }
-
-  c->min_fence_time_ns_.Set(static_cast<uint64_t>(min_fence_time.to_nsecs()));
-}
-
-void Reporter::OutputDeviceStartSession(const AudioDevice& device, zx::time start_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->device_underflows_->StartSession(start_time);
-  }
-}
-
-void Reporter::OutputDeviceStopSession(const AudioDevice& device, zx::time stop_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->device_underflows_->StopSession(stop_time);
-  }
-}
-
-void Reporter::OutputDeviceUnderflow(const AudioDevice& device, zx::time start_time,
-                                     zx::time stop_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->device_underflows_->Report(start_time, stop_time);
-  }
-}
-
-void Reporter::OutputPipelineStartSession(const AudioDevice& device, zx::time start_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->pipeline_underflows_->StartSession(start_time);
-  }
-}
-
-void Reporter::OutputPipelineStopSession(const AudioDevice& device, zx::time stop_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->pipeline_underflows_->StopSession(stop_time);
-  }
-}
-
-void Reporter::OutputPipelineUnderflow(const AudioDevice& device, zx::time start_time,
-                                       zx::time stop_time) {
-  auto o = FindOutput(device);
-  if (o) {
-    o->pipeline_underflows_->Report(start_time, stop_time);
-  }
-}
-
-void Reporter::RendererStartSession(const fuchsia::media::AudioRenderer& renderer,
-                                    zx::time start_time) {
-  auto r = FindRenderer(renderer);
-  if (r) {
-    r->underflows_->StartSession(start_time);
-  }
-}
-
-void Reporter::RendererStopSession(const fuchsia::media::AudioRenderer& renderer,
-                                   zx::time stop_time) {
-  auto r = FindRenderer(renderer);
-  if (r) {
-    r->underflows_->StopSession(stop_time);
-  }
-}
-
-void Reporter::RendererUnderflow(const fuchsia::media::AudioRenderer& renderer, zx::time start_time,
-                                 zx::time stop_time) {
-  auto r = FindRenderer(renderer);
-  if (r) {
-    r->underflows_->Report(start_time, stop_time);
-  }
-}
-
-void Reporter::CapturerStartSession(const fuchsia::media::AudioCapturer& capturer,
-                                    zx::time start_time) {
-  auto c = FindCapturer(capturer);
-  if (c) {
-    c->overflows_->StartSession(start_time);
-  }
-}
-
-void Reporter::CapturerStopSession(const fuchsia::media::AudioCapturer& capturer,
-                                   zx::time stop_time) {
-  auto c = FindCapturer(capturer);
-  if (c) {
-    c->overflows_->StopSession(stop_time);
-  }
-}
-
-void Reporter::CapturerOverflow(const fuchsia::media::AudioCapturer& capturer, zx::time start_time,
-                                zx::time stop_time) {
-  auto c = FindCapturer(capturer);
-  if (c) {
-    c->overflows_->Report(start_time, stop_time);
-  }
-}
-
-Reporter::Output* Reporter::FindOutput(const AudioDevice& device) {
-  auto i = outputs_.find(&device);
-  if (i == outputs_.end()) {
-    FX_LOGS(ERROR) << "Specified output device not found";
-    return nullptr;
-  }
-  return &i->second;
-}
-
-Reporter::Input* Reporter::FindInput(const AudioDevice& device) {
-  auto i = inputs_.find(&device);
-  if (i == inputs_.end()) {
-    FX_LOGS(ERROR) << "Specified input device not found";
-    return nullptr;
-  }
-  return &i->second;
-}
-
-Reporter::Renderer* Reporter::FindRenderer(const fuchsia::media::AudioRenderer& renderer) {
-  auto i = renderers_.find(&renderer);
-  if (i == renderers_.end()) {
-    FX_LOGS(ERROR) << "Specified renderer not found";
-    return nullptr;
-  }
-  return &i->second;
-}
-
-Reporter::Capturer* Reporter::FindCapturer(const fuchsia::media::AudioCapturer& capturer) {
-  auto i = capturers_.find(&capturer);
-  if (i == capturers_.end()) {
-    FX_LOGS(ERROR) << "Specified capturer not found";
-    return nullptr;
-  }
-  return &i->second;
-}
-
-std::string Reporter::NextRendererName() {
-  std::ostringstream os;
-  os << ++next_renderer_name_;
-  return os.str();
-}
-
-std::string Reporter::NextCapturerName() {
-  std::ostringstream os;
-  os << ++next_capturer_name_;
-  return os.str();
-}
-
-Reporter::Device::Device(inspect::Node node) : node_(std::move(node)) {
-  gain_db_ = node_.CreateDouble("gain db", 0.0);
-  muted_ = node_.CreateUint("muted", 0);
-  agc_supported_ = node_.CreateUint("agc supported", 0);
-  agc_enabled_ = node_.CreateUint("agc enabled", 0);
-}
-
-Reporter::Output::Output(inspect::Node node, Reporter& reporter)
-    : Device(std::move(node)),
-      device_underflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
-          .event_name = "device underflows",
-          .parent_node = node_,
-          .reporter = reporter,
-          .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputDevice,
-          .cobalt_event_duration_metric_id = kAudioUnderflowDurationMetricId,
-          .cobalt_time_since_last_event_or_session_start_metric_id =
-              kAudioTimeSinceLastUnderflowOrSessionStartMetricId,
-      })),
-      pipeline_underflows_(
-          std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
-              .event_name = "pipeline underflows",
-              .parent_node = node_,
-              .reporter = reporter,
-              .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputPipeline,
-              .cobalt_event_duration_metric_id = kAudioUnderflowDurationMetricId,
-              .cobalt_time_since_last_event_or_session_start_metric_id =
-                  kAudioTimeSinceLastUnderflowOrSessionStartMetricId,
-          })) {}
-
-Reporter::Input::Input(inspect::Node node) : Device(std::move(node)) {}
-
-Reporter::ClientPort::ClientPort(inspect::Node node) : node_(std::move(node)) {
-  sample_format_ = node_.CreateUint("sample format", 0);
-  channels_ = node_.CreateUint("channels", 0);
-  frames_per_second_ = node_.CreateUint("frames per second", 0);
-  payload_buffers_node_ = node_.CreateChild("payload buffers");
-  gain_db_ = node_.CreateDouble("gain db", 0.0);
-  muted_ = node_.CreateUint("muted", 0);
-  set_gain_with_ramp_calls_ = node_.CreateUint("calls to SetGainWithRamp", 0);
-}
-
-Reporter::Renderer::Renderer(inspect::Node node, Reporter& reporter)
-    : ClientPort(std::move(node)),
-      underflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
-          .event_name = "underflows",
-          .parent_node = node_,
-          .reporter = reporter,
-          .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Renderer,
-          .cobalt_event_duration_metric_id = kAudioUnderflowDurationMetricId,
-          .cobalt_time_since_last_event_or_session_start_metric_id =
-              kAudioTimeSinceLastUnderflowOrSessionStartMetricId,
-      })) {
-  min_lead_time_ns_ = node_.CreateUint("min lead time (ns)", 0);
-  pts_continuity_threshold_seconds_ = node_.CreateDouble("pts continuity threshold (s)", 0.0);
-  final_stream_gain_ = node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0);
-}
-
-Reporter::Capturer::Capturer(inspect::Node node, Reporter& reporter)
-    : ClientPort(std::move(node)),
-      overflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
-          .event_name = "overflows",
-          .parent_node = node_,
-          .reporter = reporter,
-          .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Capturer,
-          .cobalt_event_duration_metric_id = kAudioOverflowDurationMetricId,
-          .cobalt_time_since_last_event_or_session_start_metric_id =
-              kAudioTimeSinceLastOverflowOrSessionStartMetricId,
-      })) {
-  min_fence_time_ns_ = node_.CreateUint("min fence time (ns)", 0);
-}
+//////////////////////////////////////////////////////////////////////////////////
+// OverflowUnderflowTracker implementation
 
 namespace {
 constexpr auto kEventSessionStart = 0;
@@ -568,11 +577,13 @@ static_assert(AudioTimeSinceLastUnderflowOrSessionStartMetricDimensionLastEvent:
 
 Reporter::OverflowUnderflowTracker::OverflowUnderflowTracker(Args args)
     : state_(State::Stopped),
-      reporter_(args.reporter),
+      impl_(args.impl),
       cobalt_component_id_(args.cobalt_component_id),
-      cobalt_event_duration_metric_id_(args.cobalt_event_duration_metric_id),
+      cobalt_event_duration_metric_id_(args.is_underflow ? kAudioUnderflowDurationMetricId
+                                                         : kAudioOverflowDurationMetricId),
       cobalt_time_since_last_event_or_session_start_metric_id_(
-          args.cobalt_time_since_last_event_or_session_start_metric_id) {
+          args.is_underflow ? kAudioTimeSinceLastUnderflowOrSessionStartMetricId
+                            : kAudioTimeSinceLastOverflowOrSessionStartMetricId) {
   node_ = args.parent_node.CreateChild(args.event_name);
   event_count_ = node_.CreateUint("count", 0);
   event_duration_ = node_.CreateUint("duration (ns)", 0);
@@ -583,6 +594,18 @@ Reporter::OverflowUnderflowTracker::OverflowUnderflowTracker(Args args)
                            ComputeDurationOfAllSessions().get(), &i);
     return fit::make_ok_promise(std::move(i));
   });
+}
+
+Reporter::OverflowUnderflowTracker::~OverflowUnderflowTracker() {
+  bool started;
+  {
+    // Technically a lock is not required here, but the lock analysis can't tell that.
+    std::lock_guard<std::mutex> lock(mutex_);
+    started = (state_ == State::Started);
+  }
+  if (started) {
+    StopSession(zx::clock::get_monotonic());
+  }
 }
 
 void Reporter::OverflowUnderflowTracker::StartSession(zx::time start_time) {
@@ -598,7 +621,7 @@ void Reporter::OverflowUnderflowTracker::StartSession(zx::time start_time) {
   last_event_time_ = start_time;
   session_start_time_ = start_time;
   session_real_start_time_ = start_time;
-  restart_session_timer_.PostDelayed(reporter_.threading_model_.IoDomain().dispatcher(),
+  restart_session_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
                                      kMaxSessionDuration);
 }
 
@@ -634,7 +657,7 @@ void Reporter::OverflowUnderflowTracker::RestartSession() {
 
   last_event_time_ = stop_time;
   session_start_time_ = stop_time;
-  restart_session_timer_.PostDelayed(reporter_.threading_model_.IoDomain().dispatcher(),
+  restart_session_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
                                      kMaxSessionDuration);
 }
 
@@ -677,7 +700,7 @@ void Reporter::OverflowUnderflowTracker::Report(zx::time start_time, zx::time en
 void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
                                                            std::vector<uint32_t> event_codes,
                                                            zx::duration d) {
-  auto& logger = reporter_.cobalt_logger_;
+  auto& logger = impl_.cobalt_logger;
   if (!logger) {
     return;
   }
@@ -697,7 +720,5 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
     }
   });
 }
-
-#endif  // ENABLE_REPORTER
 
 }  // namespace media::audio

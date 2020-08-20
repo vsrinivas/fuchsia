@@ -105,8 +105,8 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 
   zx::channel c1, c2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   auto fake_driver =
       testing::FakeAudioDriverV1(std::move(c1), threading_model().FidlDomain().dispatcher());
 
@@ -148,7 +148,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersD
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
   fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
   stream_config.set_channel(zx::channel());
-  auto input = AudioInput::Create(std::move(stream_config), &threading_model(),
+  auto input = AudioInput::Create("", std::move(stream_config), &threading_model(),
                                   &context().device_manager(), &context().link_matrix());
   auto fake_driver =
       testing::FakeAudioDriverV2(std::move(c1), threading_model().FidlDomain().dispatcher());

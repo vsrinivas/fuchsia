@@ -10,6 +10,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
 
@@ -17,16 +18,19 @@ class AudioDeviceManager;
 
 class AudioInput : public AudioDevice {
  public:
-  static std::shared_ptr<AudioInput> Create(zx::channel channel, ThreadingModel* threading_model,
+  static std::shared_ptr<AudioInput> Create(const std::string& name, zx::channel channel,
+                                            ThreadingModel* threading_model,
                                             DeviceRegistry* registry, LinkMatrix* link_matrix);
 
   static std::shared_ptr<AudioInput> Create(
+      const std::string& name,
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
       ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
 
-  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry,
-             LinkMatrix* link_matrix);
-  AudioInput(fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
+  AudioInput(const std::string& name, zx::channel channel, ThreadingModel* threading_model,
+             DeviceRegistry* registry, LinkMatrix* link_matrix);
+  AudioInput(const std::string& name,
+             fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
              ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
 
   ~AudioInput() override = default;
@@ -39,6 +43,9 @@ class AudioInput : public AudioDevice {
   // |media::audio::AudioDevice|
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override;
+
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override;
 
   zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
@@ -67,6 +74,7 @@ class AudioInput : public AudioDevice {
 
   zx::channel initial_stream_channel_;
   State state_ = State::Uninitialized;
+  std::unique_ptr<Reporter::InputDevice> reporter_;
 };
 
 }  // namespace media::audio

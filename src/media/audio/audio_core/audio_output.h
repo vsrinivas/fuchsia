@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
@@ -36,12 +37,18 @@ class AudioOutput : public AudioDevice {
 
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
 
+  // |media::audio::AudioDevice|
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                   fuchsia::media::AudioGainValidFlags set_flags) override;
+
  protected:
-  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
-  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
-              std::unique_ptr<AudioDriver>);
+  AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
+              LinkMatrix* link_matrix);
+  AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
+              LinkMatrix* link_matrix, std::unique_ptr<AudioDriver>);
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  Reporter::OutputDevice& reporter() { return *reporter_; }
 
   // |media::audio::AudioObject|
   //
@@ -129,6 +136,7 @@ class AudioOutput : public AudioDevice {
   size_t max_block_size_frames_;
 
   std::unique_ptr<OutputPipeline> pipeline_;
+  std::unique_ptr<Reporter::OutputDevice> reporter_;
 };
 
 }  // namespace media::audio

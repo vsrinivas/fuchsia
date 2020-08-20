@@ -57,10 +57,11 @@ AudioClock& AudioDevice::reference_clock() {
   return driver_->reference_clock();
 }
 
-AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
-                         DeviceRegistry* registry, LinkMatrix* link_matrix,
-                         std::unique_ptr<AudioDriver> driver)
+AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
+                         ThreadingModel* threading_model, DeviceRegistry* registry,
+                         LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
     : AudioObject(type),
+      name_(name),
       device_registry_(*registry),
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain()),

@@ -7,7 +7,6 @@
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -31,10 +30,10 @@ BaseRenderer::BaseRenderer(
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1'000'000'000, 1),
       reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
-      packet_allocator_(kMaxPacketAllocatorSlabs, true) {
+      packet_allocator_(kMaxPacketAllocatorSlabs, true),
+      reporter_(Reporter::Singleton().CreateRenderer()) {
   TRACE_DURATION("audio", "BaseRenderer::BaseRenderer");
   FX_DCHECK(context);
-  REPORT(AddingRenderer(*this));
   AUDIO_LOG_OBJ(DEBUG, this);
 
   // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of the
@@ -54,7 +53,6 @@ BaseRenderer::~BaseRenderer() {
 
   wav_writer_.Close();
   payload_buffers_.clear();
-  REPORT(RemovingRenderer(*this));
 }
 
 void BaseRenderer::Shutdown() {
@@ -105,7 +103,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
                                              std::move(clock_for_packet_queue));
 
   queue->SetUnderflowReporter([this](zx::time start_time, zx::time stop_time) {
-    REPORT(RendererUnderflow(*this, start_time, stop_time));
+    reporter_->Underflow(start_time, stop_time);
   });
   auto stream_usage = usage();
   FX_DCHECK(stream_usage) << "A renderer cannot be linked without a usage";
@@ -148,7 +146,7 @@ void BaseRenderer::RecomputeMinLeadTime() {
   }
 
   if (min_lead_time_ != cur_lead_time) {
-    REPORT(SettingRendererMinLeadTime(*this, cur_lead_time));
+    reporter_->SetMinLeadTime(cur_lead_time);
     min_lead_time_ = cur_lead_time;
     ReportNewMinLeadTime();
   }
@@ -255,7 +253,7 @@ void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
     return;
   }
 
-  REPORT(AddingRendererPayloadBuffer(*this, id, vmo_mapper->size()));
+  reporter_->AddPayloadBuffer(id, vmo_mapper->size());
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
@@ -280,7 +278,7 @@ void BaseRenderer::RemovePayloadBuffer(uint32_t id) {
     return;
   }
 
-  REPORT(RemovingRendererPayloadBuffer(*this, id));
+  reporter_->RemovePayloadBuffer(id);
   cleanup.cancel();
 }
 
@@ -327,7 +325,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
     return;
   }
 
-  REPORT(SettingRendererPtsContinuityThreshold(*this, threshold_seconds));
+  reporter_->SetPtsContinuityThreshold(threshold_seconds);
 
   pts_continuity_threshold_ = threshold_seconds;
   pts_continuity_threshold_set_ = true;
@@ -387,7 +385,7 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
     return;
   }
 
-  REPORT(SendingRendererPacket(*this, packet));
+  reporter_->SendPacket(packet);
 
   // Compute the PTS values for this packet applying our interpolation and continuity thresholds as
   // we go. Start by checking to see if this our PTS to frames transformation needs to be computed
@@ -669,14 +667,14 @@ void BaseRenderer::PauseNoReply() {
 
 void BaseRenderer::ReportStart() {
   if (state_ == State::Paused) {
-    REPORT(RendererStartSession(*this, zx::clock::get_monotonic()));
+    reporter_->StartSession(zx::clock::get_monotonic());
     state_ = State::Playing;
   }
 }
 
 void BaseRenderer::ReportStop() {
   if (state_ == State::Playing) {
-    REPORT(RendererStopSession(*this, zx::clock::get_monotonic()));
+    reporter_->StopSession(zx::clock::get_monotonic());
     state_ = State::Paused;
   }
 }

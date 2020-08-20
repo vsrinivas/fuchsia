@@ -101,7 +101,7 @@ class PlugDetectorImpl : public PlugDetector {
     // fuchsia::io::Directory handles instead of file descriptors.
     fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
     if (!dev_node.is_valid()) {
-      REPORT(FailedToOpenDevice(name, is_input, errno));
+      Reporter::Singleton().FailedToOpenDevice(name, is_input, errno);
       FX_LOGS(ERROR) << "PlugDetectorImpl failed to open device node at \"" << name << "\". ("
                      << strerror(errno) << " : " << errno << ")";
       return;
@@ -112,7 +112,7 @@ class PlugDetectorImpl : public PlugDetector {
     zx::channel dev_channel;
     res = fdio_get_service_handle(dev_node.release(), dev_channel.reset_and_get_address());
     if (res != ZX_OK) {
-      REPORT(FailedToObtainFdioServiceChannel(name, is_input, res));
+      Reporter::Singleton().FailedToObtainFdioServiceChannel(name, is_input, res);
       FX_PLOGS(ERROR, res) << "Failed to obtain FDIO service channel to audio "
                            << (is_input ? "input" : "output");
       return;
@@ -122,7 +122,7 @@ class PlugDetectorImpl : public PlugDetector {
     auto device =
         fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).Bind();
     device.set_error_handler([name, is_input](zx_status_t res) {
-      REPORT(FailedToObtainStreamChannel(name, is_input, res));
+      Reporter::Singleton().FailedToObtainStreamChannel(name, is_input, res);
       FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
     });
     device->GetChannel(

@@ -70,7 +70,7 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
 class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
-      : AudioOutput(&context->threading_model(), &context->device_manager(),
+      : AudioOutput("", &context->threading_model(), &context->device_manager(),
                     &context->link_matrix()) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));

@@ -176,7 +176,7 @@ void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {
           })
           .or_else([device](zx_status_t& error) {
             FX_PLOGS(ERROR, error) << "AddDevice failed";
-            REPORT(DeviceStartupFailed(*device));
+            Reporter::Singleton().FailedToStartDevice(device->name());
             device->Shutdown();
           }));
 }
@@ -199,8 +199,6 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   }
 
   devices_.insert(std::move(dev));
-
-  REPORT(ActivatingDevice(*device));
   device->SetActivated();
 
   // Notify interested users of the new device.
@@ -225,8 +223,6 @@ void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device
 
   // If device was active: reset the default (based on most-recently-plugged).
   OnPlugStateChanged(device, false, device->plug_time());
-
-  REPORT(RemovingDevice(*device));
   device->Shutdown();
 
   auto& device_set = device->activated() ? devices_ : devices_pending_init_;
@@ -318,7 +314,6 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   dev->system_gain_dirty = true;
 
   // Change the gain and then report the new settings to our clients.
-  REPORT(SettingDeviceGainInfo(*dev, gain_info, set_flags));
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
 }
@@ -432,12 +427,12 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
-    new_device =
-        AudioInput::Create(std::move(device_channel), &threading_model(), this, &link_matrix_);
+    new_device = AudioInput::Create(device_name, std::move(device_channel), &threading_model(),
+                                    this, &link_matrix_);
   } else {
-    new_device =
-        std::make_shared<DriverOutput>(&threading_model(), this, std::move(device_channel),
-                                       &link_matrix_, process_config_.default_volume_curve());
+    new_device = std::make_shared<DriverOutput>(device_name, &threading_model(), this,
+                                                std::move(device_channel), &link_matrix_,
+                                                process_config_.default_volume_curve());
   }
 
   if (new_device == nullptr) {
@@ -445,7 +440,6 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
                    << device_name << "'";
   }
 
-  REPORT(AddingDevice(device_name, *new_device));
   AddDevice(std::move(new_device));
 }
 
@@ -458,12 +452,12 @@ void AudioDeviceManager::AddDeviceByChannel2(
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
-    new_device =
-        AudioInput::Create(std::move(stream_config), &threading_model(), this, &link_matrix_);
+    new_device = AudioInput::Create(device_name, std::move(stream_config), &threading_model(), this,
+                                    &link_matrix_);
   } else {
-    new_device =
-        std::make_shared<DriverOutput>(&threading_model(), this, std::move(stream_config),
-                                       &link_matrix_, process_config_.default_volume_curve());
+    new_device = std::make_shared<DriverOutput>(device_name, &threading_model(), this,
+                                                std::move(stream_config), &link_matrix_,
+                                                process_config_.default_volume_curve());
   }
 
   if (new_device == nullptr) {
@@ -471,7 +465,6 @@ void AudioDeviceManager::AddDeviceByChannel2(
                    << device_name << "'";
   }
 
-  REPORT(AddingDevice(device_name, *new_device));
   AddDevice(std::move(new_device));
 }
 

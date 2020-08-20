@@ -37,17 +37,20 @@ std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
 constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
 constexpr const char* kWavFileExtension = ".wav";
 
-DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                           zx::channel initial_stream_channel, LinkMatrix* link_matrix,
-                           VolumeCurve volume_curve)
-    : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV1>(this)),
+DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
+                           DeviceRegistry* registry, zx::channel initial_stream_channel,
+                           LinkMatrix* link_matrix, VolumeCurve volume_curve)
+    : AudioOutput(name, threading_model, registry, link_matrix,
+                  std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(initial_stream_channel)),
       volume_curve_(std::move(volume_curve)) {}
 
-DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
+                           DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix, VolumeCurve volume_curve)
-    : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV2>(this)),
+    : AudioOutput(name, threading_model, registry, link_matrix,
+                  std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(std::move(volume_curve)) {}
 
@@ -159,7 +162,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
                      << ") ms. Cooling down for " << kUnderflowCooldown.to_msecs()
                      << " milliseconds.";
 
-      REPORT(OutputDeviceUnderflow(*this, mono_time, mono_time + output_underflow_duration));
+      reporter().DeviceUnderflow(mono_time, mono_time + output_underflow_duration);
 
       underflow_start_time_mono_ = mono_time;
       output_producer_->FillWithSilence(rb.virt(), rb.frames());
@@ -523,7 +526,7 @@ void DriverOutput::OnDriverStartComplete() {
                   << " mSec)";
   }
 
-  REPORT(OutputDeviceStartSession(*this, zx::clock::get_monotonic()));
+  reporter().StartSession(zx::clock::get_monotonic());
   state_ = State::Started;
   Process();
 }

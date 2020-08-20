@@ -67,7 +67,7 @@ class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
-      : AudioOutput(threading_model, registry, link_matrix) {}
+      : AudioOutput("", threading_model, registry, link_matrix) {}
 
   using AudioOutput::FrameSpan;
   using AudioOutput::SetNextSchedTimeMono;

@@ -32,7 +32,7 @@ static int StartAudioCore() {
 
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  Reporter::CreateSingleton(*component_context, *threading_model);
+  Reporter::InitializeSingleton(*component_context, *threading_model);
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (process_config.is_error()) {

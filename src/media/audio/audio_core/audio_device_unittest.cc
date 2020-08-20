@@ -22,7 +22,7 @@ class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
-      : AudioDevice(type, threading_model, registry, link_matrix,
+      : AudioDevice(type, "", threading_model, registry, link_matrix,
                     std::make_unique<AudioDriverV1>(this)) {}
 
   // Needed because AudioDevice is an abstract class

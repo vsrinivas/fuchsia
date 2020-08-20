@@ -20,6 +20,7 @@
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -33,6 +34,7 @@ constexpr bool kEnableRendererWavWriters = false;
 
 class AudioAdmin;
 class StreamRegistry;
+class Reporter;
 
 class BaseRenderer : public AudioObject,
                      public fuchsia::media::AudioRenderer,
@@ -94,6 +96,7 @@ class BaseRenderer : public AudioObject,
 
   zx_status_t SetOptimalReferenceClock();
   zx_status_t SetCustomReferenceClock(zx::clock ref_clock);
+  Reporter::Renderer& reporter() { return *reporter_; }
 
  private:
   // Recompute the minimum clock lead time based on the current set of outputs
@@ -137,6 +140,7 @@ class BaseRenderer : public AudioObject,
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
+  std::unique_ptr<Reporter::Renderer> reporter_;
 
   zx::clock raw_clock_;
   bool client_allows_clock_adjustment_ = true;

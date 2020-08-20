@@ -21,16 +21,19 @@ namespace media::audio {
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
 // TODO(fxbug.dev/49345): We should not need driver to be set for all Audio Devices.
-AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                         LinkMatrix* link_matrix)
-    : AudioDevice(Type::Output, threading_model, registry, link_matrix,
-                  std::make_unique<AudioDriverV1>(this)) {
+AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_model,
+                         DeviceRegistry* registry, LinkMatrix* link_matrix)
+    : AudioDevice(Type::Output, name, threading_model, registry, link_matrix,
+                  std::make_unique<AudioDriverV1>(this)),
+      reporter_(Reporter::Singleton().CreateOutputDevice(name)) {
   SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
-AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                         LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
-    : AudioDevice(Type::Output, threading_model, registry, link_matrix, std::move(driver)) {
+AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_model,
+                         DeviceRegistry* registry, LinkMatrix* link_matrix,
+                         std::unique_ptr<AudioDriver> driver)
+    : AudioDevice(Type::Output, name, threading_model, registry, link_matrix, std::move(driver)),
+      reporter_(Reporter::Singleton().CreateOutputDevice(name)) {
   SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
@@ -213,6 +216,12 @@ fit::promise<void, zx_status_t> AudioOutput::UpdatePipelineConfig(const Pipeline
         completer.complete_ok();
       });
   return bridge.consumer.promise();
+}
+
+void AudioOutput::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                              fuchsia::media::AudioGainValidFlags set_flags) {
+  reporter_->SetGainInfo(info, set_flags);
+  AudioDevice::SetGainInfo(info, set_flags);
 }
 
 }  // namespace media::audio

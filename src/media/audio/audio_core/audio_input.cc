@@ -17,31 +17,38 @@ constexpr zx::duration kMinFenceDistance = zx::msec(200);
 constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
-std::shared_ptr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
+std::shared_ptr<AudioInput> AudioInput::Create(const std::string& name, zx::channel channel,
+                                               ThreadingModel* threading_model,
                                                DeviceRegistry* registry, LinkMatrix* link_matrix) {
-  return std::make_shared<AudioInput>(std::move(channel), threading_model, registry, link_matrix);
+  return std::make_shared<AudioInput>(name, std::move(channel), threading_model, registry,
+                                      link_matrix);
 }
 
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(
+    const std::string& name,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
     ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
-  return std::make_shared<AudioInput>(std::move(stream_config), threading_model, registry,
+  return std::make_shared<AudioInput>(name, std::move(stream_config), threading_model, registry,
                                       link_matrix);
 }
 
-AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,
-                       DeviceRegistry* registry, LinkMatrix* link_matrix)
-    : AudioDevice(Type::Input, threading_model, registry, link_matrix,
-                  std::make_unique<AudioDriverV1>(this)),
-      initial_stream_channel_(std::move(channel)) {}
-
-AudioInput::AudioInput(fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
+AudioInput::AudioInput(const std::string& name, zx::channel channel,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
                        LinkMatrix* link_matrix)
-    : AudioDevice(Type::Input, threading_model, registry, link_matrix,
+    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
+                  std::make_unique<AudioDriverV1>(this)),
+      initial_stream_channel_(std::move(channel)),
+      reporter_(Reporter::Singleton().CreateInputDevice(name)) {}
+
+AudioInput::AudioInput(const std::string& name,
+                       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
+                       ThreadingModel* threading_model, DeviceRegistry* registry,
+                       LinkMatrix* link_matrix)
+    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV2>(this)),
-      initial_stream_channel_(stream_config.TakeChannel()) {}
+      initial_stream_channel_(stream_config.TakeChannel()),
+      reporter_(Reporter::Singleton().CreateInputDevice(name)) {}
 
 zx_status_t AudioInput::Init() {
   TRACE_DURATION("audio", "AudioInput::Init");
@@ -205,6 +212,12 @@ void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
       in_out_info->gain_db = static_cast<float>(steps) * caps.gain_step;
     }
   }
+}
+
+void AudioInput::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                             fuchsia::media::AudioGainValidFlags set_flags) {
+  reporter_->SetGainInfo(info, set_flags);
+  AudioDevice::SetGainInfo(info, set_flags);
 }
 
 void AudioInput::UpdateDriverGainState() {

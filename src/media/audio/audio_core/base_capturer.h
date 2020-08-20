@@ -22,6 +22,7 @@
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
@@ -150,6 +151,8 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   // If custom, audio_core treats this as not-rate-adjustable. If optimal, it will be tuned.
   void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
 
+  Reporter::Capturer& reporter() { return *reporter_; }
+
  private:
   void UpdateState(State new_state);
 
@@ -270,6 +273,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::atomic<uint16_t> partial_overflow_count_;
 
   std::shared_ptr<MixStage> mix_stage_;
+  std::unique_ptr<Reporter::Capturer> reporter_;
 
   AudioClock audio_clock_;
 

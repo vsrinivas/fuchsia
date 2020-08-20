@@ -72,7 +72,7 @@ class FakeAudioOutput : public AudioOutput {
 
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* device_registry,
                   LinkMatrix* link_matrix)
-      : AudioOutput(threading_model, device_registry, link_matrix) {}
+      : AudioOutput("", threading_model, device_registry, link_matrix) {}
 
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
@@ -275,12 +275,12 @@ TEST_F(RouteGraphTest, CapturersRouteToLastPluggedInput) {
       *capturer,
       {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
-  auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto first_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(first_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({first_input.get()}));
 
-  auto later_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto later_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(later_input.get());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({later_input.get()}));
@@ -294,9 +294,9 @@ TEST_F(RouteGraphTest, CapturersFallbackWhenInputRemoved) {
       *capturer,
       {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
-  auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto first_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
-  auto later_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto later_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
 
   under_test_.AddDevice(first_input.get());
@@ -317,11 +317,11 @@ TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
       *capturer,
       {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
-  auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto first_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
-  auto second_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto second_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                          &context().device_manager(), &context().link_matrix());
-  auto last_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto last_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                        &context().device_manager(), &context().link_matrix());
 
   under_test_.AddDevice(first_input.get());
@@ -336,11 +336,11 @@ TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
 }
 
 TEST_F(RouteGraphTest, CapturersPickUpLastPluggedInputWhenRoutable) {
-  auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto first_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(first_input.get());
 
-  auto later_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto later_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(later_input.get());
 
@@ -363,8 +363,8 @@ TEST_F(RouteGraphTest, CapturersAreRemoved) {
       *capturer,
       {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(input.get());
   EXPECT_THAT(DestLinks(*input), UnorderedElementsAreArray({capturer.get()}));
   under_test_.RemoveCapturer(*capturer);
@@ -508,7 +508,7 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
                                         &context().link_matrix());
   under_test_.AddDevice(output.get());
 
-  auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto first_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(first_input.get());
 
@@ -550,8 +550,8 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
 }
 
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
@@ -563,7 +563,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
       *capturer,
       {.routable = false, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
-  auto second_input = AudioInput::Create(zx::channel(), &threading_model(),
+  auto second_input = AudioInput::Create("", zx::channel(), &threading_model(),
                                          &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(second_input.get());
   EXPECT_THAT(SourceLinks(*capturer), IsEmpty());
@@ -617,8 +617,8 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableRenderer) {
 }
 
 TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(input.get());
 
   auto capturer = FakeAudioObject::FakeCapturer();
@@ -789,8 +789,8 @@ TEST_F(RouteGraphTest, DoesNotUnlinkRendererNotInGraph) {
 
 TEST_F(RouteGraphTest, DoesNotUnlinkCapturerNotInGraph) {
   auto capturer = FakeAudioObject::FakeCapturer();
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
 
   context().link_matrix().LinkObjects(input, capturer, std::make_shared<NoOpLoudnessTransform>());
   EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
@@ -837,8 +837,8 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfRouteDoesNotChange) {
 
 TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfRouteDoesNotChange) {
   auto capturer = FakeAudioObject::FakeCapturer();
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
 
   const RoutingProfile kRoutableProfile{
       .routable = true,
@@ -860,8 +860,8 @@ TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfRouteDoesNotChange) {
 
 TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfUnroutedDeviceIsAdded) {
   auto capturer = FakeAudioObject::FakeCapturer();
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   const RoutingProfile kRoutableProfile{
       .routable = true,
       .usage = StreamUsage::WithCaptureUsage(CaptureUsage::BACKGROUND),
@@ -900,8 +900,8 @@ TEST_F(RouteGraphTest, DoesNotRelinkRendererIfUnroutedDeviceIsAdded) {
   EXPECT_EQ(1u, renderer->total_links_formed());
 
   // Now set the same profile. We should see no change in our routes or link counts.
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
-                                  &context().link_matrix());
+  auto input = AudioInput::Create("", zx::channel(), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
   under_test_.AddDevice(input.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
   EXPECT_EQ(1u, renderer->total_links_formed());

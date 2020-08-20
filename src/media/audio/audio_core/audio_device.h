@@ -36,13 +36,15 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   static std::string UniqueIdToString(const audio_stream_unique_id_t& id);
   static fit::result<audio_stream_unique_id_t> UniqueIdFromString(const std::string& unique_id);
 
+  ~AudioDevice() override;
+
+  const std::string& name() const { return name_; }
+
   // Wakeup
   //
   // Called from outside the mixing ExecutionDomain to cause an AudioDevice's::OnWakeup handler to
   // run from within the context of the mixing execution domain.
   void Wakeup();
-
-  ~AudioDevice() override;
 
   // |media::audio::AudioObject|
   std::optional<Format> format() const override;
@@ -92,8 +94,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // wakes up the device in the event of a meaningful change in gain settings.
   //
   // Only called by AudioDeviceManager, and only after the device is activated.
-  void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
-                   fuchsia::media::AudioGainValidFlags set_flags);
+  virtual void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                           fuchsia::media::AudioGainValidFlags set_flags);
 
   // Device info used during device enumeration and add-notifications.
   virtual fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
@@ -112,8 +114,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   AudioClock& reference_clock();
 
  protected:
-  AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver);
+  AudioDevice(Type type, const std::string& name, ThreadingModel* threading_model,
+              DeviceRegistry* registry, LinkMatrix* link_matrix,
+              std::unique_ptr<AudioDriver> driver);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -252,6 +255,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
  private:
+  const std::string name_;
   DeviceRegistry& device_registry_;
   ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
