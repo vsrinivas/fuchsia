@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -83,24 +83,12 @@ test("trace-vthread-with-static-engine-test") {
   ]
 }
 
-unittest_package("trace-vthread-test-package") {
-  package_name = "trace-vthread-test"
+bootfs_test("trace-vthread-test-bootfs-test") {
+  name = "trace-vthread-test-test"
   deps = [ ":trace-vthread-test" ]
-
-  tests = [
-    {
-      name = "trace-vthread-test-test"
-    },
-  ]
 }
 
-unittest_package("trace-vthread-with-static-engine-test-package") {
-  package_name = "trace-vthread-with-static-engine-test"
+bootfs_test("trace-vthread-with-static-engine-test-bootfs-test") {
+  name = "trace-vthread-with-static-engine-test-test"
   deps = [ ":trace-vthread-with-static-engine-test" ]
-
-  tests = [
-    {
-      name = "trace-vthread-with-static-engine-test-test"
-    },
-  ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -50,13 +50,7 @@ test("simplehid") {
   ]
 }
 
-unittest_package("simplehid-package") {
-  package_name = "simplehid"
+bootfs_test("simplehid-bootfs-test") {
+  name = "simplehid-test"
   deps = [ ":simplehid" ]
-
-  tests = [
-    {
-      name = "simplehid-test"
-    },
-  ]
 }

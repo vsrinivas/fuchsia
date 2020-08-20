@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 config("integer-paranoia") {
   visibility = [ ":*" ]
@@ -37,13 +37,7 @@ test("compiler") {
   ]
 }
 
-unittest_package("compiler-package") {
-  package_name = "compiler"
+bootfs_test("compiler-bootfs-test") {
+  name = "compiler-test"
   deps = [ ":compiler" ]
-
-  tests = [
-    {
-      name = "compiler-test"
-    },
-  ]
 }

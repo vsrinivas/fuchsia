@@ -12,7 +12,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("inspector") {
   output_name = "inspector-test"
@@ -33,13 +33,7 @@ test("inspector") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-unittest_package("inspector-package") {
-  package_name = "inspector"
+bootfs_test("inspector-bootfs-test") {
+  name = "inspector-test"
   deps = [ ":inspector" ]
-
-  tests = [
-    {
-      name = "inspector-test"
-    },
-  ]
 }

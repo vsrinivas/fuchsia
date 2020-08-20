@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("chromeos-disk-setup") {
   output_name = "chromeos-disk-setup-test"
@@ -37,13 +37,7 @@ test("chromeos-disk-setup") {
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
-unittest_package("chromeos-disk-setup-package") {
-  package_name = "chromeos-disk-setup"
+bootfs_test("chromeos-disk-setup-bootfs-test") {
+  name = "chromeos-disk-setup-test"
   deps = [ ":chromeos-disk-setup" ]
-
-  tests = [
-    {
-      name = "chromeos-disk-setup-test"
-    },
-  ]
 }

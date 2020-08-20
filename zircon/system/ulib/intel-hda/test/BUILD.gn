@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -46,13 +46,7 @@ test("intel-hda-utils-test") {
   ]
 }
 
-unittest_package("intel-hda-utils-test-package") {
-  package_name = "intel-hda-utils-test"
+bootfs_test("intel-hda-utils-test-bootfs-test") {
+  name = "intel-hda-utils-test-test"
   deps = [ ":intel-hda-utils-test" ]
-
-  tests = [
-    {
-      name = "intel-hda-utils-test-test"
-    },
-  ]
 }

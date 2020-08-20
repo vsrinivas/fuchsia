@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("processor") {
   output_name = "processor-test"
@@ -15,13 +15,7 @@ test("processor") {
   ]
 }
 
-unittest_package("processor-package") {
-  package_name = "processor"
+bootfs_test("processor-bootfs-test") {
+  name = "processor-test"
   deps = [ ":processor" ]
-
-  tests = [
-    {
-      name = "processor-test"
-    },
-  ]
 }

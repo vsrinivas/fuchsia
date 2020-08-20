@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -35,13 +35,7 @@ test("region-alloc") {
   ]
 }
 
-unittest_package("region-alloc-package") {
-  package_name = "region-alloc"
+bootfs_test("region-alloc-bootfs-test") {
+  name = "region-alloc-test"
   deps = [ ":region-alloc" ]
-
-  tests = [
-    {
-      name = "region-alloc-test"
-    },
-  ]
 }

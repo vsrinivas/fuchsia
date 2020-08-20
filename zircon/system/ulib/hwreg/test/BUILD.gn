@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -61,24 +61,12 @@ test("libhwreg-i2c") {
   ]
 }
 
-unittest_package("libhwreg-package") {
-  package_name = "libhwreg"
-  deps = [ ":libhwreg" ]
-
-  tests = [
-    {
-      name = "libhwreg-test"
-    },
-  ]
+bootfs_test("libhwreg-i2c-bootfs-test") {
+  name = "libhwreg-i2c-test"
+  deps = [ ":libhwreg-i2c" ]
 }
 
-unittest_package("libhwreg-i2c-package") {
-  package_name = "libhwreg-i2c"
-  deps = [ ":libhwreg-i2c" ]
-
-  tests = [
-    {
-      name = "libhwreg-i2c-test"
-    },
-  ]
+bootfs_test("libhwreg-bootfs-test") {
+  name = "libhwreg-test"
+  deps = [ ":libhwreg" ]
 }

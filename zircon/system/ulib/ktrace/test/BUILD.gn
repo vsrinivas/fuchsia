@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -44,13 +44,7 @@ test("ktrace-test") {
   ]
 }
 
-unittest_package("ktrace-test-package") {
-  package_name = "ktrace-test"
+bootfs_test("ktrace-test-bootfs-test") {
+  name = "ktrace-test"
   deps = [ ":ktrace-test" ]
-
-  tests = [
-    {
-      name = "ktrace-test"
-    },
-  ]
 }

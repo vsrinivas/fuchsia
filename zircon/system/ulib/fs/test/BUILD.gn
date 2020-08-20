@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/fuzzing/fuzzer.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 group("test") {
   testonly = true
   deps = [
@@ -111,24 +111,12 @@ fuzzer("vmo_file-fuzzer") {
   deps = [ "//zircon/system/ulib/fs" ]
 }
 
-unittest_package("fs-connection-package") {
-  package_name = "fs-connection"
+bootfs_test("fs-connection-bootfs-test") {
+  name = "fs-connection-test"
   deps = [ ":fs-connection" ]
-
-  tests = [
-    {
-      name = "fs-connection-test"
-    },
-  ]
 }
 
-unittest_package("fs-vnode-package") {
-  package_name = "fs-vnode"
+bootfs_test("fs-vnode-bootfs-test") {
+  name = "fs-vnode-test"
   deps = [ ":fs-vnode" ]
-
-  tests = [
-    {
-      name = "fs-vnode-test"
-    },
-  ]
 }

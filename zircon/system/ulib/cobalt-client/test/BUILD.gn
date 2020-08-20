@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -99,13 +99,7 @@ test("cobalt-client-unit") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-unittest_package("cobalt-client-unit-package") {
-  package_name = "cobalt-client-unit"
+bootfs_test("cobalt-client-unit-bootfs-test") {
+  name = "cobalt-client-unit-test"
   deps = [ ":cobalt-client-unit" ]
-
-  tests = [
-    {
-      name = "cobalt-client-unit-test"
-    },
-  ]
 }

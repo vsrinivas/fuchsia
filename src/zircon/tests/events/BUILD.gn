@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("events") {
   output_name = "events-test"
@@ -19,13 +19,7 @@ test("events") {
   libs = [ "zircon" ]
 }
 
-unittest_package("events-package") {
-  package_name = "events"
+bootfs_test("events-bootfs-test") {
+  name = "events-test"
   deps = [ ":events" ]
-
-  tests = [
-    {
-      name = "events-test"
-    },
-  ]
 }

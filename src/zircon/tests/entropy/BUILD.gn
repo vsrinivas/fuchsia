@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("entropy") {
   output_name = "entropy-test"
@@ -17,13 +17,7 @@ test("entropy") {
   ]
 }
 
-unittest_package("entropy-package") {
-  package_name = "entropy"
+bootfs_test("entropy-bootfs-test") {
+  name = "entropy-test"
   deps = [ ":entropy" ]
-
-  tests = [
-    {
-      name = "entropy-test"
-    },
-  ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("device-enumeration") {
   output_name = "device-enumeration-test"
@@ -38,13 +38,7 @@ test("device-enumeration") {
   ]
 }
 
-unittest_package("device-enumeration-package") {
-  package_name = "device-enumeration"
+bootfs_test("device-enumeration-bootfs-test") {
+  name = "device-enumeration-test"
   deps = [ ":device-enumeration" ]
-
-  tests = [
-    {
-      name = "device-enumeration-test"
-    },
-  ]
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("policy") {
   output_name = "policy-test"
@@ -26,13 +26,7 @@ test("policy") {
   ]
 }
 
-unittest_package("policy-package") {
-  package_name = "policy"
+bootfs_test("policy-bootfs-test") {
+  name = "policy-test"
   deps = [ ":policy" ]
-
-  tests = [
-    {
-      name = "policy-test"
-    },
-  ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("core-display") {
   output_name = "core-display-test"
@@ -35,13 +35,7 @@ test("core-display") {
   ]
 }
 
-unittest_package("core-display-package") {
-  package_name = "core-display"
+bootfs_test("core-display-bootfs-test") {
+  name = "core-display-test"
   deps = [ ":core-display" ]
-
-  tests = [
-    {
-      name = "core-display-test"
-    },
-  ]
 }

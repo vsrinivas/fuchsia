@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 config("unused") {
   cflags = [ "-Wno-unneeded-internal-declaration" ]
@@ -45,13 +45,7 @@ group("test") {
   deps = [ ":lockdep-test" ]
 }
 
-unittest_package("lockdep-test-package") {
-  package_name = "lockdep-test"
+bootfs_test("lockdep-test-bootfs-test") {
+  name = "lockdep-test-test"
   deps = [ ":lockdep-test" ]
-
-  tests = [
-    {
-      name = "lockdep-test-test"
-    },
-  ]
 }

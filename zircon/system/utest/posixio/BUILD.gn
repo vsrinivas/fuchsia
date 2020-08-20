@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("posixio") {
   output_name = "posixio-test"
@@ -25,13 +25,7 @@ test("posixio") {
   ]
 }
 
-unittest_package("posixio-package") {
-  package_name = "posixio"
+bootfs_test("posixio-bootfs-test") {
+  name = "posixio-test"
   deps = [ ":posixio" ]
-
-  tests = [
-    {
-      name = "posixio-test"
-    },
-  ]
 }

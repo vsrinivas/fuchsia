@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/unification/zbi/bootfs_test.gni")
 
 test("vdso") {
@@ -19,17 +18,6 @@ test("vdso") {
   ]
 }
 
-unittest_package("vdso-package") {
-  package_name = "vdso"
-  deps = [ ":vdso" ]
-
-  tests = [
-    {
-      name = "vdso-test"
-    },
-  ]
-}
-
 test("vdso-base") {
   output_name = "vdso-base-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -39,17 +27,6 @@ test("vdso-base") {
     "//zircon/public/lib/zxtest",
   ]
   libs = [ "zircon" ]
-}
-
-unittest_package("vdso-base-package") {
-  package_name = "vdso-base"
-  deps = [ ":vdso-base" ]
-
-  tests = [
-    {
-      name = "vdso-base-test"
-    },
-  ]
 }
 
 test("vdso-variant") {
@@ -75,4 +52,14 @@ executable("vdso-variant-helper") {
 bootfs_test("vdso-variant-bootfs-test") {
   name = "vdso-variant"
   deps = [ ":vdso-variant" ]
+}
+
+bootfs_test("vdso-base-bootfs-test") {
+  name = "vdso-base-test"
+  deps = [ ":vdso-base" ]
+}
+
+bootfs_test("vdso-bootfs-test") {
+  name = "vdso-test"
+  deps = [ ":vdso" ]
 }

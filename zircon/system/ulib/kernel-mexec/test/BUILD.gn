@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -48,13 +48,7 @@ test("kernel-mexec-test") {
   ]
 }
 
-unittest_package("kernel-mexec-test-package") {
-  package_name = "kernel-mexec-test"
+bootfs_test("kernel-mexec-test-bootfs-test") {
+  name = "kernel-mexec-test-test"
   deps = [ ":kernel-mexec-test" ]
-
-  tests = [
-    {
-      name = "kernel-mexec-test-test"
-    },
-  ]
 }

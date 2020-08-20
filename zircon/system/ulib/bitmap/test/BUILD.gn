@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 group("test") {
@@ -52,13 +52,7 @@ fuzzer("raw-bitmap-fuzzer") {
   deps = [ "//zircon/public/lib/bitmap" ]
 }
 
-unittest_package("bitmap-package") {
-  package_name = "bitmap"
+bootfs_test("bitmap-bootfs-test") {
+  name = "bitmap-test"
   deps = [ ":bitmap" ]
-
-  tests = [
-    {
-      name = "bitmap-test"
-    },
-  ]
 }

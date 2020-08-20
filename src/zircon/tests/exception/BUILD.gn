@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("exception") {
   output_name = "exception-test"
@@ -24,13 +24,7 @@ test("exception") {
   ]
 }
 
-unittest_package("exception-package") {
-  package_name = "exception"
+bootfs_test("exception-bootfs-test") {
+  name = "exception-test"
   deps = [ ":exception" ]
-
-  tests = [
-    {
-      name = "exception-test"
-    },
-  ]
 }

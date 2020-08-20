@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -31,13 +31,7 @@ test("id_allocator-test") {
   ]
 }
 
-unittest_package("id-allocator-package") {
-  package_name = "id-allocator"
+bootfs_test("id_allocator-test-bootfs-test") {
+  name = "id_allocator-test"
   deps = [ ":id_allocator-test" ]
-
-  tests = [
-    {
-      name = "id_allocator-test"
-    },
-  ]
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("timers") {
   output_name = "timers-test"
@@ -25,13 +25,7 @@ test("timers") {
   ]
 }
 
-unittest_package("timers-package") {
-  package_name = "timers"
+bootfs_test("timers-bootfs-test") {
+  name = "timers-test"
   deps = [ ":timers" ]
-
-  tests = [
-    {
-      name = "timers-test"
-    },
-  ]
 }

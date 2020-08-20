@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -52,13 +52,7 @@ test("fvm-unit") {
   }
 }
 
-unittest_package("fvm-unit-package") {
-  package_name = "fvm-unit"
+bootfs_test("fvm-unit-bootfs-test") {
+  name = "fvm-unit-test"
   deps = [ ":fvm-unit" ]
-
-  tests = [
-    {
-      name = "fvm-unit-test"
-    },
-  ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -52,13 +52,7 @@ test("async") {
   ]
 }
 
-unittest_package("async-package") {
-  package_name = "async"
+bootfs_test("async-bootfs-test") {
+  name = "async-test"
   deps = [ ":async" ]
-
-  tests = [
-    {
-      name = "async-test"
-    },
-  ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("int-types") {
   output_name = "int-types-test"
@@ -41,13 +41,7 @@ config("config") {
   cflags = [ "-Wno-type-limits" ]
 }
 
-unittest_package("int-types-package") {
-  package_name = "int-types"
+bootfs_test("int-types-bootfs-test") {
+  name = "int-types-test"
   deps = [ ":int-types" ]
-
-  tests = [
-    {
-      name = "int-types-test"
-    },
-  ]
 }

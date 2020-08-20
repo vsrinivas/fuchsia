@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -46,13 +46,7 @@ test("digest") {
   ]
 }
 
-unittest_package("digest-package") {
-  package_name = "digest"
+bootfs_test("digest-bootfs-test") {
+  name = "digest-test"
   deps = [ ":digest" ]
-
-  tests = [
-    {
-      name = "digest-test"
-    },
-  ]
 }

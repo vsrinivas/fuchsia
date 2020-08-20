@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 group("test") {
@@ -49,13 +49,7 @@ fuzzer("utf_conversion-fuzzer") {
   deps = [ "//zircon/system/ulib/utf_conversion" ]
 }
 
-unittest_package("utf-conversion-package") {
-  package_name = "utf-conversion"
+bootfs_test("utf_conversion-test-bootfs-test") {
+  name = "utf_conversion-test"
   deps = [ ":utf_conversion-test" ]
-
-  tests = [
-    {
-      name = "utf_conversion-test"
-    },
-  ]
 }

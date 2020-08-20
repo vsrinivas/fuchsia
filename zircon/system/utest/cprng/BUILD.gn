@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("cprng") {
   output_name = "cprng-test"
@@ -25,13 +25,7 @@ test("cprng") {
   ]
 }
 
-unittest_package("cprng-package") {
-  package_name = "cprng"
+bootfs_test("cprng-bootfs-test") {
+  name = "cprng-test"
   deps = [ ":cprng" ]
-
-  tests = [
-    {
-      name = "cprng-test"
-    },
-  ]
 }

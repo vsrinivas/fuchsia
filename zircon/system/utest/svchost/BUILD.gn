@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("svchost") {
   output_name = "svchost-test"
@@ -29,13 +29,7 @@ test("svchost") {
   ]
 }
 
-unittest_package("svchost-package") {
-  package_name = "svchost"
+bootfs_test("svchost-bootfs-test") {
+  name = "svchost-test"
   deps = [ ":svchost" ]
-
-  tests = [
-    {
-      name = "svchost-test"
-    },
-  ]
 }

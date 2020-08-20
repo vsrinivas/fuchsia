@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("miscsvc") {
   output_name = "miscsvc-test"
@@ -27,13 +27,7 @@ test("miscsvc") {
   ]
 }
 
-unittest_package("miscsvc-package") {
-  package_name = "miscsvc"
+bootfs_test("miscsvc-bootfs-test") {
+  name = "miscsvc-test"
   deps = [ ":miscsvc" ]
-
-  tests = [
-    {
-      name = "miscsvc-test"
-    },
-  ]
 }

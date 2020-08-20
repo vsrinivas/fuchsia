@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -32,17 +32,6 @@ test("backtrace-request") {
   ]
 }
 
-unittest_package("backtrace-request-package") {
-  package_name = "backtrace-request"
-  deps = [ ":backtrace-request" ]
-
-  tests = [
-    {
-      name = "backtrace-request-test"
-    },
-  ]
-}
-
 # Integration test for requesting a backtrace.
 #
 # Related unittests exist alongside the backtrace and crashsvc code, but
@@ -58,13 +47,12 @@ test("backtrace-request-integration") {
   ]
 }
 
-unittest_package("backtrace-request-integration-package") {
-  package_name = "backtrace-request-integration"
+bootfs_test("backtrace-request-integration-bootfs-test") {
+  name = "backtrace-request-integration-test"
   deps = [ ":backtrace-request-integration" ]
+}
 
-  tests = [
-    {
-      name = "backtrace-request-integration-test"
-    },
-  ]
+bootfs_test("backtrace-request-bootfs-test") {
+  name = "backtrace-request-test"
+  deps = [ ":backtrace-request" ]
 }

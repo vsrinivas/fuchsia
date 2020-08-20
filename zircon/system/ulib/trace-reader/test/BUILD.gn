@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("trace-reader-test") {
   output_name = "trace-reader-test-test"
@@ -51,13 +51,7 @@ group("test") {
   deps = [ ":trace-reader-test" ]
 }
 
-unittest_package("trace-reader-test-package") {
-  package_name = "trace-reader-test"
+bootfs_test("trace-reader-test-bootfs-test") {
+  name = "trace-reader-test-test"
   deps = [ ":trace-reader-test" ]
-
-  tests = [
-    {
-      name = "trace-reader-test-test"
-    },
-  ]
 }

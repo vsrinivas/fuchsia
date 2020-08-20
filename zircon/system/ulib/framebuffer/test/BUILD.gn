@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("framebuffer-test") {
   output_name = "framebuffer-test-test"
@@ -40,13 +40,7 @@ group("test") {
   deps = [ ":framebuffer-test" ]
 }
 
-unittest_package("framebuffer-test-package") {
-  package_name = "framebuffer-test"
+bootfs_test("framebuffer-test-bootfs-test") {
+  name = "framebuffer-test-test"
   deps = [ ":framebuffer-test" ]
-
-  tests = [
-    {
-      name = "framebuffer-test-test"
-    },
-  ]
 }

@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 group("test") {
   testonly = true
   deps = [ ":service-proxy-dir" ]
@@ -52,13 +52,7 @@ fidl("fidl.test.echo") {
   sources = [ "echo.test.fidl" ]
 }
 
-unittest_package("service-proxy-dir-package") {
-  package_name = "service-proxy-dir"
+bootfs_test("service-proxy-dir-bootfs-test") {
+  name = "service-proxy-dir-test"
   deps = [ ":service-proxy-dir" ]
-
-  tests = [
-    {
-      name = "service-proxy-dir-test"
-    },
-  ]
 }

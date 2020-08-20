@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -80,24 +80,12 @@ test("fzl") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-unittest_package("fzl-package") {
-  package_name = "fzl"
+bootfs_test("fzl-bootfs-test") {
+  name = "fzl-test"
   deps = [ ":fzl" ]
-
-  tests = [
-    {
-      name = "fzl-test"
-    },
-  ]
 }
 
-unittest_package("fzl-zxtest-package") {
-  package_name = "fzl-zxtest"
+bootfs_test("fzl-zxtest-bootfs-test") {
+  name = "fzl-zxtest-test"
   deps = [ ":fzl-zxtest" ]
-
-  tests = [
-    {
-      name = "fzl-zxtest-test"
-    },
-  ]
 }

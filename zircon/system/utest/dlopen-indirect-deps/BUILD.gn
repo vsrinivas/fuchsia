@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("dlopen-indirect-deps") {
   output_name = "dlopen-indirect-deps-test"
@@ -60,13 +60,7 @@ shared_library("dlopen-indirect-deps-test-libb") {
   sources = [ "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c" ]
 }
 
-unittest_package("dlopen-indirect-deps-package") {
-  package_name = "dlopen-indirect-deps"
+bootfs_test("dlopen-indirect-deps-bootfs-test") {
+  name = "dlopen-indirect-deps-test"
   deps = [ ":dlopen-indirect-deps" ]
-
-  tests = [
-    {
-      name = "dlopen-indirect-deps-test"
-    },
-  ]
 }

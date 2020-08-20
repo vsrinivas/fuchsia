@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
@@ -107,18 +106,12 @@ config("shadow") {
   cflags_cc = [ "-Wshadow" ]
 }
 
-unittest_package("fit-unittest-package") {
-  package_name = "fit-unittest"
-  deps = [ ":fit-unittest" ]
-
-  tests = [
-    {
-      name = "fit-unittest-test"
-    },
-  ]
-}
-
 bootfs_test("fit-bootfs-test") {
   name = "fit"
   deps = [ ":fit" ]
+}
+
+bootfs_test("fit-unittest-bootfs-test") {
+  name = "fit-unittest-test"
+  deps = [ ":fit-unittest" ]
 }

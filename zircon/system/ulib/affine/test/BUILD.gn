@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -58,13 +58,7 @@ fuzzer("affine-fuzzer") {
   deps = [ "//zircon/public/lib/affine" ]
 }
 
-unittest_package("affine-package") {
-  package_name = "affine"
+bootfs_test("affine-bootfs-test") {
+  name = "affine-test"
   deps = [ ":affine" ]
-
-  tests = [
-    {
-      name = "affine-test"
-    },
-  ]
 }

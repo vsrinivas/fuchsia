@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 test("thread-safe-deleter") {
   output_name = "thread-safe-deleter-test"
@@ -29,13 +29,7 @@ test("thread-safe-deleter") {
   ]
 }
 
-unittest_package("thread-safe-deleter-package") {
-  package_name = "thread-safe-deleter"
+bootfs_test("thread-safe-deleter-bootfs-test") {
+  name = "thread-safe-deleter-test"
   deps = [ ":thread-safe-deleter" ]
-
-  tests = [
-    {
-      name = "thread-safe-deleter-test"
-    },
-  ]
 }

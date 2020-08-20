@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -45,13 +45,7 @@ test("libfs-pty-test") {
   ]
 }
 
-unittest_package("libfs-pty-test-package") {
-  package_name = "libfs-pty-test"
+bootfs_test("libfs-pty-test-bootfs-test") {
+  name = "libfs-pty-test-test"
   deps = [ ":libfs-pty-test" ]
-
-  tests = [
-    {
-      name = "libfs-pty-test-test"
-    },
-  ]
 }

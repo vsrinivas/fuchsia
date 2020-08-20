@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("psutils") {
   testonly = true
@@ -49,24 +49,12 @@ test("handles") {
   ]
 }
 
-unittest_package("ps-package") {
-  package_name = "ps"
-  deps = [ ":ps" ]
-
-  tests = [
-    {
-      name = "ps-test"
-    },
-  ]
+bootfs_test("handles-bootfs-test") {
+  name = "handles-test"
+  deps = [ ":handles" ]
 }
 
-unittest_package("handles-package") {
-  package_name = "handles"
-  deps = [ ":handles" ]
-
-  tests = [
-    {
-      name = "handles-test"
-    },
-  ]
+bootfs_test("ps-bootfs-test") {
+  name = "ps-test"
+  deps = [ ":ps" ]
 }

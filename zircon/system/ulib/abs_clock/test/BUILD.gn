@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -41,13 +41,7 @@ test("abs_clock_test") {
   ]
 }
 
-unittest_package("abs-clock-test-package") {
-  package_name = "abs-clock-test"
+bootfs_test("abs_clock_test-bootfs-test") {
+  name = "abs_clock_test"
   deps = [ ":abs_clock_test" ]
-
-  tests = [
-    {
-      name = "abs_clock_test"
-    },
-  ]
 }
