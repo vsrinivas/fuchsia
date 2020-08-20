@@ -11,8 +11,9 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "signal-hook"
-version = "0.1.13"
+version = "0.1.16"
 authors = ["Michal 'vorner' Vaner <vorner@vorner.cz>"]
 description = "Unix signal handling"
 documentation = "https://docs.rs/signal-hook"
@@ -33,12 +34,23 @@ version = "~0.2"
 version = "~0.6"
 optional = true
 
+[dependencies.mio_0_7]
+version = "~0.7"
+features = ["os-util"]
+optional = true
+package = "mio"
+
 [dependencies.signal-hook-registry]
 version = "~1.2"
 
 [dependencies.tokio-reactor]
 version = "~0.1"
 optional = true
+[dev-dependencies.mio_0_7]
+version = "~0.7"
+features = ["os-poll", "os-util"]
+package = "mio"
+
 [dev-dependencies.tokio]
 version = "~0.1"
 
@@ -46,6 +58,7 @@ version = "~0.1"
 version = "~0.8"
 
 [features]
+mio-0_7-support = ["mio_0_7"]
 mio-support = ["mio"]
 tokio-support = ["futures", "mio-support", "tokio-reactor"]
 [badges.maintenance]

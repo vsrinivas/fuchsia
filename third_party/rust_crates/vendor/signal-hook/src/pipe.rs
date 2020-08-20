@@ -79,7 +79,7 @@ use std::os::unix::io::{AsRawFd, RawFd};
 
 use libc::{self, c_int};
 
-use SigId;
+use crate::SigId;
 
 struct OwnedFd(RawFd);
 
@@ -134,6 +134,9 @@ pub(crate) fn wake(pipe: RawFd) {
 ///
 /// In this case, the pipe is taken as the `RawFd`. It is still the caller's responsibility to
 /// close it.
+///
+/// Note that passing the wrong file descriptor won't cause UB, but can still lead to severe bugs ‒
+/// like data corruptions in files.
 pub fn register_raw(signal: c_int, pipe: RawFd) -> Result<SigId, Error> {
     // A trick here:
     // We want to set the FD non-blocking. But it belongs to the caller. Therefore, we make our own
@@ -145,7 +148,7 @@ pub fn register_raw(signal: c_int, pipe: RawFd) -> Result<SigId, Error> {
     let duped = OwnedFd(duped);
     duped.set_flags()?;
     let action = move || wake(duped.as_raw_fd());
-    unsafe { ::register(signal, action) }
+    unsafe { crate::register(signal, action) }
 }
 
 /// Registers a write to a self-pipe whenever there's the signal.

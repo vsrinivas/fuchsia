@@ -195,7 +195,7 @@ petgraph = "0.5.1"
 proc-macro2 = "1.0.9"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
-signal-hook = "0.1.13"
+signal-hook = "0.1.16"
 simplelog = "0.7.5"
 smol = "0.1.11"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
@@ -219,6 +219,7 @@ js-sys = { path = "tiny_mirrors/js-sys" }
 libm = { path = "tiny_mirrors/libm" }
 memchr = { path = "tiny_mirrors/memchr" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
+ntapi = { path = "tiny_mirrors/ntapi" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }

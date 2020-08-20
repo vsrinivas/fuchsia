@@ -534,7 +534,7 @@ if (current_os == "fuchsia") {
 }
 if (!(current_os == "fuchsia")) {
   group("signal-hook") {
-    deps = [ ":signal-hook-v0_1_13" ]
+    deps = [ ":signal-hook-v0_1_16" ]
   }
 }
 if (!(current_os == "fuchsia")) {
@@ -7265,10 +7265,10 @@ rust_library("sharded-slab-v0_0_9") {
   ]
 }
 
-rust_library("signal-hook-v0_1_13") {
+rust_library("signal-hook-v0_1_16") {
   crate_name = "signal_hook"
   crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
-  output_name = "signal_hook-95886d608472996a"
+  output_name = "signal_hook-37c66c596290553a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7282,9 +7282,9 @@ rust_library("signal-hook-v0_1_13") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=95886d608472996a",
-    "-Cextra-filename=-95886d608472996a",
+    "--edition=2018",
+    "-Cmetadata=37c66c596290553a",
+    "-Cextra-filename=-37c66c596290553a",
   ]
 }
 

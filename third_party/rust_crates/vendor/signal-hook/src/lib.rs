@@ -1,5 +1,5 @@
 #![doc(
-    html_root_url = "https://docs.rs/signal-hook/0.1.13/signal-hook/",
+    html_root_url = "https://docs.rs/signal-hook/0.1.16/signal-hook/",
     test(attr(deny(warnings))),
     test(attr(allow(bare_trait_objects, unknown_lints)))
 )]
@@ -142,7 +142,9 @@
 //! # Features
 //!
 //! * `mio-support`: The [`Signals` iterator](iterator/struct.Signals.html) becomes pluggable into
-//!   mio.
+//!   mio 0.6.
+//! * `mio-0_7-support`: The [`Signals` iterator](iterator/struct.Signals.html) becomes pluggable into
+//!   mio 0.7.
 //! * `tokio-support`: The [`Signals`](iterator/struct.Signals.html) can be turned into
 //!   [`Async`](iterator/struct.Async.html), which provides a `Stream` interface for integration in
 //!   the asynchronous world.
@@ -152,6 +154,8 @@ extern crate futures;
 extern crate libc;
 #[cfg(feature = "mio-support")]
 extern crate mio;
+#[cfg(any(test, feature = "mio-0_7-support"))]
+extern crate mio_0_7;
 extern crate signal_hook_registry;
 #[cfg(feature = "tokio-support")]
 extern crate tokio_reactor;

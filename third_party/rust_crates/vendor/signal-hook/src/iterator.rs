@@ -60,8 +60,7 @@ use std::sync::{Arc, Mutex};
 
 use libc::{self, c_int};
 
-use pipe;
-use SigId;
+use crate::SigId;
 
 /// Maximal signal number we support.
 const MAX_SIGNUM: usize = 128;
@@ -77,7 +76,19 @@ struct Waker {
 impl Waker {
     /// Sends a wakeup signal to the internal wakeup pipe.
     fn wake(&self) {
-        pipe::wake(self.write.as_raw_fd());
+        unsafe {
+            // See the comment at pipe::write.
+            //
+            // We don't use pipe::write, because it expects the FD to be already in non-blocking
+            // mode. That's because it needs to support actual pipes. We can afford send here,
+            // which has flags.
+            libc::send(
+                self.write.as_raw_fd(),
+                b"X" as *const _ as *const _,
+                1,
+                libc::MSG_DONTWAIT,
+            );
+        }
     }
 }
 
@@ -88,7 +99,7 @@ impl Drop for RegisteredSignals {
     fn drop(&mut self) {
         let lock = self.0.lock().unwrap();
         for id in lock.iter().filter_map(|s| *s) {
-            ::unregister(id);
+            crate::unregister(id);
         }
     }
 }
@@ -138,9 +149,9 @@ impl Drop for RegisteredSignals {
 ///
 /// # `mio` support
 ///
-/// If the crate is compiled with the `mio-support` flag, the `Signals` becomes pluggable into
-/// `mio` (it implements the `Evented` trait). If it becomes readable, there may be new signals to
-/// pick up. The structure is expected to be registered with level triggered mode.
+/// If the crate is compiled with the `mio-support` or `mio-0_7-support` flags, the `Signals`
+/// becomes pluggable into `mio` version `0.6` or `0.7` respectively (it implements the `Source`
+/// trait). If it becomes readable, there may be new signals to pick up.
 ///
 /// # `tokio` support
 ///
@@ -216,7 +227,7 @@ impl Signals {
             waker.pending[signal as usize].store(true, Ordering::SeqCst);
             waker.wake();
         };
-        let id = unsafe { ::register(signal, action) }?;
+        let id = unsafe { crate::register(signal, action) }?;
         lock[signal as usize] = Some(id);
         Ok(())
     }
@@ -244,6 +255,19 @@ impl Signals {
                 if wait { 0 } else { libc::MSG_DONTWAIT },
             )
         };
+
+        if res > 0 {
+            unsafe {
+                // Finish draining the data in case there's more
+                while libc::recv(
+                    self.waker.read.as_raw_fd(),
+                    buff.as_mut_ptr() as *mut libc::c_void,
+                    SIZE,
+                    libc::MSG_DONTWAIT,
+                ) > 0
+                {}
+            }
+        }
 
         if self.waker.closed.load(Ordering::SeqCst) {
             // Wake any other sleeping ends
@@ -430,7 +454,6 @@ impl<'a> Iterator for Forever<'a> {
         None
     }
 }
-
 #[cfg(feature = "mio-support")]
 mod mio_support {
     use std::io::Error;
@@ -479,20 +502,86 @@ mod mio_support {
 
         #[test]
         fn mio_wakeup() {
-            let signals = Signals::new(&[::SIGUSR1]).unwrap();
+            let signals = Signals::new(&[crate::SIGUSR1]).unwrap();
             let token = Token(0);
             let poll = Poll::new().unwrap();
             poll.register(&signals, token, Ready::readable(), PollOpt::level())
                 .unwrap();
             let mut events = Events::with_capacity(10);
-            unsafe { libc::raise(::SIGUSR1) };
+            unsafe { libc::raise(crate::SIGUSR1) };
             poll.poll(&mut events, Some(Duration::from_secs(10)))
                 .unwrap();
             let event = events.iter().next().unwrap();
             assert!(event.readiness().is_readable());
             assert_eq!(token, event.token());
             let sig = signals.pending().next().unwrap();
-            assert_eq!(::SIGUSR1, sig);
+            assert_eq!(crate::SIGUSR1, sig);
+        }
+    }
+}
+
+#[cfg(any(test, feature = "mio-0_7-support"))]
+mod mio_0_7_support {
+    use std::io::Error;
+    use std::os::unix::io::AsRawFd;
+
+    use mio_0_7::event::Source;
+    use mio_0_7::unix::SourceFd;
+    use mio_0_7::{Interest, Registry, Token};
+
+    use super::Signals;
+
+    impl Source for Signals {
+        fn register(
+            &mut self,
+            registry: &Registry,
+            token: Token,
+            interest: Interest,
+        ) -> Result<(), Error> {
+            SourceFd(&self.waker.read.as_raw_fd()).register(registry, token, interest)
+        }
+
+        fn reregister(
+            &mut self,
+            registry: &Registry,
+            token: Token,
+            interest: Interest,
+        ) -> Result<(), Error> {
+            SourceFd(&self.waker.read.as_raw_fd()).reregister(registry, token, interest)
+        }
+
+        fn deregister(&mut self, registry: &Registry) -> Result<(), Error> {
+            SourceFd(&self.waker.read.as_raw_fd()).deregister(registry)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::time::Duration;
+
+        use mio_0_7::{Events, Poll};
+
+        use super::*;
+
+        #[test]
+        fn mio_wakeup() {
+            let mut signals = Signals::new(&[crate::SIGUSR1]).unwrap();
+            let mut poll = Poll::new().unwrap();
+            let token = Token(0);
+            poll.registry()
+                .register(&mut signals, token, Interest::READABLE)
+                .unwrap();
+
+            let mut events = Events::with_capacity(10);
+            unsafe { libc::raise(crate::SIGUSR1) };
+            poll.poll(&mut events, Some(Duration::from_secs(10)))
+                .unwrap();
+            let event = events.iter().next().unwrap();
+
+            assert!(event.is_readable());
+            assert_eq!(token, event.token());
+            let sig = signals.pending().next().unwrap();
+            assert_eq!(crate::SIGUSR1, sig);
         }
     }
 }

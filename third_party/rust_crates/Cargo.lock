@@ -2779,9 +2779,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.1.13"
+version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10b9f3a1686a29f53cfd91ee5e3db3c12313ec02d33765f02c1a9645a1811e2c"
+checksum = "604508c1418b99dfe1925ca9224829bb2a8a9a04dda655cc01fcad46f4ab05ed"
 dependencies = [
  "libc",
  "signal-hook-registry",
@@ -3680,6 +3680,10 @@ version = "0.1.99"
 [[patch.unused]]
 name = "js-sys"
 version = "0.3.37"
+
+[[patch.unused]]
+name = "ntapi"
+version = "0.3.4"
 
 [[patch.unused]]
 name = "pkg-config"
