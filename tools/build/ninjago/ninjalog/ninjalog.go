@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,6 +40,35 @@ type Step struct {
 // Duration reports step's duration.
 func (s Step) Duration() time.Duration {
 	return s.End - s.Start
+}
+
+var toSkip = map[string]bool{
+	"bin": true,
+	"env": true,
+	// This is a binary wrapper for invoking host binaries produced by the build.
+	"gn_run_binary.sh": true,
+}
+
+// category returns a comma separate list of executed commands.
+func (s Step) Category() string {
+	if s.Command == nil {
+		return "unknown"
+	}
+	var categories []string
+	// TODO(jayzhuang): use github.com/google/shlex instead.
+	for _, command := range strings.Split(strings.Replace(s.Command.Command, " || ", " && ", -1), " && ") {
+		var cmd string
+		for _, token := range strings.Split(strings.TrimSpace(command), " ") {
+			cmd = strings.Trim(path.Base(token), "()")
+			if !toSkip[cmd] {
+				break
+			}
+		}
+		if cmd != "" {
+			categories = append(categories, cmd)
+		}
+	}
+	return strings.Join(categories, ",")
 }
 
 // Steps is a list of Step.

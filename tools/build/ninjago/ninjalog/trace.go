@@ -28,9 +28,9 @@ func (t traceByStart) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
 func (t traceByStart) Less(i, j int) bool { return t[i].Timestamp < t[j].Timestamp }
 
 func toTrace(step Step, pid int, tid int) Trace {
-	return Trace{
+	tr := Trace{
 		Name:      step.Out,
-		Category:  "target",
+		Category:  step.Category(),
 		EventType: "X",
 		Timestamp: int(step.Start.Nanoseconds() / 1000),
 		Duration:  int(step.Duration().Nanoseconds() / 1000),
@@ -38,6 +38,10 @@ func toTrace(step Step, pid int, tid int) Trace {
 		ThreadID:  tid,
 		Args:      make(map[string]interface{}),
 	}
+	if step.Command != nil {
+		tr.Args["command"] = step.Command.Command
+	}
+	return tr
 }
 
 // ToTraces converts Flow outputs into trace log.

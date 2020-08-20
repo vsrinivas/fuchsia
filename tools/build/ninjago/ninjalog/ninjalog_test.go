@@ -591,3 +591,43 @@ func BenchmarkDedupFlowToTraces(b *testing.B) {
 		ToTraces(flow, 1)
 	}
 }
+
+func TestCategory(t *testing.T) {
+	for _, tc := range []struct {
+		step Step
+		want string
+	}{
+		{
+			step: Step{},
+			want: "unknown",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "touch obj/third_party/cobalt/src/lib/client/rust/cobalt-client.inputs.stamp",
+				},
+			},
+			want: "touch",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "ln -f ../../zircon/third_party/ulib/musl/include/libgen.h zircon_toolchain/obj/zircon/public/sysroot/sysroot/include/libgen.h 2>/dev/null || (rm -rf zircon_toolchain/obj/zircon/public/sysroot/sysroot/include/libgen.h && cp -af ../../zircon/third_party/ulib/musl/include/libgen.h zircon_toolchain/obj/zircon/public/sysroot/sysroot/include/libgen.h)",
+				},
+			},
+			want: "ln,rm,cp",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "/usr/bin/env ../../build/gn_run_binary.sh ../../prebuilt/third_party/clang/linux-x64/bin host_x64/fidlgen_rust --json fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fuchsia.wlan.product.deprecatedconfiguration.fidl.json --output-filename fidling/gen/sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration/fidl_fuchsia_wlan_product_deprecatedconfiguration.rs --rustfmt /home/jayzhuang/fuchsia/prebuilt/third_party/rust_tools/linux-x64/bin/rustfmt",
+				},
+			},
+			want: "fidlgen_rust",
+		},
+	} {
+		if got := tc.step.Category(); got != tc.want {
+			t.Errorf("Category() = %s, want: %s, step: %#v", got, tc.want, tc.step)
+		}
+	}
+}

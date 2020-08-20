@@ -12,6 +12,9 @@ go_library("ninjalog") {
 if (is_host) {
   go_test("ninjalog_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog" ]
-    deps = [ ":ninjalog" ]
+    deps = [
+      ":ninjalog",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
   }
 }
