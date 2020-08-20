@@ -96,11 +96,22 @@ TEST(BlkdevTests, blkdev_test_bad_requests) {
 
   // Read / write non-multiples of the block size
   ASSERT_EQ(write(fd.get(), buf.get(), blk_size - 1), -1);
+  EXPECT_EQ(errno, EINVAL);
   ASSERT_EQ(write(fd.get(), buf.get(), blk_size / 2), -1);
-  ASSERT_EQ(write(fd.get(), buf.get(), blk_size * 2 - 1), -1);
+  EXPECT_EQ(errno, EINVAL);
+  const int len = static_cast<int>(blk_size) * 2 - 1;
+  ssize_t result = write(fd.get(), buf.get(), len);
+  // Fuchsia.io will break writes up into chunks, so it's possible that a partial write succeeded,
+  // so check for an error or check for a short write that happens to be a multiple of blk_size.
+  ASSERT_TRUE((result < 0 && errno == EINVAL) || (result < len && result % blk_size == 0),
+              "result=%ld, errno=%d", result, errno);
   ASSERT_EQ(read(fd.get(), buf.get(), blk_size - 1), -1);
+  EXPECT_EQ(errno, EINVAL);
   ASSERT_EQ(read(fd.get(), buf.get(), blk_size / 2), -1);
-  ASSERT_EQ(read(fd.get(), buf.get(), blk_size * 2 - 1), -1);
+  EXPECT_EQ(errno, EINVAL);
+  result = read(fd.get(), buf.get(), blk_size * 2 - 1);
+  ASSERT_TRUE((result < 0 && errno == EINVAL) || (result < len && result % blk_size == 0),
+              "result=%ld, errno=%d", result, errno);
 
   // Read / write from unaligned offset
   ASSERT_EQ(lseek(fd.get(), 1, SEEK_SET), 1);
@@ -113,7 +124,9 @@ TEST(BlkdevTests, blkdev_test_bad_requests) {
   off_t dev_size = blk_size * blk_count;
   ASSERT_EQ(lseek(fd.get(), dev_size, SEEK_SET), dev_size);
   ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
+  EXPECT_EQ(errno, EINVAL);
   ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
+  EXPECT_EQ(errno, EINVAL);
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_no_op) {

@@ -226,5 +226,18 @@ TEST_F(BlobTest, ReadWriteAllCompressionFormats) {
   }
 }
 
+TEST_F(BlobTest, WriteErrorsAreFused) {
+  std::unique_ptr<BlobInfo> info;
+  GenerateRandomBlob("", kBlockSize * kNumBlocks, &info);
+  auto root = OpenRoot();
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Create(&file, info->path + 1, 0), ZX_OK);
+  ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+  uint64_t out_actual;
+  EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_ERR_NO_SPACE);
+  // Writing just 1 byte now should see the same error returned.
+  EXPECT_EQ(file->Write(info->data.get(), 1, 0, &out_actual), ZX_ERR_NO_SPACE);
+}
+
 }  // namespace
 }  // namespace blobfs
