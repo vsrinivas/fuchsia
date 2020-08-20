@@ -36,10 +36,12 @@ void AudioRenderer::Shutdown() {
 }
 
 void AudioRenderer::ReportStart() {
+  BaseRenderer::ReportStart();
   context().audio_admin().UpdateRendererState(usage_, true, this);
 }
 
 void AudioRenderer::ReportStop() {
+  BaseRenderer::ReportStop();
   context().audio_admin().UpdateRendererState(usage_, false, this);
 }
 

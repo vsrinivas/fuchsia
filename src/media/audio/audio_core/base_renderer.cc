@@ -104,8 +104,8 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
                                              std::move(clock_for_packet_queue));
 
-  queue->SetUnderflowReporter([this](zx::duration underflow_duration) {
-    REPORT(RendererUnderflow(*this, underflow_duration));
+  queue->SetUnderflowReporter([this](zx::time start_time, zx::time stop_time) {
+    REPORT(RendererUnderflow(*this, start_time, stop_time));
   });
   auto stream_usage = usage();
   FX_DCHECK(stream_usage) << "A renderer cannot be linked without a usage";
@@ -604,6 +604,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   }
 
   ReportStart();
+
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
 }
@@ -664,6 +665,20 @@ void BaseRenderer::PauseNoReply() {
   TRACE_DURATION("audio", "BaseRenderer::PauseNoReply");
   AUDIO_LOG_OBJ(DEBUG, this);
   Pause(nullptr);
+}
+
+void BaseRenderer::ReportStart() {
+  if (state_ == State::Paused) {
+    REPORT(RendererStartSession(*this, zx::clock::get_monotonic()));
+    state_ = State::Playing;
+  }
+}
+
+void BaseRenderer::ReportStop() {
+  if (state_ == State::Playing) {
+    REPORT(RendererStopSession(*this, zx::clock::get_monotonic()));
+    state_ = State::Paused;
+  }
 }
 
 void BaseRenderer::OnLinkAdded() { RecomputeMinLeadTime(); }

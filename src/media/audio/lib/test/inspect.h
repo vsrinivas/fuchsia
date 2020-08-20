@@ -15,13 +15,22 @@ namespace media::audio::test {
 
 // Describes a set of properties that must exist at an inspect node.
 struct ExpectedInspectProperties {
+  std::unordered_map<std::string, ExpectedInspectProperties> children;
   std::unordered_map<std::string, double> double_values;
   std::unordered_map<std::string, uint64_t> uint_values;
 
-  // Compare the properties at the given node to the expected values.
-  void Check(const std::string& path, const inspect::NodeValue& node) const {
-    DoCheck<inspect::DoublePropertyValue>(path, node, double_values);
-    DoCheck<inspect::UintPropertyValue>(path, node, uint_values);
+  // Compare the properties at the given hierachy to the expected values.
+  void Check(const std::string& path, const inspect::Hierarchy& h) const {
+    for (auto& [name, expected_child] : children) {
+      auto child = h.GetByPath({name});
+      if (!child) {
+        ADD_FAILURE() << "missing node: " << path << "[" << name << "]";
+        continue;
+      }
+      expected_child.Check(path + "/" + name, *child);
+    }
+    DoCheck<inspect::DoublePropertyValue>(path, h.node(), double_values);
+    DoCheck<inspect::UintPropertyValue>(path, h.node(), uint_values);
   }
 
  private:

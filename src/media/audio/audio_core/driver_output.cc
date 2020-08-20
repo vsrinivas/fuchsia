@@ -159,8 +159,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
                      << ") ms. Cooling down for " << kUnderflowCooldown.to_msecs()
                      << " milliseconds.";
 
-      // Use our Reporter to log this to Cobalt and Inspect, if enabled.
-      REPORT(OutputUnderflow(*this, output_underflow_duration, mono_time));
+      REPORT(OutputDeviceUnderflow(*this, mono_time, mono_time + output_underflow_duration));
 
       underflow_start_time_mono_ = mono_time;
       output_producer_->FillWithSilence(rb.virt(), rb.frames());
@@ -524,6 +523,7 @@ void DriverOutput::OnDriverStartComplete() {
                   << " mSec)";
   }
 
+  REPORT(OutputDeviceStartSession(*this, zx::clock::get_monotonic()));
   state_ = State::Started;
   Process();
 }

@@ -66,13 +66,13 @@ void HermeticAudioTest::TearDown() {
   if (disallow_underflows_) {
     for (auto& [_, device] : devices_) {
       if (device.output) {
-        device.output->expected_inspect_properties().uint_values["underflows"] = 0;
-      } else {
-        device.input->expected_inspect_properties().uint_values["underflows"] = 0;
+        auto& props = device.output->expected_inspect_properties();
+        props.children["device underflows"].uint_values["count"] = 0;
+        props.children["pipeline underflows"].uint_values["count"] = 0;
       }
     }
     for (auto& r : renderers_) {
-      r->expected_inspect_properties().uint_values["underflows"] = 0;
+      r->expected_inspect_properties().children["underflows"].uint_values["count"] = 0;
     }
   }
 
@@ -415,7 +415,7 @@ void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
     ADD_FAILURE() << "Missing inspect hierarchy for " << path_string;
     return;
   }
-  expected.Check(path_string, h->node());
+  expected.Check(path_string, *h);
 }
 
 // Explicitly instantiate all possible implementations.

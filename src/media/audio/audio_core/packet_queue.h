@@ -44,8 +44,10 @@ class PacketQueue : public ReadableStream {
 
   void PushPacket(const fbl::RefPtr<Packet>& packet);
   void Flush(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
-  /// Report duration of underflow that occured
-  void SetUnderflowReporter(fit::function<void(zx::duration)> underflow_reporter) {
+
+  // Report start and end time of underflow that occured.
+  // Times use the system monotonic clock.
+  void SetUnderflowReporter(fit::function<void(zx::time, zx::time)> underflow_reporter) {
     underflow_reporter_ = std::move(underflow_reporter);
   }
 
@@ -76,7 +78,7 @@ class PacketQueue : public ReadableStream {
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
   std::atomic<uint16_t> underflow_count_ = {0};
   std::atomic<uint16_t> partial_underflow_count_ = {0};
-  fit::function<void(zx::duration)> underflow_reporter_;
+  fit::function<void(zx::time, zx::time)> underflow_reporter_;
 
   AudioClock audio_clock_;
 };

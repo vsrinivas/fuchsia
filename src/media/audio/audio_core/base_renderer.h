@@ -74,8 +74,8 @@ class BaseRenderer : public AudioObject,
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 
-  virtual void ReportStart() {}
-  virtual void ReportStop() {}
+  virtual void ReportStart();
+  virtual void ReportStop();
   virtual void Shutdown();
 
   // Hook called when the minimum clock lead time requirement changes.
@@ -124,6 +124,9 @@ class BaseRenderer : public AudioObject,
   Fixed pause_time_frac_frames_;
   bool pause_time_frac_frames_valid_ = false;
   TimelineRate frac_frames_per_ref_tick_;
+
+  enum class State { Playing, Paused };
+  State state_ = State::Paused;
 
   // Minimum Clock Lead Time state
   bool min_lead_time_events_enabled_ = false;

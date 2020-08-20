@@ -25,7 +25,7 @@ using ::testing::IsEmpty;
 
 class ReporterTest : public testing::ThreadingModelFixture {
  public:
-  ReporterTest() { under_test_.Init(&context().component_context()); }
+  ReporterTest() : under_test_(context().component_context(), threading_model()) {}
 
   inspect::Hierarchy GetHierarchy() {
     zx::vmo duplicate = under_test_.inspector().DuplicateVmo();
@@ -176,32 +176,65 @@ TEST_F(ReporterTest, DeviceMetrics) {
   under_test_.AddingDevice("output_device", output_device);
   under_test_.AddingDevice("input_device", input_device);
 
+  // Note: GetHierachy uses ReadFromVmo, which cannot read lazy values.
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(UnorderedElementsAre(
           AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                    NameMatches("output_device"),
-                    PropertyList(UnorderedElementsAre(
-                        DoubleIs("gain db", 0.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                        UintIs("agc enabled", 0), UintIs("underflows", 0)))))))),
+                ChildrenMatch(UnorderedElementsAre(
+                    AllOf(ChildrenMatch(UnorderedElementsAre(
+                              NodeMatches(AllOf(NameMatches("device underflows"),
+                                                PropertyList(UnorderedElementsAre(
+                                                    UintIs("count", 0), UintIs("duration (ns)", 0),
+                                                    UintIs("session count", 0))))),
+                              NodeMatches(AllOf(NameMatches("pipeline underflows"),
+                                                PropertyList(UnorderedElementsAre(
+                                                    UintIs("count", 0), UintIs("duration (ns)", 0),
+                                                    UintIs("session count", 0))))))),
+                          NodeMatches(AllOf(
+                              NameMatches("output_device"),
+                              PropertyList(UnorderedElementsAre(
+                                  DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                  UintIs("agc supported", 0), UintIs("agc enabled", 0))))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("input_device"),
-                    PropertyList(UnorderedElementsAre(
-                        DoubleIs("gain db", 0.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                        UintIs("agc enabled", 0), UintIs("underflows", 0)))))))),
+                    PropertyList(UnorderedElementsAre(DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                                      UintIs("agc supported", 0),
+                                                      UintIs("agc enabled", 0)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
-  under_test_.OutputUnderflow(output_device, zx::msec(1), zx::time());
+  under_test_.OutputDeviceStartSession(output_device, zx::time(0));
+  under_test_.OutputDeviceUnderflow(output_device, zx::time(10), zx::time(15));
+  under_test_.OutputDeviceUnderflow(output_device, zx::time(25), zx::time(30));
+  under_test_.OutputDeviceStopSession(output_device, zx::time(50));
+  under_test_.OutputDeviceStartSession(output_device, zx::time(90));
+  under_test_.OutputDeviceUnderflow(output_device, zx::time(91), zx::time(92));
+  under_test_.OutputDeviceStopSession(output_device, zx::time(100));
+
+  under_test_.OutputPipelineStartSession(output_device, zx::time(0));
+  under_test_.OutputPipelineUnderflow(output_device, zx::time(90), zx::time(96));
+  under_test_.OutputPipelineStopSession(output_device, zx::time(100));
 
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("output devices")),
-          ChildrenMatch(Contains(NodeMatches(AllOf(
-              NameMatches("output_device"), PropertyList(Contains(UintIs("underflows", 1)))))))))));
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(UnorderedElementsAre(
+                  NodeMatches(AllOf(NameMatches("device underflows"),
+                                    PropertyList(UnorderedElementsAre(
+                                        UintIs("count", 3), UintIs("duration (ns)", 11),
+                                        UintIs("session count", 2))))),
+                  NodeMatches(AllOf(NameMatches("pipeline underflows"),
+                                    PropertyList(UnorderedElementsAre(
+                                        UintIs("count", 1), UintIs("duration (ns)", 6),
+                                        UintIs("session count", 1))))))),
+              NodeMatches(AllOf(NameMatches("output_device"),
+                                PropertyList(UnorderedElementsAre(
+                                    DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                    UintIs("agc supported", 0), UintIs("agc enabled", 0))))))))))));
 }
 
 // Tests method SettingDeviceGainInfo.
@@ -214,18 +247,17 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
   under_test_.AddingDevice("output_device", output_device);
 
   // Expect initial device metric values.
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                    NameMatches("output_device"),
-                    PropertyList(UnorderedElementsAre(
-                        DoubleIs("gain db", 0.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                        UintIs("agc enabled", 0), UintIs("underflows", 0)))))))),
-          AllOf(NodeMatches(NameMatches("input devices")), ChildrenMatch(IsEmpty())),
-          AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
-          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(GetHierarchy(),
+              ChildrenMatch(UnorderedElementsAre(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                            AllOf(NameMatches("output_device"),
+                                  PropertyList(UnorderedElementsAre(
+                                      DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                      UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))),
+                  AllOf(NodeMatches(NameMatches("input devices")), ChildrenMatch(IsEmpty())),
+                  AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
+                  AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
   fuchsia::media::AudioGainInfo gain_info_a{
       .gain_db = -1.0f,
@@ -237,52 +269,52 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
 
   // Expect initial device metric values.
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("output devices")),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("output_device"),
-                      PropertyList(UnorderedElementsAre(
-                          DoubleIs("gain db", 0.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                          UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("output_device"),
+                            PropertyList(UnorderedElementsAre(
+                                DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::AudioGainValidFlags::GAIN_VALID);
 
   // Expect a gain change.
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("output devices")),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("output_device"),
-                      PropertyList(UnorderedElementsAre(
-                          DoubleIs("gain db", -1.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                          UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("output_device"),
+                            PropertyList(UnorderedElementsAre(
+                                DoubleIs("gain db", -1.0), UintIs("muted", 0),
+                                UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::AudioGainValidFlags::MUTE_VALID);
 
   // Expect a mute change.
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("output devices")),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("output_device"),
-                      PropertyList(UnorderedElementsAre(
-                          DoubleIs("gain db", -1.0), UintIs("muted", 1), UintIs("agc supported", 0),
-                          UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("output_device"),
+                            PropertyList(UnorderedElementsAre(
+                                DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                                UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::AudioGainValidFlags::AGC_VALID);
 
   // Expect an agc change.
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("output devices")),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("output_device"),
-                      PropertyList(UnorderedElementsAre(
-                          DoubleIs("gain db", -1.0), UintIs("muted", 1), UintIs("agc supported", 1),
-                          UintIs("agc enabled", 1), UintIs("underflows", 0)))))))))));
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("output_device"),
+                            PropertyList(UnorderedElementsAre(
+                                DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                                UintIs("agc supported", 1), UintIs("agc enabled", 1)))))))))));
 
   fuchsia::media::AudioGainInfo gain_info_b{.gain_db = -2.0f, .flags = {}};
   under_test_.SettingDeviceGainInfo(output_device, gain_info_b,
@@ -292,13 +324,13 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
 
   // Expect all changes.
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("output devices")),
-                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                      NameMatches("output_device"),
-                      PropertyList(UnorderedElementsAre(
-                          DoubleIs("gain db", -2.0), UintIs("muted", 0), UintIs("agc supported", 0),
-                          UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("output devices")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("output_device"),
+                            PropertyList(UnorderedElementsAre(
+                                DoubleIs("gain db", -2.0), UintIs("muted", 0),
+                                UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 }
 
 // Tests methods that add and remove client ports.
@@ -374,7 +406,11 @@ TEST_F(ReporterTest, RendererMetrics) {
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("renderers")),
           ChildrenMatch(UnorderedElementsAre(AllOf(
-              ChildrenMatch(Contains(
+              ChildrenMatch(UnorderedElementsAre(
+                  NodeMatches(AllOf(NameMatches("underflows"),
+                                    PropertyList(UnorderedElementsAre(
+                                        UintIs("count", 0), UintIs("duration (ns)", 0),
+                                        UintIs("session count", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
               NodeMatches(AllOf(
                   NameMatches("1"),
@@ -382,8 +418,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("sample format", 0), UintIs("channels", 0),
                       UintIs("frames per second", 0), DoubleIs("gain db", 0.0), UintIs("muted", 0),
                       UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
-                      DoubleIs("pts continuity threshold (s)", 0.0), UintIs("underflows", 0),
-                      UintIs("total underflow duration (ns)", 0),
+                      DoubleIs("pts continuity threshold (s)", 0.0),
                       DoubleIs("final stream gain (post-volume) dbfs", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
@@ -406,20 +441,28 @@ TEST_F(ReporterTest, RendererMetrics) {
   under_test_.SettingRendererPtsContinuityThreshold(renderer, 5.0);
   under_test_.SettingRendererFinalGain(renderer, -6.0);
 
+  under_test_.RendererStartSession(renderer, zx::time(0));
+  under_test_.RendererUnderflow(renderer, zx::time(10), zx::time(15));
+  under_test_.RendererStopSession(renderer, zx::time(100));
+
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("renderers")),
           ChildrenMatch(UnorderedElementsAre(AllOf(
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("payload buffers")),
-                  ChildrenMatch(UnorderedElementsAre(
-                      NodeMatches(AllOf(NameMatches("0"),
-                                        PropertyList(UnorderedElementsAre(
-                                            UintIs("size", 4096), UintIs("packets", 0))))),
-                      NodeMatches(AllOf(NameMatches("10"),
-                                        PropertyList(UnorderedElementsAre(
-                                            UintIs("size", 8192), UintIs("packets", 1)))))))))),
+              ChildrenMatch(UnorderedElementsAre(
+                  NodeMatches(AllOf(NameMatches("underflows"),
+                                    PropertyList(UnorderedElementsAre(
+                                        UintIs("count", 1), UintIs("duration (ns)", 5),
+                                        UintIs("session count", 1))))),
+                  AllOf(NodeMatches(NameMatches("payload buffers")),
+                        ChildrenMatch(UnorderedElementsAre(
+                            NodeMatches(AllOf(NameMatches("0"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  UintIs("size", 4096), UintIs("packets", 0))))),
+                            NodeMatches(AllOf(NameMatches("10"), PropertyList(UnorderedElementsAre(
+                                                                     UintIs("size", 8192),
+                                                                     UintIs("packets", 1)))))))))),
               NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(UnorderedElementsAre(
@@ -428,8 +471,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), UintIs("muted", 1),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
-                      DoubleIs("pts continuity threshold (s)", 5.0), UintIs("underflows", 0),
-                      UintIs("total underflow duration (ns)", 0),
+                      DoubleIs("pts continuity threshold (s)", 5.0),
                       DoubleIs("final stream gain (post-volume) dbfs", -6.0))))))))))));
 }
 
