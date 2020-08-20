@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as path;
 import 'package:yaml/yaml.dart';
 
 import 'package:doc_checker/errors.dart';
@@ -49,13 +50,24 @@ class YamlChecker {
       ..remove(_rootYaml);
 
     _mdSet = <String>{}
-      ..addAll(mdFiles)
+      ..addAll(filterHidden(mdFiles))
       // Remove navbar.md since it is only used on fuchsia.googlesource.com.
       ..remove('$_rootDir/docs/navbar.md')
       // Remove docs/gen/build_arguments.md since it is generated, it is
       // accessed as a source file and not published.
       ..remove('$_rootDir/docs/gen/build_arguments.md')
       ..remove('$_rootDir/docs/gen/zircon_build_arguments.md');
+  }
+
+  /// Filters out paths that are hidden names according to
+  /// https://developers.google.com/devsite/reference/filenames?hl=en#hidden_files_single_underscore.
+  /// This function expects the input paths to already be canonicalized.
+  List<String> filterHidden(List<String> mdFiles) {
+    return mdFiles
+        .where((doc) => !path
+            .split(path.relative(doc, from: _rootDir))
+            .any((component) => component.startsWith('_')))
+        .toList();
   }
 
   /// Checks the validity of the yaml files.

@@ -37,6 +37,26 @@ void main() {
       expect(ret, equals(true));
     });
 
+    test('filter hidden directory', () {
+      YamlChecker checker = YamlChecker('/usr/docs', null, [], []);
+      final files = [
+        '/usr/docs/_hidden/a.md',
+        '/usr/docs/_hidden/b.md',
+        '/usr/docs/not_hidden/c.md',
+      ];
+      expect(
+          checker.filterHidden(files), equals(['/usr/docs/not_hidden/c.md']));
+    });
+
+    test('filter hidden file', () {
+      YamlChecker checker = YamlChecker('/usr/_foo/docs', null, [], []);
+      final files = [
+        '/usr/_foo/docs/_a.md',
+        '/usr/_foo/docs/b.md',
+      ];
+      expect(checker.filterHidden(files), equals(['/usr/_foo/docs/b.md']));
+    });
+
     test('Happy path single yaml file', () async {
       const String contents = '''toc:
 - title: Hello
