@@ -69,6 +69,28 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::AddPartition(
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
+zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::GetBootloaderPartitionClient() const {
+  auto boot0_part =
+      OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
+  if (boot0_part.is_error()) {
+    return boot0_part.take_error();
+  }
+  auto boot0 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1);
+
+  auto boot1_part =
+      OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT2_VALUE), ZX_SEC(5));
+  if (boot1_part.is_error()) {
+    return boot1_part.take_error();
+  }
+  auto boot1 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1);
+
+  std::vector<std::unique_ptr<PartitionClient>> partitions;
+  partitions.push_back(std::move(boot0));
+  partitions.push_back(std::move(boot1));
+
+  return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
+}
+
 zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
@@ -79,10 +101,8 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
   std::string_view part_name;
 
   switch (spec.partition) {
-    // TODO(zyecheng): update to handle bootloader A/B once http://fxb/52708 lands.
     case Partition::kBootloaderA:
-      part_name = GPT_BOOTLOADER_A_NAME;
-      break;
+      return GetBootloaderPartitionClient();
     case Partition::kBootloaderB:
       part_name = GPT_BOOTLOADER_B_NAME;
       break;

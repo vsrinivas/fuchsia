@@ -39,6 +39,8 @@ class LuisPartitioner : public DevicePartitioner {
  private:
   LuisPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
+  zx::status<std::unique_ptr<PartitionClient>> GetBootloaderPartitionClient() const;
+
   std::unique_ptr<GptDevicePartitioner> gpt_;
 };
 

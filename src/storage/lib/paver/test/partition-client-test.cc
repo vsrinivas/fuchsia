@@ -17,13 +17,14 @@
 
 #include <zxtest/zxtest.h>
 
-#include "src/storage/lib/paver/sherlock.h"
+#include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {
 
 using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
+using paver::BlockWatcherPauser;
 
 class FakePartitionClient final : public paver::PartitionClient {
  public:
@@ -369,12 +370,13 @@ TEST(PartitionCopyClientTest, BlockFdMultilplePartition) {
   ASSERT_EQ(client.block_fd(), fbl::unique_fd());
 }
 
-class SherlockBootloaderPartitionClientTest : public zxtest::Test {
+class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
  public:
   void SetUp() override {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
+    args.path_prefix = "/pkg/";
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
@@ -393,11 +395,22 @@ class SherlockBootloaderPartitionClientTest : public zxtest::Test {
         zx::channel(fdio_service_clone(service_channel_.get())));
   }
 
-  // Creates a SherlockBootloaderPartitionClient which will read/write using
-  // the custom sherlock bootloader logic.
-  std::unique_ptr<paver::SherlockBootloaderPartitionClient> BootloaderClient() {
-    return std::make_unique<paver::SherlockBootloaderPartitionClient>(
-        zx::channel(fdio_service_clone(service_channel_.get())));
+  // Creates a FixedOffsetBlockPartitionClient which will read/write with a block offset of 1
+  std::unique_ptr<paver::FixedOffsetBlockPartitionClient> FixedOffsetClient() {
+    return std::make_unique<paver::FixedOffsetBlockPartitionClient>(
+        zx::channel(fdio_service_clone(service_channel_.get())), 1);
+  }
+
+  zx::channel GetSvcRoot() {
+    const zx::channel& fshost_root = devmgr_.fshost_outgoing_dir();
+
+    zx::channel local, remote;
+    auto status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return zx::channel();
+    }
+    fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    return local;
   }
 
  private:
@@ -432,7 +445,10 @@ void Read(std::unique_ptr<paver::PartitionClient> client, std::string* data, siz
   ASSERT_OK(vmo.read(data->data(), 0, data->size()));
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_BootloaderPartitionSize) {
+TEST_F(FixedOffsetBlockPartitionClientTest, DISABLED_GetPartitionSize) {
+  auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
+  ASSERT_OK(pauser);
+
   {
     auto status = RawClient()->GetPartitionSize();
     ASSERT_OK(status);
@@ -440,31 +456,37 @@ TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_BootloaderPartitionSize) 
   }
 
   {
-    // Bootloader size should not count block 0.
-    auto status = BootloaderClient()->GetPartitionSize();
+    // GetPartitionSize size should not count block 0.
+    auto status = FixedOffsetClient()->GetPartitionSize();
     ASSERT_OK(status);
     ASSERT_EQ(512, status.value());
   }
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_ReadBootloaderPartition) {
+TEST_F(FixedOffsetBlockPartitionClientTest, DISABLED_ReadOffsetedPartition) {
   const std::string block0(512, '0');
   const std::string firmware(512, 'F');
+
+  auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
+  ASSERT_OK(pauser);
 
   ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + firmware));
 
   // Bootloader read should skip block 0.
   std::string actual;
-  ASSERT_NO_FATAL_FAILURES(Read(BootloaderClient(), &actual, 512));
+  ASSERT_NO_FATAL_FAILURES(Read(FixedOffsetClient(), &actual, 512));
   ASSERT_EQ(firmware, actual);
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_WriteBootloaderPartition) {
+TEST_F(FixedOffsetBlockPartitionClientTest, DISABLED_WriteOffsetdPartition) {
   const std::string block0(512, '0');
   const std::string firmware(512, 'F');
 
+  auto pauser = BlockWatcherPauser::Create(GetSvcRoot());
+  ASSERT_OK(pauser);
+
   ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + block0));
-  ASSERT_NO_FATAL_FAILURES(Write(BootloaderClient(), firmware));
+  ASSERT_NO_FATAL_FAILURES(Write(FixedOffsetClient(), firmware));
 
   // Bootloader write should have skipped block 0.
   std::string actual;

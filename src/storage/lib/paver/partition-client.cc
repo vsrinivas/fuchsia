@@ -231,6 +231,47 @@ fbl::unique_fd BlockPartitionClient::block_fd() {
   }
   return fbl::unique_fd(block_fd);
 }
+
+// The partition size does not account for the offset.
+zx::status<size_t> FixedOffsetBlockPartitionClient::GetPartitionSize() {
+  auto status_or_block_size = GetBlockSize();
+  if (status_or_block_size.is_error()) {
+    return status_or_block_size.take_error();
+  }
+  const size_t block_size = status_or_block_size.value();
+
+  auto status_or_part_size = client_.GetPartitionSize();
+  if (status_or_part_size.is_error()) {
+    return status_or_part_size.take_error();
+  }
+  const size_t full_size = status_or_part_size.value();
+
+  if (full_size < block_size * offset_in_blocks_) {
+    ERROR("Inconsistent partition size with block counts and block size\n");
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  return zx::ok(full_size - block_size * offset_in_blocks_);
+}
+
+zx::status<> FixedOffsetBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  return client_.Read(vmo, size, offset_in_blocks_);
+}
+
+zx::status<> FixedOffsetBlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+  return client_.Write(vmo, vmo_size, offset_in_blocks_);
+}
+
+zx::status<size_t> FixedOffsetBlockPartitionClient::GetBlockSize() { return client_.GetBlockSize(); }
+
+zx::status<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
+
+zx::status<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
+
+zx::channel FixedOffsetBlockPartitionClient::GetChannel() { return client_.GetChannel(); }
+
+fbl::unique_fd FixedOffsetBlockPartitionClient::block_fd() { return client_.block_fd(); }
+
 zx::status<size_t> PartitionCopyClient::GetBlockSize() {
   // Choose the lowest common multiple of all block sizes.
   size_t lcm = 1;

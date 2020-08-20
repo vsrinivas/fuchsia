@@ -86,6 +86,35 @@ class BlockPartitionClient final : public PartitionClient {
   std::optional<::llcpp::fuchsia::hardware::block::BlockInfo> block_info_;
 };
 
+// A variant of BlockPartitionClient that writes starting from a fixed offset.
+// This is for those cases where image doesn't necessarily start from the beginning of
+// the partition, (i.e. for preserving metatdata/header).
+class FixedOffsetBlockPartitionClient final : public PartitionClient {
+ public:
+  explicit FixedOffsetBlockPartitionClient(zx::channel partition, size_t offset_in_blocks)
+      : client_(std::move(partition)), offset_in_blocks_(offset_in_blocks) {}
+
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
+
+  // No copy, no move.
+  FixedOffsetBlockPartitionClient(const FixedOffsetBlockPartitionClient&) = delete;
+  FixedOffsetBlockPartitionClient& operator=(const FixedOffsetBlockPartitionClient&) = delete;
+  FixedOffsetBlockPartitionClient(FixedOffsetBlockPartitionClient&&) = delete;
+  FixedOffsetBlockPartitionClient& operator=(FixedOffsetBlockPartitionClient&&) = delete;
+
+ private:
+  BlockPartitionClient client_;
+  // offset in blocks
+  size_t offset_in_blocks_ = 0;
+};
+
 // Specialized partition client which duplicates to multiple partitions, and attempts to read from
 // each.
 class PartitionCopyClient final : public PartitionClient {

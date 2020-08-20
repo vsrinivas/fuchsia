@@ -1439,6 +1439,12 @@ TEST_F(LuisPartitionerTests, FindPartition) {
   ASSERT_OK(status);
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
+  EXPECT_NOT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
+
+  std::unique_ptr<BlockDevice> boot0_dev, boot1_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * kBlockSize, kBoot0Type, &boot0_dev));
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * kBlockSize, kBoot1Type, &boot1_dev));
+
   // Make sure we can find the important partitions.
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderB)));

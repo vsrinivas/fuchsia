@@ -109,7 +109,7 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
         return boot0_part.take_error();
       }
       auto boot0 =
-          std::make_unique<SherlockBootloaderPartitionClient>(std::move(boot0_part.value()));
+          std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1);
 
       auto boot1_part = OpenBlockPartition(gpt_->devfs_root(), std::nullopt,
                                            Uuid(GUID_EMMC_BOOT2_VALUE), ZX_SEC(5));
@@ -117,7 +117,7 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
         return boot1_part.take_error();
       }
       auto boot1 =
-          std::make_unique<SherlockBootloaderPartitionClient>(std::move(boot1_part.value()));
+          std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1);
 
       std::vector<std::unique_ptr<PartitionClient>> partitions;
       partitions.push_back(std::move(boot0));
@@ -325,43 +325,5 @@ zx::status<std::unique_ptr<abr::Client>> SherlockAbrClientFactory::New(
 
   return abr::AbrPartitionClient::Create(std::move(partition.value()));
 }
-
-zx::status<size_t> SherlockBootloaderPartitionClient::GetBlockSize() {
-  return client_.GetBlockSize();
-}
-
-// Sherlock bootloader partition starts with one block of metadata used only
-// by the firmware, our read/write/size functions should skip it.
-zx::status<size_t> SherlockBootloaderPartitionClient::GetPartitionSize() {
-  auto status_or_block_size = GetBlockSize();
-  if (status_or_block_size.is_error()) {
-    return status_or_block_size.take_error();
-  }
-  const size_t block_size = status_or_block_size.value();
-
-  auto status_or_part_size = client_.GetPartitionSize();
-  if (status_or_part_size.is_error()) {
-    return status_or_part_size.take_error();
-  }
-  const size_t full_size = status_or_block_size.value();
-
-  return zx::ok(full_size - block_size);
-}
-
-zx::status<> SherlockBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
-  return client_.Read(vmo, size, 1);
-}
-
-zx::status<> SherlockBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
-  return client_.Write(vmo, vmo_size, 1);
-}
-
-zx::status<> SherlockBootloaderPartitionClient::Trim() { return client_.Trim(); }
-
-zx::status<> SherlockBootloaderPartitionClient::Flush() { return client_.Flush(); }
-
-zx::channel SherlockBootloaderPartitionClient::GetChannel() { return client_.GetChannel(); }
-
-fbl::unique_fd SherlockBootloaderPartitionClient::block_fd() { return client_.block_fd(); }
 
 }  // namespace paver

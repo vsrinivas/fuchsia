@@ -60,29 +60,6 @@ class SherlockAbrClientFactory : public abr::ClientFactory {
                                                std::shared_ptr<paver::Context> context) final;
 };
 
-class SherlockBootloaderPartitionClient final : public PartitionClient {
- public:
-  explicit SherlockBootloaderPartitionClient(zx::channel partition)
-      : client_(std::move(partition)) {}
-
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
-  zx::channel GetChannel() final;
-  fbl::unique_fd block_fd() final;
-
-  // No copy, no move.
-  SherlockBootloaderPartitionClient(const SherlockBootloaderPartitionClient&) = delete;
-  SherlockBootloaderPartitionClient& operator=(const SherlockBootloaderPartitionClient&) = delete;
-  SherlockBootloaderPartitionClient(SherlockBootloaderPartitionClient&&) = delete;
-  SherlockBootloaderPartitionClient& operator=(SherlockBootloaderPartitionClient&&) = delete;
-
- private:
-  BlockPartitionClient client_;
-};
 }  // namespace paver
 
 #endif  // SRC_STORAGE_LIB_PAVER_SHERLOCK_H_
