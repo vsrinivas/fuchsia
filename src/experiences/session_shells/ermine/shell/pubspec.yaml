@@ -5,4 +5,8 @@ name: ermine
 description: A development shell for Fuchsia.
 
 flutter:
+  fonts:
+    - family: MaterialIcons
+      fonts:
+        - asset: fonts/MaterialIcons-Regular.otf
   uses-material-design: true
