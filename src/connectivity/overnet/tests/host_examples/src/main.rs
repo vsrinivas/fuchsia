@@ -324,12 +324,11 @@ impl Ascendd {
         Ok((input, output))
     }
 
-    fn onet_client(&self, cmd: &str, exclude_self: Option<bool>) -> Command {
+    fn onet_client(&self, cmd: &str, args: &[&str]) -> Command {
         let mut c = self.labelled_cmd("onet", cmd);
         c.arg(cmd);
-        if let Some(exclude_self) = exclude_self {
-            c.arg("--exclude-self");
-            c.arg(format!("{}", exclude_self));
+        for arg in args {
+            c.arg(arg);
         }
         c
     }
@@ -367,7 +366,7 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd.echo_client()).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map", Some(true)))
+            ctx.run_client(ascendd.onet_client("full-map", &["--exclude-self", "true"]))
                 .context("running onet full-map")?;
             Ok(())
         })
@@ -387,7 +386,7 @@ mod tests {
             ascendd1.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd1.echo_client()).context("running client")?;
             let output = ctx
-                .run_client(ascendd1.onet_client("list-peers", None))
+                .run_client(ascendd1.onet_client("list-peers", &[]))
                 .context("running onet list-peers")?;
             // The following should be running: 2 ascendd's, 2 bridging onet's,
             // the query onet, and the server
@@ -424,8 +423,11 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_interface_passing_server().context("starting server")?;
             ctx.run_client(ascendd.interface_passing_client()).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map", Some(false)))
+            let output = ctx
+                .run_client(ascendd.onet_client("list-links", &["all"]))
                 .context("running onet full-map")?;
+            // Should see four links
+            assert_eq!(output.matches(" -> ").count(), 4);
             Ok(())
         })
     }
@@ -466,7 +468,7 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_socket_passing_server(&config).context("starting server")?;
             ctx.run_client(ascendd.socket_passing_client(&config)).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map", Some(true)))
+            ctx.run_client(ascendd.onet_client("full-map", &["--exclude-self", "false"]))
                 .context("running onet full-map")?;
             Ok(())
         })

@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
     std::{fmt::Write, time::Duration},
 };
@@ -68,7 +67,8 @@ async fn list_peers() -> Result<(), Error> {
 /// List links on a particular peer
 pub struct ListLinks {
     #[argh(positional)]
-    node: u64,
+    /// list of nodes to display links for, or 'all' to display links from all nodes
+    nodes: String,
 }
 
 fn fmtq<T: std::fmt::Display>(a: Option<T>) -> String {
@@ -80,47 +80,43 @@ fn fmtq<T: std::fmt::Display>(a: Option<T>) -> String {
 }
 
 async fn list_links(args: ListLinks) -> Result<(), Error> {
-    if list_peers::list_peers()
-        .try_filter(|n| future::ready(n.id == args.node))
-        .next()
+    list_peers::list_peers_from_argument(&args.nodes)?
+        .try_for_each_concurrent(None, |node| async move {
+            let mut links = probe_node::probe_node(node, probe_node::Selector::Links)
+                .await?
+                .links
+                .ok_or_else(|| format_err!("No links in probe result"))?;
+            links.sort_by(|a, b| a.source_local_id.cmp(&b.source_local_id));
+            for link in links {
+                println!(
+                    "{}#{} -> {}",
+                    fmtq(link.source.map(|n| n.id)),
+                    fmtq(link.source_local_id),
+                    fmtq(link.destination.map(|n| n.id))
+                );
+                println!(
+                    "  packets/bytes recv: {}/{} sent: {}/{}",
+                    fmtq(link.received_packets),
+                    fmtq(link.received_bytes),
+                    fmtq(link.sent_packets),
+                    fmtq(link.sent_bytes),
+                );
+                println!(
+                    "  rtt: {}",
+                    fmtq(
+                        link.round_trip_time_microseconds
+                            .map(|us| format!("{:?}", Duration::from_micros(us)))
+                    )
+                );
+                println!(
+                    "  pings sent: {} packets forwarded: {}",
+                    fmtq(link.pings_sent),
+                    fmtq(link.packets_forwarded)
+                );
+            }
+            Ok(())
+        })
         .await
-        .is_none()
-    {
-        return Err(format_err!("Could not find node {}", args.node));
-    }
-    let mut links = probe_node::probe_node(NodeId { id: args.node }, probe_node::Selector::Links)
-        .await?
-        .links
-        .ok_or_else(|| format_err!("No links in probe result"))?;
-    links.sort_by(|a, b| a.source_local_id.cmp(&b.source_local_id));
-    for link in links {
-        println!(
-            "LINK {} is {} -> {}",
-            fmtq(link.source_local_id),
-            fmtq(link.source.map(|n| n.id)),
-            fmtq(link.destination.map(|n| n.id))
-        );
-        println!(
-            "  packets/bytes recv: {}/{} sent: {}/{}",
-            fmtq(link.received_packets),
-            fmtq(link.received_bytes),
-            fmtq(link.sent_packets),
-            fmtq(link.sent_bytes),
-        );
-        println!(
-            "  rtt: {}",
-            fmtq(
-                link.round_trip_time_microseconds
-                    .map(|us| format!("{:?}", Duration::from_micros(us)))
-            )
-        );
-        println!(
-            "  pings sent: {} packets forwarded: {}",
-            fmtq(link.pings_sent),
-            fmtq(link.packets_forwarded)
-        );
-    }
-    Ok(())
 }
 
 pub async fn run_onet(opts: Opts) -> Result<(), Error> {

@@ -59,3 +59,32 @@ pub async fn own_id() -> Result<NodeId, Error> {
     }
     Err(anyhow::format_err!("Cannot find myself"))
 }
+
+/// Given a string get a list of peers
+/// String could be a comma separated list of node-ids, or the keyword 'all' to retrieve all peers
+pub fn list_peers_from_argument(
+    argument: &str,
+) -> Result<impl Stream<Item = Result<NodeId, Error>>, Error> {
+    let filter = parse_peers_argument(argument)?;
+    Ok(list_peers().try_filter(move |n| {
+        futures::future::ready(match &filter {
+            PeerList::All => true,
+            PeerList::Exactly(peers) => peers.contains(&n.id),
+        })
+    }))
+}
+
+enum PeerList {
+    All,
+    Exactly(HashSet<u64>),
+}
+
+fn parse_peers_argument(argument: &str) -> Result<PeerList, Error> {
+    let argument = argument.trim();
+    if argument == "all" {
+        return Ok(PeerList::All);
+    }
+    let r: Result<HashSet<u64>, Error> =
+        argument.split(',').map(|s| s.trim().parse().map_err(Into::into)).collect();
+    Ok(PeerList::Exactly(r?))
+}
