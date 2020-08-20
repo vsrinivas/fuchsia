@@ -13,7 +13,6 @@
 # needed, but we don't currently have a good way to determine the
 # subset that is useful to Zedboot.
 
-import("//build/images/factory.gni")
 import("//build/unification/images/common_image_contents.gni")
 
 zedboot_deps = []
