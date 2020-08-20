@@ -19,7 +19,9 @@
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
+#include <zircon/time.h>
 
+#include <ctime>
 #include <memory>
 #include <string>
 #include <utility>
@@ -89,9 +91,9 @@ bool ShouldRestartModuleForNewIntent(const fuchsia::modular::Intent& old_intent,
 }
 
 zx_time_t GetNowUTC() {
-  zx_time_t now = 0u;
-  zx_clock_get(ZX_CLOCK_UTC, &now);
-  return now;
+  std::timespec ts;
+  FX_CHECK(std::timespec_get(&ts, TIME_UTC) != 0);
+  return zx_time_from_timespec(ts);
 }
 
 void StoryControllerImpl::RunningModInfo::InitializeInspectProperties(

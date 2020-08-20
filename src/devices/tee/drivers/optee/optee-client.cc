@@ -23,6 +23,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <utility>
@@ -1171,22 +1172,14 @@ zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
   // Mark that the return code will originate from driver
   message->set_return_origin(TEEC_ORIGIN_COMMS);
 
-  zx::time_utc now;
-  zx_status_t status = zx::clock::get(&now);
-  if (status != ZX_OK) {
+  std::timespec ts;
+  if (!std::timespec_get(&ts, TIME_UTC)) {
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return status;
+    return ZX_ERR_UNAVAILABLE;
   }
 
-  static constexpr zx::duration kDurationSecond = zx::sec(1);
-  static constexpr zx::time_utc kUtcEpoch = zx::time_utc(0);
-
-  zx::duration now_since_epoch = now - kUtcEpoch;
-  auto seconds = static_cast<uint64_t>(now_since_epoch / kDurationSecond);
-  auto ns_remainder = static_cast<uint64_t>(now_since_epoch % kDurationSecond);
-
-  message->set_output_seconds(seconds);
-  message->set_output_nanoseconds(ns_remainder);
+  message->set_output_seconds(ts.tv_sec);
+  message->set_output_nanoseconds(ts.tv_nsec);
   message->set_return_code(TEEC_SUCCESS);
 
   return ZX_OK;

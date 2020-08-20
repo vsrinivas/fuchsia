@@ -15,7 +15,9 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/time.h>
 
+#include <ctime>
 #include <memory>
 #include <new>
 #include <utility>
@@ -153,15 +155,11 @@ static ACPI_STATUS thrd_status_to_acpi_status(int status) {
   }
 }
 
-static void timeout_to_timespec(UINT16 Timeout, struct timespec* timespec) {
-  zx_time_t now = 0;
-  zx_clock_get(ZX_CLOCK_UTC, &now);
-  timespec->tv_sec = static_cast<time_t>(now / ZX_SEC(1)),
-  timespec->tv_nsec = static_cast<long>(now % ZX_SEC(1)), timespec->tv_nsec += ZX_MSEC(Timeout);
-  if (timespec->tv_nsec > static_cast<long>(ZX_SEC(1))) {
-    timespec->tv_sec += timespec->tv_nsec / ZX_SEC(1);
-    timespec->tv_nsec %= ZX_SEC(1);
-  }
+static std::timespec timeout_to_timespec(UINT16 Timeout) {
+  std::timespec ts;
+  ZX_ASSERT(std::timespec_get(&ts, TIME_UTC) != 0);
+  return zx_timespec_from_duration(
+      zx_duration_add_duration(zx_duration_from_timespec(ts), ZX_MSEC(Timeout)));
 }
 
 // The |acpi_spinlock_lock| is used to guarantee that all spinlock acquisitions will
@@ -650,8 +648,7 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
     return AE_OK;
   }
 
-  struct timespec then;
-  timeout_to_timespec(Timeout, &then);
+  std::timespec then = timeout_to_timespec(Timeout);
   if (sem_timedwait(Handle, &then) < 0) {
     ZX_ASSERT_MSG(errno == ETIMEDOUT, "sem_timedwait failed unexpectedly %d", errno);
     return AE_TIME;
@@ -736,8 +733,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
     int res = mtx_lock(Handle);
     ZX_ASSERT(res == thrd_success);
   } else {
-    struct timespec then;
-    timeout_to_timespec(Timeout, &then);
+    std::timespec then = timeout_to_timespec(Timeout);
 
     if (acpi_spinlocks_held == 0) {
       int ret = pthread_rwlock_timedrdlock(&acpi_spinlock_lock, &then);

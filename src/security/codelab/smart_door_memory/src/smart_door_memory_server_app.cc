@@ -9,6 +9,9 @@
 
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/time.h>
+
+#include <ctime>
 
 #include "dirent.h"
 #include "fcntl.h"
@@ -55,10 +58,11 @@ void SmartDoorMemoryServer::GenerateToken(GenerateTokenCallback callback) {
 }
 
 bool SmartDoorMemoryServer::Log(std::string file_path, bool read_or_write) {
-  zx_time_t now;
-  if (zx_clock_get(ZX_CLOCK_UTC, &now) != ZX_OK) {
+  std::timespec ts;
+  if (!std::timespec_get(&ts, TIME_UTC)) {
     return false;
   }
+  zx_time_t now = zx_time_from_timespec(ts);
   char time[256] = {};
   int written = snprintf(time, sizeof(time), "%" PRIi64, now);
   if (written < 0 || written > (int)sizeof(time)) {

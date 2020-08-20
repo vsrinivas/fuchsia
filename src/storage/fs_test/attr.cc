@@ -4,17 +4,18 @@
 
 #include <fcntl.h>
 #include <lib/fdio/vfs.h>
-#include <lib/zx/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <time.h>
 #include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <ctime>
+#include <optional>
 
 #include <fbl/algorithm.h>
 
@@ -25,21 +26,29 @@ namespace {
 
 using AttrTest = FilesystemTest;
 
-zx_time_t ToNanoSeconds(struct timespec ts) {
+zx_time_t ToNanoSeconds(std::timespec ts) {
   // assumes very small number of seconds in deltas
-  return zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
+  return zx_time_from_timespec(ts);
+}
+
+std::optional<zx_time_t> GetCurrentTimeNanos() {
+  std::timespec ts;
+  if (!std::timespec_get(&ts, TIME_UTC)) {
+    return std::nullopt;
+  }
+  return ToNanoSeconds(ts);
 }
 
 TEST_P(AttrTest, SetModificationTime) {
-  zx_time_t now = 0;
-  ASSERT_EQ(zx_clock_get(ZX_CLOCK_UTC, &now), ZX_OK);
-  ASSERT_NE(now, 0u) << "zx_clock_get only returns zero on error";
+  auto now_opt = GetCurrentTimeNanos();
+  ASSERT_TRUE(now_opt) << "Failed to fetch the current time";
+  zx_time_t now = *now_opt;
 
   const std::string file = GetPath("file.txt");
   int fd1 = open(file.c_str(), O_CREAT | O_RDWR, 0644);
   ASSERT_GT(fd1, 0);
 
-  struct timespec ts[2];
+  std::timespec ts[2];
   ts[0].tv_nsec = UTIME_OMIT;
   ts[1].tv_sec = (long)(now / ZX_SEC(1));
   ts[1].tv_nsec = (long)(now % ZX_SEC(1));
@@ -58,15 +67,15 @@ TEST_P(AttrTest, SetModificationTime) {
 }
 
 TEST_P(AttrTest, Utimes) {
-  zx_time_t now = 0;
-  EXPECT_EQ(zx_clock_get(ZX_CLOCK_UTC, &now), ZX_OK);
-  EXPECT_NE(now, 0u) << "zx_clock_get only returns zero on error";
+  auto now_opt = GetCurrentTimeNanos();
+  ASSERT_TRUE(now_opt) << "Failed to fetch the current time";
+  zx_time_t now = *now_opt;
 
   const std::string file = GetPath("file.txt");
   int fd1 = open(file.c_str(), O_CREAT | O_RDWR, 0644);
   EXPECT_GT(fd1, 0);
 
-  struct timespec ts[2];
+  std::timespec ts[2];
   ts[0].tv_nsec = UTIME_OMIT;
   ts[1].tv_sec = (long)(now / ZX_SEC(1));
   ts[1].tv_nsec = (long)(now % ZX_SEC(1));
@@ -161,9 +170,9 @@ TEST_P(AttrTest, StatReturnsCorrectBlockSize) {
 }
 
 TEST_P(AttrTest, ParentModificationTimeUpdatedCorrectly) {
-  zx_time_t now = 0;
-  ASSERT_EQ(zx_clock_get(ZX_CLOCK_UTC, &now), ZX_OK);
-  ASSERT_NE(now, 0u) << "zx_clock_get only returns zero on error";
+  auto now_opt = GetCurrentTimeNanos();
+  ASSERT_TRUE(now_opt) << "Failed to fetch the current time";
+  zx_time_t now = *now_opt;
 
   // Create a parent directory to contain new contents
   zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));

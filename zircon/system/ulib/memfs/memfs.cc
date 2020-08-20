@@ -14,8 +14,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <zircon/device/vfs.h>
+#include <zircon/time.h>
 
 #include <atomic>
+#include <ctime>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -108,10 +110,13 @@ VnodeMemfs::VnodeMemfs(Vfs* vfs)
     : dnode_(nullptr),
       link_count_(0),
       vfs_(vfs),
-      ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
-  zx_time_t now = 0;
-  zx_clock_get(ZX_CLOCK_UTC, &now);
-  create_time_ = modify_time_ = now;
+      ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)),
+      create_time_(0),
+      modify_time_(0) {
+  std::timespec ts;
+  if (std::timespec_get(&ts, TIME_UTC)) {
+    create_time_ = modify_time_ = zx_time_from_timespec(ts);
+  }
 }
 
 VnodeMemfs::~VnodeMemfs() { deleted_ino_ctr_.fetch_add(1, std::memory_order_relaxed); }

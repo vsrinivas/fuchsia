@@ -30,6 +30,7 @@
 #include <zircon/syscalls.h>
 
 #include <cstdarg>
+#include <ctime>
 
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -1498,20 +1499,19 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
   return resolved ? strcpy(resolved, tmp) : strdup(tmp);
 }
 
-static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2], int flags) {
+static zx_status_t zx_utimens(fdio_t* io, const std::timespec times[2], int flags) {
   zxio_node_attributes_t attr = {};
 
-  uint64_t modification_time;
+  zx_time_t modification_time;
   // Extract modify time.
   if (times == nullptr || times[1].tv_nsec == UTIME_NOW) {
-    zx_time_t now;
-    zx_status_t status = zx_clock_get(ZX_CLOCK_UTC, &now);
-    if (status != ZX_OK) {
-      return status;
+    std::timespec ts;
+    if (!std::timespec_get(&ts, TIME_UTC)) {
+      return ZX_ERR_UNAVAILABLE;
     }
-    modification_time = now;
+    modification_time = zx_time_from_timespec(ts);
   } else {
-    modification_time = zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
+    modification_time = zx_time_from_timespec(times[1]);
   }
 
   if (times == nullptr || times[1].tv_nsec != UTIME_OMIT) {

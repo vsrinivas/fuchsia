@@ -10,9 +10,11 @@
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <atomic>
+#include <ctime>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -40,9 +42,12 @@ class VnodeMemfs : public fs::Vnode {
   // VnodeDirs can be unlinked, and this method will subsequently return false.
   bool IsDirectory() const { return dnode_ != nullptr; }
   void UpdateModified() {
-    zx_time_t now = 0;
-    zx_clock_get(ZX_CLOCK_UTC, &now);
-    modify_time_ = now;
+    std::timespec ts;
+    if (std::timespec_get(&ts, TIME_UTC)) {
+      modify_time_ = zx_time_from_timespec(ts);
+    } else {
+      modify_time_ = 0;
+    }
   }
 
   ~VnodeMemfs() override;

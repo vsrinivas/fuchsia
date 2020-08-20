@@ -5,14 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_RTC_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_RTC_H_
 
-#include <time.h>
-#include <zircon/types.h>
+#include <ctime>
 
 // Returns the current time in seconds.
-static inline time_t rtc_time() {
-  zx_time_t now = 0;
-  zx_clock_get(ZX_CLOCK_UTC, &now);
-  return now / ZX_SEC(1);
-}
+static inline time_t rtc_time() { return std::time(nullptr); }
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_RTC_H_
