@@ -18,6 +18,54 @@ import (
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
+func buildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, d := range defs {
+		switch d.Subtype {
+		case fidlir.Channel:
+			builder.WriteString("gidl_util::create_channel().unwrap(),")
+		case fidlir.Event:
+			builder.WriteString("gidl_util::create_event().unwrap(),")
+		default:
+			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
+		}
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
+func buildBytes(bytes []byte) string {
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, b := range bytes {
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
+		if i%8 == 7 {
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
+func buildHandles(handles []gidlir.Handle) string {
+	var builder strings.Builder
+	builder.WriteString("[\n")
+	for i, h := range handles {
+		builder.WriteString(fmt.Sprintf("%d,", h))
+		if i%8 == 7 {
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 func escapeStr(value string) string {
 	var (
 		buf    bytes.Buffer
@@ -57,6 +105,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		} else {
 			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
 		}
+		return wrapNullable(decl, expr)
+	case gidlir.Handle:
+		expr := fmt.Sprintf("unsafe { copy_handle(&handle_defs[%d]) }", value)
 		return wrapNullable(decl, expr)
 	case gidlir.Record:
 		switch decl := decl.(type) {
@@ -135,7 +186,7 @@ func wrapNullable(decl gidlmixer.Declaration, valueStr string) string {
 		return valueStr
 	}
 	switch decl.(type) {
-	case *gidlmixer.ArrayDecl, *gidlmixer.VectorDecl, *gidlmixer.StringDecl:
+	case *gidlmixer.ArrayDecl, *gidlmixer.VectorDecl, *gidlmixer.StringDecl, *gidlmixer.HandleDecl:
 		return fmt.Sprintf("Some(%s)", valueStr)
 	case *gidlmixer.StructDecl, *gidlmixer.UnionDecl:
 		return fmt.Sprintf("Some(Box::new(%s))", valueStr)
@@ -205,7 +256,7 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	var valueStr string
 	if field.Key.IsUnknown() {
 		unknownData := field.Value.(gidlir.UnknownData)
-		valueStr = fmt.Sprintf("%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: Vec::new() }", declName(decl), field.Key.UnknownOrdinal, bytesBuilder(unknownData.Bytes))
+		valueStr = fmt.Sprintf("%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: Vec::new() }", declName(decl), field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes))
 	} else {
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)

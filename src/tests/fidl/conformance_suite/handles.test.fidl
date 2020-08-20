@@ -1,0 +1,44 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+// TODO(fxb/36441): Allow bindings to compile on host with handles.
+
+[BindingsDenylist = "cpp, llcpp"]
+struct SingleHandle {
+    handle h;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct SingleOptionalHandle {
+    handle? h;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct ArrayOfHandles {
+    array<handle>:3 a;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct ArrayOfOptionalHandles {
+    array<handle?>:3 a;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct VectorOfHandles {
+    vector<handle> v;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct VectorOfOptionalHandles {
+    vector<handle?> v;
+};
+
+[BindingsDenylist = "cpp, llcpp"]
+struct MultipleHandleSubtypes {
+    handle untyped;
+    handle<event> event;
+    handle<channel> channel;
+};

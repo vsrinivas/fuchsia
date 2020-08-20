@@ -42,7 +42,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	schema := gidlmixer.BuildSchema(fidl)
 	files := map[string][]byte{}
 	for _, gidlBenchmark := range gidl.Benchmark {
-		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
+		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
 			return nil, nil, fmt.Errorf("reference benchmark %s: %s", gidlBenchmark.Name, err)
 		}

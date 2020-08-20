@@ -100,7 +100,7 @@ func TestExtractDeclarationSuccess(t *testing.T) {
 			{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 		},
 	}
-	decl, err := testSchema.ExtractDeclaration(value)
+	decl, err := testSchema.ExtractDeclaration(value, nil)
 	if err != nil {
 		t.Fatalf("ExtractDeclaration failed: %s", err)
 	}
@@ -112,7 +112,7 @@ func TestExtractDeclarationNotDefined(t *testing.T) {
 		Name:   "ThisIsNotAStruct",
 		Fields: []gidlir.Field{},
 	}
-	decl, err := testSchema.ExtractDeclaration(value)
+	decl, err := testSchema.ExtractDeclaration(value, nil)
 	if err == nil {
 		t.Fatalf("ExtractDeclaration unexpectedly succeeded: %#v", decl)
 	}
@@ -128,7 +128,7 @@ func TestExtractDeclarationDoesNotConform(t *testing.T) {
 			{Key: gidlir.FieldKey{Name: "ThisIsNotAField"}, Value: "foo"},
 		},
 	}
-	decl, err := testSchema.ExtractDeclaration(value)
+	decl, err := testSchema.ExtractDeclaration(value, nil)
 	if err == nil {
 		t.Fatalf("ExtractDeclaration unexpectedly succeeded: %#v", decl)
 	}
@@ -175,11 +175,11 @@ func (c conformFail) shouldConform() bool { return false }
 func (c conformFail) value() interface{}  { return c.val }
 
 // checkConforms is a helper function to test the Declaration.conforms method.
-func checkConforms(t *testing.T, decl Declaration, tests []conformTest) {
+func checkConforms(t *testing.T, ctx context, decl Declaration, tests []conformTest) {
 	t.Helper()
 	for _, test := range tests {
 		value, expected := test.value(), test.shouldConform()
-		if err := decl.conforms(value); (err == nil) != expected {
+		if err := decl.conforms(value, ctx); (err == nil) != expected {
 			if expected {
 				t.Errorf(
 					"value failed to conform to declaration\n\nvalue: %#v\n\nerr: %s\n\ndecl: %#v",
@@ -195,6 +195,7 @@ func checkConforms(t *testing.T, decl Declaration, tests []conformTest) {
 
 func TestBoolDeclConforms(t *testing.T) {
 	checkConforms(t,
+		context{},
 		&BoolDecl{},
 		[]conformTest{
 			conformOk{false},
@@ -209,6 +210,7 @@ func TestBoolDeclConforms(t *testing.T) {
 
 func TestIntegerDeclConforms(t *testing.T) {
 	checkConforms(t,
+		context{},
 		&IntegerDecl{subtype: fidlir.Uint8, lower: 0, upper: 255},
 		[]conformTest{
 			conformOk{uint64(0)},
@@ -228,6 +230,7 @@ func TestIntegerDeclConforms(t *testing.T) {
 		},
 	)
 	checkConforms(t,
+		context{},
 		&IntegerDecl{subtype: fidlir.Int64, lower: -5, upper: 10},
 		[]conformTest{
 			conformOk{int64(-5)},
@@ -255,12 +258,13 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformFail{math.Inf(-1)},
 		conformFail{math.NaN()},
 	}
-	checkConforms(t, &FloatDecl{subtype: fidlir.Float32}, tests)
-	checkConforms(t, &FloatDecl{subtype: fidlir.Float64}, tests)
+	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float32}, tests)
+	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float64}, tests)
 }
 
 func TestStringDeclConforms(t *testing.T) {
 	checkConforms(t,
+		context{},
 		&StringDecl{bound: nil, nullable: false},
 		[]conformTest{
 			conformOk{""},
@@ -270,6 +274,7 @@ func TestStringDeclConforms(t *testing.T) {
 		},
 	)
 	checkConforms(t,
+		context{},
 		&StringDecl{bound: nil, nullable: true},
 		[]conformTest{
 			conformOk{"foo"},
@@ -279,6 +284,7 @@ func TestStringDeclConforms(t *testing.T) {
 	)
 	two := 2
 	checkConforms(t,
+		context{},
 		&StringDecl{bound: &two, nullable: false},
 		[]conformTest{
 			conformOk{""},
@@ -290,6 +296,86 @@ func TestStringDeclConforms(t *testing.T) {
 	)
 }
 
+func TestHandleDeclConforms(t *testing.T) {
+	// Cannot refer to any handles if there are no handle_defs.
+	checkConforms(t,
+		context{},
+		&HandleDecl{subtype: fidlir.Event, nullable: false},
+		[]conformTest{
+			conformFail{gidlir.Handle(-1)}, // out of bounds
+			conformFail{gidlir.Handle(0)},  // out of bounds
+			conformFail{gidlir.Handle(1)},  // out of bounds
+			conformFail{gidlir.Handle(2)},  // out of bounds
+			conformFail{gidlir.Handle(3)},  // out of bounds
+			conformFail{nil},
+			conformFail{"foo"},
+			conformFail{0},
+		},
+	)
+	// The FIDL type `handle` is compatible with all subtypes.
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlir.Event}, // #0
+				{Subtype: fidlir.Port},  // #1
+				{Subtype: fidlir.Event}, // #2
+			},
+		},
+		&HandleDecl{subtype: fidlir.Handle, nullable: false},
+		[]conformTest{
+			conformOk{gidlir.Handle(0)},
+			conformOk{gidlir.Handle(1)},
+			conformOk{gidlir.Handle(2)},
+			conformFail{gidlir.Handle(-1)}, // out of bounds
+			conformFail{gidlir.Handle(3)},  // out of bounds
+			conformFail{nil},
+			conformFail{"foo"},
+			conformFail{0},
+		},
+	)
+	// The FIDL type `handle<event>` requires an event.
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlir.Event}, // #0
+				{Subtype: fidlir.Port},  // #1
+				{Subtype: fidlir.Event}, // #2
+			},
+		},
+		&HandleDecl{subtype: fidlir.Event, nullable: false},
+		[]conformTest{
+			conformOk{gidlir.Handle(0)},
+			conformOk{gidlir.Handle(2)},
+			conformFail{gidlir.Handle(1)},  // wrong subtype
+			conformFail{gidlir.Handle(-1)}, // out of bounds
+			conformFail{gidlir.Handle(3)},  // out of bounds
+			conformFail{nil},
+			conformFail{"foo"},
+			conformFail{0},
+		},
+	)
+	// The FIDL type `handle<port>?` requires an event or nil.
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlir.Event}, // #0
+				{Subtype: fidlir.Port},  // #1
+				{Subtype: fidlir.Event}, // #2
+			},
+		},
+		&HandleDecl{subtype: fidlir.Port, nullable: true},
+		[]conformTest{
+			conformOk{gidlir.Handle(1)},
+			conformOk{nil},
+			conformFail{gidlir.Handle(0)},  // wrong subtype
+			conformFail{gidlir.Handle(2)},  // wrong subtype
+			conformFail{gidlir.Handle(-1)}, // out of bounds
+			conformFail{gidlir.Handle(3)},  // out of bounds
+			conformFail{0},
+		},
+	)
+}
+
 func TestBitsDeclConforms(t *testing.T) {
 	decl, ok := testSchema.lookupDeclByName("ExampleBits", false)
 	if !ok {
@@ -297,6 +383,7 @@ func TestBitsDeclConforms(t *testing.T) {
 	}
 	bitsDecl := decl.(*BitsDecl)
 	checkConforms(t,
+		context{},
 		bitsDecl,
 		[]conformTest{
 			// Underlying type for ExampleBits is uint8.
@@ -324,6 +411,7 @@ func TestEnumDeclConforms(t *testing.T) {
 	}
 	enumDecl := decl.(*EnumDecl)
 	checkConforms(t,
+		context{},
 		enumDecl,
 		[]conformTest{
 			// Underlying type for ExampleEnum is uint8.
@@ -351,6 +439,7 @@ func TestStructDeclConformsNonNullable(t *testing.T) {
 	}
 	structDecl := decl.(*StructDecl)
 	checkConforms(t,
+		context{},
 		structDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
@@ -385,6 +474,7 @@ func TestStructDeclConformsNullable(t *testing.T) {
 	}
 	structDecl := decl.(*StructDecl)
 	checkConforms(t,
+		context{},
 		structDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
@@ -405,6 +495,7 @@ func TestTableDeclConforms(t *testing.T) {
 	}
 	tableDecl := decl.(*TableDecl)
 	checkConforms(t,
+		context{},
 		tableDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
@@ -439,6 +530,7 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 	}
 	unionDecl := decl.(*UnionDecl)
 	checkConforms(t,
+		context{},
 		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
@@ -491,6 +583,7 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 	}
 	unionDecl := decl.(*UnionDecl)
 	checkConforms(t,
+		context{},
 		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
@@ -511,6 +604,7 @@ func TestStrictUnionConforms(t *testing.T) {
 	}
 	unionDecl := decl.(*UnionDecl)
 	checkConforms(t,
+		context{},
 		unionDecl,
 		[]conformTest{
 			conformFail{gidlir.Record{
@@ -529,6 +623,7 @@ func TestStrictUnionConforms(t *testing.T) {
 func TestArrayDeclConforms(t *testing.T) {
 	two := 2
 	checkConforms(t,
+		context{},
 		&ArrayDecl{
 			schema: testSchema,
 			typ: fidlir.Type{
@@ -554,6 +649,7 @@ func TestArrayDeclConforms(t *testing.T) {
 func TestVectorDeclConforms(t *testing.T) {
 	two := 2
 	checkConforms(t,
+		context{},
 		&VectorDecl{
 			schema: testSchema,
 			typ: fidlir.Type{
@@ -576,6 +672,38 @@ func TestVectorDeclConforms(t *testing.T) {
 	)
 }
 
+func TestVectorDeclConformsWithHandles(t *testing.T) {
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlir.Event},
+				{Subtype: fidlir.Event},
+			},
+		},
+		&VectorDecl{
+			schema: testSchema,
+			typ: fidlir.Type{
+				Kind: fidlir.VectorType,
+				ElementType: &fidlir.Type{
+					Kind:          fidlir.HandleType,
+					HandleSubtype: fidlir.Event,
+				},
+			},
+		},
+		[]conformTest{
+			conformOk{[]interface{}{}},
+			conformOk{[]interface{}{gidlir.Handle(0)}},
+			conformOk{[]interface{}{gidlir.Handle(0), gidlir.Handle(1)}},
+			conformOk{[]interface{}{gidlir.Handle(1), gidlir.Handle(0)}},
+			// The parser is responsible for ensuring handles are used exactly
+			// once, not the mixer, so this passes.
+			conformOk{[]interface{}{gidlir.Handle(0), gidlir.Handle(0)}},
+			conformFail{[]interface{}{uint64(0)}},
+			conformFail{[]interface{}{nil}},
+		},
+	)
+}
+
 type visitor struct {
 	visited string
 }
@@ -585,6 +713,7 @@ func (v *visitor) OnInt64(int64, fidlir.PrimitiveSubtype)     { v.visited = "Int
 func (v *visitor) OnUint64(uint64, fidlir.PrimitiveSubtype)   { v.visited = "Uint64" }
 func (v *visitor) OnFloat64(float64, fidlir.PrimitiveSubtype) { v.visited = "Float64" }
 func (v *visitor) OnString(string, *StringDecl)               { v.visited = "String" }
+func (v *visitor) OnHandle(gidlir.Handle, *HandleDecl)        { v.visited = "Handle" }
 func (v *visitor) OnBits(interface{}, *BitsDecl)              { v.visited = "Bits" }
 func (v *visitor) OnEnum(interface{}, *EnumDecl)              { v.visited = "Enum" }
 func (v *visitor) OnStruct(gidlir.Record, *StructDecl)        { v.visited = "Struct" }
@@ -605,6 +734,7 @@ func TestVisit(t *testing.T) {
 		{uint64(1), &IntegerDecl{subtype: fidlir.Uint8}, "Uint64"},
 		{1.23, &FloatDecl{subtype: fidlir.Float32}, "Float64"},
 		{"foo", &StringDecl{}, "String"},
+		{gidlir.Handle(0), &HandleDecl{subtype: fidlir.Event}, "Handle"},
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the
 		// purposes of Visit() it should not matter.

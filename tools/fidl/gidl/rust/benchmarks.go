@@ -29,7 +29,9 @@ use {
 	fuchsia_criterion::criterion::{BatchSize, Bencher},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
+	gidl_util::{copy_handle, copy_handles_at, disown_handles},
 };
+
 // BENCHMARKS is aggregated by a generated benchmark_suite.rs file, which is ultimately
 // used in benchmarks in src/tests/benchmarks/fidl/rust/src/main.rs.
 pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] = [
@@ -45,17 +47,28 @@ pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] =
 	{{- end -}}
 {{- end }}
 ];
+
 const _V1_CONTEXT: &Context = &Context {};
+
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 	b.iter(|| {
 		{{ .Value }}
 	});
 }
+
 fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
+			{{- if .HandleDefs }}
+			let handle_defs = vec!{{ .HandleDefs }};
+			let handle_defs = unsafe { disown_handles(handle_defs) };
+			let handle_defs = handle_defs.as_ref();
+			let value = {{ .Value }};
+			value
+			{{- else }}
 			{{ .Value }}
+			{{- end }}
 		},
 		|value| {
 			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
@@ -66,9 +79,27 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 		BatchSize::SmallInput,
 	);
 }
+
 fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
+	{{- if .HandleDefs }}
+	b.iter_batched_ref(
+		|| {
+			let handle_defs = vec!{{ .HandleDefs }};
+			let handle_defs = unsafe { disown_handles(handle_defs) };
+			let handle_defs = handle_defs.as_ref();
+			let original_value = &mut {{ .Value }};
+			let bytes = &mut Vec::<u8>::new();
+			let handles = &mut Vec::<Handle>::new();
+			Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, original_value).unwrap();
+			(bytes, handles, {{ .ValueType }}::new_empty())
+		},
+		|(bytes, handles, value)| {
+			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
+		},
+		BatchSize::SmallInput,
+	);
+	{{- else }}
 	let bytes = &mut Vec::<u8>::new();
-	{{- /* TODO(fxb/36441): Revisit this when adding support for handles. */}}
 	let handles = &mut Vec::<Handle>::new();
 	let original_value = &mut {{ .Value }};
 	Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, original_value).unwrap();
@@ -82,7 +113,9 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		},
 		BatchSize::SmallInput,
 	);
+	{{- end }}
 }
+
 {{ if .EnableSendEventBenchmark }}
 async fn {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end: zx::Channel, sender_fifo: std::sync::mpsc::SyncSender<()>) {
 	let async_receiver_fidl_chan_end = fuchsia_async::Channel::from_channel(receiver_fidl_chan_end).unwrap();
@@ -92,6 +125,7 @@ async fn {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end: zx::Chan
 		sender_fifo.send(()).unwrap();
 	};
 }
+
 fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 	let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
 	let (sender_fidl_chan_end, receiver_fidl_chan_end) = zx::Channel::create().unwrap();
@@ -118,6 +152,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 		});
 }
 {{- end -}}
+
 {{ if .EnableEchoCallBenchmark }}
 async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
 	let async_server_end = fuchsia_async::Channel::from_channel(server_end).unwrap();
@@ -135,6 +170,7 @@ async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
 		future::ready(())
 	}).await;
 }
+
 fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	let (client_end, server_end) = zx::Channel::create().unwrap();
 	std::thread::spawn(|| {
@@ -163,8 +199,8 @@ type benchmarkTmplInput struct {
 	Benchmarks    []benchmark
 }
 type benchmark struct {
-	Name, ChromeperfPath, Value, ValueType            string
-	EnableSendEventBenchmark, EnableEchoCallBenchmark bool
+	Name, ChromeperfPath, HandleDefs, Value, ValueType string
+	EnableSendEventBenchmark, EnableEchoCallBenchmark  bool
 }
 
 // GenerateBenchmarks generates Rust benchmarks.
@@ -173,7 +209,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	var benchmarks []benchmark
 	nBenchmarks := 0
 	for _, gidlBenchmark := range gidl.Benchmark {
-		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
+		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
 			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
@@ -181,6 +217,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 		benchmarks = append(benchmarks, benchmark{
 			Name:                     benchmarkName(gidlBenchmark.Name),
 			ChromeperfPath:           gidlBenchmark.Name,
+			HandleDefs:               buildHandleDefs(gidlBenchmark.HandleDefs),
 			Value:                    value,
 			ValueType:                declName(decl),
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
@@ -203,6 +240,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	err := benchmarkTmpl.Execute(&buf, input)
 	return buf.Bytes(), nil, err
 }
+
 func benchmarkName(gidlName string) string {
 	return fidlcommon.ToSnakeCase(strings.ReplaceAll(gidlName, "/", "_"))
 }

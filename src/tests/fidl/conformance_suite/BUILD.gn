@@ -17,6 +17,7 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/arrays_and_vectors.test.fidl",
     "//src/tests/fidl/conformance_suite/bits.test.fidl",
     "//src/tests/fidl/conformance_suite/enums.test.fidl",
+    "//src/tests/fidl/conformance_suite/handles.test.fidl",
     "//src/tests/fidl/conformance_suite/mix_and_match.test.fidl",
     "//src/tests/fidl/conformance_suite/optionals.test.fidl",
     "//src/tests/fidl/conformance_suite/padding.test.fidl",

@@ -24,6 +24,8 @@ rustc_test("fidl_rust_conformance_tests") {
   source_root = conformance_test_source
   deps = [
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/gidl_util",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
     "//third_party/rust_crates:matches",
   ]

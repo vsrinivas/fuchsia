@@ -881,9 +881,12 @@ func (p *Parser) parseHandle(info handleInfo) (ir.Handle, error) {
 	if err != nil {
 		return 0, err
 	}
-	index, err := strconv.ParseUint(tok.value, 10, 64)
+	index, err := strconv.ParseInt(tok.value, 10, 0)
 	if err != nil {
 		return 0, p.newParseError(tok, "invalid handle syntax: %s", tok.value)
+	}
+	if index < 0 {
+		panic("impossible because tok is tText not tNeg")
 	}
 	h := ir.Handle(index)
 	p.handles[h] = mergeHandleInfo(p.handles[h], info)
@@ -892,7 +895,7 @@ func (p *Parser) parseHandle(info handleInfo) (ir.Handle, error) {
 
 func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
 	var res []ir.HandleDef
-	expected := uint64(0)
+	expected := ir.Handle(0)
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		tok, err := p.peekToken()
 		if err != nil {
@@ -902,9 +905,9 @@ func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
 		if err != nil {
 			return err
 		}
-		if raw := uint64(h); raw != expected {
+		if h != expected {
 			return p.newParseError(
-				tok, "want #%d, got #%d (handle_defs must be #0, #1, #2, etc.)", expected, raw)
+				tok, "want #%d, got #%d (handle_defs must be #0, #1, #2, etc.)", expected, h)
 		}
 		expected++
 		tok, err = p.consumeToken(tEqual)

@@ -20,6 +20,7 @@ type ValueVisitor interface {
 	OnUint64(value uint64, typ fidlir.PrimitiveSubtype)
 	OnFloat64(value float64, typ fidlir.PrimitiveSubtype)
 	OnString(value string, decl *StringDecl)
+	OnHandle(value gidlir.Handle, decl *HandleDecl)
 	OnBits(value interface{}, decl *BitsDecl)
 	OnEnum(value interface{}, decl *EnumDecl)
 	OnStruct(value gidlir.Record, decl *StructDecl)
@@ -67,6 +68,13 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		default:
 			panic(fmt.Sprintf("string value has non-string decl: %T", decl))
 		}
+	case gidlir.Handle:
+		switch decl := decl.(type) {
+		case *HandleDecl:
+			visitor.OnHandle(value, decl)
+		default:
+			panic(fmt.Sprintf("handle value has non-handle decl: %T", decl))
+		}
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *StructDecl:
@@ -106,7 +114,14 @@ type Declaration interface {
 	IsNullable() bool
 
 	// conforms verifies that the value conforms to this declaration.
-	conforms(value interface{}) error
+	conforms(value interface{}, ctx context) error
+}
+
+// context stores the external information needed to determine if a value
+// conforms to a declaration.
+type context struct {
+	// Handle definitions in scope, used for HandleDecl conformance.
+	handleDefs []gidlir.HandleDef
 }
 
 // Assert that wrappers conform to the Declaration interface.
@@ -115,6 +130,7 @@ var _ = []Declaration{
 	&IntegerDecl{},
 	&FloatDecl{},
 	&StringDecl{},
+	&HandleDecl{},
 	&BitsDecl{},
 	&EnumDecl{},
 	&StructDecl{},
@@ -202,7 +218,7 @@ func (decl *BoolDecl) Subtype() fidlir.PrimitiveSubtype {
 	return fidlir.Bool
 }
 
-func (decl *BoolDecl) conforms(value interface{}) error {
+func (decl *BoolDecl) conforms(value interface{}, _ context) error {
 	switch value.(type) {
 	default:
 		return fmt.Errorf("expecting bool, found %T (%s)", value, value)
@@ -222,7 +238,7 @@ func (decl *IntegerDecl) Subtype() fidlir.PrimitiveSubtype {
 	return decl.subtype
 }
 
-func (decl *IntegerDecl) conforms(value interface{}) error {
+func (decl *IntegerDecl) conforms(value interface{}, _ context) error {
 	switch value := value.(type) {
 	default:
 		return fmt.Errorf("expecting int64 or uint64, found %T (%s)", value, value)
@@ -254,7 +270,7 @@ func (decl *FloatDecl) Subtype() fidlir.PrimitiveSubtype {
 	return decl.subtype
 }
 
-func (decl *FloatDecl) conforms(value interface{}) error {
+func (decl *FloatDecl) conforms(value interface{}, _ context) error {
 	switch value := value.(type) {
 	default:
 		return fmt.Errorf("expecting float64, found %T (%s)", value, value)
@@ -279,7 +295,7 @@ func (decl *StringDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *StringDecl) conforms(value interface{}) error {
+func (decl *StringDecl) conforms(value interface{}, _ context) error {
 	switch value := value.(type) {
 	default:
 		return fmt.Errorf("expecting string, found %T (%s)", value, value)
@@ -301,6 +317,44 @@ func (decl *StringDecl) conforms(value interface{}) error {
 	}
 }
 
+type HandleDecl struct {
+	subtype fidlir.HandleSubtype
+	// TODO(fxb/41920): Add a field for handle rights.
+	nullable bool
+}
+
+func (decl *HandleDecl) Subtype() fidlir.HandleSubtype {
+	return decl.subtype
+}
+
+func (decl *HandleDecl) IsNullable() bool {
+	return decl.nullable
+}
+
+func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
+	switch value := value.(type) {
+	default:
+		return fmt.Errorf("expecting handle, found %T (%s)", value, value)
+	case gidlir.Handle:
+		if v := int(value); v < 0 || v >= len(ctx.handleDefs) {
+			return fmt.Errorf("handle #%d out of range", value)
+		}
+		if decl.subtype == fidlir.Handle {
+			// The declaration is an untyped handle. Any subtype conforms.
+			return nil
+		}
+		if subtype := ctx.handleDefs[value].Subtype; subtype != decl.subtype {
+			return fmt.Errorf("expecting handle subtype %s, found %s", decl.subtype, subtype)
+		}
+		return nil
+	case nil:
+		if decl.nullable {
+			return nil
+		}
+		return fmt.Errorf("expecting non-null handle, found nil")
+	}
+}
+
 type BitsDecl struct {
 	NeverNullable
 	Underlying IntegerDecl
@@ -311,9 +365,9 @@ func (decl *BitsDecl) Name() string {
 	return string(decl.bitsDecl.Name)
 }
 
-func (decl *BitsDecl) conforms(value interface{}) error {
+func (decl *BitsDecl) conforms(value interface{}, ctx context) error {
 	// TODO(fxb/7847): Require a valid bits member when strict
-	return decl.Underlying.conforms(value)
+	return decl.Underlying.conforms(value, ctx)
 }
 
 type EnumDecl struct {
@@ -326,9 +380,9 @@ func (decl *EnumDecl) Name() string {
 	return string(decl.enumDecl.Name)
 }
 
-func (decl *EnumDecl) conforms(value interface{}) error {
+func (decl *EnumDecl) conforms(value interface{}, ctx context) error {
 	// TODO(fxb/7847): Require a valid enum member when strict
-	return decl.Underlying.conforms(value)
+	return decl.Underlying.conforms(value, ctx)
 }
 
 // StructDecl describes a struct declaration.
@@ -384,7 +438,7 @@ func recordConforms(value interface{}, kind string, decl NamedDeclaration, schem
 	}
 }
 
-func (decl *StructDecl) conforms(value interface{}) error {
+func (decl *StructDecl) conforms(value interface{}, ctx context) error {
 	record, err := recordConforms(value, "struct", decl, decl.schema)
 	if err != nil {
 		return err
@@ -399,7 +453,7 @@ func (decl *StructDecl) conforms(value interface{}) error {
 		}
 		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
-		} else if err := fieldDecl.conforms(field.Value); err != nil {
+		} else if err := fieldDecl.conforms(field.Value, ctx); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
 		}
 		provided[field.Key.Name] = struct{}{}
@@ -453,7 +507,7 @@ func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl *TableDecl) conforms(value interface{}) error {
+func (decl *TableDecl) conforms(value interface{}, ctx context) error {
 	record, err := recordConforms(value, "table", decl, decl.schema)
 	if err != nil {
 		return err
@@ -474,7 +528,7 @@ func (decl *TableDecl) conforms(value interface{}) error {
 		}
 		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
-		} else if err := fieldDecl.conforms(field.Value); err != nil {
+		} else if err := fieldDecl.conforms(field.Value, ctx); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
 		}
 	}
@@ -522,7 +576,7 @@ func (decl *UnionDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl *UnionDecl) conforms(value interface{}) error {
+func (decl *UnionDecl) conforms(value interface{}, ctx context) error {
 	record, err := recordConforms(value, "union", decl, decl.schema)
 	if err != nil {
 		return err
@@ -545,7 +599,7 @@ func (decl *UnionDecl) conforms(value interface{}) error {
 		}
 		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
-		} else if err := fieldDecl.conforms(field.Value); err != nil {
+		} else if err := fieldDecl.conforms(field.Value, ctx); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
 		}
 	}
@@ -572,17 +626,17 @@ func (decl *ArrayDecl) Size() int {
 	return *decl.typ.ElementCount
 }
 
-func (decl *ArrayDecl) conforms(untypedValue interface{}) error {
-	switch value := untypedValue.(type) {
+func (decl *ArrayDecl) conforms(value interface{}, ctx context) error {
+	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting array, found %T (%v)", untypedValue, untypedValue)
+		return fmt.Errorf("expecting array, found %T (%v)", value, value)
 	case []interface{}:
 		if len(value) != decl.Size() {
 			return fmt.Errorf("expecting %d elements, got %d", decl.Size(), len(value))
 		}
 		elemDecl := decl.Elem()
 		for i, elem := range value {
-			if err := elemDecl.conforms(elem); err != nil {
+			if err := elemDecl.conforms(elem, ctx); err != nil {
 				return fmt.Errorf("[%d]: %s", i, err)
 			}
 		}
@@ -616,17 +670,17 @@ func (decl *VectorDecl) MaxSize() (int, bool) {
 	return 0, false
 }
 
-func (decl *VectorDecl) conforms(untypedValue interface{}) error {
-	switch value := untypedValue.(type) {
+func (decl *VectorDecl) conforms(value interface{}, ctx context) error {
+	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting vector, found %T (%v)", untypedValue, untypedValue)
+		return fmt.Errorf("expecting vector, found %T (%v)", value, value)
 	case []interface{}:
 		if maxSize, ok := decl.MaxSize(); ok && len(value) > maxSize {
 			return fmt.Errorf("expecting at most %d elements, got %d", maxSize, len(value))
 		}
 		elemDecl := decl.Elem()
 		for i, elem := range value {
-			if err := elemDecl.conforms(elem); err != nil {
+			if err := elemDecl.conforms(elem, ctx); err != nil {
 				return fmt.Errorf("[%d]: %s", i, err)
 			}
 		}
@@ -650,7 +704,7 @@ type Schema struct {
 	types map[string]interface{}
 }
 
-// BuildSchema builds a Schema from a FIDL library.
+// BuildSchema builds a Schema from a FIDL library and handle definitions.
 // Note: The returned schema contains pointers into fidl.
 func BuildSchema(fidl fidlir.Root) Schema {
 	total := len(fidl.Bits) + len(fidl.Enums) + len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
@@ -682,13 +736,14 @@ func BuildSchema(fidl fidlir.Root) Schema {
 }
 
 // ExtractDeclaration extract the top-level declaration for the provided value,
-// and ensures the value conforms to the schema.
-func (s Schema) ExtractDeclaration(value interface{}) (*StructDecl, error) {
+// and ensures the value conforms to the schema. It also takes a list of handle
+// definitions in scope, which can be nil if there are no handles.
+func (s Schema) ExtractDeclaration(value interface{}, handleDefs []gidlir.HandleDef) (*StructDecl, error) {
 	decl, err := s.ExtractDeclarationUnsafe(value)
 	if err != nil {
 		return nil, err
 	}
-	if err := decl.conforms(value); err != nil {
+	if err := decl.conforms(value, context{handleDefs}); err != nil {
 		return nil, fmt.Errorf("value %v failed to conform to declaration (type %T): %v", value, decl, err)
 	}
 	return decl, nil
@@ -808,6 +863,11 @@ func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	case fidlir.StringType:
 		return &StringDecl{
 			bound:    typ.ElementCount,
+			nullable: typ.Nullable,
+		}, true
+	case fidlir.HandleType:
+		return &HandleDecl{
+			subtype:  typ.HandleSubtype,
 			nullable: typ.Nullable,
 		}, true
 	case fidlir.PrimitiveType:

@@ -1,0 +1,193 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("SingleHandle") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = SingleHandle {
+        h: #0,
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    }
+}
+
+success("SingleOptionalHandlePresent") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = SingleOptionalHandle {
+        h: #0,
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    }
+}
+
+success("SingleOptionalHandleAbsent") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    value = SingleOptionalHandle {},
+    bytes = {
+        v1 = [
+            repeat(0x00):4, padding:4,
+        ],
+    }
+}
+
+success("ArrayOfHandles") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = ArrayOfHandles {
+        a: [#2, #0, #1],
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):4, repeat(0xff):4, repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #2, #0, #1,
+        ],
+    }
+}
+
+success("ArrayOfOptionalHandles") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = ArrayOfOptionalHandles {
+        a: [null, #0, null],
+    },
+    bytes = {
+        v1 = [
+            repeat(0x00):4, repeat(0xff):4, repeat(0x00):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    }
+}
+
+success("VectorOfHandles") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = VectorOfHandles {
+        v: [#2, #0, #1],
+    },
+    bytes = {
+        v1 = [
+            num(3):8, repeat(0xff):8,
+            repeat(0xff):4, repeat(0xff):4, repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #2, #0, #1,
+        ],
+    }
+}
+
+success("VectorOfOptionalHandles") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = event(),
+    },
+    value = VectorOfOptionalHandles {
+        v: [null, #0, null],
+    },
+    bytes = {
+        v1 = [
+            num(3):8, repeat(0xff):8,
+            repeat(0x00):4, repeat(0xff):4, repeat(0x00):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    }
+}
+
+success("MultipleHandleSubtypes") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    bindings_allowlist = [rust],
+    handle_defs = {
+        #0 = channel(),
+        #1 = event(),
+        #2 = channel(),
+    },
+    value = MultipleHandleSubtypes {
+        untyped: #0,
+        event: #1,
+        channel: #2,
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):4, repeat(0xff):4, repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1, #2,
+        ],
+    }
+}
+
+decode_failure("TooManyHandles") {
+    // TODO(fxb/36441): Implement handles in all backends.
+    // TODO(fxb/58385): Close handles on encode/decode failure in Rust.
+    bindings_allowlist = [],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    type = SingleHandle,
+    bytes = {
+        v1 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0, #1,
+        ],
+    },
+    err = EXTRA_HANDLES,
+}

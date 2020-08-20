@@ -83,7 +83,8 @@ type HandleDef struct {
 }
 
 var supportedHandleSubtypes = map[fidlir.HandleSubtype]struct{}{
-	fidlir.Event: {},
+	fidlir.Channel: {},
+	fidlir.Event:   {},
 }
 
 func HandleSubtypeByName(s string) (fidlir.HandleSubtype, bool) {

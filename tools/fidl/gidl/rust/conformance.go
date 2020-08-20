@@ -7,7 +7,6 @@ package rust
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	fidlcommon "fidl/compiler/backend/common"
@@ -23,8 +22,10 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![allow(unused_imports)]
 
 use {
-	fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}},
+	fidl::{AsHandleRef, Error, Handle, encoding::{Context, Decodable, Decoder, Encoder}},
 	fidl_conformance as conformance,
+	fuchsia_zircon_status::Status,
+	gidl_util::{copy_handle, copy_handles_at, disown_handles, get_info_handle_valid},
 	matches::assert_matches,
 };
 
@@ -33,46 +34,100 @@ const V1_CONTEXT: &Context = &Context {};
 {{ range .EncodeSuccessCases }}
 #[test]
 fn test_{{ .Name }}_encode() {
+	{{- if .HandleDefs }}
+	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	let expected_handles = unsafe { disown_handles(copy_handles_at(handle_defs, &{{ .Handles }})) };
+	let expected_handles = expected_handles.as_ref();
+	{{- end }}
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
+	let handles = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
-	Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value).unwrap();
-	assert_eq!(*bytes, &{{ .Bytes }}[..]);
+	Encoder::encode_with_context({{ .Context }}, bytes, handles, value).unwrap();
+	assert_eq!(bytes, &{{ .Bytes }});
+	{{- if .HandleDefs }}
+	assert_eq!(handles, expected_handles);
+	{{- else }}
+	assert_eq!(handles, &[]);
+	{{- end }}
 }
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
 #[test]
 fn test_{{ .Name }}_decode() {
+	let bytes = &{{ .Bytes }};
+	{{- if .HandleDefs }}
+	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
+	{{- else }}
+	let handles = &mut [];
+	{{- end }}
 	let value = &mut {{ .ValueType }}::new_empty();
-	let bytes = &mut {{ .Bytes }};
-	Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value).unwrap();
-	assert_eq!(*value, {{ .Value }});
+	Decoder::decode_with_context({{ .Context }}, bytes, handles, value).unwrap();
+	assert_eq!(value, &{{ .Value }});
+	{{- if .HandleDefs }}
+	// Re-encode purely for the side effect of linearizing the handles.
+	let mut linear_handles = unsafe { disown_handles(Vec::new()) };
+	let linear_handles = linear_handles.as_mut();
+	Encoder::encode_with_context({{ .Context }}, &mut Vec::new(), linear_handles, value)
+		.expect("Failed to re-encode the successfully decoded value");
+	{{- end }}
 }
 {{ end }}
 
 {{ range .EncodeFailureCases }}
 #[test]
 fn test_{{ .Name }}_encode_failure() {
+	{{- if .HandleDefs }}
+	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	{{- end }}
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
+	let handles = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
-	match Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value) {
+	match Encoder::encode_with_context({{ .Context }}, bytes, handles, value) {
 		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful encoding"),
 	}
+	{{- if .HandleDefs }}
+	assert_eq!(
+		handle_defs.iter().map(get_info_handle_valid).collect::<Vec<_>>(),
+		std::iter::repeat(Err(Status::BAD_HANDLE)).take(handle_defs.len()).collect::<Vec<_>>(),
+	);
+	{{- end }}
 }
 {{ end }}
 
 {{ range .DecodeFailureCases }}
 #[test]
 fn test_{{ .Name }}_decode_failure() {
+	let bytes = &{{ .Bytes }};
+	{{- if .HandleDefs }}
+	let handle_defs = vec!{{ .HandleDefs }};
+	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	let handles = &mut unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
+	{{- else }}
+	let handles = &mut [];
+	{{- end }}
 	let value = &mut {{ .ValueType }}::new_empty();
-	let bytes = &mut {{ .Bytes }};
-	match Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value) {
+	match Decoder::decode_with_context({{ .Context }}, bytes, handles, value) {
 		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),
 	}
+	{{- if .HandleDefs }}
+	assert_eq!(
+		handle_defs.iter().map(get_info_handle_valid).collect::<Vec<_>>(),
+		std::iter::repeat(Err(Status::BAD_HANDLE)).take(handle_defs.len()).collect::<Vec<_>>(),
+	);
+	{{- end }}
 }
 {{ end }}
 `))
@@ -85,19 +140,19 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Context, Value, Bytes string
+	Name, Context, HandleDefs, Value, Bytes, Handles string
 }
 
 type decodeSuccessCase struct {
-	Name, Context, ValueType, Value, Bytes string
+	Name, Context, HandleDefs, ValueType, Value, Bytes, Handles string
 }
 
 type encodeFailureCase struct {
-	Name, Context, Value, ErrorCode string
+	Name, Context, HandleDefs, Value, ErrorCode string
 }
 
 type decodeFailureCase struct {
-	Name, Context, ValueType, Bytes, ErrorCode string
+	Name, Context, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
 }
 
 // GenerateConformanceTests generates Rust tests.
@@ -133,7 +188,7 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root, config gidlconf
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
-		decl, err := schema.ExtractDeclaration(encodeSuccess.Value)
+		decl, err := schema.ExtractDeclaration(encodeSuccess.Value, encodeSuccess.HandleDefs)
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
@@ -143,10 +198,12 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:    testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				Context: encodingContext(encoding.WireFormat),
-				Value:   value,
-				Bytes:   bytesBuilder(encoding.Bytes),
+				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				Context:    encodingContext(encoding.WireFormat),
+				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
+				Value:      value,
+				Bytes:      buildBytes(encoding.Bytes),
+				Handles:    buildHandles(encoding.Handles),
 			})
 		}
 	}
@@ -156,7 +213,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
 	var decodeSuccessCases []decodeSuccessCase
 	for _, decodeSuccess := range gidlDecodeSuccesses {
-		decl, err := schema.ExtractDeclaration(decodeSuccess.Value)
+		decl, err := schema.ExtractDeclaration(decodeSuccess.Value, decodeSuccess.HandleDefs)
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
@@ -167,11 +224,13 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:      testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Context:   encodingContext(encoding.WireFormat),
-				ValueType: valueType,
-				Value:     value,
-				Bytes:     bytesBuilder(encoding.Bytes),
+				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context:    encodingContext(encoding.WireFormat),
+				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
+				ValueType:  valueType,
+				Value:      value,
+				Bytes:      buildBytes(encoding.Bytes),
+				Handles:    buildHandles(encoding.Handles),
 			})
 		}
 	}
@@ -196,10 +255,11 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:      testCaseName(encodeFailure.Name, wireFormat),
-				Context:   encodingContext(wireFormat),
-				Value:     value,
-				ErrorCode: errorCode,
+				Name:       testCaseName(encodeFailure.Name, wireFormat),
+				Context:    encodingContext(wireFormat),
+				HandleDefs: buildHandleDefs(encodeFailure.HandleDefs),
+				Value:      value,
+				ErrorCode:  errorCode,
 			})
 		}
 	}
@@ -223,11 +283,13 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
-				Context:   encodingContext(encoding.WireFormat),
-				ValueType: valueType,
-				Bytes:     bytesBuilder(encoding.Bytes),
-				ErrorCode: errorCode,
+				Name:       testCaseName(decodeFailure.Name, encoding.WireFormat),
+				Context:    encodingContext(encoding.WireFormat),
+				HandleDefs: buildHandleDefs(decodeFailure.HandleDefs),
+				ValueType:  valueType,
+				Bytes:      buildBytes(encoding.Bytes),
+				Handles:    buildHandles(encoding.Handles),
+				ErrorCode:  errorCode,
 			})
 		}
 	}
@@ -251,19 +313,6 @@ func encodingContext(wireFormat gidlir.WireFormat) string {
 	}
 }
 
-func bytesBuilder(bytes []byte) string {
-	var builder strings.Builder
-	builder.WriteString("[\n")
-	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x,", b))
-		if i%8 == 7 {
-			builder.WriteString("\n")
-		}
-	}
-	builder.WriteString("]")
-	return builder.String()
-}
-
 // Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "OutOfRange",
@@ -275,6 +324,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictEnumUnknownValue:     "Invalid",
 	gidlir.ExceededMaxOutOfLineDepth:  "MaxRecursionDepth",
 	gidlir.InvalidPaddingByte:         "NonZeroPadding",
+	gidlir.ExtraHandles:               "ExtraHandles",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

@@ -19,7 +19,7 @@ package ir
 type Value interface{}
 
 // A Handle is an index into the test's []HandleDef.
-type Handle uint64
+type Handle int
 
 // Record represents a value for a struct, table, or union type.
 type Record struct {
