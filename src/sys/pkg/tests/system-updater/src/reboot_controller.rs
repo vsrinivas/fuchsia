@@ -22,7 +22,7 @@ async fn reboot_controller_detach_causes_deferred_reboot() {
     let attempt = start_update(
         &UPDATE_PKG_URL.parse().unwrap(),
         default_options(),
-        env.installer_proxy(),
+        &env.installer_proxy(),
         Some(server_end),
     )
     .await
@@ -53,7 +53,7 @@ async fn reboot_controller_unblock_causes_reboot() {
     let attempt = start_update(
         &UPDATE_PKG_URL.parse().unwrap(),
         default_options(),
-        env.installer_proxy(),
+        &env.installer_proxy(),
         Some(server_end),
     )
     .await
@@ -84,7 +84,7 @@ async fn reboot_controller_dropped_causes_reboot() {
     let attempt = start_update(
         &UPDATE_PKG_URL.parse().unwrap(),
         default_options(),
-        env.installer_proxy(),
+        &env.installer_proxy(),
         Some(server_end),
     )
     .await

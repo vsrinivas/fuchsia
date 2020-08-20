@@ -4,27 +4,14 @@
 
 use {
     super::*,
-    fidl_fuchsia_update_installer::{MonitorRequest, MonitorRequestStream},
     fidl_fuchsia_update_installer_ext::{
-        start_update, Initiator, Options, Progress, State, StateId, UpdateAttemptError, UpdateInfo,
-        UpdateInfoAndProgress,
+        monitor_update, start_update, Initiator, Options, Progress, State, StateId,
+        UpdateAttemptError, UpdateInfo, UpdateInfoAndProgress,
     },
     fuchsia_url::pkg_url::PkgUrl,
     matches::assert_matches,
     pretty_assertions::assert_eq,
-    std::convert::TryInto,
 };
-
-async fn collect_all_on_state_events(monitor: MonitorRequestStream) -> Vec<State> {
-    monitor
-        .map(|r| {
-            let MonitorRequest::OnState { state, responder } = r.unwrap();
-            responder.send().unwrap();
-            state.try_into().unwrap()
-        })
-        .collect()
-        .await
-}
 
 #[fasync::run_singlethreaded(test)]
 async fn progress_reporting_fetch_multiple_packages() {
@@ -52,14 +39,10 @@ async fn progress_reporting_fetch_multiple_packages() {
 
     // Start the system update.
     let installer_proxy = env.installer_proxy();
-    let mut attempt = start_update(
-        &UPDATE_PKG_URL.parse().unwrap(),
-        default_options(),
-        installer_proxy.clone(),
-        None,
-    )
-    .await
-    .unwrap();
+    let mut attempt =
+        start_update(&UPDATE_PKG_URL.parse().unwrap(), default_options(), &installer_proxy, None)
+            .await
+            .unwrap();
 
     assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
 
@@ -116,10 +99,9 @@ async fn progress_reporting_fetch_multiple_packages() {
 #[fasync::run_singlethreaded(test)]
 async fn monitor_fails_when_no_update_running() {
     let env = TestEnv::builder().build();
-    let (monitor_client, _) = fidl::endpoints::create_endpoints().unwrap();
 
     // There is no update underway, so the monitor should not attach.
-    assert_eq!(env.installer_proxy().monitor_update(None, monitor_client).await.unwrap(), false);
+    assert_matches!(monitor_update(None, &env.installer_proxy()).await, Ok(None));
     assert_eq!(env.logger_factory.loggers.lock().len(), 0);
     assert_eq!(env.take_interactions(), vec![]);
 }
@@ -140,27 +122,20 @@ async fn monitor_connects_to_existing_attempt() {
 
     // Start the system update.
     let installer_proxy = env.installer_proxy();
-    let attempt = start_update(
-        &UPDATE_PKG_URL.parse().unwrap(),
-        default_options(),
-        installer_proxy.clone(),
-        None,
-    )
-    .await
-    .unwrap();
+    let attempt0 =
+        start_update(&UPDATE_PKG_URL.parse().unwrap(), default_options(), &installer_proxy, None)
+            .await
+            .unwrap();
 
     // Attach monitor.
-    let (monitor_client, monitor1_stream) = fidl::endpoints::create_request_stream().unwrap();
-    assert!(installer_proxy
-        .monitor_update(Some(attempt.attempt_id()), monitor_client)
-        .await
-        .unwrap());
+    let attempt1 =
+        monitor_update(Some(attempt0.attempt_id()), &installer_proxy).await.unwrap().unwrap();
 
     // Now that we attached both monitors to the current attempt, we can unblock the
     // resolve and resume the update attempt.
     handle_update_pkg.resolve(&update_pkg).await;
-    let monitor0_events: Vec<State> = attempt.map(|res| res.unwrap()).collect().await;
-    let monitor1_events = collect_all_on_state_events(monitor1_stream).await;
+    let monitor0_events: Vec<State> = attempt0.map(|res| res.unwrap()).collect().await;
+    let monitor1_events: Vec<State> = attempt1.map(|res| res.unwrap()).collect().await;
 
     // Since we wait until the update attempt is over to read from monitor1 events,
     // we should expect that the events in monitor1 merged.
@@ -191,8 +166,7 @@ async fn succeed_additional_start_requests_when_compatible() {
     // is essentially just a monitor_update request in this case.
     let installer_proxy = env.installer_proxy();
     let url: PkgUrl = UPDATE_PKG_URL.parse().unwrap();
-    let attempt0 =
-        start_update(&url, default_options(), installer_proxy.clone(), None).await.unwrap();
+    let attempt0 = start_update(&url, default_options(), &installer_proxy, None).await.unwrap();
     let attempt1 = start_update(
         &url,
         Options {
@@ -200,7 +174,7 @@ async fn succeed_additional_start_requests_when_compatible() {
             allow_attach_to_existing_attempt: true,
             should_write_recovery: true,
         },
-        installer_proxy.clone(),
+        &installer_proxy,
         None,
     )
     .await
@@ -245,7 +219,7 @@ async fn fail_additional_start_requests_when_not_compatible() {
         should_write_recovery: true,
     };
     let _attempt =
-        start_update(&compatible_url, compatible_options.clone(), installer_proxy.clone(), None)
+        start_update(&compatible_url, compatible_options.clone(), &installer_proxy, None)
             .await
             .unwrap();
 
@@ -264,21 +238,21 @@ async fn fail_additional_start_requests_when_not_compatible() {
 
     // Show that start_update requests fail with AlreadyInProgress errors.
     assert_matches!(
-        start_update(&compatible_url, incompatible_options0, installer_proxy.clone(), None)
+        start_update(&compatible_url, incompatible_options0, &installer_proxy, None)
             .await
             .map(|_| ())
             .unwrap_err(),
         UpdateAttemptError::InstallInProgress
     );
     assert_matches!(
-        start_update(&compatible_url, incompatible_options1, installer_proxy.clone(), None)
+        start_update(&compatible_url, incompatible_options1, &installer_proxy, None)
             .await
             .map(|_| ())
             .unwrap_err(),
         UpdateAttemptError::InstallInProgress
     );
     assert_matches!(
-        start_update(&incompatible_url, compatible_options.clone(), installer_proxy.clone(), None)
+        start_update(&incompatible_url, compatible_options.clone(), &installer_proxy, None)
             .await
             .map(|_| ())
             .unwrap_err(),
@@ -286,7 +260,7 @@ async fn fail_additional_start_requests_when_not_compatible() {
     );
     let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
     assert_matches!(
-        start_update(&compatible_url, compatible_options, installer_proxy, Some(server_end))
+        start_update(&compatible_url, compatible_options, &installer_proxy, Some(server_end))
             .await
             .map(|_| ())
             .unwrap_err(),

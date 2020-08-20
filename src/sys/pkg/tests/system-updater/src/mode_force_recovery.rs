@@ -127,7 +127,7 @@ async fn reboots_regardless_of_reboot_controller() {
     let attempt = start_update(
         &UPDATE_PKG_URL.parse().unwrap(),
         default_options(),
-        env.installer_proxy(),
+        &env.installer_proxy(),
         Some(server_end),
     )
     .await

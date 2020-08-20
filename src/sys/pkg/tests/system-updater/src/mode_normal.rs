@@ -132,7 +132,7 @@ async fn updates_the_system_no_oneshot() {
     let attempt = start_update(
         &UPDATE_PKG_URL.parse().unwrap(),
         default_options(),
-        env.installer_proxy(),
+        &env.installer_proxy(),
         None,
     )
     .await
