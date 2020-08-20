@@ -2,83 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
-
-group("magma-vulkan") {
-  if (!magma_enable_developer_build) {
-    public_deps = [ ":magma-vsi-vip" ]
-    if (build_libvulkan_vsi_vip != []) {
-      public_deps += [ ":magma-vsi-vip-config" ]
-    }
-  }
+group("magma-vsi-vip") {
+  public_deps = [ "//src/graphics/drivers/msd-vsi-vip" ]
 }
 
-if (magma_enable_developer_build) {
-  group("magma-dev") {
-    testonly = true
-    public_deps = [ ":magma-vsi-vip" ]
-    if (build_libvulkan_vsi_vip != []) {
-      public_deps += [ ":magma-vsi-vip-config" ]
-    }
-    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
-  }
-}
-
-driver_package("magma-vsi-vip") {
-  if (magma_enable_developer_build) {
-    testonly = true
-  }
-
-  deps = []
-
-  if (magma_enable_developer_build) {
-    deps += [ "//src/graphics/drivers/msd-vsi-vip:msd_vsi_test" ]
-    drivers = [
-      {
-        name = "libmsd_vsi_test.so"
-      },
-    ]
-  } else {
-    deps += [ "//src/graphics/drivers/msd-vsi-vip:msd_vsi" ]
-    drivers = [
-      {
-        name = "libmsd_vsi.so"
-      },
-    ]
-  }
-
-  resources = []
-  libraries = []
-
-  if (build_libvulkan_vsi_vip != []) {
-    foreach(entry, build_libvulkan_vsi_vip) {
-      icd_name = get_label_info(entry, "name")
-      deps += [ entry ]
-
-      libraries += [
-        {
-          name = "$icd_name.so"
-        },
-      ]
-    }
-  }
-}
-
-if (build_libvulkan_vsi_vip != []) {
-  icd_config_data("magma-vsi-vip-config") {
-    icds = []
-    foreach(entry, build_libvulkan_vsi_vip) {
-      icd_name = get_label_info(entry, "name")
-      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-      icds += [
-        {
-          lib = "${icd_name}.so"
-          manifest = filename
-        },
-      ]
-    }
-  }
+group("magma-dev") {
+  testonly = true
+  public_deps = [ "//src/graphics/drivers/msd-vsi-vip:msd-vsi-vip-test" ]
+  deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
 }

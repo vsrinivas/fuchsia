@@ -35,9 +35,13 @@ test_package("test-magma-vsi-exec") {
 }
 
 test("msd_vsi_vip_integration_tests") {
-  sources = [ "test_vsi_query.cc" ]
+  sources = [
+    "run_unit_tests.cc",
+    "test_vsi_query.cc",
+  ]
 
   deps = [
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//src/graphics/drivers/msd-vsi-vip/include",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util/platform:buffer",

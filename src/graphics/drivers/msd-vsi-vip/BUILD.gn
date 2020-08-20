@@ -3,9 +3,29 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 VSI_VIP_DEVICE_ID = "PDEV_DID_VSI_VIP"
+
+driver_package("msd-vsi-vip") {
+  deps = [ ":msd_vsi" ]
+  drivers = [
+    {
+      name = "libmsd_vsi.so"
+    },
+  ]
+}
+
+driver_package("msd-vsi-vip-test") {
+  testonly = true
+  deps = [ ":msd_vsi_test" ]
+  drivers = [
+    {
+      name = "libmsd_vsi_test.so"
+    },
+  ]
+}
 
 driver_module("msd_vsi") {
   output_name = "libmsd_vsi"
@@ -39,14 +59,10 @@ magma_pdev_entry("msd_vsi_entry") {
 magma_pdev_entry("msd_vsi_test_entry") {
   pdev_device_id = VSI_VIP_DEVICE_ID
   test_entry = true
+  disable_autobind = true
   deps = [
     "tests/unit_tests:hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [ "tests/unit_tests:nonhardware_tests" ]
 }

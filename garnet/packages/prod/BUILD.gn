@@ -308,8 +308,7 @@ group("magma-qcom-adreno") {
 }
 
 group("magma-vsi-vip") {
-  public_deps =
-      [ "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:magma-vulkan" ]
+  public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-vsi-vip" ]
 }
 
 group("memory_monitor") {

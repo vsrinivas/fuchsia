@@ -30,6 +30,7 @@ group("tests") {
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
+    "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:magma-dev",
   ]
   if (target_cpu == "x64") {
     public_deps += [

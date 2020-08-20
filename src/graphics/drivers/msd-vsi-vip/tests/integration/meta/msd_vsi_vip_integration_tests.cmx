@@ -3,6 +3,9 @@
         "binary": "test/msd_vsi_vip_integration_tests"
     },
     "sandbox": {
+        "dev": [
+            "sys"
+        ],
         "features": [
             "vulkan"
         ],
