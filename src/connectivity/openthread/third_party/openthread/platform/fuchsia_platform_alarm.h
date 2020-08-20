@@ -8,22 +8,6 @@
 #include <stdint.h>
 
 class FuchsiaPlatformAlarm {
- private:
-  static constexpr uint64_t kNanoSecondsPerMicroSecond = 1000;
-  static constexpr uint64_t kMicroSecondsPerMilliSecond = 1000;
-
-  uint32_t speed_up_factor_ = 1;
-  uint32_t ms_alarm_;
-  bool is_ms_running_ = false;
-
-  uint32_t us_alarm_;
-  bool is_us_running_ = false;
-
-  // Gets the current time in usec
-  // Note - in posix world this is redefined in sim.
-  // See if we need to do something similar
-  static uint64_t GetTimeMicroSec(void);
-
  public:
   uint32_t GetNowMicroSec(void);
   uint32_t GetNowMilliSec(void);
@@ -41,6 +25,22 @@ class FuchsiaPlatformAlarm {
   bool MicroSecAlarmFired();
   void SetMicroSecAlarm(uint32_t time_us);
   void ClearMicroSecAlarm();
+
+ private:
+  // Gets the current time in usec
+  // Note - in posix world this is redefined in sim.
+  // See if we need to do something similar
+  static uint64_t GetTimeMicroSec(void);
+
+  static constexpr uint64_t kNanoSecondsPerMicroSecond = 1000;
+  static constexpr uint64_t kMicroSecondsPerMilliSecond = 1000;
+
+  uint32_t speed_up_factor_ = 1;
+  uint32_t ms_alarm_;
+  bool is_ms_running_ = false;
+
+  uint32_t us_alarm_;
+  bool is_us_running_ = false;
 };
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_FUCHSIA_PLATFORM_ALARM_H_
