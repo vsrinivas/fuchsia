@@ -161,7 +161,7 @@ impl LightController {
                 None => continue,
                 Some(LightValue::Brightness(brightness)) => (
                     call_async!(self.light_proxy =>
-                        set_brightness_value(*hardware_index, brightness))
+                        set_brightness_value(*hardware_index, (brightness * 255.0) as u8)) // TODO (b/163829838): Change after transition
                     .await,
                     "set_brightness_value",
                 ),
@@ -242,7 +242,7 @@ impl LightController {
         let value = match light_type {
             LightType::Brightness => LightValue::Brightness(
                 match call_async!(self.light_proxy => get_current_brightness_value(index)).await {
-                    Ok(Ok(brightness)) => brightness,
+                    Ok(Ok(brightness)) => brightness as f64 / 255.0, // TODO (b/163829838): Change after transition
                     _ => {
                         return Err(ControllerError::ExternalFailure(
                             SettingType::Light,

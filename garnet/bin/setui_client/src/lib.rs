@@ -234,14 +234,14 @@ pub struct LightGroup {
     pub simple: Vec<bool>,
 
     #[structopt(short, long)]
-    /// Repeated parameter for a list of integer brightness values from 0-255 inclusive to set for a
-    /// light group.
-    pub brightness: Vec<u8>,
+    /// Repeated parameter for a list of floating point brightness values from 0.0-1.0 inclusive
+    /// to set for a light group, where 0.0 is minimum brightness and 1.0 is maximum.
+    pub brightness: Vec<f64>,
 
     #[structopt(short, long, parse(try_from_str = "str_to_rgb"))]
     /// Repeated parameter for a list of RGB values to set for a light group. Values should be in
-    /// the range of 0-255 inclusive and should be specified as a comma-separated list of the red,
-    /// green, and blue components. Ex. 100,20,23
+    /// the range of 0.0-1.0 inclusive and should be specified as a comma-separated list of the red,
+    /// green, and blue components. Ex. 0.1,0.4,0.23
     pub rgb: Vec<fidl_fuchsia_ui_types::ColorRgb>,
 }
 

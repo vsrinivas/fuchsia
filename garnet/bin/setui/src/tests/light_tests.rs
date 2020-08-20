@@ -37,7 +37,7 @@ fn get_test_light_info() -> LightInfo {
             name: LIGHT_NAME_1.to_string(),
             enabled: true,
             light_type: LightType::Brightness,
-            lights: vec![LightState { value: Some(LightValue::Brightness(42)) }],
+            lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
             hardware_index: vec![0],
         },
     );
@@ -166,10 +166,37 @@ fn assert_lights_eq(mut groups: Vec<fidl_fuchsia_settings::LightGroup>, info: Li
         .map(|(_, value)| fidl_fuchsia_settings::LightGroup::from(value))
         .collect::<Vec<_>>();
 
+    assert_eq!(groups.len(), expected_value.len());
     // Sort by names for stability
     groups.sort_by_key(|group: &fidl_fuchsia_settings::LightGroup| group.name.clone());
     expected_value.sort_by_key(|group| group.name.clone());
-    assert_eq!(groups, expected_value);
+    for i in 0..groups.len() {
+        assert_light_group_eq(&groups[i], &expected_value[i]);
+    }
+}
+
+fn assert_light_group_eq(
+    left: &fidl_fuchsia_settings::LightGroup,
+    right: &fidl_fuchsia_settings::LightGroup,
+) {
+    assert_eq!(left.name, right.name);
+    assert_eq!(left.enabled, right.enabled);
+    assert_eq!(left.type_, right.type_);
+    assert_eq!(left.lights.as_ref().unwrap().len(), right.lights.as_ref().unwrap().len());
+    if left.type_ == Some(fidl_fuchsia_settings::LightType::Simple) {
+        assert_eq!(left.lights, right.lights);
+    }
+}
+
+fn assert_switchboard_light_group_eq(left: &LightGroup, right: &LightGroup) {
+    assert_eq!(left.name, right.name);
+    assert_eq!(left.enabled, right.enabled);
+    assert_eq!(left.light_type, right.light_type);
+    assert_eq!(left.lights.len(), right.lights.len());
+    assert_eq!(left.hardware_index, right.hardware_index);
+    if left.light_type == LightType::Simple {
+        assert_eq!(left.lights, right.lights);
+    }
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -186,15 +213,18 @@ async fn test_light_restore() {
     // Verify that the restored value is persisted.
     let mut store_lock = store.lock().await;
     let retrieved_struct = store_lock.get().await;
-    assert_eq!(
+    assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
-        retrieved_struct.light_groups.get(LIGHT_NAME_1).unwrap()
+        retrieved_struct.light_groups.get(LIGHT_NAME_1).unwrap(),
     );
 
     // Verify that the restored value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =
         light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_eq!(fidl_fuchsia_settings::LightGroup::from(expected_light_group), settings);
+    assert_light_group_eq(
+        &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
+        &settings,
+    );
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -219,7 +249,7 @@ async fn test_light_store_and_watch() {
     let mut expected_light_info = get_test_light_info();
     let mut changed_light_group =
         expected_light_info.light_groups.get(LIGHT_NAME_1).unwrap().clone();
-    changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(128)) }];
+    changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.128)) }];
     expected_light_info.light_groups.insert(LIGHT_NAME_1.to_string(), changed_light_group.clone());
 
     let (light_service, store) =
@@ -247,8 +277,8 @@ async fn test_light_set_wrong_size() {
         .set_light_group_values(
             LIGHT_NAME_1,
             &mut vec![
-                LightState { value: Some(LightValue::Brightness(128)) },
-                LightState { value: Some(LightValue::Brightness(11)) },
+                LightState { value: Some(LightValue::Brightness(0.128)) },
+                LightState { value: Some(LightValue::Brightness(0.11)) },
             ]
             .into_iter()
             .map(LightState::into),
@@ -261,9 +291,9 @@ async fn test_light_set_wrong_size() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_set_none() {
     const TEST_LIGHT_NAME: &str = "multiple_lights";
-    const LIGHT_1_VAL: u8 = 42;
-    const LIGHT_2_START_VAL: u8 = 24;
-    const LIGHT_2_CHANGED_VAL: u8 = 11;
+    const LIGHT_1_VAL: f64 = 0.42;
+    const LIGHT_2_START_VAL: f64 = 0.24;
+    const LIGHT_2_CHANGED_VAL: f64 = 0.11;
     // For this test, create a light group with two lights to test setting one light at a time.
     let original_light_group = LightGroup {
         name: TEST_LIGHT_NAME.to_string(),
@@ -329,7 +359,7 @@ async fn test_individual_light_group() {
     let test_light_info = get_test_light_info();
     let light_group_1 = test_light_info.light_groups.get(LIGHT_NAME_1).unwrap().clone();
     let mut light_group_1_updated = light_group_1.clone();
-    light_group_1_updated.lights = vec![LightState { value: Some(LightValue::Brightness(128)) }];
+    light_group_1_updated.lights = vec![LightState { value: Some(LightValue::Brightness(0.128)) }];
 
     let light_group_2 = test_light_info.light_groups.get(LIGHT_NAME_2).unwrap().clone();
     let mut light_group_2_updated = light_group_2.clone();
@@ -340,20 +370,20 @@ async fn test_individual_light_group() {
 
     // Ensure values from Watch matches set values.
     let settings = light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_eq!(settings, light_group_1.into());
+    assert_light_group_eq(&settings, &light_group_1.into());
     let settings = light_service.watch_light_group(LIGHT_NAME_2).await.expect("watch completed");
-    assert_eq!(settings, light_group_2.into());
+    assert_light_group_eq(&settings, &light_group_2.into());
 
     // Set updated values for the two lights.
     set_light_value(&light_service, light_group_1_updated.clone()).await;
 
     let settings = light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
-    assert_eq!(settings, light_group_1_updated.into());
+    assert_light_group_eq(&settings, &light_group_1_updated.into());
 
     set_light_value(&light_service, light_group_2_updated.clone()).await;
 
     let settings = light_service.watch_light_group(LIGHT_NAME_2).await.expect("watch completed");
-    assert_eq!(settings, light_group_2_updated.into());
+    assert_light_group_eq(&settings, &light_group_2_updated.into());
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -405,8 +435,8 @@ async fn test_set_wrong_state_length() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_set_wrong_value_type() {
     const TEST_LIGHT_NAME: &str = "multiple_lights";
-    const LIGHT_START_VAL: u8 = 24;
-    const LIGHT_CHANGED_VAL: u8 = 11;
+    const LIGHT_START_VAL: f64 = 0.24;
+    const LIGHT_CHANGED_VAL: f64 = 0.11;
     let original_light_group = LightGroup {
         name: TEST_LIGHT_NAME.to_string(),
         enabled: true,

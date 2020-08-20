@@ -46,7 +46,8 @@ impl HardwareLightService {
         self.light_info.lock().await.insert(index, Info { name, capability: light_type.into() });
         match value {
             LightValue::Brightness(value) => {
-                self.brightness_values.lock().await.insert(index, value);
+                self.brightness_values.lock().await.insert(index, (value * 255.0) as u8);
+                // TODO (rdzhuang): Change after transition
             }
             LightValue::Rgb(value) => {
                 self.rgb_values
