@@ -328,9 +328,11 @@ collect_blob_manifest("blob.manifest") {
     ":cache_packages",
     ":meta_packages",
     ":system_image.meta",
-    ":update.meta",
     pkgfs_package_label,
   ]
+  if (product_include_updates_in_blobfs) {
+    deps += [ ":update.meta" ]
+  }
 }
 
 blob_image_path = "$target_out_dir/blob.blk"
