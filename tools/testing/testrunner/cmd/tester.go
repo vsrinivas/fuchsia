@@ -251,7 +251,7 @@ func (t *fuchsiaSSHTester) CopySinks(ctx context.Context, sinks []runtests.DataS
 	return nil
 }
 
-// RunSnapshot runs `bugreport` on the device.
+// RunSnapshot runs `snapshot` on the device.
 func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string) error {
 	if snapshotFile == "" {
 		return nil
@@ -262,8 +262,7 @@ func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 	}
 	defer snapshotOutFile.Close()
 	startTime := time.Now()
-	// TODO(50926): switch to /bin/snapshot once fxr/416328 is merged.
-	err = t.client.Run(ctx, []string{"/bin/bugreport"}, snapshotOutFile, os.Stderr)
+	err = t.client.Run(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
 	if err != nil {
 		logger.Errorf(ctx, "%s: %v", constants.FailedToRunSnapshotMsg, err)
 	}
