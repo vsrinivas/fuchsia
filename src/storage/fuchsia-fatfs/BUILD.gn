@@ -12,6 +12,7 @@ rustc_library("lib") {
   name = "fuchsia_fatfs"
 
   deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/fidl/rust/fidl",

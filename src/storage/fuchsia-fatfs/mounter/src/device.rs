@@ -11,8 +11,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_fatfs::FatFs,
     fuchsia_syslog::{self, fx_log_info},
-    fuchsia_zircon::{self as zx, Status},
+    fuchsia_zircon as zx,
     remote_block_device::RemoteBlockDevice,
+    std::ops::Deref,
     vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
 };
 
@@ -69,12 +70,6 @@ impl FatDevice {
         );
     }
 
-    /// Shut down the filesystem.
-    pub fn shut_down(&self) -> Result<(), Status> {
-        self.scope.shutdown();
-        self.fs.shut_down()
-    }
-
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.
     async fn find_fat_partition(dir_proxy: &DirectoryProxy) -> Result<Option<String>, Error> {
         let children = files_async::readdir(&dir_proxy).await?;
@@ -115,6 +110,14 @@ impl FatDevice {
         let (status, guid) = proxy.get_type_guid().await?;
         zx::Status::ok(status).context("Getting GUID")?;
         Ok(guid)
+    }
+}
+
+impl Deref for FatDevice {
+    type Target = FatFs;
+
+    fn deref(&self) -> &Self::Target {
+        &self.fs
     }
 }
 

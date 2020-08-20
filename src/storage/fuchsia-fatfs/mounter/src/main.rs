@@ -5,10 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_fs::{
-        AdminRequest, AdminRequestStream, FilesystemInfo, FilesystemInfoQuery, FsType,
-        QueryRequest, QueryRequestStream,
-    },
+    fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
     fidl_fuchsia_io::DirectoryRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -22,7 +19,7 @@ mod device;
 use crate::device::FatDevice;
 
 /// All the services handled by the fatfs implementation.
-enum Services {
+pub enum Services {
     Admin(AdminRequestStream),
     Query(QueryRequestStream),
     // Note this wraps a channel and not a RequestStream so that we can pass it to fatfs's open()
@@ -30,7 +27,7 @@ enum Services {
     Root(zx::Channel),
 }
 
-struct FatServer {
+pub struct FatServer {
     device: RwLock<Option<FatDevice>>,
 }
 
@@ -100,18 +97,12 @@ impl FatServer {
         };
 
         while let Some(req) = stream.try_next().await? {
-            match req {
-                AdminRequest::Shutdown { responder } => {
-                    let device = self.device.write().unwrap();
-                    if let Some(device) = device.as_ref() {
-                        device
-                            .shut_down()
-                            .unwrap_or_else(|e| fx_log_err!("Shutdown failed {:?}", e));
-                    }
-                    // If the device disappeared because we lost the race, it means that shutdown
-                    // already happened and we have nothing to do.
-                    responder.send()?;
-                }
+            let device = self.device.read().unwrap();
+            if let Some(device) = device.as_ref() {
+                device.handle_admin(&device.scope, req)?;
+            } else {
+                stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
+                break;
             }
         }
         Ok(())
@@ -127,33 +118,12 @@ impl FatServer {
         };
 
         while let Some(req) = stream.try_next().await? {
-            match req {
-                QueryRequest::IsNodeInFilesystem { token, responder } => {
-                    let device = self.device.read().unwrap();
-                    if let Some(device) = device.as_ref() {
-                        let result = match device
-                            .scope
-                            .token_registry()
-                            .unwrap()
-                            .get_container(token.into())
-                        {
-                            Ok(Some(_)) => true,
-                            _ => false,
-                        };
-                        responder.send(result)?;
-                    } else {
-                        stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
-                        return Ok(());
-                    }
-                }
-                QueryRequest::GetInfo { query, responder } => {
-                    let mut result = FilesystemInfo::empty();
-                    // TODO(simonshields): We should be able to expose more fields here.
-                    if query.contains(FilesystemInfoQuery::FsType) {
-                        result.fs_type = Some(FsType::Fatfs);
-                    }
-                    responder.send(&mut Ok(result))?;
-                }
+            let device = self.device.read().unwrap();
+            if let Some(device) = device.as_ref() {
+                device.handle_query(&device.scope, req)?;
+            } else {
+                stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
+                break;
             }
         }
         Ok(())

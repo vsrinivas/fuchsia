@@ -5,10 +5,12 @@ use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
     fatfs::{FsOptions, ReadWriteSeek},
+    fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FilesystemInfoQuery, FsType, QueryRequest},
+    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::pin::Pin,
     std::sync::Arc,
-    vfs::directory::entry::DirectoryEntry,
+    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
 mod directory;
@@ -50,6 +52,38 @@ impl FatFs {
     /// Get the root directory of this filesystem.
     pub fn get_root(&self) -> Arc<dyn DirectoryEntry> {
         self.root.clone()
+    }
+
+    pub fn handle_query(&self, scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
+        match req {
+            QueryRequest::IsNodeInFilesystem { token, responder } => {
+                let result = match scope.token_registry().unwrap().get_container(token.into()) {
+                    Ok(Some(_)) => true,
+                    _ => false,
+                };
+                responder.send(result)?;
+            }
+            QueryRequest::GetInfo { query, responder } => {
+                let mut result = FilesystemInfo::empty();
+                // TODO(simonshields): We should be able to expose more fields here.
+                if query.contains(FilesystemInfoQuery::FsType) {
+                    result.fs_type = Some(FsType::Fatfs);
+                }
+                responder.send(&mut Ok(result))?;
+            }
+        };
+        Ok(())
+    }
+
+    pub fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<(), Error> {
+        match req {
+            AdminRequest::Shutdown { responder } => {
+                scope.shutdown();
+                self.shut_down().unwrap_or_else(|e| fx_log_err!("Shutdown failed {:?}", e));
+                responder.send()?;
+            }
+        };
+        Ok(())
     }
 
     /// Shut down the filesystem.

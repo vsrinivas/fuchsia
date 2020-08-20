@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream},
+    fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -15,34 +15,33 @@ use {
     futures::future::TryFutureExt,
     futures::stream::{StreamExt, TryStreamExt},
     remote_block_device::RemoteBlockDevice,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
     vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
 };
 
 enum Services {
     Admin(AdminRequestStream),
+    Query(QueryRequestStream),
 }
 
 async fn handle_admin(
     mut stream: AdminRequestStream,
-    fs: Arc<Mutex<Option<FatFs>>>,
+    fs: Arc<FatFs>,
     scope: &ExecutionScope,
 ) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("Reading request")? {
-        match request {
-            AdminRequest::Shutdown { responder } => {
-                scope.shutdown();
+        fs.handle_admin(scope, request)?;
+    }
+    Ok(())
+}
 
-                match fs.lock().unwrap().take() {
-                    Some(value) => value
-                        .shut_down()
-                        .unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e)),
-                    None => {}
-                };
-
-                responder.send()?;
-            }
-        }
+async fn handle_query(
+    mut stream: QueryRequestStream,
+    fs: Arc<FatFs>,
+    scope: &ExecutionScope,
+) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("Reading request")? {
+        fs.handle_query(scope, request)?;
     }
     Ok(())
 }
@@ -84,13 +83,14 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(Services::Admin);
     fs.take_and_serve_directory_handle()?;
 
-    let fatfs = Arc::new(Mutex::new(Some(fatfs)));
+    let fatfs = Arc::new(fatfs);
 
     // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
         match request {
             Services::Admin(request) => handle_admin(request, Arc::clone(&fatfs), &scope),
+            Services::Query(request) => handle_query(request, Arc::clone(&fatfs), &scope),
         }
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))
     })
@@ -101,12 +101,7 @@ async fn main() -> Result<(), Error> {
     scope.wait().await;
 
     // Make sure that fatfs has been cleanly shut down.
-    match fatfs.lock().unwrap().take() {
-        Some(value) => {
-            value.shut_down().unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e))
-        }
-        None => {}
-    };
+    fatfs.shut_down().unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e));
 
     Ok(())
 }
