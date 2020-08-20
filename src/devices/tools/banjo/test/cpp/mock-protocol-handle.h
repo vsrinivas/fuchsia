@@ -301,6 +301,55 @@ private:
     const synchronous_handle_protocol_t proto_;
 };
 
+// This class mocks a device by providing a another_synchronous_handle_protocol_t.
+// Users can set expectations on how the protocol ops are called and what values they return. After
+// the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.
+// See the following example test:
+//
+// ddk::MockAnotherSynchronousHandle another_synchronous_handle;
+//
+// /* Set some expectations on the device by calling another_synchronous_handle.Expect... methods. */
+//
+// SomeDriver dut(another_synchronous_handle.GetProto());
+//
+// EXPECT_OK(dut.SomeMethod());
+// ASSERT_NO_FATAL_FAILURES(another_synchronous_handle.VerifyAndClear());
+//
+// Note that users must provide the equality operator for struct types, for example:
+// bool operator==(const a_struct_type& lhs, const a_struct_type& rhs)
+
+class MockAnotherSynchronousHandle : ddk::AnotherSynchronousHandleProtocol<MockAnotherSynchronousHandle> {
+public:
+    MockAnotherSynchronousHandle() : proto_{&another_synchronous_handle_protocol_ops_, this} {}
+
+    virtual ~MockAnotherSynchronousHandle() {}
+
+    const another_synchronous_handle_protocol_t* GetProto() const { return &proto_; }
+
+    virtual MockAnotherSynchronousHandle& ExpectHandle(const zx::handle& h, zx::handle out_h, zx::handle out_h2) {
+        mock_handle_.ExpectCall({std::move(out_h), std::move(out_h2)}, h.get());
+        return *this;
+    }
+
+    void VerifyAndClear() {
+        mock_handle_.VerifyAndClear();
+    }
+
+    virtual void AnotherSynchronousHandleHandle(zx::handle h, zx::handle* out_h, zx::handle* out_h2) {
+        std::tuple<zx::handle, zx::handle> ret = mock_handle_.Call(std::move(h));
+        *out_h = std::move(std::get<0>(ret));
+        *out_h2 = std::move(std::get<1>(ret));
+    }
+
+    mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle>& mock_handle() { return mock_handle_; }
+
+protected:
+    mock_function::MockFunction<std::tuple<zx::handle, zx::handle>, zx::handle> mock_handle_;
+
+private:
+    const another_synchronous_handle_protocol_t proto_;
+};
+
 // This class mocks a device by providing a async_handle_protocol_t.
 // Users can set expectations on how the protocol ops are called and what values they return. After
 // the test, use VerifyAndClear to reset the object and verify that all expectations were satisfied.

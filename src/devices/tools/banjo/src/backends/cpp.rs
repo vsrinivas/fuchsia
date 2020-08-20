@@ -411,25 +411,25 @@ fn get_mock_params(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
         .into_iter()
         .chain(m.in_params.iter().map(|(name, ty)| match ty {
             ast::Ty::Handle { .. } => {
-                format!("const {}& {}", ty_to_cpp_str(ast, true, ty).unwrap(), name)
+                format!("const {}& {}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name))
             }
-            ast::Ty::Str { .. } => format!("std::string {}", name),
+            ast::Ty::Str { .. } => format!("std::string {}", to_c_name(name)),
             ast::Ty::Vector { ref ty, .. } => format!(
                 "std::vector<{ty}> {name}",
                 ty = ty_to_cpp_str(ast, false, ty).unwrap(),
-                name = name,
+                name = to_c_name(name),
             ),
-            _ => format!("{} {}", ty_to_cpp_str(ast, true, ty).unwrap(), name),
+            _ => format!("{} {}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name)),
         }))
         .chain(m.out_params.iter().skip(if has_return_value { 1 } else { 0 }).map(|(name, ty)| {
             match ty {
-                ast::Ty::Str { .. } => format!("std::string {}", name),
+                ast::Ty::Str { .. } => format!("std::string {}", to_c_name(name)),
                 ast::Ty::Vector { ref ty, .. } => format!(
                     "std::vector<{ty}> out_{name}",
                     ty = ty_to_cpp_str(ast, false, ty).unwrap(),
-                    name = name,
+                    name = to_c_name(name),
                 ),
-                _ => format!("{} out_{}", ty_to_cpp_str(ast, true, ty).unwrap(), name),
+                _ => format!("{} out_{}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name)),
             }
         }))
         .collect::<Vec<_>>()
@@ -444,10 +444,10 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
             m.out_params
                 .iter()
                 .map(|(name, ty)| match ty {
-                    ast::Ty::Handle { .. } => format!("std::move(out_{})", name),
-                    ast::Ty::Str { .. } => format!("std::move(out_{})", name),
-                    ast::Ty::Vector { .. } => format!("std::move(out_{})", name),
-                    _ => format!("out_{}", name),
+                    ast::Ty::Handle { .. } => format!("std::move(out_{})", to_c_name(name)),
+                    ast::Ty::Str { .. } => format!("std::move(out_{})", to_c_name(name)),
+                    ast::Ty::Vector { .. } => format!("std::move(out_{})", to_c_name(name)),
+                    _ => format!("out_{}", to_c_name(name)),
                 })
                 .collect::<Vec<_>>()
                 .join(", "),
@@ -457,10 +457,10 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
     Ok(args
         .into_iter()
         .chain(m.in_params.iter().map(|(name, ty)| match ty {
-            ast::Ty::Handle { .. } => format!("{}.get()", name),
-            ast::Ty::Str { .. } => format!("std::move({})", name),
-            ast::Ty::Vector { .. } => format!("std::move({})", name),
-            _ => name.to_string(),
+            ast::Ty::Handle { .. } => format!("{}.get()", to_c_name(name)),
+            ast::Ty::Str { .. } => format!("std::move({})", to_c_name(name)),
+            ast::Ty::Vector { .. } => format!("std::move({})", to_c_name(name)),
+            _ => to_c_name(name).to_string(),
         }))
         .collect::<Vec<_>>()
         .join(", "))

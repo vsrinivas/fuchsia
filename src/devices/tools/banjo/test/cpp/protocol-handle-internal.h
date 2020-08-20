@@ -143,6 +143,18 @@ constexpr void CheckSynchronousHandleProtocolSubclass() {
 
 }
 
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_another_synchronous_handle_protocol_handle, AnotherSynchronousHandleHandle,
+        void (C::*)(zx::handle h, zx::handle* out_h, zx::handle* out_h2));
+
+
+template <typename D>
+constexpr void CheckAnotherSynchronousHandleProtocolSubclass() {
+    static_assert(internal::has_another_synchronous_handle_protocol_handle<D>::value,
+        "AnotherSynchronousHandleProtocol subclasses must implement "
+        "void AnotherSynchronousHandleHandle(zx::handle h, zx::handle* out_h, zx::handle* out_h2);");
+
+}
+
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_handle_protocol_handle, AsyncHandleHandle,
         void (C::*)(zx::handle h, async_handle_handle_callback callback, void* cookie));
 

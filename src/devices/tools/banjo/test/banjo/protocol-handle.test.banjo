@@ -29,6 +29,11 @@ protocol SynchronousHandle {
 };
 
 [Layout = "ddk-protocol"]
+protocol AnotherSynchronousHandle {
+    Handle(handle h) -> (handle @h, handle @h2);
+};
+
+[Layout = "ddk-protocol"]
 protocol AsyncHandle {
     [Async]
     Handle(handle h) -> (handle h, handle h2);

@@ -98,6 +98,32 @@
 // };
 // :: Proxies ::
 //
+// ddk::AnotherSynchronousHandleProtocolClient is a simple wrapper around
+// another_synchronous_handle_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::AnotherSynchronousHandleProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the another-synchronous-handle protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE device.
+// class AnotherSynchronousHandleDevice;
+// using AnotherSynchronousHandleDeviceType = ddk::Device<AnotherSynchronousHandleDevice, /* ddk mixins */>;
+//
+// class AnotherSynchronousHandleDevice : public AnotherSynchronousHandleDeviceType,
+//                      public ddk::AnotherSynchronousHandleProtocol<AnotherSynchronousHandleDevice> {
+//   public:
+//     AnotherSynchronousHandleDevice(zx_device_t* parent)
+//         : AnotherSynchronousHandleDeviceType(parent) {}
+//
+//     void AnotherSynchronousHandleHandle(zx::handle h, zx::handle* out_h, zx::handle* out_h2);
+//
+//     ...
+// };
+// :: Proxies ::
+//
 // ddk::AsyncHandleProtocolClient is a simple wrapper around
 // async_handle_protocol_t. It does not own the pointers passed to it.
 //
@@ -443,6 +469,89 @@ public:
 
 private:
     synchronous_handle_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+template <typename D, typename Base = internal::base_mixin>
+class AnotherSynchronousHandleProtocol : public Base {
+public:
+    AnotherSynchronousHandleProtocol() {
+        internal::CheckAnotherSynchronousHandleProtocolSubclass<D>();
+        another_synchronous_handle_protocol_ops_.handle = AnotherSynchronousHandleHandle;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE;
+            dev->ddk_proto_ops_ = &another_synchronous_handle_protocol_ops_;
+        }
+    }
+
+protected:
+    another_synchronous_handle_protocol_ops_t another_synchronous_handle_protocol_ops_ = {};
+
+private:
+    static void AnotherSynchronousHandleHandle(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::handle out_h2;
+        zx::handle out_h22;
+        static_cast<D*>(ctx)->AnotherSynchronousHandleHandle(zx::handle(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+};
+
+class AnotherSynchronousHandleProtocolClient {
+public:
+    AnotherSynchronousHandleProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    AnotherSynchronousHandleProtocolClient(const another_synchronous_handle_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    AnotherSynchronousHandleProtocolClient(zx_device_t* parent) {
+        another_synchronous_handle_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a AnotherSynchronousHandleProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        AnotherSynchronousHandleProtocolClient* result) {
+        another_synchronous_handle_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = AnotherSynchronousHandleProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    void GetProto(another_synchronous_handle_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    void Handle(zx::handle h, zx::handle* out_h, zx::handle* out_h2) const {
+        ops_->handle(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+private:
+    another_synchronous_handle_protocol_ops_t* ops_;
     void* ctx_;
 };
 

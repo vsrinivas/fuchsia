@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct another_synchronous_handle_protocol another_synchronous_handle_protocol_t;
 typedef void (*async_handle_handle_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_process_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
 typedef void (*async_handle_thread_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
@@ -36,6 +37,21 @@ typedef struct async_handle_protocol async_handle_protocol_t;
 typedef struct synchronous_handle_protocol synchronous_handle_protocol_t;
 
 // Declarations
+typedef struct another_synchronous_handle_protocol_ops {
+    void (*handle)(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2);
+} another_synchronous_handle_protocol_ops_t;
+
+
+struct another_synchronous_handle_protocol {
+    another_synchronous_handle_protocol_ops_t* ops;
+    void* ctx;
+};
+
+static inline void another_synchronous_handle_handle(const another_synchronous_handle_protocol_t* proto, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+    proto->ops->handle(proto->ctx, h, out_h, out_h2);
+}
+
+
 typedef struct async_handle_protocol_ops {
     void (*handle)(void* ctx, zx_handle_t h, async_handle_handle_callback callback, void* cookie);
     void (*process)(void* ctx, zx_handle_t h, async_handle_process_callback callback, void* cookie);

@@ -595,6 +595,57 @@ BanjoAst {
                     namespace: Some(
                         "banjo.examples.protocol.handle",
                     ),
+                    name: "AnotherSynchronousHandle",
+                },
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "Handle",
+                        in_params: [
+                            (
+                                "h",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "@h",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                            ),
+                            (
+                                "@h2",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            },
+            Protocol {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol",
+                            ),
+                        },
+                    ],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.handle",
+                    ),
                     name: "AsyncHandle",
                 },
                 methods: [
