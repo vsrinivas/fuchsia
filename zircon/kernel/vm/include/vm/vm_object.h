@@ -88,7 +88,7 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   virtual bool is_contiguous() const { return false; }
   // Returns true if the object size can be changed.
   virtual bool is_resizable() const { return false; }
-  // Returns true if the VMO was created vma CreatePagerVmo().
+  // Returns true if the VMO was created via CreatePagerVmo().
   virtual bool is_pager_backed() const { return false; }
 
   // Returns true if the vmo is a hidden paged vmo.
