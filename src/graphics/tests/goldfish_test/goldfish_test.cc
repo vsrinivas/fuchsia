@@ -186,9 +186,18 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
 
   llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
-    auto result =
-        control.CreateColorBuffer(std::move(vmo_copy), 64, 64,
-                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
   }
@@ -197,19 +206,30 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
 
   {
-    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    auto result = control.GetBufferHandle(std::move(vmo_copy2));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
+    EXPECT_EQ(result.Unwrap()->type,
+              llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER);
   }
 
   zx::vmo vmo_copy3;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
   {
-    auto result =
-        control.CreateColorBuffer(std::move(vmo_copy3), 64, 64,
-                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_ALREADY_EXISTS);
   }
@@ -301,9 +321,18 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
   {
-    auto result =
-        control.CreateColorBuffer(std::move(vmo_copy3), 64, 64,
-                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_ALREADY_EXISTS);
   }
@@ -318,7 +347,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   }
 }
 
-// In this test case we call CreateColorBuffer() and GetColorBuffer()
+// In this test case we call CreateColorBuffer() and GetBufferHandle()
 // on VMOs not registered with goldfish sysmem heap.
 //
 // The IPC transmission should succeed but FIDL interface should
@@ -340,20 +369,29 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
 
   llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
-    auto result =
-        control.CreateColorBuffer(std::move(vmo_copy), 16, 16,
-                                  llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(16))
+            .set_height(std::make_unique<uint32_t>(16))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
   }
 
-  // Call GetColorBuffer() using vmo not registered with goldfish
+  // Call GetBufferHandle() using vmo not registered with goldfish
   // sysmem heap.
   zx::vmo vmo_copy2;
   EXPECT_EQ(non_sysmem_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
 
   {
-    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    auto result = control.GetBufferHandle(std::move(vmo_copy2));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
   }
@@ -512,7 +550,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   }
 }
 
-// In this test case we call GetColorBuffer() on a vmo
+// In this test case we call GetBufferHandle() on a vmo
 // registered to the control device but we haven't created
 // the color buffer yet.
 //
@@ -582,7 +620,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
 
   llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
   {
-    auto result = control.GetColorBuffer(std::move(vmo_copy));
+    auto result = control.GetBufferHandle(std::move(vmo_copy));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_NOT_FOUND);
   }
@@ -896,10 +934,12 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   zx::vmo vmo_copy2;
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
   {
-    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    auto result = control.GetBufferHandle(std::move(vmo_copy2));
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_OK);
     EXPECT_NE(result.Unwrap()->id, 0u);
+    EXPECT_EQ(result.Unwrap()->type,
+              llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER);
   }
 
   // Cleanup.

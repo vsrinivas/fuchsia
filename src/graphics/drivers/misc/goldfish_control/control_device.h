@@ -43,20 +43,12 @@ class Control : public ControlType,
   void FreeBufferHandle(uint64_t id);
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void CreateColorBuffer(zx::vmo vmo, uint32_t width, uint32_t height,
-                         llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType format,
-                         CreateColorBufferCompleter::Sync completer) override;
-
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateColorBuffer2(
       zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
       CreateColorBuffer2Completer::Sync completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) override;
-
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void GetColorBuffer(zx::vmo vmo, GetColorBufferCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) override;

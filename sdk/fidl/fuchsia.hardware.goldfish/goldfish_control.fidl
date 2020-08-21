@@ -82,21 +82,6 @@ protocol ControlDevice {
     /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
     ///
-    /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
-    /// already been created for this VMO.
-    ///
-    /// This method is deprecated. Please use CreateColorBuffer2 instead.
-    [Deprecated, Transitional]
-    CreateColorBuffer(zx.handle:VMO vmo,
-                      uint32 width,
-                      uint32 height,
-                      ColorBufferFormatType format)
-        -> (zx.status res);
-
-    /// Create shared color buffer. Color buffer is automatically freed when
-    /// all references to `vmo` have been closed. Fails if VMO is not
-    /// associated with goldfish heap memory.
-    ///
     /// Arguments
     ///     Refer to `CreateColorBuffer2Params` for input arguments.
     ///
@@ -111,7 +96,6 @@ protocol ControlDevice {
     ///            memory property bits, this value is a non-negative
     ///            integer in [0, 4095]. For non-HOST_VISIBLE memory or
     ///            failed allocation, this value is negative.
-    [Transitional]
     CreateColorBuffer2(zx.handle:VMO vmo,
                        CreateColorBuffer2Params create_params)
         -> (zx.status res, int32 hw_address_page_offset);
@@ -123,13 +107,6 @@ protocol ControlDevice {
     /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
     /// already been created for this VMO.
     CreateBuffer(zx.handle:VMO vmo, uint32 size) -> (zx.status res);
-
-    /// Get color buffer for VMO. Fails if VMO is not associated with a color
-    /// buffer.
-    ///
-    /// This method is deprecated. Please use `GetBufferHandle` instead.
-    [Deprecated]
-    GetColorBuffer(zx.handle:VMO vmo) -> (zx.status res, uint32 id);
 
     /// Get a buffer handle for VMO and the type of the handle.
     /// Fails if VMO is not associated with neither a color buffer nor a buffer.

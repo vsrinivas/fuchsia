@@ -248,55 +248,6 @@ void Control::FreeBufferHandle(uint64_t id) {
   buffer_handles_.erase(it);
 }
 
-void Control::CreateColorBuffer(zx::vmo vmo, uint32_t width, uint32_t height,
-                                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType format,
-                                CreateColorBufferCompleter::Sync completer) {
-  TRACE_DURATION("gfx", "Control::FidlCreateColorBuffer", "width", width, "height", height);
-
-  zx_koid_t koid = GetKoidForVmo(vmo);
-  if (koid == ZX_KOID_INVALID) {
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  fbl::AutoLock lock(&lock_);
-
-  auto it = buffer_handles_.find(koid);
-  if (it == buffer_handles_.end()) {
-    completer.Reply(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  if (it->second != kInvalidColorBuffer) {
-    completer.Reply(ZX_ERR_ALREADY_EXISTS);
-    return;
-  }
-
-  uint32_t id;
-  zx_status_t status = CreateColorBufferLocked(width, height, static_cast<uint32_t>(format), &id);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to create color buffer: %d", kTag, status);
-    completer.Close(status);
-    return;
-  }
-
-  auto close_color_buffer =
-      fbl::MakeAutoCall([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseColorBufferLocked(id); });
-
-  uint32_t result = 0;
-  status = SetColorBufferVulkanMode2Locked(id, VULKAN_ONLY, 0u /*memory_property*/, &result);
-  if (status != ZX_OK || result) {
-    zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
-    completer.Close(status);
-    return;
-  }
-
-  close_color_buffer.cancel();
-  it->second = id;
-  buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER;
-  completer.Reply(ZX_OK);
-}
-
 void Control::CreateColorBuffer2(
     zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
     CreateColorBuffer2Completer::Sync completer) {
@@ -416,32 +367,6 @@ void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sy
   it->second = id;
   buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER;
   completer.Reply(ZX_OK);
-}
-
-void Control::GetColorBuffer(zx::vmo vmo, GetColorBufferCompleter::Sync completer) {
-  TRACE_DURATION("gfx", "Control::FidlGetColorBuffer");
-
-  zx_koid_t koid = GetKoidForVmo(vmo);
-  if (koid == ZX_KOID_INVALID) {
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  fbl::AutoLock lock(&lock_);
-
-  auto it = buffer_handles_.find(koid);
-  if (it == buffer_handles_.end()) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, 0);
-    return;
-  }
-
-  if (it->second == kInvalidColorBuffer) {
-    // Color buffer not created yet.
-    completer.Reply(ZX_ERR_NOT_FOUND, 0);
-    return;
-  }
-
-  completer.Reply(ZX_OK, it->second);
 }
 
 void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) {
