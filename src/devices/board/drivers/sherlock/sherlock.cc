@@ -40,13 +40,19 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  pdev_board_info_t info;
+  status = pbus_get_board_info(&pbus, &info);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, &pbus, &iommu);
+  auto board = fbl::make_unique_checked<Sherlock>(&ac, parent, &pbus, &iommu, info.pid);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

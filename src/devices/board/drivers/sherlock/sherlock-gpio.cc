@@ -218,9 +218,7 @@ zx_status_t Sherlock::GpioInit() {
   }
 
   // Luis audio
-  pdev_board_info_t info;
-  status = pbus_.GetBoardInfo(&info);
-  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
+  if (pid_ == PDEV_PID_LUIS) {
     gpio_impl_.ConfigOut(GPIO_AMP_24V_EN, 1);
   }
 

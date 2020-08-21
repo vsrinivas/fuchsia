@@ -151,14 +151,12 @@ zx_status_t Sherlock::EmmcInit() {
   emmc_dev.boot_metadata_list = emmc_boot_metadata;
   emmc_dev.boot_metadata_count = countof(emmc_boot_metadata);
 
-  pdev_board_info_t info;
-  zx_status_t status = pbus_.GetBoardInfo(&info);
-  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
+  if (pid_ == PDEV_PID_LUIS) {
     emmc_dev.metadata_list = luis_emmc_metadata;
     emmc_dev.metadata_count = countof(luis_emmc_metadata);
   }
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

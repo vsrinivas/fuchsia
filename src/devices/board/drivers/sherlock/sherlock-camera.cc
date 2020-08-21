@@ -426,24 +426,17 @@ const pbus_dev_t sensor_dev_luis = []() {
 // Refer to camera design document for driver
 // design and layout details.
 zx_status_t Sherlock::CameraInit() {
-  pdev_board_info_t info;
-  auto status = pbus_.GetBoardInfo(&info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
-    return status;
-  }
-
   // Set GPIO alternate functions.
   gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
   gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrengthUa, nullptr);
 
-  status = pbus_.DeviceAdd(&mipi_dev);
+  zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  if (info.pid == PDEV_PID_LUIS) {
+  if (pid_ == PDEV_PID_LUIS) {
     status = pbus_.CompositeDeviceAdd(&sensor_dev_luis, imx355_sensor_fragments,
                                       countof(imx355_sensor_fragments), 1);
   } else {

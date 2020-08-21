@@ -17,13 +17,6 @@
 namespace sherlock {
 
 zx_status_t Sherlock::ButtonsInit() {
-  pdev_board_info_t info;
-  zx_status_t status = pbus_.GetBoardInfo(&info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
-    return status;
-  }
-
   static const zx_bind_inst_t root_match[] = {
       BI_MATCH(),
   };
@@ -96,7 +89,7 @@ zx_status_t Sherlock::ButtonsInit() {
   // constexpr size_t kLuisButtonCount = 5;
   constexpr size_t kLuisButtonCount = 4;
 
-  const size_t button_count = info.pid == PDEV_PID_LUIS ? kLuisButtonCount : kSherlockButtonCount;
+  const size_t button_count = pid_ == PDEV_PID_LUIS ? kLuisButtonCount : kSherlockButtonCount;
 
   const device_metadata_t available_buttons_metadata[] = {
       {
@@ -127,7 +120,7 @@ zx_status_t Sherlock::ButtonsInit() {
       .metadata_count = countof(available_buttons_metadata),
   };
 
-  status = DdkAddComposite("sherlock-buttons", &comp_desc);
+  zx_status_t status = DdkAddComposite("sherlock-buttons", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

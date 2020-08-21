@@ -173,18 +173,11 @@ static const pbus_metadata_t luis_i2c_metadata[] = {
 };
 
 zx_status_t Sherlock::I2cInit() {
-  pdev_board_info_t info;
-  zx_status_t status = pbus_.GetBoardInfo(&info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
-    return status;
-  }
-
   // setup pinmux for our I2C busses
   // i2c_ao_0
   gpio_impl_.SetAltFunction(T931_GPIOAO(2), 1);
   gpio_impl_.SetAltFunction(T931_GPIOAO(3), 1);
-  if (info.pid == PDEV_PID_LUIS) {
+  if (pid_ == PDEV_PID_LUIS) {
     gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 3000, nullptr);
     gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 3000, nullptr);
   }
@@ -205,7 +198,7 @@ zx_status_t Sherlock::I2cInit() {
   dev.irq_list = i2c_irqs;
   dev.irq_count = countof(i2c_irqs);
 
-  if (info.pid == PDEV_PID_SHERLOCK) {
+  if (pid_ == PDEV_PID_SHERLOCK) {
     dev.metadata_list = sherlock_i2c_metadata;
     dev.metadata_count = countof(sherlock_i2c_metadata);
   } else {
@@ -213,7 +206,7 @@ zx_status_t Sherlock::I2cInit() {
     dev.metadata_count = countof(luis_i2c_metadata);
   };
 
-  status = pbus_.DeviceAdd(&dev);
+  zx_status_t status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
