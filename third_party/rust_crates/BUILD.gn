@@ -680,16 +680,14 @@ if (current_os == "fuchsia") {
     deps = [ ":unicode-normalization-v0_1_8" ]
   }
 }
-if (current_os == "fuchsia") {
-  group("unicode-segmentation") {
-    deps = [ ":unicode-segmentation-v1_2_1" ]
-  }
+group("unicode-segmentation") {
+  deps = [ ":unicode-segmentation-v1_2_1" ]
 }
-if (current_os == "fuchsia") {
-  group("unicode-width") {
-    deps = [ ":unicode-width-v0_1_5" ]
-  }
+
+group("unicode-width") {
+  deps = [ ":unicode-width-v0_1_5" ]
 }
+
 if (current_os == "fuchsia") {
   group("untrusted") {
     deps = [ ":untrusted-v0_7_0" ]
@@ -699,11 +697,10 @@ group("url") {
   deps = [ ":url-v2_1_0" ]
 }
 
-if (current_os == "fuchsia") {
-  group("utf8parse") {
-    deps = [ ":utf8parse-v0_1_1" ]
-  }
+group("utf8parse") {
+  deps = [ ":utf8parse-v0_1_1" ]
 }
+
 group("uuid") {
   deps = [ ":uuid-v0_7_2" ]
 }
