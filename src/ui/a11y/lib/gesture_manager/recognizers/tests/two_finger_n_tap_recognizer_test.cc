@@ -243,6 +243,24 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapGesturePerformedOverLargerArea) {
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
+// Tests Double tap gesture detection case where individual taps are performed at significant
+// distance from each other.
+TEST_F(TwoFingerNTapRecognizerTest, DoubleTapPerformedWithDistantTapsFromEachOther) {
+  CreateGestureRecognizer(kNumberOfDoubleTaps);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // Send events for first tap.
+  SendPointerEvents(DownEvents(1, {0, 0}) + DownEvents(2, {0, 0}) + UpEvents(1, {0, 0}) +
+                    UpEvents(2, {0, 0}));
+
+  // Send event for the second tap.
+  SendPointerEvents(DownEvents(1, {1, 1}) + DownEvents(2, {1, 1}) + UpEvents(1, {1, 1}) +
+                    UpEvents(2, {1, 1}));
+
+  EXPECT_FALSE(member_.is_held());
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+}
+
 // This test makes sure that local coordinates are passed correctly through the gesture context to
 // the callback.
 TEST_F(TwoFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {

@@ -11,6 +11,7 @@
 #include <set>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 
 namespace a11y {
 
@@ -76,20 +77,30 @@ void TwoFingerNTapRecognizer::HandleEvent(
         break;
       }
 
-      // For the first tap, check if pointer event has all the required fields and initialize
-      // gesture_start_info and gesture_context.
-      // NOTE: We will update gesture_context_ for both fingers, so it will
-      // reflect the location of the second finger to touch the screen during
-      // the first tap of the gesture.
-      if (!contest_->number_of_taps_detected &&
-          !InitGestureInfo(pointer_event, &start_info_by_finger_[pointer_id], &gesture_context_)) {
+      if (contest_->number_of_taps_detected) {
+        // If this is not the first tap, then make sure the pointer_id and device_id of the
+        // new_event matches with the previous event.
+        if (!StartInfoExist(pointer_event) ||
+            !ValidatePointerEvent(start_info_by_finger_.at(pointer_id), pointer_event)) {
+          FX_LOGS(INFO) << "Pointer Event is not a valid pointer event. Dropping current event.";
+          contest_.reset();
+          break;
+        }
+      }
+
+      // Check if pointer event has all the required fields and initialize gesture_start_info and
+      // gesture_context.
+      // NOTE: We will update gesture_context_ for both fingers, so it will reflect the location of
+      // the second finger to touch the screen during the first tap of the gesture.
+      if (!InitGestureInfo(pointer_event, &start_info_by_finger_[pointer_id], &gesture_context_)) {
         ResetGesture("Pointer Event is missing required fields. Dropping current event.");
         break;
       }
 
       // Check that the pointer event is valid for the current gesture.
-      if (!EventIsValid(pointer_event)) {
-        ResetGesture("Pointer Event is not valid for current gesture. Dropping current event.");
+      if (!StartInfoExist(pointer_event) ||
+          !PointerEventIsValidTap(start_info_by_finger_.at(pointer_id), pointer_event)) {
+        ResetGesture("Pointer Event is not a valid pointer event. Dropping current event.");
         break;
       }
 
@@ -183,16 +194,20 @@ void TwoFingerNTapRecognizer::OnDefeat() { contest_.reset(); }
 
 bool TwoFingerNTapRecognizer::EventIsValid(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  FX_DCHECK(pointer_event.has_pointer_id()) << "Pointer event missing pointer id.";
-  const auto pointer_id = pointer_event.pointer_id();
-  if (start_info_by_finger_.find(pointer_id) == start_info_by_finger_.end()) {
+  if (!StartInfoExist(pointer_event)) {
     return false;
   }
 
-  const auto& gesture_start_info_for_finger = start_info_by_finger_.at(pointer_id);
+  const auto& gesture_start_info_for_finger = start_info_by_finger_.at(pointer_event.pointer_id());
   // Validate pointer event for one finger tap.
   return ValidatePointerEvent(gesture_start_info_for_finger, pointer_event) &&
          PointerEventIsValidTap(gesture_start_info_for_finger, pointer_event);
+}
+bool TwoFingerNTapRecognizer::StartInfoExist(
+    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
+  FX_DCHECK(pointer_event.has_pointer_id()) << "Pointer event missing pointer id.";
+  const auto pointer_id = pointer_event.pointer_id();
+  return start_info_by_finger_.find(pointer_id) != start_info_by_finger_.end();
 }
 
 void TwoFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {

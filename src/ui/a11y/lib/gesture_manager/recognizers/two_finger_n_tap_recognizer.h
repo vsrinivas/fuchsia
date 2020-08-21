@@ -61,6 +61,10 @@ class TwoFingerNTapRecognizer : public GestureRecognizer {
   // Contains validation logic which is needed for PointerEvent.
   bool EventIsValid(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 
+  // Returns true if GestureInfo exists in |start_info_by_finger_| for pointer_id represented by
+  // |pointer_event|.
+  bool StartInfoExist(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
+
   // Checks if required number of taps are recognized.
   bool CheckIfGestureIsDetected() const;
 
