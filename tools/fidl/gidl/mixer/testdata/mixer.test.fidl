@@ -13,13 +13,13 @@ struct ExampleStruct {
 };
 
 table ExampleTable {
-    1: string t;
+    1: string s;
 };
 
-union ExampleUnion {
-    1: string u;
+union ExampleStrictUnion {
+    1: string s;
 };
 
-flexible union ExampleXUnion {
-    1: string x;
+flexible union ExampleFlexibleUnion {
+    1: string s;
 };

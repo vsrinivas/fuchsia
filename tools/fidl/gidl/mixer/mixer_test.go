@@ -161,34 +161,43 @@ func TestExtractDeclarationByNameSuccess(t *testing.T) {
 
 // conformTest describes a test case for the Declaration.conforms method.
 type conformTest interface {
-	shouldConform() bool
 	value() interface{}
 }
 
-type conformOk struct{ val interface{} }
-type conformFail struct{ val interface{} }
+type conformOk struct {
+	val interface{}
+}
+type conformFail struct {
+	val          interface{}
+	errSubstring string
+}
 
-func (c conformOk) shouldConform() bool { return true }
-func (c conformOk) value() interface{}  { return c.val }
-
-func (c conformFail) shouldConform() bool { return false }
-func (c conformFail) value() interface{}  { return c.val }
+func (c conformOk) value() interface{}   { return c.val }
+func (c conformFail) value() interface{} { return c.val }
 
 // checkConforms is a helper function to test the Declaration.conforms method.
 func checkConforms(t *testing.T, ctx context, decl Declaration, tests []conformTest) {
 	t.Helper()
 	for _, test := range tests {
-		value, expected := test.value(), test.shouldConform()
-		if err := decl.conforms(value, ctx); (err == nil) != expected {
-			if expected {
+		value := test.value()
+		err := decl.conforms(value, ctx)
+		switch test := test.(type) {
+		case conformOk:
+			if err != nil {
 				t.Errorf(
 					"value failed to conform to declaration\n\nvalue: %#v\n\nerr: %s\n\ndecl: %#v",
 					value, err, decl)
-			} else {
+			}
+		case conformFail:
+			if err == nil {
 				t.Errorf(
 					"value unexpectedly conformed to declaration\n\nvalue: %#v\n\ndecl: %#v",
 					value, decl)
+			} else if !strings.Contains(err.Error(), test.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", test.errSubstring, err.Error())
 			}
+		default:
+			panic("unreachable")
 		}
 	}
 }
@@ -200,10 +209,10 @@ func TestBoolDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{false},
 			conformOk{true},
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{42},
-			conformFail{int64(42)},
+			conformFail{nil, "expecting bool"},
+			conformFail{"foo", "expecting bool"},
+			conformFail{42, "expecting bool"},
+			conformFail{int64(42), "expecting bool"},
 		},
 	)
 }
@@ -216,17 +225,16 @@ func TestIntegerDeclConforms(t *testing.T) {
 			conformOk{uint64(0)},
 			conformOk{uint64(128)},
 			conformOk{uint64(255)},
-			conformFail{uint64(256)},
-			conformFail{int64(256)},
-			conformFail{int64(-1)},
-			conformFail{nil},
-			// Must be uint64 or int64, not any integer type.
-			conformFail{0},
-			conformFail{uint(0)},
-			conformFail{int8(0)},
-			conformFail{uint8(0)},
-			conformFail{"foo"},
-			conformFail{1.5},
+			conformFail{uint64(256), "out of range"},
+			conformFail{int64(256), "out of range"},
+			conformFail{int64(-1), "out of range"},
+			conformFail{nil, "expecting int64 or uint64"},
+			conformFail{0, "expecting int64 or uint64"},
+			conformFail{uint(0), "expecting int64 or uint64"},
+			conformFail{int8(0), "expecting int64 or uint64"},
+			conformFail{uint8(0), "expecting int64 or uint64"},
+			conformFail{"foo", "expecting int64 or uint64"},
+			conformFail{1.5, "expecting int64 or uint64"},
 		},
 	)
 	checkConforms(t,
@@ -236,9 +244,9 @@ func TestIntegerDeclConforms(t *testing.T) {
 			conformOk{int64(-5)},
 			conformOk{int64(10)},
 			conformOk{uint64(10)},
-			conformFail{int64(-6)},
-			conformFail{int64(11)},
-			conformFail{uint64(11)},
+			conformFail{int64(-6), "out of range"},
+			conformFail{int64(11), "out of range"},
+			conformFail{uint64(11), "out of range"},
 		},
 	)
 }
@@ -248,15 +256,14 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformOk{0.0},
 		conformOk{1.5},
 		conformOk{-1.0},
-		conformFail{nil},
-		// Must be float64, not float32.
-		conformFail{float32(0.0)},
-		conformFail{0},
-		conformFail{"foo"},
+		conformFail{nil, "expecting float64"},
+		conformFail{float32(0.0), "expecting float64"},
+		conformFail{0, "expecting float64"},
+		conformFail{"foo", "expecting float64"},
 		// TODO(fxb/43020): Allow these once each backend supports them.
-		conformFail{math.Inf(1)},
-		conformFail{math.Inf(-1)},
-		conformFail{math.NaN()},
+		conformFail{math.Inf(1), "infinity not supported"},
+		conformFail{math.Inf(-1), "infinity not supported"},
+		conformFail{math.NaN(), "NaN not supported"},
 	}
 	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float32}, tests)
 	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float64}, tests)
@@ -269,8 +276,8 @@ func TestStringDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{""},
 			conformOk{"the quick brown fox"},
-			conformFail{nil},
-			conformFail{0},
+			conformFail{nil, "expecting non-null string"},
+			conformFail{0, "expecting string"},
 		},
 	)
 	checkConforms(t,
@@ -279,7 +286,7 @@ func TestStringDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{"foo"},
 			conformOk{nil},
-			conformFail{0},
+			conformFail{0, "expecting string"},
 		},
 	)
 	two := 2
@@ -290,8 +297,8 @@ func TestStringDeclConforms(t *testing.T) {
 			conformOk{""},
 			conformOk{"1"},
 			conformOk{"12"},
-			conformFail{"123"},
-			conformFail{"the quick brown fox"},
+			conformFail{"123", "too long"},
+			conformFail{"the quick brown fox", "too long"},
 		},
 	)
 }
@@ -302,14 +309,14 @@ func TestHandleDeclConforms(t *testing.T) {
 		context{},
 		&HandleDecl{subtype: fidlir.Event, nullable: false},
 		[]conformTest{
-			conformFail{gidlir.Handle(-1)}, // out of bounds
-			conformFail{gidlir.Handle(0)},  // out of bounds
-			conformFail{gidlir.Handle(1)},  // out of bounds
-			conformFail{gidlir.Handle(2)},  // out of bounds
-			conformFail{gidlir.Handle(3)},  // out of bounds
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			conformFail{gidlir.Handle(-1), "out of range"},
+			conformFail{gidlir.Handle(0), "out of range"},
+			conformFail{gidlir.Handle(1), "out of range"},
+			conformFail{gidlir.Handle(2), "out of range"},
+			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{nil, "expecting non-null handle"},
+			conformFail{"foo", "expecting handle"},
+			conformFail{0, "expecting handle"},
 		},
 	)
 	// The FIDL type `handle` is compatible with all subtypes.
@@ -326,11 +333,11 @@ func TestHandleDeclConforms(t *testing.T) {
 			conformOk{gidlir.Handle(0)},
 			conformOk{gidlir.Handle(1)},
 			conformOk{gidlir.Handle(2)},
-			conformFail{gidlir.Handle(-1)}, // out of bounds
-			conformFail{gidlir.Handle(3)},  // out of bounds
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			conformFail{gidlir.Handle(-1), "out of range"},
+			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{nil, "expecting non-null handle"},
+			conformFail{"foo", "expecting handle"},
+			conformFail{0, "expecting handle"},
 		},
 	)
 	// The FIDL type `handle<event>` requires an event.
@@ -346,12 +353,12 @@ func TestHandleDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{gidlir.Handle(0)},
 			conformOk{gidlir.Handle(2)},
-			conformFail{gidlir.Handle(1)},  // wrong subtype
-			conformFail{gidlir.Handle(-1)}, // out of bounds
-			conformFail{gidlir.Handle(3)},  // out of bounds
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			conformFail{gidlir.Handle(1), "expecting handle<event>"},
+			conformFail{gidlir.Handle(-1), "out of range"},
+			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{nil, "expecting non-null handle"},
+			conformFail{"foo", "expecting handle"},
+			conformFail{0, "expecting handle"},
 		},
 	)
 	// The FIDL type `handle<port>?` requires an event or nil.
@@ -367,11 +374,11 @@ func TestHandleDeclConforms(t *testing.T) {
 		[]conformTest{
 			conformOk{gidlir.Handle(1)},
 			conformOk{nil},
-			conformFail{gidlir.Handle(0)},  // wrong subtype
-			conformFail{gidlir.Handle(2)},  // wrong subtype
-			conformFail{gidlir.Handle(-1)}, // out of bounds
-			conformFail{gidlir.Handle(3)},  // out of bounds
-			conformFail{0},
+			conformFail{gidlir.Handle(0), "expecting handle<port>"},
+			conformFail{gidlir.Handle(2), "expecting handle<port>"},
+			conformFail{gidlir.Handle(-1), "out of range"},
+			conformFail{gidlir.Handle(3), "out of range"},
+			conformFail{0, "expecting handle"},
 		},
 	)
 }
@@ -389,17 +396,16 @@ func TestBitsDeclConforms(t *testing.T) {
 			// Underlying type for ExampleBits is uint8.
 			conformOk{uint64(0)},
 			conformOk{uint64(255)},
-			conformFail{uint64(256)},
-			conformFail{int64(256)},
-			conformFail{int64(-1)},
-			conformFail{nil},
-			// Must be uint64 or int64, not any integer type.
-			conformFail{0},
-			conformFail{uint(0)},
-			conformFail{int8(0)},
-			conformFail{uint8(0)},
-			conformFail{"foo"},
-			conformFail{1.5},
+			conformFail{uint64(256), "out of range"},
+			conformFail{int64(256), "out of range"},
+			conformFail{int64(-1), "out of range"},
+			conformFail{nil, "expecting int64 or uint64"},
+			conformFail{0, "expecting int64 or uint64"},
+			conformFail{uint(0), "expecting int64 or uint64"},
+			conformFail{int8(0), "expecting int64 or uint64"},
+			conformFail{uint8(0), "expecting int64 or uint64"},
+			conformFail{"foo", "expecting int64 or uint64"},
+			conformFail{1.5, "expecting int64 or uint64"},
 		},
 	)
 }
@@ -417,17 +423,16 @@ func TestEnumDeclConforms(t *testing.T) {
 			// Underlying type for ExampleEnum is uint8.
 			conformOk{uint64(0)},
 			conformOk{uint64(255)},
-			conformFail{uint64(256)},
-			conformFail{int64(256)},
-			conformFail{int64(-1)},
-			conformFail{nil},
-			// Must be uint64 or int64, not any integer type.
-			conformFail{0},
-			conformFail{uint(0)},
-			conformFail{int8(0)},
-			conformFail{uint8(0)},
-			conformFail{"foo"},
-			conformFail{1.5},
+			conformFail{uint64(256), "out of range"},
+			conformFail{int64(256), "out of range"},
+			conformFail{int64(-1), "out of range"},
+			conformFail{nil, "expecting int64 or uint64"},
+			conformFail{0, "expecting int64 or uint64"},
+			conformFail{uint(0), "expecting int64 or uint64"},
+			conformFail{int8(0), "expecting int64 or uint64"},
+			conformFail{uint8(0), "expecting int64 or uint64"},
+			conformFail{"foo", "expecting int64 or uint64"},
+			conformFail{1.5, "expecting int64 or uint64"},
 		},
 	)
 }
@@ -453,16 +458,16 @@ func TestStructDeclConformsNonNullable(t *testing.T) {
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "DefinitelyNotS"}, Value: "foo"},
 				},
-			}},
+			}, "field DefinitelyNotS: unknown"},
 			conformFail{gidlir.Record{
 				Name: "DefinitelyNotExampleStruct",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
-			}},
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			}, "expecting struct test.mixer/ExampleStruct"},
+			conformFail{nil, "expecting non-null struct"},
+			conformFail{"foo", "expecting struct"},
+			conformFail{0, "expecting struct"},
 		},
 	)
 }
@@ -501,30 +506,30 @@ func TestTableDeclConforms(t *testing.T) {
 			conformOk{gidlir.Record{
 				Name: "ExampleTable",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "t"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
 			}},
 			conformFail{gidlir.Record{
 				Name: "ExampleTable",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "DefinitelyNotT"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "DefinitelyNotS"}, Value: "foo"},
 				},
-			}},
+			}, "field DefinitelyNotS: unknown"},
 			conformFail{gidlir.Record{
 				Name: "DefinitelyNotExampleTable",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "t"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
-			}},
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			}, "expecting table test.mixer/ExampleTable"},
+			conformFail{nil, "expecting non-null table"},
+			conformFail{"foo", "expecting table"},
+			conformFail{0, "expecting table"},
 		},
 	)
 }
 
-func TestUnionDeclConformsNonNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleXUnion", false)
+func TestFlexibleUnionDeclConformsNonNullable(t *testing.T) {
+	decl, ok := testSchema.lookupDeclByName("ExampleFlexibleUnion", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -534,13 +539,13 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
-				Name: "ExampleXUnion",
+				Name: "ExampleFlexibleUnion",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
 			}},
 			conformOk{gidlir.Record{
-				Name: "ExampleXUnion",
+				Name: "ExampleFlexibleUnion",
 				Fields: []gidlir.Field{
 					{
 						Key:   gidlir.FieldKey{UnknownOrdinal: 2},
@@ -549,35 +554,35 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 				},
 			}},
 			conformFail{gidlir.Record{
-				Name: "ExampleXUnion",
+				Name: "ExampleFlexibleUnion",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "DefinitelyNotX"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "DefinitelyNotS"}, Value: "foo"},
 				},
-			}},
+			}, "field DefinitelyNotS: unknown"},
 			conformFail{gidlir.Record{
-				Name: "DefinitelyNotExampleXUnion",
+				Name: "DefinitelyNotExampleFlexibleUnion",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
-			}},
+			}, "expecting union test.mixer/ExampleFlexibleUnion"},
 			conformFail{gidlir.Record{
-				Name: "KnownUnknownOrdinal",
+				Name: "ExampleFlexibleUnion",
 				Fields: []gidlir.Field{
 					{
 						Key:   gidlir.FieldKey{UnknownOrdinal: 1},
 						Value: gidlir.UnknownData{},
 					},
 				},
-			}},
-			conformFail{nil},
-			conformFail{"foo"},
-			conformFail{0},
+			}, "field name must be used rather than ordinal 1"},
+			conformFail{nil, "expecting non-null union"},
+			conformFail{"foo", "expecting union"},
+			conformFail{0, "expecting union"},
 		},
 	)
 }
 
 func TestUnionDeclConformsNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleXUnion", true)
+	decl, ok := testSchema.lookupDeclByName("ExampleFlexibleUnion", true)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -587,9 +592,9 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Record{
-				Name: "ExampleXUnion",
+				Name: "ExampleFlexibleUnion",
 				Fields: []gidlir.Field{
-					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
+					{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 				},
 			}},
 			conformOk{nil},
@@ -598,7 +603,7 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 }
 
 func TestStrictUnionConforms(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleUnion", false)
+	decl, ok := testSchema.lookupDeclByName("ExampleStrictUnion", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -608,14 +613,14 @@ func TestStrictUnionConforms(t *testing.T) {
 		unionDecl,
 		[]conformTest{
 			conformFail{gidlir.Record{
-				Name: "UnknownOrdinal",
+				Name: "ExampleStrictUnion",
 				Fields: []gidlir.Field{
 					{
 						Key:   gidlir.FieldKey{UnknownOrdinal: 2},
 						Value: gidlir.UnknownData{},
 					},
 				},
-			}},
+			}, "cannot use unknown ordinal in a strict union"},
 		},
 	)
 }
@@ -637,11 +642,11 @@ func TestArrayDeclConforms(t *testing.T) {
 		},
 		[]conformTest{
 			conformOk{[]interface{}{uint64(1), uint64(2)}},
-			conformFail{[]interface{}{}},
-			conformFail{[]interface{}{uint64(1)}},
-			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}},
-			conformFail{[]interface{}{"a", "b"}},
-			conformFail{[]interface{}{nil, nil}},
+			conformFail{[]interface{}{}, "expecting 2 elements"},
+			conformFail{[]interface{}{uint64(1)}, "expecting 2 elements"},
+			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}, "expecting 2 elements"},
+			conformFail{[]interface{}{"a", "b"}, "[0]: expecting int64 or uint64"},
+			conformFail{[]interface{}{nil, nil}, "[0]: expecting int64 or uint64"},
 		},
 	)
 }
@@ -665,9 +670,9 @@ func TestVectorDeclConforms(t *testing.T) {
 			conformOk{[]interface{}{}},
 			conformOk{[]interface{}{uint64(1)}},
 			conformOk{[]interface{}{uint64(1), uint64(2)}},
-			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}},
-			conformFail{[]interface{}{"a", "b"}},
-			conformFail{[]interface{}{nil, nil}},
+			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}, "expecting at most 2 elements"},
+			conformFail{[]interface{}{"a", "b"}, "[0]: expecting int64 or uint64"},
+			conformFail{[]interface{}{nil, nil}, "[0]: expecting int64 or uint64"},
 		},
 	)
 }
@@ -698,8 +703,8 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 			// The parser is responsible for ensuring handles are used exactly
 			// once, not the mixer, so this passes.
 			conformOk{[]interface{}{gidlir.Handle(0), gidlir.Handle(0)}},
-			conformFail{[]interface{}{uint64(0)}},
-			conformFail{[]interface{}{nil}},
+			conformFail{[]interface{}{uint64(0)}, "[0]: expecting handle"},
+			conformFail{[]interface{}{nil}, "[0]: expecting non-null handle"},
 		},
 	)
 }

@@ -245,17 +245,17 @@ func (decl *IntegerDecl) conforms(value interface{}, _ context) error {
 	case int64:
 		if value < 0 {
 			if value < decl.lower {
-				return fmt.Errorf("out-of-bounds %d", value)
+				return fmt.Errorf("%d is out of range", value)
 			}
 		} else {
 			if decl.upper < uint64(value) {
-				return fmt.Errorf("out-of-bounds %d", value)
+				return fmt.Errorf("%d is out of range", value)
 			}
 		}
 		return nil
 	case uint64:
 		if decl.upper < value {
-			return fmt.Errorf("out-of-bounds %d", value)
+			return fmt.Errorf("%d is out of range", value)
 		}
 		return nil
 	}
@@ -305,7 +305,7 @@ func (decl *StringDecl) conforms(value interface{}, _ context) error {
 		}
 		if bound := *decl.bound; bound < len(value) {
 			return fmt.Errorf(
-				"string '%s' is over bounds, expecting %d but was %d", value,
+				"string '%s' is too long, expecting %d but was %d", value,
 				bound, len(value))
 		}
 		return nil
@@ -344,7 +344,7 @@ func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 			return nil
 		}
 		if subtype := ctx.handleDefs[value].Subtype; subtype != decl.subtype {
-			return fmt.Errorf("expecting handle subtype %s, found %s", decl.subtype, subtype)
+			return fmt.Errorf("expecting handle<%s>, found handle<%s>", decl.subtype, subtype)
 		}
 		return nil
 	case nil:
