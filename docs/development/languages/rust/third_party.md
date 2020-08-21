@@ -101,7 +101,7 @@ To update a third-party crate, do the following:
 In some cases, you may want to import only a subset of files in a crate. For example, there may be an optional license in the
 third-party repo that's incompatible with Fuchsia's license requirements. Here's [an example](https://fuchsia-review.googlesource.com/c/fuchsia/+/369174) OSRB review in which this happened.
 
-To do this, you'll need to add the crate's files to `/third_party/rust_crates/tiny_mirrors`. 
+To do this, you'll need to add the crate's files to `/third_party/rust_crates/tiny_mirrors`.
 
 1. Follow the [instructions for adding a third-party crate](#steps-to-add-a-third-party-crate).
 1. After running `fx update-rustc-third-party`, move the downloaded copy of your crate from `/third_party/rust_crates/vendor/<my_crate>` to `/third_party/rust_crates/tiny_mirrors`.
@@ -113,7 +113,7 @@ To do this, you'll need to add the crate's files to `/third_party/rust_crates/ti
    my_crate = { path = "tiny_mirrors/my_crate" }
    ...
    ```
-1. Re-run `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json` and `fx build`.
+1. Re-run `fx update-rustc-third-party` and `fx build`.
 
 ## Unicode crates
 
