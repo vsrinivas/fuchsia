@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target contains elements that are present on the boot partition of all
+# products.
+group("bootstrap") {
+  deps = [
+    ":zedboot",
+    "//src/bringup/bin/run-vc",
+    "//src/bringup/bin/sysinfo",
+    "//src/bringup/bin/watch",
+  ]
+}
+
+# This target contains elements that are present on the boot partition of the
+# zedboot image for all products.
+group("zedboot") {
+  deps = [
+    "//src/bringup/bin/bootsvc:bin",
+    "//src/bringup/bin/console",
+    "//src/bringup/bin/console:bootfs",
+    "//src/bringup/bin/debuglog",
+    "//src/bringup/bin/miscsvc",
+    "//src/bringup/bin/netsvc",
+    "//src/bringup/bin/netsvc:device-name-provider",
+    "//src/bringup/bin/ptysvc",
+    "//src/bringup/bin/ptysvc:bootfs",
+    "//src/bringup/bin/pwrbtn-monitor",
+    "//src/bringup/bin/pwrbtn-monitor:bootfs",
+    "//src/bringup/bin/svchost",
+    "//src/bringup/bin/sysinfo:bootfs",
+    "//src/bringup/bin/waitfor",
+  ]
+}

@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target contains elements that are present on the boot partition of all
+# products.
+group("bootstrap") {
+  deps = [
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/sdmmc",
+    "//src/devices/bus/drivers/platform:platform-bus",
+    "//src/devices/bus/drivers/platform:platform-bus.proxy",
+    "//src/devices/clock/drivers/clock",
+    "//src/devices/gpio/drivers/gpio",
+    "//src/devices/i2c/drivers/i2c",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/internal/drivers/fragment:fragment.proxy",
+    "//src/devices/misc/drivers/builtin",
+    "//src/devices/power/drivers/power",
+    "//src/devices/serial/drivers/serial",
+    "//src/devices/serial/drivers/serial-async",
+    "//src/devices/spi/drivers/spi",
+  ]
+}
