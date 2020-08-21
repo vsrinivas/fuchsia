@@ -21,7 +21,7 @@ the following headers:
 implementation of an asynchronous dispatcher which you can use out of box
 unless you need something more specialized.
 
-See [async/loop.h](include/async/loop.h) for details.
+See [async-loop/loop.h](include/lib/async-loop/loop.h) for details.
 
 ```c
 #include <lib/async-loop/default.h>
