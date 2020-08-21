@@ -203,6 +203,7 @@ sdk_molecule("core_tools") {
     "tools:symbolize_sdk",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
     "//tools/cmc:cmc_sdk",
+    "//src/developer/ffx:bin_sdk",
     "//src/sys/pkg/bin/far:bin_sdk",
     "//src/sys/pkg/bin/pm:pm_bin_sdk",
     "//tools/bootserver_old:bootserver_sdk",
