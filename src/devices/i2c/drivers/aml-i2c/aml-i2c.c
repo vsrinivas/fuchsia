@@ -19,6 +19,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform/device.h>
@@ -32,6 +33,11 @@
 #define AML_I2C_CONTROL_REG_ACK_IGNORE (uint32_t)(1 << 1)
 #define AML_I2C_CONTROL_REG_STATUS (uint32_t)(1 << 2)
 #define AML_I2C_CONTROL_REG_ERR (uint32_t)(1 << 3)
+
+#define AML_I2C_CONTROL_REG_QTR_CLK_DLY_MAX 0x3ff
+#define AML_I2C_CONTROL_REG_QTR_CLK_DLY_SHIFT 12
+#define AML_I2C_CONTROL_REG_QTR_CLK_DLY_MASK \
+  (uint32_t)(AML_I2C_CONTROL_REG_QTR_CLK_DLY_MAX << AML_I2C_CONTROL_REG_QTR_CLK_DLY_SHIFT)
 
 #define AML_I2C_MAX_TRANSFER 256
 
@@ -258,7 +264,7 @@ static zx_status_t aml_i2c_read(aml_i2c_dev_t* dev, uint8_t* buff, uint32_t len,
 /* create instance of aml_i2c_t and do basic initialization.  There will
 be one of these instances for each of the soc i2c ports.
 */
-static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
+static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index, uint32_t clock_delay) {
   aml_i2c_dev_t* device = &i2c->i2c_devs[index];
 
   device->timeout = ZX_SEC(1);
@@ -273,6 +279,18 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
   }
 
   device->virt_regs = (MMIO_PTR aml_i2c_regs_t*)device->regs_iobuff.vaddr;
+
+  if (clock_delay > AML_I2C_CONTROL_REG_QTR_CLK_DLY_MAX) {
+    zxlogf(ERROR, "aml_i2c_dev_init: invalid clock delay");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (clock_delay > 0) {
+    uint32_t control = MmioRead32(&device->virt_regs->control);
+    control &= ~AML_I2C_CONTROL_REG_QTR_CLK_DLY_MASK;
+    control |= clock_delay << AML_I2C_CONTROL_REG_QTR_CLK_DLY_SHIFT;
+    MmioWrite32(control, &device->virt_regs->control);
+  }
 
   status = pdev_get_interrupt(&i2c->pdev, index, 0, &device->irq);
   if (status != ZX_OK) {
@@ -389,6 +407,8 @@ static zx_protocol_device_t i2c_device_proto = {
 static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
+  uint32_t* clock_delays = NULL;
+
   aml_i2c_t* i2c = calloc(1, sizeof(aml_i2c_t));
   if (!i2c) {
     return ZX_ERR_NO_MEMORY;
@@ -412,19 +432,54 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
     status = ZX_ERR_INVALID_ARGS;
     goto fail;
   }
+
+  size_t metadata_size;
+  status = device_get_metadata_size(parent, DEVICE_METADATA_PRIVATE, &metadata_size);
+  if (status != ZX_OK) {
+    metadata_size = 0;
+  } else if (metadata_size != (info.mmio_count * sizeof(uint32_t))) {
+    zxlogf(ERROR, "aml_i2c_bind: invalid metadata size");
+    status = ZX_ERR_INVALID_ARGS;
+    goto fail;
+  }
+
   i2c->i2c_devs = calloc(info.mmio_count, sizeof(aml_i2c_dev_t));
   if (!i2c->i2c_devs) {
     goto fail;
   }
   i2c->dev_count = info.mmio_count;
 
+  if (metadata_size > 0) {
+    clock_delays = calloc(info.mmio_count, sizeof(uint32_t));
+    if (!clock_delays) {
+      status = ZX_ERR_NO_MEMORY;
+      goto fail;
+    }
+
+    size_t actual;
+    status =
+        device_get_metadata(parent, DEVICE_METADATA_PRIVATE, clock_delays, metadata_size, &actual);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "aml_i2c_bind: device_get_metadata failed");
+      goto fail;
+    }
+    if (actual != metadata_size) {
+      zxlogf(ERROR, "aml_i2c_bind: metadata size mismatch");
+      status = ZX_ERR_INTERNAL;
+      goto fail;
+    }
+  }
+
   for (unsigned i = 0; i < i2c->dev_count; i++) {
-    zx_status_t status = aml_i2c_dev_init(i2c, i);
+    zx_status_t status = aml_i2c_dev_init(i2c, i, metadata_size > 0 ? clock_delays[i] : 0);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml_i2c_bind: aml_i2c_dev_init failed: %d", status);
       goto fail;
     }
   }
+
+  free(clock_delays);
+  clock_delays = NULL;
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -444,6 +499,7 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 
 fail:
+  free(clock_delays);
   aml_i2c_release(i2c);
   return status;
 }
