@@ -19,6 +19,7 @@ group("tests") {
     "bin:tests",
     "bind/debugger:tests",
     "block:tests",
+    "board:tests",
     "bus:tests",
     "clock:tests",
     "cpu:tests",

@@ -4,6 +4,12 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":mt8167s-ref-test-package" ]
+}
 
 driver_module("mt8167s_ref") {
   configs += [
@@ -62,7 +68,7 @@ driver_module("mt8167s_ref") {
   # boot shims.
 }
 
-test("mt8167s_ref-test") {
+test("mt8167s-ref-test") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -75,7 +81,7 @@ test("mt8167s_ref-test") {
       configs -= fdio_config
     }
   }
-  output_name = "mt8167s_ref-test"
+  output_name = "mt8167s-ref-test"
   sources = [
     "mt8167-audio.cc",
     "mt8167-backlight.cc",
@@ -119,5 +125,15 @@ test("mt8167s_ref-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("mt8167s-ref-test-package") {
+  package_name = "mt8167s-ref-test"
+  deps = [ ":mt8167s-ref-test" ]
+  tests = [
+    {
+      name = "mt8167s-ref-test"
+    },
   ]
 }
