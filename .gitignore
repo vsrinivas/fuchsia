@@ -92,3 +92,7 @@ json_generator_tests_*.txt
 # All files in vendor need to be delivered as is, as they use
 # checksumming to ensure secure package delivery.
 !/third_party/rust_crates/vendor/**
+
+# fxb/55387, fxb/57231: keep go.sum files in subdirectory but do not commit them
+# for now.
+/*/go.sum
