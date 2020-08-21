@@ -3,17 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::io::Directory,
     log::info,
-    std::path::PathBuf,
     test_utils_lib::{
         events::{Event, EventMatcher, Handler, Started},
         test_utils::OpaqueTest,
     },
 };
-
-// The error code returned from an I/O operation when
-// the filesystem has run out of space.
-pub const OUT_OF_SPACE_OS_ERROR_CODE: i32 = 28;
 
 pub const ONE_MB: u64 = 1048576;
 pub const FOUR_MB: u64 = 4 * ONE_MB;
@@ -23,7 +19,7 @@ pub const HASH_SIZE: u64 = fuchsia_hash::HASH_SIZE as u64;
 // Sets up an OpaqueTest which creates the v2 components needed for blobfs to be mounted.
 // Waits until blobfs is ready to be used. Returns the OpaqueTest object and a path to the
 // blobfs root.
-pub async fn init_blobfs() -> (OpaqueTest, PathBuf) {
+pub async fn init_blobfs() -> (OpaqueTest, Directory) {
     let test: OpaqueTest =
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/blobfs-stress-test#meta/root.cm")
             .await
@@ -57,10 +53,12 @@ pub async fn init_blobfs() -> (OpaqueTest, PathBuf) {
         event.resume().await.unwrap();
     }
 
-    let blobfs_path = test.get_hub_v2_path().join("children/mounter/exec/out/blobfs");
+    let blobfs_root_path = test.get_hub_v2_path().join("children/mounter/exec/out/blobfs/root");
 
     // Wait for blobfs to be mounted
-    assert!(blobfs_path.exists());
+    assert!(blobfs_root_path.exists());
 
-    (test, blobfs_path)
+    let root_dir = Directory::from_namespace(blobfs_root_path);
+
+    (test, root_dir)
 }

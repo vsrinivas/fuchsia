@@ -20,9 +20,9 @@ async fn simple_test() {
 
     info!("TEST SEED = {}", seed);
 
-    let (_test, blobfs_path) = init_blobfs().await;
+    let (_test, root_dir) = init_blobfs().await;
 
-    let mut state = BlobfsState::new(blobfs_path, rng);
+    let mut state = BlobfsState::new(root_dir, rng);
 
     // Do 10 random operations on the disk
     for _ in 0..10 {

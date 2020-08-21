@@ -3,5 +3,6 @@
 // found in the LICENSE file.
 
 pub mod blob;
+pub mod io;
 pub mod state;
 pub mod utils;

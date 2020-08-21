@@ -3,25 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::utils::{BLOCK_SIZE, FOUR_MB, OUT_OF_SPACE_OS_ERROR_CODE},
+    crate::io::{Directory, File},
+    crate::utils::{BLOCK_SIZE, FOUR_MB},
     fuchsia_merkle::MerkleTree,
+    fuchsia_zircon::Status,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     std::{
         cmp::{min, Eq},
-        fs::{metadata, read, File},
         hash::{Hash, Hasher},
-        io::Write,
-        os::unix::fs::MetadataExt,
-        path::PathBuf,
     },
 };
 
 // In-memory representation of a single blob.
 #[derive(Debug)]
 pub struct Blob {
-    // The qualified path to this blob
-    path: PathBuf,
-
     // The root merkle hash for this blob
     merkle_root_hash: String,
 
@@ -62,44 +57,41 @@ pub enum Compressibility {
 // Reasons why creating a blob can fail
 #[derive(Debug)]
 pub enum CreationError {
-    // Hold onto the file that failed creation so that it doesn't close.
-    OutOfSpace(File),
+    OutOfSpace,
 }
 
 impl Blob {
     // Attempts to write the blob to disk. This operation is allowed to fail
     // if we run out of storage space. Other failures cause a panic.
-    fn create(root_path: &PathBuf, data: Vec<u8>) -> Result<Blob, CreationError> {
+    async fn create(root_dir: &Directory, data: Vec<u8>) -> Result<Blob, CreationError> {
         // Create the root hash for the blob
         let tree = MerkleTree::from_reader(&data[..]).unwrap();
         let merkle_root_hash = tree.root().to_string();
 
         // Write the file to disk
-        let path = root_path.join(&merkle_root_hash);
-        let mut file = File::create(&path).unwrap();
-        file.set_len(data.len() as u64).unwrap();
-        let result = file.write_all(&data);
+        let file = root_dir.create(&merkle_root_hash).await;
+        file.truncate(data.len() as u64).await;
 
-        // The only error we will forward is running out of storage space.
-        // Note that blobfs will return this error code for running out of inodes as well.
-        if let Err(e) = result {
-            if let Some(OUT_OF_SPACE_OS_ERROR_CODE) = e.raw_os_error() {
-                return Err(CreationError::OutOfSpace(file));
-            } else {
-                // TODO(xbhatnag): Bubble this error up to the top loop.
-                // Use panics for unrecoverable error states from SUT.
-                // Use asserts to prevent programmer error.
-                panic!("Unexpected error during write: {}", e);
+        let result = file.write(&data).await;
+
+        match result {
+            Err(Status::NO_SPACE) => {
+                return Err(CreationError::OutOfSpace);
             }
+            Err(x) => {
+                panic!("Unexpected error during write: {}", x);
+            }
+            _ => {}
         }
 
-        file.flush().unwrap();
+        file.flush().await;
 
         // Get the size as reported by the filesystem
-        let metadata = file.metadata().unwrap();
-        let size_on_disk_bytes = metadata.blocks() * metadata.blksize();
+        let size_on_disk_bytes = file.size_on_disk().await;
 
-        let blob = Blob { path, merkle_root_hash, data, size_on_disk_bytes, handles: vec![] };
+        file.close().await;
+
+        let blob = Blob { merkle_root_hash, data, size_on_disk_bytes, handles: vec![] };
 
         blob.check_well_formed();
 
@@ -108,14 +100,12 @@ impl Blob {
 
     // Reads the blob that matches this hash from disk.
     // This operation is not expected to fail.
-    pub fn from_disk(root_path: &PathBuf, merkle_root_hash: &str) -> Blob {
-        let path = root_path.join(merkle_root_hash);
-        let data = read(&path).unwrap();
-        let metadata = metadata(&path).unwrap();
-        let size_on_disk_bytes = metadata.blocks() * metadata.blksize();
+    pub async fn from_disk(root_dir: &Directory, merkle_root_hash: &str) -> Blob {
+        let file = root_dir.open(merkle_root_hash).await;
+        let data = file.read_until_eof().await;
+        let size_on_disk_bytes = file.size_on_disk().await;
 
         let blob = Blob {
-            path,
             merkle_root_hash: merkle_root_hash.to_string(),
             data,
             size_on_disk_bytes,
@@ -133,7 +123,7 @@ impl Blob {
         let tree = MerkleTree::from_reader(&self.data[..]).unwrap();
         let merkle_root_hash = tree.root().to_string();
 
-        // TODO(xbhatnag): Bubble this error up to the top loop.
+        // TODO(58749): Bubble this error up to the top loop.
         // Use panics for unrecoverable error states from SUT.
         // Use asserts to prevent programmer error.
         assert!(self.merkle_root_hash == merkle_root_hash);
@@ -157,15 +147,6 @@ impl Blob {
         &self.data
     }
 
-    pub fn path(&self) -> &PathBuf {
-        &self.path
-    }
-
-    // Creates a new handle to this blob
-    pub fn open(&self) -> File {
-        File::open(&self.path).unwrap()
-    }
-
     // Returns the list of open handles to this blob.
     // Placing a file in this list ensures that it remains open.
     pub fn handles(&mut self) -> &mut Vec<File> {
@@ -178,13 +159,13 @@ impl Blob {
 }
 
 pub struct BlobFactory {
+    root_dir: Directory,
     rng: SmallRng,
-    root_path: PathBuf,
 }
 
 impl BlobFactory {
-    pub fn new(root_path: PathBuf, rng: SmallRng) -> Self {
-        BlobFactory { root_path, rng }
+    pub fn new(root_dir: Directory, rng: SmallRng) -> Self {
+        BlobFactory { root_dir, rng }
     }
 
     // Run lengths and bytes are sampled from a uniform distribution.
@@ -275,6 +256,6 @@ impl BlobFactory {
             }
         };
 
-        Blob::create(&self.root_path, data)
+        Blob::create(&self.root_dir, data).await
     }
 }
