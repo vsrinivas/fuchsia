@@ -103,11 +103,44 @@ declare_args() {
   #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
   #     `toolchain_variant.is_pic_default`
   #         [bool] This is true in `shlib_toolchain`.
+  #     `toolchain_variant.configs`
+  #         [list of configs] A list of configs that are added to all linkable
+  #         targets for this toolchain() instance.
+  #     `toolchain_variant.remove_common_configs`
+  #         [list of configs] A list of configs that are removed from all
+  #         linkable targets for this toolchain() instance. Useful when
+  #         one of the default configs must not be used.
+  #     `toolchain_variant.remove_shared_configs`
+  #         [list of configs] Same a remove_common_configs, but only applies
+  #         to non-executable (e.g. shared_library()) targets.
+  #     `toolchain_variant.instrumented`
+  #         [boolean] A flag that is true iff this toolchain generates
+  #         instrumented code (for sanitizers, code-coverage analysis or
+  #         fuzzing).
+  #     `toolchain_variant.with_shared`
+  #         [boolean] True iff this toolchain() instance has a secondary
+  #         toolchain to build ELF shared-library code.
+  #
   # The other fields are the variant's effects as defined in
   # [`known_variants`](#known_variants).
   toolchain_variant = {
     base = target_toolchain  # default toolchain
   }
+
+  # *This should never be set as a build argument.*
+  # It exists only to be set in `toolchain_args`.
+  # For Zircon toolchains, this will be a scope whose schema
+  # is documented in //build/toolchain/zircon/zircon_toolchain.gni.
+  # For all other toolchains, this will be false.
+  #
+  # This allows testing for a Zircon-specific toolchain with:
+  #
+  #   if (zircon_toolchain != false) {
+  #     // code path for Zircon-specific toolchains
+  #   } else {
+  #     // code path for non-Zircon ones.
+  #   }
+  zircon_toolchain = false
 }
 
 if (!defined(toolchain_variant.name)) {
@@ -184,6 +217,9 @@ if (toolchain_variant.base == host_x64_toolchain ||
 # `"label(${target_toolchain}-shared)"` or anything else.
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 
+# Note that Zircon toolchains and non-Zircon ones have a very different set
+# of default configs for all target types.
+if (zircon_toolchain == false) {
 # All binary targets will get this list of configs by default.
 default_common_binary_configs = [
   "//build/config:compiler",
@@ -244,28 +280,17 @@ default_common_binary_configs += toolchain_variant.configs
 default_common_binary_configs -= toolchain_variant.remove_common_configs
 
 default_shared_library_configs = default_common_binary_configs + [
-                                   "//build/config:shared_library_config",
-                                   "//build/config:symbol_no_undefined",
-                                 ]
+                                    "//build/config:shared_library_config",
+                                    "//build/config:symbol_no_undefined",
+                                  ]
 default_shared_library_configs -= toolchain_variant.remove_shared_configs
 
-# Rust proc macros don't support (Thin)LTO, so always remove it.
-default_rust_proc_macro_configs = default_shared_library_configs + [
-                                    "//build/config/lto",
-                                    "//build/config/lto:thinlto",
-                                  ] -
-                                  [
-                                    "//build/config/lto",
-                                    "//build/config/lto:thinlto",
-                                    "//build/config/lto:default",
-                                  ]
-
 default_executable_configs = default_common_binary_configs + [
-                               "//build/config:executable_config",
-                               "//build/config:default_libs",
-                             ]
+                                "//build/config:executable_config",
+                                "//build/config:default_libs",
+                              ]
 
-# These config are added here so that they can later be removed from default
+# These configs are added here so that they can later be removed from default
 # configs for targets which do not need them. This cannot be done when the
 # configs are added transitively.
 if (current_os == "fuchsia") {
@@ -280,6 +305,72 @@ default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
 if (toolchain_variant.is_pic_default) {
   default_common_binary_configs += [ "//build/config:shared_library_config" ]
 }
+} else {
+  # This list is adapted from the `standard_configs` list defined in
+  # //zircon/public/gn/config/standard.gni
+  #
+  # IMPORTANT: Some of the configs below are simple redirections to equivalent
+  # configs in //build/config/BUILD.gn, but are used to ensure that the order
+  # in the list below matches exactly that of the Zircon build. This ensures
+  # that build commands are identical between the Fuchsia and Zircon builds,
+  # as verified by //zircon/public/canaries/compare_toolchains.py.
+  #
+  # After build unification completes, it will be possible to remove the
+  # intermediate configs.
+  #
+  default_common_binary_configs = [
+    "//build/config/zircon:compiler",
+    "//build/config/zircon:language",
+    "//build/config/zircon:machine",
+    "//build/config/zircon:relative_paths",
+    "//build/config/zircon:assert_level",
+    "//build/config/zircon:default_optimize",
+    "//build/config/zircon:default_debuginfo",
+    "//build/config/zircon:default_warnings",
+    "//build/config/zircon:default_icf",
+    "//build/config/zircon:default_include_dirs",
+    "//build/config/zircon:default_frame_pointers",
+    "//build/config/zircon:default_linker_gc",
+    "//build/config/zircon:default_template_backtrace_limit",
+    "//build/config/zircon:no_exceptions",
+    "//build/config/zircon:no_rtti",
+    "//build/config/zircon:no_threadsafe_statics",
+    "//build/config/zircon:thread_safety_annotations",
+    "//build/config/zircon:warn-implicit-fallthrough",
+    "//build/config/zircon:visibility_hidden",
+    "//build/config/zircon:auto_var_init",
+    "//build/config/zircon:werror",
+  ]
+
+  # NOTE: Contrary to the Fuchsia build, we start by removing common configs
+  # then adding new ones. This is necessary because some Zircon kernel
+  # toolchains want to move certain configs to the end of the list to ensure
+  # that kernel-provided ones are listed first.
+
+  default_common_binary_configs -= toolchain_variant.remove_common_configs
+  default_common_binary_configs += toolchain_variant.configs
+
+  default_shared_library_configs =
+      default_common_binary_configs + [
+        "//build/config/zircon:shared_library_configs",
+        "//build/config/zircon:no_undefined_symbols",
+      ]
+
+  default_executable_configs = default_common_binary_configs
+  default_executable_deps = []
+}
+
+# Rust proc macros don't support (Thin)LTO, so always remove it.
+default_rust_proc_macro_configs = default_shared_library_configs + [
+                                    "//build/config/lto",
+                                    "//build/config/lto:thinlto",
+                                    "//build/config/lto:default",
+                                  ] -
+                                  [
+                                    "//build/config/lto",
+                                    "//build/config/lto:thinlto",
+                                    "//build/config/lto:default",
+                                  ]
 
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
@@ -400,7 +491,16 @@ if (toolchain_variant.with_shared) {
           output_file_name += ".$output_extension"
         }
         output_file = "$output_dir/$output_file_name"
-        link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+
+        # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+        # shared libraries, instead of putting them into exe.unstripped. This can be
+        # changed after build unification completes.
+        if (zircon_toolchain != false) {
+          link_output_file = "$output_dir/$output_file_name" +
+                             zircon_toolchain.link_output_suffix
+        } else {
+          link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+        }
 
         metadata = {
           # NOTE: No metadata keys for link_output_rspfile() here to let
@@ -489,7 +589,15 @@ if (toolchain_variant.with_shared) {
         output_file = "$output_dir/$output_file_name"
         rebased_output_file = rebase_path(output_file, root_build_dir)
 
-        link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+        # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+        # shared libraries, instead of putting them into exe.unstripped. This can be
+        # changed after build unification completes.
+        if (zircon_toolchain != false) {
+          link_output_file = "$output_dir/$output_file_name" +
+                             zircon_toolchain.link_output_suffix
+        } else {
+          link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+        }
 
         # Note: the manifest-related metadata is added to the builder target as
         # some targets (e.g. drivers) depend on it directly in the builder
@@ -1308,7 +1416,16 @@ template("executable") {
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
-    link_output_file = "$output_dir/exe.unstripped/$output_name"
+
+    # TODO(54322): Zircon toolchains must use a .debug suffix for non-stripped
+    # executables, instead of putting them into exe.unstripped. This can be
+    # changed after build unification completes.
+    if (zircon_toolchain != false) {
+      link_output_file =
+          "$output_dir/$output_name" + zircon_toolchain.link_output_suffix
+    } else {
+      link_output_file = "$output_dir/exe.unstripped/$output_name"
+    }
 
     deps += default_executable_deps
 

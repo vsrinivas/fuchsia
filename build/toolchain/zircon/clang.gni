@@ -1,41 +1,93 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/prebuilt.gni")
-import("breakpad.gni")
+import("//build/config/clang/clang.gni")
 
 declare_args() {
-  # If $clang_tool_dir is "", then this controls how the Clang toolchain
-  # binaries are found.  If true, then the standard prebuilt is used.
-  # Otherwise the tools are just expected to be found by the shell via `PATH`.
-  use_prebuilt_clang = true
-
   # Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
-  # found.  If this is "", then the behavior depends on $use_prebuilt_clang.
+  # found.  If this is "", then the behavior depends on $clang_prefix.
   # This toolchain is expected to support both Fuchsia targets and the host.
   clang_tool_dir = ""
 }
 
-# This is a string identifying the particular toolchain version in use.  Its
-# only purpose is to be unique enough that it changes when switching to a new
-# toolchain, so that recompilations with the new compiler can be triggered.
-#
-# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
-# When not using the prebuilt, there isn't a quick way to extract the compiler
-# version.  But at least changing the setting to a different compiler will
-# change the string.
-clang_version_string = clang_tool_dir
-if (clang_tool_dir == "" && use_prebuilt_clang) {
-  _prebuilt_clang_dir = "$prebuilt_dir/third_party/clang/$host_platform"
-  clang_tool_dir = "$_prebuilt_clang_dir/bin"
-  _prebuilt_clang_cipd_version =
-      read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
-  clang_version_string = _prebuilt_clang_cipd_version.instance_id
+if (clang_tool_dir == "") {
+  if (clang_prefix == default_clang_prefix) {
+    _prebuilt_clang_dir = "//prebuilt/third_party/clang/$host_platform"
+    clang_tool_dir = "${_prebuilt_clang_dir}/bin"
+    _prebuilt_cipd_version =
+        read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
+    clang_version_string = _prebuilt_cipd_version.instance_id
+  } else {
+    clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
+  }
 }
 
+_clang_lib_dir = "$clang_tool_dir/../lib"
+
 # Human-readable identifier for the toolchain version.
+#
+# clang_version_string is useful for Fuchsia standard prebuilts, since it's
+# the CIPD instance ID that can be looked up to find the compiler build.
+# clang_version_description is something that can lead a human to find the
+# specific toolchain, such as a source repository URL and revision identifier.
 #
 # TODO(mcgrathr): Make this the same repo/revision info from `clang --version`.
 # e.g., clang_version_description = read_file("$_clang_lib_dir/VERSION")
 clang_version_description = ""
+
+# This file is provided by the toolchain to describe the runtime
+# dependencies implied by linking a binary based on --target and other
+# compiler switches.  The file contains a JSON array of objects that map to
+# the following GN schema.  Each entry matches a single compilation mode
+# and yields all the runtime dependencies implied by that mode.
+#
+# Type: list(scope)
+#
+#   target
+#     Required: --target tuple a la ${toolchain.target_tuple}.
+#     Type: string
+#
+#   cflags
+#     Optional: List of compilation flags that select this mode,
+#     e.g. "-fsanitizer=..." and the like.
+#     Type: list(string)
+#     Default: []
+#
+#   ldflags
+#     Optional: Link-time flags that select this mode.
+#     This is either [ "-static-libstdc++" ] or [].
+#     Type: list(string)
+#     Default: []
+#
+#   runtime
+#     Required: List of runtime files needed by binaries in this mode.
+#     Type: list(scope)
+#
+#       soname
+#         Required: `DT_SONAME` string in the ELF shared library.
+#         Type: string
+#
+#       dist
+#         Required: File to load to satisfy $soname `DT_NEEDED` entries.
+#         Type: path relative to JSON file's directory
+#
+#       debug
+#         Optional: Unstripped or separate debug file matching $dist.
+#         Type: path relative to JSON file's directory
+#
+_clang_runtime_file = "$_clang_lib_dir/runtime.json"
+clang_runtime = read_file(_clang_runtime_file, "json")
+
+# This is the prefix of labels generated for targets to generate Breakpad
+# symbols for toolchain-provided debug files.
+clang_runtime_breakpad_syms_label =
+    "//build/toolchain/zircon/toolchain:_clang.breakpad."
+
+# This is where those files go.
+clang_runtime_breakpad_syms_dir =
+    get_label_info("$clang_runtime_breakpad_syms_label($default_toolchain)",
+                   "target_out_dir") + "/clang-runtime.sym"
+
+# TODO(digit): toolchain_runtime_deps()
+

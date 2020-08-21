@@ -75,17 +75,33 @@ _DEFAULT_OUT_PREFIX = 'toolchains'
 #
 _ALL_TOOLCHAINS = [
     {
-        'name': 'host_x64',
+        'name': 'bootloader_x64',
         'gn':
             {
-                'toolchain': '//build/toolchain:host_x64',
-                'output_dir': 'host_x64',
+                'toolchain': '//zircon/bootloader:efi_x64',
+                'output_dir': 'efi_x64',
             },
         'zn':
             {
-                'toolchain': '//public/gn/toolchain:host-x64-linux-clang',
-                'output_dir': 'host-x64-linux-clang/obj/public/canaries/',
+                'toolchain': '//bootloader:efi-x64-win-clang',
+                'output_dir': 'efi-x64-win-clang/obj/public/canaries/',
             },
+        'output_extension': 'exe',
+        'no_shared': True,
+    },
+    {
+        'name': 'bootloader_arm64',
+        'gn':
+            {
+                'toolchain': '//zircon/bootloader:efi_arm64',
+                'output_dir': 'efi_arm64',
+            },
+        'zn':
+            {
+                'toolchain': '//bootloader:efi-arm64-win-clang',
+                'output_dir': 'efi-arm64-win-clang/obj/public/canaries/',
+            },
+        'output_extension': 'exe',
         'no_shared': True,
     },
 ]

@@ -125,6 +125,9 @@ declare_args() {
       mac_sdk_path = mac_sdk_path
     }
     variants = zircon_variants
+
+    # TODO(51585): Keep this in sync with the code in
+    # //build/toolchain/zircon/zircon_toolchain.gni
     if (optimize == "none" || optimize == "sanitizer" ||
         optimize == "profile" || optimize == "size") {
       # TODO(51585): Only propagate none/sanitizer/profile for now.

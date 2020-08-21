@@ -10,48 +10,10 @@ declare_args() {
   # * 0 disables standard C `assert()` and `ZX_DEBUG_ASSERT`.
   # * 1 disables `ZX_DEBUG_ASSERT`. Standard C `assert()` remains enabled.
   # * 2 enables all asserts.
-  assert_level = 2
+  zx_assert_level = 2
+
+  # Zircon optimization level. Same acceptable values as `optimize`.
+  # Note that this will be ignored, in favor of the global `optimize` variable
+  # if the latter is one of: "none", "sanitizer", "profile" or "size".
+  zircon_optimize = "default"
 }
-
-# NOTE: Keep in sync with //build/config/compiler.gni
-# TODO: Unify the default value between the two builds.
-declare_args() {
-  # * `none`: really unoptimized, usually only build-tested and not run
-  # * `debug`: "optimized for debugging", light enough to avoid confusion
-  # * `default`: default optimization level
-  # * `size`:  optimized for space rather than purely for speed
-  # * `speed`: optimized purely for speed
-  # * `sanitizer`: optimized for sanitizers (ASan, etc.)
-  # * `profile`: optimized for coverage/profile data collection
-  optimize = "default"
-}
-
-_optimize_valid = [
-  "none",
-  "debug",
-  "default",
-  "size",
-  "speed",
-  "sanitizer",
-  "profile",
-]
-
-assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
-       "`optimize=\"$optimize\"` must be one of $_optimize_valid")
-
-# NOTE: Keep in sync with //build/config/compiler.gni
-declare_args() {
-  # * `none` means no debugging information
-  # * `backtrace` means sufficient debugging information to symbolize backtraces
-  # * `debug` means debugging information suited for debugging
-  debuginfo = "debug"
-}
-
-_debuginfo_valid = [
-  "none",
-  "backtrace",
-  "debug",
-]
-
-assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
-       "`debuginfo=\"...\"` must be one of $_debuginfo_valid")

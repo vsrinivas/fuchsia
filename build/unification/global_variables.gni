@@ -7,7 +7,7 @@
 # rules under //zircon/ which invoke zx_library() or zx_host_tool()
 
 # `is_gcc` is true for GCC-based toolchains.
-is_gcc = false
+is_gcc = zircon_toolchain != false && zircon_toolchain.is_gcc
 
 # `is_kernel` is true for kernel-specific toolchains.
 is_kernel = false

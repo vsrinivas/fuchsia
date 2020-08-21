@@ -2,73 +2,62 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/clang.gni")
-import("$zx/public/gn/toolchain/goma.gni")
-import("$zx/public/gn/toolchain/rustc.gni")
-import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
-import("levels.gni")
+import("//build/config/build_id.gni")
+import("//build/config/clang/crash_diagnostics.gni")
+import("//build/config/compiler.gni")
+import("//build/config/linker.gni")
+import("//build/config/zircon/levels.gni")
+import("//build/toolchain/goma.gni")
+import("//build/unification/global_variables.gni")
 
-declare_args() {
-  # Clang crash reports directory path. Use empty path to disable altogether.
-  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
+# NOTE: This file was written from the content of
+# //zircon/public/gn/config/BUILD.zircon.gn and provides the GN configs used
+# by zircon toolchains exclusively. See //build/toolchain/zircon/BUILD.gn.
+#
+# Major differences in the rewrite:
+#
+#  - Uses |zircon_toolchain| global variable, instead of |toolchain|.
+#
+#  - All code paths related to |is_host| has been removed (the Zircon toolchain
+#    are never used to build host binaries).
+#
+#  - There are many configs here that redirect to an equivalent config
+#    defined in //build/config/BUILD.gn. These are necessary to ensure
+#    that build commands between the Zircon and Fuchsia builds are equivalent,
+#    as verified by //zircon/public/canaries/compare_toolchains.py, because
+#    the order of entries in `configs` list must be the same, even after
+#    a `gn format` pass.
+#
+#    I.e. compare:
+#
+#      configs = [
+#        "//build/config/zircon:default_include_dirs",
+#        "//build/config/zircon:relative_paths",
+#      ]
+#
+#    Which corresponds to the original configs list as it appeared in the
+#    Zircon build, with:
+#
+#      configs = [
+#        "//build/config:relative_paths",
+#        "//build/config/zircon:default_include_dirs",
+#      ]
+#
+#    Which is the properly formatted equivalent, when not using intermediate
+#    configs here. Because the entries appear in different order, the build
+#    commands will place tool flags in different position, making comparison
+#    much more difficult.
+#
+#    Once the build is unified, these intermediate configs will be removed
+#    since the order of build tool parameters is only important to minimize
+#    surprises during unification.
+#
 
-  # The `--sysroot` directory for host compilations.
-  # This can be a string, which only applies to $host_os-$host_cpu.
-  # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
-  # The empty list (or empty string) means don't use `--sysroot` at all.
-  sysroot = standard_sysroot
+assert(zircon_toolchain != false,
+       "The configs here must only be used by the Zircon toolchains!")
 
-  # Build ID algorithm to use for Fuchsia-target code.  This does not apply
-  # to host or guest code.  The value is the argument to the linker's
-  # `--build-id=...` switch.  If left empty (the default), the linker's
-  # default format is used.
-  build_id_format = ""
-}
-
-# Convert a string to a list.
-if (sysroot == "") {
-  sysroot = []
-} else if (sysroot == "$sysroot") {
-  sysroot = [
-    {
-      cpu = host_cpu
-      os = host_os
-      sysroot = sysroot
-    },
-  ]
-}
-
-config("sysroot") {
-  foreach(host, sysroot) {
-    if (host.cpu == current_cpu && host.os == current_os) {
-      compiler_flags =
-          [ "--sysroot=" + rebase_path(host.sysroot, root_build_dir) ]
-      asmflags = compiler_flags
-      cflags = compiler_flags
-      ldflags = compiler_flags
-    }
-  }
-}
-
-if (current_os == "mac") {
-  # Only the native host linker works for macOS.
-  linker = ""
-} else if (is_gcc) {
-  # Assume ld.gold is available for any native Linux host, and for any ELF
-  # cross-compile target.  Use Gold for userland, and BFD ld for kernel.
-  if (current_os == "linux" ||
-      ((current_cpu != host_cpu || current_os != host_os) && !is_kernel &&
-       current_os != "win")) {
-    linker = "gold"
-  } else {
-    # For GCC on non-ELF hosts, use the system default linker.
-    linker = ""
-  }
-} else {
-  # Always use lld with Clang.
-  linker = "lld"
-}
+# Import global variables from zircon_toolchain scope.
+is_gcc = zircon_toolchain.is_gcc
 
 config("compiler") {
   compiler_flags = []
@@ -78,35 +67,30 @@ config("compiler") {
   # For GCC, the compiler command implies the target.
   # For Clang, there's a single compiler command that takes `--target`.
   if (!is_gcc && (current_cpu != host_cpu || current_os != host_os)) {
-    compiler_flags += [ "--target=${toolchain.target_tuple}" ]
+    compiler_flags += [ "--target=${zircon_toolchain.target_tuple}" ]
   }
 
   if (linker != "") {
     ldflags += [ "-fuse-ld=$linker" ]
   }
 
-  if (defined(toolchain.version_string) && toolchain.version_string != "") {
+  if (defined(zircon_toolchain.version_string) &&
+      zircon_toolchain.version_string != "") {
     # Nothing uses this define, but its presence on compilation command
     # lines ensures that Ninja will rebuild things when a new compiler
     # version arrives.
-    defines += [ "TOOLCHAIN_VERSION=${toolchain.version_string}" ]
+    defines += [ "TOOLCHAIN_VERSION=${zircon_toolchain.version_string}" ]
   }
 
   # This is the default already on Fuchsia and maybe others, but never hurts.
   cflags = [ "-fno-common" ]
 
   configs = [
-    ":color_diagnostics",
+    "//build/config:color_diagnostics",
     # TODO: "$current_os:compiler",
   ]
 
-  if (is_host) {
-    configs += [ ":sysroot" ]
-
-    if (current_os != "win" && current_os != "mac") {
-      ldflags += [ "-Wl,--build-id" ]
-    }
-  } else if (is_fuchsia) {
+  if (is_fuchsia) {
     # TODO(mcgrathr): These should all be default in the compiler driver.
     ldflags += [
       "-Wl,-z,combreloc",
@@ -164,15 +148,6 @@ config("compiler") {
     ldflags += [ "-Wl,/Brepro" ]
   }
 
-  if (is_host) {
-    configs += [ ":static-libc++" ]
-
-    # For host tools without C++, ignore the unused arguments.
-    if (!is_gcc) {
-      ldflags += [ "-Wno-unused-command-line-argument" ]
-    }
-  }
-
   if (!is_gcc && crash_diagnostics_dir != "") {
     compiler_flags += [ "-fcrash-diagnostics-dir=" +
                         rebase_path(crash_diagnostics_dir, root_build_dir) ]
@@ -180,14 +155,14 @@ config("compiler") {
 
   # The toolchain-supplied headers come after include_dirs from targets and
   # configs but before libc.
-  foreach(dir, toolchain.include_dirs) {
+  foreach(dir, zircon_toolchain.include_dirs) {
     compiler_flags += [
       "-isystem",
       rebase_path(dir, root_build_dir),
     ]
   }
 
-  lib_dirs = toolchain.lib_dirs
+  lib_dirs = zircon_toolchain.lib_dirs
 
   asmflags = compiler_flags
   cflags += compiler_flags
@@ -198,117 +173,14 @@ config("compiler") {
   }
 }
 
+# NOTE: Do not remove this until unification completes (see explanation above).
 config("language") {
-  cflags_c = [ "-std=c11" ]
-  cflags_cc = [ "-std=c++17" ]
-  if (current_os == "mac") {
-    # macOS needs this to not complain about C++17isms that older macOS
-    # system libc++ doesn't support.  But we use our own toolchain's static
-    # libc++ anyway.
-    cflags_cc += [ "-faligned-allocation" ]
-
-    # libc++ headers mark some symbols as unavailable on macOS by default
-    # because the system libc++ doesn't support them.  But we use our own
-    # toolchain's static libc++ anyway.
-    defines = [ "_LIBCPP_DISABLE_AVAILABILITY" ]
-  }
+  configs = [ "//build/config:language" ]
 }
 
-config("color_diagnostics") {
-  # GCC correctly defaults this from the terminal, so leave it alone.
-  if (!is_gcc) {
-    compiler_flags = [ "-fcolor-diagnostics" ]
-    asmflags = compiler_flags
-    cflags = compiler_flags
-    ldflags = compiler_flags
-
-    # The macOS linker does not support `--color-diagnostics`.
-    if (current_os != "mac") {
-      ldflags += [ "-Wl,--color-diagnostics" ]
-    }
-  }
-}
-
+# NOTE: Do not remove this until unification completes (see explanation above).
 config("relative_paths") {
-  # Make builds independent of absolute file path.  The file names
-  # embedded in debugging information will be expressed as relative to
-  # the build directory, e.g. "../.." for an "out/subdir" under //.
-  #
-  # See comment in the "relative_paths" config in //build/config/BUILD.gn
-  # for details.
-  #
-  # TODO(BLD-353): After build unification, the definitions in
-  # //build/config/BUILD.gn should be sufficient for Zircon.
-
-  if (is_gcc) {
-    if (use_goma) {
-      # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
-      # build commands, allowing it to reuse compilation results for users running
-      # out of different working directories. However, it only supports a single
-      # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
-      # canonicalization to fail, meaning that builds running out of different
-      # directories won't share cache results. For now, we just provide a single
-      # debug-prefix-map, even though more would be ideal.
-
-      # Map "/some/dir/fuchsia" to "../..".
-      compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-                         rebase_path("$zx/..", root_build_dir) ]
-    } else {
-      compiler_flags = [
-        # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
-        "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
-
-        # Map "/some/dir/fuchsia/out" to "..".
-        "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
-
-        # Map "/some/dir/fuchsia" to "../..".
-        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-            rebase_path("$zx/..", root_build_dir),
-      ]
-    }
-  } else {
-    # Make builds independent of the absolute file path. -fdebug-prefix-map=
-    # can be used to the same effect, but it requires putting the absolute path
-    # to the build directory in the compile command, thus making it dependent
-    # on the absolute path of build directory. -fdebug-compilation-dir is
-    # designed to address this issue, making both debug info and the compile
-    # command itself independent of the absolute path of the build directory.
-    compiler_flags = [
-      "-fdebug-compilation-dir",
-      ".",
-    ]
-  }
-
-  if (!is_gcc) {
-    # This makes sure that include directories in the toolchain are
-    # represented as relative to the build directory (because that's how we
-    # invoke the compiler), rather than absolute.  This can affect __FILE__
-    # expansions (e.g. assertions in system headers).  We normally run a
-    # compiler that's someplace within the source tree, so its absolute
-    # installation path will have a prefix matching `absolute_path` and
-    # hence be mapped to `relative_path` in the debugging information, so
-    # this should actually be superfluous for purposes of the debugging
-    # information.
-    compiler_flags += [ "-no-canonical-prefixes" ]
-  }
-
-  asmflags = compiler_flags
-  cflags = compiler_flags
-  ldflags = compiler_flags
-
-  if (current_os == "win") {
-    ldflags += [
-      # This embeds just "name.pdb" in the binary instead of the absolute
-      # path to the PDB file.
-      "-Wl,/pdbaltpath:%_PDB%",
-
-      # This embeds a fake Windows-style absolute path rather than the real
-      # build-time absolute path in the PDB file.  Windows apparently
-      # requires an absolute path here, so we use an arbitrary fake one for
-      # reproducibility.
-      "-Wl,/pdbsourcepath:c:\\src",
-    ]
-  }
+  configs = [ "//build/config:relative_paths" ]
 }
 
 config("nolibc") {
@@ -365,9 +237,9 @@ config("linker_gc") {
 }
 
 config("assert_level") {
-  assert(assert_level >= 0)
-  defines = [ "ZX_ASSERT_LEVEL=$assert_level" ]
-  if (assert_level == 0) {
+  assert(zx_assert_level >= 0)
+  defines = [ "ZX_ASSERT_LEVEL=$zx_assert_level" ]
+  if (zx_assert_level == 0) {
     defines += [ "NDEBUG" ]
   }
 }
@@ -380,23 +252,20 @@ config("linker_string_merging") {
   }
 }
 
-# Each optimize_$optimize config below corresponds to a single setting that's
-# controlled by the optimize argument. The default_optimize level is set to
-# optimize_$optimize for convenience, but individual targets can override their
-# optimization level by remove default_optimize and manually applying one of
-# the configs below.
+# IMPORTANT: //build/config/BUILD.gn also defines a list of optimize_${level}
+# configs, but some of them have slightly different values. Until build
+# unification completes, the configs below should match the Zircon build
+# values instead.
 #
-# The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
-# is separate from default_optimize so it can be removed separately.
-
-# NOTE: Keep in sync with //build/config/BUILD.gn
+# NOTE: Keep in sync with //zircon/public/gn:optimize_${level} definitions,
+# keeping in mind that the Zircon build `optimize` variable is named
+# `zircon_optimize` in the Fuchsia build.
 
 config("optimize_none") {
-  cflags = [ "-O0" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=0" ]
+  configs = [ "/build/config:optimize_none" ]
 }
 
+# NOTE: //build/config:optimize_debug is slightly different.
 config("optimize_debug") {
   cflags = [ "-Og" ]
   ldflags = cflags
@@ -404,22 +273,14 @@ config("optimize_debug") {
 }
 
 config("optimize_default") {
-  cflags = [ "-O2" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=2" ]
+  configs = [ "//build/config:optimize_default" ]
 }
 
 config("optimize_size") {
-  if (is_gcc) {
-    cflags = [ "-Os" ]
-  } else {
-    cflags = [ "-Oz" ]
-  }
-  ldflags = cflags
-  rustflags = [ "-Copt-level=z" ]
-  configs = [ ":linker_string_merging" ]
+  configs = [ "//build/config:optimized_size" ]
 }
 
+# NOTE: //build/config:optimize_speed is slightly different.
 config("optimize_speed") {
   cflags = [ "-O3" ]
   ldflags = cflags
@@ -428,21 +289,15 @@ config("optimize_speed") {
 }
 
 config("optimize_sanitizer") {
-  # Instrumentation adds overhead that is greatly improved by optimization.
-  # -O1 is well-tested with the instrumentation modes and does not degrade the
-  # comprehensibility of backtraces produced by sanitizer failures.
-  cflags = [ "-O1" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
+  configs = [ "//build/config:optimize_sanitizer" ]
 }
 
 config("optimize_profile") {
-  # TODO(51509): Perhaps use a different default.
-  configs = [ ":optimize_default" ]
+  configs = [ "//build/config:optimize_profile" ]
 }
 
 config("default_optimize") {
-  configs = [ ":optimize_${optimize}" ]
+  configs = [ ":optimize_${zircon_optimize}" ]
 }
 
 config("linker_gc_none") {
@@ -475,7 +330,7 @@ config("linker_gc_profile") {
 }
 
 config("default_linker_gc") {
-  configs = [ ":linker_gc_$optimize" ]
+  configs = [ ":linker_gc_${zircon_optimize}" ]
 }
 
 # This is separate from default_optimize so it can be removed.
@@ -493,33 +348,22 @@ config("default_icf") {
 # debuginfo_$debuginfo for convenience, but individual targets can override
 # their debuginfo level by manually applying one of the configs below.
 
-# NOTE: Keep in sync with //build/config/BUILD.gn
+# Keep in sync with //build/config/BUILD.gn
 
 config("debuginfo_none") {
-  cflags = [ "-g0" ]
-  asmflags = cflags
-  ldflags = cflags
+  configs = [ "//build/config:debuginfo_none" ]
 }
 
 config("debuginfo_backtrace") {
-  cflags = [ "-g1" ]
-  asmflags = cflags
-  ldflags = cflags
+  configs = [ "//build/config:debuginfo_backtrace" ]
 }
 
 config("debuginfo_debug") {
-  cflags = [ "-g3" ]
-  asmflags = cflags
-  ldflags = cflags
+  configs = [ "//build/config:debuginfo_debug" ]
 }
 
 config("default_debuginfo") {
-  configs = [ ":debuginfo_${debuginfo}" ]
-  if (debuginfo != "none" && current_os == "win") {
-    # TODO(55244): This produces the .pdb file, but it doesn't seem
-    # to get the DWARF data out of the main output file.
-    ldflags = [ "-Wl,/debug:full" ]
-  }
+  configs = [ "//build/config:default_debuginfo" ]
 }
 
 config("werror") {
@@ -614,27 +458,19 @@ config("icf") {
 }
 
 config("exceptions") {
-  cflags_cc = [ "-fexceptions" ]
-  cflags_objcc = cflags_cc
-  ldflags = cflags_cc
+  configs = [ "//build/config:exceptions" ]
 }
 
 config("no_exceptions") {
-  cflags_cc = [ "-fno-exceptions" ]
-  cflags_objcc = cflags_cc
-  ldflags = cflags_cc
+  configs = [ "//build/config:no_exceptions" ]
 }
 
 config("rtti") {
-  cflags_cc = [ "-frtti" ]
-  cflags_objcc = cflags_cc
-  ldflags = cflags_cc
+  configs = [ "//build/config:rtti" ]
 }
 
 config("no_rtti") {
-  cflags_cc = [ "-fno-rtti" ]
-  cflags_objcc = cflags_cc
-  ldflags = cflags_cc
+  configs = [ "//build/config:no_rtti" ]
 }
 
 config("no_threadsafe_statics") {
@@ -643,27 +479,30 @@ config("no_threadsafe_statics") {
 }
 
 config("default_include_dirs") {
-  include_dirs = [ "$zx/system/public" ]
+  include_dirs = [ "//zircon/system/public" ]
 }
 
 config("default_frame_pointers") {
-  if (assert_level > 0) {
+  if (zx_assert_level > 0) {
     configs = [ ":frame_pointers" ]
   } else {
     configs = [ ":no_frame_pointers" ]
   }
 }
 
+# NOTE: //build/config:frame_pointers exists but is different!
 config("frame_pointers") {
   defines = [ "WITH_FRAME_POINTERS=1" ]
   cflags = [ "-fno-omit-frame-pointer" ]
 }
 
+# NOTE: //build/config:no_frame_pointers exists but is different!
 config("no_frame_pointers") {
   defines = [ "WITH_FRAME_POINTERS=0" ]
   cflags = [ "-fomit-frame-pointer" ]
 }
 
+# NOTE: //build/config:thread_safety_annotations is slightly different
 config("thread_safety_annotations") {
   if (!is_gcc) {
     cflags = [ "-Wthread-safety" ]
@@ -754,34 +593,33 @@ config("machine") {
   }
 }
 
+# TODO(54322): Use the config under //third_party/ulib/musl once the C
+# library has been migrated to the GN build.
+config("musl_headers") {
+  _musl_dir = "//zircon/third_party/ulib/musl"
+  visibility = [
+    "${_musl_dir}/*",
+    "//zircon/system/ulib/c:*",
+  ]
+  cflags = [
+    "-idirafter",
+    rebase_path("${_musl_dir}/include", root_build_dir),
+  ]
+  asmflags = cflags
+}
+
 config("user") {
   defines = [ "_ALL_SOURCE" ]
   configs = [
     ":nolibc",
-    "$zx/third_party/ulib/musl:headers",
+    ":musl_headers",
   ]
 }
 
 config("user_executable") {
-  # Fuchsia userland code is compiled as PIE by default.
-  # In Clang, this is the default in the compiler driver for *-fuchsia targets.
-  # For GCC, it must be explicit.
-  if (is_gcc) {
-    compiler_flags = [ "-fPIE" ]
-    asmflags = compiler_flags
-    cflags = compiler_flags
-    ldflags = compiler_flags + [ "-Wl,-pie" ]
-  } else {
-    ldflags = []
-  }
-
-  # Specify the dynamic linker if building a variant that uses a separate
-  # set of libraries.  With GCC, the dynamic linker must be explicit even
-  # in the default case because the compiler driver is not inherently
-  # configured for Fuchsia as it is in Clang.
-  if (is_gcc || toolchain.libprefix != "") {
-    ldflags += [ "-Wl,-dynamic-linker=${toolchain.libprefix}ld.so.1" ]
-  }
+  # NOTE: Was only used in the 'user' Zircon build environment, which is
+  # implemented by the Fuchsia build using the 'target' toolchain instead,
+  # so this is not needed here.
 }
 
 config("integer-paranoia") {
@@ -810,32 +648,6 @@ config("static-libc++") {
         "pthread",
       ]
     }
-  }
-}
-
-if (is_fuchsia) {
-  toolchain_runtime_deps("static-libc++-deps") {
-    toolchain_spec = clang_toolchain_spec
-    cflags = toolchain.runtime_deps_cflags
-    ldflags = [ "-static-libstdc++" ]
-  }
-
-  toolchain_runtime_deps("shared-libc++-deps") {
-    toolchain_spec = clang_toolchain_spec
-    cflags = toolchain.runtime_deps_cflags
-    ldflags = []
-    zx_publish = true
-  }
-
-  toolchain_runtime_deps("static-ruststd-deps") {
-    toolchain_spec = rustc_toolchain_spec
-    rustflags = toolchain.runtime_deps_rustflags
-  }
-
-  toolchain_runtime_deps("shared-ruststd-deps") {
-    toolchain_spec = rustc_toolchain_spec
-    rustflags = toolchain.runtime_deps_rustflags + [ "-Cprefer-dynamic" ]
-    zx_publish = true
   }
 }
 
@@ -873,6 +685,9 @@ config("tiny") {
 # the asan-ubsan variant is in CI/CQ and we remove all instances of caught
 # undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
 config("temporarily_disable_ubsan_do_not_use") {
+  # TODO(54322): Replace $zx_build with //zircon below after unification. This
+  # is kept here to keep it identical to the definitions in
+  # //zircon/public/gn/config:BUILD.zircon.gn
   visibility = [
     # TODO(41888): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
@@ -967,4 +782,81 @@ config("temporarily_disable_ubsan_do_not_use") {
   if (!is_gcc) {
     cflags = [ "-fno-sanitize=undefined" ]
   }
+}
+
+# TODO(54322): Move this to //zircon/kernel/BUILD.gn once the kernel has been
+# migrated to the Fuchsia build.
+# For any standalone static binary.
+config("standalone") {
+  ldflags = [
+    "-nostdlib",
+    "-static",
+  ]
+
+  cflags = [
+    "-ffreestanding",
+    "-include",
+    rebase_path("//zircon/kernel/include/hidden.h", root_build_dir),
+
+    # We want `.debug_frame` for the kernel (ZX-62).  And we still want
+    # asynchronous unwind tables.  Alas there's (currently) no way to
+    # achieve this with our GCC.  At the moment we compile with
+    # `-fno-omit-frame-pointer`, which is good because we link with
+    # `--gc-sections`, which means `.eh_frame` gets discarded so GCC-built
+    # kernels don't have any unwind info (except for assembly)!  Assembler
+    # code has its own way of requesting `.debug_frame` vs `.eh_frame` with
+    # the `.cfi_sections` directive.
+    "-fno-unwind-tables",
+  ]
+
+  cflags_cc = [
+    # Underlying kernel heap only has default alignment of 8 bytes, so pass
+    # this to the compiler as the default new alignment.
+    "-faligned-new=8",
+  ]
+
+  if (current_cpu == "x64") {
+    # This only matters in an environment where interrupt handlers might
+    # push trap frames in the same privilege level, like the kernel.
+    # e.g. Multiboot probably doesn't actually need it, but it doesn't hurt.
+    cflags += [ "-mno-red-zone" ]
+  } else if (current_cpu == "arm64") {
+    # This matters if vector registers are not available, e.g. in the kernel
+    # since the they hold unsaved user state, or in the physmem environment
+    # because they might not be enabled in hardware yet.
+    cflags += [ "-mgeneral-regs-only" ]
+  }
+
+  if (is_gcc && current_os == "fuchsia") {
+    cflags += [ "-fpie" ]
+  }
+
+  if (!is_gcc && current_os == "fuchsia") {
+    # In the Fuchsia-target toolchains there's no way to prevent the
+    # compiler driver from passing -pie, so negate it.  BFD ld doesn't
+    # have --no-pie, but arm64-elf-gcc doesn't pass -pie either.
+    ldflags += [ "-Wl,--no-pie" ]
+  }
+
+  if (!is_gcc) {
+    # Disable the implicit addition of toolchain-provided libraries to
+    # the link by the compiler driver.  No toolchain-provided library is
+    # compatible with the kernel's internal ABI.
+    #
+    # TODO(27356): Clang doesn't have a single straightforward switch to
+    # disable all such libraries, though it certainly should.  It
+    # provides separate switches to disable the profiling/coverage
+    # runtime and to disable all the flavors of runtime implied by
+    # -fsanitize=... switches (including any such defaults).  It will
+    # still provide other incompatible libraries to the link, but they
+    # won't have any effect since they don't define any symbols the link
+    # needs.  However, this is a fragile situation that could easily
+    # break.
+    ldflags += [
+      "-noprofilelib",
+      "-fno-sanitize-link-runtime",
+    ]
+  }
+
+  configs = [ "//build/config/zircon:no_exceptions" ]
 }

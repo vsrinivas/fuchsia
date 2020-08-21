@@ -1,0 +1,81 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (current_toolchain == default_toolchain) {
+  # In the default toolchain, simply define the bootloader toolchains
+  # to be used to build Gigaboot as a Win32 PE32+ executable.
+
+  import("//build/toolchain/zircon/zircon_toolchain.gni")
+
+  # Define a Zircon EFI toolchain. These are required to build the Gigaboot
+  # bootloader (see //zircon/bootloader/README.md)
+  #
+  # Parameters:
+  #    cpu: [required]
+  #      Fuchsia device CPU name (e.g. "x64" or "arm64")
+  #      Type: string
+  #
+  #    toolchain_variant_args: [optional]
+  #      Optional toolchain_variant_args passed to the toolchain.
+  #      Type: scope
+  #
+  template("zircon_efi_toolchain") {
+    zircon_toolchain(target_name) {
+      cpu = invoker.cpu
+      os = "win"
+      environment = "efi"
+      gcc = false
+      shlib = false
+
+      toolchain_variant_args = {
+        configs = []
+        remove_common_configs = []
+
+        if (defined(invoker.toolchain_variant_args)) {
+          forward_variables_from(invoker.toolchain_variant_args, "*")
+        }
+        configs += [ "//zircon/bootloader:efi_config" ]
+
+        # TODO: harmless, but just to match build.mk
+        remove_common_configs +=
+            [ "//build/config/zircon:default_frame_pointers" ]
+      }
+    }
+  }
+
+  # These toolchains will be used to build the EFI bootloader.
+  zircon_efi_toolchain("efi_x64") {
+    cpu = "x64"
+  }
+
+  zircon_efi_toolchain("efi_arm64") {
+    cpu = "arm64"
+  }
+} else {
+  assert(
+      current_toolchain == "//zircon/bootloader:efi_${current_cpu}",
+      "current_toolchain is ${current_toolchain} and should be efi_${current_cpu}")
+
+  # This is the top config for all code in the efi_toolchain.
+  config("efi_config") {
+    configs = [
+      "//build/config/zircon:standalone",
+      "//build/config/zircon:no_sanitizers",
+
+      # TODO: "$zx/kernel:warnings",
+    ]
+    include_dirs = [ "include" ]
+    cflags = [
+      "-std=c99",
+      "-fshort-wchar",
+    ]
+  }
+
+  # Any config listed in toolchain_variant must have a _deps group listing
+  # extra dependencies for it.
+  group("efi_config_deps") {
+  }
+
+  # TODO(digit): bootloader executable
+}
