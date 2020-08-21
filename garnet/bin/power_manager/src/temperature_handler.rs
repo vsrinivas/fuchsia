@@ -360,6 +360,7 @@ impl TemperatureFilter {
     /// Constucts a new TemperatureFilter with the specified TemperatureHandler node and filter time
     /// constant.
     pub fn new(temperature_handler: Rc<dyn Node>, time_constant: Seconds) -> Self {
+        assert!(time_constant > Seconds(0.0));
         Self {
             time_constant,
             prev_temperature: Cell::new(None),
@@ -391,6 +392,15 @@ impl TemperatureFilter {
         self.prev_timestamp.set(timestamp);
 
         Ok(TemperatureReadings { raw: raw_temperature, filtered: filtered_temperature })
+    }
+
+    /// Reset the internal state of the temperature filter. This has the effect of causing the
+    /// filter to return the same value for both the `raw` and `filtered` temperature fields on the
+    /// next call to `get_temperature`.
+    #[cfg(test)]
+    pub fn reset(&self) {
+        self.prev_temperature.set(None);
+        self.prev_timestamp.set(Nanoseconds(0));
     }
 
     /// Queries the current temperature from the temperature handler node

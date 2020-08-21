@@ -52,8 +52,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
@@ -70,6 +72,7 @@ rustc_binary("bin") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
+    "src/cobalt_metrics.rs",
     "src/cpu_control_handler.rs",
     "src/cpu_stats_handler.rs",
     "src/crash_report_handler.rs",

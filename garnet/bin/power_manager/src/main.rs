@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // core
+mod cobalt_metrics;
 mod error;
 mod message;
 mod node;
