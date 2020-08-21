@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+edition = "2018"
+name = "miow"
+version = "0.3.5"
+authors = ["The Fuchsia Authors"]

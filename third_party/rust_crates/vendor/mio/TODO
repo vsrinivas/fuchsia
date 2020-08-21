@@ -1,0 +1,26 @@
+TODO.
+
+Finish review/cleanup:
+sys/windows
+
+
+
+
+
+Merge prs:
+ * Add timeout to tests for CI (~branch: always_timeout)
+
+Local work:
+ * Mark internal API as `pub(crate)`, rather then `pub` (branch: __TODO_pub-crate).
+ * More windows cleanup (branch: __TODO_win-cleanup2)
+ * rename macros to features, branch: rename-macros.
+ * Mark internal types as pub(crate), rather then pub, branch sys-pub-crate.
+   Depends on pr #1252.
+     TODO: sys/windows and sys/unix.
+
+
+TODO:
+ * Look at `mio::net::SocketAddr` (for UDS), we can create it, see `sys::net`
+   socket_addr.
+ * Look at other branches: __check_review __keep_benchmarks
+ * Wasm32 port, branches: wasm32-wasi, __keep_wasm32-wasi.

@@ -1,6 +1,6 @@
 [package]
 name = "winapi"
-version = "0.3.8"
+version = "0.3.9"
 authors = ["Erick Tryzelaar <etryzelaar@google.com>"]
 
 [dependencies]
@@ -105,6 +105,7 @@ dxgidebug = []
 dxgiformat = []
 dxgitype = []
 errhandlingapi = []
+evntrace = []
 everything = []
 excpt = []
 fibersapi = []
@@ -164,6 +165,7 @@ msaatext = []
 mscat = []
 mssip = []
 mstcpip = []
+mswsock = []
 namedpipeapi = []
 namespaceapi = []
 nb30 = []

@@ -82,6 +82,11 @@ group("crossbeam") {
   deps = [ ":crossbeam-v0_7_3" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("crossterm") {
+    deps = [ ":crossterm-v0_17_7" ]
+  }
+}
 group("csv") {
   deps = [ ":csv-v1_1_3" ]
 }
@@ -803,7 +808,7 @@ rust_library("ansi_term-v0_11_0") {
 
   deps = []
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -1192,7 +1197,7 @@ rust_library("atty-v0_2_11") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -2081,6 +2086,62 @@ rust_library("crossbeam-utils-v0_7_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("crossterm-v0_17_7") {
+  crate_name = "crossterm"
+  crate_root = "//third_party/rust_crates/vendor/crossterm/src/lib.rs"
+  output_name = "crossterm-ccfb3daa259048ba"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":parking_lot-v0_10_2" ]
+  if (true) {
+    deps += [ ":libc-v0_2_74" ]
+    deps += [ ":mio-v0_7_0" ]
+    deps += [ ":signal-hook-v0_1_16" ]
+  }
+  if (false) {
+    deps += [ ":crossterm_winapi-v0_6_1" ]
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ccfb3daa259048ba",
+    "-Cextra-filename=-ccfb3daa259048ba",
+    "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("crossterm_winapi-v0_6_1") {
+  crate_name = "crossterm_winapi"
+  crate_root =
+      "//third_party/rust_crates/tiny_mirrors/crossterm_winapi/src/lib.rs"
+  output_name = "crossterm_winapi-3884a110943dbe32"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=3884a110943dbe32",
+    "-Cextra-filename=-3884a110943dbe32",
   ]
 }
 
@@ -3219,7 +3280,7 @@ rust_library("home-v0_5_3") {
 
   deps = []
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -4060,6 +4121,61 @@ rust_library("miniz_oxide-v0_3_6") {
   ]
 }
 
+rust_library("mio-v0_7_0") {
+  crate_name = "mio"
+  crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
+  output_name = "mio-35621ccd559c52ed"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":log-v0_4_8" ]
+  if (true) {
+    deps += [ ":libc-v0_2_74" ]
+  }
+  if (false) {
+    deps += [ ":lazy_static-v1_4_0" ]
+    deps += [ ":miow-v0_3_5" ]
+    deps += [ ":ntapi-v0_3_4" ]
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=35621ccd559c52ed",
+    "-Cextra-filename=-35621ccd559c52ed",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"os-poll\"",
+    "--cfg=feature=\"os-util\"",
+  ]
+}
+
+rust_library("miow-v0_3_5") {
+  crate_name = "miow"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/miow/src/lib.rs"
+  output_name = "miow-dc82f42c60569f01"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=dc82f42c60569f01",
+    "-Cextra-filename=-dc82f42c60569f01",
+  ]
+}
+
 rust_library("multipart-v0_15_4") {
   crate_name = "multipart"
   crate_root = "//third_party/rust_crates/vendor/multipart/src/lib.rs"
@@ -4196,6 +4312,30 @@ rust_library("nom_locate-v2_0_0") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("ntapi-v0_3_4") {
+  crate_name = "ntapi"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/ntapi/src/lib.rs"
+  output_name = "ntapi-3fb9016f4c012ee1"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":winapi-v0_3_9" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3fb9016f4c012ee1",
+    "-Cextra-filename=-3fb9016f4c012ee1",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"user\"",
   ]
 }
 
@@ -4568,6 +4708,7 @@ rust_library("parking_lot-v0_10_2") {
     "--edition=2018",
     "-Cmetadata=b84453ff4ae0bc4f",
     "-Cextra-filename=-b84453ff4ae0bc4f",
+    "--cfg=feature=\"default\"",
   ]
 }
 
@@ -4618,7 +4759,7 @@ rust_library("parking_lot_core-v0_6_2") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -4657,7 +4798,7 @@ rust_library("parking_lot_core-v0_7_2") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -5546,7 +5687,7 @@ rust_library("rand-v0_4_6") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -5583,7 +5724,7 @@ rust_library("rand-v0_5_6") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -5625,7 +5766,7 @@ rust_library("rand-v0_6_5") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -5887,7 +6028,7 @@ rust_library("rand_jitter-v0_1_3") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -5925,7 +6066,7 @@ rust_library("rand_os-v0_1_2") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -6234,7 +6375,7 @@ rust_library("remove_dir_all-v0_5_1") {
 
   deps = []
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -6321,7 +6462,7 @@ rust_library("ring-v0_16_12") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
   deps += [ "//third_party/rust_crates/compat/ring:ring-core" ]
   rustenv = []
@@ -7299,6 +7440,7 @@ rust_library("signal-hook-v0_1_16") {
 
   deps = []
   deps += [ ":libc-v0_2_74" ]
+  deps += [ ":mio-v0_7_0" ]
   deps += [ ":signal-hook-registry-v1_2_0" ]
 
   rustenv = []
@@ -7308,7 +7450,13 @@ rust_library("signal-hook-v0_1_16") {
     "--edition=2018",
     "-Cmetadata=37c66c596290553a",
     "-Cextra-filename=-37c66c596290553a",
+    "--cfg=feature=\"mio-0_7-support\"",
+    "--cfg=feature=\"mio_0_7\"",
   ]
+
+  aliased_deps = {
+    mio_0_7 = ":mio-v0_7_0"
+  }
 }
 
 rust_library("signal-hook-registry-v1_2_0") {
@@ -7526,7 +7674,7 @@ rust_library("socket2-v0_3_12") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -7899,7 +8047,7 @@ rust_library("tempfile-v3_1_0") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -7928,7 +8076,7 @@ rust_library("term-v0_5_1") {
   deps = []
   deps += [ ":byteorder-v1_3_1" ]
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -8148,7 +8296,7 @@ rust_library("time-v0_1_42") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
@@ -9293,7 +9441,7 @@ rust_library("walkdir-v2_3_1") {
   deps = []
   deps += [ ":same-file-v1_0_4" ]
   if (false) {
-    deps += [ ":winapi-v0_3_8" ]
+    deps += [ ":winapi-v0_3_9" ]
     deps += [ ":winapi-util-v0_1_2" ]
   }
 
@@ -9575,10 +9723,10 @@ rust_library("wepoll-binding-v2_0_2") {
   ]
 }
 
-rust_library("winapi-v0_3_8") {
+rust_library("winapi-v0_3_9") {
   crate_name = "winapi"
   crate_root = "//third_party/rust_crates/tiny_mirrors/winapi/src/lib.rs"
-  output_name = "winapi-8420c37d53967cec"
+  output_name = "winapi-36dcf2c9d4b87e51"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9591,14 +9739,19 @@ rust_library("winapi-v0_3_8") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=8420c37d53967cec",
-    "-Cextra-filename=-8420c37d53967cec",
+    "-Cmetadata=36dcf2c9d4b87e51",
+    "-Cextra-filename=-36dcf2c9d4b87e51",
+    "--cfg=feature=\"cfg\"",
     "--cfg=feature=\"consoleapi\"",
     "--cfg=feature=\"errhandlingapi\"",
+    "--cfg=feature=\"evntrace\"",
     "--cfg=feature=\"fileapi\"",
     "--cfg=feature=\"handleapi\"",
+    "--cfg=feature=\"in6addr\"",
+    "--cfg=feature=\"inaddr\"",
     "--cfg=feature=\"minwinbase\"",
     "--cfg=feature=\"minwindef\"",
+    "--cfg=feature=\"mswsock\"",
     "--cfg=feature=\"ntdef\"",
     "--cfg=feature=\"ntsecapi\"",
     "--cfg=feature=\"ntstatus\"",
@@ -9610,8 +9763,12 @@ rust_library("winapi-v0_3_8") {
     "--cfg=feature=\"timezoneapi\"",
     "--cfg=feature=\"winbase\"",
     "--cfg=feature=\"wincon\"",
+    "--cfg=feature=\"windef\"",
     "--cfg=feature=\"winerror\"",
+    "--cfg=feature=\"winioctl\"",
     "--cfg=feature=\"winnt\"",
+    "--cfg=feature=\"winsock2\"",
+    "--cfg=feature=\"winuser\"",
     "--cfg=feature=\"ws2def\"",
     "--cfg=feature=\"ws2ipdef\"",
     "--cfg=feature=\"ws2tcpip\"",

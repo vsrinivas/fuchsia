@@ -187,6 +187,7 @@ webpki = "0.21"
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }
+crossterm = "0.17.7"
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 indoc = "0.3.3"
@@ -213,12 +214,14 @@ backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
 # TODO(fxb/56201): Vendor fatfs when upstream makes a new release.
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
+crossterm_winapi = { path = "tiny_mirrors/crossterm_winapi" }
 fatfs = { path = "tiny_mirrors/fatfs" }
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
 futures-timer = { path = "tiny_mirrors/futures-timer" }
 js-sys = { path = "tiny_mirrors/js-sys" }
 libm = { path = "tiny_mirrors/libm" }
 memchr = { path = "tiny_mirrors/memchr" }
+miow = { path = "tiny_mirrors/miow" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
 ntapi = { path = "tiny_mirrors/ntapi" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
@@ -230,6 +233,8 @@ tracing-core = { path = "tiny_mirrors/tracing-core" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }
+winapi-i686-pc-windows-gnu = { path = "tiny_mirrors/winapi-i686-pc-windows-gnu" }
+winapi-x86_64-pc-windows-gnu = { path = "tiny_mirrors/winapi-x86_64-pc-windows-gnu" }
 winapi = { path = "tiny_mirrors/winapi" }
 winapi-util = { path = "tiny_mirrors/winapi-util" }
 
