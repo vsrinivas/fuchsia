@@ -8,10 +8,13 @@ executable("bin") {
   output_name = "fidl_echo_llcpp_client_sync"
   sources = [ "main.cc" ]
 
+  # [START deps]
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
     "//sdk/lib/fdio",
   ]
+
+  # [END deps]
 }
 
 fuchsia_component("echo-client") {

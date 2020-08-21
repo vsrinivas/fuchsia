@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START includes]
 #include <fuchsia/examples/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -11,9 +12,11 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+// [END includes]
 
 #include <iostream>
 
+// [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
 // creating a subclass of the ::Interface class for the protocol.
 class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
@@ -35,7 +38,9 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
   // to send events to the client.
   fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::examples::Echo>> binding_;
 };
+// [END impl]
 
+// [START handler]
 // The extra data that svc_dir_add_service passes to our connect function.
 struct ConnectRequestContext {
   async_dispatcher_t* dispatcher;
@@ -54,8 +59,15 @@ static void connect(void* untyped_context, const char* service_name, zx_handle_t
     context->server->binding_ = result.take_value();
   }
 }
+// [END handler]
 
+// [START main]
 int main(int argc, char** argv) {
+  // Initialize the async loop. The Echo server will use the dispatcher of this
+  // loop to listen for incoming requests.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
   // Get the startup handle provided to this component by the component framework.
   // Every component has a startup handle, and can use it to provide capabilities
   // (like FIDL protocols) to other components.
@@ -64,11 +76,6 @@ int main(int argc, char** argv) {
     std::cerr << "error: directory_request was ZX_HANDLE_INVALID" << std::endl;
     return -1;
   }
-
-  // Initialize the async loop. The Echo server will use the dispatcher of this
-  // loop to listen for incoming requests.
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  async_dispatcher_t* dispatcher = loop.dispatcher();
 
   // Wrap the raw startup handle in an svc_dir_t, which is used by the fdio svc_* functions.
   svc_dir_t* dir = nullptr;
@@ -93,3 +100,4 @@ int main(int argc, char** argv) {
   loop.Run();
   return 0;
 }
+// [END main]

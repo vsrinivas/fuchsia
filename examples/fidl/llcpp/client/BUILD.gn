@@ -8,6 +8,7 @@ executable("bin") {
   output_name = "fidl_echo_llcpp_client"
   sources = [ "main.cc" ]
 
+  # [START deps]
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
     "//sdk/lib/fdio",
@@ -15,6 +16,8 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # [END deps]
 }
 
 fuchsia_component("echo-client") {

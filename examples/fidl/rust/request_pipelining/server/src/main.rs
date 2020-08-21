@@ -11,6 +11,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
+// [START echo-impl]
 // An Echo implementation that adds a prefix to every response
 async fn run_echo_server(stream: EchoRequestStream, prefix: &str) -> Result<(), Error> {
     stream
@@ -30,7 +31,9 @@ async fn run_echo_server(stream: EchoRequestStream, prefix: &str) -> Result<(), 
         })
         .await
 }
+// [END echo-impl]
 
+// [START launcher-impl]
 // The EchoLauncher implementation that launches Echo servers with the specified
 // prefix
 async fn run_echo_launcher_server(stream: EchoLauncherRequestStream) -> Result<(), Error> {
@@ -64,7 +67,9 @@ async fn run_echo_launcher_server(stream: EchoLauncherRequestStream) -> Result<(
         })
         .await
 }
+// [END launcher-impl]
 
+// [START main]
 enum IncomingService {
     EchoLauncher(EchoLauncherRequestStream),
 }
@@ -84,3 +89,4 @@ async fn main() -> Result<(), Error> {
     fut.await;
     Ok(())
 }
+// [END main]

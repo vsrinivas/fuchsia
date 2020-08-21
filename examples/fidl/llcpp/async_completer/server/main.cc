@@ -16,6 +16,7 @@
 
 #include <iostream>
 
+// [START impl]
 class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
  public:
   explicit EchoImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
@@ -37,6 +38,7 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
   // PostDelayedTask.
   async_dispatcher_t* dispatcher_;
 };
+// [END impl]
 
 struct ConnectRequestContext {
   async_dispatcher_t* dispatcher;

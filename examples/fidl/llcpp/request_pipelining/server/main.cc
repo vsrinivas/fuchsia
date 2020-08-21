@@ -14,6 +14,7 @@
 
 #include <iostream>
 
+// [START echo-impl]
 // Implementation of the Echo protocol that prepends a prefix to every response.
 class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
  public:
@@ -29,7 +30,9 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
 
   const std::string prefix_;
 };
+// [END echo-impl]
 
+// [START launcher-impl]
 // Implementation of EchoLauncher. Each method creates an instance of EchoImpl
 // with the specified prefix.
 class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::Interface {
@@ -63,6 +66,7 @@ class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::In
   std::vector<std::unique_ptr<EchoImpl>> server_instances_;
   async_dispatcher_t* dispatcher_;
 };
+// [END launcher-impl]
 
 struct ConnectRequestContext {
   async_dispatcher_t* dispatcher;

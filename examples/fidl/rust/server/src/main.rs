@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Note: this file must be kept in sync with
+// docs/development/languages/fidl/tutorials/rust/basic/server.md
+
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::{EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
+// [START impl]
 // An implementation of the Echo stream, which handles a stream of EchoRequests
 async fn run_echo_server(stream: EchoRequestStream) -> Result<(), Error> {
     stream
@@ -33,13 +37,17 @@ async fn run_echo_server(stream: EchoRequestStream) -> Result<(), Error> {
         })
         .await
 }
+// [END impl]
 
+// [START enum]
 enum IncomingService {
     // Host a service protocol.
     Echo(EchoRequestStream),
     // ... more services here
 }
+// [END enum]
 
+// [START main]
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Initialize the outgoing services provided by this component
@@ -51,6 +59,7 @@ async fn main() -> Result<(), Error> {
 
     // Listen for incoming requests to connect to Echo, and call run_echo_server
     // on each one
+    println!("Listening for incoming connections...");
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Echo(stream)| {
         run_echo_server(stream).unwrap_or_else(|e| println!("{:?}", e))
@@ -59,3 +68,4 @@ async fn main() -> Result<(), Error> {
 
     Ok(())
 }
+// [END main]

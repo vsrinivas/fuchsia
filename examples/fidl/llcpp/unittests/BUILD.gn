@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
+# [START imports]
 import("//src/sys/build/components.gni")
 
-executable("bin") {
+# [END imports]
+
+# [START test]
+test("test") {
   testonly = true
   output_name = "fidl_example_llcpp_test"
   sources = [ "main.cc" ]
@@ -14,10 +20,15 @@ executable("bin") {
   ]
 }
 
+# [END test]
+
+# [START package]
 fuchsia_unittest_package("fidl-example-llcpp-test") {
-  executable_path = "bin/fidl_example_llcpp_test"
-  deps = [ ":bin" ]
+  executable_path = "test/fidl_example_llcpp_test"
+  deps = [ ":test" ]
 }
+
+# [END package]
 
 group("unittests") {
   testonly = true

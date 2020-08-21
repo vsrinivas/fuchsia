@@ -6,12 +6,14 @@ library fuchsia.examples;
 
 const uint64 MAX_STRING_LENGTH = 32;
 
+// [START echo]
 [Discoverable]
 protocol Echo {
     EchoString(string:MAX_STRING_LENGTH value) -> (string:MAX_STRING_LENGTH response);
     SendString(string:MAX_STRING_LENGTH value);
     -> OnString(string:MAX_STRING_LENGTH response);
 };
+// [END echo]
 
 // [START launcher]
 [Discoverable]

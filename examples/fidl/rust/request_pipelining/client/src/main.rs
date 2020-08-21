@@ -10,6 +10,7 @@ use fuchsia_component::client::connect_to_service;
 use futures::join;
 use futures::prelude::*;
 
+// [START main]
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let echo_launcher =
@@ -39,3 +40,4 @@ async fn main() -> Result<(), Error> {
     non_pipelined_result?;
     Ok(())
 }
+// [END main]

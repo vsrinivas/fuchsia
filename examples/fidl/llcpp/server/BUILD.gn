@@ -4,6 +4,7 @@
 
 import("//src/sys/build/components.gni")
 
+# [START bin]
 executable("bin") {
   output_name = "fidl_echo_llcpp_server"
   sources = [ "main.cc" ]
@@ -17,12 +18,19 @@ executable("bin") {
   ]
 }
 
+# [END bin]
+
+# [START rest]
+# Declare a component for the server, which consists of the manifest and the
+# binary that the component will run.
 fuchsia_component("echo-server") {
   manifest = "server.cmx"
   deps = [ ":bin" ]
 }
 
+# Declare a package that contains a single component, our server.
 fuchsia_package("server") {
   package_name = "echo-llcpp-server"
   deps = [ ":echo-server" ]
 }
+# [END rest]

@@ -2,17 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/rust/rustc_test.gni")
 
+# [END imports]
+
+# [START test]
 rustc_test("fidl_crates_test") {
-  source_root = "fidl_crates_test.rs"
   edition = "2018"
   deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
 
-  sources = [ "fidl_crates_test.rs" ]
+  sources = [ "src/lib.rs" ]
 }
 
+# [END test]
+
+# [START group]
 group("fidl_crates") {
   testonly = true
   deps = [ ":fidl_crates_test($host_toolchain)" ]
 }
+# [END group]

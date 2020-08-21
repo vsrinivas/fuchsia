@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START includes]
 #include <fuchsia/examples/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
 #include <iostream>
+// [END includes]
 
+// [START connect]
 // Returns a channel connected to the /svc directory. The
 // remote end of the channel implements the io.Directory protocol and contains
 // the capabilities provided to this component.
@@ -18,10 +21,11 @@ zx::channel get_svc_directory() {
   ZX_ASSERT(fdio_service_connect("/svc/.", server_end.release()) == ZX_OK);
   return client_end;
 }
+// [END connect]
 
+// [START main]
 int main(int argc, const char** argv) {
   auto svc = get_svc_directory();
-
   zx::channel server_end, client_end;
   ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
   // Connect to the fuchsia.examples.Echo protocol.
@@ -43,6 +47,7 @@ int main(int argc, const char** argv) {
     auto result = client.SendString("hi");
     // Check that the request was sent succesfully
     ZX_ASSERT(result.ok());
+
     llcpp::fuchsia::examples::Echo::EventHandlers handlers{
         .on_string =
             [](fidl::StringView event) {
@@ -58,3 +63,4 @@ int main(int argc, const char** argv) {
 
   return 0;
 }
+// [END main]

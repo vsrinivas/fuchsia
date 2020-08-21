@@ -19,6 +19,7 @@ zx::channel get_svc_directory() {
   return client_end;
 }
 
+// [START main]
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -66,3 +67,4 @@ int main(int argc, const char** argv) {
   loop.Run();
   return num_responses == 2 ? 0 : 1;
 }
+// [END main]

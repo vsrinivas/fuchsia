@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START imports]
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::{EchoEvent, EchoMarker};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use futures::prelude::*;
+// [END imports]
 
+// [START main]
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Connect to the Echo protocol, which is assumed to be in the component's environment
@@ -26,3 +29,4 @@ async fn main() -> Result<(), Error> {
 
     Ok(())
 }
+// [START main]
