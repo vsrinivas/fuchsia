@@ -38,7 +38,6 @@ zx_library("metrics-inspect") {
   sdk_headers = [
     "fs/metrics/events.h",
     "fs/metrics/histograms.h",
-    "fs/metrics/internal",
     "fs/metrics/internal/object_generator.h",
     "fs/metrics/internal/object_offsets.h",
     "fs/metrics/internal/offsets.h",

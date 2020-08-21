@@ -7,7 +7,7 @@ zx_library("gfx-font-data") {
   static = true
 
   sdk = "static"
-  sdk_headers = "lib/gfx-font-data/gfx-font-data.h"
+  sdk_headers = [ "lib/gfx-font-data/gfx-font-data.h" ]
 
   public_deps = [ "$zx/system/ulib/gfx:headers" ]
   sources = [

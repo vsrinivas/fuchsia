@@ -67,7 +67,6 @@ zx_library("blobfs") {
     "blobfs/host.h",
     "blobfs/format.h",
     "blobfs/mount.h",
-    "blobfs/host",
     "blobfs/host/fsck.h",
     "blobfs/node-finder.h",
     "blobfs/fsck.h",
