@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(is_fuchsia, "dart_component is only available for Fuchsia targets")
-
 import("//build/dart/config.gni")  # For dart_force_product
 import("//build/dart/dart.gni")
 import("//build/flutter/internal/flutter_dart_component.gni")
