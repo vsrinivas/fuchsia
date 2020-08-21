@@ -70,7 +70,9 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
       break;
     }
 
-    if ((r = write(fd.get(), data, sizeof(data_a))) < 0) {
+    const int offset = sz % sizeof(data_a);
+    const int len = sizeof(data_a) - offset;
+    if ((r = write(fd.get(), data + offset, len)) < 0) {
       FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
       if ((errno == EFBIG) || (errno == ENOSPC)) {
         // Either the file should be too big (EFBIG) or the file should
@@ -84,10 +86,12 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
       FX_LOGS(INFO) << "wrote " << (sz + r) / kMb << " MB";
     }
     sz += r;
-    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(data_a)));
-
-    // Rotate which data buffer we use
-    data = rotate(data);
+    if (r == len) {
+      // Rotate which data buffer we use
+      data = rotate(data);
+    } else {
+      ASSERT_LT(r, len);
+    }
   }
   ASSERT_EQ(r, 0) << "Saw an unexpected error from write";
   FX_LOGS(INFO) << "wrote " << sz << " bytes";
@@ -155,7 +159,9 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
       break;
     }
 
-    if ((r = write(fd, data, sizeof(data_a))) <= 0) {
+    const int offset = *sz % sizeof(data_a);
+    const int len = sizeof(data_a) - offset;
+    if ((r = write(fd, data + offset, len)) <= 0) {
       FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
       // Either the file should be too big (EFBIG) or the file should
       // consume the whole volume (ENOSPC).
@@ -167,11 +173,13 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
       FX_LOGS(INFO) << "wrote " << (*sz + r) / kMb << " MB";
     }
     *sz += r;
-    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(data_a)));
-
-    fd = (fd == fda.get()) ? fdb.get() : fda.get();
-    data = (data == data_a) ? data_b : data_a;
-    sz = (sz == &sz_a) ? &sz_b : &sz_a;
+    if (r == len) {
+      fd = (fd == fda.get()) ? fdb.get() : fda.get();
+      data = (data == data_a) ? data_b : data_a;
+      sz = (sz == &sz_a) ? &sz_b : &sz_a;
+    } else {
+      ASSERT_LT(r, len);
+    }
   }
   FX_LOGS(INFO) << "wrote " << sz_a << " bytes (to A)";
   FX_LOGS(INFO) << "wrote " << sz_b << " bytes (to B)";
@@ -232,11 +240,14 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) 
 std::vector<ParamType> GetTestCombinations() {
   std::vector<ParamType> test_combinations;
   for (TestFilesystemOptions options : AllTestFilesystems()) {
-    // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded for
-    // during delayed data allocation on non-FVM-backed Minfs partitions.
-    options.device_block_size = 512;
-    options.device_block_count = 1'048'576;
-    options.fvm_slice_size = 8'388'608;
+    // Fatfs is slow and there's no real benefit from having a larger ram-disk.
+    if (options.filesystem->GetTraits().name != "fatfs") {
+      // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded
+      // for during delayed data allocation on non-FVM-backed Minfs partitions.
+      options.device_block_size = 512;
+      options.device_block_count = 1'048'576;
+      options.fvm_slice_size = 8'388'608;
+    }
     test_combinations.push_back(ParamType{options, false});
     if (options.filesystem->GetTraits().can_unmount) {
       test_combinations.push_back(ParamType{options, true});

@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <random>
 #include <string_view>
 
 #include <fbl/unique_fd.h>
@@ -101,6 +102,55 @@ TEST_P(RwTest, OffsetOperations) {
   }
 }
 
+using RwFullDiskTest = FilesystemTest;
+
+TEST_P(RwFullDiskTest, PartialWriteSucceedsForFullDisk) {
+  fbl::unique_fd fd(open(GetPath("bigfile").c_str(), O_CREAT | O_RDWR, 0644));
+  ASSERT_TRUE(fd);
+  constexpr int kBufSize = 131072;
+  std::vector<uint64_t> data(kBufSize / sizeof(uint64_t));
+  std::random_device random_device;
+  std::default_random_engine random(random_device());
+  std::uniform_int_distribution<uint64_t> distribution;
+  std::generate(data.begin(), data.end(), [&]() { return distribution(random); });
+  off_t done = 0;
+  for (;;) {
+    const int offset = done % kBufSize;
+    int len = kBufSize - offset;
+    // We should always hit ENOSPC on a power of 2; make sure that we'll always have a short write
+    // at the end.
+    if (done + len % 2 == 0) {
+      --len;
+    }
+    ssize_t r = write(fd.get(), reinterpret_cast<uint8_t*>(data.data()) + offset, len);
+    if (r < 0) {
+      EXPECT_EQ(errno, ENOSPC);
+      break;
+    }
+    EXPECT_LE(r, len);
+    done += r;
+  }
+  struct stat stat_buf;
+  ASSERT_EQ(fstat(fd.get(), &stat_buf), 0) << errno;
+  EXPECT_EQ(stat_buf.st_size, done);
+  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0) << errno;
+  std::vector<uint8_t> read_buf(kBufSize);
+  off_t verified = 0;
+  for (;;) {
+    const int offset = verified % kBufSize;
+    int len = kBufSize - offset;
+    ssize_t r = read(fd.get(), read_buf.data(), len);
+    ASSERT_GE(r, 0) << errno;
+    if (r == 0) {
+      EXPECT_EQ(verified, done);
+      break;
+    }
+    ASSERT_LE(r, len);
+    EXPECT_EQ(memcmp(read_buf.data(), reinterpret_cast<uint8_t*>(data.data()) + offset, r), 0);
+    verified += r;
+  }
+}
+
 using RwSparseTest = FilesystemTest;
 
 TEST_P(RwSparseTest, MaxFileSize) {
@@ -127,6 +177,20 @@ TEST_P(RwSparseTest, MaxFileSize) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RwTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
+
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, RwFullDiskTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](TestFilesystemOptions options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().in_memory) {
+            return std::nullopt;
+          }
+          // Run on a smaller ram-disk to keep run-time reasonable.
+          options.device_block_count = 8192;
+          options.fvm_slice_size = 32768;
+          return options;
+        })),
+    testing::PrintToStringParamName());
 
 // These tests will only work on a file system that supports sparse files.
 INSTANTIATE_TEST_SUITE_P(

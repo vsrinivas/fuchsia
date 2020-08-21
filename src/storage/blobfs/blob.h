@@ -50,25 +50,18 @@ class Blobfs;
 using digest::Digest;
 using digest::MerkleTreeVerifier;
 
-typedef uint16_t BlobFlags;
-
-// clang-format off
-
-// After Open:
-constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
-// After Space Reserved (but allocation not yet persisted).
-constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
-// After Writing:
-constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
-// After Unlink:
-constexpr BlobFlags kBlobStatePurged      = 0x00000008; // Blob should be released during recycle
-// Unrecoverable error state:
-constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
-constexpr BlobFlags kBlobStateMask        = 0x000000FF;
-
-// Informational non-state flags:
-constexpr BlobFlags kBlobFlagDeletable    = 0x00000100; // This node should be unlinked when closed
-constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
+enum class BlobState : uint8_t {
+  // After Open:
+  kEmpty,
+  // After Space Reserved (but allocation not yet persisted).
+  kDataWrite,
+  // After Writing:
+  kReadable,
+  // After Unlink:
+  kPurged,
+  // Unrecoverable error states:
+  kError,
+};
 
 // clang-format on
 
@@ -102,10 +95,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Identifies if we can safely remove all on-disk and in-memory storage used
   // by this blob.
   bool Purgeable() const {
-    return fd_count_ == 0 && (DeletionQueued() || !(GetState() & kBlobStateReadable));
+    return fd_count_ == 0 && (DeletionQueued() || state() != BlobState::kReadable);
   }
 
-  bool DeletionQueued() const { return flags_ & kBlobFlagDeletable; }
+  bool DeletionQueued() const { return deletable_; }
 
   uint32_t GetMapIndex() const { return map_index_; }
 
@@ -164,8 +157,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
-  void SetState(BlobFlags new_state) { flags_ = (flags_ & ~kBlobStateMask) | new_state; }
-  BlobFlags GetState() const { return flags_ & kBlobStateMask; }
+  void set_state(BlobState new_state) { state_ = new_state; };
+  BlobState state() const { return state_; }
 
   // Returns a handle to an event which will be signalled when
   // the blob is readable.
@@ -264,8 +257,13 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Equivalent to digest::Digest(GetKey()).
   digest::Digest MerkleRoot() const;
 
+  // Commits the blob to persistent storage.
+  zx_status_t Commit();
+
   Blobfs* const blobfs_;
-  BlobFlags flags_ = {};
+  BlobState state_ = BlobState::kEmpty;
+  // True if this node should be unlinked when closed.
+  bool deletable_ = false;
 
   bool tearing_down_ = false;
 
@@ -330,6 +328,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     fbl::Vector<ReservedNode> node_indices;
 
     std::optional<BlobCompressor> compressor;
+
+    // The fused write error.  Once writing has failed, we return the same error on subsequent
+    // writes in case a higher layer dropped the error and returned a short write instead.
+    zx_status_t write_error = ZX_OK;
   };
 
   std::unique_ptr<WritebackInfo> write_info_ = {};

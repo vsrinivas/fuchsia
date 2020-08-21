@@ -391,7 +391,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for File<'_, IO, TP, OCC> {
         if written_bytes == 0 {
             return Ok(0);
         }
-        // some bytes were writter - update position and optionally size
+        // some bytes were written - update position and optionally size
         self.offset += written_bytes as u32;
         self.current_cluster = Some(current_cluster);
         self.update_dir_entry_after_write();
@@ -418,7 +418,7 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for File<'_, IO, TP, OCC> {
         }
         if let Some(s) = self.size() {
             if new_pos > s as i64 {
-                info!("seek beyond end of file");
+                trace!("seek beyond end of file");
                 new_pos = s as i64;
             }
         }

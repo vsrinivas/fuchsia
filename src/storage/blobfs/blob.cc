@@ -55,9 +55,8 @@ using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
   zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
-  if (status.is_ok() &&
-      (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
-       status.value() == CompressionAlgorithm::CHUNKED)) {
+  if (status.is_ok() && (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
+                         status.value() == CompressionAlgorithm::CHUNKED)) {
     return true;
   }
   return false;
@@ -102,19 +101,19 @@ zx_status_t Blob::Verify() const {
 }
 
 uint64_t Blob::SizeData() const {
-  if (GetState() == kBlobStateReadable) {
+  if (state() == BlobState::kReadable) {
     return inode_.blob_size;
   }
   return 0;
 }
 
 Blob::Blob(Blobfs* bs, const Digest& digest)
-    : CacheNode(digest), blobfs_(bs), flags_(kBlobStateEmpty), clone_watcher_(this) {}
+    : CacheNode(digest), blobfs_(bs), clone_watcher_(this) {}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(Digest(inode.merkle_root_hash)),
       blobfs_(bs),
-      flags_(kBlobStateReadable),
+      state_(BlobState::kReadable),
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
       clone_watcher_(this),
@@ -135,7 +134,7 @@ zx_status_t Blob::WriteNullBlob() {
 }
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data) {
-  if (GetState() != kBlobStateEmpty) {
+  if (state() != BlobState::kEmpty) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -168,7 +167,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data) {
 
   map_index_ = write_info->node_indices[0].index();
   write_info_ = std::move(write_info);
-  SetState(kBlobStateDataWrite);
+  set_state(BlobState::kDataWrite);
 
   return ZX_OK;
 }
@@ -222,24 +221,24 @@ void* Blob::GetDataBuffer() const { return data_mapping_.start(); }
 void* Blob::GetMerkleTreeBuffer() const { return merkle_mapping_.start(); }
 
 bool Blob::IsPagerBacked() const {
-  return blobfs_->PagingEnabled() && SupportsPaging(inode_) && GetState() == kBlobStateReadable;
+  return blobfs_->PagingEnabled() && SupportsPaging(inode_) && state() == BlobState::kReadable;
 }
 
 Digest Blob::MerkleRoot() const { return GetKeyAsDigest(); }
 
 fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
-  assert(GetState() == kBlobStateDataWrite);
+  assert(state() == BlobState::kDataWrite);
 
   // Update the on-disk hash.
   MerkleRoot().CopyTo(inode_.merkle_root_hash);
 
   // All data has been written to the containing VMO.
-  SetState(kBlobStateReadable);
+  set_state(BlobState::kReadable);
   if (readable_event_.is_valid()) {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
-      SetState(kBlobStateError);
+      set_state(BlobState::kError);
       return fit::make_error_promise(status);
     }
   }
@@ -334,12 +333,15 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_OK;
   }
 
-  if (GetState() != kBlobStateDataWrite) {
+  if (state() != BlobState::kDataWrite) {
+    if (state() == BlobState::kError && write_info_ && write_info_->write_error != ZX_OK) {
+      return write_info_->write_error;
+    }
     return ZX_ERR_BAD_STATE;
   }
 
-  size_t to_write = std::min(len, inode_.blob_size - write_info_->bytes_written);
-  size_t offset = write_info_->bytes_written;
+  const size_t to_write = std::min(len, inode_.blob_size - write_info_->bytes_written);
+  const size_t offset = write_info_->bytes_written;
 
   zx_status_t status;
   if ((status = data_mapping_.vmo().write(data, offset, to_write)) != ZX_OK) {
@@ -362,7 +364,22 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_OK;
   }
 
-  auto set_error = fbl::MakeAutoCall([this]() { SetState(kBlobStateError); });
+  status = Commit();
+  if (status != ZX_OK) {
+    // Record the status so that if called again, we return the same status again.  This is done
+    // because it's possible that the end-user managed to partially write some data to this blob in
+    // which case the error could be dropped (by zxio or some other layer) and a short write
+    // returned instead.  If this happens, the end-user will retry at which point it's helpful if we
+    // return the same error rather than ZX_ERR_BAD_STATE (see above).
+    write_info_->write_error = status;
+    set_state(BlobState::kError);
+  }
+
+  return status;
+}
+
+zx_status_t Blob::Commit() {
+  zx_status_t status;
 
   // Only write data to disk once we've buffered the file into memory.
   // This gives us a chance to try compressing the blob before we write it back.
@@ -440,6 +457,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return status;
   }
 
+  uint64_t data_bytes_written;
+
   if (write_info_->compressor) {
     // This shouldn't be necessary because it should already be zeroed, but just in case:
     status = ZeroTail(write_info_->compressor->Vmo().get(), write_info_->compressor->Size());
@@ -447,8 +466,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return status;
     }
 
-    uint64_t blocks64 =
-        fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
+    data_bytes_written = fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize);
+    uint64_t blocks64 = data_bytes_written / kBlobfsBlockSize;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     status = StreamBlocks(&block_iter, blocks,
@@ -485,7 +504,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return status;
     }
 
-    uint64_t blocks64 = fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
+    data_bytes_written = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
+    uint64_t blocks64 = data_bytes_written / kBlobfsBlockSize;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     status = StreamBlocks(
@@ -516,8 +536,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   // alive while there are writes in progress acting on it.
   auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::RefPtr(this));
   blobfs_->journal()->schedule_task(std::move(task));
-  blobfs_->Metrics()->UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
-  set_error.cancel();
+  blobfs_->Metrics()->UpdateClientWrite(data_bytes_written, merkle_size, ticker.End(),
+                                        generation_time);
   return ZX_OK;
 }
 
@@ -537,7 +557,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
     status = zx::event::create(0, &readable_event_);
     if (status != ZX_OK) {
       return status;
-    } else if (GetState() == kBlobStateReadable) {
+    } else if (state() == BlobState::kReadable) {
       readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     }
   }
@@ -553,7 +573,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
 
 zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
-  if (GetState() != kBlobStateReadable) {
+  if (state() != BlobState::kReadable) {
     return ZX_ERR_BAD_STATE;
   }
   if (inode_.blob_size == 0) {
@@ -650,7 +670,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
 
-  if (GetState() != kBlobStateReadable) {
+  if (state() != BlobState::kReadable) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -735,7 +755,7 @@ zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
 }
 
 zx_status_t Blob::QueueUnlink() {
-  flags_ |= kBlobFlagDeletable;
+  deletable_ = true;
   // Attempt to purge in case the blob has been unlinked with no open fds
   return TryPurge();
 }
@@ -766,9 +786,9 @@ zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
 BlobCache& Blob::Cache() { return blobfs_->Cache(); }
 
 bool Blob::ShouldCache() const {
-  switch (GetState()) {
+  switch (state()) {
     // All "Valid", cacheable states, where the blob still exists on storage.
-    case kBlobStateReadable:
+    case BlobState::kReadable:
       return true;
     default:
       return false;
@@ -789,7 +809,7 @@ fs::VnodeProtocolSet Blob::GetProtocols() const { return fs::VnodeProtocol::kFil
 
 bool Blob::ValidateRights(fs::Rights rights) {
   // To acquire write access to a blob, it must be empty.
-  return !rights.write || (GetState() == kBlobStateEmpty);
+  return !rights.write || state() == BlobState::kEmpty;
 }
 
 zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
@@ -820,7 +840,7 @@ zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
   zx_status_t status = WriteInternal(data, len, out_actual);
-  if (GetState() == kBlobStateDataWrite) {
+  if (state() == BlobState::kDataWrite) {
     ZX_DEBUG_ASSERT(write_info_ != nullptr);
     *out_actual = write_info_->bytes_written;
   } else {
@@ -979,7 +999,7 @@ zx_status_t Blob::Purge() {
   ZX_DEBUG_ASSERT(fd_count_ == 0);
   ZX_DEBUG_ASSERT(Purgeable());
 
-  if (GetState() == kBlobStateReadable) {
+  if (state() == BlobState::kReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
     storage::UnbufferedOperationsBuilder operations;
@@ -992,7 +1012,7 @@ zx_status_t Blob::Purge() {
     blobfs_->journal()->schedule_task(std::move(task));
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);
-  SetState(kBlobStatePurged);
+  set_state(BlobState::kPurged);
   return ZX_OK;
 }
 

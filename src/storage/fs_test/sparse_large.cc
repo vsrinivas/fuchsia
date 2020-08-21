@@ -46,10 +46,14 @@ TEST_P(SparseAllocationTest, CheckSparseFileOccupyingMultipleBitmapBlocks) {
 std::vector<TestFilesystemOptions> AllTestFilesystemsWithCustomDisk() {
   std::vector<TestFilesystemOptions> filesystems;
   for (TestFilesystemOptions options : AllTestFilesystems()) {
-    options.device_block_count = 1LLU << 24;
-    options.device_block_size = 1LLU << 9;
-    options.fvm_slice_size = 1LLU << 23;
-    filesystems.push_back(options);
+    // Fatfs doesn't support sparse files, is slow, and this test doesn't test more than other
+    // tests, so skip it.
+    if (options.filesystem->GetTraits().name != "fatfs") {
+      options.device_block_count = 1LLU << 24;
+      options.device_block_size = 1LLU << 9;
+      options.fvm_slice_size = 1LLU << 23;
+      filesystems.push_back(options);
+    }
   }
   return filesystems;
 }

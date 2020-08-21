@@ -71,6 +71,7 @@ class FilesystemInstance {
 class Filesystem {
  public:
   struct Traits {
+    std::string_view name;
     bool can_unmount = false;
     zx::duration timestamp_granularity = zx::nsec(1);
     bool supports_hard_links = true;
@@ -109,6 +110,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
       const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
+        .name = "minfs",
         .can_unmount = true,
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
@@ -130,6 +132,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
       const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
+        .name = "memfs",
         .can_unmount = false,
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
@@ -151,6 +154,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
       const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
+        .name = "fatfs",
         .can_unmount = true,
         .timestamp_granularity = zx::sec(2),
         .supports_hard_links = false,
