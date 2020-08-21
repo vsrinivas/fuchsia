@@ -88,6 +88,7 @@ void AudioInput::OnWakeup() {
 void AudioInput::OnDriverInfoFetched() {
   TRACE_DURATION("audio", "AudioInput::OnDriverInfoFetched");
   state_ = State::Idle;
+  reporter_->SetDriverName(driver()->manufacturer_name() + ' ' + driver()->product_name());
 
   auto input_device_profile = ProcessConfig::instance().device_config().input_device_profile(
       driver()->persistent_unique_id());

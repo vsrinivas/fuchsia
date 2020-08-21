@@ -18,6 +18,7 @@ AudioRenderer::AudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request, Context* context)
     : BaseRenderer(std::move(audio_renderer_request), context) {
   context->volume_manager().AddStream(this);
+  reporter().SetUsage(RenderUsageFromFidlRenderUsage(usage_));
 }
 
 AudioRenderer::~AudioRenderer() {
@@ -54,6 +55,7 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
     context().route_graph().RemoveRenderer(*this);
     return;
   }
+  reporter().SetUsage(RenderUsageFromFidlRenderUsage(usage));
   usage_ = usage;
 }
 

@@ -338,6 +338,8 @@ void DriverOutput::OnDriverInfoFetched() {
     ShutdownSelf();
   });
 
+  reporter().SetDriverName(driver()->manufacturer_name() + ' ' + driver()->product_name());
+
   if (state_ != State::FetchingFormats) {
     FX_LOGS(ERROR) << "Unexpected GetFormatsComplete while in state "
                    << static_cast<uint32_t>(state_);

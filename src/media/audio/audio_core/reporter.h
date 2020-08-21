@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
@@ -59,6 +60,7 @@ class Reporter {
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
+    virtual void SetDriverName(const std::string& driver_name) = 0;
     virtual void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                              fuchsia::media::AudioGainValidFlags set_flags) = 0;
   };
@@ -78,6 +80,7 @@ class Reporter {
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
+    virtual void SetUsage(RenderUsage usage) = 0;
     virtual void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) = 0;
     virtual void SetGain(float gain_db) = 0;
     virtual void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -100,6 +103,7 @@ class Reporter {
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
+    virtual void SetUsage(CaptureUsage usage) = 0;
     virtual void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) = 0;
     virtual void SetGain(float gain_db) = 0;
     virtual void SetGainWithRamp(float gain_db, zx::duration duration,

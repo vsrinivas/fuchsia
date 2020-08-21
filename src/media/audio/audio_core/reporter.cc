@@ -28,6 +28,7 @@ class OutputDeviceNop : public Reporter::OutputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
+  void SetDriverName(const std::string& driver_name) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
   void DeviceUnderflow(zx::time start_time, zx::time end_time) override {}
@@ -39,6 +40,7 @@ class InputDeviceNop : public Reporter::InputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
+  void SetDriverName(const std::string& driver_name) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
 };
@@ -48,6 +50,7 @@ class RendererNop : public Reporter::Renderer {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
+  void SetUsage(RenderUsage usage) override {}
   void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
   void SetGain(float gain_db) override {}
   void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -68,6 +71,7 @@ class CapturerNop : public Reporter::Capturer {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
+  void SetUsage(CaptureUsage usage) override {}
   void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
   void SetGain(float gain_db) override {}
   void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -183,6 +187,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name)
       : node_(impl.outputs_node.CreateChild(name)),
+        driver_name_(node_.CreateString("driver name", "unknown")),
         gain_info_(node_),
         device_underflows_(
             std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -211,6 +216,8 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
     pipeline_underflows_->StopSession(stop_time);
   }
 
+  void SetDriverName(const std::string& driver_name) override { driver_name_.Set(driver_name); }
+
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
     gain_info_.Set(gain_info, set_flags);
@@ -226,6 +233,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 
  private:
   inspect::Node node_;
+  inspect::StringProperty driver_name_;
   DeviceGainInfo gain_info_;
   std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
   std::unique_ptr<OverflowUnderflowTracker> pipeline_underflows_;
@@ -234,10 +242,14 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  public:
   InputDeviceImpl(Reporter::Impl& impl, const std::string& name)
-      : node_(impl.inputs_node.CreateChild(name)), gain_info_(node_) {}
+      : node_(impl.inputs_node.CreateChild(name)),
+        driver_name_(node_.CreateString("driver name", "unknown")),
+        gain_info_(node_) {}
 
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
+
+  void SetDriverName(const std::string& driver_name) override { driver_name_.Set(driver_name); }
 
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
@@ -246,6 +258,7 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
 
  private:
   inspect::Node node_;
+  inspect::StringProperty driver_name_;
   DeviceGainInfo gain_info_;
 };
 
@@ -329,6 +342,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
         final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
+        usage_(node_.CreateString("usage", "default")),
         underflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
             .event_name = "underflows",
             .parent_node = node_,
@@ -340,6 +354,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   void StartSession(zx::time start_time) override { underflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { underflows_->StopSession(stop_time); }
 
+  void SetUsage(RenderUsage usage) override { usage_.Set(RenderUsageToString(usage)); }
   void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
     client_port_.SetStreamType(stream_type);
   }
@@ -377,6 +392,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   inspect::UintProperty min_lead_time_ns_;
   inspect::DoubleProperty pts_continuity_threshold_seconds_;
   inspect::DoubleProperty final_stream_gain_;
+  inspect::StringProperty usage_;
   std::unique_ptr<OverflowUnderflowTracker> underflows_;
 };
 
@@ -386,6 +402,7 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
         client_port_(node_),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
+        usage_(node_.CreateString("usage", "default")),
         overflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
             .event_name = "overflows",
             .parent_node = node_,
@@ -396,6 +413,8 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
 
   void StartSession(zx::time start_time) override { overflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { overflows_->StopSession(stop_time); }
+
+  void SetUsage(CaptureUsage usage) override { usage_.Set(CaptureUsageToString(usage)); }
 
   void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
     client_port_.SetStreamType(stream_type);
@@ -425,6 +444,7 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
   inspect::Node node_;
   ClientPort client_port_;
   inspect::UintProperty min_fence_time_ns_;
+  inspect::StringProperty usage_;
   std::unique_ptr<OverflowUnderflowTracker> overflows_;
 };
 

@@ -34,6 +34,7 @@ AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configur
       usage_ = configuration.input().usage();
     }
   }
+  reporter().SetUsage(CaptureUsageFromFidlCaptureUsage(usage_));
 }
 
 AudioCapturer::~AudioCapturer() {
@@ -161,6 +162,7 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   }
 
   ReportStop();
+  reporter().SetUsage(CaptureUsageFromFidlCaptureUsage(usage));
   usage_ = usage;
   context().volume_manager().NotifyStreamChanged(this);
   State state = capture_state();

@@ -13,6 +13,7 @@ UltrasoundRenderer::UltrasoundRenderer(
     fuchsia::ultrasound::Factory::CreateRendererCallback callback)
     : BaseRenderer(std::move(request), context), create_callback_(std::move(callback)) {
   FX_DCHECK(create_callback_);
+  reporter().SetUsage(RenderUsage::ULTRASOUND);
 }
 
 fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::InitializeDestLink(

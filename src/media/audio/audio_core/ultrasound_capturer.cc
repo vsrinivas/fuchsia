@@ -14,6 +14,7 @@ UltrasoundCapturer::UltrasoundCapturer(
     : BaseCapturer(std::nullopt, std::move(request), context),
       create_callback_(std::move(callback)) {
   FX_DCHECK(create_callback_);
+  reporter().SetUsage(CaptureUsage::ULTRASOUND);
 }
 
 fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
