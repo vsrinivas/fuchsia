@@ -8,6 +8,6 @@
   },
   "type": ["object", "string"],
   "required": ["ext4"],
-  "pattern": "^factory_items$",
+  "pattern": "^factory_(items|verity)$",
   "additionalProperties": false
 }

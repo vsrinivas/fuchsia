@@ -49,6 +49,7 @@ use {
 
 const CONCURRENT_LIMIT: usize = 10_000;
 const DEFAULT_BOOTFS_FACTORY_ITEM_EXTRA: u32 = 0;
+const FACTORY_DEVICE_CONFIG: &'static str = "/config/data/factory.config";
 
 enum IncomingServices {
     AlphaFactoryStoreProvider(AlphaFactoryStoreProviderRequestStream),
@@ -101,6 +102,10 @@ async fn read_file_from_proxy<'a>(
     let file =
         io_util::open_file(&dir_proxy, &PathBuf::from(file_path), io_util::OPEN_RIGHT_READABLE)?;
     io_util::read_file_bytes(&file).await
+}
+
+fn load_config_file(path: &str) -> Result<FactoryConfig, Error> {
+    FactoryConfig::load(io::BufReader::new(std::fs::File::open(path)?))
 }
 
 async fn create_dir_from_context<'a>(
@@ -208,9 +213,8 @@ where
     Ok(())
 }
 
-async fn open_factory_source() -> Result<DirectoryProxy, Error> {
+async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryProxy, Error> {
     let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
-    let factory_config = FactoryConfig::load().unwrap_or_default();
     match factory_config {
         FactoryConfig::FactoryItems => {
             syslog::fx_log_info!("{}", "Reading from FactoryItems service");
@@ -266,6 +270,11 @@ async fn open_factory_source() -> Result<DirectoryProxy, Error> {
                 _ => Err(format_err!("Unknown error while mounting ext4 vmo")),
             }
         }
+        FactoryConfig::FactoryVerity => {
+            syslog::fx_log_info!("reading from factory verity");
+            fdio::open("/factory", OPEN_RIGHT_READABLE, directory_server_end.into_channel())?;
+            Ok(directory_proxy)
+        }
     }
 }
 
@@ -274,7 +283,8 @@ async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["factory_store_providers"]).expect("Can't init logger");
     syslog::fx_log_info!("{}", "Starting factory_store_providers");
 
-    let directory_proxy = open_factory_source().await.map_err(|e| {
+    let factory_config = load_config_file(FACTORY_DEVICE_CONFIG).unwrap_or_default();
+    let directory_proxy = open_factory_source(factory_config).await.map_err(|e| {
         syslog::fx_log_info!("{:?}", e);
         e
     })?;
@@ -395,4 +405,49 @@ async fn main() -> Result<(), Error> {
     })
     .await;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        vfs::{
+            directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,
+            file::pcb::read_only_static, pseudo_directory,
+        },
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_factory_verity() {
+        // Bind a vfs to /factory.
+        let dir = pseudo_directory! {
+            "a" => read_only_static("a content"),
+            "b" => pseudo_directory! {
+                "c" => read_only_static("c content"),
+            },
+        };
+        let (dir_proxy, dir_server) = create_proxy::<DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        dir.open(
+            scope,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            vfs::path::Path::empty(),
+            ServerEnd::new(dir_server.into_channel()),
+        );
+        let ns = fdio::Namespace::installed().unwrap();
+        ns.bind("/factory", dir_proxy.into_channel().unwrap().into_zx_channel()).unwrap();
+
+        let factory_proxy = open_factory_source(FactoryConfig::FactoryVerity).await.unwrap();
+
+        assert_eq!(
+            read_file_from_proxy(&factory_proxy, "a").await.unwrap(),
+            "a content".as_bytes()
+        );
+        assert_eq!(
+            read_file_from_proxy(&factory_proxy, "b/c").await.unwrap(),
+            "c content".as_bytes()
+        );
+    }
 }

@@ -38,6 +38,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/storage/vfs/rust:vfs" ]
+
   sources = [
     "src/config.rs",
     "src/main.rs",

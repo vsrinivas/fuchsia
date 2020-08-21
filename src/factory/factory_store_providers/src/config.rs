@@ -12,8 +12,6 @@ use {
     std::{collections::HashMap, default::Default, io},
 };
 
-const FACTORY_DEVICE_CONFIG: &'static str = "/config/data/factory.config";
-
 /// Type that maps a file to a group of arguments passed to a validator.
 pub type ValidatorFileArgsMap = HashMap<String, Value>;
 
@@ -49,6 +47,7 @@ pub struct ConfigContext {
 pub struct Config {
     files: Vec<FactoryFileSpec>,
 }
+
 impl Config {
     fn load_file(path: &str) -> Result<Self, Error> {
         Ok(serde_json::from_reader(io::BufReader::new(std::fs::File::open(path)?))?)
@@ -121,12 +120,15 @@ impl Config {
 pub enum FactoryConfig {
     FactoryItems,
     Ext4(String),
+    FactoryVerity,
 }
+
 impl FactoryConfig {
-    pub fn load() -> Result<Self, Error> {
-        Ok(serde_json::from_reader(io::BufReader::new(std::fs::File::open(
-            FACTORY_DEVICE_CONFIG,
-        )?))?)
+    pub fn load<R>(config: R) -> Result<Self, Error>
+    where
+        R: io::Read,
+    {
+        Ok(serde_json::from_reader(config)?)
     }
 }
 
@@ -261,5 +263,30 @@ mod tests {
         assert_eq!(1, context.validator_contexts.len());
         assert_eq!("pass", context.validator_contexts[0].name);
         assert_eq!(vec!["file1"], context.validator_contexts[0].paths_to_validate);
+    }
+
+    #[test]
+    fn test_load_configs() {
+        let ext4_config_json = json!({
+            "ext4": "/pkg/data/factory_ext4.img"
+        });
+        let mut buf = std::io::Cursor::new(Vec::new());
+        serde_json::to_writer(&mut buf, &ext4_config_json).unwrap();
+        buf.set_position(0);
+        let ext4_config = FactoryConfig::load(buf).unwrap();
+        match ext4_config {
+            FactoryConfig::Ext4(_) => {}
+            _ => panic!("expected ext4 factory config"),
+        }
+
+        let verity_config_json = json!("factory_verity");
+        buf = std::io::Cursor::new(Vec::new());
+        serde_json::to_writer(&mut buf, &verity_config_json).unwrap();
+        buf.set_position(0);
+        let verity_config = FactoryConfig::load(buf).unwrap();
+        match verity_config {
+            FactoryConfig::FactoryVerity => {}
+            _ => panic!("expected factory verity config"),
+        }
     }
 }
