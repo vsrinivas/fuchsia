@@ -4,7 +4,7 @@
 
 group("elements") {
   deps = [
-    "//src/experiences/examples/spinning_cube",
+    "//src/experiences/examples/spinning_cube:spinning-cube",
     "//src/session/examples/elements/element_proposer",
     "//src/session/examples/elements/element_session",
     "//src/session/examples/elements/simple_element",
