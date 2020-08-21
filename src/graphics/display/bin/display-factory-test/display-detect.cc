@@ -28,6 +28,7 @@ namespace gpio = ::llcpp::fuchsia::hardware::gpio;
 
 enum Boards {
   SHERLOCK,
+  LUIS,
   UNKNOWN_BOARD,
   BOARD_COUNT,
 };
@@ -61,6 +62,9 @@ Boards GetBoard() {
   if (board_name_cmp.find("sherlock") != std::string_view::npos) {
     return SHERLOCK;
   }
+  if (board_name_cmp.find("luis") != std::string_view::npos) {
+    return LUIS;
+  }
   return UNKNOWN_BOARD;
 }
 
@@ -89,6 +93,8 @@ int main(int argc, const char* argv[]) {
     const auto* path = "/dev/sys/platform/05:04:1/aml-axg-gpio/gpio-76";
     auto val = GetGpioValue(path);
     printf("MIPI device detect type: %s\n", val ? "Innolux" : "BOE");
+  } else if (GetBoard() == LUIS) {
+    printf("MIPI device detect type: BOE\n");
   } else {
     printf("Unknown board\n");
   }
