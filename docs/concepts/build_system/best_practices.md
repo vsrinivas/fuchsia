@@ -10,16 +10,16 @@ This document details the best practices for creating GN templates, and each bes
 practice includes an example. These best practices are in addition to the best
 practices outlined in [Fuchsia build system policies](policies.md).
 
-See gn help template for more information and more complete examples, and
-[GN Language and Operation](https://chromium.googlesource.com/chromium/src/tools/gn/+/48062805e19b4697c5fbd926dc649c78b6aaa138/docs/language.md#templates)
+Run `gn help template` for more information and more complete examples, and
+[GN Language and Operation](https://gn.googlesource.com/gn/+/HEAD/docs/language.md#templates)
 for more information on GN features.
 
 ##  Templates {#templates}
 
 ### Define templates in `.gni`, targets in `BUILD.gn` {#define-templates-in-gni-targets-in-build-gn}
 
-Technically, it’s possible to import both `.gni` and `BUILD.gn` files, because `import()` works
-similarly to `#include`. The best practice, however, is to build templates in `.gni` files, and
+Technically, it’s possible to import both `.gni` and `BUILD.gn` files. The best
+practice, however, is to define templates in `.gni` files, and
 targets in `.gn` files. This makes it clear to users what’s a template. Users
 want to import templates so they can use them, and never want to import targets.
 
@@ -34,7 +34,7 @@ Document both your templates and args, including:
 To document your template, insert a comment block in front of your template definition
 to specify your public contract.
 
-```
+```gn
 declare_args() {
   # The amount of bytes to allocate when creating a disk image.
   disk_image_size_bytes = 1024
@@ -89,7 +89,7 @@ Note that in this example we define the `executable()` in one file and the
 `template()` in another, because
 [templates and targets should be separated](#define-templates-in-gni-targets-in-build-gn).
 
-```
+```gn
 # //src/developer_tools/BUILD.gn
 executable("copy_to_target_bin") {
   ...
@@ -128,7 +128,7 @@ used in the same file that they’re defined. This is useful for internal helper
 “local global variables” that you might define for instance to share logic between two templates,
 where the helper is not useful to the user.
 
-```
+```gn
 template("coffee") {
   # Take coffee parameters like roast and sugar
   ...
@@ -168,7 +168,7 @@ You should not rely on other people’s builds and tests to test your template.
 Having your own tests makes your template more maintainable, since it’s faster
 to validate future changes to your template and it’s easier to isolate faults.
 
-```
+```gn
 # //src/drinks/coffee.gni
 template("coffee") {
   ...
@@ -196,8 +196,7 @@ If a user forgets to specify a required parameter, and there’s no assert defin
 they won’t get a clear explanation for their error. Using an assert allows you to
 provide a useful error message.
 
-
-```
+```gn
 template("my_template") {
   forward_variables_from(invoker, [ "sources", "testonly", "visibility" ])
   assert(defined(sources),
@@ -220,9 +219,9 @@ If your template doesn’t forward `testonly` to inner targets then:
 1. Your inner targets might fail to build, because your users might pass you `testonly` dependencies.
 2. You’ll surprise your users when they find that their `testonly` artifacts end up in production artifacts.
 
-The following example shows how to forward `testonly`: 
+The following example shows how to forward `testonly`:
 
-```
+```gn
 template("my_template") {
   action(target_name) {
     forward_variables_from(invoker, [ "testonly", "deps" ])
@@ -241,7 +240,7 @@ Note that if the parent scope for the inner action defines `testonly`
 then `forward_variables_from(invoker, "*")` won’t forward it, as it
 avoids clobbering variables. Here are some patterns to work around this:
 
-```
+```gn
 # Broken, doesn't forward `testonly`
 template("my_template") {
   testonly = ...
@@ -272,6 +271,16 @@ template("my_template") {
 }
 ```
 
+The one exception to this are templates that hard-code `testonly = true` because
+they should never be used in production targets. For example:
+
+```gn
+template("a_test_template") {
+  testonly = true
+  ...
+}
+```
+
 ### Forward `visibility` to the main target and hide inner targets {#forward-visibility-to-the-main-target-hide-inner-targets}
 
 GN users expect to be able to set `visibility` on any target.
@@ -281,8 +290,7 @@ it only applies to the main target (the target named `target_name`). Other targe
 have their `visibility` restricted, so that your users can’t depend on your inner targets
 that are not part of your contract.
 
-
-```
+```gn
 template("my_template") {
   action("${target_name}_helper") {
     forward_variables_from(invoker, [ "testonly", "deps" ])
@@ -298,8 +306,6 @@ template("my_template") {
 }
 ```
 
-
-
 ### If forwarding `deps`, also forward `public_deps` and `data_deps` {#if-forwarding-deps-also-forward-public_deps-and-data_deps}
 
 All built-in rules that take `deps` take `public_deps` and `data_deps`.
@@ -308,8 +314,7 @@ treats `deps` and `public_deps` equally). But dependants on your generated
 targets might (e.g. an `executable()` that deps on your generated `action()`
 treats transitive `deps` and `public_deps` differently).
 
-
-```
+```gn
 template("my_template") {
   action(target_name) {
     forward_variables_from(invoker, [
@@ -332,8 +337,7 @@ Your template should define at least one target that is named `target_name`.
 This allows your users to invoke your template with a name, and then use that
 name in their deps.
 
-
-```
+```gn
 # //build/image.gni
 template("image") {
   action(target_name) {
@@ -362,7 +366,7 @@ want both for the target and the output.
 
 It’s a good best practice to offer users an override:
 
-```
+```gn
 template("image") {
   forward_variables_from(invoker, [ "output_name", ... ])
   if (!defined(output_name)) {
@@ -379,8 +383,7 @@ the same project follows the same naming convention then collisions are less
 likely to happen and it becomes easier to associate internal target names
 with the targets that created them.
 
-
-```
+```gn
 template("boot_image") {
   generate_boot_manifest_action = "${target_name}_generate_boot_manifest"
   action(generate_boot_manifest_action) {
@@ -399,7 +402,7 @@ template("boot_image") {
 It’s tempting to assume a relationship between target names and output names.
 For instance, the following example will work:
 
-```
+```gn
 executable("bin") {
   ...
 }
@@ -421,7 +424,7 @@ bin_runner("this_will_work") {
 
 However this example will product a gen-time error:
 
-```
+```gn
 executable("bin") {
   output_name = "my_binary"
   ...
@@ -445,7 +448,7 @@ bin_runner("this_will_fail") {
 
 Here’s one way of fixing this problem:
 
-```
+```gn
 executable("bin") {
   output_name = "my_binary"
   ...
@@ -484,13 +487,13 @@ while `write_file()` is done serially at gen time.
 The structure of both commands is very similar. For instance, you can turn
 this instance of `write_file()`:
 
-```
+```gn
 write_file("my_file", "My file contents")
 ```
 
 Into this instance of `generated_file()`:
 
-```
+```gn
 generated_file("my_file") {
   outputs = [ "my_file" ]
   contents = "My file contents"
@@ -505,16 +508,17 @@ When working with `get_target_outputs()` to extract a single element, GN won’t
 let you subscript a list before assignment. To work around this issue,
 you can use the less than elegant workaround below:
 
-```
+```gn
 # Appending to a list is elegant
 deps += get_target_outputs(":some_target")
 
 # Extracting a single element to use in variable substitution - ugly but reliable
-output = get_target_outputs(":other_target")
-output = output[0]
+_outputs = get_target_outputs(":other_target")
+output = _outputs[0]
+message = "My favorite output is $output"
+
 # This expression is invalid: `output = get_target_outputs(":other_target")[0]`
 # GN won't let you subscript an rvalue.
-message = "My favorite output is $output"
 ```
 
 ### Set operations {#set-operations}
@@ -524,8 +528,7 @@ types like maps or sets. Sometimes lists are used instead of sets. The
 example below has a list of build variants, and checks if one of them
 is the “profile” variant:
 
-
-```
+```gn
 if (variants + [ "profile" ] - [ "profile" ] != variants) {
   # Do something special for profile builds
   ...
@@ -534,8 +537,7 @@ if (variants + [ "profile" ] - [ "profile" ] != variants) {
 
 This is an anti-pattern. Rather, variants could be defined as follows:
 
-
-```
+```gn
 variants = {
   profile = true
   asan = false
@@ -560,8 +562,7 @@ Sometimes you want to copy everything from the invoker, except for
 a particular variable that you want to copy from any enclosing
 scope. You’ll encounter this pattern:
 
-
-```
+```gn
 forward_variables_from(invoker, "*", [ "visibility" ])
 forward_variables_from(invoker, [ "visibility" ])
 ```
