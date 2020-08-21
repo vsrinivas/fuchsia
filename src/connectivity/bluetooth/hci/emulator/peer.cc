@@ -108,8 +108,7 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
       }
     }
     bt::l2cap::ChannelParameters params;
-    auto NopConnectCallback = [](bt::l2cap::ChannelSocket, bt::hci::ConnectionHandle,
-                                 const bt::sdp::DataElement&) {};
+    auto NopConnectCallback = [](auto /*channel*/, const bt::sdp::DataElement&) {};
     peer->sdp_server()->server()->RegisterService(std::move(recs), params, NopConnectCallback);
   }
 

@@ -74,13 +74,13 @@ table ChannelParameters {
 /// A channel opened to a peer.
 table Channel {
     /// Socket interface for sending/receiving SDUs on the channel.
-    /// Missing if there was an error opening the channel, present otherwise.
+    /// Always present.
     1: zx.handle:SOCKET socket;
     /// Channel mode accepted by the peer.
-    /// Present when `socket` is provided.
+    /// Always present.
     2: ChannelMode channel_mode;
     /// Maximum SDU size the peer is capable of accepting.
-    /// Present when `socket` is provided.
+    /// Always present.
     3: uint16 max_tx_sdu_size;
     /// Audio Direction priority extension. See `AudioDirectionExt`.
     /// Present only if supported by the host.
