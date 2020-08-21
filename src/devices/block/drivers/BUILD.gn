@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "ahci:tests",
     "aml-sd-emmc:tests",
     "block-verity:tests",
     "ftl:tests",

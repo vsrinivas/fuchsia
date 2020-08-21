@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 driver_module("ahci") {
   configs += [
@@ -21,9 +22,9 @@ driver_module("ahci") {
   ]
 }
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":ahci-unittest" ]
+  deps = [ ":ahci-unittest-package" ]
 }
 
 test("ahci-unittest") {
@@ -43,6 +44,16 @@ test("ahci-unittest") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("ahci-unittest-package") {
+  package_name = "ahci-unittest"
+  deps = [ ":ahci-unittest" ]
+  tests = [
+    {
+      name = "ahci-unittest"
+    },
   ]
 }
 
