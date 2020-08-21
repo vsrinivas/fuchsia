@@ -22,9 +22,6 @@ class InputReaderBase {
   virtual void RemoveDevice(InputInterpreter* device) = 0;
 };
 
-// This InputReader is different from the one in //src/ui/lib/input_reader/
-// because this one reads structured InputReport data where the old one
-// reads raw HID reports. This one is the preferred library.
 // InputReader does four things:
 // 1- Watches who owns the display, which can be us, or the console.
 // 2- Watches new devices that are added to dev/class/input-report and then
