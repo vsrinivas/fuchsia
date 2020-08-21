@@ -1,0 +1,39 @@
+{
+    program: {
+        binary: "bin/go_runner_integration_test",
+    },
+    children: [
+        {
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+        },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#test_manager" ],
+        },
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+            from: "parent",
+            to: [ "#test_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

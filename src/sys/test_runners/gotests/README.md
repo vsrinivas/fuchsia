@@ -34,9 +34,8 @@ enumerate sub-tests.
 
 ### Disabled Tests
 
-There is no way in golang to enumerate disabled tests, so all the tests will
-be marked as enabled.
-
+There is no way in golang to enumerate or force-run disabled tests, so all the
+tests will be marked as enabled when enumerated.
 
 ## Testing
 
@@ -44,11 +43,12 @@ Run:
 
 ```bash
 fx test go-test-runner-unit-tests
+fx test go_runner_integration_test
 ```
 
 ## Source layout
 
-The entrypoint is located in `src/main.rs`, the FIDL service implementation and
+The entry-point is located in `src/main.rs`, the FIDL service implementation and
 all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 

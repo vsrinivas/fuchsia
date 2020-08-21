@@ -1,0 +1,22 @@
+// Component manifest for the `echo_go_client`.
+// It connects to echo server and checks result.
+{
+    program: {
+        binary: "test/echo_go_client",
+    },
+    use: [
+        { runner: "go_test_runner" },
+        {
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

@@ -5,11 +5,15 @@
 package sample_go_test
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestPassing(t *testing.T) {
-	print("hello")
+	fmt.Println("This test will pass")
+	fmt.Println("It will also print this line")
+	fmt.Println("And this line")
+
 }
 
 func TestFailing(t *testing.T) {
@@ -17,7 +21,11 @@ func TestFailing(t *testing.T) {
 }
 
 func TestCrashing(t *testing.T) {
-	panic("This will crash")
+	panic("This will crash\n")
+}
+
+func TestSkipped(t *testing.T) {
+	t.Skip("Skipping this test")
 }
 
 func TestSubtests(t *testing.T) {
@@ -26,4 +34,18 @@ func TestSubtests(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 		})
 	}
+}
+
+func TestPrefix(t *testing.T) {
+	fmt.Println("Testing that given two tests where one test is prefix of another can execute independently.")
+}
+
+func TestPrefixExtra(t *testing.T) {
+	fmt.Println("Testing that given two tests where one test is prefix of another can execute independently.")
+}
+
+func TestPrintMultiline(t *testing.T) {
+	fmt.Print("This test will ")
+	fmt.Print("print the msg ")
+	fmt.Println("in multi-line.")
 }

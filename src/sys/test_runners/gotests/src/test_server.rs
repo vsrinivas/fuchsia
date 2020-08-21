@@ -5,8 +5,10 @@
 use {
     async_trait::async_trait,
     fdio::fdio_sys,
-    fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
-    ftest::{Invocation, RunListenerProxy},
+    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_test::{
+        self as ftest, Invocation, Result_ as TestResult, RunListenerProxy, Status,
+    },
     fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
@@ -16,6 +18,7 @@ use {
         prelude::*,
     },
     log::{debug, error},
+    regex::bytes::Regex,
     std::{
         str::from_utf8,
         sync::{Arc, Weak},
@@ -23,12 +26,12 @@ use {
     test_runners_lib::{
         cases::TestCaseInfo,
         elf::{
-            Component, EnumeratedTestCases, KernelError, MemoizedFutureContainer, PinnedFuture,
-            SuiteServer,
+            Component, EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer,
+            PinnedFuture, SuiteServer,
         },
         errors::*,
         launch,
-        logs::{LogStreamReader, LoggerStream},
+        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
     },
     zx::HandleBased,
 };
@@ -62,12 +65,15 @@ impl SuiteServer for TestServer {
 
     async fn run_tests(
         &self,
-        _invocations: Vec<Invocation>,
-        _run_options: ftest::RunOptions,
-        _test_component: Arc<Component>,
-        _run_listener: &RunListenerProxy,
+        invocations: Vec<Invocation>,
+        run_options: ftest::RunOptions,
+        test_component: Arc<Component>,
+        run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        panic!("Not yet implemented!!!");
+        for invocation in invocations {
+            self.run_test(invocation, &run_options, test_component.clone(), run_listener).await?;
+        }
+        Ok(())
     }
 
     /// Run this server.
@@ -148,6 +154,117 @@ impl TestServer {
         let tests_future_container = self.tests_future_container.clone();
         get_or_insert_tests_future(test_component, tests_future_container)
     }
+
+    async fn run_test<'a>(
+        &'a self,
+        invocation: Invocation,
+        _run_options: &ftest::RunOptions,
+        component: Arc<Component>,
+        run_listener: &RunListenerProxy,
+    ) -> Result<(), RunTestError> {
+        let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
+        debug!("Running test {}", test);
+
+        let mut args = vec!["-test.run".to_owned(), format!("^{}$", test), "-test.v".to_owned()];
+        args.extend(component.args.clone());
+
+        // run test.
+        // Load bearing to hold job guard.
+        let (process, _job, mut stdlogger, _stdin_socket) =
+            launch_component_process::<RunTestError>(&component, args).await?;
+        let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .map_err(KernelError::CreateSocket)
+            .unwrap();
+        let (case_listener_proxy, listener) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
+                .map_err(FidlError::CreateProxy)
+                .unwrap();
+
+        run_listener
+            .on_test_case_started(invocation, log_client, listener)
+            .map_err(RunTestError::SendStart)?;
+        let test_logger =
+            fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_logger = LogWriter::new(test_logger);
+
+        let mut buffer = vec![];
+        const NEWLINE: u8 = b'\n';
+        const BUF_THRESHOLD: usize = 2048;
+        let test_start_re = Regex::new(&format!(r"^=== RUN\s+{}$", test)).unwrap();
+        let test_end_re = Regex::new(&format!(r"^\s*--- (\w*?): {} \(.*\)$", test)).unwrap();
+        let mut skipped = false;
+        while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
+            if bytes.is_empty() {
+                continue;
+            }
+            let is_last_byte_newline = *bytes.last().unwrap() == NEWLINE;
+            let mut iter = bytes.split(|&x| x == NEWLINE).peekable();
+            while let Some(b) = iter.next() {
+                buffer.extend_from_slice(b);
+
+                if buffer.len() >= BUF_THRESHOLD {
+                    test_logger.write(&buffer).await?;
+                    buffer.clear();
+                    continue;
+                } else if buffer.len() < BUF_THRESHOLD
+                    && !is_last_byte_newline
+                    && iter.peek() == None
+                {
+                    // last part of split without a newline, so skip printing or matching and store
+                    // it in buffer for next iteration.
+                    break;
+                }
+                if iter.peek() == Some(&"".as_bytes()) && (buffer == b"PASS" || buffer == b"FAIL") {
+                    // end of test, do nothing, no need to print it
+                } else if test_start_re.is_match(&buffer) {
+                    // start of test, do nothing, no need to print it
+                } else if let Some(capture) = test_end_re.captures(&buffer) {
+                    if capture.get(1).unwrap().as_bytes() == b"SKIP" {
+                        skipped = true;
+                    }
+                } else {
+                    test_logger.write(&buffer).await?;
+                }
+                buffer.clear()
+            }
+        }
+
+        if buffer.len() > 0 {
+            test_logger.write(&buffer).await?;
+        }
+        buffer.clear();
+        debug!("Waiting for test to finish: {}", test);
+
+        // wait for test to end.
+        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+            .await
+            .map_err(KernelError::ProcessExit)
+            .unwrap();
+        let process_info = process.info().map_err(RunTestError::ProcessInfo)?;
+
+        // gotest returns 0 is test succeeds and 1 if test fails. This will check if test ended
+        // abnormally.
+        if process_info.return_code != 0 && process_info.return_code != 1 {
+            test_logger.write("Test exited abnormally".as_bytes()).await?;
+            case_listener_proxy
+                .finished(TestResult { status: Some(Status::Failed) })
+                .map_err(RunTestError::SendFinish)?;
+            return Ok(());
+        }
+
+        let status = if skipped {
+            Status::Skipped
+        } else if process_info.return_code != 0 {
+            Status::Failed
+        } else {
+            Status::Passed
+        };
+        case_listener_proxy
+            .finished(TestResult { status: Some(status) })
+            .map_err(RunTestError::SendFinish)?;
+        debug!("test finish {}", test);
+        Ok(())
+    }
 }
 
 /// Launches the golang test binary specified by the given `Component` to retrieve a list of test
@@ -158,7 +275,7 @@ async fn get_tests(test_component: Arc<Component>) -> Result<Vec<String>, Enumer
 
     // Load bearing to hold job guard.
     let (process, _job, stdlogger, _stdin_socket) =
-        launch_component_process::<EnumerationError>(&test_component, args, None).await?;
+        launch_component_process::<EnumerationError>(&test_component, args).await?;
 
     // collect stdout in background before waiting for process termination.
     let std_reader = LogStreamReader::new(stdlogger);
@@ -189,7 +306,6 @@ async fn get_tests(test_component: Arc<Component>) -> Result<Vec<String>, Enumer
 async fn launch_component_process<E>(
     component: &Component,
     args: Vec<String>,
-    test_invoke: Option<String>,
 ) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, zx::Socket), E>
 where
     E: From<NamespaceError> + From<launch::LaunchError>,
@@ -228,7 +344,7 @@ where
         ns: component.ns.clone().map_err(NamespaceError::Clone)?,
         args: Some(args),
         name_infos: None,
-        environs: test_invoke.map(|test_invoke| vec![test_invoke]),
+        environs: None,
         handle_infos: Some(handle_infos),
     })
     .await?;
@@ -238,12 +354,23 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::*, anyhow::Error, fidl::endpoints::ClientEnd,
-        fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        fuchsia_runtime::job_default, itertools::Itertools, matches::assert_matches,
-        pretty_assertions::assert_eq, runner::component::ComponentNamespace,
-        runner::component::ComponentNamespaceError, std::convert::TryFrom,
+        super::*,
+        anyhow::{Context as _, Error},
+        fidl::endpoints::ClientEnd,
+        fidl_fuchsia_component_runner as fcrunner,
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_test::{
+            Result_ as TestResult, RunListenerMarker, RunOptions, Status, SuiteMarker,
+        },
+        fuchsia_runtime::job_default,
+        itertools::Itertools,
+        matches::assert_matches,
+        pretty_assertions::assert_eq,
+        runner::component::ComponentNamespace,
+        runner::component::ComponentNamespaceError,
+        std::convert::TryFrom,
         test_runners_lib::cases::TestCaseInfo,
+        test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
     };
 
     fn create_ns_from_raw_ns(
@@ -293,6 +420,10 @@ mod tests {
             TestCaseInfo { name: "TestCrashing".to_string(), enabled: true },
             TestCaseInfo { name: "TestFailing".to_string(), enabled: true },
             TestCaseInfo { name: "TestPassing".to_string(), enabled: true },
+            TestCaseInfo { name: "TestPrefix".to_string(), enabled: true },
+            TestCaseInfo { name: "TestPrefixExtra".to_string(), enabled: true },
+            TestCaseInfo { name: "TestPrintMultiline".to_string(), enabled: true },
+            TestCaseInfo { name: "TestSkipped".to_string(), enabled: true },
             TestCaseInfo { name: "TestSubtests".to_string(), enabled: true },
         ]
         .into_iter()
@@ -359,6 +490,109 @@ mod tests {
             _ => false,
         };
         assert!(is_valid_error, "Invalid error: {:?}", err);
+        Ok(())
+    }
+
+    async fn run_tests(
+        invocations: Vec<Invocation>,
+        run_options: RunOptions,
+    ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
+        let component = sample_test_component().context("Cannot create test component")?;
+        let weak_component = Arc::downgrade(&component);
+        let server = TestServer::new();
+
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .context("Failed to create run_listener")?;
+        let (test_suite_client, test_suite) =
+            fidl::endpoints::create_request_stream::<SuiteMarker>()
+                .context("failed to create suite")?;
+
+        let suite_proxy =
+            test_suite_client.into_proxy().context("can't convert suite into proxy")?;
+        fasync::Task::spawn(async move {
+            server
+                .serve_test_suite(test_suite, weak_component)
+                .await
+                .expect("Failed to run test suite")
+        })
+        .detach();
+
+        suite_proxy
+            .run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)
+            .context("cannot call run")?;
+
+        collect_listener_event(run_listener).await.context("Failed to collect results")
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let events = run_tests(
+            names_to_invocation(vec![
+                "TestCrashing",
+                "TestPassing",
+                "TestFailing",
+                "TestPrefix",
+                "TestSkipped",
+                "TestPrefixExtra",
+            ]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
+        .await
+        .unwrap();
+
+        let expected_events = vec![
+            ListenerEvent::start_test("TestCrashing"),
+            ListenerEvent::finish_test("TestCrashing", TestResult { status: Some(Status::Failed) }),
+            ListenerEvent::start_test("TestPassing"),
+            ListenerEvent::finish_test("TestPassing", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::start_test("TestFailing"),
+            ListenerEvent::finish_test("TestFailing", TestResult { status: Some(Status::Failed) }),
+            ListenerEvent::start_test("TestPrefix"),
+            ListenerEvent::finish_test("TestPrefix", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::start_test("TestSkipped"),
+            ListenerEvent::finish_test("TestSkipped", TestResult { status: Some(Status::Skipped) }),
+            ListenerEvent::start_test("TestPrefixExtra"),
+            ListenerEvent::finish_test(
+                "TestPrefixExtra",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_no_test() -> Result<(), Error> {
+        let events =
+            run_tests(vec![], RunOptions { include_disabled_tests: Some(false) }).await.unwrap();
+
+        let expected_events = vec![ListenerEvent::finish_all_test()];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_one_test() -> Result<(), Error> {
+        let events = run_tests(
+            names_to_invocation(vec!["TestPassing"]),
+            RunOptions { include_disabled_tests: Some(false) },
+        )
+        .await
+        .unwrap();
+
+        let expected_events = vec![
+            ListenerEvent::start_test("TestPassing"),
+            ListenerEvent::finish_test("TestPassing", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_eq!(expected_events, events);
+
         Ok(())
     }
 }

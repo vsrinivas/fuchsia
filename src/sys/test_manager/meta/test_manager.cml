@@ -12,6 +12,10 @@
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
         },
         {
+            name: "go_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner#meta/go-test-runner.cm",
+        },
+        {
             name: "runner_memfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
@@ -47,6 +51,7 @@
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#go_test_runner",
                 "#gtest_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
@@ -67,6 +72,7 @@
             protocol: "/svc/fuchsia.process.Launcher",
             from: "parent",
             to: [
+                "#go_test_runner",
                 "#gtest_runner",
                 "#rust_test_runner",
                 "#tests",
@@ -123,6 +129,10 @@
                 {
                     runner: "rust_test_runner",
                     from: "#rust_test_runner",
+                },
+                {
+                    runner: "go_test_runner",
+                    from: "#go_test_runner",
                 },
             ],
         },

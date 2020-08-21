@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//src/sys/build/components.gni")
+
+go_library("echo_go_test_lib") {
+  name = "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/echo_go_client/..."
+  deps = [
+    "//examples/components/routing/fidl:echo($go_toolchain)",
+    "//src/lib/component",
+  ]
+}
+
+go_test("echo_go_client") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/echo_go_client" ]
+  deps = [ ":echo_go_test_lib" ]
+}
+
+fuchsia_component("echo_go_client_component") {
+  testonly = true
+  manifest = "meta/echo_go_client.cml"
+  component_name = "echo_go_client"
+  deps = [ ":echo_go_client" ]
+}
+
+fuchsia_component("echo-test-realm") {
+  testonly = true
+  manifest = "meta/echo-test-realm.cml"
+}
+
+group("echo-example") {
+  testonly = true
+  public_deps = [
+    ":echo-test-realm",
+    ":echo_go_client_component",
+    "//examples/components/routing/echo_server:echo_server_component",
+  ]
+}

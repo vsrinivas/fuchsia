@@ -1,0 +1,38 @@
+// Component test example which injects echo_server and launches echo_go_client
+// which connects to this injected server, tests it and passes back result using 
+// `fuchsia.test.Suite`
+{
+    // Two children: a server and client. "echo_go_client" has "eager" startup so it
+    // will be started along with the realm.
+    children: [
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo_server.cm",
+        },
+        {
+            name: "echo_go_client",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo_go_client.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#echo_go_client" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#echo_go_client" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#echo_go_client",
+        },
+    ],
+}

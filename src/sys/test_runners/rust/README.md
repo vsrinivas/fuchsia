@@ -32,7 +32,7 @@ No known current limitations.
 Run:
 
 ```bash
-fx run-test rust-test-runner-unit-tests
+fx run-test rust-test-runner-unit-test
 
 fx run-test rust-runner-integration-test
 ```

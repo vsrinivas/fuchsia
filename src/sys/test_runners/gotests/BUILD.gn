@@ -36,6 +36,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
@@ -85,5 +86,6 @@ group("tests") {
   deps = [
     ":go-test-runner-unit-test",
     "test_data",
+    "tests",
   ]
 }
