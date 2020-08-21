@@ -22,6 +22,16 @@ assemble_system("guest") {
     "//src/virtualization/tests:virtualization_test_utils_pkg",
   ]
   bootfs_labels = common_image_contents
-  bootfs_labels += [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+  bootfs_labels += [
+    "//src/sys/component_manager:component_manager_config_bootfs_resource",
+    "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+    "//src/devices/block/drivers/virtio:virtio_block",
+    "//src/devices/block/drivers/virtio:virtio_scsi",
+    "//src/devices/misc/drivers/virtio-rng:virtio_rng",
+    "//src/devices/misc/drivers/virtio-socket:virtio_socket",
+    "//src/devices/serial/drivers/virtio-console:virtio_console",
+    "//src/graphics/drivers/virtio:virtio_gpu",
+    "//src/ui/input/drivers/virtio:virtio_input",
+  ]
   sysmgr_golden = "sysmgr-golden.json"
 }

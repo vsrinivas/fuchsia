@@ -134,7 +134,6 @@ common_image_contents = [
   "//src/devices/ram/bin/ram-info",
   "//src/devices/ram/drivers/aml-ram",
   "//src/devices/rtc/drivers/fallback",
-  "//src/devices/rtc/drivers/pl031-rtc",
   "//src/devices/securemem/drivers/aml-securemem",
   "//src/devices/serial/drivers/aml-uart",
   "//src/devices/serial/drivers/ftdi",
@@ -252,47 +251,31 @@ if (target_cpu == "arm64") {
 
 if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
   common_image_contents += [
-    "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
-    "//src/devices/block/drivers/virtio:virtio_block",
-    "//src/devices/block/drivers/virtio:virtio_scsi",
-    "//src/devices/board/drivers/qemu-arm64",
     "//src/devices/gpio/drivers/gpio-test",
     "//src/devices/i2c/drivers/dw-i2c",
     "//src/devices/misc/drivers/test",
-    "//src/devices/misc/drivers/virtio-rng:virtio_rng",
-    "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/serial/bin/serial-test",
-    "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/tests/sysdev",
     "//src/devices/usb/bin/xdc-test",
     "//src/devices/usb/drivers/usb-bus:usb-device",
     "//src/devices/usb/drivers/usb-test/flash-programmer",
-    "//src/graphics/display/drivers/fake:fake-display",
-    "//src/graphics/display/drivers/goldfish-display",
     "//src/graphics/display/drivers/simple:simple.amd-kaveri",
     "//src/graphics/display/drivers/simple:simple.bochs",
     "//src/graphics/display/drivers/simple:simple.intel",
     "//src/graphics/display/drivers/simple:simple.nv",
     "//src/graphics/display/drivers/simple:simple.vmware",
     "//src/graphics/display/drivers/ssd1306",
-    "//src/graphics/drivers/virtio:virtio_gpu",
     "//src/media/audio/drivers/alc5514",
     "//src/media/audio/drivers/alc5663",
     "//src/media/audio/drivers/codecs/max98373",
     "//src/media/audio/drivers/codecs/tas58xx",
     "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
-    "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda",
     "//src/media/audio/drivers/max98927",
     "//src/media/audio/tools/audio-driver-ctl:test",
     "//src/ui/input/drivers/cypress",
-    "//src/ui/input/drivers/virtio:virtio_input",
     "//src/ui/light/drivers/gpio-light",
     "//src/ui/light/drivers/lp50xx-light",
   ]
-
-  if (target_cpu == "arm64") {
-    common_image_contents += [ "//src/devices/board/drivers/qemu-arm64" ]
-  }
 }

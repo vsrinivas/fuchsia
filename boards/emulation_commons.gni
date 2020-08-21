@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+_emulation_common_deps = [
+  "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+  "//src/devices/block/drivers/virtio:virtio_block",
+  "//src/devices/block/drivers/virtio:virtio_scsi",
+  "//src/devices/misc/drivers/virtio-rng:virtio_rng",
+  "//src/devices/misc/drivers/virtio-socket:virtio_socket",
+  "//src/devices/serial/drivers/virtio-console:virtio_console",
+  "//src/graphics/display/drivers/goldfish-display",
+  "//src/graphics/drivers/virtio:virtio_gpu",
+  "//src/ui/input/drivers/virtio:virtio_input",
+]
+
+emulation_arm64_bootfs_deps = _emulation_common_deps
+emulation_arm64_bootfs_deps += [
+  "//src/devices/board/drivers/qemu-arm64",
+  "//src/devices/rtc/drivers/pl031-rtc",
+  "//src/graphics/display/drivers/fake:fake-display",
+]
+
+emulation_x64_bootfs_deps = _emulation_common_deps
+emulation_x64_bootfs_deps +=
+    [ "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec" ]
