@@ -43,10 +43,10 @@ source_set("source") {
   defines = [ camera_debug_define ]
   visibility = [ "../*" ]
   sources = [
-    "controller-device.cc",
-    "controller-device.h",
-    "controller-protocol.cc",
-    "controller-protocol.h",
+    "controller_device.cc",
+    "controller_device.h",
+    "controller_protocol.cc",
+    "controller_protocol.h",
     "gdc_node.cc",
     "gdc_node.h",
     "ge2d_node.cc",

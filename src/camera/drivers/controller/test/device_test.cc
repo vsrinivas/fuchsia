@@ -8,8 +8,8 @@
 
 #include <ddktl/protocol/sysmem.h>
 
-#include "src/camera/drivers/controller/controller-device.h"
-#include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/controller_device.h"
+#include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/test/constants.h"
 #include "src/camera/drivers/controller/test/fake_sysmem.h"
 

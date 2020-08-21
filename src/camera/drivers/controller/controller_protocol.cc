@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/controller_protocol.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>

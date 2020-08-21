@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/controller/controller-device.h"
+#include "src/camera/drivers/controller/controller_device.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>

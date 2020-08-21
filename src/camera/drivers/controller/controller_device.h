@@ -30,7 +30,7 @@
 #include <ddktl/protocol/isp.h>
 #include <ddktl/protocol/sysmem.h>
 
-#include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/controller_protocol.h"
 
 namespace camera {
 

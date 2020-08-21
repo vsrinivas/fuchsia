@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
-#include "src/camera/drivers/controller/controller-protocol.h"
+#include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
 #include "src/camera/drivers/controller/graph_utils.h"
