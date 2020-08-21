@@ -180,7 +180,6 @@ group("deprecated_package_underscore") {
     "//garnet/tests/zircon:zircon_fuzzers_pkg",
     "//garnet/tests/zircon:zircon_tests",
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
-    "//sdk/lib/fidl/cpp:fidl_tests",
     "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",
     "//sdk/lib/inspect/contrib/cpp/tests:archive_reader_integration_tests",
     "//sdk/lib/inspect/contrib/cpp:inspect_contrib_cpp_tests",

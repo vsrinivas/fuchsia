@@ -8,6 +8,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -236,7 +237,8 @@ source_set("test_sources") {
   public_configs = [ "//sdk/config" ]
 }
 
-executable("conformance_test") {
+executable("fidl_hlcpp_conformance_test") {
+  visibility = [ ":*" ]
   testonly = true
 
   sources = [ "test/async_loop_for_test.cc" ]
@@ -253,7 +255,14 @@ executable("conformance_test") {
   ]
 }
 
-executable("fidl_cpp_unittests") {
+fuchsia_unittest_component("fidl-hlcpp-conformance-test") {
+  visibility = [ ":*" ]
+  executable_path = "bin/fidl_hlcpp_conformance_test"
+  deps = [ ":fidl_hlcpp_conformance_test" ]
+}
+
+executable("fidl_hlcpp_unit_tests") {
+  visibility = [ ":*" ]
   testonly = true
 
   sources = [ "test/async_loop_for_test.cc" ]
@@ -271,21 +280,16 @@ executable("fidl_cpp_unittests") {
   ]
 }
 
-unittest_package("fidl_tests") {
-  deps = [
-    ":conformance_test",
-    ":fidl_cpp_unittests",
-  ]
+fuchsia_unittest_component("fidl-hlcpp-unit-tests") {
+  visibility = [ ":*" ]
+  executable_path = "bin/fidl_hlcpp_unit_tests"
+  deps = [ ":fidl_hlcpp_unit_tests" ]
+}
 
-  tests = [
-    {
-      name = "fidl_cpp_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "conformance_test"
-      environments = basic_envs
-    },
+fuchsia_test_package("fidl-hlcpp-tests") {
+  test_components = [
+    ":fidl-hlcpp-conformance-test",
+    ":fidl-hlcpp-unit-tests",
   ]
 }
 
