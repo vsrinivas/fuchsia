@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 driver_module("core") {
   configs += [
@@ -22,9 +23,9 @@ driver_module("core") {
   ]
 }
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":core-unittest" ]
+  deps = [ ":core-unittest-package" ]
 }
 
 test("core-unittest") {
@@ -47,6 +48,16 @@ test("core-unittest") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
+  ]
+}
+
+unittest_package("core-unittest-package") {
+  package_name = "core-unittest"
+  deps = [ ":core-unittest" ]
+  tests = [
+    {
+      name = "blockcore"
+    },
   ]
 }
 

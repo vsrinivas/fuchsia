@@ -9,6 +9,7 @@ group("tests") {
     "ahci:tests",
     "aml-sd-emmc:tests",
     "block-verity:tests",
+    "core:tests",
     "ftl:tests",
     "fvm:tests",
     "gpt:tests",
