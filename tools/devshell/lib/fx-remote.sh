@@ -37,6 +37,8 @@ function fetch_remote_build_archive {
   local host="$1"
   local dir="$2"
 
+  ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx build build-archive.tar" || return 1
+
   local build_dir=$(ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
   if [[ -z "${build_dir}" ]]; then
     return 1
