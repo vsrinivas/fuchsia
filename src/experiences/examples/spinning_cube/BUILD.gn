@@ -28,8 +28,3 @@ fuchsia_package("spinning-cube") {
     ":component"
   ]
 }
-
-# @TODO(fxb/58701): For purposes of soft transition.
-group("spinning_cube") {
-  deps = [ ":spinning-cube" ]
-}
