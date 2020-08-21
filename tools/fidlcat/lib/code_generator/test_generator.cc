@@ -1,5 +1,9 @@
 #include "tools/fidlcat/lib/code_generator/test_generator.h"
 
+#include <set>
+
+#include "tools/fidlcat/lib/code_generator/cpp_visitor.h"
+
 namespace fidlcat {
 
 void TestGenerator::GenerateTests() {
@@ -78,7 +82,10 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
     return;
   }
 
-  GenerateIncludes(target_file);
+  fidl_codec::PrettyPrinter printer =
+      fidl_codec::PrettyPrinter(target_file, fidl_codec::WithoutColors, true, "", 0, false);
+
+  GenerateIncludes(printer);
 
   target_file << "TEST(" << ToSnakeCase(dispatcher_->processes().begin()->second->name()) << ", "
               << ToSnakeCase(protocol_name) << ") {\n";
@@ -87,6 +94,120 @@ void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
   target_file << "}\n";
 
   target_file.close();
+}
+
+void TestGenerator::GenerateAsyncCallsFromIterator(
+    fidl_codec::PrettyPrinter& printer,
+    const std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>& async_calls,
+    std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
+    std::string_view final_statement) {
+  if (iterator == async_calls.end()) {
+    printer << final_statement;
+    return;
+  }
+
+  FidlCallInfo* call_write = (*iterator).first;
+  FidlCallInfo* call_read = (*iterator).second;
+
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> input_arguments;
+  // Print outline declaration of input
+  if (call_write) {
+    input_arguments = GenerateInputInitializers(printer, call_write);
+  }
+
+  // Print outline declaration of output
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> output_arguments =
+      GenerateOutputDeclarations(printer, call_read);
+
+  // Make an async fidl call
+  printer << "proxy_->";
+  if (call_write) {
+    printer << call_write->method_name();
+  } else {
+    printer << call_read->method_name();
+  }
+  printer << "(";
+
+  // Pass input arguments to the fidl call
+  std::string separator = "";
+  for (const auto& argument : input_arguments) {
+    printer << separator;
+    argument->GenerateName(printer);
+    separator = ", ";
+  }
+
+  printer << separator << "[](";
+  separator = "";
+  for (const auto& argument : output_arguments) {
+    // Pass output arguments by reference
+    printer << separator;
+    argument->GenerateTypeAndName(printer);
+    separator = ", ";
+  }
+
+  printer << ") {\n";
+  {
+    fidl_codec::Indent indent(printer);
+    separator = "";
+    for (const auto& argument : output_arguments) {
+      printer << separator;
+      argument->GenerateAssertStatement(printer);
+      separator = "\n";
+    }
+    printer << "\n";
+    GenerateAsyncCallsFromIterator(printer, async_calls, std::next(iterator), final_statement);
+  }
+  printer << "});";
+
+  printer << "\n";
+}
+
+std::vector<std::shared_ptr<fidl_codec::CppVariable>>
+TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_prefix,
+                                                const fidl_codec::StructValue* struct_value) {
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> cpp_vars;
+
+  if (!struct_value) {
+    return cpp_vars;
+  }
+
+  // The input to this method is the decoded_input_value/decoded_output_value from the message.
+  // Each member in decoded_value will be treated as a argument to a HLCPP call,
+  // Therefore we only need to traverse the decoded_value for one level.
+
+  for (const std::unique_ptr<fidl_codec::StructMember>& struct_member :
+       struct_value->struct_definition().members()) {
+    const fidl_codec::Value* value = struct_value->GetFieldValue(struct_member->name());
+    fidl_codec::CppVisitor visitor(AcquireUniqueName(variable_prefix + struct_member->name()));
+    value->Visit(&visitor, struct_member->type());
+
+    std::shared_ptr<fidl_codec::CppVariable> argument = visitor.result();
+    cpp_vars.emplace_back(argument);
+  }
+
+  return cpp_vars;
+}
+
+std::vector<std::shared_ptr<fidl_codec::CppVariable>> TestGenerator::GenerateInputInitializers(
+    fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info) {
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> input_arguments =
+      CollectArgumentsFromDecodedValue("in_", call_info->decoded_input_value());
+
+  for (const auto& argument : input_arguments) {
+    argument->GenerateInitialization(printer);
+  }
+  return input_arguments;
+}
+
+std::vector<std::shared_ptr<fidl_codec::CppVariable>> TestGenerator::GenerateOutputDeclarations(
+    fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info) {
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> output_arguments =
+      CollectArgumentsFromDecodedValue("out_", call_info->decoded_output_value());
+
+  for (const auto& argument : output_arguments) {
+    argument->GenerateDeclaration(printer);
+  }
+  return output_arguments;
 }
 
 }  // namespace fidlcat

@@ -6,6 +6,7 @@
 #include <filesystem>
 
 #include "tools/fidlcat/lib/code_generator/code_generator.h"
+#include "tools/fidlcat/lib/code_generator/cpp_visitor.h"
 
 namespace fidlcat {
 
@@ -13,6 +14,21 @@ class TestGenerator : public CodeGenerator {
  public:
   TestGenerator(SyscallDecoderDispatcher* dispatcher, const std::string& output_directory)
       : CodeGenerator(), dispatcher_(dispatcher), output_directory_(output_directory) {}
+
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> CollectArgumentsFromDecodedValue(
+      const std::string& variable_prefix, const fidl_codec::StructValue* struct_value);
+
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> GenerateInputInitializers(
+      fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
+
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> GenerateOutputDeclarations(
+      fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
+
+  void GenerateAsyncCallsFromIterator(
+      fidl_codec::PrettyPrinter& printer,
+      const std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>& async_calls,
+      std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
+      std::string_view final_statement);
 
   void GenerateTests();
 

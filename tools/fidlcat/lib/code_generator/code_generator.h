@@ -10,6 +10,7 @@
 
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/printer.h"
+#include "src/lib/fidl_codec/wire_object.h"
 #include "tools/fidlcat/lib/event.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
@@ -21,12 +22,19 @@ std::string ToSnakeCase(std::string_view str);
 class FidlCallInfo {
  public:
   FidlCallInfo(bool crashed, std::string_view enclosing_interface_name, zx_handle_t handle_id,
-               SyscallKind kind, std::string_view method_name)
+               SyscallKind kind, std::string_view method_name,
+               const fidl_codec::Struct* struct_input, const fidl_codec::Struct* struct_output,
+               const fidl_codec::StructValue* decoded_input_value,
+               const fidl_codec::StructValue* decoded_output_value)
       : crashed_(crashed),
         enclosing_interface_name_(enclosing_interface_name),
         handle_id_(handle_id),
         kind_(kind),
-        method_name_(method_name) {}
+        method_name_(method_name),
+        struct_input_(struct_input),
+        struct_output_(struct_output),
+        decoded_input_value_(decoded_input_value),
+        decoded_output_value_(decoded_output_value) {}
 
   bool crashed() const { return crashed_; }
 
@@ -37,6 +45,14 @@ class FidlCallInfo {
   const std::string& method_name() const { return method_name_; }
 
   const std::string& enclosing_interface_name() const { return enclosing_interface_name_; }
+
+  const fidl_codec::Struct* struct_input() const { return struct_input_; }
+
+  const fidl_codec::Struct* struct_output() const { return struct_output_; }
+
+  const fidl_codec::StructValue* decoded_input_value() const { return decoded_input_value_; }
+
+  const fidl_codec::StructValue* decoded_output_value() const { return decoded_output_value_; }
 
  private:
   // True if server crashes in response to a zx_channel_call
@@ -53,6 +69,18 @@ class FidlCallInfo {
 
   // FIDL method name (e.g. EchoString)
   const std::string method_name_;
+
+  // Input struct definition
+  const fidl_codec::Struct* const struct_input_;
+
+  // Output struct definition
+  const fidl_codec::Struct* const struct_output_;
+
+  // Decoded input value
+  const fidl_codec::StructValue* const decoded_input_value_;
+
+  // Decoded output value
+  const fidl_codec::StructValue* const decoded_output_value_;
 };
 
 std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_event);
@@ -73,14 +101,23 @@ class CodeGenerator {
     fidl_headers_.insert(FidlMethodToIncludePath(enclosing_interface_name));
   }
 
-  void GenerateIncludes(std::ostream& os);
+  std::string AcquireUniqueName(const std::string& prefix) {
+    return prefix + "_" + std::to_string(unique_name_counter_[prefix]++);
+  }
 
-  void GenerateFidlIncludes(std::ostream& os);
+  void GenerateIncludes(fidl_codec::PrettyPrinter& printer);
+
+  void GenerateFidlIncludes(fidl_codec::PrettyPrinter& printer);
 
  private:
+  // A log of processed events.
   std::map<zx_handle_t, std::vector<std::unique_ptr<FidlCallInfo>>> call_log_;
 
+  // Paths for FIDL-related #include directives.
   std::set<std::string> fidl_headers_;
+
+  // Counter for unique variable ids.
+  std::map<std::string, int> unique_name_counter_;
 };
 
 }  // namespace fidlcat

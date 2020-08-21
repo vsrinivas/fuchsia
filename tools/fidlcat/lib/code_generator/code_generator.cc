@@ -4,25 +4,25 @@
 
 namespace fidlcat {
 
-void CodeGenerator::GenerateIncludes(std::ostream& os) {
-  os << "#include <lib/async-loop/cpp/loop.h>\n";
-  os << "#include <lib/async-loop/default.h>\n";
-  os << "#include <lib/async/default.h>\n";
-  os << "#include <lib/syslog/cpp/macros.h>\n";
-  os << "\n";
-  os << "#include <gtest/gtest.h>\n";
-  os << "\n";
-  os << "#include \"lib/sys/cpp/component_context.h\"\n";
-  os << "\n";
+void CodeGenerator::GenerateIncludes(fidl_codec::PrettyPrinter& printer) {
+  printer << "#include <lib/async-loop/cpp/loop.h>\n";
+  printer << "#include <lib/async-loop/default.h>\n";
+  printer << "#include <lib/async/default.h>\n";
+  printer << "#include <lib/syslog/cpp/macros.h>\n";
+  printer << "\n";
+  printer << "#include <gtest/gtest.h>\n";
+  printer << "\n";
+  printer << "#include \"lib/sys/cpp/component_context.h\"\n";
+  printer << "\n";
 
-  GenerateFidlIncludes(os);
+  GenerateFidlIncludes(printer);
 
-  os << "\n";
+  printer << "\n";
 }
 
-void CodeGenerator::GenerateFidlIncludes(std::ostream& os) {
+void CodeGenerator::GenerateFidlIncludes(fidl_codec::PrettyPrinter& printer) {
   for (const auto& fidl_include : fidl_headers_) {
-    os << "#include <" << fidl_include << ">\n";
+    printer << "#include <" << fidl_include << ">\n";
   }
 }
 
@@ -43,26 +43,29 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
   // We inspect the message to extract
   // "interface name", "method name" and "message content".
   // Based on the system call, this could be in either of output event or invoked event.
-  const fidl_codec::FidlMessageValue* message = nullptr;
+  const fidl_codec::InterfaceMethod* method = nullptr;
 
   switch (syscall_kind) {
     case SyscallKind::kChannelRead:
-      message = output_event->GetMessage();
+      method = output_event->GetMessage()->method();
       break;
     case SyscallKind::kChannelWrite:
     case SyscallKind::kChannelCall:
-      message = output_event->invoked_event()->GetMessage();
+      method = output_event->invoked_event()->GetMessage()->method();
       break;
     default:
       return nullptr;
       break;
   }
 
-  if (message->method() == nullptr) {
+  if (method == nullptr) {
     // TODO(nimaj): investigate why this happens for zx_channel_read and zx_channel_write
     // We will not be able to determine method name nor interface name
     return nullptr;
   }
+
+  const fidl_codec::StructValue* decoded_input_value = nullptr;
+  const fidl_codec::StructValue* decoded_output_value = nullptr;
 
   // Extract handle information from output event in 2 steps:
   // (1/2) Find handle's struct member
@@ -74,8 +77,9 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
 
   bool crashed = output_event->returned_value() == ZX_ERR_PEER_CLOSED;
 
-  return std::make_unique<FidlCallInfo>(crashed, message->method()->enclosing_interface().name(),
-                                        handle_id, syscall_kind, message->method()->name());
+  return std::make_unique<FidlCallInfo>(
+      crashed, method->enclosing_interface().name(), handle_id, syscall_kind, method->name(),
+      method->request(), method->response(), decoded_input_value, decoded_output_value);
 }
 
 std::string FidlMethodToIncludePath(std::string_view identifier) {
