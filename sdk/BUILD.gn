@@ -75,7 +75,7 @@ sdk("e2e_testing") {
 
   category = "partner"
 
-  api = "e2e_testing.api"
+  api = "e2e_testing.manifest"
 
   deps = [
     ":e2e_testing_tools",
@@ -286,7 +286,7 @@ sdk("core") {
 
   category = "partner"
 
-  api = "core.api"
+  api = "core.manifest"
 
   testonly = true
 
@@ -318,7 +318,7 @@ sdk("modular_testing") {
 
   id = sdk_id
 
-  api = "modular_testing.api"
+  api = "modular_testing.manifest"
 
   category = "partner"
 
