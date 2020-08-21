@@ -275,12 +275,11 @@ async fn test_interruption_sounds() {
 
     // Test that the volume-changed sound gets played on the soundplayer for interruption.
     set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS]).await;
-    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Interruption)
-        .await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
 
     // Test that the volume-max sound gets played on the soundplayer for interruption.
     set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX]).await;
-    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Interruption)
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
         .await;
 }
 

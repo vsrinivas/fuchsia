@@ -229,7 +229,7 @@ impl VolumeChangeHandler {
                 // On restore, the last media user volume is set for the first time, and registers
                 // as different from the last seen volume, because it is initially None. Don't play
                 // the earcons sound on that set.
-                self.play_volume_sound(stream_type, new_user_volume);
+                self.play_volume_sound(new_user_volume);
             }
             self.last_user_volumes.insert(stream_type, new_user_volume);
         }
@@ -264,7 +264,7 @@ impl VolumeChangeHandler {
     /// Play the earcons sound given the changed volume streams.
     ///
     /// The parameters are packaged together. See [VolumeChangeParams].
-    fn play_volume_sound(&self, stream_type: AudioStreamType, volume: f32) {
+    fn play_volume_sound(&self, volume: f32) {
         let common_earcons_params = self.common_earcons_params.clone();
 
         let publisher = self.publisher.clone();
@@ -291,7 +291,6 @@ impl VolumeChangeHandler {
                         VOLUME_MAX_FILE_PATH,
                         VOLUME_MAX_SOUND_ID,
                         sound_player_added_files.clone(),
-                        Some(stream_type),
                     )
                     .await
                     .ok();
@@ -301,7 +300,6 @@ impl VolumeChangeHandler {
                         VOLUME_CHANGED_FILE_PATH,
                         VOLUME_CHANGED_SOUND_ID,
                         sound_player_added_files.clone(),
-                        Some(stream_type),
                     )
                     .await
                     .ok();
