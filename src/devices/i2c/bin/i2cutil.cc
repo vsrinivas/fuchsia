@@ -259,7 +259,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
       size_t n_write_bytes = argc - 3;
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
-      auto status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
+      status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
       if (status != ZX_OK) {
         usage(argv[0]);
         return status;
