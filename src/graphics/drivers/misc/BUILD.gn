@@ -9,3 +9,8 @@ group("misc") {
     "goldfish_control",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "goldfish_address_space:tests" ]
+}
