@@ -207,12 +207,12 @@ static const device_fragment_t ge2d_fragments[] = {
     {countof(amlogiccanvas_fragment), amlogiccanvas_fragment},
 };
 
-// Composite binding rules for IMX227 Sensor.
+// Composite binding rules for camera modules.
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),  // sherlock
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a),  // luis
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a),  // luis camera sensor
 };
 static const zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -226,6 +226,22 @@ static const zx_bind_inst_t gpio_vdig_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VDIG_ENABLE),
 };
+
+// Additional definitions for Luis.
+// The reset and digital voltage enables are the same
+static const zx_bind_inst_t gpio_cam_mute_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_MUTE),
+};
+static const zx_bind_inst_t gpio_cam_vif_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_VIF_ENABLE),
+};
+static const zx_bind_inst_t gpio_cam_vana_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_VANA_ENABLE),
+};
+
 static const zx_bind_inst_t clk_sensor_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_CAM_INCK_24M),
@@ -249,6 +265,21 @@ static const device_fragment_part_t gpio_vdig_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_vdig_match), gpio_vdig_match},
 };
+
+// Additions for Luis
+static const device_fragment_part_t gpio_cam_mute_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_cam_mute_match), gpio_cam_mute_match},
+};
+static const device_fragment_part_t gpio_cam_vif_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_cam_vif_match), gpio_cam_vif_match},
+};
+static const device_fragment_part_t gpio_cam_vana_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(gpio_cam_vana_match), gpio_cam_vana_match},
+};
+
 static const device_fragment_part_t clk_sensor_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk_sensor_match), clk_sensor_match},
@@ -263,6 +294,16 @@ static const device_fragment_t imx227_sensor_fragments[] = {
     {countof(gpio_vana_fragment), gpio_vana_fragment},
     {countof(gpio_vdig_fragment), gpio_vdig_fragment},
     {countof(gpio_reset_fragment), gpio_reset_fragment},
+    {countof(clk_sensor_fragment), clk_sensor_fragment},
+};
+static const device_fragment_t imx355_sensor_fragments[] = {
+    {countof(mipicsi_fragment), mipicsi_fragment},
+    {countof(i2c_fragment), i2c_fragment},
+    {countof(gpio_cam_mute_fragment), gpio_cam_mute_fragment},
+    {countof(gpio_reset_fragment), gpio_reset_fragment},
+    {countof(gpio_cam_vana_fragment), gpio_cam_vana_fragment},
+    {countof(gpio_vdig_fragment), gpio_vdig_fragment},
+    {countof(gpio_cam_vif_fragment), gpio_cam_vif_fragment},
     {countof(clk_sensor_fragment), clk_sensor_fragment},
 };
 
@@ -362,11 +403,20 @@ static const pbus_dev_t mipi_dev = []() {
 }();
 
 // Binding rules for Sensor Driver
-const pbus_dev_t sensor_dev = []() {
+const pbus_dev_t sensor_dev_sherlock = []() {
   pbus_dev_t dev = {};
   dev.name = "imx227-sensor";
   dev.vid = PDEV_VID_SONY;
   dev.pid = PDEV_PID_SONY_IMX227;
+  dev.did = PDEV_DID_CAMERA_SENSOR;
+  return dev;
+}();
+
+const pbus_dev_t sensor_dev_luis = []() {
+  pbus_dev_t dev = {};
+  dev.name = "imx355-sensor";
+  dev.vid = PDEV_VID_SONY;
+  dev.pid = PDEV_PID_SONY_IMX355;
   dev.did = PDEV_DID_CAMERA_SENSOR;
   return dev;
 }();
@@ -376,20 +426,32 @@ const pbus_dev_t sensor_dev = []() {
 // Refer to camera design document for driver
 // design and layout details.
 zx_status_t Sherlock::CameraInit() {
+  pdev_board_info_t info;
+  auto status = pbus_.GetBoardInfo(&info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
+    return status;
+  }
+
   // Set GPIO alternate functions.
   gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
   gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrengthUa, nullptr);
 
-  zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
+  status = pbus_.DeviceAdd(&mipi_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&sensor_dev, imx227_sensor_fragments,
-                                    countof(imx227_sensor_fragments), 1);
+  if (info.pid == PDEV_PID_LUIS) {
+    status = pbus_.CompositeDeviceAdd(&sensor_dev_luis, imx355_sensor_fragments,
+                                      countof(imx355_sensor_fragments), 1);
+  } else {
+    status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock, imx227_sensor_fragments,
+                                      countof(imx227_sensor_fragments), 1);
+  }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
   }
 
