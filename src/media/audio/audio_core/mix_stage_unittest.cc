@@ -24,6 +24,9 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
+// When tuning a new set of PID coefficients, set this to enable additional logging.
+constexpr bool kDisplayForNewPidCoefficientsTuning = false;
+
 constexpr uint32_t kDefaultNumChannels = 2;
 constexpr uint32_t kDefaultFrameRate = 48000;
 const Format kDefaultFormat =
@@ -37,9 +40,9 @@ const Format kDefaultFormat =
 enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 class MixStageTest : public testing::ThreadingModelFixture {
+ protected:
   static constexpr uint32_t kBlockSizeFrames = 240;
 
- protected:
   void SetUp() {
     device_clock_ =
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
@@ -427,6 +430,69 @@ TEST_F(MixStageTest, MixMultipleInputs) {
   }
 }
 
+// When micro-SRC makes a rate change, we take particular care to preserve our source stream's
+// position. Specifically, a component of position beyond what we capture by our Fixed data type is
+// kept in [src_pos_modulo, rate_modulo, denominator, next_src_pos_modulo] (in Bookkeeping x3 and
+// SourceInfo respectively). If a rate adjustment occurs but denominator is unchanged, then
+// src_pos_modulo and next_src_pos_modulo need not change. If denominator DOES change, then
+// src_pos_modulo and next_src_pos_modulo are scaled, from the old denominator to the new one.
+TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
+  AudioClock audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
+  ASSERT_TRUE(audio_clock.is_valid());
+  auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  std::shared_ptr<PacketQueue> packet_queue =
+      std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
+
+  auto mixer = mix_stage_->AddInput(packet_queue);
+  auto& info = mixer->source_info();
+  auto& bookkeeping = mixer->bookkeeping();
+
+  constexpr zx::duration kMixDuration = zx::msec(1);
+  constexpr uint32_t dest_frames_per_mix = 48;
+
+  //
+  // Position accounting is reset before the first mix; preexisting values should not persist.
+  info.next_src_pos_modulo = 2;
+  bookkeeping.src_pos_modulo = 4;
+  bookkeeping.denominator = 2;
+  mix_stage_->ReadLock(time_until(zx::duration(0)), 0, dest_frames_per_mix);
+
+  // Long-running source position advances normally; src_pos_modulos are reset.
+  EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix));
+  EXPECT_EQ(info.next_src_pos_modulo, 0u);
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 0u);
+  EXPECT_EQ(bookkeeping.denominator, 1u);
+
+  //
+  // If denominator is not changing, src_pos_modulo will be unchanged.
+  bookkeeping.src_pos_modulo = 4;
+  zx_nanosleep(zx_deadline_after(kMixDuration.get()));
+  mix_stage_->ReadLock(time_until(kMixDuration), dest_frames_per_mix, dest_frames_per_mix);
+
+  // Long-running source position advances normally, no change to src_pos_modulo.
+  EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix * 2));
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 4u);
+
+  //
+  // If the denominator is changing, existing values for src_pos_modulo and next_src_pos_modulo are
+  // scaled to the new denominator (by multipling by new denom, dividing by old denom).
+  info.next_src_pos_modulo = 2;
+  bookkeeping.src_pos_modulo = 4;
+  bookkeeping.denominator = 2;
+  zx_nanosleep(zx_deadline_after(kMixDuration.get()));
+  mix_stage_->ReadLock(time_until(kMixDuration * 2), dest_frames_per_mix * 2, dest_frames_per_mix);
+
+  // Denominator changes from 2 to 1, so src_pos_modulo is scaled from 4 to 2. next_src_pos_modulo
+  // is scaled from 2 to 1, then reduced (because denominator == 1), after which next_src_pos_modulo
+  // is zero and next_frac_source_frame is incremented by one sub-frame.
+  EXPECT_EQ(info.next_frac_source_frame.raw_value(),
+            Fixed(dest_frames_per_mix * 3).raw_value() + 1);
+  EXPECT_EQ(info.next_src_pos_modulo, 0u);
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 2u);
+  EXPECT_EQ(bookkeeping.denominator, 1u);
+}
+
 // Test the accuracy of long-running position maintained by MixStage across ReadLock calls. No
 // source audio is needed: source position is determined by clocks and the change in dest position.
 //
@@ -532,8 +598,11 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
       max_frac_error_last_ten = std::max(info.frac_source_error, max_frac_error_last_ten);
       min_frac_error_last_ten = std::min(info.frac_source_error, min_frac_error_last_ten);
     }
-    FX_LOGS(TRACE) << rate_adjust_ppm << ": [" << mix_count << "], error "
-                   << info.frac_source_error.raw_value();
+
+    if constexpr (kDisplayForNewPidCoefficientsTuning) {
+      FX_LOGS(INFO) << rate_adjust_ppm << ": [" << mix_count << "], error "
+                    << info.frac_source_error.raw_value();
+    }
   }
 
   EXPECT_LE(max_frac_error.raw_value(), upper_limit.raw_value())
@@ -548,6 +617,20 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
         << "for rate_adjust_ppm " << rate_adjust_ppm;
     EXPECT_GE(min_frac_error_last_ten.raw_value(), kLowerLimitLastTen.raw_value())
         << "for rate_adjust_ppm " << rate_adjust_ppm;
+  }
+
+  if constexpr (kDisplayForNewPidCoefficientsTuning) {
+    FX_LOGS(INFO) << rate_adjust_ppm << ":max at [" << mix_count_of_max_error << "] ("
+                  << mix_count_of_max_error * kMixDuration.to_msecs() << " msec), "
+                  << max_frac_error.raw_value();
+    FX_LOGS(INFO) << rate_adjust_ppm << ":min at [" << mix_count_of_min_error << "] ("
+                  << mix_count_of_min_error * kMixDuration.to_msecs() << " msec), "
+                  << min_frac_error.raw_value();
+
+    if (rate_adjust_ppm != 0) {
+      FX_LOGS(INFO) << rate_adjust_ppm << ":settled max " << max_frac_error_last_ten.raw_value();
+      FX_LOGS(INFO) << rate_adjust_ppm << ":settled min " << min_frac_error_last_ten.raw_value();
+    }
   }
 }
 

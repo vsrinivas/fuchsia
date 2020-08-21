@@ -144,19 +144,19 @@ TEST(PositionManagerTest, UpdateOffsets) {
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
   auto step_size = Mixer::FRAC_ONE;
-  auto rate_modulo = 0u;
-  auto denominator = 0u;
-  uint32_t src_position_modulo = 0u;
+  auto rate_modulo = 0ul;
+  auto denominator = 0ul;
+  auto src_position_modulo = 0ul;
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &src_position_modulo);
 
   frac_src_off = 27;
   dest_offset = 42u;
-  src_position_modulo = 72u;
+  src_position_modulo = 72;
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(frac_src_off, 0);
   EXPECT_EQ(dest_offset, 0u);
-  EXPECT_EQ(src_position_modulo, 0u);
+  EXPECT_EQ(src_position_modulo, 0ul);
 }
 
 TEST(PositionManagerTest, FrameCanBeMixed) {
@@ -193,7 +193,7 @@ TEST(PositionManagerTest, AdvanceFrame_Basic) {
   auto dest_offset = 1u;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  auto src_position_modulo = 0u;
+  auto src_position_modulo = 0ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
 
   int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
@@ -214,7 +214,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
   auto dest_offset = 1u;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  auto src_position_modulo = 0u;
+  auto src_position_modulo = 0ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
 
   int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
@@ -236,9 +236,9 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto step_size = Mixer::FRAC_ONE;
-  auto rate_modulo = 1u;
-  auto denominator = 243u;
-  auto src_position_modulo = 242u;
+  auto rate_modulo = 1ul;
+  auto denominator = 243ul;
+  auto src_position_modulo = 242ul;
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &src_position_modulo);
 
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
@@ -268,9 +268,9 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto step_size = Mixer::FRAC_ONE;
-  auto rate_modulo = 1u;
-  auto denominator = 243u;
-  auto src_position_modulo = 241u;
+  auto rate_modulo = 1ul;
+  auto denominator = 243ul;
+  auto src_position_modulo = 241ul;
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &src_position_modulo);
 
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
@@ -303,7 +303,7 @@ TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
   auto dest_offset = 1u;
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
-  auto src_position_modulo = 0u;
+  auto src_position_modulo = 0ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE, 0, 0, &src_position_modulo);
 
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
@@ -327,9 +327,9 @@ TEST(PositionManagerTest, AdvanceFrame_TemplateNoModulo) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto step_size = Mixer::FRAC_ONE;
-  auto rate_modulo = 1u;
-  auto denominator = 243u;
-  auto src_position_modulo = 242u;
+  auto rate_modulo = 1ul;
+  auto denominator = 243ul;
+  auto src_position_modulo = 242ul;
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &src_position_modulo);
 
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
@@ -386,9 +386,9 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   auto dest_offset = 0u;
   pos_mgr.SetDestValues(dest, 5, &dest_offset);
 
-  auto src_position_modulo = 1u;
-  auto denominator = 2u;
-  pos_mgr.SetRateValues((Mixer::FRAC_ONE << 1) - 1, 0u, denominator, &src_position_modulo);
+  auto src_position_modulo = 1ul;
+  auto denominator = 2ul;
+  pos_mgr.SetRateValues((Mixer::FRAC_ONE << 1) - 1, 0, denominator, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd<false>();
   EXPECT_EQ(num_src_frames_skipped, 10u);
@@ -397,7 +397,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
 
   EXPECT_TRUE(frac_src_off == (10 * Mixer::FRAC_ONE) - 6);
   EXPECT_EQ(dest_offset, 5u);
-  EXPECT_EQ(src_position_modulo, 1u);
+  EXPECT_EQ(src_position_modulo, 1ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
 }
@@ -413,8 +413,8 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
   auto dest_offset = 0u;
   pos_mgr.SetDestValues(dest, 10, &dest_offset);
 
-  auto src_position_modulo = 0u;
-  pos_mgr.SetRateValues(Mixer::FRAC_ONE >> 1, 0u, 0u, &src_position_modulo);
+  auto src_position_modulo = 0ul;
+  pos_mgr.SetRateValues(Mixer::FRAC_ONE >> 1, 0, 0, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd();
   EXPECT_EQ(num_src_frames_skipped, 5u);
@@ -439,9 +439,9 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
   auto dest_offset = 0u;
   pos_mgr.SetDestValues(dest, 6, &dest_offset);
 
-  auto rate_modulo = 1u;
-  auto denominator = 25u;
-  auto src_position_modulo = 20u;
+  auto rate_modulo = 1ul;
+  auto denominator = 25ul;
+  auto src_position_modulo = 20ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE << 1, rate_modulo, denominator, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd();
@@ -451,7 +451,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 
   EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
-  EXPECT_EQ(src_position_modulo, 0u);
+  EXPECT_EQ(src_position_modulo, 0ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }
@@ -467,9 +467,9 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
   auto dest_offset = 0u;
   pos_mgr.SetDestValues(dest, 6, &dest_offset);
 
-  auto rate_modulo = 1u;
-  auto denominator = 25u;
-  auto src_position_modulo = 24u;
+  auto rate_modulo = 1ul;
+  auto denominator = 25ul;
+  auto src_position_modulo = 24ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE << 1, rate_modulo, denominator, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd();
@@ -479,7 +479,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
 
   EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
-  EXPECT_EQ(src_position_modulo, 4u);
+  EXPECT_EQ(src_position_modulo, 4ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }
@@ -495,20 +495,20 @@ TEST(PositionManagerTest, AdvanceToEnd_TemplateNoModulo) {
   auto dest_offset = 0u;
   pos_mgr.SetDestValues(dest, 7, &dest_offset);
 
-  auto rate_modulo = 1u;
-  auto denominator = 25u;
-  auto src_position_modulo = 20u;
+  auto rate_modulo = 1ul;
+  auto denominator = 25ul;
+  auto src_position_modulo = 20ul;
   pos_mgr.SetRateValues(Mixer::FRAC_ONE << 1, rate_modulo, denominator, &src_position_modulo);
 
   auto num_src_frames_skipped = pos_mgr.AdvanceToEnd<false>();
   EXPECT_EQ(num_src_frames_skipped, 12u);
 
-  src_position_modulo = 42u;
+  src_position_modulo = 42;
   pos_mgr.UpdateOffsets();
 
   EXPECT_TRUE(frac_src_off == (12 * Mixer::FRAC_ONE) - 1);
   EXPECT_EQ(dest_offset, 6u);
-  EXPECT_EQ(src_position_modulo, 20u);
+  EXPECT_EQ(src_position_modulo, 20ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }

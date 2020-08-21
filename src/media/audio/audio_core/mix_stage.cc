@@ -9,6 +9,7 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
+#include <iomanip>
 #include <limits>
 #include <memory>
 
@@ -494,7 +495,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.clock_mono_to_frac_source_frames = TimelineFunction();
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = 0;
-    bookkeeping.denominator = 0;  // we need not also clear rate_mod and pos_mod
+    bookkeeping.rate_modulo = 0;  // we need not also clear rate_mod and pos_mod
 
     return;
   }
@@ -519,7 +520,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   if (cur_mix_job_.dest_ref_clock_to_frac_dest_frame.rate().subject_delta() == 0) {
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = 0;
-    bookkeeping.denominator = 0;  // we need not also clear rate_mod and pos_mod
+    bookkeeping.rate_modulo = 0;  // we need not also clear rate_mod and pos_mod
 
     return;
   }
@@ -634,32 +635,18 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       } else {
         client_clock.TuneRateForError(info.frac_source_error, curr_dest_frame);
 
-        // Using this rate adjustment factor, adjust step_size, so future src_positions will
-        // converge to what these two clocks require.
-        // Multiplying these factors can exceed TimelineRate's uint32/uint32 resolution so we allow
-        // reduced precision, if required.
+        // Using this rate adjustment factor, adjust step_size, so future src_positions converge to
+        // what these two clocks require. The product might exceed uint64/uint64: allow reduction.
         TimelineRate micro_src_factor = client_clock.rate_adjustment();
         frac_src_frames_per_dest_frame =
             TimelineRate::Product(frac_src_frames_per_dest_frame, micro_src_factor, false);
-
-        while (frac_src_frames_per_dest_frame.subject_delta() >
-                   std::numeric_limits<uint32_t>::max() ||
-               frac_src_frames_per_dest_frame.reference_delta() >
-                   std::numeric_limits<uint32_t>::max()) {
-          frac_src_frames_per_dest_frame =
-              TimelineRate((frac_src_frames_per_dest_frame.subject_delta() + 1) >> 1,
-                           frac_src_frames_per_dest_frame.reference_delta() >> 1);
-          // clock::DisplayTimelineRate(frac_src_frames_per_dest_frame,"Reduced frac-to-dest:");
-        }
       }
     }
   }
 
   // SetStepSize
   //
-  // Convert the TimelineRate into step_size, denominator and rate_modulo -- as usual.
-  // Finally, compute the step size in subframes. IOW, every time we move forward one dest
-  // frame, how many source subframes should we consume.
+  // Convert the TimelineRate into [step_size, denominator, rate_modulo] as usual.
   FX_DCHECK(frac_src_frames_per_dest_frame.reference_delta());
   int64_t tmp_step_size = frac_src_frames_per_dest_frame.Scale(1);
 
@@ -672,20 +659,21 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   bookkeeping.rate_modulo = frac_src_frames_per_dest_frame.subject_delta() -
                             (bookkeeping.denominator * bookkeeping.step_size);
 
-  // Update the source position modulos, if the denominator is changing.
+  // If the denominator is changing, update the source position modulos.
   if (old_denominator != bookkeeping.denominator) {
-    if (old_denominator) {
-      bookkeeping.src_pos_modulo *= bookkeeping.denominator;
-      info.next_src_pos_modulo *= bookkeeping.denominator;
-      bookkeeping.src_pos_modulo =
-          std::round(static_cast<float>(bookkeeping.src_pos_modulo) / old_denominator);
-      info.next_src_pos_modulo =
-          std::round(static_cast<float>(info.next_src_pos_modulo) / old_denominator);
-    } else {
-      bookkeeping.src_pos_modulo = info.next_src_pos_modulo = 0;
+    // Reinterpret previous per-job and long-running src_pos_mod values for the new denominator
+    if (bookkeeping.src_pos_modulo) {
+      __uint128_t tmp_src_pos_modulo =
+          static_cast<__uint128_t>(bookkeeping.src_pos_modulo) * bookkeeping.denominator;
+      bookkeeping.src_pos_modulo = tmp_src_pos_modulo / old_denominator;
+    }
+    if (info.next_src_pos_modulo) {
+      __uint128_t tmp_next_src_pos_modulo =
+          static_cast<__uint128_t>(info.next_src_pos_modulo) * bookkeeping.denominator;
+      info.next_src_pos_modulo = tmp_next_src_pos_modulo / old_denominator;
     }
   }
-  // Else preserve the previous source position modulo values from before
+  // Otherwise, preserve the previous source position modulo values
 }
 
 }  // namespace media::audio

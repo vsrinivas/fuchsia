@@ -25,9 +25,9 @@ TEST(BookkeepingTest, Defaults) {
   auto& bookkeeping = mixer.bookkeeping();
 
   EXPECT_EQ(bookkeeping.step_size, Mixer::FRAC_ONE);
-  EXPECT_EQ(bookkeeping.rate_modulo, 0u);
-  EXPECT_EQ(bookkeeping.denominator, 0u);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 0u);
+  EXPECT_EQ(bookkeeping.rate_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.denominator, 0ull);
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 0ull);
 
   EXPECT_TRUE(bookkeeping.gain.IsUnity());
   EXPECT_FALSE(bookkeeping.gain.IsSilent());
@@ -41,16 +41,16 @@ TEST(BookkeepingTest, Reset) {
   auto& bookkeeping = mixer.bookkeeping();
   bookkeeping.rate_modulo = 5;
   bookkeeping.denominator = 7;
-  bookkeeping.src_pos_modulo = 3u;
+  bookkeeping.src_pos_modulo = 3;
   bookkeeping.gain.SetSourceGainWithRamp(-42.0f, zx::sec(1),
                                          fuchsia::media::audio::RampType::SCALE_LINEAR);
   EXPECT_TRUE(bookkeeping.gain.IsRamping());
 
   bookkeeping.Reset();
 
-  EXPECT_EQ(bookkeeping.rate_modulo, 5u);
-  EXPECT_EQ(bookkeeping.denominator, 7u);
-  EXPECT_EQ(bookkeeping.src_pos_modulo, 0u);
+  EXPECT_EQ(bookkeeping.rate_modulo, 5ull);
+  EXPECT_EQ(bookkeeping.denominator, 7ull);
+  EXPECT_EQ(bookkeeping.src_pos_modulo, 0ull);
 
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }

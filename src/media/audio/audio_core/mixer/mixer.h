@@ -63,25 +63,25 @@ class Mixer {
     // Advancing by a negative number of frames should be infrequent, but we do support it.
     void AdvanceRunningPositionsBy(int32_t dest_frames, Bookkeeping& bookkeeping) {
       next_dest_frame += dest_frames;
-      int32_t frac_src_increment = (dest_frames * bookkeeping.step_size);
+      int64_t source_frame_delta = static_cast<int64_t>(bookkeeping.step_size) * dest_frames;
 
       if (bookkeeping.denominator) {
-        // mod next_src_pos_modulo back UP into range, if our advance was negative in direction.
-        // This is only a few loops so it is more clear (negative modulo!) and comparable CPU-wise.
-        int32_t src_mod_increment = dest_frames * bookkeeping.rate_modulo;
-        while (src_mod_increment < 0) {
-          --frac_src_increment;
-          src_mod_increment += bookkeeping.denominator;
+        // mod next_src_pos_modulo up into range if advance was negative. This is more clear (avoids
+        // the error-prone negative modulo!) at negligible CPU cost.
+        int64_t src_pos_modulo_delta = static_cast<int64_t>(bookkeeping.rate_modulo) * dest_frames;
+        while (src_pos_modulo_delta < 0) {
+          --source_frame_delta;
+          src_pos_modulo_delta += bookkeeping.denominator;
         }
-        next_src_pos_modulo += src_mod_increment;
+        next_src_pos_modulo += src_pos_modulo_delta;
 
         // mod next_src_pos_modulo back down into range.
         if (next_src_pos_modulo >= bookkeeping.denominator) {
-          frac_src_increment += (next_src_pos_modulo / bookkeeping.denominator);
+          source_frame_delta += (next_src_pos_modulo / bookkeeping.denominator);
           next_src_pos_modulo %= bookkeeping.denominator;
         }
       }
-      next_frac_source_frame += Fixed::FromRaw(frac_src_increment);
+      next_frac_source_frame += Fixed::FromRaw(source_frame_delta);
     }
 
     // From current values, advance long-running positions to the specified absolute dest frame num.
@@ -103,6 +103,7 @@ class Mixer {
     TimelineFunction dest_frames_to_frac_source_frames;
 
     // Per-job state, used by the MixStage around a loop of potentially multiple calls to Mix().
+    // 32 bits is adequate: even at 192kHz the MixJob could be 6+ hours (is generally 10 ms).
     uint32_t frames_produced;
 
     // Maintained since the stream started, relative to dest or source reference clocks.
@@ -121,7 +122,7 @@ class Mixer {
 
     // This field is similar to src_pos_modulo and relates to the same rate_modulo and denominator.
     // It expresses the stream's long-running position modulo (whereas src_pos_modulo is per-Mix).
-    uint32_t next_src_pos_modulo = 0;
+    uint64_t next_src_pos_modulo = 0;
 
     // This field represents the difference between next_frac_souce_frame (maintained on a relative
     // basis after each Mix() call), and the clock-derived absolute source position (calculated from
@@ -182,21 +183,20 @@ class Mixer {
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
     // subsequent denominator) expresses leftover precision. When non-zero, rate_modulo and
-    // denominator express a fractional value of step_size unit that src position should advance,
-    // for each dest frame.
-    uint32_t rate_modulo = 0;
+    // denominator express a fractional value of the step_size unit that src position should
+    // advance, for each dest frame.
+    uint64_t rate_modulo = 0;
 
     // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
     // precedent rate_modulo) expresses leftover precision. When non-zero, rate_modulo and
-    // denominator express a fractional value of step_size unit that src position should advance,
-    // for each dest frame.
-    uint32_t denominator = 0;
+    // denominator express a fractional value of the step_size unit that src position should
+    // advance, for each dest frame.
+    uint64_t denominator = 0;
 
-    // If src_offset cannot perfectly express the source's position, this parameter (along with
+    // If frac_src_offset cannot perfectly express the source's position, this parameter (along with
     // denominator) expresses any leftover precision. When present, src_pos_modulo and denominator
-    // express a fractional value of src_offset unit that should be used when advancing src
-    // position.
-    uint32_t src_pos_modulo = 0;
+    // express a fractional value of the frac_src_offset unit to be used when src position advances.
+    uint64_t src_pos_modulo = 0;
 
     // This method resets the local position accounting (including gain ramping), but not the
     // long-running positions. This is called upon a source discontinuity.

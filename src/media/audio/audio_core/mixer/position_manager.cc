@@ -93,8 +93,8 @@ void PositionManager::SetDestValues(float* dest, uint32_t dest_frames, uint32_t*
   FX_DCHECK(dest_offset_ < dest_frames_);
 }
 
-void PositionManager::SetRateValues(uint32_t step_size, uint32_t rate_modulo, uint32_t denominator,
-                                    uint32_t* src_pos_mod) {
+void PositionManager::SetRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
+                                    uint64_t* src_pos_mod) {
   step_size_ = step_size;
   FX_DCHECK(step_size > 0);
 

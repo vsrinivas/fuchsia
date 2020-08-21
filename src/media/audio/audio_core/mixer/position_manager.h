@@ -34,8 +34,8 @@ class PositionManager {
   void SetSourceValues(const void* src_void, uint32_t frac_src_frames, int32_t* frac_src_offset);
   void SetDestValues(float* dest, uint32_t dest_frames, uint32_t* dest_offset);
   // Specify the rate parameters. If not called, a unity rate (1:1) is assumed.
-  void SetRateValues(uint32_t step_size, uint32_t rate_modulo, uint32_t denominator,
-                     uint32_t* src_pos_mod);
+  void SetRateValues(uint32_t step_size, uint64_t rate_modulo, uint64_t denominator,
+                     uint64_t* src_pos_mod);
 
   // Convenience method to retrieve the pointer to the first available source frame in this buffer.
   template <typename SrcSampleType>
@@ -108,10 +108,10 @@ class PositionManager {
   // If SetRateValues is never called, we successfully operate at 1:1 (without rate change).
   bool using_modulo_ = false;
   uint32_t step_size_ = Mixer::FRAC_ONE;
-  uint32_t rate_modulo_ = 0;
-  uint32_t denominator_ = 1;
-  uint32_t src_pos_modulo_ = 0;
-  uint32_t* src_pos_modulo_ptr_ = &src_pos_modulo_;
+  uint64_t rate_modulo_ = 0;
+  uint64_t denominator_ = 1;
+  uint64_t src_pos_modulo_ = 0;
+  uint64_t* src_pos_modulo_ptr_ = &src_pos_modulo_;
 };
 
 //

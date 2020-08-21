@@ -24,7 +24,7 @@ TEST(SourceInfoTest, Defaults) {
 
   EXPECT_EQ(info.next_dest_frame, 0);
   EXPECT_EQ(info.next_frac_source_frame, 0);
-  EXPECT_EQ(info.next_src_pos_modulo, 0u);
+  EXPECT_EQ(info.next_src_pos_modulo, 0ull);
   EXPECT_EQ(info.frac_source_error, 0);
 
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
@@ -61,7 +61,7 @@ TEST(SourceInfoTest, ResetPositions) {
   // Calculated directly from the TimelineFunction
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(1700));
   // Calculated from rate_modulo and deominator, starting at zero. (100*5)%7 = 3.
-  EXPECT_EQ(info.next_src_pos_modulo, 3u);
+  EXPECT_EQ(info.next_src_pos_modulo, 3ull);
   EXPECT_EQ(info.frac_source_error, 0);
 }
 
@@ -83,7 +83,7 @@ TEST(SourceInfoTest, UnaffectedByBookkeepingReset) {
 
   EXPECT_EQ(info.next_dest_frame, 13);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(11));
-  EXPECT_EQ(info.next_src_pos_modulo, 2u);
+  EXPECT_EQ(info.next_src_pos_modulo, 2ull);
   EXPECT_EQ(info.frac_source_error, Fixed::FromRaw(-17));
 }
 
@@ -118,7 +118,7 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
   // Thus expect new running src position: 12 frames, 21 subframes, position modulo 4.
   EXPECT_EQ(info.next_dest_frame, 11u);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(12) + Fixed::FromRaw(21));
-  EXPECT_EQ(info.next_src_pos_modulo, 4u);
+  EXPECT_EQ(info.next_src_pos_modulo, 4ull);
 }
 
 // Also validate AdvanceRunningPositions for negative offsets.
@@ -145,7 +145,7 @@ TEST(SourceInfoTest, NegativeAdvanceRunningPositionBy) {
   // frac_src advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
   EXPECT_EQ(info.next_dest_frame, 9u);
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(-8));
-  EXPECT_EQ(info.next_src_pos_modulo, 4u);
+  EXPECT_EQ(info.next_src_pos_modulo, 4ul);
 }
 
 }  // namespace
