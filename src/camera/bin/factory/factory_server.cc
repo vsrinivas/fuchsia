@@ -4,15 +4,13 @@
 
 #include "src/camera/bin/factory/factory_server.h"
 
-#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
-#include <fbl/unique_fd.h>
-#include <src/lib/files/directory.h>
-#include <src/lib/files/file.h>
-#include <src/lib/files/path.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 namespace camera {
 

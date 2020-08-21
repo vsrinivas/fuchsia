@@ -22,9 +22,13 @@ source_set("lib") {
 
   sources = [
     "capture.cc",
+    "capture.h",
     "factory_server.cc",
+    "factory_server.h",
     "streamer.cc",
+    "streamer.h",
     "web_ui.cc",
+    "web_ui.h",
   ]
 
   deps = [
