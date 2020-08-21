@@ -158,6 +158,9 @@ class ConnectivityManagerImpl final
 
   // Stop the service tunnel.
   void StopServiceTunnel(void);
+
+  // Stop the service tunnel with the specified error.
+  void StopServiceTunnel(WEAVE_ERROR err);
 };
 
 inline bool ConnectivityManagerImpl::_IsWiFiStationApplicationControlled(void) {

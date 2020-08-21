@@ -9,11 +9,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <memory>
-#include <src/lib/fsl/tasks/fd_waiter.h>
 #include <sys/select.h>
-#include <vector>
+
+#include <map>
+#include <memory>
+
 #include <Weave/Core/WeaveError.h>
+#include <src/lib/fsl/tasks/fd_waiter.h>
 
 #include "fidl/stack_impl.h"
 
@@ -38,13 +40,22 @@ class App {
   void ClearWaiters();
   void ClearFds();
   void FdHandler(zx_status_t status, uint32_t zero);
+  // Static handler to trampoline callbacks to an App instance.
+  // |fd| refers to an fd to be closed.
+  // |arg| is a pointer to the App instance.
+  static void TrampolineDoClose(int fd, intptr_t arg);
+  // DoClose will perform the required cleanup for the given
+  // |fd| before closing |fd|. Register DoClose as a pre-socket
+  // close handler which gets invoked, whenever openweave-core
+  // is about to close a socket.
+  void DoClose(int fd);
   struct {
     fd_set read_fds;
     fd_set write_fds;
     fd_set except_fds;
     int num_fds;
   } fds_;
-  std::vector<std::unique_ptr<fsl::FDWaiter>> waiters_;
+  std::map<int, std::unique_ptr<fsl::FDWaiter>> waiters_;
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   bool initialized_ = false;
   std::unique_ptr<async::TaskClosure> sleep_task_;

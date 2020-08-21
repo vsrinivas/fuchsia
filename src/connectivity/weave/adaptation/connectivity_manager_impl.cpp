@@ -76,8 +76,8 @@ WEAVE_ERROR ConnectivityManagerImpl::_SetServiceTunnelMode(ServiceTunnelMode val
 bool ConnectivityManagerImpl::_IsServiceTunnelConnected(void) {
   WeaveTunnelAgent::AgentState tunnel_state = ServiceTunnelAgent.GetWeaveTunnelAgentState();
   return (tunnel_state == WeaveTunnelAgent::kState_PrimaryTunModeEstablished ||
-            tunnel_state == WeaveTunnelAgent::kState_PrimaryAndBkupTunModeEstablished ||
-            tunnel_state == WeaveTunnelAgent::kState_BkupOnlyTunModeEstablished);
+          tunnel_state == WeaveTunnelAgent::kState_PrimaryAndBkupTunModeEstablished ||
+          tunnel_state == WeaveTunnelAgent::kState_BkupOnlyTunModeEstablished);
 }
 
 bool ConnectivityManagerImpl::_IsServiceTunnelRestricted(void) {
@@ -89,8 +89,8 @@ bool ConnectivityManagerImpl::_HaveServiceConnectivityViaTunnel(void) {
 }
 
 // ==================== ConnectivityManager Platform Internal Methods ====================
-void ConnectivityManagerImpl::HandleServiceTunnelNotification(WeaveTunnelConnectionMgr::TunnelConnNotifyReasons reason,
-            WEAVE_ERROR err, void *app_ctx) {
+void ConnectivityManagerImpl::HandleServiceTunnelNotification(
+    WeaveTunnelConnectionMgr::TunnelConnNotifyReasons reason, WEAVE_ERROR err, void* app_ctx) {
   bool new_tunnel_state = false;
   bool prev_tunnel_state = GetFlag(sInstance.flags_, kFlag_ServiceTunnelUp);
   bool is_restricted = false;
@@ -145,8 +145,8 @@ void ConnectivityManagerImpl::HandleServiceTunnelNotification(WeaveTunnelConnect
   service_event.ServiceConnectivityChange.ViaThread.Result = kConnectivity_NoChange;
   service_event.ServiceConnectivityChange.Overall.Result =
       ConnectivityMgr().HaveServiceConnectivityViaThread()
-      ? kConnectivity_NoChange
-      : service_event.ServiceConnectivityChange.ViaTunnel.Result;
+          ? kConnectivity_NoChange
+          : service_event.ServiceConnectivityChange.ViaTunnel.Result;
   PlatformMgr().PostEvent(&service_event);
 }
 
@@ -174,6 +174,11 @@ void ConnectivityManagerImpl::StopServiceTunnel(void) {
   ServiceTunnelAgent.StopServiceTunnel();
 }
 
+void ConnectivityManagerImpl::StopServiceTunnel(WEAVE_ERROR err) {
+  ClearFlag(flags_, kFlag_ServiceTunnelStarted);
+  ServiceTunnelAgent.StopServiceTunnel(err);
+}
+
 WEAVE_ERROR ConnectivityManagerImpl::_Init() {
   mServiceTunnelMode = kServiceTunnelMode_Enabled;
   flags_ = 0;
@@ -197,9 +202,8 @@ WEAVE_ERROR ConnectivityManagerImpl::_Init() {
 
 // Check if service tunnel should be started.
 bool ConnectivityManagerImpl::ShouldStartServiceTunnel() {
-  return (mServiceTunnelMode == kServiceTunnelMode_Enabled
-                        && ConfigurationMgr().IsMemberOfFabric()
-                        && ConfigurationMgr().IsServiceProvisioned());
+  return (mServiceTunnelMode == kServiceTunnelMode_Enabled &&
+          ConfigurationMgr().IsMemberOfFabric() && ConfigurationMgr().IsServiceProvisioned());
 }
 
 // Handle platform events.
@@ -207,13 +211,26 @@ void ConnectivityManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
   if (event == NULL) {
     return;
   }
-  switch(event->Type) {
+  switch (event->Type) {
     case DeviceEventType::kFabricMembershipChange:
     case DeviceEventType::kServiceProvisioningChange:
       if (ShouldStartServiceTunnel()) {
         StartServiceTunnel();
       } else {
         StopServiceTunnel();
+      }
+      break;
+    case DeviceEventType::kAccountPairingChange:
+      // When account pairing successfully completes, if the tunnel to the
+      // service is subject to routing restrictions (imposed because at the time
+      // the tunnel was established the device was not paired to an account)
+      // then force the tunnel to close.  This will result in the tunnel being
+      // re-established, which should lift the service-side restrictions.
+      if (event->AccountPairingChange.IsPairedToAccount &&
+          GetFlag(flags_, kFlag_ServiceTunnelStarted) && IsServiceTunnelRestricted()) {
+        FX_LOGS(INFO) << "Restarting service tunnel to lift routing restrictions";
+        StopServiceTunnel(WEAVE_ERROR_TUNNEL_FORCE_ABORT);
+        StartServiceTunnel();
       }
       break;
     default:

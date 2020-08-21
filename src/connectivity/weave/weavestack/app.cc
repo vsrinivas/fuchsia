@@ -18,9 +18,8 @@ using nl::Weave::DeviceLayer::PlatformMgrImpl;
 
 constexpr struct timeval MAX_SELECT_SLEEP_TIME = {.tv_sec = 10};
 
-App::App() :
-  stack_impl_(std::make_unique<StackImpl>(
-      PlatformMgrImpl().GetComponentContextForProcess())) {}
+App::App()
+    : stack_impl_(std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess())) {}
 
 App::~App() { Quit(); }
 
@@ -46,6 +45,30 @@ void App::Quit() {
   PlatformMgrImpl().ShutdownWeaveStack();
 }
 
+void App::TrampolineDoClose(int fd, intptr_t arg) {
+  if (arg == 0) {
+    FX_LOGS(ERROR) << "Invalid argument";
+    return;
+  }
+  App* app = reinterpret_cast<App*>(arg);
+  app->DoClose(fd);
+}
+
+void App::DoClose(int fd) {
+  if (fd <= 0) {
+    FX_LOGS(ERROR) << "Invalid fd: " << fd;
+    return;
+  }
+  if (waiters_.erase(fd) == 0) {
+    FX_LOGS(ERROR) << "Couldnt find fd " << fd << " in waiters_";
+    return;
+  }
+
+  FD_CLR(fd, &fds_.read_fds);
+  FD_CLR(fd, &fds_.write_fds);
+  FD_CLR(fd, &fds_.except_fds);
+}
+
 zx_status_t App::Init() {
   syslog::SetTags({"weavestack"});
 
@@ -61,6 +84,9 @@ zx_status_t App::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  PlatformMgrImpl().GetInetLayer().SetPlatformSocketCloseHandler(TrampolineDoClose,
+                                                                 reinterpret_cast<intptr_t>(this));
+
   sleep_task_ = std::make_unique<async::TaskClosure>([this] { FdHandler(ZX_OK, 0); });
 
   // The stack implementation should remain the last member to be fully
@@ -68,8 +94,7 @@ zx_status_t App::Init() {
   // is complete, potentially interacting with the rest of WeaveStack.
   zx_status_t status = stack_impl_->Init();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "StackImpl Init() failed with status = "
-                   << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "StackImpl Init() failed with status = " << zx_status_get_string(status);
     return status;
   }
 
@@ -84,7 +109,7 @@ zx_status_t App::WaitForFd(int fd, uint32_t events) {
   if (!waited) {
     FX_LOGS(ERROR) << "failed to wait for events on fd = " << fd;
   }
-  waiters_.emplace_back(std::move(waiter));
+  waiters_[fd] = std::move(waiter);
 
   return ZX_OK;
 }
