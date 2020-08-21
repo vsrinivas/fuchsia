@@ -284,11 +284,13 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader) {
   // Push the remaining mappings.
   uint64_t slice = 1;  // It's 1 indexed.
   for (const Extent& extent : extents) {
-    address_descriptor.mappings.push_back(
-        AddressMap{.source = extent.second,
-                   .target = format_info.GetSliceStart(slice),
-                   .count = extent.first.extent_length,
-                   .size = std::optional<uint64_t>(extent.first.slice_count * slice_size)});
+    AddressMap mapping = {.source = extent.second,
+                          .target = format_info.GetSliceStart(slice),
+                          .count = extent.first.extent_length,
+                          .size = extent.first.slice_count * slice_size};
+    mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
+
+    address_descriptor.mappings.push_back(std::move(mapping));
     slice += extent.first.slice_count;
   }
 

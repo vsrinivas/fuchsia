@@ -18,7 +18,7 @@
 namespace storage::volume_image {
 
 // Writer implementation that interacts reads from a file descriptor.
-class FdWriter final : Writer {
+class FdWriter final : public Writer {
  public:
   // On success returns a |FdWriter| from a file descriptor pointing to |path|, and whose name is
   // |path|.

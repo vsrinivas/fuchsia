@@ -14,6 +14,11 @@ import("//build/sdk/sdk_host_tool.gni")
 executable("fvm") {
   sources = [ "main.cc" ]
   deps = [
+    "//src/storage/volume_image/ftl:ftl-image",
+    "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
+    "//src/storage/volume_image/ftl:raw-nand-image-utils",
+    "//src/storage/volume_image/fvm:fvm-sparse-image",
+    "//src/storage/volume_image/utils:fd-io",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
