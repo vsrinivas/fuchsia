@@ -9,8 +9,9 @@ use {
     fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_MISCELLANEOUS},
     fidl_fuchsia_bluetooth_bredr::{
         ChannelParameters, ConnectParameters, ConnectionReceiverRequestStream, DataElement,
-        L2capParameters, ProtocolDescriptor, ProtocolIdentifier, SearchResultsRequestStream,
-        ServiceClassProfileIdentifier, ServiceDefinition, PSM_AVDTP,
+        L2capParameters, ProfileDescriptor, ProtocolDescriptor, ProtocolIdentifier,
+        SearchResultsRequest, SearchResultsRequestStream, ServiceClassProfileIdentifier,
+        ServiceDefinition, PSM_AVDTP,
     },
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{BredrPeerParameters, HciEmulatorProxy, PeerProxy},
@@ -20,7 +21,7 @@ use {
         types::Address,
         types::{PeerId, Uuid},
     },
-    futures::{FutureExt, StreamExt},
+    futures::{FutureExt, StreamExt, TryFutureExt},
 };
 
 use crate::{
@@ -44,11 +45,32 @@ fn service_definition_for_testing() -> ServiceDefinition {
     }
 }
 
+pub fn a2dp_sink_service_definition() -> ServiceDefinition {
+    ServiceDefinition {
+        service_class_uuids: Some(vec![Uuid::new16(0x110B).into()]), // Audio Sink UUID
+        protocol_descriptor_list: Some(vec![
+            ProtocolDescriptor {
+                protocol: ProtocolIdentifier::L2Cap,
+                params: vec![DataElement::Uint16(PSM_AVDTP)],
+            },
+            ProtocolDescriptor {
+                protocol: ProtocolIdentifier::Avdtp,
+                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
+            },
+        ]),
+        profile_descriptors: Some(vec![ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 2,
+        }]),
+        ..ServiceDefinition::new_empty()
+    }
+}
+
 fn add_service(profile: &ProfileHarness) -> Result<ConnectionReceiverRequestStream, anyhow::Error> {
     let service_defs = vec![service_definition_for_testing()];
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
-
     let _ = profile.aux().proxy().advertise(
         &mut service_defs.into_iter(),
         ChannelParameters::new_empty(),
@@ -62,7 +84,7 @@ async fn create_bredr_peer(proxy: &HciEmulatorProxy, address: Address) -> Result
         address: Some(address.into()),
         connectable: Some(true),
         device_class: Some(DeviceClass { value: MAJOR_DEVICE_CLASS_MISCELLANEOUS + 0 }),
-        service_definition: None,
+        service_definition: Some(vec![a2dp_sink_service_definition()]),
     };
 
     let (peer, remote) = fidl::endpoints::create_proxy()?;
@@ -84,14 +106,13 @@ async fn start_discovery(access: &AccessHarness) -> Result<ProcedureTokenProxy, 
     Ok(token)
 }
 
-async fn add_search(profile: &ProfileHarness) -> Result<SearchResultsRequestStream, Error> {
+async fn add_search(
+    profile: &ProfileHarness,
+    profileid: ServiceClassProfileIdentifier,
+) -> Result<SearchResultsRequestStream, Error> {
     let (results_client, results_stream) =
         create_request_stream().context("SearchResults creation")?;
-    profile.aux().proxy().search(
-        ServiceClassProfileIdentifier::AudioSource,
-        &[],
-        results_client,
-    )?;
+    profile.aux().proxy().search(profileid, &[], results_client)?;
     Ok(results_stream)
 }
 
@@ -150,32 +171,37 @@ async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error>
     }
 }
 
-async fn test_connect_peer(
-    (access, profile): (AccessHarness, ProfileHarness),
-) -> Result<(), Error> {
+async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> Result<(), Error> {
     let emulator = profile.aux().emulator().clone();
     let peer_address = default_address();
-    let _search_result = add_search(&profile).await?;
-    let _discovery_result = start_discovery(&access).await?;
+    let mut search_result = add_search(&profile, ServiceClassProfileIdentifier::AudioSink).await?;
     let _peer = create_bredr_peer(&emulator, peer_address).await?;
+    let _discovery_result = start_discovery(&access).await?;
 
     let state = access
         .when_satisfied(expectation::peer_with_address(peer_address), timeout_duration())
         .await?;
 
-    // We can safely unwrap here as this is guarded by the previous expectation
-    let peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
+    let conected_peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
 
-    let fidl_response = access.aux().connect(&mut peer_id.into());
+    let fidl_response = access.aux().connect(&mut conected_peer_id.into());
     fidl_response
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
-    access.when_satisfied(expectation::peer_connected(peer_id, true), timeout_duration()).await?;
+    access
+        .when_satisfied(expectation::peer_connected(conected_peer_id, true), timeout_duration())
+        .await?;
+
+    // The SDP search result conducted following connection should contain the
+    // peer ID of the created peer.
+    let service_found_fut = search_result.select_next_some().map_err(|e| format_err!("{:?}", e));
+    let SearchResultsRequest::ServiceFound { peer_id, .. } = service_found_fut.await?;
+    assert_eq!(conected_peer_id, peer_id.into());
+
     Ok(())
 }
 
-// TODO(BT-659): the rest of connect_l2cap tests (that acutally succeed)
-// TODO(BT-759): add_search / on_service_found
+// TODO(fxb/1252): the rest of connect_l2cap tests (that actually succeed)
 
 /// Run all test cases.
 pub fn run_all() -> Result<(), Error> {
@@ -186,7 +212,7 @@ pub fn run_all() -> Result<(), Error> {
             test_same_psm_twice_fails,
             test_add_and_remove_profile,
             test_connect_unknown_peer,
-            test_connect_peer
+            test_add_search
         ]
     )
 }
