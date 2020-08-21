@@ -4,9 +4,9 @@
 
 group("examples") {
   deps = [
-    "hello_experiences",
-    "localized_flutter",
-    "spinning_cube",
+    "hello_experiences:hello-experiences",
+    "localized_flutter:localized-flutter",
+    "spinning_cube:spinning-cube",
   ]
 }
 

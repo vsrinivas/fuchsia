@@ -2,25 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
 
-flutter_app("spinning_cube") {
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
-  main_dart = "lib/main.dart"
-
-  manifest = "pubspec.yaml"
-
-  meta = [
-    {
-      path = rebase_path("meta/spinning_cube.cmx")
-      dest = "spinning_cube.cmx"
-    },
+dart_library("lib") {
+  package_name = "spinning_cube"
+  sources = [ "main.dart", "spinning_cube_gem.dart" ]
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/vector_math",
   ]
+}
 
-  sources = [ "spinning_cube_gem.dart" ]
+flutter_component("component") {
+  component_name = "spinning-cube"
+  manifest = "meta/spinning_cube.cmx"
+  deps = [
+    ":lib"
+  ]
+}
 
-  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+fuchsia_package("spinning-cube") {
+  deps = [
+    ":component"
+  ]
+}
+
+# @TODO(fxb/58701): For purposes of soft transition.
+group("spinning_cube") {
+  deps = [ ":spinning-cube" ]
 }

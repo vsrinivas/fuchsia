@@ -4,7 +4,7 @@
 
 import("//build/dart/dart_library.gni")
 
-dart_library("localized_flutter_localization") {
+dart_library("localized-flutter-localization") {
   package_name = "localized_flutter_localization"
 
   disable_analysis = true

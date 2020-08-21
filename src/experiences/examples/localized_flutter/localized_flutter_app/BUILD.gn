@@ -2,27 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-flutter_app("localized_flutter_app") {
-  main_dart = "lib/main.dart"
+dart_library("lib") {
   package_name = "localized_flutter_app"
-
-  sources = []
-
+  sources = [
+    "main.dart",
+    "provider.dart",
+    "supported_locales.dart",
+    "localized_mod_localizations_delegate.dart",
+    "localized_mod_strings.dart",
+  ]
   deps = [
-    "//src/experiences/examples/localized_flutter/localized_flutter_localization",
+    "//src/experiences/examples/localized_flutter/localized_flutter_localization:localized-flutter-localization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/intl",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/localized_flutter_app.cmx")
-      dest = "localized_flutter_app.cmx"
-    },
+flutter_component("component") {
+  component_name = "localized-flutter-app"
+  manifest = "meta/localized_flutter_app.cmx"
+  deps = [
+    ":lib"
+  ]
+}
+
+fuchsia_package("localized-flutter-app") {
+  deps = [
+    ":component"
   ]
 }
 

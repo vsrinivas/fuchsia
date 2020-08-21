@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("localized_flutter") {
+group("localized-flutter") {
   public_deps = [
-    "localized_flutter_app",
-    "localized_flutter_localization",
+    "localized_flutter_app:localized-flutter-app",
+    "localized_flutter_localization:localized-flutter-localization",
   ]
 }
