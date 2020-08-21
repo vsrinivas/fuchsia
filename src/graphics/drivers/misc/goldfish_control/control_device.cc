@@ -48,15 +48,6 @@ struct CloseColorBufferCmd {
 constexpr uint32_t kOP_rcCloseColorBuffer = 10014;
 constexpr uint32_t kSize_rcCloseColorBuffer = 12;
 
-struct SetColorBufferVulkanModeCmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t id;
-  uint32_t mode;
-};
-constexpr uint32_t kOP_rcSetColorBufferVulkanMode = 10045;
-constexpr uint32_t kSize_rcSetColorBufferVulkanMode = 16;
-
 struct CreateBufferCmd {
   uint32_t op;
   uint32_t size;
@@ -72,6 +63,25 @@ struct CloseBufferCmd {
 };
 constexpr uint32_t kOP_rcCloseBuffer = 10050;
 constexpr uint32_t kSize_rcCloseBuffer = 12;
+
+struct SetColorBufferVulkanMode2Cmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t id;
+  uint32_t mode;
+  uint32_t memory_property;
+};
+constexpr uint32_t kOP_rcSetColorBufferVulkanMode2 = 10051;
+constexpr uint32_t kSize_rcSetColorBufferVulkanMode2 = 20;
+
+struct __attribute__((__packed__)) MapGpaToBufferHandleCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t id;
+  uint64_t gpa;
+};
+constexpr uint32_t kOP_rcMapGpaToBufferHandle = 10052;
+constexpr uint32_t kSize_rcMapGpaToBufferHandle = 20;
 
 zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   zx_info_handle_basic_t info;
@@ -274,7 +284,7 @@ void Control::CreateColorBuffer(zx::vmo vmo, uint32_t width, uint32_t height,
       fbl::MakeAutoCall([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseColorBufferLocked(id); });
 
   uint32_t result = 0;
-  status = SetColorBufferVulkanModeLocked(id, VULKAN_ONLY, &result);
+  status = SetColorBufferVulkanMode2Locked(id, VULKAN_ONLY, 0u /*memory_property*/, &result);
   if (status != ZX_OK || result) {
     zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
     completer.Close(status);
@@ -285,6 +295,92 @@ void Control::CreateColorBuffer(zx::vmo vmo, uint32_t width, uint32_t height,
   it->second = id;
   buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER;
   completer.Reply(ZX_OK);
+}
+
+void Control::CreateColorBuffer2(
+    zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
+    CreateColorBuffer2Completer::Sync completer) {
+  // Check argument validity.
+  if (!create_params.has_width() || !create_params.has_height() || !create_params.has_format() ||
+      !create_params.has_memory_property()) {
+    zxlogf(ERROR, "%s: invalid arguments: width? %d height? %d format? %d memory property? %d\n",
+           kTag, create_params.has_width(), create_params.has_height(), create_params.has_format(),
+           create_params.has_memory_property());
+    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
+    return;
+  }
+  if ((create_params.memory_property() &
+       llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) &&
+      !create_params.has_physical_address()) {
+    zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
+           create_params.memory_property());
+    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
+    return;
+  }
+
+  TRACE_DURATION("gfx", "Control::CreateColorBuffer2", "width", create_params.width(), "height",
+                 create_params.height(), "format", static_cast<uint32_t>(create_params.format()),
+                 "memory_property", create_params.memory_property());
+
+  zx_koid_t koid = GetKoidForVmo(vmo);
+  if (koid == ZX_KOID_INVALID) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  fbl::AutoLock lock(&lock_);
+
+  auto it = buffer_handles_.find(koid);
+  if (it == buffer_handles_.end()) {
+    completer.Reply(ZX_ERR_INVALID_ARGS, -1);
+    return;
+  }
+
+  if (it->second != kInvalidColorBuffer) {
+    completer.Reply(ZX_ERR_ALREADY_EXISTS, -1);
+    return;
+  }
+
+  uint32_t id;
+  zx_status_t status = CreateColorBufferLocked(create_params.width(), create_params.height(),
+                                               static_cast<uint32_t>(create_params.format()), &id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to create color buffer: %d", kTag, status);
+    completer.Close(status);
+    return;
+  }
+
+  auto close_color_buffer =
+      fbl::MakeAutoCall([this, id]() TA_NO_THREAD_SAFETY_ANALYSIS { CloseColorBufferLocked(id); });
+
+  uint32_t result = 0;
+  status =
+      SetColorBufferVulkanMode2Locked(id, VULKAN_ONLY, create_params.memory_property(), &result);
+  if (status != ZX_OK || result) {
+    zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
+    completer.Close(status);
+    return;
+  }
+
+  int32_t hw_address_page_offset = -1;
+  if (create_params.memory_property() &
+      llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE) {
+    uint32_t map_result = 0;
+    status = MapGpaToBufferHandleLocked(id, create_params.physical_address(), &map_result);
+    if (status != ZX_OK || map_result < 0) {
+      zxlogf(ERROR, "%s: failed to map gpa to color buffer: %d %d", kTag, status, map_result);
+      completer.Close(status);
+      return;
+    }
+
+    hw_address_page_offset = map_result;
+  }
+
+  close_color_buffer.cancel();
+  it->second = id;
+  buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::COLOR_BUFFER;
+
+  completer.Reply(ZX_OK, hw_address_page_offset);
 }
 
 void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) {
@@ -577,16 +673,31 @@ void Control::CloseBufferLocked(uint32_t id) {
   WriteLocked(kSize_rcCloseBuffer);
 }
 
-zx_status_t Control::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result) {
-  TRACE_DURATION("gfx", "Control::SetColorBufferVulkanMode", "id", id, "mode", mode);
+zx_status_t Control::SetColorBufferVulkanMode2Locked(uint32_t id, uint32_t mode,
+                                                     uint32_t memory_property, uint32_t* result) {
+  TRACE_DURATION("gfx", "Control::SetColorBufferVulkanMode2Locked", "id", id, "mode", mode,
+                 "memory_property", memory_property);
 
-  auto cmd = static_cast<SetColorBufferVulkanModeCmd*>(io_buffer_.virt());
-  cmd->op = kOP_rcSetColorBufferVulkanMode;
-  cmd->size = kSize_rcSetColorBufferVulkanMode;
+  auto cmd = static_cast<SetColorBufferVulkanMode2Cmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcSetColorBufferVulkanMode2;
+  cmd->size = kSize_rcSetColorBufferVulkanMode2;
   cmd->id = id;
   cmd->mode = mode;
+  cmd->memory_property = memory_property;
 
-  return ExecuteCommandLocked(kSize_rcSetColorBufferVulkanMode, result);
+  return ExecuteCommandLocked(kSize_rcSetColorBufferVulkanMode2, result);
+}
+
+zx_status_t Control::MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint32_t* result) {
+  TRACE_DURATION("gfx", "Control::MapGpaToBufferHandleLocked", "id", id, "gpa", gpa);
+
+  auto cmd = static_cast<MapGpaToBufferHandleCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcMapGpaToBufferHandle;
+  cmd->size = kSize_rcMapGpaToBufferHandle;
+  cmd->id = id;
+  cmd->gpa = gpa;
+
+  return ExecuteCommandLocked(kSize_rcMapGpaToBufferHandle, result);
 }
 
 void Control::RemoveHeap(Heap* heap) {

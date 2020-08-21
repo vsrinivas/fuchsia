@@ -48,6 +48,11 @@ class Control : public ControlType,
                          CreateColorBufferCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void CreateColorBuffer2(
+      zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
+      CreateColorBuffer2Completer::Sync completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
@@ -82,6 +87,9 @@ class Control : public ControlType,
   void CloseColorBufferLocked(uint32_t id) TA_REQ(lock_);
   zx_status_t SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result)
       TA_REQ(lock_);
+  zx_status_t SetColorBufferVulkanMode2Locked(uint32_t id, uint32_t mode, uint32_t memory_property,
+                                              uint32_t* result) TA_REQ(lock_);
+  zx_status_t MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint32_t* result) TA_REQ(lock_);
 
   fbl::Mutex lock_;
   fbl::ConditionVariable readable_cvar_;

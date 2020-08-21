@@ -18,6 +18,63 @@ enum ColorBufferFormatType : uint32 {
     BGRA = 0x80E1;
 };
 
+/// Memory property flags for color buffers and data buffers.
+///
+/// `MEMORY_PROPERTY_DEVICE_LOCAL` corresponds to Vulkan's memory property
+/// `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`. Memory allocated with this type
+/// is the most efficient for device access.
+const uint32 MEMORY_PROPERTY_DEVICE_LOCAL = 0x00000001;
+/// `MEMORY_PROPERTY_HOST_VISIBLE` corresponds to Vulkan's memory property
+/// `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`. Memory allocated with this type
+/// can be mapped for host access using `vkMapMemory()`.
+const uint32 MEMORY_PROPERTY_HOST_VISIBLE = 0x00000002;
+
+/// Input arguments of `ControlDevice.CreateColorBuffer2()` method.
+/// Includes necessary properties of a Vulkan-backed color buffer.
+table CreateColorBuffer2Params {
+    /// Width of the color buffer (unit: pixel).
+    ///
+    /// This argument is mandatory. `CreateColorBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `width` is missing.
+    1: uint32 width;
+
+    /// Height of the color buffer (unit: pixel).
+    ///
+    /// This argument is mandatory. `CreateColorBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `height` is missing.
+    2: uint32 height;
+
+    /// Color format type of the color buffer.
+    ///
+    /// This argument is mandatory. `CreateColorBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `format` is missing.
+    3: ColorBufferFormatType format;
+
+    /// Memory property flags the color buffer should support. Only bits
+    /// from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
+    ///
+    /// This argument is mandatory. `CreateColorBuffer2()` method returns
+    /// `ZX_ERR_INVALID_ARGS` if `memory_property` is missing.
+    4: uint32 memory_property;
+
+    /// Goldfish address space device allocates a physical memory address
+    /// for each host-visible color buffer. This address is mapped to a
+    /// corresponding hardware address when that host-visible
+    /// color buffer is created, and is unmapped when the color buffer is
+    /// torn down.
+    ///
+    /// This field stores the physical memory address allocated by address
+    /// space device.
+    ///
+    /// If `memory_property` has the bit `MEMORY_PROPERTY_HOST_VISIBLE` set,
+    /// this argument is mandatory. If `physical_address` is missing,
+    /// `CreateColorBuffer2()` returns `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// If `memory_property` doesn't have the `MEMORY_PROPERTY_HOST_VISIBLE`
+    /// bit, this argument is ignored.
+    5: uint64 physical_address;
+};
+
 /// Interface for the Goldfish control driver providing color buffers and
 /// data buffers.
 protocol ControlDevice {
@@ -27,11 +84,37 @@ protocol ControlDevice {
     ///
     /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
     /// already been created for this VMO.
+    ///
+    /// This method is deprecated. Please use CreateColorBuffer2 instead.
+    [Deprecated, Transitional]
     CreateColorBuffer(zx.handle:VMO vmo,
                       uint32 width,
                       uint32 height,
                       ColorBufferFormatType format)
         -> (zx.status res);
+
+    /// Create shared color buffer. Color buffer is automatically freed when
+    /// all references to `vmo` have been closed. Fails if VMO is not
+    /// associated with goldfish heap memory.
+    ///
+    /// Arguments
+    ///     Refer to `CreateColorBuffer2Params` for input arguments.
+    ///
+    /// Return value
+    ///     `res`: `ZX_ERR_ALREADY_EXISTS` if a buffer or color buffer has
+    ///               already been created for this VMO.
+    ///            `ZX_ERR_INVALID_ARGS` if arguments are invalid.
+    ///               (see `CreateColorBuffer2Params`)
+    ///            Otherwise returns `ZX_OK`.
+    ///     `hw_address_page_offset`: memory page offset of the buffer's
+    ///            hardware-mapped memory. For color buffers with HOST_VISIBLE
+    ///            memory property bits, this value is a non-negative
+    ///            integer in [0, 4095]. For non-HOST_VISIBLE memory or
+    ///            failed allocation, this value is negative.
+    [Transitional]
+    CreateColorBuffer2(zx.handle:VMO vmo,
+                       CreateColorBuffer2Params create_params)
+        -> (zx.status res, int32 hw_address_page_offset);
 
     /// Create shared data buffer. Buffer is automatically freed when
     /// all references to `vmo` have been closed. Fails if VMO is not
@@ -44,7 +127,7 @@ protocol ControlDevice {
     /// Get color buffer for VMO. Fails if VMO is not associated with a color
     /// buffer.
     ///
-    /// This method is deprecated. Please use |GetBufferHandle| instead.
+    /// This method is deprecated. Please use `GetBufferHandle` instead.
     [Deprecated]
     GetColorBuffer(zx.handle:VMO vmo) -> (zx.status res, uint32 id);
 

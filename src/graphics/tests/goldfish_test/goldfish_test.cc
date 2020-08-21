@@ -359,6 +359,159 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   }
 }
 
+// In this test case we test arguments of CreateColorBuffer2() method.
+// If a mandatory field is missing, it should return "ZX_ERR_INVALID_ARGS".
+TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
+  // Setup control device.
+  int control_device_fd = open("/dev/class/goldfish-control/000", O_RDWR);
+  EXPECT_GE(control_device_fd, 0);
+
+  zx::channel control_channel;
+  EXPECT_EQ(fdio_get_service_handle(control_device_fd, control_channel.reset_and_get_address()),
+            ZX_OK);
+
+  // ----------------------------------------------------------------------//
+  // Setup sysmem allocator and buffer collection.
+  zx::channel allocator_client;
+  zx::channel allocator_server;
+  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
+  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
+            ZX_OK);
+
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
+  zx::channel token_client;
+  zx::channel token_server;
+  EXPECT_EQ(zx::channel::create(0, &token_client, &token_server), ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server)).ok());
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  EXPECT_EQ(zx::channel::create(0, &collection_client, &collection_server), ZX_OK);
+  EXPECT_TRUE(
+      allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
+
+  // ----------------------------------------------------------------------//
+  // Use device local heap which only *registers* the koid of vmo to control
+  // device.
+  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
+      .min_size_bytes = 4 * 1024,
+      .max_size_bytes = 4 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = false,
+      .inaccessible_domain_supported = true,
+      .heap_permitted_count = 1,
+      .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
+
+  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
+
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection.WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
+  EXPECT_TRUE(vmo.is_valid());
+
+  EXPECT_TRUE(collection.Close().ok());
+
+  // ----------------------------------------------------------------------//
+  // Try creating color buffer.
+  zx::vmo vmo_copy;
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+
+  {
+    // Verify that a CreateColorBuffer2() call without width will fail.
+    EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            // Without width
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+    EXPECT_LT(result.Unwrap()->hw_address_page_offset, 0);
+  }
+
+  {
+    // Verify that a CreateColorBuffer2() call without height will fail.
+    EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            // Without height
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+    EXPECT_LT(result.Unwrap()->hw_address_page_offset, 0);
+  }
+
+  {
+    // Verify that a CreateColorBuffer2() call without color format will fail.
+    EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            // Without format
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_DEVICE_LOCAL))
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+    EXPECT_LT(result.Unwrap()->hw_address_page_offset, 0);
+  }
+
+  {
+    // Verify that a CreateColorBuffer2() call without memory property will fail.
+    EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            // Without memory property
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+    EXPECT_LT(result.Unwrap()->hw_address_page_offset, 0);
+  }
+}
+
 // In this test case we call GetColorBuffer() on a vmo
 // registered to the control device but we haven't created
 // the color buffer yet.
@@ -561,6 +714,199 @@ TEST(GoldfishAddressSpaceTests, GoldfishAddressSpaceTest) {
     auto result = asd_child.UnclaimSharedBlock(0);
     ASSERT_TRUE(result.ok());
     EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+  }
+}
+
+// This is a test case testing goldfish Heap, control device, address space
+// device, and host implementation of host-visible memory allocation.
+//
+// This test case using a device-local Heap and a pre-allocated address space
+// block to simulate a host-visible sysmem Heap. It does the following things:
+//
+// 1) It allocates a memory block (vmo = |address_space_vmo| and gpa =
+//    |physical_addr|) from address space device.
+//
+// 2) It allocates an vmo (vmo = |vmo|) from the goldfish device-local Heap
+//    so that |vmo| is registered for color buffer creation.
+//
+// 3) It calls goldfish Control FIDL API to create a color buffer using |vmo|.
+//    and maps memory to |physical_addr|.
+//
+// 4) The color buffer creation and memory process should work correctly, and
+//    heap offset should be a non-negative value.
+//
+TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
+  // Setup control device.
+  int control_device_fd = open("/dev/class/goldfish-control/000", O_RDWR);
+  EXPECT_GE(control_device_fd, 0);
+
+  zx::channel control_channel;
+  EXPECT_EQ(fdio_get_service_handle(control_device_fd, control_channel.reset_and_get_address()),
+            ZX_OK);
+
+  // ----------------------------------------------------------------------//
+  // Setup sysmem allocator and buffer collection.
+  zx::channel allocator_client;
+  zx::channel allocator_server;
+  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
+  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
+            ZX_OK);
+
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
+  zx::channel token_client;
+  zx::channel token_server;
+  EXPECT_EQ(zx::channel::create(0, &token_client, &token_server), ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server)).ok());
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  EXPECT_EQ(zx::channel::create(0, &collection_client, &collection_server), ZX_OK);
+  EXPECT_TRUE(
+      allocator.BindSharedCollection(std::move(token_client), std::move(collection_server)).ok());
+
+  // ----------------------------------------------------------------------//
+  // Setup address space driver.
+  int address_space_fd = open("/dev/class/goldfish-address-space/000", O_RDWR);
+  EXPECT_GE(address_space_fd, 0);
+
+  zx::channel parent_channel;
+  EXPECT_EQ(fdio_get_service_handle(address_space_fd, parent_channel.reset_and_get_address()),
+            ZX_OK);
+
+  zx::channel child_channel;
+  zx::channel child_channel2;
+  EXPECT_EQ(zx::channel::create(0, &child_channel, &child_channel2), ZX_OK);
+
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::SyncClient asd_parent(
+      std::move(parent_channel));
+  {
+    auto result = asd_parent.OpenChildDriver(
+        llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType::DEFAULT,
+        std::move(child_channel));
+    ASSERT_TRUE(result.ok());
+  }
+
+  // Allocate device memory block using address space device.
+  constexpr uint64_t kHeapSize = 32768ULL;
+
+  llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient asd_child(
+      std::move(child_channel2));
+  uint64_t physical_addr = 0;
+  zx::vmo address_space_vmo;
+  {
+    auto result = asd_child.AllocateBlock(kHeapSize);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+
+    physical_addr = result.Unwrap()->paddr;
+    EXPECT_NE(physical_addr, 0);
+
+    address_space_vmo = std::move(result.Unwrap()->vmo);
+    EXPECT_EQ(address_space_vmo.is_valid(), true);
+    uint64_t actual_size = 0;
+    EXPECT_EQ(address_space_vmo.get_size(&actual_size), ZX_OK);
+    EXPECT_GE(actual_size, kHeapSize);
+  }
+
+  // ----------------------------------------------------------------------//
+  // Use device local heap which only *registers* the koid of vmo to control
+  // device.
+  llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
+      .min_size_bytes = 4 * 1024,
+      .max_size_bytes = 4 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = false,
+      .inaccessible_domain_supported = true,
+      .heap_permitted_count = 1,
+      .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
+
+  llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
+
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection.WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
+  EXPECT_TRUE(vmo.is_valid());
+
+  EXPECT_TRUE(collection.Close().ok());
+
+  // ----------------------------------------------------------------------//
+  // Creates color buffer and map host memory.
+  zx::vmo vmo_copy;
+  EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(control_channel));
+  {
+    // Verify that a CreateColorBuffer2() call with host-visible memory property,
+    // but without physical address will fail.
+    auto create_info =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(
+                llcpp::fuchsia::hardware::goldfish::MEMORY_PROPERTY_HOST_VISIBLE))
+            // Without physical address
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_info));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_ERR_INVALID_ARGS);
+    EXPECT_LT(result.Unwrap()->hw_address_page_offset, 0);
+  }
+
+  EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
+  {
+    auto create_params =
+        llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Builder(
+            std::make_unique<llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params::Frame>())
+            .set_width(std::make_unique<uint32_t>(64))
+            .set_height(std::make_unique<uint32_t>(64))
+            .set_format(std::make_unique<llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType>(
+                llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::BGRA))
+            .set_memory_property(std::make_unique<uint32_t>(0x02u))
+            .set_physical_address(std::make_unique<uint64_t>(physical_addr))
+            .build();
+    auto result = control.CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
+
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_GE(result.Unwrap()->hw_address_page_offset, 0);
+  }
+
+  // Verify if the color buffer works correctly.
+  zx::vmo vmo_copy2;
+  EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy2), ZX_OK);
+  {
+    auto result = control.GetColorBuffer(std::move(vmo_copy2));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
+    EXPECT_NE(result.Unwrap()->id, 0u);
+  }
+
+  // Cleanup.
+  {
+    auto result = asd_child.DeallocateBlock(physical_addr);
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->res, ZX_OK);
   }
 }
 
