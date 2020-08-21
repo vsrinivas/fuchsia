@@ -220,91 +220,91 @@ shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 # Note that Zircon toolchains and non-Zircon ones have a very different set
 # of default configs for all target types.
 if (zircon_toolchain == false) {
-# All binary targets will get this list of configs by default.
-default_common_binary_configs = [
-  "//build/config:compiler",
-  "//build/config:language",
-  "//build/config:relative_paths",
-  "//build/config:default_frame_pointers",
-  "//build/config:default_include_dirs",
-  "//build/config:default_linker_gc",
-  "//build/config:default_optimize",
-  "//build/config:default_debuginfo",
-  "//build/config:default_warnings",
-  "//build/config:no_exceptions",
-  "//build/config:no_rtti",
-  "//build/config:symbol_visibility_hidden",
-  "//build/config:rust_edition_2018",
-  "//build/config:rust_no_features",
-  "//build/config:rust_target",
-  "//build/config:rust_2018_idioms",
-  "//build/config:werror",
-]
-
-if (is_analysis) {
-  default_common_binary_configs += [ "//build/config:rust_analysis" ]
-}
-
-if (is_debug) {
-  default_common_binary_configs += [ "//build/config:debug" ]
-} else {
-  default_common_binary_configs += [ "//build/config:release" ]
-}
-
-if (is_fuchsia) {
-  default_common_binary_configs += [
-    "//build/config/fuchsia:auto_var_init",
-    "//build/config/fuchsia:large_rust_stack",
-    "//build/config/fuchsia:thread_safety_annotations",
-    "//build/config:icf",
-    "//build/config:rust_panic_abort",
-    "//build/config:rust_v0_symbol_mangling",
-
-    # TODO(mcgrathr): Perhaps restrict this to only affected code.
-    # For now, safest to do it everywhere.
-    "//build/config/fuchsia:zircon_asserts",
+  # All binary targets will get this list of configs by default.
+  default_common_binary_configs = [
+    "//build/config:compiler",
+    "//build/config:language",
+    "//build/config:relative_paths",
+    "//build/config:default_frame_pointers",
+    "//build/config:default_include_dirs",
+    "//build/config:default_linker_gc",
+    "//build/config:default_optimize",
+    "//build/config:default_debuginfo",
+    "//build/config:default_warnings",
+    "//build/config:no_exceptions",
+    "//build/config:no_rtti",
+    "//build/config:symbol_visibility_hidden",
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_no_features",
+    "//build/config:rust_target",
+    "//build/config:rust_2018_idioms",
+    "//build/config:werror",
   ]
-}
 
-if (is_mac) {
-  default_common_binary_configs += [ "//build/config/mac:compiler" ]
-}
-if (is_linux) {
-  default_common_binary_configs += [ "//build/config/linux:compiler" ]
-}
+  if (is_analysis) {
+    default_common_binary_configs += [ "//build/config:rust_analysis" ]
+  }
 
-default_common_binary_configs += [ "//build/config/lto:default" ]
+  if (is_debug) {
+    default_common_binary_configs += [ "//build/config:debug" ]
+  } else {
+    default_common_binary_configs += [ "//build/config:release" ]
+  }
 
-# Add and remove configs specified by the variant.
-default_common_binary_configs += toolchain_variant.configs
-default_common_binary_configs -= toolchain_variant.remove_common_configs
+  if (is_fuchsia) {
+    default_common_binary_configs += [
+      "//build/config/fuchsia:auto_var_init",
+      "//build/config/fuchsia:large_rust_stack",
+      "//build/config/fuchsia:thread_safety_annotations",
+      "//build/config:icf",
+      "//build/config:rust_panic_abort",
+      "//build/config:rust_v0_symbol_mangling",
 
-default_shared_library_configs = default_common_binary_configs + [
-                                    "//build/config:shared_library_config",
-                                    "//build/config:symbol_no_undefined",
-                                  ]
-default_shared_library_configs -= toolchain_variant.remove_shared_configs
+      # TODO(mcgrathr): Perhaps restrict this to only affected code.
+      # For now, safest to do it everywhere.
+      "//build/config/fuchsia:zircon_asserts",
+    ]
+  }
 
-default_executable_configs = default_common_binary_configs + [
-                                "//build/config:executable_config",
-                                "//build/config:default_libs",
-                              ]
+  if (is_mac) {
+    default_common_binary_configs += [ "//build/config/mac:compiler" ]
+  }
+  if (is_linux) {
+    default_common_binary_configs += [ "//build/config/linux:compiler" ]
+  }
 
-# These configs are added here so that they can later be removed from default
-# configs for targets which do not need them. This cannot be done when the
-# configs are added transitively.
-if (current_os == "fuchsia") {
-  default_executable_configs += [ "//build/config/fuchsia:fdio_config" ]
+  default_common_binary_configs += [ "//build/config/lto:default" ]
 
-  # TODO(57585): Enable this for shared and (non-rlib) static libraries as well.
-  default_executable_configs +=
-      [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-}
-default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
+  # Add and remove configs specified by the variant.
+  default_common_binary_configs += toolchain_variant.configs
+  default_common_binary_configs -= toolchain_variant.remove_common_configs
 
-if (toolchain_variant.is_pic_default) {
-  default_common_binary_configs += [ "//build/config:shared_library_config" ]
-}
+  default_shared_library_configs = default_common_binary_configs + [
+                                     "//build/config:shared_library_config",
+                                     "//build/config:symbol_no_undefined",
+                                   ]
+  default_shared_library_configs -= toolchain_variant.remove_shared_configs
+
+  default_executable_configs = default_common_binary_configs + [
+                                 "//build/config:executable_config",
+                                 "//build/config:default_libs",
+                               ]
+
+  # These configs are added here so that they can later be removed from default
+  # configs for targets which do not need them. This cannot be done when the
+  # configs are added transitively.
+  if (current_os == "fuchsia") {
+    default_executable_configs += [ "//build/config/fuchsia:fdio_config" ]
+
+    # TODO(57585): Enable this for shared and (non-rlib) static libraries as well.
+    default_executable_configs +=
+        [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+  }
+  default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
+
+  if (toolchain_variant.is_pic_default) {
+    default_common_binary_configs += [ "//build/config:shared_library_config" ]
+  }
 } else {
   # This list is adapted from the `standard_configs` list defined in
   # //zircon/public/gn/config/standard.gni
