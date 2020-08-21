@@ -82,13 +82,13 @@ impl ToSelectorArguments for ComponentSelector {
 
 /// Utility for reading inspect data of a running component using the injected observer.cmx Archive
 /// Reader service.
+#[derive(Clone)]
 pub struct ArchiveReader {
     archive: Option<ArchiveAccessorProxy>,
     selectors: Vec<String>,
     should_retry: bool,
     minimum_schema_count: usize,
     timeout: Option<Duration>,
-    excluded_urls: Vec<String>,
 }
 
 impl ArchiveReader {
@@ -102,7 +102,6 @@ impl ArchiveReader {
             should_retry: true,
             archive: None,
             minimum_schema_count: 1,
-            excluded_urls: vec![],
         }
     }
 
@@ -120,17 +119,6 @@ impl ArchiveReader {
     /// Requests to retry when an empty result is received.
     pub fn retry_if_empty(mut self, retry: bool) -> Self {
         self.should_retry = retry;
-        self
-    }
-
-    /// Exclude diagnostics from components matching the provided `url`.
-    ///
-    /// Note that calling this and `with_minimum_schema_count` on the same reader will increase
-    /// the minimum schema count by one for each URL provided. In other words this method creates
-    /// the expectation that the diagnostics data will be received in order to ignore it.
-    // TODO(fxbug.dev/58353) implement moniker filtering
-    pub fn without_url(mut self, url: impl ToString) -> Self {
-        self.excluded_urls.push(url.to_string());
         self
     }
 
@@ -160,19 +148,13 @@ impl ArchiveReader {
         self
     }
 
-    fn minimum_count(&self) -> usize {
-        self.minimum_schema_count + self.excluded_urls.len()
-    }
-
     /// Connects to the ArchiveAccessor and returns data matching provided selectors.
     pub async fn snapshot<T>(&self) -> Result<Vec<Data<String, T::Metadata>>, Error>
     where
         T: BatchIteratorType,
     {
         let raw_json = self.snapshot_raw(T::data_type()).await?;
-        let mut data: Vec<Data<String, T::Metadata>> = serde_json::from_value(raw_json)?;
-        data.retain(|d| self.excluded_urls.iter().all(|u| T::component_url(&d.metadata) != u));
-        Ok(data)
+        Ok(serde_json::from_value(raw_json)?)
     }
 
     /// Use `snapshot::<Inspect>()` instead for identical functionality.
@@ -202,7 +184,7 @@ impl ArchiveReader {
             let iterator = self.batch_iterator(data_type, StreamMode::Snapshot)?;
             drain_batch_iterator(iterator, &mut result).await?;
 
-            if result.len() < self.minimum_count() && self.should_retry {
+            if result.len() < self.minimum_schema_count && self.should_retry {
                 fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
             } else {
                 return Ok(result);

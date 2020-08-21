@@ -1,66 +1,97 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use anyhow::Error;
-use diagnostics_reader::ArchiveReader;
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
-use fidl_fuchsia_diagnostics_test::ControllerMarker;
+use diagnostics_data::InspectData;
+use diagnostics_reader::{ArchiveReader, ComponentSelector};
+use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
-use fidl_fuchsia_sys::{EnvironmentControllerProxy, LauncherMarker};
+use fidl_fuchsia_sys::{ComponentControllerEvent::*, LauncherProxy};
 use fuchsia_async::Task;
 use fuchsia_component::{
-    client::{connect_to_service, launch_with_options, App, ExitStatus, LaunchOptions},
-    server::{ServiceFs, ServiceObj},
+    client::{launch_with_options, App, LaunchOptions},
+    server::ServiceFs,
 };
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
-use futures::{channel::mpsc, StreamExt};
-use std::ops::Deref;
+use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_zircon as zx;
+use futures::{channel::mpsc, prelude::*};
 
 pub use diagnostics_data::LifecycleType;
 pub use diagnostics_reader::{Inspect, Lifecycle};
 
-/// An instance of [`fuchsia_component::client::App`] which will have all its logs and inspect
-/// collected.
-pub struct AppWithDiagnostics {
-    app: App,
+const ARCHIVIST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
+
+pub struct EnvWithDiagnostics {
+    launcher: LauncherProxy,
     archivist: App,
-    recv_logs: mpsc::UnboundedReceiver<LogMessage>,
-    env_proxy: EnvironmentControllerProxy,
+    archive: ArchiveAccessorProxy,
     _env_task: Task<()>,
-    _listen_task: Task<()>,
+    listeners: Vec<Task<()>>,
 }
 
-const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx";
+impl EnvWithDiagnostics {
+    /// Construct a new nested environment with a diagnostics archivist. Requires access to the
+    /// `fuchsia.sys.Launcher` protocol.
+    // TODO(fxbug.dev/58351) cooperate with run-test-component to avoid double-spawning archivist
+    pub async fn new() -> Self {
+        let mut fs = ServiceFs::new();
+        let env = fs.create_salted_nested_environment("diagnostics").unwrap();
+        let launcher = env.launcher().clone();
+        let _env_task = Task::spawn(async move {
+            let _env = env; // move env into the task so it stays alive
+            fs.collect::<()>().await
+        });
 
-impl AppWithDiagnostics {
-    /// Launch the app from the given URL with the given arguments in the named realm, collecting
-    /// its diagnostics.
-    pub fn launch(realm: impl ToString, url: impl ToString, args: Option<Vec<String>>) -> Self {
-        Self::launch_with_options(realm, url, args, LaunchOptions::new())
+        let archivist =
+            launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, LaunchOptions::new())
+                .unwrap();
+        let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+
+        let mut archivist_events = archivist.controller().take_event_stream();
+        if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
+            panic!("archivist terminated early");
+        }
+
+        Self { archivist, archive, launcher, _env_task, listeners: vec![] }
     }
 
-    /// Launch the app from the given URL with the given arguments and launch options in the
-    /// named realm, collecting its diagnostics.
+    /// Launch the app from the given URL with the given arguments, collecting its diagnostics.
+    /// Returns a reader for the component's diagnostics.
+    pub fn launch(&self, url: &str, args: Option<Vec<String>>) -> Launched {
+        self.launch_with_options(url, args, LaunchOptions::new())
+    }
+
+    /// Launch the app from the given URL with the given arguments and launch options, collecting
+    /// its diagnostics. Returns a reader for the component's diagnostics.
     pub fn launch_with_options(
-        realm: impl ToString,
-        url: impl ToString,
+        &self,
+        url: &str,
         args: Option<Vec<String>>,
         launch_options: LaunchOptions,
-    ) -> Self {
-        let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    ) -> Launched {
+        let url = PkgUrl::parse(url).unwrap();
+        let manifest = url.resource().unwrap().rsplit('/').next().unwrap();
+        let reader = self.reader_for(manifest, &[]);
+        let app =
+            launch_with_options(&self.launcher, url.to_string(), args, launch_options).unwrap();
+        Launched { app, reader }
+    }
 
-        // we need an archivist to collect the diagnostics from the nested realm we make below
-        let archivist = launch_with_options(
-            &launcher,
-            ARCHIVIST_URL.to_owned(),
-            // the log connector api is challenging to integrate with the stop api
-            Some(vec!["--disable-log-connector".to_owned()]),
-            LaunchOptions::new(),
-        )
-        .unwrap();
+    /// Returns the writer-half of a syslog socket, the reader half of which has been sent to
+    /// the embedded archivist. The embedded archivist expects to receive logs in the legacy
+    /// wire format. Pass this socket to [`fuchsia_syslog::init_with_socket_and_name`] to send
+    /// the invoking component's logs to the embedded archivist.
+    pub fn legacy_log_socket(&self) -> zx::Socket {
+        let sink = self.archivist.connect_to_service::<LogSinkMarker>().unwrap();
+        let (tx, rx) = zx::Socket::create(zx::SocketOpts::empty()).unwrap();
+        sink.connect(rx).unwrap();
+        tx
+    }
 
+    pub fn listen_to_logs(&mut self) -> impl Stream<Item = LogMessage> {
         // start listening
-        let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+        let log_proxy = self.archivist.connect_to_service::<LogMarker>().unwrap();
         let mut options = LogFilterOptions {
             filter_by_pid: false,
             pid: 0,
@@ -71,99 +102,61 @@ impl AppWithDiagnostics {
             tags: vec![],
         };
         let (send_logs, recv_logs) = mpsc::unbounded();
-        let _listen_task = Task::spawn(async move {
+        let listener = Task::spawn(async move {
             run_log_listener_with_proxy(&log_proxy, send_logs, Some(&mut options), false, None)
                 .await
                 .unwrap();
         });
 
-        // start the component
-        let realm_label = realm.to_string();
-        let dir_req = archivist.directory_request().clone();
-        let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
-        let (env_proxy, app) = fs
-            .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
-            .launch_component_in_nested_environment_with_options(
-                url.to_string(),
-                args,
-                launch_options,
-                &realm_label,
-            )
-            .unwrap();
-        let _env_task = Task::spawn(Box::pin(async move {
-            fs.collect::<()>().await;
-        }));
-
-        Self { app, archivist, recv_logs, env_proxy, _env_task, _listen_task }
+        self.listeners.push(listener);
+        recv_logs.filter(|m| {
+            let from_archivist = m.tags.iter().any(|t| t == "archivist");
+            async move { !from_archivist }
+        })
     }
 
-    pub fn reader(&self) -> ArchiveReader {
-        let archive = self.archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
-        ArchiveReader::new().with_archive(archive).without_url(ARCHIVIST_URL)
-    }
-
-    /// Returns once the component with `moniker` has started.
-    pub async fn until_has_started(&self, moniker: &str) -> Result<(), Error> {
-        self.until_all_have_started(&[moniker]).await
-    }
-
-    /// Returns once all the components in `monikers` have started.
-    pub async fn until_all_have_started(&self, monikers: &[&str]) -> Result<(), Error> {
-        loop {
-            let lifecycle = self.reader().snapshot::<Lifecycle>().await?;
-            if monikers.iter().all(|moniker| {
-                lifecycle
-                    .iter()
-                    .filter(|e| e.metadata.lifecycle_event_type == LifecycleType::Started)
-                    .any(|e| e.moniker.ends_with(moniker))
-            }) {
-                return Ok(());
-            }
-        }
-    }
-
-    /// Kill the running component. Differs from [`fuchsia_component::client::App`] in that it also
-    /// returns a future which waits for the component to exit.
-    pub async fn kill(mut self) -> (ExitStatus, Vec<LogMessage>) {
-        self.app.kill().unwrap();
-        self.wait().await
-    }
-
-    /// Wait until the running component has terminated, returning its exit status and logs.
-    pub async fn wait(mut self) -> (ExitStatus, Vec<LogMessage>) {
-        // wait for logging_component to die
-        let status = self.app.wait().await.unwrap();
-
-        // kill environment before stopping archivist.
-        self.env_proxy.kill().await.unwrap();
-
-        // connect to controller and call stop
-        let controller = self.archivist.connect_to_service::<ControllerMarker>().unwrap();
-        controller.stop().unwrap();
-
-        // collect all logs
-        let mut logs = self
-            .recv_logs
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .filter(|m| !m.tags.iter().any(|t| t == "archivist"))
-            .collect::<Vec<_>>();
-
-        // recv_logs returned, means archivist must be dead. check.
-        assert!(self.archivist.wait().await.unwrap().success());
-
-        // in case we got things out of order
-        logs.sort_by_key(|msg| msg.time);
-
-        (status, logs)
+    /// Returns a reader for the provided manifest, assuming it was launched in this environment
+    /// under the `realms` provided.
+    pub fn reader_for(&self, manifest: &str, realms: &[&str]) -> AppReader {
+        AppReader::new(self.archive.clone(), manifest, realms)
     }
 }
 
-impl Deref for AppWithDiagnostics {
-    type Target = App;
-    fn deref(&self) -> &Self::Target {
-        &self.app
+pub struct Launched {
+    pub app: App,
+    pub reader: AppReader,
+}
+
+/// A reader for a launched component's inspect.
+pub struct AppReader {
+    reader: ArchiveReader,
+}
+
+impl AppReader {
+    /// Construct a new `AppReader` with the given `archive` for the given `manifest`. Pass `realms`
+    /// a list of nested environments relative to the archive if the component is not launched as
+    /// a sibling to the archive.
+    pub fn new(archive: ArchiveAccessorProxy, manifest: &str, realms: &[&str]) -> Self {
+        let mut moniker = realms.iter().map(ToString::to_string).collect::<Vec<_>>();
+        moniker.push(manifest.to_string());
+
+        Self {
+            reader: ArchiveReader::new()
+                .with_archive(archive)
+                .with_minimum_schema_count(1)
+                .add_selector(ComponentSelector::new(moniker)),
+        }
+    }
+
+    /// Returns inspect data for this component.
+    pub async fn inspect(&self) -> InspectData {
+        self.reader
+            .snapshot::<Inspect>()
+            .await
+            .expect("snapshot will succeed")
+            .into_iter()
+            .next()
+            .expect(">=1 item in results")
     }
 }
 
@@ -172,38 +165,27 @@ mod tests {
     use super::*;
     use fidl_fuchsia_diagnostics::Severity;
     use fuchsia_inspect::assert_inspect_tree;
+    use futures::pin_mut;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn nested_apps_with_diagnostics() {
-        let emitter = "emitter-for-test.cmx";
-        let emitter_url =
-            format!("fuchsia-pkg://fuchsia.com/diagnostics-testing-tests#meta/{}", emitter);
-
-        let test_realm = "with-diagnostics";
-        let emitter_moniker = format!("{}/{}", test_realm, emitter);
-        let nested_moniker = format!("{}/inspect_test_component.cmx", test_realm);
+        let mut test_realm = EnvWithDiagnostics::new().await;
+        let logs = test_realm.listen_to_logs();
 
         // launch the diagnostics emitter
-        let test_app = AppWithDiagnostics::launch(test_realm, emitter_url, None);
+        let Launched { app: _emitter, reader: emitter_reader } = test_realm.launch(
+            "fuchsia-pkg://fuchsia.com/diagnostics-testing-tests#meta/emitter-for-test.cmx",
+            None,
+        );
 
-        // wait for start of both parent and child
-        test_app.until_all_have_started(&[&emitter_moniker, &emitter_moniker]).await.unwrap();
+        let emitter_inspect = emitter_reader.inspect().await;
+        let nested_inspect =
+            test_realm.reader_for("inspect_test_component.cmx", &[]).inspect().await;
 
-        // snapshot the environment's inspect
-        let reader = test_app.reader().with_minimum_schema_count(2);
-        let mut results = reader.snapshot::<Inspect>().await.unwrap();
-        // sorting by moniker puts the parent first
-        results.sort_by(|a, b| a.moniker.cmp(&b.moniker));
-
-        assert_eq!(results.len(), 2, "expecting inspect for both components in the env");
-        let (emitter_inspect, nested_inspect) = (results[0].clone(), results[1].clone());
-
-        assert_eq!(&emitter_inspect.moniker, &emitter_moniker);
         assert_inspect_tree!(emitter_inspect.payload.as_ref().unwrap(), root: {
             other_int: 7u64,
         });
 
-        assert_eq!(&nested_inspect.moniker, &nested_moniker);
         assert_inspect_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
             int: 3u64,
             "lazy-node": {
@@ -214,21 +196,18 @@ mod tests {
             }
         });
 
-        // end the child task and wait for it to finish
-        let (_status, mut logs) = test_app.kill().await;
-
-        logs.sort_by_key(|l| l.time);
-        let mut logs_iter = logs.iter();
-        let mut check_next_message = |expected| {
-            let next_message = logs_iter.next().unwrap();
-
+        async fn check_next_message(
+            logs: &mut (impl Stream<Item = LogMessage> + Unpin),
+            expected: &'static str,
+        ) {
+            let next_message = logs.next().await.unwrap();
             assert_eq!(next_message.tags, &["emitter_bin"]);
             assert_eq!(next_message.severity, Severity::Info as i32);
             assert_eq!(next_message.msg, expected);
-        };
+        }
 
-        check_next_message("emitter started");
-        check_next_message("launching child");
-        assert_eq!(logs_iter.next(), None);
+        pin_mut!(logs);
+        check_next_message(&mut logs, "emitter started").await;
+        check_next_message(&mut logs, "launching child").await;
     }
 }

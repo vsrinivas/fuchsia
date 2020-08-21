@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use archivist_lib::logs::message::fx_log_packet_t;
-use diagnostics_testing::AppWithDiagnostics;
 use fidl::{
     endpoints::{ClientEnd, ServerEnd, ServiceMarker},
     Socket, SocketOpts,
@@ -136,18 +135,70 @@ async fn listen_for_klog_routed_stdio() {
 
 #[fasync::run_singlethreaded(test)]
 async fn embedding_stop_api() {
-    let (status, logs) = AppWithDiagnostics::launch(
-        "logging",
-        "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx",
-        None,
+    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    // launch archivist
+    let mut archivist = launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
+        Some(vec!["--disable-log-connector".to_owned()]),
+        LaunchOptions::new(),
     )
-    .wait()
-    .await;
-    assert!(status.success());
+    .unwrap();
 
+    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let dir_req = archivist.directory_request().clone();
+    let mut fs = ServiceFs::new();
+
+    let (env_proxy, mut logging_component) = fs
+        .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
+        .launch_component_in_nested_environment(
+            "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx"
+                .to_owned(),
+            None,
+            "stop_test_env",
+        )
+        .unwrap();
+    let _fs = fasync::Task::spawn(Box::pin(async move {
+        fs.collect::<()>().await;
+    }));
+
+    let mut options = LogFilterOptions {
+        filter_by_pid: false,
+        pid: 0,
+        min_severity: LogLevelFilter::None,
+        verbosity: 0,
+        filter_by_tid: false,
+        tid: 0,
+        tags: vec!["logging component".to_owned()],
+    };
+    let (send_logs, recv_logs) = mpsc::unbounded();
+    let l = Listener { send_logs };
+    let _listen = fasync::Task::spawn(async move {
+        run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None).await.unwrap();
+    });
+
+    // wait for logging_component to die
+    assert!(logging_component.wait().await.unwrap().success());
+
+    // kill environment before stopping archivist.
+    env_proxy.kill().await.unwrap();
+
+    // connect to controller and call stop
+    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    controller.stop().unwrap();
+
+    // collect all logs
+    let logs = recv_logs.map(|l| (l.severity, l.msg)).collect::<Vec<_>>().await;
+
+    // recv_logs returned, means archivist must be dead. check.
+    assert!(archivist.wait().await.unwrap().success());
     assert_eq!(
-        logs.iter().map(|m| (m.severity, m.msg.as_str())).collect::<Vec<_>>(),
-        vec![(DEBUG, "my debug message."), (INFO, "my info message."), (WARN, "my warn message."),]
+        logs,
+        vec![
+            (DEBUG, "my debug message.".to_owned()),
+            (INFO, "my info message.".to_owned()),
+            (WARN, "my warn message.".to_owned()),
+        ]
     );
 }
 
