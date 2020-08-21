@@ -72,3 +72,7 @@ toc:
 - title: "Publish prebuilt packages"
   section:
   - include: /docs/development/prebuilt_packages/_toc.yaml
+- heading: "Troubleshooting"
+- title: "Error Codes"
+  section:
+  - include: /docs/development/error_codes/_toc.yaml

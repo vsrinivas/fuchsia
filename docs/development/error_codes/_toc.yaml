@@ -1,0 +1,6 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Troubleshoot zx_err_peer_closed"
+  path:  /docs/development/error_codes/troubleshoot_zx_err_peer_closed.md
