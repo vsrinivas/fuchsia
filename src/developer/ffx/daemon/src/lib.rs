@@ -7,6 +7,7 @@ use {
     crate::daemon::Daemon,
     anyhow::{bail, Context, Result},
     ffx_config::get,
+    ffx_lib_args::Ffx,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{
@@ -77,12 +78,22 @@ pub async fn spawn_daemon() -> Result<()> {
     // when we daemonize, our path will change to /, so get the canonical path before that occurs.
     ffx_path = std::fs::canonicalize(ffx_path)?;
     log::info!("Starting new ffx background daemon from {:?}", &ffx_path);
-    daemonize(Command::new(ffx_path).arg(DAEMON).arg("start"))
-        .spawn()
-        .context("spawning daemon start")?
-        .wait()
-        .map(|_| ())
-        .context("waiting for daemon start")
+    let ffx: Ffx = argh::from_env();
+    let config_string = ffx.config.unwrap_or("".to_owned());
+    daemonize(
+        Command::new(ffx_path)
+            .arg("--env")
+            .arg(ffx_config::find_env_file()?)
+            .arg("--config")
+            .arg(config_string)
+            .arg(DAEMON)
+            .arg("start"),
+    )
+    .spawn()
+    .context("spawning daemon start")?
+    .wait()
+    .map(|_| ())
+    .context("waiting for daemon start")
 }
 
 ////////////////////////////////////////////////////////////////////////////////

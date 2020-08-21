@@ -19,6 +19,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/tools/ascendd:lib",
+      "//src/developer/ffx:ffx_lib_args",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/fastboot:lib",
       "//src/lib/fidl/rust/fidl",
