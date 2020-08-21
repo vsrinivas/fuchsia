@@ -5,9 +5,8 @@
 use {
     crate::{
         builtin::{process_launcher::ProcessLauncher, runner::BuiltinRunnerFactory},
-        config::{PolicyError, ScopedPolicyChecker},
+        config::{PolicyError, RuntimeConfig, ScopedPolicyChecker},
         model::runner::{Runner, RunnerError},
-        startup::Arguments,
     },
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
@@ -176,8 +175,8 @@ pub struct ElfRunner {
 }
 
 impl ElfRunner {
-    pub fn new(args: &Arguments, utc_clock: Option<Arc<Clock>>) -> ElfRunner {
-        ElfRunner { launcher_connector: ProcessLauncherConnector::new(args), utc_clock }
+    pub fn new(config: &RuntimeConfig, utc_clock: Option<Arc<Clock>>) -> ElfRunner {
+        ElfRunner { launcher_connector: ProcessLauncherConnector::new(config), utc_clock }
     }
 
     async fn create_runtime_directory<'a>(
@@ -732,8 +731,8 @@ struct ProcessLauncherConnector {
 }
 
 impl ProcessLauncherConnector {
-    pub fn new(args: &Arguments) -> Self {
-        Self { use_builtin: args.use_builtin_process_launcher }
+    pub fn new(config: &RuntimeConfig) -> Self {
+        Self { use_builtin: config.use_builtin_process_launcher }
     }
 
     pub fn connect(&self) -> Result<fproc::LauncherProxy, Error> {
@@ -939,14 +938,13 @@ mod tests {
             fasync::Channel::from_channel(runtime_dir_client).unwrap(),
         );
 
-        let args = Arguments {
+        let config = RuntimeConfig {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let config = Arc::new(RuntimeConfig::default());
-        let runner = Arc::new(ElfRunner::new(&args, None));
+        let runner = Arc::new(ElfRunner::new(&config, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
-            Arc::downgrade(&config),
+            Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
@@ -987,14 +985,13 @@ mod tests {
         let start_info = hello_world_startinfo(Some(ServerEnd::new(runtime_dir_server)));
 
         // Note that value of should_use... is negated
-        let args = Arguments {
+        let config = RuntimeConfig {
             use_builtin_process_launcher: !should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let config = Arc::new(RuntimeConfig::default());
-        let runner = Arc::new(ElfRunner::new(&args, None));
+        let runner = Arc::new(ElfRunner::new(&config, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
-            Arc::downgrade(&config),
+            Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
         ));
         let (client_controller, server_controller) =
@@ -1180,14 +1177,13 @@ mod tests {
         let start_info = lifecycle_startinfo_mark_vmo_exec(None);
 
         // Config does not allowlist any monikers to have access to the job policy.
-        let config = Arc::new(RuntimeConfig::default());
-        let args = Arguments {
+        let config = RuntimeConfig {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&args, None));
+        let runner = Arc::new(ElfRunner::new(&config, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
-            Arc::downgrade(&config),
+            Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
@@ -1220,13 +1216,10 @@ mod tests {
                     ..Default::default()
                 },
             },
-            ..Default::default()
-        });
-        let args = Arguments {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
-        };
-        let runner = Arc::new(ElfRunner::new(&args, None));
+        });
+        let runner = Arc::new(ElfRunner::new(&config, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::from(vec!["foo:0"]),
@@ -1264,14 +1257,13 @@ mod tests {
         let start_info = hello_world_startinfo_main_process_critical(None);
 
         // Config does not allowlist any monikers to be marked as critical
-        let config = Arc::new(RuntimeConfig::default());
-        let args = Arguments {
+        let config = RuntimeConfig {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&args, None));
+        let runner = Arc::new(ElfRunner::new(&config, None));
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
-            Arc::downgrade(&config),
+            Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()

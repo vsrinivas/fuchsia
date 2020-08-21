@@ -32,6 +32,21 @@ pub struct RuntimeConfig {
     /// This is done so that an external component (say an integration test) can subscribe
     /// to events before the root component has started.
     pub debug: bool,
+
+    /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
+    /// launcher for the built-in ELF component runner. The root component can additionally
+    /// use and/or offer this service using '/builtin/fuchsia.process.Launcher' from realm.
+    // This flag exists because the built-in process launcher *only* works when
+    // component_manager runs under a job that has ZX_POL_NEW_PROCESS set to allow, like the root
+    // job. Otherwise, the component_manager process cannot directly create process through
+    // zx_process_create. When we run component_manager elsewhere, like in test environments, it
+    // has to use the fuchsia.process.Launcher service provided through its namespace instead.
+    pub use_builtin_process_launcher: bool,
+
+    /// If true, component_manager will maintain a UTC kernel clock and vend write handles through
+    /// an instance of `fuchsia.time.Maintenance`. This flag should only be used with the top-level
+    /// component_manager.
+    pub maintain_utc_clock: bool,
 }
 
 /// Runtime security policy.
@@ -70,6 +85,10 @@ impl Default for RuntimeConfig {
             security_policy: Default::default(),
 
             debug: false,
+
+            use_builtin_process_launcher: false,
+
+            maintain_utc_clock: false,
         }
     }
 }
@@ -128,6 +147,10 @@ impl TryFrom<&component_internal::Config> for RuntimeConfig {
             list_children_batch_size: list_children_batch_size,
             security_policy: SecurityPolicy { job_policy },
             debug: config.debug.unwrap_or(default.debug),
+            use_builtin_process_launcher: config
+                .use_builtin_process_launcher
+                .unwrap_or(default.use_builtin_process_launcher),
+            maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
         })
     }
 }
@@ -223,6 +246,8 @@ mod tests {
         let config = component_internal::Config {
             debug: None,
             list_children_batch_size: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     main_process_critical: None,
@@ -239,21 +264,29 @@ mod tests {
             debug: None,
             list_children_batch_size: None,
             security_policy: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
             list_children_batch_size: Some(5),
+            maintain_utc_clock: Some(false),
+            use_builtin_process_launcher: Some(true),
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     main_process_critical: None,
                     ambient_mark_vmo_exec: None,
                 }),
             }),
-        }, RuntimeConfig { debug:false, list_children_batch_size: 5, ..Default::default() }),
+        }, RuntimeConfig { debug:false, list_children_batch_size: 5,
+                           maintain_utc_clock: false, use_builtin_process_launcher:true,
+                           ..Default::default() }),
         all_fields_some => (
             component_internal::Config {
                 debug: Some(true),
                 list_children_batch_size: Some(42),
+                maintain_utc_clock: Some(true),
+                use_builtin_process_launcher: Some(false),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/something/important".to_string()]),
@@ -264,6 +297,8 @@ mod tests {
             RuntimeConfig {
                 debug: true,
                 list_children_batch_size: 42,
+                maintain_utc_clock: true,
+                use_builtin_process_launcher: false,
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![
@@ -288,10 +323,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn config_from_file_missing() -> Result<(), Error> {
-        let args = startup::Arguments {
-            runtime_config: Some("/foo/bar".to_string()),
-            ..Default::default()
-        };
+        let args = startup::Arguments { config: "/foo/bar".to_string(), ..Default::default() };
         assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
         Ok(())
     }
@@ -327,6 +359,8 @@ mod tests {
             debug: None,
             list_children_batch_size: Some(42),
             security_policy: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 
