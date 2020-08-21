@@ -5,8 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.test") {
-  sdk_category = "internal"
-
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
@@ -16,5 +14,8 @@ fidl("fuchsia.bluetooth.test") {
     "hci_errors.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth.bredr",
+  ]
 }

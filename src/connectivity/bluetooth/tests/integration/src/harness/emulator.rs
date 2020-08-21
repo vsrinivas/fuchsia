@@ -177,6 +177,7 @@ impl<T> EmulatorHarnessAux<T> {
             address: Some(address.into()),
             connectable: Some(true),
             device_class: Some(DeviceClass { value: MAJOR_DEVICE_CLASS_TOY }),
+            service_definition: None,
         };
         self.add_bredr_peer(parameters)
     }
