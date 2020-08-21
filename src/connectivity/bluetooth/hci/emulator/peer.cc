@@ -99,6 +99,19 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
   if (parameters.has_device_class()) {
     peer->set_class_of_device(bt::DeviceClass(parameters.device_class().value));
   }
+  if (parameters.has_service_definition()) {
+    std::vector<bt::sdp::ServiceRecord> recs;
+    for (const auto& defn : parameters.service_definition()) {
+      auto rec = bthost::fidl_helpers::ServiceDefinitionToServiceRecord(defn);
+      if (rec.is_ok()) {
+        recs.emplace_back(std::move(rec.value()));
+      }
+    }
+    bt::l2cap::ChannelParameters params;
+    auto NopConnectCallback = [](bt::l2cap::ChannelSocket, bt::hci::ConnectionHandle,
+                                 const bt::sdp::DataElement&) {};
+    peer->sdp_server()->server()->RegisterService(std::move(recs), params, NopConnectCallback);
+  }
 
   if (!fake_controller->AddPeer(std::move(peer))) {
     logf(ERROR, "A fake BR/EDR peer with given address already exists: %s\n",

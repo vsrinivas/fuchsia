@@ -15,6 +15,8 @@
 
 #include <fbl/macros.h>
 
+#include "src/connectivity/bluetooth/core/bt-host/fidl/helpers.h"
+#include "src/connectivity/bluetooth/core/bt-host/sdp/service_record.h"
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
