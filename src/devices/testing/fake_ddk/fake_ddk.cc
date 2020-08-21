@@ -134,7 +134,13 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
       has_init_hook_ = true;
     }
     if (args->ops->message) {
-      if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+      std::optional<zx::channel> remote_channel = std::nullopt;
+      if (args->client_remote) {
+        remote_channel.emplace(args->client_remote);
+      }
+
+      if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message, std::move(remote_channel))) <
+          0) {
         return status;
       }
     }
