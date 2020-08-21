@@ -44,6 +44,8 @@ inline constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
 inline constexpr vaddr_t kAsanStartAddress = PHYSMAP_BASE;
 inline constexpr vaddr_t kAsanEndAddress = PHYSMAP_BASE + PHYSMAP_SIZE;
 
+static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
+
 // Returns the address of the shadow byte corresponding to |address|.
 static inline uint8_t* addr2shadow(uintptr_t address) {
   DEBUG_ASSERT(address >= KERNEL_ASPACE_BASE);
@@ -66,6 +68,34 @@ void asan_check_memory_overlap(uintptr_t offseta, size_t lena, uintptr_t offsetb
 
 #endif  // __x86_64__
 
+// Structure shared between the compiler and ASAN runtime describing the location (in source code)
+// where a particular global is defined.
+//
+// See LLVM compiler-rt/lib/asan/asan_interface_internal.h
+struct asan_global_source_location {
+  const char* filename;
+  int line_no;
+  int column_no;
+};
+
+// Structure shared between the compiler and ASAN runtime describing a global variable that is
+// instrumented. Describes the virtual address, source location, size and redzone, and other
+// metadata.
+//
+// See LLVM compiler-rt/lib/asan/asan_interface_internal.h
+struct asan_global {
+  const void* begin;
+  size_t size;
+  size_t size_with_redzone;
+  const char* name;
+  const char* module_name;
+  uintptr_t dynamic_init;
+  struct asan_global_source_location* asan_global_source_location;
+  uintptr_t odr_indicator;
+};
+
 void arch_asan_reallocate_shadow();
+
+extern "C" void asan_register_globals_late();
 
 #endif  // ZIRCON_KERNEL_LIB_INSTRUMENTATION_ASAN_ASAN_INTERNAL_H_

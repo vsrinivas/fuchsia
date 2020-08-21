@@ -77,17 +77,17 @@ succeed, as all shadow map memory is marked as unpoisoned.
 
 In order to allow memory poisoning / tracking validity of kernel memory, asan
 needs to have writable pages backing portions of the shadow that cover the
-kernel physical map.
-
-Our implementation of asan only tracks memory within the physmap; this covers
-all page allocations/frees and the kernel heap, but does not cover additional
-virtual mappings within the kernel address space.
+kernel physical map. These writable pages replace zero page mappings in parts
+of the shadow map that asan instruments.
 
 During late boot, after PMM is initialized, we allocate a shadow page for every
-8 pages of physmap that contain at least one page of real memory.  We do not
-consider MMIO regions, device memory, the ISA hole, etc. as real memory. We then
-replace the early boot zero page mappings with mappings to the newly allocated
-shadow pages. All the remaining early boot mappings remain the same.
+8 pages of address space to instrument that contain at least one page of real memory. 
+We do not consider MMIO regions, device memory, the ISA hole, etc. as real memory.
+We then replace the early boot zero page mappings with mappings to the newly
+allocated shadow pages. All the remaining early boot mappings remain the same.
+
+We register the entire physmap and the kernel data/rodata/bss (sections with
+global variables) for instrumentation with asan during boot.
 
 ## Runtime
 
@@ -129,5 +129,17 @@ case it increases kernel heap memory usage by 256 MB (4K * 65536), which is the
 same as compiler-rt's default quarantine size. We could consider dynamically
 tuning this or having the quarantine not release memory until there is memory
 pressure.
+
+### Globals
+
+Global variables are instrumented for out-of-bounds accesses.
+
+When the kernel is compiled with kasan and global checking is enabled, a
+redzone is added to the right of every global object. Out-of-bounds accesses
+that hit the redzone are errors and are reported via the same mechanism as
+other out-of-bounds accesses.
+
+ASAN can also instrument globals for initialization order bugs; we do not
+support that feature yet.
 
 [address-sanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html

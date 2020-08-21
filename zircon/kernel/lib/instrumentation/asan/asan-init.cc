@@ -14,6 +14,8 @@
 
 #include "asan-internal.h"
 
+extern "C" void __asan_register_globals_late();
+
 namespace {
 
 void asan_early_init(unsigned int arg) {
@@ -26,6 +28,8 @@ void asan_late_init(unsigned int arg) {
       VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
   ZX_ASSERT(status == ZX_OK);
   pmm_asan_poison_all_free_pages();
+
+  asan_register_globals_late();
 }
 
 }  // namespace

@@ -102,14 +102,15 @@ config("kasan") {
     "-mllvm",
     "-asan-stack=0",
 
-    # TODO(30033): Disable poisoning around globals until later.
-    "-mllvm",
-    "-asan-globals=0",
-
     "-mllvm",
     "-asan-mapping-scale=$asan_mapping_scale",
 
     "-mllvm",
     "-asan-mapping-offset=$asan_mapping_offset",
+
+    # Avoid GOT-indirected weak symbol references used with
+    # __asan_register_elf_globals
+    "-mllvm",
+    "-asan-globals-live-support=false",
   ]
 }

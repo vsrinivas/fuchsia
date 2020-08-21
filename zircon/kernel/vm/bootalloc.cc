@@ -8,6 +8,7 @@
 #include "vm/bootalloc.h"
 
 #include <align.h>
+#include <lib/instrumentation/asan.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -33,8 +34,9 @@ paddr_t boot_alloc_end;
 // run in physical space without the mmu set up, so by computing the address of _end
 // and saving it, we've effectively computed the physical address of the end of the
 // kernel.
-__NO_SAFESTACK
-void boot_alloc_init() {
+// We can't allow asan to check the globals here as it happens on a different
+// aspace where asan shadow isn't mapped.
+NO_ASAN __NO_SAFESTACK void boot_alloc_init() {
   boot_alloc_start = reinterpret_cast<paddr_t>(_end);
   // TODO(ZX-2563): This is a compile-time no-op that defeats any compiler
   // optimizations based on its knowledge/assumption that `&_end` is a

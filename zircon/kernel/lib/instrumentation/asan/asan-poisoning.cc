@@ -189,8 +189,6 @@ void asan_poison_shadow(uintptr_t address, size_t size, uint8_t value) {
     return;
   }
   DEBUG_ASSERT(size > 0);
-  DEBUG_ASSERT(address >= kAsanStartAddress);
-  DEBUG_ASSERT(address + size < kAsanEndAddress);
   DEBUG_ASSERT(value >= kAsanSmallestPoisonedValue);  // only used for poisoning.
 
   uint8_t* shadow_addr_beg = addr2shadow(address);
@@ -263,8 +261,6 @@ void asan_unpoison_shadow(uintptr_t address, size_t size) {
     return;
   }
   DEBUG_ASSERT(size > 0);
-  DEBUG_ASSERT(address >= kAsanStartAddress);
-  DEBUG_ASSERT(address + size < kAsanEndAddress);
   uint8_t* const shadow_addr_beg = addr2shadow(address);
   uint8_t* const shadow_addr_end = addr2shadow(address + size);
 

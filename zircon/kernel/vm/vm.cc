@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
+#include <lib/instrumentation/asan.h>
 #include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <trace.h>
@@ -198,6 +199,10 @@ void vm_init() {
     status =
         kernel_region->ReserveSpace(region.name, region.base, region.size, region.arch_mmu_flags);
     ASSERT(status == ZX_OK);
+
+#if __has_feature(address_sanitizer)
+    asan_remap_shadow(region.base, region.size);
+#endif  // __has_feature(address_sanitizer)
   }
 
   // reserve the kernel aspace where the physmap is

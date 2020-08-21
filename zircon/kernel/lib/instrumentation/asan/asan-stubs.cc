@@ -22,6 +22,11 @@
 // (see llvm/lib/Transforms/Instrumentation/AddressSanitizer.cpp and
 // compiler-rt/lib/asan/*).
 
+constexpr size_t kAsanMaxGlobalsRegions = 400;
+static asan_global* g_globals_regions[kAsanMaxGlobalsRegions];
+static size_t g_globals_regions_sizes[kAsanMaxGlobalsRegions];
+static size_t g_total_globals;
+
 extern "C" {
 
 void* __asan_memcpy(void* dst, const void* src, size_t n) {
@@ -192,6 +197,36 @@ DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(10)
 
 PANIC_STUB(void __asan_alloca_poison(uintptr_t addr, uintptr_t size))
 PANIC_STUB(void __asan_allocas_unpoison(uintptr_t top, uintptr_t bottom))
+
+void __asan_register_globals(asan_global* globals, size_t size) {
+  if (g_total_globals == kAsanMaxGlobalsRegions) {
+    // This will fail in asan_register_globals_late.
+    return;
+  }
+  g_globals_regions[g_total_globals] = globals;
+  g_globals_regions_sizes[g_total_globals] = size;
+  g_total_globals++;
+}
+
+void __asan_unregister_globals(asan_global* globals, size_t size) {
+  ZX_PANIC("__asan_unregister_globals should be unreachable code");
+}
+
+void asan_register_globals_late() {
+  DEBUG_ASSERT(g_total_globals < kAsanMaxGlobalsRegions);
+  for (size_t i = 0; i < g_total_globals; i++) {
+    asan_global* region = g_globals_regions[i];
+    for (size_t j = 0; j < g_globals_regions_sizes[i]; j++) {
+      asan_global* g = &region[j];
+      asan_poison_shadow((reinterpret_cast<uintptr_t>(g->begin) + g->size),
+                         g->size_with_redzone - g->size, kAsanGlobalRedzoneMagic);
+    }
+  }
+}
+
+// TODO(fxbug.dev/30033): Figure out what dynamic_init is doing.
+void __asan_before_dynamic_init(const char* module) {}
+void __asan_after_dynamic_init() {}
 
 // These are called by static constructor code to initialize the sanitizer
 // runtime.  There's no need for those calls in the kernel, since the

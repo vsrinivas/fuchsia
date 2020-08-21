@@ -56,15 +56,14 @@ paddr_t get_or_allocate_page_table(volatile pt_entry_t* table, size_t i,
 void asan_remap_shadow_internal(volatile pt_entry_t* pdp, uintptr_t start, size_t size) {
   const vaddr_t start_shadow = reinterpret_cast<vaddr_t>(addr2shadow(start));
   const vaddr_t end_shadow = reinterpret_cast<vaddr_t>(addr2shadow(start + size - 1));
-
+  printf("KASAN enabling shadow for region %lx size %lx, start_shadow=%lx end_shadow=%lx\n", start,
+         size, start_shadow, end_shadow);
   const size_t pdp_map_start = VADDR_TO_PDP_INDEX(start_shadow);
   const size_t pdp_map_end = VADDR_TO_PDP_INDEX(end_shadow);
   const size_t pd_map_start = VADDR_TO_PD_INDEX(start_shadow);
   const size_t pd_map_end = VADDR_TO_PD_INDEX(end_shadow);
   const size_t pt_map_start = VADDR_TO_PT_INDEX(start_shadow);
   const size_t pt_map_end = VADDR_TO_PT_INDEX(end_shadow);
-
-  printf("KASAN remapping shadow for 0x%016lx (%zu bytes)\n", start, size);
 
   // TODO(fxbug.dev/50371): When pmm_alloc_page allows getting high memory, use high pages where
   // possible for page tables and asan shadow pages.

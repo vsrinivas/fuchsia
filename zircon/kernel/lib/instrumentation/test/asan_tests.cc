@@ -27,6 +27,8 @@
 
 namespace {
 
+unsigned char global_buffer[8];
+
 static inline uint8_t* test_addr2shadow(uintptr_t address) {
   uint8_t* const kasan_shadow_map = reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET);
   uint8_t* const shadow_byte_address =
@@ -276,6 +278,16 @@ bool kasan_test_remap_shadow() {
   END_TEST;
 }
 
+bool kasan_test_globals_are_poisoned() {
+  BEGIN_TEST;
+
+  uintptr_t buf = reinterpret_cast<uintptr_t>(global_buffer);
+  EXPECT_TRUE(asan_address_is_poisoned(buf + sizeof(global_buffer)));
+  EXPECT_EQ(0UL, asan_region_is_poisoned(buf, sizeof(global_buffer)));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(kasan_tests)
@@ -290,6 +302,7 @@ UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
 UNITTEST("test_quarantine", kasan_test_quarantine)
 UNITTEST("test_walk_shadow", kasan_test_walk_shadow)
 UNITTEST("test_asan_remap_shadow", kasan_test_remap_shadow)
+UNITTEST("test_globals", kasan_test_globals_are_poisoned)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)
