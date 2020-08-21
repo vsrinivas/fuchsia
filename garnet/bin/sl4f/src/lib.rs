@@ -16,6 +16,7 @@ pub mod boot_arguments;
 pub mod camera;
 pub mod common_utils;
 pub mod component;
+pub mod cpu_ctrl;
 pub mod device;
 pub mod diagnostics;
 pub mod factory_reset;

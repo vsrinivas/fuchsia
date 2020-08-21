@@ -52,6 +52,9 @@ use crate::boot_arguments::facade::BootArgumentsFacade;
 // Camera-related includes
 use crate::camera::facade::CameraFacade;
 
+// Cpu-Ctrl related includes
+use crate::cpu_ctrl::facade::CpuCtrlFacade;
+
 // Common
 use crate::common_utils::common::{read_json_from_vmo, write_json_to_vmo};
 use crate::common_utils::error::Sl4fError;
@@ -211,6 +214,7 @@ impl Sl4f {
                 "boot_arguments_facade" => BootArgumentsFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
                 "camera_facade" => CameraFacade::new(),
+                "cpu_ctrl_facade" => CpuCtrlFacade::new(),
                 "component_facade" => ComponentFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),

@@ -6,6 +6,7 @@
         "dev": [
             "class/backlight",
             "class/camera",
+            "class/cpu-ctrl",
             "class/i2c",
             "class/input-report",
             "class/light",
@@ -41,6 +42,7 @@
             "fuchsia.feedback.DataProvider",
             "fuchsia.fonts.Provider",
             "fuchsia.hardware.camera.Device",
+            "fuchsia.hardware.cpu.ctrl.Ctrl",
             "fuchsia.hardware.gpio.Gpio",
             "fuchsia.hardware.i2c",
             "fuchsia.hardware.light.Light",
