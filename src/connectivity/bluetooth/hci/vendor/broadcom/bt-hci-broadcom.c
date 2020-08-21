@@ -97,6 +97,12 @@ typedef struct {
 
 #define HCI_EVT_COMMAND_COMPLETE 0x0e
 
+// Max size of a event frame. Max is 255 + sizeof(hci_event_header_t)
+#define CHAN_READ_BUF_LEN 257
+
+// Min event param size for a valid command complete event frame
+#define MIN_EVT_PARAM_SIZE (sizeof(hci_command_complete_t) - sizeof(hci_event_header_t))
+
 typedef struct {
   zx_device_t* zxdev;
   zx_device_t* transport_dev;
@@ -200,7 +206,6 @@ static zx_protocol_device_t bcm_hci_device_proto = {
 
 static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header_t* command,
                                         size_t length, void* out_buf, size_t out_buf_len) {
-#define CHAN_READ_BUF_LEN 257
   uint8_t read_buf[CHAN_READ_BUF_LEN];
   if (out_buf_len > CHAN_READ_BUF_LEN) {
     zxlogf(ERROR, "bcm_hci_send_command provided |out_buf| is too large");
@@ -234,10 +239,11 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
 
   hci_event_header_t* header = (hci_event_header_t*)read_buf;
   if (header->event_code != HCI_EVT_COMMAND_COMPLETE ||
-      header->parameter_total_size != sizeof(hci_command_complete_t) - sizeof(hci_event_header_t)) {
+      header->parameter_total_size < MIN_EVT_PARAM_SIZE) {
     zxlogf(ERROR, "bcm_hci_send_command did not receive command complete\n");
     return ZX_ERR_INTERNAL;
   }
+
   hci_command_complete_t* event = (hci_command_complete_t*)read_buf;
   if (event->return_code != 0) {
     zxlogf(ERROR, "bcm_hci_send_command got command complete error %u\n", event->return_code);
@@ -408,6 +414,12 @@ static int bcm_hci_start_thread(void* arg) {
   }
 
   status = bcm_load_firmware(hci);
+  if (status != ZX_OK) {
+    goto fail;
+  }
+
+   // Send Reset command
+  status = bcm_hci_send_command(hci, &RESET_CMD, sizeof(RESET_CMD), NULL, 0);
   if (status != ZX_OK) {
     goto fail;
   }

@@ -17,22 +17,36 @@ zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw, s
   return load_firmware_result;
 }
 
+// Test command with two additional params
+typedef struct {
+  hci_event_header_t header;
+  uint8_t num_hci_command_packets;
+  uint16_t command_opcode;
+  uint8_t return_code;
+  uint8_t test_param_1;
+  uint8_t test_param_2;
+} __PACKED hci_read_test_command_complete_t;
+
 // zx_channel_read stub for use in bcm_hci_send_command which is the only place it is used in
 // bt-hci-broadcom.c
 zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options, void* bytes, zx_handle_t* handles,
                             uint32_t num_bytes, uint32_t num_handles, uint32_t* actual_bytes,
                             uint32_t* actual_handles) {
-  hci_command_complete_t read_result = {
+  hci_read_test_command_complete_t read_result = {
       .header =
           {
               .event_code = HCI_EVT_COMMAND_COMPLETE,
-              .parameter_total_size = sizeof(hci_command_complete_t) - sizeof(hci_event_header_t),
+              .parameter_total_size = sizeof(hci_read_test_command_complete_t) - sizeof(hci_event_header_t),
           },
       .num_hci_command_packets = 0,
       .command_opcode = 0,
       .return_code = 0,
+      .test_param_1 = 0xaa,
+      .test_param_2 = 0xbb,
   };
-  memcpy(bytes, &read_result, sizeof(hci_command_complete_t));
+
+  memcpy(bytes, &read_result, sizeof(hci_read_test_command_complete_t));
+
   return ZX_OK;
 }
 
