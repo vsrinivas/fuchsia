@@ -12,10 +12,11 @@ mod tests {
         crossbeam::channel,
         fidl_fidl_examples_echo as fecho, fidl_fuchsia_intl as fintl,
         fidl_fuchsia_settings as fsettings, fuchsia_async as fasync,
+        fuchsia_async::DurationExt,
         fuchsia_component::client,
         fuchsia_syslog::{self as syslog, macros::*},
-        icu_data, rust_icu_ucal as ucal, rust_icu_udat as udat, rust_icu_uloc as uloc,
-        rust_icu_ustring as ustring,
+        fuchsia_zircon as zx, icu_data, rust_icu_ucal as ucal, rust_icu_udat as udat,
+        rust_icu_uloc as uloc, rust_icu_ustring as ustring,
         std::convert::TryFrom,
     };
 
@@ -38,7 +39,7 @@ mod tests {
             let response = client.watch().await?;
             fx_log_info!("setting timezone for test: {}", timezone);
             let old_timezone = response.time_zone_id.unwrap().id;
-            let setter = ScopedTimezone { timezone: old_timezone, client: client };
+            let setter = ScopedTimezone { timezone: old_timezone, client };
             setter.set_timezone(timezone).await?;
             Ok(setter)
         }
@@ -88,29 +89,67 @@ mod tests {
     static DART_TIME_SERVICE_URL: &str =
         "fuchsia-pkg://fuchsia.com/timestamp-server-dart#meta/timestamp-server-dart.cmx";
 
-    // The test will set this timezone to be the "system" timezone.
-    // TODO(fxb/47043): Use another value for the time zone, e.g. "America/Los_Angeles".
+    // The test will set one of these timezones to be the "system" timezone.
     static TIMEZONE_NAME: &str = "America/Los_Angeles";
+    static TIMEZONE_NAME_2: &str = "America/New_York";
+
+    /// Polls the echo server until either the local and remote time match, or a timeout
+    /// occurs.
+    async fn loop_until_matching_time(
+        fmt: &udat::UDateFormat,
+        echo: &fidl_fidl_examples_echo::EchoProxy,
+    ) -> Result<(), Error> {
+        const MAX_ATTEMPTS: usize = 10;
+        let sleep = zx::Duration::from_millis(1000);
+
+        // Multiple attempts in case the test is run close to the turn of the hour.
+        for attempt in 1..=MAX_ATTEMPTS {
+            fx_log_info!("Requesting some time, attempt: {}", attempt);
+            let out = echo
+                .echo_string(Some("Gimme some time!"))
+                .await
+                .with_context(|| "echo_string failed")?;
+            let date_time = fmt.format(ucal::get_now())?;
+            let vm_time = out.unwrap();
+            if date_time == vm_time {
+                break;
+            }
+            if (date_time != vm_time) && attempt == MAX_ATTEMPTS {
+                return Err(anyhow::anyhow!(
+                    "dart VM says the time is {:?}, but the test fixture says it should be: {:?}",
+                    vm_time,
+                    date_time
+                ));
+            }
+            fasync::Timer::new(sleep.after_now()).await;
+        }
+        Ok(())
+    }
 
     /// Starts a dart program that uses Dart's idea of the system time zone to report time zone
     /// information.  The test fixture compares its own idea of local time with the one in the dart
-    /// VM.  Ostensibly, those two times should be the same up to the current date and current
-    /// hour.
+    /// VM.
+    ///
+    /// Ostensibly, those two times should be the same up to the current date and current hour.
+    ///
+    /// We do this twice, to ensure that runtime timezone changes are reflected in the time
+    /// reported by the dart VM.
     #[fasync::run_singlethreaded(test)]
     async fn check_reported_time_in_dart_vm() -> Result<(), Error> {
         syslog::init_with_tags(&["check_reported_time_in_dart_vm"]).context("Can't init logger")?;
         let _icu_data_loader =
             icu_data::Loader::new().with_context(|| "could not load ICU data")?;
-        let _setter = ScopedTimezone::try_new(TIMEZONE_NAME)
-            .await
-            .context("Failed to instantiate ScopedTimezone")?;
+        let _setter = ScopedTimezone::try_new(TIMEZONE_NAME).await.unwrap();
+        let locale = uloc::ULoc::try_from("Etc/Unknown").unwrap();
+        // Example: "2020-2-26-14", hour 14 of February 26.
+        let pattern = ustring::UChar::try_from("yyyy-M-d-H").unwrap();
 
         let formatter = udat::UDateFormat::new_with_pattern(
-            &uloc::ULoc::try_from("Etc/Unknown")?,
-            &ustring::UChar::try_from(TIMEZONE_NAME).expect("create string from timezone"),
-            // Example: 2020-2-26-14, hour 14 of February 26.
-            &ustring::UChar::try_from("yyyy-M-d-H")?,
-        )?;
+            &locale,
+            &ustring::UChar::try_from(TIMEZONE_NAME).unwrap(),
+            &pattern,
+        )
+        .unwrap();
 
         let launcher = client::launcher().context("Failed to get the launcher")?;
         let app = client::launch(&launcher, DART_TIME_SERVICE_URL.to_string(), None)
@@ -120,24 +159,60 @@ mod tests {
             .connect_to_service::<fecho::EchoMarker>()
             .context("Failed to connect to echo service")?;
 
-        // Multiple attempts in case the test is run close to the turn of the hour.
-        for attempt in 1u8..3 {
-            fx_log_info!("Requesting some time, attempt: {}", attempt);
-            let out = echo
-                .echo_string(Some("Gimme some time!"))
+        loop_until_matching_time(&formatter, &echo)
+            .await
+            .expect("local and remote times should match eventually");
+
+        {
+            // Change the time zone again, and verify that the dart VM has seen the change
+            // too.
+            let _setter = ScopedTimezone::try_new(TIMEZONE_NAME_2).await.unwrap();
+            let formatter = udat::UDateFormat::new_with_pattern(
+                &locale,
+                &ustring::UChar::try_from(TIMEZONE_NAME_2).unwrap(),
+                &pattern,
+            )
+            .unwrap();
+
+            loop_until_matching_time(&formatter, &echo)
                 .await
-                .with_context(|| "echo_string failed")?;
-            let date_time = formatter.format(ucal::get_now())?;
-            let vm_time = out.unwrap();
-            if date_time == vm_time {
-                break;
-            }
-            if (date_time != vm_time) && attempt == 3 {
-                assert_eq!(date_time, vm_time,
-                    "dart VM says the time local in timezone {:?} is {:?}, but the test fixture says it should be: {:?}",
-        TIMEZONE_NAME, vm_time, date_time);
-            }
+                .expect("local and remote times should match eventually");
         }
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[ignore] // See http://fxb/58383
+    async fn check_reported_time_in_dart_vm_no_update() -> Result<(), Error> {
+        syslog::init_with_tags(&["check_reported_time_in_dart_vm_no_update"])
+            .context("Can't init logger")?;
+        let _icu_data_loader =
+            icu_data::Loader::new().with_context(|| "could not load ICU data")?;
+        let _setter = ScopedTimezone::try_new(TIMEZONE_NAME).await.unwrap();
+        let locale = uloc::ULoc::try_from("Etc/Unknown").unwrap();
+        // Example: "2020-2-26-14", hour 14 of February 26.
+        let pattern = ustring::UChar::try_from("yyyy-M-d-H").unwrap();
+
+        let formatter = udat::UDateFormat::new_with_pattern(
+            &locale,
+            &ustring::UChar::try_from(TIMEZONE_NAME).unwrap(),
+            &pattern,
+        )
+        .unwrap();
+
+        let launcher = client::launcher().context("Failed to get the launcher")?;
+        let app = client::launch(&launcher, DART_TIME_SERVICE_URL.to_string(), None)
+            .context("failed to launch the dart service under test")?;
+
+        let echo = app
+            .connect_to_service::<fecho::EchoMarker>()
+            .context("Failed to connect to echo service")?;
+
+        loop_until_matching_time(&formatter, &echo)
+            .await
+            .expect("local and remote times should match eventually");
+
         Ok(())
     }
 } // tests
