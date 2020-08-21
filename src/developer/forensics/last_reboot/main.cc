@@ -17,6 +17,7 @@ namespace {
 
 constexpr char kTmpGracefulRebootReason[] = "/tmp/graceful_reboot_reason.txt";
 constexpr char kCacheGracefulRebootReason[] = "/cache/graceful_reboot_reason.txt";
+constexpr char kNotAFdr[] = "/data/not_a_fdr.txt";
 
 void MoveGracefulRebootReason() {
   if (!files::IsFile(kCacheGracefulRebootReason)) {
@@ -40,6 +41,16 @@ void MoveGracefulRebootReason() {
   }
 }
 
+void SetNotAFdr() {
+  if (files::IsFile(kNotAFdr)) {
+    return;
+  }
+
+  if (!files::WriteFile(kNotAFdr, "", 0u)) {
+    FX_LOGS(ERROR) << "Failed to create " << kNotAFdr;
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -50,6 +61,7 @@ int main(int argc, char** argv) {
   forensics::component::Component component;
   if (component.IsFirstInstance()) {
     MoveGracefulRebootReason();
+    SetNotAFdr();
   }
 
   MainService main_service(MainService::Config{
