@@ -10,6 +10,7 @@ group("tests") {
     "block-verity:tests",
     "ftl:tests",
     "fvm:tests",
+    "gpt:tests",
     "mtk-sdmmc:tests",
     "ramdisk:tests",
     "sdhci:tests",

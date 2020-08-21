@@ -8,7 +8,6 @@
 common_test_contents = [
   "//src/devices/block/drivers/ahci:ahci-unittest",
   "//src/devices/block/drivers/core:core-unittest",
-  "//src/devices/block/drivers/gpt:gpt-device-test",
   "//src/devices/block/drivers/mbr:mbr-test",
   "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test",
   "//src/devices/tests/devhost-test",

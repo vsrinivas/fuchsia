@@ -4,6 +4,12 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":gpt-device-test-package" ]
+}
 
 driver_module("gpt") {
   configs += [
@@ -48,5 +54,15 @@ test("gpt-device-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/gpt",
+  ]
+}
+
+unittest_package("gpt-device-test-package") {
+  package_name = "gpt-device-test"
+  deps = [ ":gpt-device-test" ]
+  tests = [
+    {
+      name = "gpt-device-test"
+    },
   ]
 }
