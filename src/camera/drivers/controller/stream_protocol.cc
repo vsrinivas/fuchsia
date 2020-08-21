@@ -5,6 +5,7 @@
 #include "src/camera/drivers/controller/stream_protocol.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/errors.h>
 
 #include <utility>
@@ -37,6 +38,8 @@ zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> di
 }
 
 void StreamImpl::FrameReady(const frame_available_info_t* info) {
+  TRACE_DURATION("camera", "StreamImpl::FrameReady");
+  TRACE_FLOW_BEGIN("camera", "camera_stream_on_frame_available", info->metadata.timestamp);
   ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   fuchsia::camera2::FrameAvailableInfo frame_info;
   frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;

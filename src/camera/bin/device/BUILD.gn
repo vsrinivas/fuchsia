@@ -28,6 +28,7 @@ source_set("lib") {
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [
@@ -60,6 +61,7 @@ executable("bin") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   defines = [ camera_debug_define ]

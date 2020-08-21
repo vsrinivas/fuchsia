@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 
 #include <string>
 
@@ -19,6 +20,7 @@ int main(int argc, char* argv[]) {
   syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera", "camera_device"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Verify arguments.

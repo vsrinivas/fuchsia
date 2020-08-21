@@ -7,11 +7,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/types.h>
 
 #include <sstream>
 
 #include "src/camera/bin/camera-gym/moving_window.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {
 
@@ -201,6 +203,9 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
 }
 
 void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {
+  TRACE_DURATION("camera", "StreamCycler::OnNextFrame");
+  TRACE_FLOW_END("camera", "camera3::Stream::GetNextFrame",
+                 fsl::GetKoid(frame_info.release_fence.get()));
   auto& stream_info = stream_infos_[stream_index];
   if (show_buffer_handler_ && stream_info.add_collection_handler_returned_value) {
     show_buffer_handler_(stream_info.add_collection_handler_returned_value.value(),

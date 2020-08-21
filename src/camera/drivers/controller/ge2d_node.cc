@@ -22,11 +22,18 @@ namespace camera {
 constexpr auto kTag = "camera_controller_ge2d_node";
 
 void OnGe2dFrameAvailable(void* ctx, const frame_available_info_t* info) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "OnGe2dFrameAvailable");
+  TRACE_FLOW_BEGIN("camera", "post_on_ge2d_frame_available", nonce);
   // This method is invoked by the GE2D in its own thread,
   // so the event must be marshalled to the
   // controller's thread.
   auto* ge2d_node = static_cast<Ge2dNode*>(ctx);
-  ge2d_node->RunOnMainThread([ge2d_node, info = *info]() { ge2d_node->OnFrameAvailable(&info); });
+  ge2d_node->RunOnMainThread([ge2d_node, info = *info, nonce]() {
+    TRACE_DURATION("camera", "OnGe2dFrameAvailable.task");
+    TRACE_FLOW_END("camera", "post_on_ge2d_frame_available", nonce);
+    ge2d_node->OnFrameAvailable(&info);
+  });
 }
 
 void OnGe2dResChange(void* ctx, const frame_available_info_t* info) {
@@ -193,8 +200,11 @@ void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
 }
 
 void Ge2dNode::OnReadyToProcess(const frame_available_info_t* info) {
+  TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess");
+  TRACE_FLOW_BEGIN("camera", "ge2d_node_on_ready_to_process", info->buffer_id);
   async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id]() {
-    TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess", "buffer_index", buffer_index);
+    TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess.task");
+    TRACE_FLOW_END("camera", "ge2d_node_on_ready_to_process", buffer_index);
     if (enabled_) {
       ZX_ASSERT(ZX_OK == ge2d_.ProcessFrame(task_index_, buffer_index));
     } else {

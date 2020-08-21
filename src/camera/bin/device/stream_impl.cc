@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -53,7 +54,12 @@ StreamImpl::~StreamImpl() {
 }
 
 void StreamImpl::PostSetMuteState(MuteState mute_state, fit::closure completed) {
-  async::PostTask(loop_.dispatcher(), [this, mute_state, completed = std::move(completed)] {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostSetMuteState");
+  TRACE_FLOW_BEGIN("camera", "post_set_mute_state_task", nonce);
+  async::PostTask(loop_.dispatcher(), [this, mute_state, completed = std::move(completed), nonce] {
+    TRACE_DURATION("camera", "StreamImpl::PostSetMuteState.task");
+    TRACE_FLOW_END("camera", "post_set_mute_state_task", nonce);
     mute_state_ = mute_state;
     // On either transition, invalidate existing frames.
     while (!frames_.empty()) {
@@ -64,8 +70,13 @@ void StreamImpl::PostSetMuteState(MuteState mute_state, fit::closure completed) 
 }
 
 void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::OnNewRequest");
+  TRACE_FLOW_BEGIN("camera", "post_on_new_request", nonce);
   zx_status_t status =
-      async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
+      async::PostTask(loop_.dispatcher(), [this, request = std::move(request), nonce]() mutable {
+        TRACE_DURATION("camera", "StreamImpl::OnNewRequest.task");
+        TRACE_FLOW_END("camera", "post_on_new_request", nonce);
         auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
         client->PostReceiveResolution(current_resolution_);
         client->PostReceiveCropRegion(nullptr);
@@ -81,7 +92,12 @@ void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
 }
 
 void StreamImpl::PostRemoveClient(uint64_t id) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostRemoveClient");
+  TRACE_FLOW_BEGIN("camera", "post_remove_client", nonce);
   async::PostTask(loop_.dispatcher(), [=]() {
+    TRACE_DURATION("camera", "StreamImpl::PostRemoveClient.task");
+    TRACE_FLOW_END("camera", "post_remove_client", nonce);
     clients_.erase(id);
     if (clients_.empty()) {
       on_no_clients_();
@@ -90,13 +106,23 @@ void StreamImpl::PostRemoveClient(uint64_t id) {
 }
 
 void StreamImpl::PostAddFrameSink(uint64_t id) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostAddFrameSink");
+  TRACE_FLOW_BEGIN("camera", "post_add_frame_sink", nonce);
   async::PostTask(loop_.dispatcher(), [=]() {
+    TRACE_DURATION("camera", "StreamImpl::PostAddFrameSink.task");
+    TRACE_FLOW_END("camera", "post_add_frame_sink", nonce);
     frame_sinks_.push(id);
     SendFrames();
   });
 }
 
 void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
+  TRACE_DURATION("camera", "StreamImpl::OnFrameAvailable");
+  if (info.metadata.has_timestamp()) {
+    TRACE_FLOW_END("camera", "camera_stream_on_frame_available", info.metadata.timestamp());
+  }
+
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
     FX_LOGS(WARNING) << "Driver reported a bad frame. This will not be reported to clients.";
     legacy_stream_->AcknowledgeFrameError();
@@ -171,7 +197,12 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
 void StreamImpl::PostSetBufferCollection(
     uint64_t id, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  async::PostTask(loop_.dispatcher(), [this, id, token_handle = std::move(token)]() mutable {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostSetBufferCollection");
+  TRACE_FLOW_BEGIN("camera", "post_set_buffer_collection", nonce);
+  async::PostTask(loop_.dispatcher(), [this, id, token_handle = std::move(token), nonce]() mutable {
+    TRACE_DURATION("camera", "StreamImpl::PostSetBufferCollection.task");
+    TRACE_FLOW_END("camera", "post_set_buffer_collection", nonce);
     auto it = clients_.find(id);
     if (it == clients_.end()) {
       FX_LOGS(ERROR) << "Client " << id << " not found.";
@@ -219,6 +250,7 @@ void StreamImpl::PostSetBufferCollection(
 }
 
 void StreamImpl::SendFrames() {
+  TRACE_DURATION("camera", "StreamImpl::SendFrames");
   if (frame_sinks_.size() > 1 && !frame_sink_warning_sent_) {
     FX_LOGS(INFO) << Messages::kMultipleFrameClients;
     frame_sink_warning_sent_ = true;
@@ -239,7 +271,12 @@ void StreamImpl::SendFrames() {
 }
 
 void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) {
-  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, id, coded_size] {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostSetResolution");
+  TRACE_FLOW_BEGIN("camera", "post_set_resolution", nonce);
+  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, id, coded_size, nonce] {
+    TRACE_DURATION("camera", "StreamImpl::PostSetResolution.task");
+    TRACE_FLOW_END("camera", "post_set_resolution", nonce);
     auto it = clients_.find(id);
     if (it == clients_.end()) {
       FX_LOGS(ERROR) << "Client " << id << " not found.";
@@ -297,8 +334,13 @@ void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) 
 }
 
 void StreamImpl::PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::RectF> region) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "StreamImpl::PostSetCropRegion");
+  TRACE_FLOW_BEGIN("camera", "post_set_crop_region", nonce);
   zx_status_t status =
-      async::PostTask(loop_.dispatcher(), [this, region = std::move(region)]() mutable {
+      async::PostTask(loop_.dispatcher(), [this, region = std::move(region), nonce]() mutable {
+        TRACE_DURATION("camera", "StreamImpl::PostSetCropRegion.task");
+        TRACE_FLOW_END("camera", "post_set_crop_region", nonce);
         if (legacy_stream_) {
           float x_min = 0.0f;
           float y_min = 0.0f;

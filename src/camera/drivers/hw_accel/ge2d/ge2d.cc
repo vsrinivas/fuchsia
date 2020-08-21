@@ -233,6 +233,7 @@ zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
 }
 
 zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+  TRACE_DURATION("camera", "Ge2dDevice::Ge2dProcessFrame");
   fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
@@ -251,6 +252,7 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   info.index = input_buffer_index;
 
   // Put the task on queue.
+  TRACE_FLOW_BEGIN("camera", "ge2d_process_frame", info.index);
   fbl::AutoLock lock(&lock_);
   processing_queue_.push_front(info);
   frame_processing_signal_.Signal();
@@ -303,6 +305,8 @@ void Ge2dDevice::InitializeScalingCoefficients() {
 }
 
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessTask");
+  TRACE_FLOW_END("camera", "ge2d_process_frame", info.index);
   switch (info.op) {
     case GE2D_OP_SETOUTPUTRES:
     case GE2D_OP_SETINPUTOUTPUTRES:
@@ -818,6 +822,7 @@ void Ge2dDevice::ProcessInPlaceWatermarkTask(Ge2dTask* task, uint32_t input_buff
 }
 
 void Ge2dDevice::ProcessFrame(TaskInfo& info) {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessFrame");
   auto task = info.task;
 
   auto input_buffer_index = info.index;

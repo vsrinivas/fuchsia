@@ -13,6 +13,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -136,6 +137,7 @@ fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> BufferCollage::Get
 fit::promise<uint32_t> BufferCollage::AddCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token, fuchsia::sysmem::ImageFormat_2 image_format,
     std::string description) {
+  TRACE_DURATION("camera", "BufferCollage::AddCollection");
   ZX_ASSERT(image_format.coded_width > 0);
   ZX_ASSERT(image_format.coded_height > 0);
 
@@ -213,7 +215,12 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
 }
 
 void BufferCollage::RemoveCollection(uint32_t id) {
-  async::PostTask(loop_.dispatcher(), [this, id]() {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "BufferCollage::RemoveCollection");
+  TRACE_FLOW_BEGIN("camera", "post_remove_collection", nonce);
+  async::PostTask(loop_.dispatcher(), [this, id, nonce]() {
+    TRACE_DURATION("camera", "BufferCollage::RemoveCollection.task");
+    TRACE_FLOW_END("camera", "post_remove_collection", nonce);
     auto it = collection_views_.find(id);
     if (it == collection_views_.end()) {
       FX_LOGS(ERROR) << "Invalid collection ID " << id << ".";
@@ -235,7 +242,12 @@ void BufferCollage::RemoveCollection(uint32_t id) {
 void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                    zx::eventpair release_fence,
                                    std::optional<fuchsia::math::RectF> subregion) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "BufferCollage::PostShowBuffer");
+  TRACE_FLOW_BEGIN("camera", "post_show_buffer", nonce);
   async::PostTask(loop_.dispatcher(), [=, release_fence = std::move(release_fence)]() mutable {
+    TRACE_DURATION("camera", "BufferCollage::PostShowBuffer.task");
+    TRACE_FLOW_END("camera", "post_show_buffer", nonce);
     ShowBuffer(collection_id, buffer_index, std::move(release_fence), subregion);
   });
 }
@@ -302,6 +314,7 @@ void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
 void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                zx::eventpair release_fence,
                                std::optional<fuchsia::math::RectF> subregion) {
+  TRACE_DURATION("camera", "BufferCollage::ShowBuffer");
   auto it = collection_views_.find(collection_id);
   if (it == collection_views_.end()) {
     FX_LOGS(ERROR) << "Invalid collection ID " << collection_id << ".";
@@ -334,6 +347,8 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
   }
   std::vector<zx::event> scenic_fences;
   scenic_fences.push_back(result.take_value());
+
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", buffer_index + 1);
   it->second.image_pipe->PresentImage(buffer_index + 1, zx::clock::get_monotonic().get(), {},
                                       std::move(scenic_fences),
                                       [](fuchsia::images::PresentationInfo info) {});
