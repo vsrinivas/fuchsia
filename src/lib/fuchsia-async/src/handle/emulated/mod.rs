@@ -57,8 +57,11 @@ pub trait AsHandleRef {
     fn raw_handle(&self) -> u32 {
         self.as_handle_ref().0
     }
+}
 
-    /// Non-fuchsia only: return the type of a handle
+/// An extension of `AsHandleRef` that adds non-Fuchsia-only operations.
+pub trait EmulatedHandleRef: AsHandleRef {
+    /// Return the type of a handle.
     fn handle_type(&self) -> HandleType {
         if self.is_invalid() {
             HandleType::Invalid
@@ -72,7 +75,7 @@ pub trait AsHandleRef {
         }
     }
 
-    /// Non-fuchsia only: return a reference to the other end of a handle
+    /// Return a reference to the other end of a handle.
     fn related<'a>(&'a self) -> HandleRef<'a> {
         if self.is_invalid() {
             HandleRef(INVALID_HANDLE, std::marker::PhantomData)
@@ -81,8 +84,8 @@ pub trait AsHandleRef {
         }
     }
 
-    /// Non-fuchsia only: return a "koid" like value
-    fn emulated_koid_pair(&self) -> (u64, u64) {
+    /// Return a "koid" like value.
+    fn koid_pair(&self) -> (u64, u64) {
         if self.is_invalid() {
             (0, 0)
         } else {
@@ -99,7 +102,26 @@ pub trait AsHandleRef {
             })
         }
     }
+
+    /// Return true if the handle appears valid (i.e. not `Handle::invalid()`),
+    /// but does not exist in the table. This should not normally return true;
+    /// when it does, dropping the handle will cause a panic.
+    fn is_dangling(&self) -> bool {
+        if self.is_invalid() {
+            false
+        } else {
+            let (shard, slot, ty, side) = unpack_handle(self.as_handle_ref().0);
+            let present = match ty {
+                HdlType::Channel => table_contains(&CHANNELS, shard, slot, side),
+                HdlType::StreamSocket => table_contains(&STREAM_SOCKETS, shard, slot, side),
+                HdlType::DatagramSocket => table_contains(&DATAGRAM_SOCKETS, shard, slot, side),
+            };
+            !present
+        }
+    }
 }
+
+impl<T: AsHandleRef> EmulatedHandleRef for T {}
 
 impl AsHandleRef for HandleRef<'_> {
     fn as_handle_ref<'a>(&'a self) -> HandleRef<'a> {
@@ -703,6 +725,18 @@ fn unpack_handle(handle: u32) -> (usize, usize, HdlType, Side) {
     (shard, slot, ty, side)
 }
 
+fn table_contains<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) -> bool {
+    match tbl.shards[shard].lock().unwrap().get(slot) {
+        None => false,
+        Some(h) => match (h.liveness, side) {
+            (Liveness::Open, _) => true,
+            (Liveness::Left, Side::Left) => true,
+            (Liveness::Right, Side::Right) => true,
+            _ => false,
+        },
+    }
+}
+
 fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) {
     let mut tbl = tbl.shards[shard].lock().unwrap();
     let h = &mut tbl[slot];
@@ -839,5 +873,31 @@ mod test {
         assert_eq!(c2.into_handle().handle_type(), HandleType::Channel);
         assert_eq!(s1.into_handle().handle_type(), HandleType::Socket);
         assert_eq!(s2.into_handle().handle_type(), HandleType::Socket);
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    #[test]
+    fn invalid_handle_is_not_dangling() {
+        let h = Handle::invalid();
+        assert!(!h.is_dangling());
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    #[test]
+    fn live_valid_handle_is_not_dangling() {
+        let (c1, c2) = Channel::create().unwrap();
+        assert!(!c1.is_dangling());
+        assert!(!c2.is_dangling());
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    #[test]
+    fn dropped_handle_is_dangling() {
+        let (c, _) = Channel::create().unwrap();
+        unsafe {
+            drop(Handle::from_raw(c.raw_handle()));
+        }
+        assert!(c.is_dangling());
+        std::mem::forget(c);
     }
 }

@@ -66,7 +66,8 @@ pub mod non_fuchsia_handles {
     use crate::invoke_for_handle_types;
 
     pub use fuchsia_async::emulated_handle::{
-        AsHandleRef, Handle, HandleBased, HandleRef, HandleType, MessageBuf, SocketOpts,
+        AsHandleRef, EmulatedHandleRef, Handle, HandleBased, HandleRef, HandleType, MessageBuf,
+        SocketOpts,
     };
 
     macro_rules! declare_unsupported_fidl_handle {

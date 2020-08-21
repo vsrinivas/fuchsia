@@ -114,12 +114,14 @@ pub use non_fuchsia_impl::*;
 #[cfg(not(target_os = "fuchsia"))]
 mod non_fuchsia_impl {
     use super::*;
-    // TODO(fxb/58687)
-    // use fidl::EmulatedHandleRef;
+    use fidl::EmulatedHandleRef;
 
-    pub fn get_info_handle_valid(_handle: &Handle) -> Result<(), Status> {
-        // TODO(fxb/58687): Use handle.is_dangling() from EmulatedHandleRef.
-        Err(Status::BAD_HANDLE)
+    pub fn get_info_handle_valid(handle: &Handle) -> Result<(), Status> {
+        if handle.is_dangling() {
+            Err(Status::BAD_HANDLE)
+        } else {
+            Ok(())
+        }
     }
 
     pub fn create_event() -> Result<Handle, Status> {

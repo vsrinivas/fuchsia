@@ -3,8 +3,14 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, Error};
-use fidl::{AsHandleRef, HandleRef};
+use fidl::HandleRef;
 use fidl_fuchsia_overnet_protocol::{ChannelRights, SocketRights, SocketType};
+
+#[cfg(target_os = "fuchsia")]
+use fidl::AsHandleRef;
+
+#[cfg(not(target_os = "fuchsia"))]
+use fidl::EmulatedHandleRef;
 
 #[cfg(target_os = "fuchsia")]
 pub(crate) type HandleKey = fuchsia_zircon::Koid;
@@ -39,7 +45,7 @@ pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
         }
         fidl::HandleType::Invalid => bail!("Unsupported handle type"),
     };
-    let (this_handle_key, pair_handle_key) = hdl.emulated_koid_pair();
+    let (this_handle_key, pair_handle_key) = hdl.koid_pair();
     Ok(HandleInfo { handle_type, this_handle_key, pair_handle_key })
 }
 
