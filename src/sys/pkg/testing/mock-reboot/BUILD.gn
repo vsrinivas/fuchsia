@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("mock-reboot") {
+  version = "0.0.1"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  test_deps = [
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:parking_lot",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":mock-reboot-tests" ]
+}
+
+unittest_package("mock-reboot-tests") {
+  deps = [ ":mock-reboot_test" ]
+
+  tests = [
+    {
+      name = "mock_reboot_lib_test"
+      environments = basic_envs
+    },
+  ]
+}

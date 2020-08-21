@@ -4,6 +4,7 @@
 
 use crate::errors::Error;
 use anyhow::Context as _;
+use fidl_fuchsia_hardware_power_statecontrol::{AdminProxy, RebootReason};
 use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
 use fidl_fuchsia_update_ext::Initiator;
 use fuchsia_async::futures::{future::BoxFuture, FutureExt};
@@ -31,15 +32,50 @@ pub async fn apply_system_update(
     let launcher =
         connect_to_service::<LauncherMarker>().context("connecting to component Launcher")?;
     let mut component_runner = RealComponentRunner { launcher_proxy: launcher };
-    apply_system_update_impl(
+
+    let reboot_service =
+        connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
+            .context("connecting to power state control")?;
+
+    apply_system_update_and_reboot(
         current_system_image,
         latest_system_image,
         &mut component_runner,
         initiator,
         &RealTimeSource,
         &RealFileSystem,
+        reboot_service,
     )
     .await
+}
+
+async fn apply_system_update_and_reboot<'a>(
+    current_system_image: Hash,
+    latest_system_image: Hash,
+    component_runner: &'a mut impl ComponentRunner,
+    initiator: Initiator,
+    time_source: &'a impl TimeSource,
+    file_system: &'a impl FileSystem,
+    reboot_service: AdminProxy,
+) -> Result<(), anyhow::Error> {
+    apply_system_update_impl(
+        current_system_image,
+        latest_system_image,
+        component_runner,
+        initiator,
+        time_source,
+        file_system,
+    )
+    .await?;
+
+    fx_log_info!("Successful update, rebooting...");
+
+    reboot_service
+        .reboot(RebootReason::SystemUpdate)
+        .await
+        .context("while performing reboot call")?
+        .map_err(|e| Error::RebootFailed(zx::Status::from_raw(e)))
+        .context("reboot responded with")
 }
 
 // For mocking
@@ -176,6 +212,8 @@ async fn apply_system_update_impl<'a>(
                 &format!("{}", current_system_image),
                 "--target",
                 &format!("{}", latest_system_image),
+                "--reboot",
+                "false",
                 "--oneshot",
                 "true",
             ]
@@ -185,15 +223,18 @@ async fn apply_system_update_impl<'a>(
         ),
     );
     fut.await?;
-    Err(Error::SystemUpdaterFinished)?
+    Ok(())
 }
 
 #[cfg(test)]
 mod test_apply_system_update_impl {
     use super::*;
+    use anyhow::anyhow;
     use fuchsia_async::{self as fasync, futures::future};
     use matches::assert_matches;
+    use mock_reboot::MockRebootService;
     use proptest::prelude::*;
+    use std::sync::{atomic::AtomicU32, atomic::Ordering, Arc};
 
     const ACTIVE_SYSTEM_IMAGE_MERKLE: [u8; 32] = [0u8; 32];
     const NEW_SYSTEM_IMAGE_MERKLE: [u8; 32] = [1u8; 32];
@@ -262,7 +303,7 @@ mod test_apply_system_update_impl {
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_system_updater: true };
 
-        let result = apply_system_update_impl(
+        apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
@@ -270,12 +311,8 @@ mod test_apply_system_update_impl {
             &time_source,
             &filesystem,
         )
-        .await;
-
-        assert_matches!(
-            result.unwrap_err().downcast::<Error>().unwrap(),
-            Error::SystemUpdaterFinished
-        );
+        .await
+        .unwrap();
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -284,7 +321,7 @@ mod test_apply_system_update_impl {
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_system_updater: true };
 
-        let result = apply_system_update_impl(
+        apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
@@ -292,12 +329,9 @@ mod test_apply_system_update_impl {
             &time_source,
             &filesystem,
         )
-        .await;
+        .await
+        .unwrap();
 
-        assert_matches!(
-            result.unwrap_err().downcast::<Error>().unwrap(),
-            Error::SystemUpdaterFinished
-        );
         assert!(component_runner.was_called);
     }
 
@@ -307,7 +341,7 @@ mod test_apply_system_update_impl {
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_system_updater: true };
 
-        let result = apply_system_update_impl(
+        apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
@@ -315,12 +349,9 @@ mod test_apply_system_update_impl {
             &time_source,
             &filesystem,
         )
-        .await;
+        .await
+        .unwrap();
 
-        assert_matches!(
-            result.unwrap_err().downcast::<Error>().unwrap(),
-            Error::SystemUpdaterFinished
-        );
         assert!(component_runner.was_called);
     }
 
@@ -349,7 +380,7 @@ mod test_apply_system_update_impl {
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_system_updater: true };
 
-        let result = apply_system_update_impl(
+        apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
             &mut component_runner,
@@ -357,17 +388,14 @@ mod test_apply_system_update_impl {
             &time_source,
             &filesystem,
         )
-        .await;
+        .await
+        .unwrap();
 
         let expected_url = "fuchsia-pkg://fuchsia.com/system-updater?hash=\
                             6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0\
                             #meta/system-updater.cmx"
             .to_string();
 
-        assert_matches!(
-            result.unwrap_err().downcast::<Error>().unwrap(),
-            Error::SystemUpdaterFinished
-        );
         assert_eq!(
             component_runner.captured_args,
             vec![Args {
@@ -382,6 +410,8 @@ mod test_apply_system_update_impl {
                         "0000000000000000000000000000000000000000000000000000000000000000",
                         "--target",
                         "0101010101010101010101010101010101010101010101010101010101010101",
+                        "--reboot",
+                        "false",
                         "--oneshot",
                         "true",
                     ]
@@ -391,6 +421,132 @@ mod test_apply_system_update_impl {
                 )
             }]
         );
+    }
+
+    // Many implementations of a reboot test will do it in a full TestEnv,
+    // but if you find yourself copying this struct, consider refactoring it into
+    // the mock-reboot crate
+    struct RebootTestState {
+        _reboot_service: Arc<MockRebootService>,
+        reboot_service_proxy: AdminProxy,
+        reboot_service_call_count: Arc<AtomicU32>,
+    }
+
+    fn setup_reboot_test(reboot_should_fail: bool) -> RebootTestState {
+        let call_count = Arc::new(AtomicU32::new(0));
+        let call_count_clone = Arc::clone(&call_count);
+        let reboot_service_callback = Box::new(move || {
+            call_count_clone.fetch_add(1, Ordering::SeqCst);
+            if reboot_should_fail {
+                Err(zx::Status::PEER_CLOSED.into_raw())
+            } else {
+                Ok(())
+            }
+        });
+        let reboot_service = Arc::new(MockRebootService::new(reboot_service_callback));
+        let reboot_service_clone = Arc::clone(&reboot_service);
+
+        let proxy = reboot_service_clone.spawn_reboot_service();
+
+        RebootTestState {
+            _reboot_service: reboot_service,
+            reboot_service_proxy: proxy,
+            reboot_service_call_count: call_count,
+        }
+    }
+
+    // Test that if system updater succeeds, system-update-checker calls the reboot service.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reboot_on_success() {
+        let reboot_test_state = setup_reboot_test(false);
+
+        let mut component_runner = DoNothingComponentRunner;
+        let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_system_updater: true };
+
+        apply_system_update_and_reboot(
+            ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
+            NEW_SYSTEM_IMAGE_MERKLE.into(),
+            &mut component_runner,
+            Initiator::User,
+            &time_source,
+            &filesystem,
+            reboot_test_state.reboot_service_proxy,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(reboot_test_state.reboot_service_call_count.load(Ordering::SeqCst), 1);
+    }
+
+    // A component runner which fails every call made to it.
+    // Useful for making the "run system updater" step fail.
+    struct FailingComponentRunner;
+    impl ComponentRunner for FailingComponentRunner {
+        fn run_until_exit(
+            &mut self,
+            _url: String,
+            _arguments: Option<Vec<String>>,
+        ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+            Box::pin(future::err(anyhow!(Error::SystemUpdaterFailed)).boxed())
+        }
+    }
+
+    // Test that if system updater fails, we don't reboot the system.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_does_not_reboot_on_failure() {
+        let reboot_test_state = setup_reboot_test(false);
+
+        let mut component_runner = FailingComponentRunner;
+        let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_system_updater: true };
+
+        let update_result = apply_system_update_and_reboot(
+            ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
+            NEW_SYSTEM_IMAGE_MERKLE.into(),
+            &mut component_runner,
+            Initiator::User,
+            &time_source,
+            &filesystem,
+            reboot_test_state.reboot_service_proxy,
+        )
+        .await;
+
+        assert_matches!(
+            update_result.unwrap_err().downcast::<Error>().unwrap(),
+            Error::SystemUpdaterFailed
+        );
+        assert_eq!(reboot_test_state.reboot_service_call_count.load(Ordering::SeqCst), 0);
+    }
+
+    // Test that if the reboot service isn't working, we surface the appropriate error after updating.
+    // This would be a bad state to be in, but at least a user would get output.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reboot_errors_on_no_service() {
+        let reboot_test_state = setup_reboot_test(true);
+
+        let mut component_runner = DoNothingComponentRunner;
+        let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_system_updater: true };
+
+        let update_result = apply_system_update_and_reboot(
+            ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
+            NEW_SYSTEM_IMAGE_MERKLE.into(),
+            &mut component_runner,
+            Initiator::User,
+            &time_source,
+            &filesystem,
+            reboot_test_state.reboot_service_proxy,
+        )
+        .await;
+
+        // We should have errored out on calling system_updater, but should have
+        // called the reboot API.
+        assert_matches!(
+            update_result.err().expect("system update should fail").downcast::<Error>().unwrap(),
+            Error::RebootFailed(zx::Status::PEER_CLOSED)
+        );
+        assert_eq!(reboot_test_state.reboot_service_call_count.load(Ordering::SeqCst), 1);
     }
 
     proptest! {
@@ -418,8 +574,7 @@ mod test_apply_system_update_impl {
                 &filesystem,
             ));
 
-            prop_assert!(result.is_err());
-            assert_matches!(result.unwrap_err().downcast::<Error>().unwrap(), Error::SystemUpdaterFinished);
+            prop_assert!(result.is_ok(), "apply_system_update_impl failed: {:?}", result);
             prop_assert_eq!(
                 component_runner.captured_args,
                 vec![Args {
@@ -433,6 +588,8 @@ mod test_apply_system_update_impl {
                         &source_merkle.to_lowercase(),
                         "--target",
                         &target_merkle.to_lowercase(),
+                        "--reboot",
+                        "false",
                         "--oneshot",
                         "true",
                     ]

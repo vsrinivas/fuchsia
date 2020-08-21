@@ -19,6 +19,7 @@ use {
     fuchsia_zircon::Status,
     futures::prelude::*,
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
@@ -169,7 +170,15 @@ impl TestEnvBuilder {
                 interactions.lock().push(PackageResolve(resolved_url.to_owned()))
             }))))
         };
-        let reboot_service = Arc::new(MockRebootService::new(Arc::clone(&interactions)));
+
+        let reboot_service = {
+            let interactions = Arc::clone(&interactions);
+            Arc::new(MockRebootService::new(Box::new(move || {
+                interactions.lock().push(Reboot);
+                Ok(())
+            })))
+        };
+
         let cache_service = Arc::new(MockCacheService::new(Arc::clone(&interactions)));
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let space_service = Arc::new(MockSpaceService::new(Arc::clone(&interactions)));
@@ -253,7 +262,7 @@ impl TestEnvBuilder {
         fasync::Task::spawn(fs.collect()).detach();
 
         let system_updater = system_updater_builder
-            .map(|builder| builder.spawn(env.launcher()).expect("sustem updater to launch"));
+            .map(|builder| builder.spawn(env.launcher()).expect("system updater to launch"));
 
         TestEnv {
             env,
@@ -550,41 +559,6 @@ impl MockCacheService {
             }
         }
 
-        Ok(())
-    }
-}
-
-struct MockRebootService {
-    interactions: SystemUpdaterInteractions,
-}
-impl MockRebootService {
-    fn new(interactions: SystemUpdaterInteractions) -> Self {
-        Self { interactions }
-    }
-
-    async fn run_reboot_service(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_hardware_power_statecontrol::AdminRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
-            match event {
-                fidl_fuchsia_hardware_power_statecontrol::AdminRequest::Reboot {
-                    reason,
-                    responder,
-                } => {
-                    assert_eq!(
-                        reason,
-                        fidl_fuchsia_hardware_power_statecontrol::RebootReason::SystemUpdate
-                    );
-                    eprintln!("TEST: Got reboot request with reason {:?}", reason);
-                    self.interactions.lock().push(Reboot);
-                    responder.send(&mut Ok(()))?;
-                }
-                _ => {
-                    panic!("unhandled RebootService method {:?}", event);
-                }
-            }
-        }
         Ok(())
     }
 }

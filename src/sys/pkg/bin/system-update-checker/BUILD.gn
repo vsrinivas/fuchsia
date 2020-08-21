@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/sysconfig-client",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
@@ -52,7 +53,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//src/sys/pkg/testing/mock-reboot",
+    "//third_party/rust_crates:matches",
+  ]
 
   # TODO(54452): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]

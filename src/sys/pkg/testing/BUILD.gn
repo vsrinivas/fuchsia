@@ -9,6 +9,7 @@ group("tests") {
     "host-target-testing:tests",
     "mock-omaha-server:tests",
     "mock-paver:tests",
+    "mock-reboot:tests",
     "mock-resolver:tests",
     "pkgfs-ramdisk:tests",
   ]
