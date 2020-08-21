@@ -5,11 +5,11 @@
 package lib
 
 import (
-	fidlir "fidl/compiler/backend/types"
 	"fmt"
 	"strconv"
 	"strings"
 
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )

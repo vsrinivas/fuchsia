@@ -11,8 +11,7 @@ import (
 	"os"
 	"path"
 
-	"fidl/compiler/backend/types"
-
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
 )

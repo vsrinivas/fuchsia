@@ -7,7 +7,7 @@ package ir
 import (
 	"strings"
 
-	fidlir "fidl/compiler/backend/types"
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 type All struct {

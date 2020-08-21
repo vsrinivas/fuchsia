@@ -9,8 +9,8 @@ import (
 	"log"
 	"strings"
 
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 const (

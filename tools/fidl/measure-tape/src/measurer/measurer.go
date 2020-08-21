@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"log"
 
-	fidlcommon "fidl/compiler/backend/common"
-	fidlir "fidl/compiler/backend/types"
+	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 type Measurer struct {

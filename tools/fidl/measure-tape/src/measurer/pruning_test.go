@@ -7,7 +7,7 @@ package measurer
 import (
 	"testing"
 
-	fidlcommon "fidl/compiler/backend/common"
+	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 )
 
 func TestPruningCallerCallingEmptyCallee(t *testing.T) {

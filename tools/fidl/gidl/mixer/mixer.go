@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"math"
 
-	fidlir "fidl/compiler/backend/types"
-
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 

@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 // This value needs to be kept in sync with the one defined in

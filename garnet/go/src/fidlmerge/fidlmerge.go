@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{

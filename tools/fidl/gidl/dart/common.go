@@ -9,8 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	fidlcommon "fidl/compiler/backend/common"
-
+	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )

@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
-
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/templates"
 )

@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fidl/compiler/backend/typestest"
-
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/ir"
 )
 

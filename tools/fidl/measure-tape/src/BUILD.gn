@@ -9,7 +9,7 @@ import("//build/host.gni")
 
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/..."
-  deps = [ "//garnet/go/src/fidl:fidl_lib" ]
+  deps = [ "//garnet/go/src/fidl:compiler" ]
 }
 
 go_binary("measure-tape") {

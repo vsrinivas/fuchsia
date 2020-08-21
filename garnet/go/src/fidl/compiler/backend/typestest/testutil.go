@@ -11,9 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"fidl/compiler/backend/types"
-
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
 // AllExamples returns all examples by filename.

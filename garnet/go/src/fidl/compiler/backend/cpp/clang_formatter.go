@@ -4,7 +4,9 @@
 
 package cpp
 
-import "fidl/compiler/backend/common"
+import (
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+)
 
 // NewClangFormatter a formatter that invokes clang-format.
 // TODO(fxb/49757) Use --style=file and copy the .clang-format file to the correct location.

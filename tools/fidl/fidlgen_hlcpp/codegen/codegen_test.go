@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/typestest"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
 )
 
 // basePath holds the base path to the directory containing goldens.

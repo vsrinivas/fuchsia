@@ -8,7 +8,7 @@ import (
 	"log"
 	"sort"
 
-	fidlcommon "fidl/compiler/backend/common"
+	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 )
 
 type statementKind int

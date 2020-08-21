@@ -15,8 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	fidlir "fidl/compiler/backend/types"
-
+	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"

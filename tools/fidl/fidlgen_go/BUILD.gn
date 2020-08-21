@@ -19,7 +19,7 @@ go_binary("fidlgen_go") {
 
   deps = [
     ":lib",
-    "//garnet/go/src/fidl:fidl_lib",
+    "//garnet/go/src/fidl:compiler",
   ]
 }
 

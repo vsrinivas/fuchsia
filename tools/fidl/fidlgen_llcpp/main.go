@@ -12,9 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/types"
-
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/codegen"
 )
 
