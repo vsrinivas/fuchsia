@@ -55,6 +55,10 @@ source_set("paver-core") {
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fvm",
   ]
+
+  # TODO(57974): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 # Helper libraries to aid board specific implementations.
