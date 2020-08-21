@@ -14,7 +14,6 @@ rustc_library("rustyline") {
   source_root = "//third_party/rust-mirrors/rustyline/src/lib.rs"
   configs -= [ "//build/config:rust_2018_idioms" ]
   deps = [
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:memchr",
@@ -22,6 +21,12 @@ rustc_library("rustyline") {
     "//third_party/rust_crates:unicode-width",
     "//third_party/rust_crates:utf8parse",
   ]
+
+  if (current_os == "fuchsia") {
+    deps += ["//src/lib/zircon/rust:fuchsia-zircon"]
+  } else {
+    deps += ["//third_party/rust_crates:nix"]
+  }
 
   sources = [
     "//third_party/rust-mirrors/rustyline/src/completion.rs",
@@ -36,8 +41,13 @@ rustc_library("rustyline") {
     "//third_party/rust-mirrors/rustyline/src/kill_ring.rs",
     "//third_party/rust-mirrors/rustyline/src/lib.rs",
     "//third_party/rust-mirrors/rustyline/src/line_buffer.rs",
-    "//third_party/rust-mirrors/rustyline/src/tty/fuchsia.rs",
     "//third_party/rust-mirrors/rustyline/src/tty/mod.rs",
     "//third_party/rust-mirrors/rustyline/src/undo.rs",
   ]
+
+  if (current_os == "fuchsia") {
+    sources += ["//third_party/rust-mirrors/rustyline/src/tty/fuchsia.rs"]
+  } else {
+    sources += ["//third_party/rust-mirrors/rustyline/src/tty/unix.rs"]
+  }
 }
