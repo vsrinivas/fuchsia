@@ -322,6 +322,25 @@ if (internal_access) {
       "brcmfmac43455-sdio.txt",
       "brcmfmac43455-sdio.clm_blob",
     ]
+  } else if (board_name == "luis") {
+    copy("brcmfmac-firmware-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-luis.bin" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
+    }
+    copy("brcmfmac-nvram-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-luis.txt" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
+    }
+    copy("brcmfmac-clm-copy") {
+      sources = [ "firmware/brcmfmac43455-sdio-luis.clm_blob" ]
+      outputs =
+          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
+    }
+    driver_library_files += [
+      "brcmfmac43455-sdio.bin",
+      "brcmfmac43455-sdio.txt",
+      "brcmfmac43455-sdio.clm_blob",
+    ]
   } else if (target_cpu == "x64") {
     # Assume for now that x64 boards use the PCIE interface.
     copy("brcmfmac-firmware-copy") {
@@ -457,6 +476,7 @@ driver_package("brcmfmac") {
 }
 
 # Driver package for the test version of the brcmfmac driver.
+# TODO: Need to look into including the test-driver in the template as well.
 driver_package("brcmfmac-test-driver") {
   deps = [
     # The copy step has to be in the shared-library toolchain to use the
