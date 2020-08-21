@@ -278,12 +278,18 @@ impl<TP: TimeProvider, OCC: OemCpConverter> FsOptions<TP, OCC> {
 /// A FAT volume statistics.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct FileSystemStats {
+    sector_size: u16,
     cluster_size: u32,
     total_clusters: u32,
     free_clusters: u32,
 }
 
 impl FileSystemStats {
+    /// Sector size in bytes.
+    pub fn sector_size(&self) -> u16 {
+        self.sector_size
+    }
+
     /// Cluster size in bytes
     pub fn cluster_size(&self) -> u32 {
         self.cluster_size
@@ -487,6 +493,7 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
             _ => self.recalc_free_clusters()?,
         };
         Ok(FileSystemStats {
+            sector_size: self.bpb.bytes_per_sector,
             cluster_size: self.cluster_size(),
             total_clusters: self.total_clusters,
             free_clusters,

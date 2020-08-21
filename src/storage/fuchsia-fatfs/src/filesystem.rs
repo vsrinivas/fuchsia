@@ -45,6 +45,18 @@ impl FatFilesystemInner {
     pub fn cluster_size(&self) -> u32 {
         self.filesystem.cluster_size()
     }
+
+    pub fn total_clusters(&self) -> Result<u32, Status> {
+        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.total_clusters())
+    }
+
+    pub fn free_clusters(&self) -> Result<u32, Status> {
+        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.free_clusters())
+    }
+
+    pub fn sector_size(&self) -> Result<u16, Status> {
+        Ok(self.filesystem.stats().map_err(fatfs_error_to_status)?.sector_size())
+    }
 }
 
 pub struct FatFilesystem {

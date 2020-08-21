@@ -24,25 +24,20 @@ enum Services {
     Query(QueryRequestStream),
 }
 
-async fn handle_admin(
-    mut stream: AdminRequestStream,
-    fs: Arc<FatFs>,
-    scope: &ExecutionScope,
-) -> Result<(), Error> {
-    while let Some(request) = stream.try_next().await.context("Reading request")? {
-        fs.handle_admin(scope, request)?;
+async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Result<(), Error> {
+    match stream {
+        Services::Admin(mut stream) => {
+            while let Some(request) = stream.try_next().await.context("Reading request")? {
+                fs.handle_admin(scope, request)?;
+            }
+        }
+        Services::Query(mut stream) => {
+            while let Some(request) = stream.try_next().await.context("Reading request")? {
+                fs.handle_query(scope, request)?;
+            }
+        }
     }
-    Ok(())
-}
 
-async fn handle_query(
-    mut stream: QueryRequestStream,
-    fs: Arc<FatFs>,
-    scope: &ExecutionScope,
-) -> Result<(), Error> {
-    while let Some(request) = stream.try_next().await.context("Reading request")? {
-        fs.handle_query(scope, request)?;
-    }
     Ok(())
 }
 
@@ -80,7 +75,7 @@ async fn main() -> Result<(), Error> {
     // Export the root directory in our outgoing directory.
     let mut fs = ServiceFs::new();
     fs.add_remote("root", proxy);
-    fs.dir("svc").add_fidl_service(Services::Admin);
+    fs.dir("svc").add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
     fs.take_and_serve_directory_handle()?;
 
     let fatfs = Arc::new(fatfs);
@@ -88,11 +83,7 @@ async fn main() -> Result<(), Error> {
     // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
-        match request {
-            Services::Admin(request) => handle_admin(request, Arc::clone(&fatfs), &scope),
-            Services::Query(request) => handle_query(request, Arc::clone(&fatfs), &scope),
-        }
-        .unwrap_or_else(|e| fx_log_err!("{:?}", e))
+        handle(request, Arc::clone(&fatfs), &scope).unwrap_or_else(|e| fx_log_err!("{:?}", e))
     })
     .await;
 
