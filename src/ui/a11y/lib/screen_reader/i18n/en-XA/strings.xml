@@ -31,11 +31,19 @@
   <string name="role_ordered_list">[Öŕðéŕéð ļîšţ one two]</string>
   <string name="role_list">[Ļîšţ one]</string>
   <string name="list_items">{num_items,plural, =0{[ŵîţĥ ñö îţémš one two]}=1{[ŵîţĥ öñé îţém one two]}other{[ŵîţĥ ᐅ#ᐊ îţémš one two three]}}</string>
+  <string name="normal_navigation_granularity">[Ñöŕmåļ ñåvîĝåţîöñ one two three]</string>
+  <string name="adjust_value_granularity">[Åðĵûšţ våļûé one two]</string>
+  <string name="heading_granularity">[Ĥéåðîñĝ one]</string>
+  <string name="form_control_granularity">[Föŕm çöñţŕöļ one two]</string>
+  <string name="link_granularity">[Ļîñķ one]</string>
   <string name="line_granularity">[Ļîñé one]</string>
   <string name="word_granularity">[Ŵöŕð one]</string>
   <string name="character_granularity">[Çĥåŕåçţéŕ one two]</string>
   <string name="double_tap_hint">[Ðöûбļé ţåþ ţö åçţîvåţé one two three four five]</string>
+  <string name="adjust_value_hint">[Šŵîþé ļéƒţ öŕ ŕîĝĥţ ţö åðĵûšţ ţĥé våļûé. one two three four five six seven eight]</string>
   <string name="last_element">[Ļåšţ one]</string>
   <string name="first_element">[Fîŕšţ one]</string>
   <string name="no_focus_alert">[Ñö ƒöçûš. Ţöûçĥ åñð éxþļöŕé ţö ƒîñð îţémš. one two three four five six seven eight nine]</string>
+  <string name="screen_reader_on_hint">[Šçŕééñ Ŕéåðéŕ öñ. one two three]</string>
+  <string name="screen_reader_off_hint">[Šçŕééñ Ŕéåðéŕ öƒƒ. one two three]</string>
 </resources>

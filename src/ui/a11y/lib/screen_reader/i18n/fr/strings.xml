@@ -31,11 +31,19 @@
   <string name="role_ordered_list">Liste numérotée</string>
   <string name="role_list">Liste</string>
   <string name="list_items">{num_items,plural, =0{sans aucun élément}=1{avec 1 élément}one{with # items}other{avec # éléments}}</string>
+  <string name="normal_navigation_granularity">Navigation normale</string>
+  <string name="adjust_value_granularity">Ajuster la valeur</string>
+  <string name="heading_granularity">Titre</string>
+  <string name="form_control_granularity">Commande de formulaire</string>
+  <string name="link_granularity">Lien</string>
   <string name="line_granularity">Ligne</string>
   <string name="word_granularity">Mot</string>
   <string name="character_granularity">Caractère</string>
   <string name="double_tap_hint">Appuyer deux fois pour activer</string>
+  <string name="adjust_value_hint">Balayez vers la gauche ou vers le droite pour ajuster la valeur.</string>
   <string name="last_element">Dernier élément</string>
   <string name="first_element">Premier élément</string>
   <string name="no_focus_alert">Aucun élément sélectionné. Appuyez sur l\'écran et naviguez pour trouver un élément.</string>
+  <string name="screen_reader_on_hint">Lecteur d\'écran activé.</string>
+  <string name="screen_reader_off_hint">Lecteur d\'écran désactivé.</string>
 </resources>

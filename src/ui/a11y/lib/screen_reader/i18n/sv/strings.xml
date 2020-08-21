@@ -31,11 +31,19 @@
   <string name="role_ordered_list">Sorterad lista</string>
   <string name="role_list">Lista</string>
   <string name="list_items">{num_items,plural, =0{utan objekt}=1{med ett objekt}other{med # objekt}}</string>
+  <string name="normal_navigation_granularity">Normal navigering</string>
+  <string name="adjust_value_granularity">Justera värdet</string>
+  <string name="heading_granularity">Rubrik</string>
+  <string name="form_control_granularity">Formulärkontroll</string>
+  <string name="link_granularity">Länk</string>
   <string name="line_granularity">Linje</string>
   <string name="word_granularity">Ord</string>
   <string name="character_granularity">Tecken</string>
   <string name="double_tap_hint">Aktivera genom att trycka snabbt två gånger</string>
+  <string name="adjust_value_hint">Svep till vänster eller höger för att justera värdet.</string>
   <string name="last_element">Sista</string>
   <string name="first_element">Första</string>
   <string name="no_focus_alert">Inget i fokus. Tryck och utforska för att hitta objekt.</string>
+  <string name="screen_reader_on_hint">Skärmläsningsprogram på.</string>
+  <string name="screen_reader_off_hint">Skärmläsningsprogram av.</string>
 </resources>
