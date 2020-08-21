@@ -17,6 +17,7 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/goldfish/addressspace.h>
 #include <ddktl/protocol/pci.h>
 #include <fbl/mutex.h>
 
@@ -30,6 +31,7 @@ using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 
 class AddressSpaceDevice
     : public DeviceType,
+      public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
       public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -48,15 +50,29 @@ class AddressSpaceDevice
   uint32_t DestroyChildDriver(uint32_t handle);
   uint32_t ChildDriverPing(uint32_t handle);
 
+  // |ddk.protocol.GoldfishAddressSpace|
+  zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
+                                                  zx::channel request) {
+    return OpenChildDriver(
+        static_cast<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType>(type),
+        std::move(request));
+  }
+
   // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
   void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
-                       zx::channel request, OpenChildDriverCompleter::Sync completer) override;
+                       zx::channel request, OpenChildDriverCompleter::Sync completer) override {
+    zx_status_t result = OpenChildDriver(type, std::move(request));
+    completer.Close(result);
+  }
 
   // Device protocol implementation.
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
  private:
+  zx_status_t OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
+                              zx::channel request);
+
   uint32_t CommandMmioLocked(uint32_t cmd) TA_REQ(mmio_lock_);
 
   ddk::PciProtocolClient pci_;

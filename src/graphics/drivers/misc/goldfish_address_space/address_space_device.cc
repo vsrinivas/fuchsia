@@ -219,18 +219,16 @@ uint32_t AddressSpaceDevice::ChildDriverPing(uint32_t handle) {
   return ZX_OK;
 }
 
-// |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
-void AddressSpaceDevice::OpenChildDriver(
-    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type, zx::channel request,
-    OpenChildDriverCompleter::Sync completer) {
+zx_status_t AddressSpaceDevice::OpenChildDriver(
+    llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type, zx::channel request) {
   using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
 
   ddk::IoBuffer io_buffer;
   uint32_t handle;
   zx_status_t status = CreateChildDriver(&io_buffer, &handle);
   if (status != ZX_OK) {
-    completer.Close(status);
-    return;
+    zxlogf(ERROR, "%s: failed to create child driver: %d", kTag, status);
+    return status;
   }
 
   AddressSpaceChildDriverPingMessage* ping =
@@ -249,13 +247,11 @@ void AddressSpaceDevice::OpenChildDriver(
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
-    completer.Close(status);
-    return;
+    return status;
   }
 
   child_driver.release();
-
-  completer.Close(ZX_OK);
+  return ZX_OK;
 }
 
 void AddressSpaceDevice::DdkRelease() { delete this; }

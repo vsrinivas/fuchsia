@@ -8,6 +8,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 common_deps = [
+  "//sdk/banjo/ddk.protocol.goldfish.addressspace",
   "//sdk/banjo/ddk.protocol.pci",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//src/devices/lib/driver",
