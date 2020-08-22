@@ -196,17 +196,17 @@ From //build/images/fvm.gni:41
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:9
+From //boards/arm64.gni:13
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:14
 
-**Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:9
+From //boards/x64.gni:41
 
 **Overridden from the default:** `[]`
 
@@ -232,7 +232,7 @@ Board name used for paving and amber updates.
 
 **Current value for `target_cpu = "arm64"`:** `"qemu-arm64"`
 
-From //boards/arm64.gni:7
+From //boards/arm64.gni:9
 
 **Overridden from the default:** `""`
 
@@ -240,7 +240,7 @@ From //build/board.gni:7
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //boards/x64.gni:7
+From //boards/x64.gni:9
 
 **Overridden from the default:** `""`
 
@@ -252,7 +252,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/arm64.gni:15
+From //boards/arm64.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -260,7 +260,7 @@ From //build/board.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/x64.gni:15
+From //boards/x64.gni:47
 
 **Overridden from the default:** `[]`
 
@@ -269,17 +269,17 @@ From //build/board.gni:11
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:13
+From //boards/arm64.gni:17
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:25
 
-**Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:13
+From //boards/x64.gni:43
 
 **Overridden from the default:** `[]`
 
@@ -303,17 +303,17 @@ From //build/images/args.gni:131
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:11
+From //boards/arm64.gni:15
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:22
 
-**Current value for `target_cpu = "x64"`:** `["//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:11
+From //boards/x64.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -603,6 +603,12 @@ starts with //).
 
 From //build/images/custom_signing.gni:12
 
+### dart_compilation_mode
+
+**Current value (from the default):** `"jit"`
+
+From //build/dart/config.gni:16
+
 ### dart_default_app
 Controls whether dart_app() targets generate JIT or AOT Dart snapshots.
 This defaults to JIT, use `fx set <ARCH> --args
@@ -610,7 +616,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -618,14 +624,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -798,7 +804,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:708
+From //build/config/BUILDCONFIG.gn:816
 
 ### fastboot_product
 
@@ -855,7 +861,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -870,14 +876,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/28efd3b25ed94fca071642b3f29bccac4801dfb5/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/2565b6d37447c3eb88178be33437bd6c27079433/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1386,7 +1392,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:633
+From //build/config/BUILDCONFIG.gn:741
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1544,7 +1550,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:26
+From //boards/arm64.gni:30
 
 **Overridden from the default:** `"0"`
 
@@ -1552,7 +1558,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:27
+From //boards/x64.gni:59
 
 **Overridden from the default:** `"0"`
 
@@ -1579,7 +1585,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:27
+From //boards/arm64.gni:31
 
 **Overridden from the default:** `"0"`
 
@@ -1587,7 +1593,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:28
+From //boards/x64.gni:60
 
 **Overridden from the default:** `"0"`
 
@@ -2060,7 +2066,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:938
+From //build/config/BUILDCONFIG.gn:1046
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2069,7 +2075,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:943
+From //build/config/BUILDCONFIG.gn:1051
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2103,7 +2109,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:754
+From //build/config/BUILDCONFIG.gn:862
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2204,13 +2210,13 @@ From //src/testing/fuzzing/syzkaller/BUILD.gn:11
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //boards/arm64.gni:5
+From //boards/arm64.gni:7
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //boards/x64.gni:5
+From //boards/x64.gni:7
 
 **Overridden from the default:** `""`
 
@@ -2293,6 +2299,24 @@ This variable is a scope giving details about the current toolchain:
         [string] This is "-${toolchain_variant.name}", "" if name is empty.
     `toolchain_variant.is_pic_default`
         [bool] This is true in `shlib_toolchain`.
+    `toolchain_variant.configs`
+        [list of configs] A list of configs that are added to all linkable
+        targets for this toolchain() instance.
+    `toolchain_variant.remove_common_configs`
+        [list of configs] A list of configs that are removed from all
+        linkable targets for this toolchain() instance. Useful when
+        one of the default configs must not be used.
+    `toolchain_variant.remove_shared_configs`
+        [list of configs] Same a remove_common_configs, but only applies
+        to non-executable (e.g. shared_library()) targets.
+    `toolchain_variant.instrumented`
+        [boolean] A flag that is true iff this toolchain generates
+        instrumented code (for sanitizers, code-coverage analysis or
+        fuzzing).
+    `toolchain_variant.with_shared`
+        [boolean] True iff this toolchain() instance has a secondary
+        toolchain to build ELF shared-library code.
+
 The other fields are the variant's effects as defined in
 [`known_variants`](#known_variants).
 
@@ -2303,7 +2327,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:108
+From //build/config/BUILDCONFIG.gn:126
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2331,7 +2355,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:728
+From //build/config/BUILDCONFIG.gn:836
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2700,6 +2724,25 @@ From //BUILD.gn:71
 **Current value (from the default):** `""`
 
 From //build/images/args.gni:72
+
+### zircon_toolchain
+*This should never be set as a build argument.*
+It exists only to be set in `toolchain_args`.
+For Zircon toolchains, this will be a scope whose schema
+is documented in //build/toolchain/zircon/zircon_toolchain.gni.
+For all other toolchains, this will be false.
+
+This allows testing for a Zircon-specific toolchain with:
+
+  if (zircon_toolchain != false) {
+    // code path for Zircon-specific toolchains
+  } else {
+    // code path for non-Zircon ones.
+  }
+
+**Current value (from the default):** `false`
+
+From //build/config/BUILDCONFIG.gn:143
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
