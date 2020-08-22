@@ -13,6 +13,10 @@ import("//build/testing/test_spec.gni")
 #     Required: The go packages containing the tests to be run.
 #     Type: list of strings.
 #
+#   use_prebuilt_go (optional)
+#     If true, use a prebuilt go toolchain, rather than building the toolchain.
+#     If not set, defaults to false when targetting Fuchsia and true otherwise.
+#
 #   args
 #     Optional: additional arguments needed when invoking the test.
 #     Only applies to host tests.

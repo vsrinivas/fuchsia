@@ -28,6 +28,10 @@ declare_args() {
 #   gopackages (required)
 #     List of packages to build.
 #
+#   use_prebuilt_go (optional)
+#     If true, use a prebuilt go toolchain, rather than building the toolchain.
+#     If not set, defaults to false when targetting Fuchsia and true otherwise.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -273,7 +277,6 @@ template("go_build") {
         deps += [
           "//build/unification/lib/sysroot",
           "//sdk/lib/fdio",
-          "//third_party/go:go_runtime",
         ]
 
         if (!carchive && output_breakpad_syms && host_os != "mac") {
@@ -294,8 +297,6 @@ template("go_build") {
           rebase_path("//zircon/third_party/ulib/musl/include"),
           "--include-dir",
           rebase_path("//zircon/system/public"),
-          "--go-root",
-          rebase_path("$host_tools_dir/goroot"),
         ]
         args += [
           # For src/sys/pkg/bin/pkgfs/ramdisk
@@ -326,11 +327,25 @@ template("go_build") {
           rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
                                      "target_gen_dir")),
         ]
+      }
+
+      use_prebuilt_go = !is_fuchsia
+      if (defined(invoker.use_prebuilt_go)) {
+          use_prebuilt_go = invoker.use_prebuilt_go
+      }
+      if (use_prebuilt_go) {
+          args += [
+            "--go-root",
+            rebase_path("//prebuilt/third_party/go/${host_platform}"),
+          ]
       } else {
-        args += [
-          "--go-root",
-          rebase_path("//prebuilt/third_party/go/${host_platform}"),
-        ]
+          args += [
+            "--go-root",
+            rebase_path("$host_tools_dir/goroot"),
+          ]
+          deps += [
+            "//third_party/go:go_runtime",
+          ]
       }
 
       if (!carchive) {

@@ -11,6 +11,10 @@ import("//build/go/go_build.gni")
 #   gopackage (required)
 #     The go package containing the main function.
 #
+#   use_prebuilt_go (optional)
+#     If true, use a prebuilt go toolchain, rather than building the toolchain.
+#     If not set, defaults to false when targetting Fuchsia and true otherwise.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
