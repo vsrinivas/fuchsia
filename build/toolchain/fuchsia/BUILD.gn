@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/clang_toolchain_suite.gni")
 
 clang_toolchain_suite(target_cpu) {
   toolchain_cpu = target_cpu

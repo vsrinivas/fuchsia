@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/variant_toolchain_suite.gni")
+
+template("clang_toolchain_suite") {
+  variant_toolchain_suite(target_name) {
+    toolchain_template = "clang_toolchain"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("clang_toolchain_suite") {
+  with_shared = true
+}
+
+template("clang_host_toolchain_suite") {
+  clang_toolchain_suite(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "toolchain_os",
+                             "toolchain_cpu",
+                           ])
+    if (!defined(toolchain_cpu)) {
+      toolchain_cpu = host_cpu
+    }
+    if (!defined(toolchain_os)) {
+      toolchain_os = host_os
+    }
+    with_shared = false
+    use_strip = true
+  }
+}

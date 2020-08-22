@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/clang_toolchain_suite.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
