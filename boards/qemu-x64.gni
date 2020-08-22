@@ -8,14 +8,42 @@ target_cpu = "x64"
 
 board_name = "qemu-x64"
 
-board_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_bootfs_labels += emulation_x64_bootfs_deps
+_common_bootfs_deps = [
+  "//src/connectivity/ethernet/drivers/realtek-8111",
+  "//src/devices/block/drivers/ahci",
+  "//src/devices/block/drivers/mbr",
+  "//src/devices/block/drivers/nvme",
+  "//src/devices/block/drivers/pci-sdhci",
+  "//src/devices/block/drivers/sdhci",
+  "//src/devices/board/drivers/x86:platform-bus-x86",
+  "//src/devices/i2c/drivers/intel-i2c",
+  "//src/devices/rtc/drivers/intel-rtc",
+  "//src/devices/serial/drivers/intel-serialio",
+  "//src/devices/serial/drivers/uart16550",
+  "//src/devices/usb/drivers/xhci:xhci-x86",
+  "//src/graphics/display/drivers/intel-i915",
+  "//src/graphics/display/drivers/simple:simple.amd-kaveri",
+  "//src/graphics/display/drivers/simple:simple.bochs",
+  "//src/graphics/display/drivers/simple:simple.intel",
+  "//src/graphics/display/drivers/simple:simple.nv",
+  "//src/graphics/display/drivers/simple:simple.vmware",
+  "//src/media/audio/drivers/alc5514",
+  "//src/media/audio/drivers/alc5663",
+  "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
+  "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
+  "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+  "//src/media/audio/drivers/max98927",
+  "//src/ui/input/drivers/i2c-hid",
+  "//src/ui/input/drivers/pc-ps2",
+]
+_common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
+_common_bootfs_deps += emulation_x64_bootfs_deps
 
-board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_zedboot_bootfs_labels += emulation_x64_bootfs_deps
+board_bootfs_labels = _common_bootfs_deps
 
-board_recovery_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_recovery_bootfs_labels += emulation_x64_bootfs_deps
+board_recovery_bootfs_labels = _common_bootfs_deps
+
+board_zedboot_bootfs_labels = _common_bootfs_deps
 
 board_package_labels = [
   "//garnet/bin/power_manager",

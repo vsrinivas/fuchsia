@@ -33,5 +33,30 @@ assemble_system("guest") {
     "//src/graphics/drivers/virtio:virtio_gpu",
     "//src/ui/input/drivers/virtio:virtio_input",
   ]
+  if (current_cpu == "x64") {
+    bootfs_labels += [
+      "//src/connectivity/ethernet/drivers/realtek-8111",
+      "//src/devices/block/drivers/ahci",
+      "//src/devices/block/drivers/mbr",
+      "//src/devices/block/drivers/nvme",
+      "//src/devices/block/drivers/pci-sdhci",
+      "//src/devices/block/drivers/sdhci",
+      "//src/devices/board/drivers/x86:platform-bus-x86",
+      "//src/devices/i2c/drivers/intel-i2c",
+      "//src/devices/rtc/drivers/intel-rtc",
+      "//src/devices/serial/drivers/intel-serialio",
+      "//src/devices/serial/drivers/uart16550",
+      "//src/devices/usb/drivers/xhci:xhci-x86",
+      "//src/graphics/display/drivers/intel-i915",
+      "//src/media/audio/drivers/alc5514",
+      "//src/media/audio/drivers/alc5663",
+      "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
+      "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
+      "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+      "//src/media/audio/drivers/max98927",
+      "//src/ui/input/drivers/i2c-hid",
+      "//src/ui/input/drivers/pc-ps2",
+    ]
+  }
   sysmgr_golden = "sysmgr-golden.json"
 }
