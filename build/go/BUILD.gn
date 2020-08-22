@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/go/toolchain.gni")
-import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
@@ -15,18 +15,11 @@ if (current_toolchain == default_toolchain) {
   pool("pool") {
     depth = concurrent_go_jobs
   }
-}
 
-# A toolchain dedicated to processing Go code.
-# The only targets in this toolchain are action() targets, so it
-# has no real tools.  But every toolchain needs stamp and copy.
-toolchain("gopher") {
-  tool("stamp") {
-    command = stamp_command
-    description = stamp_description
-  }
-  tool("copy") {
-    command = copy_command
-    description = copy_description
+  # A toolchain dedicated to processing Go code.
+  # The only targets in this toolchain are action() targets, so it
+  # has no real tools.  But every toolchain needs stamp and copy.
+  basic_toolchain("gopher") {
+    expected_label = go_toolchain
   }
 }

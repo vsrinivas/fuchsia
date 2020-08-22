@@ -2,29 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
-import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/basic_toolchain.gni")
 
 # A toolchain dedicated to processing FIDL libraries.
 # The only targets in this toolchain are action() targets, so it
 # has no real tools.  But every toolchain needs stamp and copy.
-toolchain("fidling") {
-  tool("stamp") {
-    command = stamp_command
-    description = stamp_description
-  }
-  tool("copy") {
-    command = copy_command
-    description = copy_description
-  }
-
-  toolchain_args = {
-    toolchain_variant = {
-    }
-    toolchain_variant = {
-      base = get_label_info(":fidling", "label_no_toolchain")
-    }
-  }
+basic_toolchain("fidling") {
+  expected_label = fidl_toolchain
 }
 
 # A generated file that lists all of the .fidl.json files.

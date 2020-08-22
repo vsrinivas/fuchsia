@@ -2,29 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/default_tools.gni")
+import("//build/toolchain/basic_toolchain.gni")
 
 # Define a toolchain to build Zircon in.
 # This allows us to let the target and host toolchains depend on Zircon, which
 # in turn ensure Zircon is built before everything else.
-toolchain("zircon_toolchain") {
-  tool("stamp") {
-    command = stamp_command
-    description = stamp_description
-  }
-
-  tool("copy") {
-    # We use link instead of copy; the way "copy" tool is being used is
-    # compatible with links since Ninja is tracking changes to the source.
-    command = copy_command
-    description = copy_description
-  }
-
-  toolchain_args = {
-    toolchain_variant = {
-    }
-    toolchain_variant = {
-      base = get_label_info(":zircon_toolchain", "label_no_toolchain")
-    }
-  }
+basic_toolchain("zircon_toolchain") {
 }

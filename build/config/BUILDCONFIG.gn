@@ -1051,12 +1051,23 @@ declare_args() {
   select_variant_canonical = []
 }
 
+# Very unfortunately, GN nevers sets `current_toolchain` when executing
+# BUILDCONFIG.gn, so the logic below is used to detect when this file
+# is executed in the context of the default toolchain.
+#
+# It relies on any non-default toolchain to set toolchain_variant.base to
+# a value different from its default value. This should be enforce by any
+# toolchain() defining template, i.e. basic_toolchain(), clang_toolchain()
+# and zircon_toolchain().
+in_default_toolchain =
+    toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
+    current_os == target_os && toolchain_variant.name == "" &&
+    !toolchain_variant.is_pic_default
+
 # Do this only once, in the default toolchain context.    Then
 # clang_toolchain_suite will just pass the results through to every
 # other toolchain via toolchain_args so the work is not repeated.
-if (toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
-    current_os == target_os && toolchain_variant.name == "" &&
-    !toolchain_variant.is_pic_default) {
+if (in_default_toolchain) {
   assert(select_variant_canonical == [],
          "`select_variant_canonical` cannot be set as a build argument")
 
