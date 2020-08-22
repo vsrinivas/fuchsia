@@ -173,13 +173,7 @@ if (target_cpu == "arm64") {
 
 if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
   zedboot_deps += [
-    "//src/devices/i2c/drivers/dw-i2c",
     "//src/devices/usb/drivers/usb-test/flash-programmer",
     "//src/graphics/display/drivers/ssd1306",
-    "//src/media/audio/drivers/codecs/max98373",
-    "//src/media/audio/drivers/codecs/tas58xx",
-    "//src/ui/input/drivers/cypress",
-    "//src/ui/light/drivers/gpio-light",
-    "//src/ui/light/drivers/lp50xx-light",
   ]
 }

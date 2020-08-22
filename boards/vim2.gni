@@ -18,6 +18,7 @@ _common_bootfs_deps = [
   "//src/devices/scpi/drivers/aml-scpi-s912:scpi",
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/graphics/display/drivers/vim-display",
+  "//src/ui/light/drivers/gpio-light",
 ]
 
 board_bootfs_labels += _common_bootfs_deps

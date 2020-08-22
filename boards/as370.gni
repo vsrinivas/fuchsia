@@ -11,12 +11,16 @@ _common_bootfs_deps = [
   "//src/devices/board/drivers/as370",
   "//src/devices/clock/drivers/as370-clk",
   "//src/devices/gpio/drivers/as370-gpio",
+  "//src/devices/i2c/drivers/dw-i2c",
   "//src/devices/nand/drivers/cadence-hpnfc",
   "//src/devices/power/drivers/as370-power",
   "//src/devices/thermal/drivers/as370-thermal",
   "//src/devices/usb/drivers/as370-usb-phy",
   "//src/media/audio/drivers/as370-pdm-input",
   "//src/media/audio/drivers/as370-tdm-output",
+  "//src/media/audio/drivers/codecs/max98373",
+  "//src/ui/input/drivers/cypress",
+  "//src/ui/light/drivers/lp50xx-light",
 ]
 
 board_bootfs_labels =

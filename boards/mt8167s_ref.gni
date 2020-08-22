@@ -24,6 +24,7 @@ _common_bootfs_deps = [
   "//src/graphics/display/drivers/dsi-mt",
   "//src/graphics/display/drivers/mt8167s-display",
   "//src/media/audio/drivers/codecs/tas5782",
+  "//src/media/audio/drivers/codecs/tas58xx",
   "//src/media/audio/drivers/mt8167-tdm-input",
   "//src/media/audio/drivers/mt8167-tdm-output",
   "//src/ui/backlight/drivers/sg-micro",

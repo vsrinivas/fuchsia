@@ -7,6 +7,7 @@ import("//boards/arm64.gni")
 _common_bootfs_deps = [
   "//src/devices/board/drivers/vs680-evk",
   "//src/devices/clock/drivers/vs680-clk",
+  "//src/devices/i2c/drivers/dw-i2c",
   "//src/devices/power/drivers/vs680-power",
   "//src/devices/spi/drivers/dw-spi",
   "//src/devices/thermal/drivers/vs680-thermal",
