@@ -14,24 +14,36 @@
 
 namespace mdns {
 
+enum class Media { kWired, kWireless, kBoth };
+
 // SocketAddress with interface address.
 class ReplyAddress {
  public:
-  // Creates a reply address from an |SocketAddress| and an interface
-  // |IpAddress|.
-  ReplyAddress(const inet::SocketAddress& socket_address, const inet::IpAddress& interface_address);
+  // Creates a reply address with an invalid socket address and interface.
+  ReplyAddress();
+
+  // Creates a reply address from an |SocketAddress| and an interface |IpAddress|.
+  ReplyAddress(const inet::SocketAddress& socket_address, const inet::IpAddress& interface_address,
+               Media media);
 
   // Creates a reply address from an |sockaddr_storage| struct and an interface
   // |IpAddress|.
-  ReplyAddress(const sockaddr_storage& socket_address, const inet::IpAddress& interface_address);
+  ReplyAddress(const sockaddr_storage& socket_address, const inet::IpAddress& interface_address,
+               Media media);
 
   const inet::SocketAddress& socket_address() const { return socket_address_; }
 
   const inet::IpAddress& interface_address() const { return interface_address_; }
 
+  // For unicast reply addresses, this field is set to |kWired| or |kWireless| to describe the
+  // interface. For multicast reply addresses, this field is set to |kWired| to multicast via
+  // wired interfaces only, |kWireless| to multicast via wireless interfaces only, or |kBoth|
+  // to multicast via all interfaces.
+  Media media() const { return media_; }
+
   bool operator==(const ReplyAddress& other) const {
     return socket_address_ == other.socket_address() &&
-           interface_address_ == other.interface_address();
+           interface_address_ == other.interface_address() && media_ == other.media_;
   }
 
   bool operator!=(const ReplyAddress& other) const { return !(*this == other); }
@@ -39,6 +51,7 @@ class ReplyAddress {
  private:
   inet::SocketAddress socket_address_;
   inet::IpAddress interface_address_;
+  Media media_;
 };
 
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value);

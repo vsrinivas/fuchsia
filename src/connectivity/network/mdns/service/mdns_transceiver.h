@@ -52,7 +52,7 @@ class MdnsTransceiver : public Mdns::Transceiver {
   // is valid. Returns true if a change was made, false otherwise.
   bool EnsureInterfaceTransceiver(
       const inet::IpAddress& address, const inet::IpAddress& alternate_address, uint32_t id,
-      const std::string& name,
+      Media media, const std::string& name,
       std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
   // Determines if |address| identifies one of the NICs in |interface_transceivers_by_address_|.

@@ -8,13 +8,18 @@
 
 namespace mdns {
 
+ReplyAddress::ReplyAddress()
+    : socket_address_(inet::SocketAddress::kInvalid),
+      interface_address_(inet::IpAddress::kInvalid),
+      media_(Media::kBoth) {}
+
 ReplyAddress::ReplyAddress(const inet::SocketAddress& socket_address,
-                           const inet::IpAddress& interface_address)
-    : socket_address_(socket_address), interface_address_(interface_address) {}
+                           const inet::IpAddress& interface_address, Media media)
+    : socket_address_(socket_address), interface_address_(interface_address), media_(media) {}
 
 ReplyAddress::ReplyAddress(const sockaddr_storage& socket_address,
-                           const inet::IpAddress& interface_address)
-    : socket_address_(socket_address), interface_address_(interface_address) {}
+                           const inet::IpAddress& interface_address, Media media)
+    : socket_address_(socket_address), interface_address_(interface_address), media_(media) {}
 
 std::ostream& operator<<(std::ostream& os, const ReplyAddress& value) {
   if (!value.socket_address().is_valid()) {

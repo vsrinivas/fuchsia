@@ -15,7 +15,7 @@ static const std::string kServiceFullName = "_yardapult._tcp.local.";
 static const std::string kInstanceName = "my";
 static const std::string kInstanceFullName = "my._yardapult._tcp.local.";
 static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_in_port_t(5353)},
-                                        {192, 168, 1, 1});
+                                        {192, 168, 1, 1}, Media::kWired);
 
 // Unit tests for the |Mdns| class.
 class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
@@ -37,6 +37,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address) override {
     send_message_called_ = true;
+    send_message_reply_address_ = reply_address;
   }
 
   void LogTraffic() override {}
@@ -59,6 +60,12 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     bool result = send_message_called_;
     send_message_called_ = false;
     return result;
+  }
+
+  void ExpectSendMessageCalled(const ReplyAddress& reply_address) {
+    EXPECT_TRUE(send_message_called_);
+    EXPECT_EQ(reply_address, send_message_reply_address_);
+    send_message_called_ = false;
   }
 
   // Whether the ready callback has been called by the unit under test.
@@ -140,6 +147,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   bool start_called_ = false;
   bool stop_called_ = false;
   bool send_message_called_ = false;
+  ReplyAddress send_message_reply_address_;
   bool ready_ = false;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
@@ -179,9 +187,25 @@ class Subscriber : public Mdns::Subscriber {
   bool instance_discovered_called_ = false;
 };
 
+// Responds synchronously to |GetPublication| with publication.
 class Publisher : public Mdns::Publisher {
  public:
   Publisher() {}
+
+  // Mdns::Publisher implementation.
+  void ReportSuccess(bool success) override {}
+
+  void GetPublication(bool query, const std::string& subtype,
+                      const std::vector<inet::SocketAddress>& source_addresses,
+                      fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
+    callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
+  }
+};
+
+// Responds synchronously to |GetPublication| with null.
+class NonPublisher : public Mdns::Publisher {
+ public:
+  NonPublisher() {}
 
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
@@ -193,6 +217,7 @@ class Publisher : public Mdns::Publisher {
   }
 };
 
+// Responds asynchronously to |GetPublication|.
 class AsyncPublisher : public Mdns::Publisher {
  public:
   AsyncPublisher() {}
@@ -276,19 +301,21 @@ TEST_F(MdnsUnitTests, PublishUnpublish) {
   SetHasInterfaces(true);
   Start(false);
 
-  Publisher publisher0;
-  Publisher publisher1;
+  NonPublisher publisher0;
+  NonPublisher publisher1;
 
   // Publish should work the first time.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher0));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+                                                  &publisher0));
 
   // A second attempt should fail.
-  EXPECT_FALSE(
-      under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher1));
+  EXPECT_FALSE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
+                                                   Media::kWired, &publisher1));
 
   // We should be able to unpublish and publish again.
   publisher0.Unpublish();
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher1));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+                                                  &publisher1));
 
   // Clean up.
   publisher1.Unpublish();
@@ -302,10 +329,11 @@ TEST_F(MdnsUnitTests, UnpublishDuringProbe) {
   SetHasInterfaces(true);
   Start(false);
 
-  Publisher publisher;
+  NonPublisher publisher;
 
   // Publish with probe and then immediately unpublish.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, true, &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, true, Media::kWired,
+                                                  &publisher));
   publisher.Unpublish();
   RunLoopUntilIdle();
 
@@ -331,7 +359,8 @@ TEST_F(MdnsUnitTests, AsyncSendMessage) {
   AsyncPublisher publisher;
 
   // Publish should work the first time.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+                                                  &publisher));
 
   // The publisher should get a |GetPublication| call immediately as part of initial announcement.
   auto callback = publisher.get_publication_callback();
@@ -345,6 +374,66 @@ TEST_F(MdnsUnitTests, AsyncSendMessage) {
 
   // Clean up.
   publisher.Unpublish();
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a wired-only publisher multicasts to wired interfaces only.
+TEST_F(MdnsUnitTests, PublishWiredOnly) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish wired-only.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
+                                                  &publisher));
+  RunLoopUntilIdle();
+  MdnsAddresses addresses;
+  ExpectSendMessageCalled(addresses.multicast_reply_wired_only());
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a wireless-only publisher multicasts to wireless interfaces only.
+TEST_F(MdnsUnitTests, PublishWirelessOnly) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish wired-only.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
+                                                  Media::kWireless, &publisher));
+  RunLoopUntilIdle();
+  MdnsAddresses addresses;
+  ExpectSendMessageCalled(addresses.multicast_reply_wireless_only());
+
+  // Clean up.
+  under_test().Stop();
+  RunLoopUntilIdle();
+}
+
+// Tests that a wireless+wired publisher multicasts to all interfaces.
+TEST_F(MdnsUnitTests, PublishBoth) {
+  // Start.
+  SetHasInterfaces(true);
+  Start(false);
+
+  Publisher publisher;
+
+  // Publish wired-only.
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
+                                                  Media::kBoth, &publisher));
+  RunLoopUntilIdle();
+  MdnsAddresses addresses;
+  ExpectSendMessageCalled(addresses.multicast_reply());
+
+  // Clean up.
   under_test().Stop();
   RunLoopUntilIdle();
 }

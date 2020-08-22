@@ -14,8 +14,9 @@
 namespace mdns {
 
 MdnsInterfaceTransceiverV6::MdnsInterfaceTransceiverV6(inet::IpAddress address,
-                                                       const std::string& name, uint32_t index)
-    : MdnsInterfaceTransceiver(address, name, index) {}
+                                                       const std::string& name, uint32_t index,
+                                                       Media media)
+    : MdnsInterfaceTransceiver(address, name, index, media) {}
 
 MdnsInterfaceTransceiverV6::~MdnsInterfaceTransceiverV6() {}
 

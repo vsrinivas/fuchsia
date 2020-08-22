@@ -22,6 +22,7 @@ class Config {
     std::string instance_;
     std::unique_ptr<Mdns::Publication> publication_;
     bool perform_probe_;
+    Media media_;
   };
 
   Config() = default;

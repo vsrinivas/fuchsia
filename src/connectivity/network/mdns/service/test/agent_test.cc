@@ -77,7 +77,7 @@ void AgentTest::SendResource(std::shared_ptr<DnsResource> resource, MdnsResource
                              const ReplyAddress& reply_address) {
   EXPECT_NE(nullptr, resource);
 
-  auto& message = outbound_messages_by_reply_address_[addresses_.multicast_reply()];
+  auto& message = outbound_messages_by_reply_address_[reply_address];
   if (message == nullptr) {
     message = std::make_unique<DnsMessage>();
   }
@@ -111,9 +111,7 @@ void AgentTest::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
   remove_agent_called_ = true;
 }
 
-void AgentTest::FlushSentItems() {
-  flush_sent_items_called_ = true;
-}
+void AgentTest::FlushSentItems() { flush_sent_items_called_ = true; }
 
 void AgentTest::AdvanceTo(zx::time time) {
   EXPECT_LE(now_, time);

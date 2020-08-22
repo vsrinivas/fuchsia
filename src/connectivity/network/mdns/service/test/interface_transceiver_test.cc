@@ -19,8 +19,9 @@ namespace test {
 
 class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
  public:
-  MdnsInterfaceTransceiverTest(inet::IpAddress address, const std::string& name, uint32_t index)
-      : MdnsInterfaceTransceiver(address, name, index) {}
+  MdnsInterfaceTransceiverTest(inet::IpAddress address, const std::string& name, uint32_t index,
+                               Media media)
+      : MdnsInterfaceTransceiver(address, name, index, media) {}
 
   virtual ~MdnsInterfaceTransceiverTest() override {}
 
@@ -76,11 +77,12 @@ TEST(InterfaceTransceiverTest, Construct) {
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   EXPECT_EQ(nic_address, under_test.address());
   EXPECT_EQ(nic_name, under_test.name());
   EXPECT_EQ(nic_index, under_test.index());
+  EXPECT_EQ(Media::kWired, under_test.media());
 }
 
 // Sends a message containing no A or AAAA resources.
@@ -92,7 +94,7 @@ TEST(InterfaceTransceiverTest, SendSimpleMessage) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto ptr_resource = std::make_shared<DnsResource>("_test_name._whatever.", DnsType::kPtr);
   ptr_resource->time_to_live_ = 234;
@@ -132,7 +134,7 @@ TEST(InterfaceTransceiverTest, SendLeadingA) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -181,7 +183,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -233,7 +235,7 @@ TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -285,7 +287,7 @@ TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -338,7 +340,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
   under_test.SetAlternateAddress(alternate_address);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);

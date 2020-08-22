@@ -103,7 +103,8 @@ void MdnsServiceImpl::OnReady() {
   // Publish as indicated in config files.
   for (auto& publication : config_.publications()) {
     PublishServiceInstance(publication.service_, publication.instance_,
-                           publication.publication_->Clone(), true,
+                           publication.publication_->Clone(), publication.perform_probe_,
+                           publication.media_,
                            [service = publication.service_](
                                fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
                              if (result.is_err()) {
@@ -120,11 +121,12 @@ void MdnsServiceImpl::OnReady() {
 
 bool MdnsServiceImpl::PublishServiceInstance(std::string service_name, std::string instance_name,
                                              std::unique_ptr<Mdns::Publication> publication,
-                                             bool perform_probe,
+                                             bool perform_probe, Media media,
                                              PublishServiceInstanceCallback callback) {
   auto publisher = std::make_unique<SimplePublisher>(std::move(publication), callback.share());
 
-  if (!mdns_.PublishServiceInstance(service_name, instance_name, perform_probe, publisher.get())) {
+  if (!mdns_.PublishServiceInstance(service_name, instance_name, perform_probe, media,
+                                    publisher.get())) {
     return false;
   }
 
@@ -232,7 +234,8 @@ void MdnsServiceImpl::PublishServiceInstance(
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get());
+  bool result =
+      mdns_.PublishServiceInstance(service, instance, perform_probe, Media::kBoth, publisher.get());
   // Because of the erase call above, |PublishServiceInstance| should always succeed.
   FX_DCHECK(result);
 
@@ -275,7 +278,8 @@ void MdnsServiceImpl::PublishServiceInstance2(
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get());
+  bool result =
+      mdns_.PublishServiceInstance(service, instance, perform_probe, Media::kBoth, publisher.get());
   // Because of the erase call above, |PublishServiceInstance| should always succeed.
   FX_DCHECK(result);
   (void)result;

@@ -212,7 +212,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   // Publishes a service instance using |SimplePublisher|.
   bool PublishServiceInstance(std::string service_name, std::string instance_name,
                               std::unique_ptr<Mdns::Publication> publication, bool perform_probe,
-                              PublishServiceInstanceCallback callback);
+                              Media media, PublishServiceInstanceCallback callback);
 
   sys::ComponentContext* component_context_;
   Config config_;

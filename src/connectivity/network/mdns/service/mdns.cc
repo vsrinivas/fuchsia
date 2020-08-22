@@ -78,7 +78,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
 #endif  // MDNS_TRACE
 
         // We'll send messages when we're done processing this inbound message, so don't respond
-        // to |FlushSentItems| in the interim. 
+        // to |FlushSentItems| in the interim.
         defer_flush_ = true;
 
         for (auto& question : message->questions_) {
@@ -167,7 +167,7 @@ void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subsc
 }
 
 bool Mdns::PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
-                                  bool perform_probe, Publisher* publisher) {
+                                  bool perform_probe, Media media, Publisher* publisher) {
   FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FX_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
   FX_DCHECK(publisher);
@@ -180,7 +180,8 @@ bool Mdns::PublishServiceInstance(const std::string& service_name, const std::st
     return false;
   }
 
-  auto agent = std::make_shared<InstanceResponder>(this, service_name, instance_name, publisher);
+  auto agent =
+      std::make_shared<InstanceResponder>(this, service_name, instance_name, media, publisher);
 
   instance_responders_by_instance_full_name_.emplace(instance_full_name, agent);
   agent->SetOnQuitCallback([this, instance_full_name]() {
@@ -387,6 +388,10 @@ void Mdns::SendMessages() {
     if (verbose_) {
       if (reply_address == addresses_->multicast_reply()) {
         FX_LOGS(INFO) << "Outbound message (multicast): " << message;
+      } else if (reply_address == addresses_->multicast_reply_wired_only()) {
+        FX_LOGS(INFO) << "Outbound message (multicast, wired only): " << message;
+      } else if (reply_address == addresses_->multicast_reply_wireless_only()) {
+        FX_LOGS(INFO) << "Outbound message (multicast, wireless only): " << message;
       } else {
         FX_LOGS(INFO) << "Outbound message to " << reply_address << ":" << message;
       }
@@ -443,7 +448,7 @@ void Mdns::PostTask() {
         zx::time now = this->now();
 
         // We'll send messages when we're done running ready tasks, so don't respond to
-        // |FlushSentItems| in the interim. 
+        // |FlushSentItems| in the interim.
         defer_flush_ = true;
 
         while (!task_queue_.empty() && task_queue_.top().time_ <= now) {

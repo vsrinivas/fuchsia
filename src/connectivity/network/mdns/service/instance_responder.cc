@@ -13,11 +13,13 @@
 namespace mdns {
 
 InstanceResponder::InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
-                                     const std::string& instance_name, Mdns::Publisher* publisher)
+                                     const std::string& instance_name, Media media,
+                                     Mdns::Publisher* publisher)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(MdnsNames::LocalInstanceFullName(instance_name, service_name)),
+      media_(media),
       publisher_(publisher) {}
 
 InstanceResponder::~InstanceResponder() {}
@@ -37,6 +39,11 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
                                         const ReplyAddress& sender_address) {
   std::string name = question.name_.dotted_string_;
   std::string subtype;
+
+  if (media_ != Media::kBoth && reply_address.media() != media_) {
+    // Question received on unsupported medium. Ignore.
+    return;
+  }
 
   switch (question.type_) {
     case DnsType::kPtr:
@@ -90,7 +97,7 @@ void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
   // contains PTR records for the removed subtypes with TTL of zero.
   for (const std::string& subtype : subtypes_) {
     if (std::find(subtypes.begin(), subtypes.end(), subtype) == subtypes.end()) {
-      SendSubtypePtrRecord(subtype, 0, addresses().multicast_reply());
+      SendSubtypePtrRecord(subtype, 0, multicast_reply());
     }
   }
 
@@ -123,10 +130,10 @@ void InstanceResponder::LogSenderAddress(const ReplyAddress& sender_address) {
 }
 
 void InstanceResponder::SendAnnouncement() {
-  GetAndSendPublication(false, "", addresses().multicast_reply());
+  GetAndSendPublication(false, "", multicast_reply());
 
   for (const std::string& subtype : subtypes_) {
-    SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive, addresses().multicast_reply());
+    SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive, multicast_reply());
   }
 
   if (announcement_interval_ > kMaxAnnouncementInterval) {
@@ -254,13 +261,24 @@ void InstanceResponder::SendGoodbye() const {
   publication.srv_ttl_seconds_ = 0;
   publication.txt_ttl_seconds_ = 0;
 
-  SendPublication(publication, "", addresses().multicast_reply());
+  SendPublication(publication, "", multicast_reply());
 }
 
 void InstanceResponder::IdleCheck(const std::string& subtype) {
   auto iter = throttle_state_by_subtype_.find(subtype);
   if (iter != throttle_state_by_subtype_.end() && iter->second + kMinMulticastInterval < now()) {
     throttle_state_by_subtype_.erase(iter);
+  }
+}
+
+ReplyAddress InstanceResponder::multicast_reply() const {
+  switch (media_) {
+    case Media::kWired:
+      return addresses().multicast_reply_wired_only();
+    case Media::kWireless:
+      return addresses().multicast_reply_wireless_only();
+    case Media::kBoth:
+      return addresses().multicast_reply();
   }
 }
 

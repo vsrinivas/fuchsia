@@ -66,6 +66,10 @@ const char kSchema[] = R"({
           },
           "perform_probe": {
             "type": "boolean"
+          },
+          "media": {
+            "type": "string",
+            "enum": ["wired", "wireless", "both"]
           }
         },
         "required": ["service","port"]
@@ -83,6 +87,10 @@ const char kServiceKey[] = "service";
 const char kInstanceKey[] = "instance";
 const char kTextKey[] = "text";
 const char kPerformProbeKey[] = "perform_probe";
+const char kMediaKey[] = "media";
+const char kMediaValueWired[] = "wired";
+const char kMediaValueWireless[] = "wireless";
+const char kMediaValueBoth[] = "both";
 
 }  // namespace
 
@@ -227,12 +235,26 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
     perform_probe = value[kPerformProbeKey].GetBool();
   }
 
+  Media media = Media::kBoth;
+  if (value.HasMember(kMediaKey)) {
+    FX_DCHECK(value[kMediaKey].IsString());
+    std::string media_string = value[kMediaKey].GetString();
+    if (media_string == kMediaValueWired) {
+      media = Media::kWired;
+    } else if (media_string == kMediaValueWireless) {
+      media = Media::kWireless;
+    } else {
+      FX_DCHECK(media_string == kMediaValueBoth);
+    }
+  }
+
   publications_.emplace_back(Publication{
       .service_ = service,
       .instance_ = instance,
       .publication_ =
           Mdns::Publication::Create(inet::IpPort::From_uint16_t(value[kPortKey].GetUint()), text),
-      .perform_probe_ = perform_probe});
+      .perform_probe_ = perform_probe,
+      .media_ = media});
 }
 
 void Config::SetPerformHostNameProbe(bool perform_host_name_probe) {

@@ -30,21 +30,25 @@ namespace mdns {
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(inet::IpAddress address,
                                                                            const std::string& name,
-                                                                           uint32_t index) {
+                                                                           uint32_t index,
+                                                                           Media media) {
   if (address.is_v4()) {
-    return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, index);
+    return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, index, media);
   } else {
-    return std::make_unique<MdnsInterfaceTransceiverV6>(address, name, index);
+    return std::make_unique<MdnsInterfaceTransceiverV6>(address, name, index, media);
   }
 }
 
 MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
-                                                   uint32_t index)
+                                                   uint32_t index, Media media)
     : address_(address),
       name_(name),
       index_(index),
+      media_(media),
       inbound_buffer_(kMaxPacketSize),
-      outbound_buffer_(kMaxPacketSize) {}
+      outbound_buffer_(kMaxPacketSize) {
+  FX_DCHECK(media_ == Media::kWired || media_ == Media::kWireless);
+}
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
@@ -199,7 +203,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
   ++messages_received_;
   bytes_received_ += result;
 
-  ReplyAddress reply_address(source_address_storage, address_);
+  ReplyAddress reply_address(source_address_storage, address_, media_);
 
   if (reply_address.socket_address().address() == address_) {
     // This is an outgoing message that's bounced back to us. Drop it.

@@ -24,7 +24,7 @@ class InstanceResponder : public MdnsAgent {
   // Creates an |InstanceResponder|. The publisher is consulted to determine
   // how queries are handled.
   InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
-                    const std::string& instance_name, Mdns::Publisher* publisher);
+                    const std::string& instance_name, Media media, Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
 
@@ -84,10 +84,14 @@ class InstanceResponder : public MdnsAgent {
   // Frees resources associated with |subtype| if they're no longer required.
   void IdleCheck(const std::string& subtype);
 
+  // Returns the correct multicast reply address depending on |media_|.
+  ReplyAddress multicast_reply() const;
+
   std::string host_full_name_;
   std::string service_name_;
   std::string instance_name_;
   std::string instance_full_name_;
+  Media media_;
   Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
   zx::duration announcement_interval_ = kInitialAnnouncementInterval;

@@ -32,7 +32,8 @@ bool operator==(const std::unique_ptr<Mdns::Publication>& lhs,
 
 bool operator==(const Config::Publication& lhs, const Config::Publication& rhs) {
   return lhs.service_ == rhs.service_ && lhs.instance_ == rhs.instance_ &&
-         lhs.publication_ == rhs.publication_ && lhs.perform_probe_ == rhs.perform_probe_;
+         lhs.publication_ == rhs.publication_ && lhs.perform_probe_ == rhs.perform_probe_ &&
+         lhs.media_ == rhs.media_;
 }
 
 static const inet::IpPort kDefaultPort = inet::IpPort::From_uint16_t(5353);
@@ -41,7 +42,7 @@ static const inet::SocketAddress kDefaultV6MulticastAddress(0xff02, 0xfb, kDefau
 static const inet::SocketAddress kDefaultV4BindAddress(INADDR_ANY, kDefaultPort);
 static const inet::SocketAddress kDefaultV6BindAddress(in6addr_any, kDefaultPort);
 static const ReplyAddress kDefaulMulticastReplyAddress(kDefaultV4MulticastAddress,
-                                                       inet::IpAddress());
+                                                       inet::IpAddress(), Media::kBoth);
 
 // Tests behavior when there is no config directory.
 TEST(ConfigTest, NoDir) {
@@ -91,7 +92,7 @@ TEST(ConfigTest, OneValidFile) {
     "perform_host_name_probe": false,
     "publications" : [
       {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false,
-       "text": ["chins=2", "thumbs=10"]}
+       "text": ["chins=2", "thumbs=10"], "media": "wireless"}
     ]
   })"));
 
@@ -100,7 +101,8 @@ TEST(ConfigTest, OneValidFile) {
   inet::SocketAddress expected_v6_multicast_address(0xff03, 0xfc, expected_port);
   inet::SocketAddress expected_v4_bind_address(INADDR_ANY, expected_port);
   inet::SocketAddress expected_v6_bind_address(in6addr_any, expected_port);
-  ReplyAddress expected_multicast_reply_address(expected_v4_multicast_address, inet::IpAddress());
+  ReplyAddress expected_multicast_reply_address(expected_v4_multicast_address, inet::IpAddress(),
+                                                Media::kBoth);
 
   Config under_test;
   under_test.ReadConfigFiles(kHostName, kTestDir);
@@ -115,7 +117,8 @@ TEST(ConfigTest, OneValidFile) {
             .instance_ = kHostName,
             .publication_ = std::make_unique<Mdns::Publication>(Mdns::Publication{
                 .port_ = inet::IpPort::From_uint16_t(5353), .text_ = {"chins=2", "thumbs=10"}}),
-            .perform_probe_ = false}) == under_test.publications()[0]);
+            .perform_probe_ = false,
+            .media_ = Media::kWireless}) == under_test.publications()[0]);
   }
 
   EXPECT_EQ(expected_port, under_test.addresses().port());
@@ -170,12 +173,12 @@ TEST(ConfigTest, TwoValidFiles) {
   EXPECT_TRUE(WriteFile("valid1", R"({
     "perform_host_name_probe": false,
     "publications" : [
-      {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false}
+      {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false, "media": "wired"}
     ]
   })"));
   EXPECT_TRUE(WriteFile("valid2", R"({
     "publications" : [
-      {"service" : "_footstool._udp.", "instance": "puffy", "port" : 1234}
+      {"service" : "_footstool._udp.", "instance": "puffy", "port" : 1234, "media": "both"}
     ]
   })"));
 
@@ -194,13 +197,15 @@ TEST(ConfigTest, TwoValidFiles) {
                            .instance_ = kHostName,
                            .publication_ = std::make_unique<Mdns::Publication>(
                                Mdns::Publication{.port_ = inet::IpPort::From_uint16_t(5353)}),
-                           .perform_probe_ = false}) == under_test.publications()[fuchsia_index]);
+                           .perform_probe_ = false,
+                           .media_ = Media::kWired}) == under_test.publications()[fuchsia_index]);
   EXPECT_TRUE((Config::Publication{
                   .service_ = "_footstool._udp.",
                   .instance_ = "puffy",
                   .publication_ = std::make_unique<Mdns::Publication>(
                       Mdns::Publication{.port_ = inet::IpPort::From_uint16_t(1234)}),
-                  .perform_probe_ = true}) == under_test.publications()[1 - fuchsia_index]);
+                  .perform_probe_ = true,
+                  .media_ = Media::kBoth}) == under_test.publications()[1 - fuchsia_index]);
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
 }

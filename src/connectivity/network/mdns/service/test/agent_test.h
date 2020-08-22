@@ -102,7 +102,8 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
   struct ReplyAddressHash {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
-             (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1);
+             (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
+             (std::hash<Media>{}(reply_address.media()) << 2);
     }
   };
 

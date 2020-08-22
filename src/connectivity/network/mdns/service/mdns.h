@@ -208,7 +208,7 @@ class Mdns : public MdnsAgent::Host {
   // is deleted or its |Unpublish| method is called. Must not be called before
   // |Start|'s ready callback is called.
   bool PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
-                              bool perform_probe, Publisher* publisher);
+                              bool perform_probe, Media media, Publisher* publisher);
 
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
@@ -238,7 +238,8 @@ class Mdns : public MdnsAgent::Host {
   struct ReplyAddressHash {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
-             (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1);
+             (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
+             (std::hash<Media>{}(reply_address.media()) << 2);
     }
   };
 

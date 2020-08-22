@@ -51,10 +51,10 @@ TEST_F(AddressResponderTest, MulticastRateLimit) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100));
+      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100));
+      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
 
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA), addresses().multicast_reply(),

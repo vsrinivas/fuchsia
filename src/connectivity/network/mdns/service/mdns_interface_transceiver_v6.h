@@ -12,7 +12,8 @@ namespace mdns {
 // Provides V6-specific behavior for abstract MdnsInterfaceTransceiver.
 class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
  public:
-  MdnsInterfaceTransceiverV6(inet::IpAddress address, const std::string& name, uint32_t index);
+  MdnsInterfaceTransceiverV6(inet::IpAddress address, const std::string& name, uint32_t index,
+                             Media media);
 
   virtual ~MdnsInterfaceTransceiverV6() override;
 
