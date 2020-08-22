@@ -2,20 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("emulation_commons.gni")
+import("emulation/emulation_arm64.gni")
 
 target_cpu = "arm64"
 
 board_name = "qemu-arm64"
 
-board_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_bootfs_labels += emulation_arm64_bootfs_deps
+_common_bootfs_deps = [ "//src/security/policy/zxcrypt:null" ]
 
-board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_zedboot_bootfs_labels += emulation_arm64_bootfs_deps
+board_bootfs_labels += _common_bootfs_deps
 
-board_recovery_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
-board_recovery_bootfs_labels += emulation_arm64_bootfs_deps
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
 
 board_package_labels = [
   "//garnet/bin/power_manager",

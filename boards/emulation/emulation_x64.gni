@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-_emulation_common_deps = [
+# Common entries, need to be kept in sync with arm64 version.
+_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
   "//src/devices/block/drivers/virtio:virtio_block",
   "//src/devices/block/drivers/virtio:virtio_scsi",
@@ -14,13 +15,10 @@ _emulation_common_deps = [
   "//src/ui/input/drivers/virtio:virtio_input",
 ]
 
-emulation_arm64_bootfs_deps = _emulation_common_deps
-emulation_arm64_bootfs_deps += [
-  "//src/devices/board/drivers/qemu-arm64",
-  "//src/devices/rtc/drivers/pl031-rtc",
-  "//src/graphics/display/drivers/fake:fake-display",
-]
-
-emulation_x64_bootfs_deps = _emulation_common_deps
-emulation_x64_bootfs_deps +=
+# x64 specifics
+_bootfs_deps +=
     [ "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec" ]
+
+board_bootfs_labels = _bootfs_deps
+board_zedboot_bootfs_labels = _bootfs_deps
+board_recovery_bootfs_labels = _bootfs_deps

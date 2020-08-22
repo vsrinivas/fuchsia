@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Common entries, need to be kept in sync with x64 version.
+_bootfs_deps = [
+  "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+  "//src/devices/block/drivers/virtio:virtio_block",
+  "//src/devices/block/drivers/virtio:virtio_scsi",
+  "//src/devices/misc/drivers/virtio-rng:virtio_rng",
+  "//src/devices/misc/drivers/virtio-socket:virtio_socket",
+  "//src/devices/serial/drivers/virtio-console:virtio_console",
+  "//src/graphics/display/drivers/goldfish-display",
+  "//src/graphics/drivers/virtio:virtio_gpu",
+  "//src/ui/input/drivers/virtio:virtio_input",
+]
+
+# arm64 specifics
+_bootfs_deps += [
+  "//src/devices/board/drivers/qemu-arm64",
+  "//src/devices/rtc/drivers/pl031-rtc",
+  "//src/graphics/display/drivers/fake:fake-display",
+]
+
+board_bootfs_labels = _bootfs_deps
+board_zedboot_bootfs_labels = _bootfs_deps
+board_recovery_bootfs_labels = _bootfs_deps
