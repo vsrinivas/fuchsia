@@ -19,5 +19,6 @@ fidl("fuchsia.ui.app") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
   ]
 }

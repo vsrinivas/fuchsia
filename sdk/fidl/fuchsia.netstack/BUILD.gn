@@ -14,5 +14,6 @@ fidl("fuchsia.netstack") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.dhcp",
     "//sdk/fidl/fuchsia.posix.socket",
+    "//zircon/vdso/zx",
   ]
 }

@@ -21,5 +21,6 @@ fidl("fuchsia.media.sessions2") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/vdso/zx",
   ]
 }
