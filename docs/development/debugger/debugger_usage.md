@@ -727,6 +727,31 @@ Or whole files:
 [zxdb] list --all myfile.cc:1
 ```
 
+### Working with second-chance exceptions
+
+When a zircon exception is raised, a
+[hierarchy of task-level handlers](/docs/concepts/kernel/exceptions.md) may try
+to service it, but the debugger always gets access to it first. On its own,
+this would present an issue when debugging programs that expect to catch and
+handle exceptions themselves (for example, in death tests). Zxdb has the
+ability to "forward" an exception to the debugged program:
+```
+[zxdb] continue --forward
+```
+If the debugged program does not handle the exception, it will get re-caught
+by the debugger as a "second-chance" exception. If the debugged program
+resolves the exception, it will not appear in the debugger again. You can
+configure the list of exception types that are handled only as second-chance
+exceptions (that is, automatically passed to the debugged program first) by:
+```
+[zxdb] set second-chance-exceptions pf ui
+```
+We do this by using two-to-three letter shorthands for the types (e.g., "pf"
+for page faults and "ui" for undefined instructions). You can run
+`get second-chance-exceptions` to view the full list of allowed shorthands.
+
+By default, page faults will only be seen on the second chance.
+
 ### Printing values
 
 The `print` command can evaluate simple C/C++ expressions in the context of a

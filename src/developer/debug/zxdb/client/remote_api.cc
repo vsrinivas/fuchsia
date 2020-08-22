@@ -138,4 +138,10 @@ void RemoteAPI::LoadInfoHandleTable(
   FX_NOTREACHED();
 }
 
+void RemoteAPI::UpdateGlobalSettings(
+    const debug_ipc::UpdateGlobalSettingsRequest& request,
+    fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) {
+  FX_NOTREACHED();
+}
+
 }  // namespace zxdb

@@ -152,6 +152,12 @@ void RemoteAPIImpl::LoadInfoHandleTable(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::UpdateGlobalSettings(
+    const debug_ipc::UpdateGlobalSettingsRequest& request,
+    fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 template <typename SendMsgType, typename RecvMsgType>
 void RemoteAPIImpl::Send(const SendMsgType& send_msg,
                          fit::callback<void(const Err&, RecvMsgType)> callback) {

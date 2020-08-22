@@ -73,6 +73,9 @@ class RemoteAPIImpl : public RemoteAPI {
   void LoadInfoHandleTable(
       const debug_ipc::LoadInfoHandleTableRequest& request,
       fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb) override;
+  void UpdateGlobalSettings(
+      const debug_ipc::UpdateGlobalSettingsRequest& request,
+      fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.

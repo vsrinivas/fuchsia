@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -51,10 +52,23 @@ class APISink : public MockRemoteAPI {
     info_count_ = 0;
   }
 
+  void UpdateGlobalSettings(
+      const debug_ipc::UpdateGlobalSettingsRequest& request,
+      fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) override {
+    global_setting_requests_.push_back(request);
+    debug_ipc::UpdateGlobalSettingsReply reply = {.status = debug_ipc::kZxOk};
+    cb(Err(), std::move(reply));
+  }
+
+  const std::vector<debug_ipc::UpdateGlobalSettingsRequest>& global_setting_requests() const {
+    return global_setting_requests_;
+  }
+
  private:
   size_t info_count_ = 0;
   std::vector<ProcessInfo> next_infos_;
   std::vector<debug_ipc::AttachRequest> attach_requests_;
+  std::vector<debug_ipc::UpdateGlobalSettingsRequest> global_setting_requests_;
 };
 
 class SystemTest : public RemoteAPITest {
@@ -251,6 +265,37 @@ TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
   ASSERT_TRUE(process);
   EXPECT_EQ(process->GetKoid(), kProcessKoid2);
   EXPECT_EQ(process->GetName(), kProcessName);
+}
+
+TEST_F(SystemTest, UpdateSecondChanceExceptions) {
+  System& system = session().system();
+  {
+    system.settings().SetList(ClientSettings::System::kSecondChanceExceptions, {"pf"});
+    ASSERT_EQ(1u, sink()->global_setting_requests().size());
+    auto& request = sink()->global_setting_requests()[0];
+    std::set<debug_ipc::ExceptionType> second_chance_excps;
+    for (const auto& update : request.exception_strategies) {
+      if (update.value == debug_ipc::ExceptionStrategy::kSecondChance) {
+        second_chance_excps.insert(update.type);
+      }
+    }
+    EXPECT_EQ(std::set({debug_ipc::ExceptionType::kPageFault}), second_chance_excps);
+  }
+
+  {
+    system.settings().SetList(ClientSettings::System::kSecondChanceExceptions, {"gen", "ua"});
+    ASSERT_EQ(2u, sink()->global_setting_requests().size());
+    auto& request = sink()->global_setting_requests()[1];
+    std::set<debug_ipc::ExceptionType> second_chance_excps;
+    for (const auto& update : request.exception_strategies) {
+      if (update.value == debug_ipc::ExceptionStrategy::kSecondChance) {
+        second_chance_excps.insert(update.type);
+      }
+    }
+    EXPECT_EQ(
+        std::set({debug_ipc::ExceptionType::kGeneral, debug_ipc::ExceptionType::kUnalignedAccess}),
+        second_chance_excps);
+  }
 }
 
 }  // namespace zxdb

@@ -180,6 +180,8 @@ TEST(DebuggedThread, OnException) {
     thread->OnException(std::move(exception));
 
     EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance, applied_strategy);
+    // Since we didn't handle the exception, we expect it to have been closed.
+    EXPECT_EQ(nullptr, thread->exception_handle());
   }
 
   // Policy: general exceptions initially handled as second-chance.

@@ -248,6 +248,10 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
   if (handle_now) {
     exception->exception.strategy = applied;
     SendExceptionNotification(exception, regs);
+  } else {
+    // Reset and close the handle to "forward" the exception back to the
+    // program to resolve.
+    exception_handle_.reset();
   }
 }
 

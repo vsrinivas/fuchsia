@@ -77,6 +77,9 @@ class RemoteAPI {
   virtual void LoadInfoHandleTable(
       const debug_ipc::LoadInfoHandleTableRequest& request,
       fit::callback<void(const Err&, debug_ipc::LoadInfoHandleTableReply)> cb);
+  virtual void UpdateGlobalSettings(
+      const debug_ipc::UpdateGlobalSettingsRequest& request,
+      fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPI);

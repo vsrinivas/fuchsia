@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
+#include "src/developer/debug/zxdb/client/exception_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
@@ -80,6 +81,17 @@ const char* ClientSettings::System::kLanguage_Cpp = "c++";
 const char* ClientSettings::System::kLanguage_Rust = "rust";
 const char* ClientSettings::System::kLanguage_Auto = "auto";
 
+const char* ClientSettings::System::kSecondChanceExceptions = "second-chance-exceptions";
+static const char* kSecondChanceExceptionsDescription =
+    R"( List of exception types that should be handled as second-chance by
+    default; anything not in this list will be handled as first-chance. For
+    brevity two-to-three letter shorthands are used represent the types; valid
+    shorthands are
+    • "gen": general
+    • "pf": page faults
+    • "ui": undefined instruction
+    • "ua": unaligned access)";
+
 // Symbol lookup.
 const char* ClientSettings::System::kSymbolIndexFiles = "symbol-index-files";
 static const char* kSymbolIndexFilesDescription =
@@ -130,6 +142,15 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
                     {"rust", "c++", "auto"});
+  schema->AddList(ClientSettings::System::kSecondChanceExceptions,
+                  kSecondChanceExceptionsDescription, {kPageFaultExcpTypeShorthand},
+                  {
+                      kGeneralExcpTypeShorthand,
+                      kPageFaultExcpTypeShorthand,
+                      kUndefinedInstructionExcpTypeShorthand,
+                      kUnalignedAccessExcpTypeShorthand,
+                      kPolicyErrorExcpTypeShorthand,
+                  });
 
   // Symbol lookup.
   schema->AddList(ClientSettings::System::kSymbolIndexFiles, kSymbolIndexFilesDescription, {});
@@ -308,6 +329,7 @@ System::System(Session* session)
   settings_.AddObserver(ClientSettings::System::kBuildIdDirs, this);
   settings_.AddObserver(ClientSettings::System::kIdsTxts, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
+  settings_.AddObserver(ClientSettings::System::kSecondChanceExceptions, this);
 
   // Observe the session for filter matches and attach to any process koid that the system is not
   // already attached to.
@@ -736,6 +758,10 @@ void System::DidConnect() {
     AddNewJob(std::move(new_job));
   }
   implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err&) {});
+
+  // Force the debug agent to reload its second-chance exception handling
+  // policy.
+  OnSettingChanged(settings(), ClientSettings::System::kSecondChanceExceptions);
 }
 
 void System::DidDisconnect() {
@@ -815,6 +841,21 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
     debug_ipc::SetDebugMode(store.GetBool(setting_name));
+  } else if (setting_name == ClientSettings::System::kSecondChanceExceptions) {
+    debug_ipc::UpdateGlobalSettingsRequest request;
+    auto updates = ParseExceptionStrategyUpdates(store.GetList(setting_name));
+    if (updates.has_error()) {
+      // TODO: handle me.
+      return;
+    }
+    request.exception_strategies = updates.value();
+    session()->remote_api()->UpdateGlobalSettings(
+        request, [](const Err& err, debug_ipc::UpdateGlobalSettingsReply reply) {
+          if (reply.status != 0) {
+            // TODO: handle me.
+          }
+        });
+
   } else {
     FX_LOGS(WARNING) << "Unhandled setting change: " << setting_name;
   }

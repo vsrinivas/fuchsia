@@ -38,6 +38,8 @@ struct ClientSettings {
     static const char* kLanguage_Rust;
     static const char* kLanguage_Auto;
 
+    static const char* kSecondChanceExceptions;
+
     // Symbol lookup.
     static const char* kSymbolIndexFiles;
     static const char* kSymbolPaths;
