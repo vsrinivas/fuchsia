@@ -162,6 +162,47 @@ void TestGenerator::GenerateAsyncCallsFromIterator(
   printer << "\n";
 }
 
+void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info) {
+  fidl_codec::CppVisitor visitor_input = fidl_codec::CppVisitor();
+
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> input_arguments =
+      GenerateInputInitializers(printer, call_info);
+
+  // Prints outline declaration of output
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> output_arguments =
+      CollectArgumentsFromDecodedValue("out_", call_info->decoded_output_value());
+
+  for (const auto& argument : output_arguments) {
+    argument->GenerateDeclaration(printer);
+  }
+
+  printer << "proxy_sync_->" << call_info->method_name();
+  printer << "(";
+
+  // Passes input arguments to the fidl call
+  std::string separator = "";
+  for (auto argument : input_arguments) {
+    printer << separator;
+    argument->GenerateName(printer);
+    separator = ", ";
+  }
+
+  for (auto& argument : output_arguments) {
+    printer << separator << "&";  // Passes output arguments by reference
+    argument->GenerateName(printer);
+    separator = ", ";
+  }
+
+  printer << ");\n";
+
+  separator = "";
+  for (const auto& argument : output_arguments) {
+    printer << separator;
+    argument->GenerateAssertStatement(printer);
+    separator = "\n";
+  }
+}
+
 std::vector<std::shared_ptr<fidl_codec::CppVariable>>
 TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_prefix,
                                                 const fidl_codec::StructValue* struct_value) {

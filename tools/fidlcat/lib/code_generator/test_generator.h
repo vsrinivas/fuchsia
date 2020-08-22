@@ -32,6 +32,8 @@ class TestGenerator : public CodeGenerator {
 
   void GenerateTests();
 
+  void GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
+
   void WriteTestToFile(std::string_view protocol_name);
 
  private:

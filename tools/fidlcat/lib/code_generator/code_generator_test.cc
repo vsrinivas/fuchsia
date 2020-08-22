@@ -100,6 +100,11 @@ class TestGeneratorTest : public ::testing::Test {
     call_read_2_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "Exponentiation",
         nullptr, nullptr, nullptr, struct_output_2_.get());
+
+    call_sync_ = std::make_shared<FidlCallInfo>(false, "fidl.examples.calculator", handle_id,
+                                                SyscallKind::kChannelCall, "Exponentiation",
+                                                struct_def_input_.get(), struct_def_output_.get(),
+                                                struct_input_1_.get(), struct_output_1_.get());
   }
 
   void SetUp() { os_.str(""); }
@@ -121,6 +126,7 @@ class TestGeneratorTest : public ::testing::Test {
   std::shared_ptr<FidlCallInfo> call_read_1_;
   std::shared_ptr<FidlCallInfo> call_write_2_;
   std::shared_ptr<FidlCallInfo> call_read_2_;
+  std::shared_ptr<FidlCallInfo> call_sync_;
 };
 
 TEST_F(TestGeneratorTest, GenerateAsyncCall) {
@@ -198,6 +204,24 @@ TEST_F(TestGeneratorTest, AcquireUniqueName) {
   EXPECT_EQ(test_generator_.AcquireUniqueName("bar"), "bar_0");
   EXPECT_EQ(test_generator_.AcquireUniqueName("foo"), "foo_1");
   EXPECT_EQ(test_generator_.AcquireUniqueName("bar"), "bar_1");
+}
+
+TEST_F(TestGeneratorTest, GenerateSyncCall) {
+  test_generator_.GenerateSyncCall(printer_, call_sync_.get());
+
+  std::string expected =
+      "int64_t in_base_0 = 2;\n"
+      "int64_t in_exponent_0 = 3;\n"
+      "int64_t out_result_0;\n"
+      "std::string out_result_words_0;\n"
+      "proxy_sync_->Exponentiation(in_base_0, in_exponent_0, &out_result_0, &out_result_words_0);\n"
+      "int64_t out_result_0_expected = 8;\n"
+      "ASSERT_EQ(out_result_0, out_result_0_expected);\n"
+      "\n"
+      "std::string out_result_words_0_expected = \"eight\";\n"
+      "ASSERT_EQ(out_result_words_0, out_result_words_0_expected);\n";
+
+  EXPECT_EQ(os_.str(), expected);
 }
 
 }  // namespace fidlcat
