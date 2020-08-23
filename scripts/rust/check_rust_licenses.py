@@ -29,10 +29,10 @@ def get_repo_path(subdir):
             return m.group(1)
 
 
-def get_github_content(path):
+def find_github_blob_path(path):
     s = path.split('/')
     if s[2] == 'github.com':
-        s[2] = 'api.github.com/repos'
+        s[2] = 'raw.githubusercontent.com'
         # github redirects "github.com/$USER/$PROJECT.git" to
         # "github.com/$USER/$PROJECT".
         if s[4].endswith('.git'):
@@ -44,42 +44,32 @@ def get_github_content(path):
     if len(s) >= 6 and s[5] == 'tree':
         del s[5]
     else:
-        s.append('contents')
-    # unprivildged API token to avoid API limits, since API limits are imposed
-    # based on the originating IP address, and only allow 60 requests per hour.
-    #
-    # https://developer.github.com/v3/#rate-limiting
-    #
-    # TODO: can we do better?
-    token = '84509a5cf729275dee7ab7363be1a6147adf3183'
-    return json.load(
-        urllib.request.urlopen(
-            urllib.request.Request(
-                '/'.join(s), headers={
-                    'Authorization': 'token %s' % token,
-                })))
+        s.append('HEAD')
+    return '/'.join(s)
 
 
 def fetch_license(subdir):
     repo_path = get_repo_path(subdir)
     if repo_path is None:
         die('can\'t find repo path for ' + subdir)
-    content = get_github_content(repo_path)
+    base_path = find_github_blob_path(repo_path)
     first = True
     with open(os.path.join(subdir, 'LICENSE'), 'wb') as license_out:
-        for file in content:
-            # 'LICENCE' is a British English spelling variant used in https://github.com/ebarnard/rust-plist
-            if file['name'] in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT',
-                                'COPYING', 'LICENCE', 'LICENSE.md'):
-                if first:
-                    first = False
-                else:
-                    license_out.write(bytearray('=' * 40 + '\n', 'utf-8'))
-
-                url = file['download_url']
-                license_out.write(bytearray(url + ':\n\n', 'utf-8'))
+        # 'LICENCE' is a British English spelling variant used in https://github.com/ebarnard/rust-plist
+        for filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT', 'COPYING',
+                         'LICENCE', 'LICENSE.md'):
+            url = '/'.join((base_path, filename))
+            try:
                 with urllib.request.urlopen(url) as resp:
+                    if first:
+                        first = False
+                    else:
+                        license_out.write(bytearray('=' * 40 + '\n', 'utf-8'))
+                    license_out.write(bytearray(url + ':\n\n', 'utf-8'))
                     license_out.write(resp.read())
+            except urllib.error.HTTPError as err:
+                if err.code != 404:
+                    raise
     if first:
         die('no licenses found under ' + repo_path)
 
@@ -110,7 +100,7 @@ def check_licenses(directory, verify=False):
             fetch_license(subdir)
             print('FETCH    %s' % subdir)
         except Exception as err:
-            print('ERROR    %s (%s)' % (subdir, err.message))
+            print('ERROR    %s (%s)' % (subdir, err))
             success = False
     return success
 

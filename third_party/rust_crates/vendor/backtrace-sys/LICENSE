@@ -1,4 +1,4 @@
-https://raw.githubusercontent.com/rust-lang/backtrace-rs/master/LICENSE-APACHE:
+https://raw.githubusercontent.com/alexcrichton/backtrace-rs/HEAD/LICENSE-APACHE:
 
                               Apache License
                         Version 2.0, January 2004
@@ -202,7 +202,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ========================================
-https://raw.githubusercontent.com/rust-lang/backtrace-rs/master/LICENSE-MIT:
+https://raw.githubusercontent.com/alexcrichton/backtrace-rs/HEAD/LICENSE-MIT:
 
 Copyright (c) 2014 Alex Crichton
 

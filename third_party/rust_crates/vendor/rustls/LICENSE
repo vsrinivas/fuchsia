@@ -1,4 +1,4 @@
-https://raw.githubusercontent.com/ctz/rustls/main/LICENSE:
+https://raw.githubusercontent.com/ctz/rustls/HEAD/LICENSE:
 
 Rustls is distributed under the following three licenses:
 
@@ -11,7 +11,7 @@ respectively.  You may use this software under the terms of any
 of these licenses, at your option.
 
 ========================================
-https://raw.githubusercontent.com/ctz/rustls/main/LICENSE-APACHE:
+https://raw.githubusercontent.com/ctz/rustls/HEAD/LICENSE-APACHE:
 
                               Apache License
                         Version 2.0, January 2004
@@ -215,7 +215,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ========================================
-https://raw.githubusercontent.com/ctz/rustls/main/LICENSE-MIT:
+https://raw.githubusercontent.com/ctz/rustls/HEAD/LICENSE-MIT:
 
 Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
 
