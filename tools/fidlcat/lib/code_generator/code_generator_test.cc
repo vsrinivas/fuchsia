@@ -109,6 +109,10 @@ class TestGeneratorTest : public ::testing::Test {
     call_event_ = std::make_shared<FidlCallInfo>(
         false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "OnTimeout",
         nullptr, struct_def_output_.get(), nullptr, struct_output_1_.get());
+
+    call_fire_and_forget_ = std::make_shared<FidlCallInfo>(
+        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelWrite, "TurnOn",
+        struct_def_input_.get(), nullptr, struct_input_1_.get(), nullptr);
   }
 
   void SetUp() { os_.str(""); }
@@ -132,6 +136,7 @@ class TestGeneratorTest : public ::testing::Test {
   std::shared_ptr<FidlCallInfo> call_read_2_;
   std::shared_ptr<FidlCallInfo> call_sync_;
   std::shared_ptr<FidlCallInfo> call_event_;
+  std::shared_ptr<FidlCallInfo> call_fire_and_forget_;
 };
 
 TEST_F(TestGeneratorTest, GenerateAsyncCall) {
@@ -244,6 +249,17 @@ TEST_F(TestGeneratorTest, GenerateEvent) {
       "\n"
       "  // end of event\n"
       "};\n";
+
+  EXPECT_EQ(os_.str(), expected);
+}
+
+TEST_F(TestGeneratorTest, GenerateFireAndForget) {
+  test_generator_.GenerateFireAndForget(printer_, call_fire_and_forget_.get());
+
+  std::string expected =
+      "int64_t in_base_0 = 2;\n"
+      "int64_t in_exponent_0 = 3;\n"
+      "proxy_->TurnOn(in_base_0, in_exponent_0);\n";
 
   EXPECT_EQ(os_.str(), expected);
 }

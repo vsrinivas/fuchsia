@@ -237,6 +237,26 @@ void TestGenerator::GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallIn
   printer << "\n";
 }
 
+void TestGenerator::GenerateFireAndForget(fidl_codec::PrettyPrinter& printer,
+                                          FidlCallInfo* call_info) {
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> input_arguments =
+      GenerateInputInitializers(printer, call_info);
+
+  printer << "proxy_->";
+  printer << call_info->method_name();
+  printer << "(";
+
+  std::string separator = "";
+  for (auto argument : input_arguments) {
+    printer << separator;
+    argument->GenerateName(printer);
+    separator = ", ";
+  }
+
+  printer << ");";
+  printer << "\n";
+}
+
 std::vector<std::shared_ptr<fidl_codec::CppVariable>>
 TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_prefix,
                                                 const fidl_codec::StructValue* struct_value) {

@@ -33,6 +33,8 @@ class TestGenerator : public CodeGenerator {
   void GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call,
                      std::string_view final_statement);
 
+  void GenerateFireAndForget(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call);
+
   void GenerateTests();
 
   void GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
