@@ -6,7 +6,6 @@
 #define FBL_ALGORITHM_H_
 
 #include <stdlib.h>
-#include <zircon/assert.h>
 
 #include <algorithm>
 #include <limits>

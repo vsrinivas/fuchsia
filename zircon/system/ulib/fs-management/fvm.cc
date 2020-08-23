@@ -17,6 +17,7 @@
 #include <lib/fdio/watcher.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>

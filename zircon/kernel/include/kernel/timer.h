@@ -8,7 +8,6 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
 
-#include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

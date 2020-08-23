@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <string.h>
-#include <sys/types.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
