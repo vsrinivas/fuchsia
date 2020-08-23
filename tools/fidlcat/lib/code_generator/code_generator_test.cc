@@ -105,6 +105,10 @@ class TestGeneratorTest : public ::testing::Test {
                                                 SyscallKind::kChannelCall, "Exponentiation",
                                                 struct_def_input_.get(), struct_def_output_.get(),
                                                 struct_input_1_.get(), struct_output_1_.get());
+
+    call_event_ = std::make_shared<FidlCallInfo>(
+        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "OnTimeout",
+        nullptr, struct_def_output_.get(), nullptr, struct_output_1_.get());
   }
 
   void SetUp() { os_.str(""); }
@@ -127,6 +131,7 @@ class TestGeneratorTest : public ::testing::Test {
   std::shared_ptr<FidlCallInfo> call_write_2_;
   std::shared_ptr<FidlCallInfo> call_read_2_;
   std::shared_ptr<FidlCallInfo> call_sync_;
+  std::shared_ptr<FidlCallInfo> call_event_;
 };
 
 TEST_F(TestGeneratorTest, GenerateAsyncCall) {
@@ -220,6 +225,25 @@ TEST_F(TestGeneratorTest, GenerateSyncCall) {
       "\n"
       "std::string out_result_words_0_expected = \"eight\";\n"
       "ASSERT_EQ(out_result_words_0, out_result_words_0_expected);\n";
+
+  EXPECT_EQ(os_.str(), expected);
+}
+
+TEST_F(TestGeneratorTest, GenerateEvent) {
+  test_generator_.GenerateEvent(printer_, call_event_.get(), "// end of event\n");
+
+  std::string expected =
+      "int64_t out_result_0;\n"
+      "std::string out_result_words_0;\n"
+      "proxy_.events().OnTimeout = [](int64_t out_result_0, std::string out_result_words_0) {\n"
+      "  int64_t out_result_0_expected = 8;\n"
+      "  ASSERT_EQ(out_result_0, out_result_0_expected);\n"
+      "\n"
+      "  std::string out_result_words_0_expected = \"eight\";\n"
+      "  ASSERT_EQ(out_result_words_0, out_result_words_0_expected);\n"
+      "\n"
+      "  // end of event\n"
+      "};\n";
 
   EXPECT_EQ(os_.str(), expected);
 }

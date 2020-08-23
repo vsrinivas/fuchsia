@@ -30,6 +30,9 @@ class TestGenerator : public CodeGenerator {
       std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
       std::string_view final_statement);
 
+  void GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call,
+                     std::string_view final_statement);
+
   void GenerateTests();
 
   void GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);

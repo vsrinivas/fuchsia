@@ -203,6 +203,40 @@ void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCal
   }
 }
 
+void TestGenerator::GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call,
+                                  std::string_view finish_statement) {
+  // Prints outline declaration of output variables
+  std::vector<std::shared_ptr<fidl_codec::CppVariable>> output_arguments =
+      GenerateOutputDeclarations(printer, call);
+
+  // Registers a callback for the event
+  printer << "proxy_.events()." << call->method_name() << " = ";
+
+  std::string separator = "";
+  printer << "[](";
+  for (auto& argument : output_arguments) {
+    printer << separator;
+    argument->GenerateTypeAndName(printer);
+    separator = ", ";
+  }
+
+  printer << ") {\n";
+  {
+    fidl_codec::Indent indent(printer);
+    separator = "";
+    for (const auto& argument : output_arguments) {
+      printer << separator;
+      argument->GenerateAssertStatement(printer);
+      separator = "\n";
+    }
+    printer << separator;
+    printer << finish_statement;
+  }
+  printer << "};";
+
+  printer << "\n";
+}
+
 std::vector<std::shared_ptr<fidl_codec::CppVariable>>
 TestGenerator::CollectArgumentsFromDecodedValue(const std::string& variable_prefix,
                                                 const fidl_codec::StructValue* struct_value) {
