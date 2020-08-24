@@ -20,6 +20,9 @@ class LineTable;
 // Represents a DWARF unit in the binary file. The primary purpose of this class is to allow
 // mocking the LLVM libraries. It corresponds to what we need from llvm::DWARFUnit and is consumed
 // primarily by ModuleSymbolsImpl which provides the high-level symbol interface.
+//
+// This is the higher-level thing that contains the line tables and such for the unit. The specific
+// DIE for the compilation unit is represented by the CompileUnit class.
 class DwarfUnit : public fxl::RefCountedThreadSafe<DwarfUnit> {
  public:
   // Returns the DIE information, if possible, for the function covering the given absolute address.

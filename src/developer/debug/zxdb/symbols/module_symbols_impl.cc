@@ -195,6 +195,11 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContex
   }
 }
 
+fxl::RefPtr<DwarfUnit> ModuleSymbolsImpl::GetDwarfUnit(const SymbolContext& symbol_context,
+                                                       uint64_t absolute_address) const {
+  return binary_->UnitForRelativeAddress(symbol_context.AbsoluteToRelative(absolute_address));
+}
+
 LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol_context,
                                                      uint64_t absolute_address, bool greedy) const {
   uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);

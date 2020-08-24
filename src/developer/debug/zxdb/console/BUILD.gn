@@ -113,6 +113,8 @@ static_library("console") {
     "commands/verb_stepi.h",
     "commands/verb_steps.cc",
     "commands/verb_steps.h",
+    "commands/verb_sym_debug.cc",
+    "commands/verb_sym_debug.h",
     "commands/verb_sym_info.cc",
     "commands/verb_sym_info.h",
     "commands/verb_sym_near.cc",

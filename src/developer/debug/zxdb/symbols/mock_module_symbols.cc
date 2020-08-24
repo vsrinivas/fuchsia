@@ -89,6 +89,11 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
   return result;
 }
 
+fxl::RefPtr<DwarfUnit> MockModuleSymbols::GetDwarfUnit(const SymbolContext& symbol_context,
+                                                       uint64_t absolute_address) const {
+  return nullptr;
+}
+
 LineDetails MockModuleSymbols::LineDetailsForAddress(const SymbolContext& symbol_context,
                                                      uint64_t absolute_address, bool greedy) const {
   // This mock assumes all addresses are absolute so the symbol context is not used.

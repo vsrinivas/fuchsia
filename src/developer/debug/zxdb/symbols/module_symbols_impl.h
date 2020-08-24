@@ -54,6 +54,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const override;
+  fxl::RefPtr<DwarfUnit> GetDwarfUnit(const SymbolContext& symbol_context,
+                                      uint64_t absolute_address) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context, uint64_t absolute_address,
                                     bool greedy) const override;
   std::vector<std::string> FindFileMatches(std::string_view name) const override;

@@ -52,6 +52,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_step.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stepi.h"
 #include "src/developer/debug/zxdb/console/commands/verb_steps.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sym_debug.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sym_info.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sym_near.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sym_search.h"
@@ -158,6 +159,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kStep] = GetStepVerbRecord();
     all_verbs[Verb::kStepi] = GetStepiVerbRecord();
     all_verbs[Verb::kSteps] = GetStepsVerbRecord();
+    all_verbs[Verb::kSymDebug] = GetSymDebugVerbRecord();
     all_verbs[Verb::kSymInfo] = GetSymInfoVerbRecord();
     all_verbs[Verb::kSymNear] = GetSymNearVerbRecord();
     all_verbs[Verb::kSymSearch] = GetSymSearchVerbRecord();

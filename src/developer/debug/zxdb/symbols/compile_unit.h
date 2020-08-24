@@ -13,6 +13,7 @@ namespace zxdb {
 
 class ModuleSymbols;
 
+// Represents a DWARF "unit" DIE. See also DwarfUnit.
 class CompileUnit final : public Symbol {
  public:
   // Symbol overrides.

@@ -23,6 +23,7 @@
 
 namespace zxdb {
 
+class DwarfUnit;
 class FileLine;
 class Function;
 struct InputLocation;
@@ -67,6 +68,10 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   virtual std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const = 0;
+
+  // Returns the low-level DwarfUnit that covers the given address, or null if no match.
+  virtual fxl::RefPtr<DwarfUnit> GetDwarfUnit(const SymbolContext& symbol_context,
+                                              uint64_t absolute_address) const = 0;
 
   // Computes the line that corresponds to the given address. Unlike ResolveInputLocation (which
   // just returns the current source line), this returns the entire set of contiguous line table
