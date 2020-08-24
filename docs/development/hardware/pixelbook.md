@@ -136,12 +136,22 @@ kernel partitions is an extension of that device.
             id:   769444A7-6E13-D74D-B583-C3A9CF0DE307
             type: 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC
             flags: 0x0000000000000000
-5. KERN-C typically hosts the Zircon kernel. KERN-A and KERN-B typically have
-ChromeOS kernels. To go to ChromeOS we need to lower the priority of KERN-C
-here by referencing the **partition** index on the **disk** that has that
-partition.
+5. Note that KERN-A and KERN-B typically have ChromeOS kernels. The
+   Zircon kernel appears as KERN-C as in the example above, or as
+   ZIRCON-A instead in certain setups.
+
+   To go to ChromeOS, lower the priority of KERN-C (or ZIRCON-A)
+   by referencing the **partition** index on the **disk** that has
+   that partition. E.g.:
 
         $ gpt edit_cros 5 -P 0 /dev/class/block/000
-6. Reboot
+
+6. Reboot.
+
+7. When the ChromeOS bootloader appears, press Space to re-enable
+OS Verification. Your device will reboot. This time, it will display
+a message with "Your system is repairing itself. Please wait". This operation
+will take around 5 minutes, after which the PixelBook will reboot one final
+time. The device will reboot to the initial setup screen.
 
 To go back to the Fuchsia kernel, just re-pave the device.
