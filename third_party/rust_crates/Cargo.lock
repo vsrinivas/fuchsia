@@ -934,6 +934,7 @@ dependencies = [
  "tracing-subscriber",
  "trust-dns-proto",
  "trust-dns-resolver",
+ "ttf-parser",
  "tui",
  "unic-char-range",
  "unic-ucd-block",
@@ -3341,6 +3342,10 @@ name = "try-lock"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e604eb7b43c06650e854be16a2a03155743d3752dd1c943f6829e26b7a36e382"
+
+[[package]]
+name = "ttf-parser"
+version = "0.8.2"
 
 [[package]]
 name = "tui"

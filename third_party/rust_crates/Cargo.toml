@@ -176,6 +176,7 @@ tokio = { version = "0.2.16", default-features = false }
 tokio-rustls = "0.13.0"
 trust-dns-proto = { version = "0.19.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.19.2", default-features = false, features = ["testing"] }
+ttf-parser = "0.8.2"
 unicode-normalization = "0.1"
 untrusted = "0.7"
 vk-sys = "0.4.0"
@@ -230,6 +231,7 @@ rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
+ttf-parser = { path = "tiny_mirrors/ttf-parser" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }

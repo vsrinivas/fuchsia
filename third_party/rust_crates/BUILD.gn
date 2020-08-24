@@ -663,6 +663,11 @@ if (current_os == "fuchsia") {
     deps = [ ":trust-dns-resolver-v0_19_2" ]
   }
 }
+if (current_os == "fuchsia") {
+  group("ttf-parser") {
+    deps = [ ":ttf-parser-v0_8_2" ]
+  }
+}
 if (!(current_os == "fuchsia")) {
   group("tui") {
     deps = [ ":tui-v0_10_0" ]
@@ -8737,6 +8742,29 @@ rust_library("try-lock-v0_2_2") {
     "--edition=2015",
     "-Cmetadata=d2aa576612eef943",
     "-Cextra-filename=-d2aa576612eef943",
+  ]
+}
+
+rust_library("ttf-parser-v0_8_2") {
+  crate_name = "ttf_parser"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/ttf-parser/src/lib.rs"
+  output_name = "ttf_parser-290b07bca3311e6a"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=290b07bca3311e6a",
+    "-Cextra-filename=-290b07bca3311e6a",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
