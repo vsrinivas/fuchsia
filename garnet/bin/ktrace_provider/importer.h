@@ -131,6 +131,8 @@ class Importer {
                        uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
   bool HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                      uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
+  bool HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                     uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
   bool HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                      uint32_t group, bool cpu_trace, trace_counter_id_t counter_id, int64_t value);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);

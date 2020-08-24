@@ -460,13 +460,16 @@ bool Importer::ImportFlowRecord(const ktrace_header_t* record, size_t record_siz
 
   if (record_size == 32) {
     const auto flow_id = reinterpret_cast<const uint64_t*>(record + 1)[0];
-    if (is_begin) {
+    if (is_begin && !is_end) {
       return HandleFlowBegin(record->ts, record->tid, event_name_id, group, cpu_trace, flow_id);
-    } else if (is_end) {
-      return HandleFlowEnd(record->ts, record->tid, event_name_id, group, cpu_trace, flow_id);
-    } else {
-      return ImportUnknownRecord(record, record_size);
     }
+    if (is_end && !is_begin) {
+      return HandleFlowEnd(record->ts, record->tid, event_name_id, group, cpu_trace, flow_id);
+    }
+    if (is_begin && is_end) {
+      return HandleFlowStep(record->ts, record->tid, event_name_id, group, cpu_trace, flow_id);
+    }
+    return ImportUnknownRecord(record, record_size);
   }
 
   return false;
@@ -1073,6 +1076,17 @@ bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_end_event_record(context_, event_time, &thread_ref, &category_ref,
+                                            &name_ref, flow_id, nullptr, 0u);
+
+  return true;
+}
+
+bool Importer::HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                             uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
+  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_flow_step_event_record(context_, event_time, &thread_ref, &category_ref,
                                             &name_ref, flow_id, nullptr, 0u);
 
   return true;

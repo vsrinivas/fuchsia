@@ -256,6 +256,20 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
 }
 
 template <bool enabled>
+inline void ktrace_flow_step(TraceEnabled<enabled>, TraceContext context, uint32_t group,
+                            StringRef* string_ref, uint64_t flow_id, uint64_t a = 0) {
+  if constexpr (!enabled) {
+    return;
+  }
+  const uint32_t tag = TAG_FLOW_STEP(string_ref->GetId(), group);
+  const uint32_t effective_tag =
+      KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
+  if (unlikely(ktrace_enabled(effective_tag))) {
+    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
+  }
+}
+
+template <bool enabled>
 inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* string_ref,
                            int64_t value, uint64_t counter_id = 0) {
   if constexpr (!enabled) {
