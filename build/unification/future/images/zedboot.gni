@@ -172,8 +172,5 @@ if (target_cpu == "arm64") {
 }
 
 if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
-  zedboot_deps += [
-    "//src/devices/usb/drivers/usb-test/flash-programmer",
-    "//src/graphics/display/drivers/ssd1306",
-  ]
+  zedboot_deps += [ "//src/devices/usb/drivers/usb-test/flash-programmer" ]
 }

@@ -12,6 +12,7 @@ group("tests") {
     "goldfish-display:tests",
     "intel-i915:tests",
     "mt8167s-display:tests",
+    "ssd1306:tests",
     "vim-display:tests",
   ]
 }
