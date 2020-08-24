@@ -383,6 +383,9 @@ zx_status_t SparseContainer::Commit() {
   }
 
   header_length += sizeof(fvm::SparseImage);
+  if (image_.flags & fvm::kSparseFlagLz4) {
+    image_.flags |= fvm::kSparseFlagZeroFillNotRequired;
+  }
   if (write(fd_.get(), &image_, sizeof(fvm::SparseImage)) != sizeof(fvm::SparseImage)) {
     fprintf(stderr, "Write sparse image header failed\n");
     return ZX_ERR_IO;
@@ -398,9 +401,25 @@ zx_status_t SparseContainer::Commit() {
       return ZX_ERR_IO;
     }
 
+    Format* format = nullptr;
+    if ((flags_ & fvm::kSparseFlagLz4) && !(partition.flags & fvm::kSparseFlagCorrupted)) {
+      format = partitions_[i].format.get();
+    }
+    // Write out each extent in the partition
     for (unsigned j = 0; j < partition.extent_count; j++) {
       fvm::ExtentDescriptor extent = partitions_[i].extents[j];
       header_length += sizeof(fvm::ExtentDescriptor);
+      // If format is non-null, then we should zero fill if the slice requests it.
+      if (format) {
+        vslice_info_t vslice_info;
+        if (format->GetVsliceRange(j, &vslice_info) != ZX_OK) {
+          fprintf(stderr, "Unable to access partition extent\n");
+          return ZX_ERR_OUT_OF_RANGE;
+        }
+        if (vslice_info.zero_fill) {
+          extent.extent_length = extent.slice_count * slice_size_;
+        }
+      }
       if (write(fd_.get(), &extent, sizeof(fvm::ExtentDescriptor)) !=
           sizeof(fvm::ExtentDescriptor)) {
         fprintf(stderr, "Write extent failed\n");
@@ -457,8 +476,16 @@ zx_status_t SparseContainer::Commit() {
       }
 
       // Write out each block in the extent
-      for (unsigned k = 0; k < vslice_info.block_count; k++) {
-        if (format->FillBlock(vslice_info.block_offset + k) != ZX_OK) {
+      for (unsigned k = 0; k < vslice_info.slice_count * format->BlocksPerSlice(); ++k) {
+        if (k == vslice_info.block_count) {
+          // Zero fill, but only if compression is enabled and it has been requested; we wrote an
+          // appropriate extent entry earlier.
+          if (!(flags_ & fvm::kSparseFlagLz4) || !vslice_info.zero_fill) {
+            break;
+          }
+          format->EmptyBlock();
+        } else if (k < vslice_info.block_count &&
+                   format->FillBlock(vslice_info.block_offset + k) != ZX_OK) {
           fprintf(stderr, "Failed to read block\n");
           return ZX_ERR_IO;
         }

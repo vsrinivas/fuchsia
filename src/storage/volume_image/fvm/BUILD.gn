@@ -80,9 +80,10 @@ compiled_action("test_data.blk") {
 test_fvm_data_partition = {
   type = "data"
   dep = ":test_data.blk"
-  minimum_inodes = "32768"
+  minimum_inodes =
+      "600000"  # Deliberately chosen so that partition is expanded.
   minimum_data_bytes = "10M"
-  maximum_bytes = "100M"
+  maximum_bytes = "218103808"
 }
 
 generate_fvm("test_fvm.sparse.blk") {

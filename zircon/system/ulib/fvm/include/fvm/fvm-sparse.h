@@ -51,8 +51,12 @@ enum SparseFlags {
   kSparseFlagZxcrypt = 0x2,
   // Marks a partition as intentionaly corrupted.
   kSparseFlagCorrupted = 0x4,
+  // If set, indicates zero filling is not required which is otherwise expected for extents where
+  // extent_length < slice_count.
+  kSparseFlagZeroFillNotRequired = 0x8,
   // The final value is the bitwise-OR of all other flags
-  kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt | kSparseFlagCorrupted,
+  kSparseFlagAllValid =
+      kSparseFlagLz4 | kSparseFlagZxcrypt | kSparseFlagCorrupted | kSparseFlagZeroFillNotRequired,
 };
 
 struct __attribute__((packed)) SparseImage {

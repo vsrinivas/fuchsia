@@ -288,7 +288,9 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader) {
                           .target = format_info.GetSliceStart(slice),
                           .count = extent.first.extent_length,
                           .size = extent.first.slice_count * slice_size};
-    mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
+    if (!(fvm_sparse_header.flags & fvm::kSparseFlagZeroFillNotRequired)) {
+      mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
+    }
 
     address_descriptor.mappings.push_back(std::move(mapping));
     slice += extent.first.slice_count;

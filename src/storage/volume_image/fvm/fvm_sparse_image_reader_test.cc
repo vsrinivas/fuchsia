@@ -87,7 +87,8 @@ TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
   status = block_client::RemoteBlockDevice::Create(std::move(device), &client);
   ASSERT_EQ(status, ZX_OK);
 
-  auto vmo = fzl::ResizeableVmoMapper::Create(1048576, "test");
+  constexpr uint64_t kInitialVmoSize = 1048576;
+  auto vmo = fzl::ResizeableVmoMapper::Create(kInitialVmoSize, "test");
   ASSERT_TRUE(vmo);
 
   storage::Vmoid vmoid;
@@ -96,11 +97,26 @@ TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
   vmoid_t vmo_id = vmoid.TakeId();
   ASSERT_EQ(status, ZX_OK);
 
+  memset(vmo->start(), 0xaf, kInitialVmoSize);
+
+  // Initialize the entire ramdisk with a filler (that isn't zero).
+  for (uint64_t offset = 0; offset < disk_size; offset += kInitialVmoSize) {
+    block_fifo_request_t request = {
+        .opcode = BLOCKIO_WRITE,
+        .vmoid = vmo_id,
+        .length =
+            static_cast<uint32_t>(std::min(disk_size - offset, kInitialVmoSize) / kDeviceBlockSize),
+        .dev_offset = offset / kDeviceBlockSize};
+    status = client->FifoTransaction(&request, 1);
+    ASSERT_EQ(status, ZX_OK);
+  }
+
   for (const AddressMap& map : sparse_image_or.value().address().mappings) {
     ASSERT_EQ(map.count % kDeviceBlockSize, 0u);
     ASSERT_EQ(map.target % kDeviceBlockSize, 0u);
     ASSERT_LT(map.target, disk_size);
     ASSERT_LE(map.target + map.count, disk_size);
+    EXPECT_TRUE(map.options.empty());
 
     if (vmo->size() < map.count) {
       status = vmo->Grow(map.count);
@@ -117,7 +133,8 @@ TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
                                     .dev_offset = map.target / kDeviceBlockSize};
 
     status = client->FifoTransaction(&request, 1);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(status, ZX_OK) << "length=" << request.length
+                             << ", dev_offset=" << request.dev_offset;
   }
 
   fd.reset();
@@ -169,7 +186,7 @@ TEST(FvmSparseImageReaderTest, WriteFtlImageSucceeds) {
           .oob_bytes_size = 16,
       },
       sparse_image_or.value(), &writer);
-  EXPECT_TRUE(result.is_ok());
+  EXPECT_TRUE(result.is_ok()) << result.error();
 }
 
 }  // namespace
