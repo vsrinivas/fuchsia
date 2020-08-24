@@ -191,7 +191,7 @@ function main {
   shift
 
   local gn_cmd='gen'
-  local -a gn_switches=(--check=system --export-rust-project --export-compile-commands=default)
+  local -a gn_switches=(--fail-on-unused-args --check=system --export-rust-project --export-compile-commands=default)
   local gn_after_args=""
   local base_packages=()
   local cache_packages=()
