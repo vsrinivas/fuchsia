@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
            zx_status_get_string(status));
     }
     if (!devmgr_args.no_exit_after_suspend) {
-      LOGF(ERROR, "Exiting driver manager gracefully");
+      LOGF(INFO, "Exiting driver manager gracefully");
       // TODO(fxb:52627) This event handler should teardown devices and driver hosts
       // properly for system state transitions where driver manager needs to go down.
       // Exiting like so, will not run all the destructors and clean things up properly.
