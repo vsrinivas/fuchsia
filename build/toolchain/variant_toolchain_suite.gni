@@ -6,6 +6,7 @@
 # invoking it through toolchain_template below, GN will refuse to compile if
 # the template is not previously defined.
 import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/variant_tags.gni")
 
 # Private subroutine of variant_toolchain_suite(), below, used to instantiate
 # a single variant toolchain() instance.
@@ -35,9 +36,12 @@ template("_variant_toolchain") {
   this_invoker = invoker.this_invoker
   not_needed([ "this_invoker" ])
 
-  # Every toolchain needs the global select_variant_canonical passed
-  # down explicitly via toolchain_args.  See BUILDCONFIG.gn.
-  pass_through_canonical = select_variant_canonical
+  # Every toolchain needs the global select_variant_canonical and
+  # all_toolchain_variants passed down explicitly via toolchain_args.
+  # See BUILDCONFIG.gn.
+  pass_through_select_variant_canonical = select_variant_canonical
+  pass_through_all_toolchain_variants = all_toolchain_variants
+
   _target_type = invoker.toolchain_template
 
   target(_target_type, target_name) {
@@ -63,7 +67,10 @@ template("_variant_toolchain") {
 
       # See comment above.
       select_variant_canonical = []
-      select_variant_canonical = pass_through_canonical
+      select_variant_canonical = pass_through_select_variant_canonical
+
+      all_toolchain_variants = []
+      all_toolchain_variants = pass_through_all_toolchain_variants
     }
   }
 }
@@ -96,97 +103,47 @@ template("_variant_toolchain") {
 # clang_toolchain_instance() and zircon_toolchain_instance() for their values.
 #
 template("variant_toolchain_suite") {
-  # First get a canonicalized, flat list of variant specs that includes the
-  # null variant.  Canonical variants don't have `host_only`/`target_only` but
-  # instead take the body of one or the other, have [] for any missing list
-  # fields, have .suffix as well as .name (or implied .name), and have .base.
+  # Expand all_toolchain_variants into a canonicalized, list of variant specs
+  # that don't have `host_only`/`target_only` but instead take the body of one
+  # or the other., and have .base.
   is_host = defined(invoker.toolchain_os) && invoker.toolchain_os == host_os
   not_needed([ "is_host" ])
   variants = []
-  foreach(variant, [ false ] + known_variants) {
+  foreach(variant, all_toolchain_variants) {
     variants += [
       {
         base = get_label_info(":$target_name", "label_no_toolchain")
-        configs = []
-        remove_common_configs = []
-        remove_shared_configs = []
-        deps = []
-        instrumented = false
-        if (variant == false) {
-          name = ""
-          suffix = ""
+
+        forward_variables_from(variant,
+                               "*",
+                               [
+                                 "host_only",
+                                 "target_only",
+                               ])
+
+        if (is_host) {
+          if (defined(variant.host_only)) {
+            forward_variables_from(variant.host_only, "*")
+          }
         } else {
-          if (is_host) {
-            if (defined(variant.host_only)) {
-              forward_variables_from(variant.host_only, "*")
-            }
-          } else {
-            if (defined(variant.target_only)) {
-              forward_variables_from(variant.target_only, "*")
-            }
+          if (defined(variant.target_only)) {
+            forward_variables_from(variant.target_only, "*")
           }
-          forward_variables_from(variant,
-                                 "*",
-                                 [
-                                   "host_only",
-                                   "target_only",
-                                 ])
-          if (!defined(name)) {
-            name = ""
-            assert(configs != [],
-                   "variant with no name must include nonempty configs")
-            foreach(config, configs) {
-              if (name != "") {
-                name += "-"
-              }
-              name += get_label_info(config, "name")
-            }
-          }
-          suffix = "-$name"
         }
+
+        # NOTE: foreach() is used here to ensure that `unknown_tags` is not
+        # recorded in the scope.
+        foreach(unknown_tags, [ [] ]) {
+          unknown_tags = tags + all_variant_tags - all_variant_tags
+          assert(
+              unknown_tags == [],
+              "Unknown tags ${unknown_tags} in variant definition: ${variant}")
+        }
+
+        # Recompute `instrumented` flag based on tags.
+        instrumented = tags + [ "instrumented" ] - [ "instrumented" ] != tags
       },
     ]
-  }
-
-  # Now elaborate the list with all the universal variant combinations.
-  # Each universal variant becomes its own standalone variant when
-  # combined with the null variant.
-  # TODO(crbug.com/818525): The `+ []` works around a bug that crashes
-  # GN with heap-use-after-free: the no-op `+` forces a copy of the list
-  # in `variants`; without it, GN uses the same std::vector object in
-  # the looping logic that it mutates in place for `variants +=`.
-  foreach(variant, variants + []) {
-    foreach(universal_variant, universal_variants) {
-      variants += [
-        {
-          forward_variables_from(variant, "*", [ "toolchain_args" ])
-          toolchain_args = {
-            if (defined(variant.toolchain_args)) {
-              forward_variables_from(variant.toolchain_args, "*")
-            }
-            if (defined(universal_variant.toolchain_args)) {
-              forward_variables_from(universal_variant.toolchain_args, "*")
-            }
-          }
-          if (name == "") {
-            name = universal_variant.name
-          } else {
-            name += "-${universal_variant.name}"
-          }
-          suffix += "-${universal_variant.name}"
-          configs += universal_variant.configs
-          if (defined(universal_variant.remove_common_configs)) {
-            remove_common_configs += universal_variant.remove_common_configs
-          }
-          if (defined(universal_variant.remove_shared_configs)) {
-            remove_shared_configs += universal_variant.remove_shared_configs
-          }
-          if (defined(universal_variant.deps)) {
-            deps += universal_variant.deps
-          }
-        },
-      ]
-    }
   }
 
   # Exclude the arguments that are for us or are verboten.

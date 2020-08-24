@@ -1,0 +1,34 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The list of all valid variant tag strings that can appear inside a
+# variant definition scope, or in `exclude_variant_tags` target or toolchain
+# fields.
+#
+# Tags are used to specify various properties of a variant, and allows some
+# filtering to happen during variant toolchain selection, or directly inside
+# a target's build rules by looking at `toolchain_variant.variant_tags`.
+#
+all_variant_tags = [
+  # The `instrumented` tag is used for variants that generate instrumented
+  # machine code (e.g. profiling and sanitizers). As a special case, if this
+  # tag is listed by a variant descriptor, the global
+  # toolchain_variant.instrumented flag will be set to true in the
+  # context of the corresponding variant toolchain.
+  "instrumented",
+
+  # The `instrumentation-runtime` tag is used for instrumented variants that
+  # also require linking a specific instrumentation runtime to linkable
+  # binaries. Note that any variant that has this tag should also have
+  # the `instrumented` tag as well.
+  "instrumentation-runtime",
+
+  # The `asan` tag is used for variants that implement address-sanitizers.
+  # These should always list `instrumented` and `instrumentation-runtime`
+  # as well.
+  "asan",
+
+  # The `fuzzer` tag is used for variants that implement fuzzers only.
+  "fuzzer",
+]

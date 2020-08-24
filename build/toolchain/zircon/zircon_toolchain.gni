@@ -227,6 +227,9 @@ template("zircon_toolchain") {
       if (defined(_tv_args.remove_shared_configs)) {
         remove_shared_configs += _tv_args.remove_shared_configs
       }
+      if (defined(_tv_args.tags)) {
+        tags += _tv_args.tags
+      }
     }
   }
 

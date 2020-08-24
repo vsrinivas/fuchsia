@@ -103,6 +103,10 @@ declare_args() {
   #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
   #     `toolchain_variant.is_pic_default`
   #         [bool] This is true in `shlib_toolchain`.
+  #     `toolchain_variant.tags`
+  #         [list of strings] A list of liberal strings, each one describing a
+  #         property of this toolchain instance. See
+  #         //build/toolchain/variant_tags.gni for more details.
   #     `toolchain_variant.configs`
   #         [list of configs] A list of configs that are added to all linkable
   #         targets for this toolchain() instance.
@@ -114,9 +118,8 @@ declare_args() {
   #         [list of configs] Same a remove_common_configs, but only applies
   #         to non-executable (e.g. shared_library()) targets.
   #     `toolchain_variant.instrumented`
-  #         [boolean] A flag that is true iff this toolchain generates
-  #         instrumented code (for sanitizers, code-coverage analysis or
-  #         fuzzing).
+  #         [boolean] A convenience flag that is true iff "instrumented" is
+  #         part of toolchain_variant.tags.
   #     `toolchain_variant.with_shared`
   #         [boolean] True iff this toolchain() instance has a secondary
   #         toolchain to build ELF shared-library code.
@@ -157,6 +160,7 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.is_pic_default = false
   toolchain_variant.with_shared = true
   toolchain_variant.instrumented = false
+  toolchain_variant.tags = []
 }
 
 is_android = false
@@ -645,7 +649,11 @@ _asan_variant = {
     # -fsanitize=scudo is incompatible with -fsanitize=address.
     use_scudo = false
   }
-  instrumented = true
+  tags = [
+    "asan",
+    "instrumented",
+    "instrumentation-runtime",
+  ]
 }
 
 # When fuzzing with ASan, we configure it to be ClusterFuzz-friendly
@@ -728,6 +736,12 @@ declare_args() {
   #       so the list of config names forming each variant must be unique
   #       among the lists in `known_variants + extra_variants`.
   #
+  #   `tags` (optional)
+  #       [list of strings] A list of liberal strings describing properties
+  #       of the toolchain instances created from this variant scope. See
+  #       //build/toolchain/variant_tags.gni for the list of available
+  #       values and their meaning.
+  #
   #   `toolchain_args` (optional)
   #       [scope] Each variable defined in this scope overrides a
   #       build argument in the toolchain context of this variant.
@@ -748,7 +762,7 @@ declare_args() {
 
     {
       configs = [ "//build/config/profile" ]
-      instrumented = true
+      tags = [ "instrumented" ]
     },
 
     {
@@ -757,14 +771,20 @@ declare_args() {
 
     {
       configs = [ "//build/config/sanitizers:ubsan" ]
-      instrumented = true
+      tags = [
+        "instrumented",
+        "instrumentation-runtime",
+      ]
     },
     {
       configs = [
         "//build/config/sanitizers:ubsan",
         "//build/config/sanitizers:sancov",
       ]
-      instrumented = true
+      tags = [
+        "instrumented",
+        "instrumentation-runtime",
+      ]
     },
 
     _asan_variant,
@@ -797,6 +817,7 @@ declare_args() {
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs
+      tags += [ "fuzzer" ]
     },
     {
       name = "ubsan-fuzzer"
@@ -807,7 +828,11 @@ declare_args() {
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs
-      instrumented = true
+      tags = [
+        "fuzzer",
+        "instrumented",
+        "instrumentation-runtime",
+      ]
     },
   ]
 
@@ -880,15 +905,6 @@ declare_args() {
           ]
         },
         {
-          variant = false
-          host = true
-          dir = [
-            # TODO(53356): Blobfs host tool performs poorly when built with
-            # asan.
-            "//zircon/tools/blobfs",
-          ]
-        },
-        {
           variant = "asan"
           host = true
         },
@@ -928,7 +944,7 @@ declare_args() {
 # each known variant.  The shortcut is just the name of the variant
 # and selects for `host=false`.
 _select_variant_shortcuts = select_variant_shortcuts
-foreach(variant, known_variants) {
+foreach(variant, known_variants + extra_variants) {
   if (defined(variant.name)) {
     variant = variant.name
   } else {
@@ -1060,6 +1076,11 @@ declare_args() {
   # It exists only to be set in `toolchain_args`.
   # See //build/toolchain/clang_toolchain.gni for details.
   select_variant_canonical = []
+
+  # *These should never be set as a build argument.*
+  # It will be set below and passed to other toolchains through toolchain_args
+  # (see variant_toolchain.gni).
+  all_toolchain_variants = []
 }
 
 # Very unfortunately, GN nevers sets `current_toolchain` when executing
@@ -1126,6 +1147,118 @@ if (in_default_toolchain) {
       }
     }
   }
+
+  # Expand the list of all variants, based on the values of known_variants,
+  # extra_variants, and universal_variants. Note that the items in the list
+  # are not in their full canonical format because they don't have a 'base'
+  # key, and the 'host_only' and 'target_only' keys are not expanded yet.
+  # Full expansion will happen in variant_toolchain_suite().
+  all_toolchain_variants = []
+  foreach(variant, [ false ] + known_variants + extra_variants) {
+    all_toolchain_variants += [
+      {
+        configs = []
+        remove_common_configs = []
+        remove_shared_configs = []
+        deps = []
+        tags = []
+        if (variant == false) {
+          name = ""
+          suffix = ""
+        } else {
+          forward_variables_from(variant, "*")
+          if (!defined(name)) {
+            # We cannot expand host_only/target_only yet, but we can verify that
+            # these scopes should not include any "configs" keys, to ensure the
+            # future expansion cannot change the variant's name computed from
+            # the list of configs.
+            if (defined(host_only)) {
+              assert(
+                  !defined(host_only.configs),
+                  "The host_only scope of a name-less variant cannot contain 'configs' entries.")
+            }
+            if (defined(target_only)) {
+              assert(
+                  !defined(target_only.configs),
+                  "The target_only scope of a name-less variant cannot contain 'configs' entries.")
+            }
+            name = ""
+            assert(configs != [],
+                   "variant with no name must include nonempty configs")
+            foreach(config, configs) {
+              if (name != "") {
+                name += "-"
+              }
+              name += get_label_info(config, "name")
+            }
+          }
+          suffix = "-$name"
+        }
+      },
+    ]
+  }
+
+  # Now elaborate the list with all the universal variant combinations.
+  # Each universal variant becomes its own standalone variant when
+  # combined with the null variant.
+  foreach(variant, all_toolchain_variants) {
+    foreach(universal_variant, universal_variants) {
+      all_toolchain_variants += [
+        {
+          forward_variables_from(variant, "*", [ "toolchain_args" ])
+          toolchain_args = {
+            if (defined(variant.toolchain_args)) {
+              forward_variables_from(variant.toolchain_args, "*")
+            }
+            if (defined(universal_variant.toolchain_args)) {
+              forward_variables_from(universal_variant.toolchain_args, "*")
+            }
+          }
+          if (name == "") {
+            name = universal_variant.name
+          } else {
+            name += "-${universal_variant.name}"
+          }
+          suffix += "-${universal_variant.name}"
+          configs += universal_variant.configs
+          if (defined(universal_variant.remove_common_configs)) {
+            remove_common_configs += universal_variant.remove_common_configs
+          }
+          if (defined(universal_variant.remove_shared_configs)) {
+            remove_shared_configs += universal_variant.remove_shared_configs
+          }
+          if (defined(universal_variant.deps)) {
+            deps += universal_variant.deps
+          }
+        },
+      ]
+    }
+  }
+
+  # Insert a 'variant_tags' field in each selector item that corresponds to
+  # the list of tags from the variant the selector points to.
+  foreach(_variant_selectors, [ [] ]) {
+    foreach(selector, select_variant_canonical) {
+      _variant_selectors += [
+        {
+          forward_variables_from(selector, "*")
+          variant_tags = []
+          foreach(selected_tags, [ false ]) {
+            foreach(variant, all_toolchain_variants) {
+              if (selector.variant == variant.name) {
+                selected_tags = variant.tags
+              }
+            }
+            if (selected_tags != false) {
+              variant_tags = selected_tags
+            }
+          }
+        },
+      ]
+    }
+    select_variant_canonical = []
+    select_variant_canonical = _variant_selectors
+  }
 }
 
 template("variant_target") {
@@ -1138,6 +1271,7 @@ template("variant_target") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "exclude_toolchain_tags",
                              "_target_type",
                              "target_name",
                              "visibility",
@@ -1158,9 +1292,15 @@ template("variant_target") {
 
   target_label = get_label_info(":$target_name", "label_no_toolchain")
 
+  exclude_toolchain_tags = []
+  if (defined(invoker.exclude_toolchain_tags)) {
+    exclude_toolchain_tags += invoker.exclude_toolchain_tags
+  }
+
   # These are not actually used in all possible if branches below,
   # so defang GN's extremely sensitive "unused variable" errors.
   not_needed([
+               "exclude_toolchain_tags",
                "selector_target_type",
                "target_invoker",
                "target_label",
@@ -1254,6 +1394,13 @@ template("variant_target") {
           }
         }
 
+        if (selected && exclude_toolchain_tags != []) {
+          if (exclude_toolchain_tags + select.variant_tags -
+              select.variant_tags != exclude_toolchain_tags) {
+            selected = false
+          }
+        }
+
         if (selected && selector.variant != false) {
           target_variant = "-${selector.variant}"
         }
@@ -1297,7 +1444,7 @@ template("variant_target") {
       # These dependencies need to be attached here rather than higher up in the
       # dependency tree in order to correctly capture the active toolchain
       # variant.
-      if (is_fuchsia) {
+      if (is_fuchsia && zircon_toolchain == false) {
         if (!defined(data_deps)) {
           data_deps = []
         }
