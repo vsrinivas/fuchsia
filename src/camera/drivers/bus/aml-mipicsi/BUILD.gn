@@ -10,12 +10,11 @@ driver_module("aml-mipicsi-driver") {
   sources = [
     "aml-mipi-adap.cc",
     "aml-mipi-debug.cc",
+    "aml-mipi-regs.h",
     "aml-mipi.cc",
+    "aml-mipi.h",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.mipicsi",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -25,8 +24,6 @@ driver_module("aml-mipicsi-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]

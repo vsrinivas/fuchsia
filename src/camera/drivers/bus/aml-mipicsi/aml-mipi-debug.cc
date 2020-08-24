@@ -6,10 +6,9 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
-#include <hw/reg.h>
 
-#include "aml-mipi-regs.h"
-#include "aml-mipi.h"
+#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi-regs.h"
+#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi.h"
 
 namespace camera {
 

@@ -2,20 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
 #include <math.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/metadata.h>
-#include <ddk/metadata/camera.h>
-#include <fbl/auto_call.h>
-#include <hw/reg.h>
 
-#include "aml-mipi-regs.h"
-#include "aml-mipi.h"
+#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi-regs.h"
+#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi.h"
 
 // NOTE: A lot of magic numbers, they come from vendor
 //       source code.
