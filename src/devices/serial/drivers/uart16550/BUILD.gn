@@ -11,6 +11,59 @@ group("tests") {
   deps = [ ":uart16550-test-package" ]
 }
 
+# We need to build both a "normal" and a "testonly" version of the library,
+# because its headers (and implementation) want to include testonly headers
+# like hwreg/mock.h for the benefit of uart16550-test below.
+#
+# The config below is used to define a macro that is used by uart16550.h to
+# conditionally include hwreg/mock.h, and define certain mocking-related
+# types and methods.
+config("testing.config") {
+  defines = [ "UART16550_TESTING=1" ]
+}
+
+# A template to define a source_set() target for the library. The `testonly`
+# parameter is required.
+template("define_common_lib") {
+  source_set(target_name) {
+    visibility = [ ":*" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/unification/config:zircon-migrated",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
+    sources = [ "uart16550.cc" ]
+    deps = [ "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c" ]
+    public_deps = [
+      "//sdk/banjo/ddk.protocol.acpi",
+      "//sdk/banjo/ddk.protocol.serial",
+      "//sdk/banjo/ddk.protocol.serialimpl",
+      "//src/lib/ddk",
+      "//src/lib/ddktl",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/hwreg",
+      "//zircon/public/lib/uart",
+      "//zircon/public/lib/zx",
+    ]
+    if (invoker.testonly) {
+      testonly = true
+      public_deps += [ "//zircon/public/lib/hwreg-mock" ]
+      public_configs = [ ":testing.config" ]
+    }
+  }
+}
+
+# This version of the library doesn't have any mocking support, but can
+# be used by all other targets.
+define_common_lib("uart16550_lib") {
+  testonly = false
+}
+
+# This version of the library has mocking support, but requires testonly = true.
+define_common_lib("uart16550_lib_for_testing") {
+  testonly = true
+}
+
 driver_module("uart16550") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -18,31 +71,8 @@ driver_module("uart16550") {
     "//build/unification/config:zircon-migrated",
   ]
   deps = [
-    ":common",
+    ":uart16550_lib",
     "//src/devices/lib/driver",
-  ]
-}
-
-source_set("common") {
-  visibility = [ ":*" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-  sources = [ "uart16550.cc" ]
-  deps = [ "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c" ]
-  public_deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.serial",
-    "//sdk/banjo/ddk.protocol.serialimpl",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/hwreg-mock",
-    "//zircon/public/lib/uart",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -51,8 +81,9 @@ test("uart16550-test") {
   output_name = "uart16550-test"
   sources = [ "uart16550-test.cc" ]
   deps = [
-    ":common",
+    ":uart16550_lib_for_testing",
     "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/hwreg-mock",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

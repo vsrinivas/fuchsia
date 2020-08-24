@@ -137,6 +137,7 @@ zx_status_t Uart16550::Init() {
   return ZX_OK;
 }
 
+#if UART16550_TESTING
 zx_status_t Uart16550::Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo port_mock) {
   interrupt_ = std::move(interrupt);
   {
@@ -155,6 +156,7 @@ zx_status_t Uart16550::Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo por
 
   return ZX_OK;
 }
+#endif  // UART16550_TESTING
 
 zx::unowned_interrupt Uart16550::InterruptHandle() { return zx::unowned_interrupt(interrupt_); }
 

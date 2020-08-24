@@ -18,8 +18,11 @@
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/function.h>
 #include <hwreg/bitfields.h>
-#include <hwreg/mock.h>
 #include <hwreg/pio.h>
+
+#if UART16550_TESTING
+#include <hwreg/mock.h>
+#endif
 
 namespace uart16550 {
 
@@ -42,8 +45,10 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 
   zx_status_t Init();
 
+#if UART16550_TESTING
   // test-use only
   zx_status_t Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo port_mock);
+#endif
 
   // test-use only
   zx::unowned_interrupt InterruptHandle();
@@ -91,9 +96,13 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 
   serial_notify_t notify_cb_ __TA_GUARDED(device_mutex_) = {};
 
+#if UART16550_TESTING
   // This should never be used before Init, but must be default-constructible.
   // The Mock is the default (first) variant so it's default-constructible.
   std::variant<hwreg::Mock::RegisterIo, hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_);
+#else
+  std::variant<hwreg::RegisterPio> port_io_ __TA_GUARDED(device_mutex_);
+#endif
 
   size_t uart_fifo_len_ = 1;
 
