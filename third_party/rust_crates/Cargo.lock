@@ -3355,7 +3355,7 @@ checksum = "a977b0bb2e2033a6fef950f218f13622c3c34e59754b704ce3492dedab1dfe95"
 dependencies = [
  "bitflags",
  "cassowary",
- "termion",
+ "crossterm",
  "unicode-segmentation",
  "unicode-width",
 ]

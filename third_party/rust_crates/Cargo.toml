@@ -204,7 +204,7 @@ syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
-tui = "0.10.0"
+tui = { version = "0.10.0", features = ["crossterm"], default-features = false }
 zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 
 # For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing

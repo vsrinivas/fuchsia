@@ -8780,7 +8780,7 @@ rust_library("tui-v0_10_0") {
   deps = []
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":cassowary-v0_3_0" ]
-  deps += [ ":termion-v1_5_3" ]
+  deps += [ ":crossterm-v0_17_7" ]
   deps += [ ":unicode-segmentation-v1_2_1" ]
   deps += [ ":unicode-width-v0_1_5" ]
 
@@ -8791,8 +8791,7 @@ rust_library("tui-v0_10_0") {
     "--edition=2018",
     "-Cmetadata=5761e34de280b46c",
     "-Cextra-filename=-5761e34de280b46c",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"termion\"",
+    "--cfg=feature=\"crossterm\"",
   ]
 }
 
