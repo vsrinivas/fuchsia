@@ -8,13 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
-# TODO(maruel): Remove once the switch over is done.
-go_library("fidl_lib") {
-  name = "fidl/compiler/..."
-  source_dir = "compiler_old"
-  deps = [ ":compiler" ]
-}
-
 go_library("compiler") {
   name = "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/..."
   source_dir = "compiler"
