@@ -165,6 +165,10 @@ def main():
                 config_printed = False
         run_command(["fx", "format-code", "--files=" + build_file])
 
+    print("Fixed all of:")
+    for error_target in sorted(error_targets):
+        print("  \"" + error_target + "\",")
+
     return 0
 
 
