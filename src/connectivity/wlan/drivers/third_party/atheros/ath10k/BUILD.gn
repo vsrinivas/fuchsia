@@ -23,7 +23,6 @@ driver_module("ath10k_driver") {
   output_name = "ath10k"
 
   sources = [
-    "ahb.h",
     "bitarr.c",
     "bmi.c",
     "bmi.h",

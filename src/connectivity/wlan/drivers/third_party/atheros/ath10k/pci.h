@@ -22,7 +22,6 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 
-#include "ahb.h"
 #include "ce.h"
 #include "hw.h"
 

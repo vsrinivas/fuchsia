@@ -199,7 +199,6 @@ struct bmi_target_info {
 
 void ath10k_bmi_start(struct ath10k* ar);
 zx_status_t ath10k_bmi_done(struct ath10k* ar);
-zx_status_t ath10k_bmi_get_target_info_sdio(struct ath10k* ar, struct bmi_target_info* target_info);
 zx_status_t ath10k_bmi_get_target_info(struct ath10k* ar, struct bmi_target_info* target_info);
 zx_status_t ath10k_bmi_read_memory(struct ath10k* ar, uint32_t address, void* buffer,
                                    uint32_t length);

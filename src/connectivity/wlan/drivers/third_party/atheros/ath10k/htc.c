@@ -703,9 +703,10 @@ zx_status_t ath10k_htc_start(struct ath10k_htc* htc) {
   msg->hdr.message_id = ATH10K_HTC_MSG_SETUP_COMPLETE_EX_ID;
 
   if (ar->hif.bus == ATH10K_BUS_SDIO) {
-    /* Extra setup params used by SDIO */
-    msg->setup_complete_ext.flags = ATH10K_HTC_SETUP_COMPLETE_FLAGS_RX_BNDL_EN;
-    msg->setup_complete_ext.max_msgs_per_bundled_recv = htc->max_msgs_per_htc_bundle;
+    ath10k_msg_buf_free(msg_buf);
+    status = ZX_ERR_NOT_SUPPORTED;
+    ath10k_err("sdio bus not supported (%s)\n", zx_status_get_string(status));
+    return status;
   }
   ath10k_dbg(ar, ATH10K_DBG_HTC, "HTC is using TX credit flow control\n");
 
