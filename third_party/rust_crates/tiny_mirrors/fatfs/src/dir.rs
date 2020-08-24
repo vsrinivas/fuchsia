@@ -327,6 +327,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
         match r {
             // directory does not exist - create it
             DirEntryOrShortName::ShortName(short_name) => {
+                let transaction = self.fs.begin_transaction().unwrap();
                 // alloc cluster for directory data
                 let cluster = self.fs.alloc_cluster(None, true)?;
                 // create entry in parent directory
@@ -349,6 +350,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
                     self.cluster_for_child_dotdot_entry(),
                 );
                 dir.write_entry("..", sfn_entry)?;
+                self.fs.commit(transaction)?;
                 Ok(dir)
             }
             // directory already exists - return it
@@ -881,7 +883,7 @@ fn validate_long_name(name: &str, short_name: &[u8; SFN_SIZE]) -> io::Result<boo
             'A'..='Z' | '0'..='9' => {}
             '$' | '%' | '\'' | '-' | '_' | '@' | '~' | '`' | '!' | '(' | ')' | '{' | '}' | '^'
             | '#' | '&' | '.' => {}
-            'a'..='z' | '\u{80}'..='\u{FFFF}' | ' ' | '+' | ',' | ';' | '=' | '[' | ']' => {
+            'a'..='z' | '\u{80}'..='\u{10FFFF}' | ' ' | '+' | ',' | ';' | '=' | '[' | ']' => {
                 long_name_required = true
             }
             _ => return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameBadCharacter)),
@@ -1243,24 +1245,26 @@ impl ShortNameGenerator {
         let mut short_name = [SFN_PADDING; SFN_SIZE];
         // find extension after last dot
         // Note: short file name cannot start with the extension
-        let (basename_len, name_fits, lossy_conv) = match name[1..].rfind('.') {
-            Some(index) => {
-                // extension found - copy parts before and after dot
-                let dot_index = index + 1;
-                let (basename_len, basename_fits, basename_lossy) =
-                    Self::copy_short_name_part(&mut short_name[0..8], &name[..dot_index]);
-                let (_, ext_fits, ext_lossy) =
-                    Self::copy_short_name_part(&mut short_name[8..11], &name[dot_index + 1..]);
-                (basename_len, basename_fits && ext_fits, basename_lossy || ext_lossy)
-            }
-            _ => {
-                // no extension - copy name and leave extension empty
+        let (basename_len, name_fits, lossy_conv) = match name.rfind('.') {
+            Some(0) | None => {
+                // file starts with a '.', or it has no extension - copy name and leave extension
+                // empty.
                 let (basename_len, basename_fits, basename_lossy) =
                     Self::copy_short_name_part(&mut short_name[0..8], &name);
                 (basename_len, basename_fits, basename_lossy)
             }
+            Some(dot_index) => {
+                // extension found - copy parts before and after dot
+                let (basename_len, basename_fits, basename_lossy) =
+                    Self::copy_short_name_part(&mut short_name[0..8], &name[..dot_index]);
+                // This is safe, because '.' is always exactly one byte - we don't risk
+                // accidentally indexing mid-character.
+                let (_, ext_fits, ext_lossy) =
+                    Self::copy_short_name_part(&mut short_name[8..11], &name[dot_index + 1..]);
+                (basename_len, basename_fits && ext_fits, basename_lossy || ext_lossy)
+            }
         };
-        let chksum = Self::checksum(name);
+        let chksum = Self::checksum(&name);
         Self {
             short_name,
             chksum,
