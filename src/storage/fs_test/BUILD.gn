@@ -515,6 +515,24 @@ fuchsia_component("truncate-tests") {
   ]
 }
 
+test("unicode_tests") {
+  sources = [ "unicode.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("unicode-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/unicode-tests.cml"
+  deps = [
+    ":manifests",
+    ":unicode_tests",
+  ]
+}
+
 test("unlink_tests") {
   sources = [ "unlink.cc" ]
   deps = [
@@ -580,6 +598,7 @@ fuchsia_test_package("fs-tests") {
     ":sync-tests",
     ":threading-tests",
     ":truncate-tests",
+    ":unicode-tests",
     ":unlink-tests",
     ":watcher-tests",
   ]
@@ -712,6 +731,7 @@ action("manifests") {
     "$target_gen_dir/threading-tests.cml",
     "$target_gen_dir/truncate-large-tests.cml",
     "$target_gen_dir/truncate-tests.cml",
+    "$target_gen_dir/unicode-tests.cml",
     "$target_gen_dir/unlink-tests.cml",
     "$target_gen_dir/watcher-tests.cml",
   ]
