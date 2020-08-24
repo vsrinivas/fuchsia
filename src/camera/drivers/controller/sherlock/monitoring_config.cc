@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
+#include "src/camera/drivers/controller/sherlock/monitoring_config.h"
 
 // This file contains static information for the Monitor Configuration
 // There are three streams in one configuration

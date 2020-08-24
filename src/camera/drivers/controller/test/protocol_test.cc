@@ -13,7 +13,6 @@
 
 #include <utility>
 
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -22,6 +21,7 @@
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/output_node.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
+#include "src/camera/drivers/controller/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/test/constants.h"
 #include "src/camera/drivers/controller/test/fake_gdc.h"
 #include "src/camera/drivers/controller/test/fake_ge2d.h"

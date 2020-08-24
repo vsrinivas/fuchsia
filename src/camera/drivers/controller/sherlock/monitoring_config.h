@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_MONITORING_CONFIG_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_MONITORING_CONFIG_H_
+#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_MONITORING_CONFIG_H_
+#define SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_MONITORING_CONFIG_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/common_util.h"
+#include "src/camera/drivers/controller/sherlock/common_util.h"
 #include "src/camera/lib/stream_utils/stream_constraints.h"
 
 // Config 1: Monitoring configuration.
@@ -93,4 +93,4 @@ constexpr FrameRateRange kMonitoringFrameRateRange = {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_MONITORING_CONFIG_H_
+#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_MONITORING_CONFIG_H_

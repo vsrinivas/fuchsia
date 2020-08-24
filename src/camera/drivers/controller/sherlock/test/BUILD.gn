@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 
 executable("test") {
-  output_name = "configs_test"
+  output_name = "sherlock_configs_test"
   testonly = true
   sources = [ "configs_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
-    "//src/camera/drivers/controller/configs/sherlock",
+    "//src/camera/drivers/controller/sherlock:config",
     "//src/camera/drivers/controller/test:constants",
     "//src/lib/fxl/test:gtest_main",
   ]

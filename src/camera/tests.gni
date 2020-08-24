@@ -10,7 +10,7 @@ camera_tests = {
     "//src/camera/bin/device_watcher/test",
     "//src/camera/bin/factory/test",
     "//src/camera/calibration/algorithms/test",
-    "//src/camera/drivers/controller/configs/sherlock/test",
+    "//src/camera/drivers/controller/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
     "//src/camera/drivers/hw_accel/ge2d/test",
@@ -43,9 +43,8 @@ camera_tests = {
       environments = [ sherlock_env ]
     },
     {
-      name = "configs_test"
-      manifest =
-          "//src/camera/drivers/controller/configs/sherlock/test/meta/configs_test.cmx"
+      name = "sherlock_configs_test"
+      manifest = "//src/camera/drivers/controller/sherlock/test/meta/sherlock_configs_test.cmx"
       environments = [ sherlock_env ]
     },
     {

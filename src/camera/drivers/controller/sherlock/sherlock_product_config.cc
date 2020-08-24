@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_product_config.h"
+#include "src/camera/drivers/controller/sherlock/sherlock_product_config.h"
 
-#include "src/camera/drivers/controller/configs/sherlock/isp_debug_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/video_conferencing_config.h"
+#include "src/camera/drivers/controller/sherlock/isp_debug_config.h"
+#include "src/camera/drivers/controller/sherlock/monitoring_config.h"
+#include "src/camera/drivers/controller/sherlock/video_conferencing_config.h"
 
 namespace camera {
 

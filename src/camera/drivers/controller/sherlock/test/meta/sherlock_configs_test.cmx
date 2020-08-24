@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/configs_test"
+        "binary": "test/sherlock_configs_test"
     },
     "sandbox": {
         "dev": [

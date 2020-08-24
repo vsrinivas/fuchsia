@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cipd.gni")
 import("//src/camera/debug.gni")
-import("//src/camera/drivers/controller/camera_controller_driver.gni")
 
 source_set("source") {
   defines = [ camera_debug_define ]
@@ -70,28 +68,4 @@ source_set("source") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-}
-
-camera_controller_driver("controller") {
-  deps = [ "//src/camera/drivers/controller/configs/sherlock" ]
-
-  # The following config files are currently gated behind internal
-  # access to the CIPD repository.
-  if (internal_access) {
-    gdc_config_files = [
-      "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin",
-      "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin",
-      "config_002_1152x1440-to-1440x1152-DKCR-YUV420SemiPlanar.bin",
-      "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
-      "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
-      "config_1152x1440_to_1152x864_Crop_Rotate.bin",
-      "config_1152x1440_to_512x384_Crop_Rotate.bin",
-      "config_1152x1440_to_720x540_Crop_Rotate.bin",
-    ]
-    watermark_files = [
-      "watermark-360p.rgba",
-      "watermark-480p.rgba",
-      "watermark-720p.rgba",
-    ]
-  }
 }

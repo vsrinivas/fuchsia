@@ -4,9 +4,9 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/camera/drivers/controller/configs/sherlock/common_util.h"
-#include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_product_config.h"
+#include "src/camera/drivers/controller/sherlock/common_util.h"
+#include "src/camera/drivers/controller/sherlock/monitoring_config.h"
+#include "src/camera/drivers/controller/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/test/constants.h"
 
 namespace camera {

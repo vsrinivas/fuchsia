@@ -6,7 +6,7 @@ group("drivers") {
   testonly = true
   deps = [
     "bus",
-    "controller",
+    "controller/sherlock",
     "hw_accel",
     "sensors",
     "test_utils",
@@ -21,7 +21,7 @@ group("all") {
   testonly = true
   deps = [
     "bus",
-    "controller",
+    "controller/sherlock",
     "hw_accel",
     "sensors",
     "usb_video",
@@ -33,7 +33,7 @@ group("sherlock") {
   testonly = true
   deps = [
     "bus",
-    "controller",
+    "controller/sherlock",
     "hw_accel",
     "sensors",
   ]

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
+#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_COMMON_UTIL_H_
+#define SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_COMMON_UTIL_H_
 
 #include "src/camera/lib/stream_utils/stream_constraints.h"
 
@@ -21,4 +21,4 @@ fuchsia::sysmem::BufferCollectionConstraints InvalidConstraints();
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
+#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_SHERLOCK_COMMON_UTIL_H_
