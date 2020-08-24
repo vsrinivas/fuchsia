@@ -6,7 +6,7 @@
 
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
+#include "src/camera/drivers/controller/configs/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/test/constants.h"
 
 namespace camera {
@@ -20,15 +20,17 @@ constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONF
 constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
 
 TEST(ConfigTest, ExternalConfiguration) {
-  auto external_configs = SherlockExternalConfigs();
-  auto internal_configs = SherlockInternalConfigs();
+  auto sherlock_configs = ProductConfig::Create();
+  auto external_configs = sherlock_configs->ExternalConfigs();
+  auto internal_configs = sherlock_configs->InternalConfigs();
 
   EXPECT_EQ(external_configs.size(), SherlockConfigs::MAX);
   EXPECT_EQ(internal_configs.configs_info.size(), SherlockConfigs::MAX);
 }
 
 TEST(ConfigTest, InternalMonitorConfiguration) {
-  auto internal_configs = SherlockInternalConfigs();
+  auto sherlock_configs = ProductConfig::Create();
+  auto internal_configs = sherlock_configs->InternalConfigs();
   auto monitor_config = internal_configs.configs_info.at(SherlockConfigs::MONITORING);
   auto fr = monitor_config.streams_info.at(0);
   auto ds = monitor_config.streams_info.at(1);
@@ -113,7 +115,8 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
 }
 
 TEST(ConfigTest, InternalVideoConferenceConfiguration) {
-  auto internal_configs = SherlockInternalConfigs();
+  auto sherlock_configs = ProductConfig::Create();
+  auto internal_configs = sherlock_configs->InternalConfigs();
   auto video_config = internal_configs.configs_info.at(SherlockConfigs::VIDEO);
 
   EXPECT_EQ(video_config.streams_info.size(), 1u);

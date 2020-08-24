@@ -8,7 +8,7 @@ executable("test") {
   sources = [ "configs_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
-    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
+    "//src/camera/drivers/controller/configs/sherlock",
     "//src/camera/drivers/controller/test:constants",
     "//src/lib/fxl/test:gtest_main",
   ]

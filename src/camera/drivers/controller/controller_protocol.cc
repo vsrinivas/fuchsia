@@ -11,6 +11,8 @@
 
 #include <fbl/auto_call.h>
 
+#include "src/camera/drivers/controller/configs/product_config.h"
+
 namespace camera {
 
 namespace {
@@ -27,7 +29,8 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
                                const zx::event& shutdown_event)
     : binding_(this),
       pipeline_manager_(device, dispatcher, isp, gdc, ge2d, std::move(sysmem_allocator),
-                        shutdown_event) {
+                        shutdown_event),
+      product_config_(ProductConfig::Create()) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
   PopulateConfigurations();
@@ -78,7 +81,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   TRACE_DURATION("camera", "ControllerImpl::CreateStream");
   zx_status_t status = ZX_OK;
   auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
-  auto external_configs = camera::SherlockExternalConfigs();
+  auto external_configs = product_config_->ExternalConfigs();
 
   // Input Validations
   if (config_index >= configs_.size()) {

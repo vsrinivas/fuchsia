@@ -2,18 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("controller-configs") {
+source_set("sherlock") {
   visibility = [ "//src/camera/drivers/controller/*" ]
   sources = [
     "common_util.cc",
     "common_util.h",
-    "internal_config.h",
     "isp_debug_config.cc",
     "isp_debug_config.h",
     "monitoring_config.cc",
     "monitoring_config.h",
-    "sherlock_configs.cc",
-    "sherlock_configs.h",
+    "sherlock_product_config.cc",
+    "sherlock_product_config.h",
     "video_conferencing_config.cc",
     "video_conferencing_config.h",
   ]
@@ -22,6 +21,7 @@ source_set("controller-configs") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//src/camera/drivers/controller/configs",
     "//src/camera/lib/stream_utils:stream_configs",
     "//zircon/system/ulib/fidl-utils",
   ]

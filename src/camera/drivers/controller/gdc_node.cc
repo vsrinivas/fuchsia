@@ -19,30 +19,8 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_gdc_node";
 
-const char* ToConfigFileName(const camera::GdcConfig& config_type) {
-  switch (config_type) {
-    case GdcConfig::MONITORING_360p:
-      return "config_1152x1440_to_512x384_Crop_Rotate.bin";
-    case GdcConfig::MONITORING_480p:
-      return "config_1152x1440_to_720x540_Crop_Rotate.bin";
-    case GdcConfig::MONITORING_720p:
-      return "config_1152x1440_to_1152x864_Crop_Rotate.bin";
-    case GdcConfig::MONITORING_ML:
-      return "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin";
-    case GdcConfig::VIDEO_CONFERENCE:
-      return "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin";
-    case GdcConfig::VIDEO_CONFERENCE_EXTENDED_FOV:
-      return "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin";
-    case GdcConfig::VIDEO_CONFERENCE_ML:
-      return "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin";
-    case GdcConfig::INVALID:
-    default:
-      return nullptr;
-  }
-}
-
 fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
-    zx_device_t* device, const camera::GdcConfig& config_type) {
+    zx_device_t* device, ProductConfig& product_config, const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
     FX_LOGST(DEBUG, kTag) << "Invalid GDC configuration type";
     return fit::error(ZX_ERR_INVALID_ARGS);
@@ -50,7 +28,8 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
 
   gdc_config_info info;
   size_t size;
-  auto status = load_firmware(device, ToConfigFileName(config_type), &info.config_vmo, &size);
+  auto status =
+      load_firmware(device, product_config.GetGdcConfigFile(config_type), &info.config_vmo, &size);
   if (status != ZX_OK || size == 0) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to load the GDC firmware";
     return fit::error(status);
@@ -109,9 +88,10 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
       parent_node->output_image_formats()[0].coded_height);
 
   // Get the GDC configurations loaded
+  auto product_config = ProductConfig::Create();
   std::vector<gdc_config_info> config_vmos_info;
   for (const auto& config : internal_gdc_node.gdc_info.config_type) {
-    auto gdc_config = LoadGdcConfiguration(device, config);
+    auto gdc_config = LoadGdcConfiguration(device, *product_config, config);
     if (gdc_config.is_error()) {
       FX_LOGST(ERROR, kTag) << "Failed to load GDC configuration";
       return fit::error(gdc_config.error());

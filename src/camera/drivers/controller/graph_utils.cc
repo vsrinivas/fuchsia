@@ -9,7 +9,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
+#include "src/camera/drivers/controller/configs/internal_config.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {

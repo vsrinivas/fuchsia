@@ -13,7 +13,7 @@
 
 #include <utility>
 
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
+#include "src/camera/drivers/controller/configs/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -47,7 +47,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     pipeline_manager_ =
         std::make_unique<PipelineManager>(fake_ddk::kFakeParent, dispatcher(), isp_, gdc_, ge2d_,
                                           std::move(sysmem_allocator1_), event_);
-    internal_config_info_ = SherlockInternalConfigs();
+    SherlockProductConfig sherlock_configs;
+    internal_config_info_ = sherlock_configs.InternalConfigs();
   }
 
   void TearDown() override {
@@ -964,10 +965,11 @@ TEST_F(ControllerProtocolTest, TestCropRectChangeInvalidStream) {
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS
-  auto result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, GdcConfig::INVALID);
+  auto config = ProductConfig::Create();
+  auto result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, *config, GdcConfig::INVALID);
   EXPECT_TRUE(result.is_error());
 
-  result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, GdcConfig::MONITORING_360p);
+  result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, *config, GdcConfig::MONITORING_360p);
   EXPECT_FALSE(result.is_error());
 #else
   GTEST_SKIP();

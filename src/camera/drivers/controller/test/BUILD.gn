@@ -31,6 +31,7 @@ executable("test") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",
+    "//src/camera/drivers/controller/configs/sherlock",
     "//src/camera/drivers/test_utils",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",

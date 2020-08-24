@@ -8,7 +8,7 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 
-#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
+#include "src/camera/drivers/controller/configs/internal_config.h"
 
 namespace camera {
 

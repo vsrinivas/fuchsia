@@ -10,8 +10,8 @@
 
 #include <vector>
 
+#include "src/camera/drivers/controller/configs/internal_config.h"
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
-#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/lib/stream_utils/stream_constraints.h"
 
 // Config 1: Monitoring configuration.

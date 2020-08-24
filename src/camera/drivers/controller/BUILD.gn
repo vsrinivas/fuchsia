@@ -3,41 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/cipd.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
 import("//src/camera/debug.gni")
-
-# The following config files are currently gated behind internal
-# access to the CIPD repository.
-if (internal_access) {
-  all_gdc_config_files = [
-    "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin",
-    "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin",
-    "config_002_1152x1440-to-1440x1152-DKCR-YUV420SemiPlanar.bin",
-    "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
-    "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
-    "config_1152x1440_to_1152x864_Crop_Rotate.bin",
-    "config_1152x1440_to_512x384_Crop_Rotate.bin",
-    "config_1152x1440_to_720x540_Crop_Rotate.bin",
-  ]
-
-  all_watermark_files = [
-    "watermark-360p.rgba",
-    "watermark-480p.rgba",
-    "watermark-720p.rgba",
-  ]
-}
-
-driver_module("driver") {
-  output_name = "controller"
-  deps = [ ":source" ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-}
+import("//src/camera/drivers/controller/camera_controller_driver.gni")
 
 source_set("source") {
   defines = [ camera_debug_define ]
@@ -81,7 +48,7 @@ source_set("source") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
+    "//src/camera/drivers/controller/configs",
     "//src/camera/lib/format_conversion",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -105,33 +72,26 @@ source_set("source") {
   ]
 }
 
-driver_package("controller") {
-  deps = [ ":driver" ]
+camera_controller_driver("controller") {
+  deps = [ "//src/camera/drivers/controller/configs/sherlock" ]
 
-  drivers = [
-    {
-      name = "controller.so"
-    },
-  ]
-
-  libraries = []
+  # The following config files are currently gated behind internal
+  # access to the CIPD repository.
   if (internal_access) {
-    foreach(config_file, all_gdc_config_files) {
-      libraries += [
-        {
-          source =
-              rebase_path("//prebuilt/camera/arm/gdc/configs/" + config_file)
-          name = "firmware/" + config_file
-        },
-      ]
-    }
-    foreach(watermark_file, all_watermark_files) {
-      libraries += [
-        {
-          source = rebase_path("//prebuilt/camera/watermark/" + watermark_file)
-          name = "firmware/" + watermark_file
-        },
-      ]
-    }
+    gdc_config_files = [
+      "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin",
+      "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin",
+      "config_002_1152x1440-to-1440x1152-DKCR-YUV420SemiPlanar.bin",
+      "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
+      "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
+      "config_1152x1440_to_1152x864_Crop_Rotate.bin",
+      "config_1152x1440_to_512x384_Crop_Rotate.bin",
+      "config_1152x1440_to_720x540_Crop_Rotate.bin",
+    ]
+    watermark_files = [
+      "watermark-360p.rgba",
+      "watermark-480p.rgba",
+      "watermark-720p.rgba",
+    ]
   }
 }

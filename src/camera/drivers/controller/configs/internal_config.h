@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_INTERNAL_CONFIG_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_INTERNAL_CONFIG_H_
+#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_INTERNAL_CONFIG_H_
+#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_INTERNAL_CONFIG_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -15,13 +15,13 @@
 namespace camera {
 
 enum GdcConfig {
-  MONITORING_360p = 0,                // config_1152x1440_to_512x384_Crop_Rotate
-  MONITORING_480p = 1,                // config_1152x1440_to_720x540_Crop_Rotate
-  MONITORING_720p = 2,                // config_1152x1440_to_1152x864_Crop_Rotate
-  MONITORING_ML = 3,                  // config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar
-  VIDEO_CONFERENCE = 4,               // config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar
-  VIDEO_CONFERENCE_EXTENDED_FOV = 5,  // config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar
-  VIDEO_CONFERENCE_ML = 6,            // config_001_2240x1792-to-640x512-S-YUV420SemiPlanar
+  MONITORING_360p = 0,
+  MONITORING_480p = 1,
+  MONITORING_720p = 2,
+  MONITORING_ML = 3,
+  VIDEO_CONFERENCE = 4,
+  VIDEO_CONFERENCE_EXTENDED_FOV = 5,
+  VIDEO_CONFERENCE_ML = 6,
   INVALID = 7,
 };
 
@@ -106,4 +106,4 @@ struct InternalConfigs {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_INTERNAL_CONFIG_H_
+#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_INTERNAL_CONFIG_H_

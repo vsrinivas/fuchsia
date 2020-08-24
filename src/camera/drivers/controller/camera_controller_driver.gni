@@ -1,0 +1,100 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/driver_package.gni")
+
+# Defines a controller driver
+#
+# This template creates a driver_module and driver_package customized for a
+# specific target. Each instantiation must provide a dependency on a
+# source_set that provides an implementation of camera::ProductConfig::Create.
+# See //src/camera/drivers/controller/configs/product_config.h for more
+# details.
+#
+# Example:
+# ```
+# camera_controller_driver(my_product_controller) {
+#   deps = [
+#     "//src/camera/drivers/controller/configs/my_product",
+#   ]
+# }
+# ```
+#
+# Parameters
+#   deps (required)
+#     List of additional dependencies to link. This must provide an implementation
+#     of camera::ProductConfig::Create.
+#     Type: list(path)
+#
+#   package_name (optional)
+#     The name of the driver package.
+#     Type: string
+#     Default: $target_name
+#
+#   gdc_config_files (optional)
+#     List of paths, relative to //prebuilt/camera/arm/gdc/configs, to include
+#     in the driver package.
+#     Type: list(path)
+#
+#   watermark_files (optional)
+#     List of paths, relative to //prebuilt/camera/watermark, to include in the
+#     driver package.
+#     Type: list(path)
+#
+template("camera_controller_driver") {
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+  driver_target = "${package_name}_driver"
+
+  driver_module(driver_target) {
+    output_name = package_name
+    deps = [ "//src/camera/drivers/controller:source" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [
+      "//build/config/fuchsia:static_cpp_standard_library",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
+  }
+
+  driver_package(package_name) {
+    deps = [ ":${driver_target}" ]
+
+    drivers = [
+      {
+        name = "${target_name}.so"
+      },
+    ]
+
+    libraries = []
+    if (defined(invoker.gdc_config_files)) {
+      foreach(config_file, invoker.gdc_config_files) {
+        libraries += [
+          {
+            source =
+                rebase_path("//prebuilt/camera/arm/gdc/configs/" + config_file)
+            name = "firmware/" + config_file
+          },
+        ]
+      }
+    }
+    if (defined(invoker.watermark_files)) {
+      foreach(watermark_file, invoker.watermark_files) {
+        libraries += [
+          {
+            source =
+                rebase_path("//prebuilt/camera/watermark/" + watermark_file)
+            name = "firmware/" + watermark_file
+          },
+        ]
+      }
+    }
+  }
+}

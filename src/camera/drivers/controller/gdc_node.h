@@ -9,6 +9,7 @@
 
 #include <ddktl/protocol/gdc.h>
 
+#include "src/camera/drivers/controller/configs/product_config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/processing_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
@@ -18,7 +19,7 @@
 namespace camera {
 
 fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
-    zx_device_t* device, const camera::GdcConfig& config_type);
+    zx_device_t* device, ProductConfig& product_config, const camera::GdcConfig& config_type);
 
 // Invoked by GDC driver when a new frame is available.
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info);

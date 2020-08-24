@@ -13,8 +13,8 @@
 #include <ddktl/protocol/ge2d.h>
 #include <ddktl/protocol/isp.h>
 
-#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
-#include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
+#include "src/camera/drivers/controller/configs/internal_config.h"
+#include "src/camera/drivers/controller/configs/product_config.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
 #include "src/camera/drivers/controller/processing_node.h"
@@ -43,8 +43,8 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
 
   void PopulateConfigurations() {
-    configs_ = camera::SherlockExternalConfigs();
-    internal_configs_ = SherlockInternalConfigs();
+    configs_ = product_config_->ExternalConfigs();
+    internal_configs_ = product_config_->InternalConfigs();
   }
 
   // Enable/Disable Streaming
@@ -82,6 +82,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   InternalConfigs internal_configs_;
   PipelineManager pipeline_manager_;
   uint32_t config_count_ = 0;
+  std::unique_ptr<ProductConfig> product_config_;
 };
 
 }  // namespace camera

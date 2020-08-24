@@ -17,7 +17,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 
-#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
+#include "src/camera/drivers/controller/configs/internal_config.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {
