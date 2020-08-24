@@ -1887,6 +1887,7 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
                                   arvif->beacon_interval);
   if (ret != ZX_OK) {
     ath10k_err("Setting beacon interval failed: %s\n", zx_status_get_string(ret));
+    mtx_unlock(&ar->conf_mutex);
     return ret;
   }
 
@@ -1894,6 +1895,7 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
       ath10k_wmi_pdev_set_param(ar, ar->wmi.pdev_param->beacon_tx_mode, WMI_BEACON_STAGGERED_MODE);
   if (ret != ZX_OK) {
     ath10k_err("Setting beacon Tx mode failed: %s\n", zx_status_get_string(ret));
+    mtx_unlock(&ar->conf_mutex);
     return ret;
   }
 
@@ -1901,6 +1903,7 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
   if (ret != ZX_OK) {
     ath10k_err("ath10k_mac_setup_bcn_tmpl() failed: %s at ath10k_mac_start_ap().\n",
                zx_status_get_string(ret));
+    mtx_unlock(&ar->conf_mutex);
     return ret;
   }
 
@@ -1908,12 +1911,14 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
                                   arvif->dtim_period);
   if (ret != ZX_OK) {
     ath10k_err("Setting DTIM period failed: %s\n", zx_status_get_string(ret));
+    mtx_unlock(&ar->conf_mutex);
     return ret;
   }
 
   ret = ath10k_control_beaconing(arvif);
   if (ret != ZX_OK) {
     ath10k_err("controlling beaconing failed: %s\n", zx_status_get_string(ret));
+    mtx_unlock(&ar->conf_mutex);
     return ret;
   }
 

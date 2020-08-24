@@ -86,11 +86,6 @@ driver_module("ath10k_driver") {
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(39323): This driver emits a bunch of -Wthread-safety warnings that
-  # should be addressed. The config is removed from this target in the
-  # meantime.
-  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 }
 
 if (internal_access) {
