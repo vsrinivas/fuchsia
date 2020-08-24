@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' show sha256;
+import 'package:crypto/src/digest.dart';
 import 'package:pool/pool.dart';
 import 'package:path/path.dart' as path;
 import 'package:googleapis/discovery/v1.dart' as discovery;
@@ -32,14 +34,15 @@ Future<void> mainImpl(List<String> args) async {
   if (parsedArgs == null) return;
 
   // The high-level flow of the program:
-  // - Generate bloaty reports if they aren't alreay cached.
+  // - Generate bloaty reports if they aren't already cached.
   // - Run requested queries on those reports.
   // - Present the results in the specified format.
   try {
     final cs = CodeSize(parsedArgs.buildDir);
 
     AnalysisRequest allBloatyReportFiles = await ensureReportFiles(cs,
-        cachingBehavior: parsedArgs.cachingBehavior);
+        cachingBehavior: parsedArgs.cachingBehavior,
+        heatmap: parsedArgs.heatmap);
 
     List<Query> populatedQueries = await runQueriesOnReports(
         parsedArgs.selectedQueries,
@@ -438,7 +441,7 @@ class CodeSize {
 }
 
 Future<AnalysisRequest> ensureReportFiles(CodeSize cs,
-    {cli.CachingBehavior cachingBehavior}) async {
+    {cli.CachingBehavior cachingBehavior, File heatmap}) async {
   AnalysisRequest allBloatyReportFiles;
   final bloatyStamp = cs.build.openFile('codesize_bloaty_report.stamp');
   if (bloatyStamp.existsSync()) {
@@ -457,12 +460,36 @@ Future<AnalysisRequest> ensureReportFiles(CodeSize cs,
         final manifestStat = cs.build.blobManifestFile().statSync();
         final stampStat = bloatyStamp.statSync();
         useCache = stampStat.modified.isAfter(manifestStat.modified);
-        if (useCache)
-          print('Using cached report files since '
-              'it was generated after the last full build');
-        else
+        if (useCache) {
+          // Check if heatmap file remained the same too.
+          final lastRequest = AnalysisRequest.fromJson(
+              json.decode(await bloatyStamp.readAsString()));
+          if (lastRequest.heatmapContentSha != null) {
+            if (heatmap == null) {
+              useCache = false;
+            } else {
+              final digest = await _hashFile(heatmap);
+              if (digest != lastRequest.heatmapContentSha) {
+                useCache = false;
+              }
+            }
+          } else {
+            if (heatmap != null) {
+              useCache = false;
+            }
+          }
+          if (!useCache) {
+            print('Not using cached report files since '
+                'the heatmap option has changed');
+          }
+        } else {
           print('Not using cached report files since '
               'a new full build has been performed');
+        }
+        if (useCache) {
+          print('Using cached report files since '
+              'it was generated after the last full build');
+        }
         break;
     }
     if (useCache) {
@@ -476,13 +503,17 @@ Future<AnalysisRequest> ensureReportFiles(CodeSize cs,
 
   // Rerun bloaty and save the report file index as a stamp.
   try {
-    allBloatyReportFiles = await generateBloatyReportsFromBuild(cs);
+    allBloatyReportFiles =
+        await generateBloatyReportsFromBuild(cs, heatmap: heatmap);
     await bloatyStamp.writeAsString(json.encode(allBloatyReportFiles.toJson()));
   } finally {
     await GoogleApiClient.close();
   }
   return allBloatyReportFiles;
 }
+
+Future<String> _hashFile(File heatmap) async =>
+    sha256.convert(await heatmap.readAsBytes()).toString();
 
 Future<List<Query>> runQueriesOnReports(
     List<QueryThunk> queries,
@@ -537,8 +568,10 @@ Future<void> presentResults(cli.OutputFormat outputFormat, IOSink output,
   }
 }
 
-Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs) async {
-  final allBloatyReportFiles = AnalysisRequest(items: []);
+Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
+    {File heatmap}) async {
+  final allBloatyReportFiles = AnalysisRequest(
+      items: [], heatmapContentSha: await flatMap(heatmap, _hashFile));
   final io = Io.get();
 
   final manifest = await cs.parseManifest(cs.build.blobManifestFile());
@@ -601,20 +634,79 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs) async {
     print('Did not find any extra symbols from symbol servers');
   }
 
+  var buildIds = <String>{};
+  HashMap<String, String> buildIdToAccessPattern;
+  if (heatmap != null) {
+    buildIdToAccessPattern = HashMap<String, String>();
+    final HashMap<String, String> merkleToAccessPattern =
+        HashMap<String, String>();
+    for (final line in await heatmap.readAsLines()) {
+      final firstComma = line.indexOf(',');
+      final merkle = line.substring(0, firstComma);
+      final accessPattern = line.substring(firstComma + 1);
+      merkleToAccessPattern[merkle] = accessPattern;
+    }
+    for (final entry in cs.artifactsByBuildId.entries) {
+      final buildId = entry.key;
+      final artifact = entry.value.first;
+      if (artifact is Blob) {
+        if (cs.matchedDebugBinaries.contains(buildId) &&
+            merkleToAccessPattern.containsKey(artifact.hash)) {
+          final accessPattern = merkleToAccessPattern[artifact.hash];
+          // Exclude fully-hot blobs, since downstream queries would be confused
+          // as to which language this ELF is written in due to lack of symbols.
+          final int elfSize =
+              cs.build.openFile(artifact.buildPath).statSync().size;
+          const int frameSize = 32 * 1024;
+          final int numFrames = (elfSize / frameSize).ceil();
+          final isFrameHot = List<bool>.generate(numFrames, (i) => false);
+          for (final part in accessPattern.split(',')) {
+            final frameAndCount = part.split(':').toList();
+            if (frameAndCount.length != 2) {
+              throw Exception('Invalid access pattern $accessPattern');
+            }
+            final frame = int.parse(frameAndCount[0]);
+            final count = int.parse(frameAndCount[1]);
+            if (frame >= numFrames) {
+              throw Exception('Blob merkle ${artifact.hash} '
+                  '(at: ${artifact.buildPath}) is $elfSize bytes on disk, '
+                  'but access pattern indicated an out-of-range frame $frame. '
+                  'Does the heatmap CSV match the version of the build?');
+            }
+            if (count > 0) isFrameHot[frame] = true;
+          }
+          if (isFrameHot.every((e) => e)) continue;
+
+          buildIds.add(buildId);
+          buildIdToAccessPattern[buildId] = accessPattern;
+        }
+      }
+    }
+
+    io.out.writeln('Blob access heatmap specified, only looking at '
+        '${buildIds.length} files with both cold regions and debug info');
+    for (final buildId in buildIds) {
+      io.out.writeln('-> ${cs.artifactsByBuildId[buildId].first}');
+    }
+  } else {
+    buildIds = cs.matchedDebugBinaries;
+  }
+
   io.out.write('Running bloaty on matched binaries ');
-  await runBloatyOnMatchedBinaries(cs.matchedDebugBinaries,
+  await runBloatyOnMatchedBinaries(buildIds,
       options: RunBloatyOptions(
         build: cs.build,
         artifactsByBuildId: cs.artifactsByBuildId,
         debugBinaries: cs.debugBinaries,
         buildIdToLinkMapFile: cs.buildIdToLinkMapFile,
+        buildIdToAccessPattern: buildIdToAccessPattern,
         jobInitCallback: cs.jobInitCallback,
         jobIterationCallback: cs.jobIterationCallback,
         jobCompleteCallback: cs.jobCompleteCallback,
       ));
 
   final zbiExtractedBinary = RegExp(r'obj/codesize/bootfs-(.*)\.zbi/(.*)$');
-  for (final buildId in cs.matchedDebugBinaries) {
+  for (final buildId in buildIds) {
     final blob = cs.artifactsByBuildId[buildId].first;
     var name = blob.buildPath;
     if (blob is SubBlob) {
@@ -643,8 +735,13 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs) async {
         }
       }
     }
+    // If heatmap was specified, we'd generate two versions of reports, one of
+    // which is filtered using the heatmap.
     final report = AnalysisItem(
         path: cs.build.rebasePath('${blob.buildPath}.bloaty_report_pb'),
+        filteredCounterpart: heatmap != null
+            ? cs.build.rebasePath('${blob.buildPath}.filtered.bloaty_report_pb')
+            : null,
         name: name);
     if (!cs.build.openFile(report.path).existsSync())
       throw Exception('Could not find bloaty report at ${report.path}');

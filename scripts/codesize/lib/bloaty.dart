@@ -22,6 +22,7 @@ class RunBloatyOptions {
   final HashMap<String, SplayTreeSet<BuildArtifact>> artifactsByBuildId;
   final HashMap<String, SplayTreeSet<File>> debugBinaries;
   final HashMap<String, File> buildIdToLinkMapFile;
+  final HashMap<String, String> buildIdToAccessPattern;
 
   final void Function(int) jobInitCallback;
   final void Function() jobIterationCallback;
@@ -32,6 +33,7 @@ class RunBloatyOptions {
       this.artifactsByBuildId,
       this.debugBinaries,
       this.buildIdToLinkMapFile,
+      this.buildIdToAccessPattern,
       this.jobInitCallback,
       this.jobIterationCallback,
       this.jobCompleteCallback});
@@ -45,14 +47,14 @@ class RunBloatyOptions {
   }
 }
 
-/// Runs bloaty on all binaries in the set `matchedDebugBinaries`, saving their
+/// Runs bloaty on all binaries in the set `buildIds`, saving their
 /// results in report files next to the binaries themselves.
-/// `matchedDebugBinaries` should be a set of build-ids.
+/// `buildIds` should be a set of build-ids.
 ///
 /// If `options.buildIdToLinkMapFile` contains a link map for the corresponding
 /// binary, also supply that option to bloaty. Link maps will help bloaty
 /// produce much more accurate size breakdowns.
-Future<void> runBloatyOnMatchedBinaries(Set<String> matchedDebugBinaries,
+Future<void> runBloatyOnMatchedBinaries(Set<String> buildIds,
     {RunBloatyOptions options}) async {
   final io = Io.get();
   final fuchsiaDir = Directory(Platform.environment['FUCHSIA_DIR']);
@@ -60,29 +62,29 @@ Future<void> runBloatyOnMatchedBinaries(Set<String> matchedDebugBinaries,
       Directory('prebuilt/third_party/bloaty/${options.hostPlatform}/bloaty');
   final pool = Pool(Platform.numberOfProcessors);
   final allFutures = <Future>[];
-  options.jobInitCallback?.call(matchedDebugBinaries.length);
-  for (final buildId in matchedDebugBinaries) {
+  options.jobInitCallback?.call(buildIds.length);
+  for (final buildId in buildIds) {
     final blob = options.artifactsByBuildId[buildId].first;
     final debugElf = options.debugBinaries[buildId].first;
-    List<String> linkMapArgs = [];
-    if (options.buildIdToLinkMapFile.containsKey(buildId)) {
-      linkMapArgs = [
-        '--link-map-file=${options.buildIdToLinkMapFile[buildId].absolute.path}'
-      ];
-    }
-    allFutures.add(pool.withResource(() async {
+
+    Future<void> _bloaty(
+        {List<String> dataSourceArgs = const [
+          '-d',
+          'compileunits,symbols',
+        ],
+        String reportSuffix = '.bloaty_report_pb'}) async {
       final result = await io.processManager.run([
         pathToBloaty.absolute.path,
         '--pb',
-        '-d',
-        'compileunits,symbols',
+        ...dataSourceArgs,
         '-n',
         '0',
         '-s',
         'file',
         '--demangle=full',
         '--debug-file=${debugElf.absolute.path}',
-        ...linkMapArgs,
+        if (options.buildIdToLinkMapFile.containsKey(buildId))
+          '--link-map-file=${options.buildIdToLinkMapFile[buildId].absolute.path}',
         options.build.openFile(blob.buildPath).absolute.path
       ],
           // Accommodate binary protobuf data
@@ -93,12 +95,29 @@ Future<void> runBloatyOnMatchedBinaries(Set<String> matchedDebugBinaries,
         throw Exception('Failed to inspect ${blob.buildPath} '
             '(debug file: ${debugElf.absolute.path})');
       }
-      // Save stdout as flatbuffers
-      final output =
-          options.build.openFile('${blob.buildPath}.bloaty_report_pb');
+      // Save stdout as protobuf
+      final output = options.build.openFile('${blob.buildPath}$reportSuffix');
       await output.writeAsBytes(result.stdout, flush: true);
-      options.jobIterationCallback?.call();
-    }));
+    }
+
+    if (options.buildIdToAccessPattern != null) {
+      // Generate two reports, one filtered and one unfiltered by access pattern
+      allFutures
+        ..add(pool
+            .withResource(_bloaty)
+            .then((x) => options.jobIterationCallback?.call()))
+        ..add(pool.withResource(() => _bloaty(dataSourceArgs: [
+              '--cold-bytes-filter',
+              options.buildIdToAccessPattern[buildId],
+              '-d',
+              'accesspattern,compileunits,symbols',
+            ], reportSuffix: '.filtered.bloaty_report_pb')));
+    } else {
+      // Only generate the unfiltered report
+      allFutures.add(pool
+          .withResource(_bloaty)
+          .then((x) => options.jobIterationCallback?.call()));
+    }
   }
   await Future.wait(allFutures);
   options.jobCompleteCallback?.call();

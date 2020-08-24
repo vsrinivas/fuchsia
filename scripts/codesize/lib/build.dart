@@ -87,7 +87,7 @@ extension SubDir on Directory {
 /// An ELF object produced by the build.
 /// It can either be a standalone blob, or a ELF contained within a
 /// Zircon Boot Image (ZBI) blob, see `SubBlob`.
-class BuildArtifact implements Comparable {
+abstract class BuildArtifact implements Comparable {
   /// Path to the file within the build directory.
   String buildPath;
 
@@ -133,11 +133,21 @@ class Blob extends BuildArtifact {
   /// If the blob is a zbi, we would extract and count the contents
   /// in the zbi too. Those would be listed as `subBlobs`.
   List<SubBlob> subBlobs = [];
+
+  @override
+  String toString() => 'Blob { buildPath: $buildPath, sizeOnHost: $sizeOnHost, '
+      'hash: $hash, sourcePaths: $sourcePaths, '
+      'size: $size, count: $count, subBlobs: $subBlobs }';
 }
 
 class SubBlob extends BuildArtifact {
   /// Name of the file relative to the root of the zbi.
   String name;
+
+  @override
+  String toString() =>
+      'SubBlob { buildPath: $buildPath, sizeOnHost: $sizeOnHost, '
+      'name: $name }';
 }
 
 class Package {

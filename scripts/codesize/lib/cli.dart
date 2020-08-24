@@ -19,6 +19,7 @@ import 'run_queries.dart';
 /// Parse command line arguments
 ParsedArgs parseArgs(List<String> args) {
   final parser = ArgParser(allowTrailingOptions: true)
+    ..addSeparator('Core options:\n')
     ..addFlag('help', help: 'Give this help.', negatable: false)
     // The `--[no-]cache` parameter is a tri-state:
     //
@@ -40,6 +41,11 @@ ParsedArgs parseArgs(List<String> args) {
             'If absent, defaults to the current output directory '
             '(FUCHSIA_BUILD_DIR)',
         defaultsTo: Platform.environment['FUCHSIA_BUILD_DIR'])
+    ..addOption(concurrency,
+        help: 'The number of worker threads.\n'
+            'If absent, defaults to a reasonable number based on the CPU cores',
+        abbr: 'j')
+    ..addSeparator('Filtering by name and language:\n')
     ..addOption(fileRegex,
         help: 'Optionally specify a regex to only incorporate statistics\n'
             'from binaries whose name match the regex.',
@@ -50,10 +56,16 @@ ParsedArgs parseArgs(List<String> args) {
             'of this programming language.',
         abbr: 'l',
         allowed: SourceLang.values.map((e) => e.name))
-    ..addOption(concurrency,
-        help: 'The number of worker threads.\n'
-            'If absent, defaults to a reasonable number based on the CPU cores',
-        abbr: 'j')
+    ..addSeparator('Filtering by run-time page-in frequency:\n')
+    ..addOption(heatmap,
+        help: 'Optionally specify a blob access heatmap to only show symbols '
+            'that have never been used at run-time.\n'
+            'The heatmap is a CSV in [merkle],[[frame index]:[frequency],...] '
+            'format, where each frame is 32 KiB.\n'
+            'See the detailed explanation of `cold_bytes_filter` in '
+            'https://fuchsia.googlesource.com/third_party/bloaty/+/refs/heads/fuchsia/src/bloaty.proto\n'
+            '')
+    ..addSeparator('Output controls:\n')
     ..addOption(outputFile,
         help: 'The destination for writing stats. If absent, assumes stdout.',
         abbr: 'o')
@@ -71,9 +83,6 @@ ParsedArgs parseArgs(List<String> args) {
 
   final queryHelp = StringBuffer();
   for (final query in queries.allQueries) {
-    if (ReflectQuery.hasCustomArguments(query)) {
-      queryHelp.writeln();
-    }
     queryHelp
       ..write('      ${query.name.padRight(24)}')
       ..writeln(query.description);
@@ -81,6 +90,8 @@ ParsedArgs parseArgs(List<String> args) {
       for (final constructor in ReflectQuery.describeQueryConstructors(query)) {
         queryHelp.writeln('      $constructor  <-  optional arguments\n');
       }
+    } else {
+      queryHelp.writeln();
     }
   }
   queryHelp.write(r'''
@@ -127,7 +138,7 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
         'Looks at all the ELF binaries in the fvm/zbi images in the out dir,\n'
         'computes various bary size queries specified in [QUERY]...\n'
         'If [QUERY] is absent, defaults to CodeCategory and SourceLang\n\n'
-        'Options:\n${parser.usage}\n\n'
+        '${parser.usage}\n\n'
         'Supported queries:\n\n$queryHelp'
         'Some examples:\n\n$examples');
     return null;
@@ -168,7 +179,9 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
       selectedQueries: List<QueryThunk>.from(selectedQueries),
       format: toOutputFormat(argResults[format]),
       // ignore: avoid_as
-      onlyLang: flatMap(argResults[onlyLang] as String, toSourceLang));
+      onlyLang: flatMap(argResults[onlyLang] as String, toSourceLang),
+      // ignore: avoid_as
+      heatmap: flatMap(argResults[heatmap] as String, (x) => File(x)));
 }
 
 enum OutputFormat { terminal, basic, html, tsv }
@@ -258,6 +271,7 @@ const onlyLang = 'only-lang';
 const outputFile = 'output';
 const format = 'format';
 const concurrency = 'concurrency';
+const heatmap = 'heatmap';
 
 class ParsedArgs {
   final CachingBehavior cachingBehavior;
@@ -268,6 +282,7 @@ class ParsedArgs {
   final OutputFormat format;
   final int concurrency;
   final List<QueryThunk> selectedQueries;
+  final File heatmap;
 
   ParsedArgs(
       {this.cachingBehavior,
@@ -277,5 +292,6 @@ class ParsedArgs {
       this.output,
       this.format,
       this.concurrency,
-      this.selectedQueries});
+      this.selectedQueries,
+      this.heatmap});
 }

@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:protobuf/protobuf.dart' as pb;
 
+import 'common_util.dart';
 import 'queries/index.dart';
 import 'report.pb.dart' as bloaty_report;
 
@@ -16,7 +17,11 @@ import 'report.pb.dart' as bloaty_report;
 class AnalysisRequest {
   List<AnalysisItem> items;
 
-  AnalysisRequest({this.items});
+  /// The SHA-256 hash of the access heatmap file used to generate the reports.
+  /// If a heatmap file was not used, this field may be null.
+  String heatmapContentSha;
+
+  AnalysisRequest({this.items, this.heatmapContentSha});
 
   AnalysisRequest.fromJson(Map<String, dynamic> json) {
     if (json['items'] != null) {
@@ -25,12 +30,18 @@ class AnalysisRequest {
         items.add(AnalysisItem.fromJson(v));
       });
     }
+    if (json['heatmap_content_sha'] != null) {
+      heatmapContentSha = json['heatmap_content_sha'];
+    }
   }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (items != null) {
       data['items'] = items.map((v) => v.toJson()).toList();
+    }
+    if (heatmapContentSha != null) {
+      data['heatmap_content_sha'] = heatmapContentSha;
     }
     return data;
   }
@@ -39,28 +50,34 @@ class AnalysisRequest {
 /// Generated from https://javiercbk.github.io/json_to_dart/.
 class AnalysisItem {
   String path;
+
+  /// If the access heatmap is not used, this field may be null.
+  String filteredCounterpart;
+
   String name;
 
-  AnalysisItem({this.path, this.name});
+  AnalysisItem({this.path, this.filteredCounterpart, this.name});
 
   AnalysisItem.fromJson(Map<String, dynamic> json) {
     path = json['path'];
+    filteredCounterpart = json['filtered_counterpart'];
     name = json['name'];
   }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['path'] = path;
+    data['filtered_counterpart'] = filteredCounterpart;
     data['name'] = name;
     return data;
   }
 
   AnalysisItem absolute(String basePath) {
-    if (File(path).isAbsolute) {
-      return AnalysisItem(path: path, name: name);
-    } else {
-      return AnalysisItem(path: _pathJoin(basePath, path), name: name);
-    }
+    String abs(String p) => File(p).isAbsolute ? p : _pathJoin(basePath, p);
+    final newPath = abs(path);
+    final newFilteredCounterpart = flatMap(filteredCounterpart, abs);
+    return AnalysisItem(
+        path: newPath, filteredCounterpart: newFilteredCounterpart, name: name);
   }
 }
 
@@ -210,21 +227,26 @@ class Report {
   Report(this.compileUnits, this.fileTotal, this.vmTotal);
 
   /// Create a report from its corresponding protobuf representation.
-  Report.fromBloaty(String name, bloaty_report.Report report)
+  Report.fromBloaty(String name, bloaty_report.Report report,
+      {ProgramContext reuseContext})
       : compileUnits =
             report.compileUnits.map((c) => CompileUnit.fromBloaty(c)).toList(),
         fileTotal = report.fileTotal.toInt(),
         vmTotal = report.vmTotal.toInt() {
-    context = ProgramContext(name, this);
+    if (reuseContext == null)
+      context = ProgramContext(name, this);
+    else
+      context = reuseContext;
   }
 
   /// Deserialize a report in protobuf format from `bytes`.
-  Report.fromBytes(String name, Uint8List bytes)
+  Report.fromBytes(String name, Uint8List bytes, {ProgramContext reuseContext})
       : this.fromBloaty(
             name,
             bloaty_report.Report.create()
               ..mergeFromCodedBufferReader(
-                  pb.CodedBufferReader(bytes, sizeLimit: bytes.length)));
+                  pb.CodedBufferReader(bytes, sizeLimit: bytes.length)),
+            reuseContext: reuseContext);
 
   /// Convert the report into its protobuf representation.
   bloaty_report.Report toBloaty() => bloaty_report.Report()

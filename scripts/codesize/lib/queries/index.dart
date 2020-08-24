@@ -201,6 +201,18 @@ abstract class Query {
       maybeRemoveSuffix(typeName, 'Query');
 }
 
+/// Indicates this query should get the unfiltered bloaty report even when a
+/// heatmap filter is specified.
+///
+/// When generating bloaty reports containing symbols and compile units, a
+/// frame-based filter may be specified to only output symbols within a certain
+/// byte range of the binary. This allows for example only analyzing symbols
+/// that were not paged-in at runtime. However, certain queries may still wish
+/// to receive the unfiltered set of symbols and compile units, because their
+/// definition is independent from the access frequency e.g. [SourceLangQuery].
+/// In that case, the query should implement this marker interface.
+class IgnorePageInHeatmapFilter {}
+
 /// A `QueryReport` contains the distilled results from running a query,
 /// ready to be exported into some output format.
 ///

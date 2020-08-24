@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'queries/index.dart';
 import 'queries/source_lang.dart';
@@ -162,21 +163,36 @@ class QueryRunner {
       }
 
       final AnalysisItem reportFile = message;
-      final bytes = await File(reportFile.path).readAsBytes();
-      final report = (() {
+      Report parse(String name, Uint8List bytes,
+          {ProgramContext reuseContext}) {
         try {
-          return Report.fromBytes(reportFile.name, bytes);
+          return Report.fromBytes(name, bytes, reuseContext: reuseContext);
         } on Exception {
           print('Error loading report from ${reportFile.path}');
           rethrow;
         }
-      })();
+      }
 
-      for (var query in queries) {
+      final bytes = await File(reportFile.path).readAsBytes();
+      final report = parse(reportFile.name, bytes);
+
+      // Additionally load the filtered report if generated.
+      Report filteredReport = report;
+      if (reportFile.filteredCounterpart != null) {
+        final filteredBytes =
+            await File(reportFile.filteredCounterpart).readAsBytes();
+        filteredReport =
+            parse(reportFile.name, filteredBytes, reuseContext: report.context);
+      }
+
+      for (final query in queries) {
         if (onlyLang != null) {
-          if (report.context.lang != onlyLang) continue;
+          if (filteredReport.context.lang != onlyLang) continue;
         }
-        query.addReport(report);
+        if (query is IgnorePageInHeatmapFilter)
+          query.addReport(report);
+        else
+          query.addReport(filteredReport);
       }
       sendPort.send(bytes.length);
     }

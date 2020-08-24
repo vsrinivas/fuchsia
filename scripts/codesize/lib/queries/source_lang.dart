@@ -62,7 +62,8 @@ class SourceLangCompileContextMixin {
           _cFamilyFileExtensionRegex.hasMatch(self.name));
 }
 
-class SourceLangQuery extends Query implements QueryReport {
+class SourceLangQuery extends Query
+    implements QueryReport, IgnorePageInHeatmapFilter {
   static const String description =
       'Groups binaries based on the programming language they are '
       'predominantly written in.';
