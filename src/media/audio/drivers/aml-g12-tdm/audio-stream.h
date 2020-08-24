@@ -49,6 +49,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx_status_t InitHW();
   zx_status_t InitPDev();
   void InitDaiFormats();
+  zx_status_t InitCodecsGain() __TA_REQUIRES(domain_token());
 
   std::vector<SimpleCodecClient> codecs_;
   std::unique_ptr<AmlTdmDevice> aml_audio_;
@@ -62,7 +63,8 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
   void ProcessRingNotification();
-  zx_status_t SetCodecsGainState(GainState state);
+  void UpdateCodecsGainState(GainState state) __TA_REQUIRES(domain_token());
+  void UpdateCodecsGainStateFromCurrent() __TA_REQUIRES(domain_token());
 
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
@@ -78,6 +80,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx::bti bti_;
   const ddk::GpioProtocolClient enable_gpio_;
   uint64_t channels_to_use_;
+  bool override_mute_ = true;
 };
 
 }  // namespace aml_g12

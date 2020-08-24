@@ -370,13 +370,68 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   return ZX_OK;
 }
 
-zx_status_t AmlG12TdmStream::SetCodecsGainState(GainState state) {
-  if (metadata_.tdm.number_of_codecs) {
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-      auto state2 = state;
-      state2.gain_db += metadata_.tdm.codecs_delta_gains[i];
-      codecs_[i].SetGainState(state2);
+void AmlG12TdmStream::UpdateCodecsGainStateFromCurrent() {
+  UpdateCodecsGainState({.gain_db = cur_gain_state_.cur_gain,
+                         .muted = cur_gain_state_.cur_mute,
+                         .agc_enable = cur_gain_state_.cur_agc});
+}
+
+void AmlG12TdmStream::UpdateCodecsGainState(GainState state) {
+  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    auto state2 = state;
+    state2.gain_db += metadata_.tdm.codecs_delta_gains[i];
+    if (override_mute_) {
+      state2.muted = true;
     }
+    codecs_[i].SetGainState(state2);
+  }
+}
+
+zx_status_t AmlG12TdmStream::InitCodecsGain() {
+  if (metadata_.tdm.number_of_codecs) {
+    // Set our gain capabilities.
+    float min_gain = std::numeric_limits<float>::lowest();
+    float max_gain = std::numeric_limits<float>::max();
+    float gain_step = std::numeric_limits<float>::lowest();
+    bool can_all_mute = true;
+    bool can_all_agc = true;
+    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+      auto format = codecs_[i].GetGainFormat();
+      if (format.is_error()) {
+        return format.error_value();
+      }
+      min_gain = std::max(min_gain, format->min_gain_db);
+      max_gain = std::min(max_gain, format->max_gain_db);
+      gain_step = std::max(gain_step, format->gain_step_db);
+      can_all_mute = (can_all_mute && format->can_mute);
+      can_all_agc = (can_all_agc && format->can_agc);
+    }
+
+    // Use first codec as reference initial gain.
+    auto state = codecs_[0].GetGainState();
+    if (state.is_error()) {
+      return state.error_value();
+    }
+    cur_gain_state_.cur_gain = state->gain_db;
+    cur_gain_state_.cur_mute = false;
+    cur_gain_state_.cur_agc = false;
+    UpdateCodecsGainState(state.value());
+
+    cur_gain_state_.min_gain = min_gain;
+    cur_gain_state_.max_gain = max_gain;
+    cur_gain_state_.gain_step = gain_step;
+    cur_gain_state_.can_mute = can_all_mute;
+    cur_gain_state_.can_agc = can_all_agc;
+  } else {
+    cur_gain_state_.cur_gain = 0.f;
+    cur_gain_state_.cur_mute = false;
+    cur_gain_state_.cur_agc = false;
+
+    cur_gain_state_.min_gain = 0.f;
+    cur_gain_state_.max_gain = 0.f;
+    cur_gain_state_.gain_step = .0f;
+    cur_gain_state_.can_mute = false;
+    cur_gain_state_.can_agc = false;
   }
   return ZX_OK;
 }
@@ -394,49 +449,9 @@ zx_status_t AmlG12TdmStream::Init() {
     return status;
   }
 
-  if (metadata_.tdm.number_of_codecs) {
-    // Set our gain capabilities.
-    float min_gain = std::numeric_limits<float>::lowest();
-    float max_gain = std::numeric_limits<float>::max();
-    float gain_step = std::numeric_limits<float>::lowest();
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-      auto format = codecs_[i].GetGainFormat();
-      if (format.is_error()) {
-        return format.error_value();
-      }
-      min_gain = std::max(min_gain, format->min_gain_db);
-      max_gain = std::min(max_gain, format->max_gain_db);
-      gain_step = std::max(gain_step, format->gain_step_db);
-    }
-
-    // Use woofer as reference initial gain.
-    auto state = codecs_[0].GetGainState();
-    if (state.is_error()) {
-      return state.error_value();
-    }
-    status = SetCodecsGainState(state.value());
-    if (status != ZX_OK) {
-      return status;
-    }
-    cur_gain_state_.cur_gain = state->gain_db;
-    cur_gain_state_.cur_mute = false;
-    cur_gain_state_.cur_agc = false;
-
-    cur_gain_state_.min_gain = min_gain;
-    cur_gain_state_.max_gain = max_gain;
-    cur_gain_state_.gain_step = gain_step;
-    cur_gain_state_.can_mute = false;
-    cur_gain_state_.can_agc = false;
-  } else {
-    cur_gain_state_.cur_gain = 0.f;
-    cur_gain_state_.cur_mute = false;
-    cur_gain_state_.cur_agc = false;
-
-    cur_gain_state_.min_gain = 0.f;
-    cur_gain_state_.max_gain = 0.f;
-    cur_gain_state_.gain_step = .0f;
-    cur_gain_state_.can_mute = false;
-    cur_gain_state_.can_agc = false;
+  status = InitCodecsGain();
+  if (status != ZX_OK) {
+    return status;
   }
 
   const char* in_out = "out";
@@ -546,22 +561,15 @@ void AmlG12TdmStream::ShutdownHook() {
 }
 
 zx_status_t AmlG12TdmStream::SetGain(const audio_proto::SetGainReq& req) {
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-    // Modify parts of the gain state we have received in the request.
-    GainState gain({.gain_db = req.gain + metadata_.tdm.codecs_delta_gains[i],
-                    .muted = cur_gain_state_.cur_mute,
-                    .agc_enable = cur_gain_state_.cur_agc});
-    if (req.flags & AUDIO_SGF_MUTE_VALID) {
-      gain.muted = req.flags & AUDIO_SGF_MUTE;
-    }
-    if (req.flags & AUDIO_SGF_AGC_VALID) {
-      gain.agc_enable = req.flags & AUDIO_SGF_AGC;
-    };
-    cur_gain_state_.cur_gain = req.gain;
-    cur_gain_state_.cur_mute = gain.muted;
-    cur_gain_state_.cur_agc = gain.agc_enable;
-    codecs_[i].SetGainState(gain);
+  // Modify parts of the gain state we have received in the request.
+  if (req.flags & AUDIO_SGF_MUTE_VALID) {
+    cur_gain_state_.cur_mute = req.flags & AUDIO_SGF_MUTE;
   }
+  if (req.flags & AUDIO_SGF_AGC_VALID) {
+    cur_gain_state_.cur_agc = req.flags & AUDIO_SGF_AGC;
+  };
+  cur_gain_state_.cur_gain = req.gain;
+  UpdateCodecsGainStateFromCurrent();
   return ZX_OK;
 }
 
@@ -598,24 +606,14 @@ zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
   } else {
     us_per_notification_ = 0;
   }
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-    // Restore mute to cur_gain_state_.cur_mute (we set it to true in Stop below).
-    codecs_[i].SetGainState(
-        {.gain_db = cur_gain_state_.cur_gain + metadata_.tdm.codecs_delta_gains[i],
-         .muted = cur_gain_state_.cur_mute,
-         .agc_enable = cur_gain_state_.cur_agc});
-  }
+  override_mute_ = false;
+  UpdateCodecsGainStateFromCurrent();
   return ZX_OK;
 }
 
 zx_status_t AmlG12TdmStream::Stop() {
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-    // Set mute to true.
-    codecs_[i].SetGainState(
-        {.gain_db = cur_gain_state_.cur_gain + metadata_.tdm.codecs_delta_gains[i],
-         .muted = true,
-         .agc_enable = cur_gain_state_.cur_agc});
-  }
+  override_mute_ = true;
+  UpdateCodecsGainStateFromCurrent();
   notify_timer_.Cancel();
   us_per_notification_ = 0;
   aml_audio_->Stop();
