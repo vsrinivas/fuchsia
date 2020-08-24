@@ -33,10 +33,12 @@ bool TypeIsStorage(uint32_t type) {
   // something else simple.  Short of that, someplace more authoritative than
   // here should contain this list.  But N.B. that no ZBI_TYPE_STORAGE_* type
   // is a long-term stable protocol with boot loaders, so meh.
+  //
+  // TODO(mcgrathr): ZBI_TYPE_STORAGE_BOOTFS_FACTORY is misnamed and is not
+  // actually a "storage" type.
   switch (type) {
     case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_STORAGE_BOOTFS:
-    case ZBI_TYPE_STORAGE_BOOTFS_FACTORY:
       return true;
   }
   return false;

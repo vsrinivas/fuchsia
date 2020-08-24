@@ -7,6 +7,7 @@
 #include <fnmatch.h>
 #include <getopt.h>
 #include <lib/cksum.h>
+#include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -1361,10 +1362,6 @@ Extracted items use the file names shown below:\n\
     }
   }
 
-  static bool TypeIsStorage(uint32_t zbi_type) {
-    return (zbi_type == ZBI_TYPE_STORAGE_BOOTFS || zbi_type == ZBI_TYPE_STORAGE_RAMDISK);
-  }
-
   uint32_t type() const { return header_.type; }
 
   uint32_t PayloadSize() const { return header_.length; }
@@ -1391,7 +1388,7 @@ Extracted items use the file names shown below:\n\
     const char* type_name = TypeName(type());
     if (!type_name) {
       printf("%08x: %08x UNKNOWN (type=%08x)\n", pos, header.length, header.type);
-    } else if (TypeIsStorage(type())) {
+    } else if (zbitl::TypeIsStorage(type())) {
       printf("%08x: %08x %s (size=%08x)\n", pos, header.length, type_name, header.extra);
     } else {
       printf("%08x: %08x %s\n", pos, header.length, type_name);
@@ -1495,7 +1492,7 @@ Extracted items use the file names shown below:\n\
   // Create from raw file contents.
   static ItemPtr CreateFromFile(const File* filenode, uint32_t type, Compressor::Config compress) {
     bool null_terminate = type == ZBI_TYPE_CMDLINE;
-    if (!TypeIsStorage(type)) {
+    if (!zbitl::TypeIsStorage(type)) {
       compress.clear();
     }
 
@@ -1739,7 +1736,7 @@ Extracted items use the file names shown below:\n\
   }
 
   static ItemPtr Recompress(ItemPtr item, Compressor::Config how) {
-    if (TypeIsStorage(item->type())) {
+    if (zbitl::TypeIsStorage(item->type())) {
       if (item->AlreadyCompressed()) {
         item = CreateFromCompressed(std::move(item), how);
       } else if (how) {
