@@ -547,8 +547,7 @@ Future<void> presentResults(cli.OutputFormat outputFormat, IOSink output,
       renderer = BasicRenderer();
       break;
     case cli.OutputFormat.html:
-      // renderer = HtmlRenderer();
-      throw Exception('HtmlRenderer will be added in a follow up CL');
+      renderer = HtmlRenderer();
       break;
     case cli.OutputFormat.terminal:
       renderer = TerminalRenderer(supportsControlCharacters: output == io.out);
