@@ -161,6 +161,7 @@ source_set("crash_reporter") {
   public_deps = [
     ":crash_register",
     ":crash_server",
+    ":data_provider_ptr",
     ":privacy_settings_ptr",
     ":product",
     ":queue",
@@ -170,7 +171,6 @@ source_set("crash_reporter") {
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:utc_time_provider",
-    "//src/developer/forensics/utils/fidl:data_provider_ptr",
     "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
     "//src/developer/forensics/utils/fit",
     "//src/lib/timekeeper",
@@ -206,6 +206,31 @@ source_set("crash_server") {
   ]
 
   deps = [ "//src/developer/forensics/utils:sized_data" ]
+}
+
+source_set("data_provider_ptr") {
+  sources = [
+    "data_provider_ptr.cc",
+    "data_provider_ptr.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/utils:errors",
+    "//zircon/public/lib/async-cpp",
+  ]
 }
 
 source_set("errors") {

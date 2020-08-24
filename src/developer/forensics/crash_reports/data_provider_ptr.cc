@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/utils/fidl/data_provider_ptr.h"
+#include "src/developer/forensics/crash_reports/data_provider_ptr.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
@@ -14,7 +14,7 @@
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
-namespace fidl {
+namespace crash_reports {
 namespace {
 
 using fuchsia::feedback::Snapshot;
@@ -76,5 +76,5 @@ void DataProviderPtr::Connect() {
   });
 }
 
-}  // namespace fidl
+}  // namespace crash_reports
 }  // namespace forensics

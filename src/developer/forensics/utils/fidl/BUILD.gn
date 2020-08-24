@@ -44,31 +44,6 @@ source_set("channel_provider_ptr") {
   deps = [ "//src/developer/forensics/utils:errors" ]
 }
 
-source_set("data_provider_ptr") {
-  sources = [
-    "data_provider_ptr.cc",
-    "data_provider_ptr.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/utils:errors",
-    "//zircon/public/lib/async-cpp",
-  ]
-}
-
 source_set("device_id_provider_ptr") {
   sources = [
     "device_id_provider_ptr.cc",

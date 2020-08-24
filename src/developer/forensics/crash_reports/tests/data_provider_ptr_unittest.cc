@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/utils/fidl/data_provider_ptr.h"
+#include "src/developer/forensics/crash_reports/data_provider_ptr.h"
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
@@ -12,13 +12,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "fuchsia/feedback/cpp/fidl.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
+namespace crash_reports {
 namespace {
 
 using fuchsia::feedback::Snapshot;
@@ -56,7 +56,7 @@ class DataProviderPtrTest : public UnitTestFixture {
 
  protected:
   async::Executor executor_;
-  fidl::DataProviderPtr data_provider_ptr_;
+  DataProviderPtr data_provider_ptr_;
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
@@ -126,4 +126,5 @@ TEST_F(DataProviderPtrTest, Fail_OnServerTakingTooLong) {
 }
 
 }  // namespace
+}  // namespace crash_reports
 }  // namespace forensics

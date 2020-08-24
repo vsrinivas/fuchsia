@@ -16,13 +16,13 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
+#include "src/developer/forensics/crash_reports/data_provider_ptr.h"
 #include "src/developer/forensics/crash_reports/info/crash_reporter_info.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fidl/data_provider_ptr.h"
 #include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/fxl/macros.h"
@@ -67,7 +67,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporterInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
-  fidl::DataProviderPtr data_provider_ptr_;
+  DataProviderPtr data_provider_ptr_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);

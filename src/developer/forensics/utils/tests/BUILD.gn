@@ -111,24 +111,6 @@ executable("component_unittest_exe") {
   ]
 }
 
-executable("data_provider_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "data_provider_ptr_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:data_provider",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:data_provider_ptr",
-    "//src/lib/fsl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("device_id_provider_ptr_unittest_exe") {
   testonly = true
 
@@ -315,14 +297,6 @@ fuchsia_component("component_unittest") {
   deps = [ ":component_unittest_exe" ]
 }
 
-fuchsia_component("data_provider_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/data_provider_ptr_unittest.cmx"
-
-  deps = [ ":data_provider_ptr_unittest_exe" ]
-}
-
 fuchsia_component("device_id_provider_ptr_unittest") {
   testonly = true
 
@@ -398,7 +372,6 @@ fuchsia_test_package("feedback-utils-tests") {
     ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
     ":component_unittest",
-    ":data_provider_ptr_unittest",
     ":device_id_provider_ptr_unittest",
     ":inspect_node_manager_unittest",
     ":inspect_protocol_stats_unittest",

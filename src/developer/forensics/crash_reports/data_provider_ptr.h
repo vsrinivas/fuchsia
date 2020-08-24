@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_UTILS_FIDL_DATA_PROVIDER_PTR_H_
-#define SRC_DEVELOPER_FORENSICS_UTILS_FIDL_DATA_PROVIDER_PTR_H_
+#ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_DATA_PROVIDER_PTR_H_
+#define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_DATA_PROVIDER_PTR_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -18,7 +18,7 @@
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
-namespace fidl {
+namespace crash_reports {
 
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
@@ -41,7 +41,7 @@ class DataProviderPtr {
   FXL_DISALLOW_COPY_AND_ASSIGN(DataProviderPtr);
 };
 
-}  // namespace fidl
+}  // namespace crash_reports
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_UTILS_FIDL_DATA_PROVIDER_PTR_H_
+#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_DATA_PROVIDER_PTR_H_
