@@ -90,7 +90,7 @@ def main():
     stderr = stderr.decode('utf-8')
 
     if call.returncode:
-        print((stdout + stderr).decode('UTF-8'))
+        print(stdout + stderr)
         return 1
 
     with open(args.stamp, 'w') as stamp:
