@@ -13,6 +13,7 @@ group("tests") {
     "ftl:tests",
     "fvm:tests",
     "gpt:tests",
+    "mbr:tests",
     "mtk-sdmmc:tests",
     "ramdisk:tests",
     "sdhci:tests",

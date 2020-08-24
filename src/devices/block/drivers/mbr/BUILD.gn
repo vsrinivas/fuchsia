@@ -4,6 +4,12 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":mbr-test-package" ]
+}
 
 driver_module("mbr") {
   configs += [
@@ -57,5 +63,15 @@ test("mbr-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/mbr",
+  ]
+}
+
+unittest_package("mbr-test-package") {
+  package_name = "mbr-test"
+  deps = [ ":mbr-test" ]
+  tests = [
+    {
+      name = "mbr-test"
+    },
   ]
 }
