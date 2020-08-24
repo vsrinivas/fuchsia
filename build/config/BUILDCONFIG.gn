@@ -895,6 +895,17 @@ declare_args() {
       ]
     },
 
+    {
+      name = "host_profile"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "profile"
+          host = true
+        },
+      ]
+    },
+
     # TODO(30033): Eventually this will go away and just "asan" will cover it.
     # This is just ignored so it can be passed through to the Zircon GN build.
     # It has no effect on variant selection in the Fuchsia GN build.

@@ -508,6 +508,15 @@ variant_shorthands = [
     ]
   },
   {
+    name = "host_profile"
+    selectors = [
+      {
+        variant = "profile"
+        host = true
+      },
+    ]
+  },
+  {
     name = "asan_drivers"
     selectors = [
       {
