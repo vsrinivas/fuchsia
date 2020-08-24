@@ -36,7 +36,7 @@ For FTDI serial cables with black, white, red and green wires, use this:
 - 3rd from right: RX (Green wire)
 - 4th from right: Ground (Black wire)
 
-In [this diagram](http://docs.khadas.com/vim1/GPIOPinout.html) of the 40 pin header,
+In [this diagram](http://docs.khadas.com/vim2/GPIOPinout.html) of the 40 pin header,
 these correspond to pins 17 through 19.
 
 ## Buttons
