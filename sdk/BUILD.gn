@@ -329,3 +329,16 @@ sdk("modular_testing") {
     "//sdk/lib/modular/testing/cpp:cpp_sdk",
   ]
 }
+
+# Firmware SDK. See //src/firmware/README.md for info.
+sdk("firmware") {
+  category = "experimental"
+
+  api = "firmware.manifest"
+
+  deps = [
+    "//src/firmware/lib/zbi:zbi_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/system/ulib/abr:abr_sdk",
+  ]
+}
