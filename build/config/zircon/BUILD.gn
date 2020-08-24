@@ -262,7 +262,7 @@ config("linker_string_merging") {
 # `zircon_optimize` in the Fuchsia build.
 
 config("optimize_none") {
-  configs = [ "/build/config:optimize_none" ]
+  configs = [ "//build/config:optimize_none" ]
 }
 
 # NOTE: //build/config:optimize_debug is slightly different.
