@@ -12,6 +12,12 @@ const _timeout = Timeout(Duration(minutes: 5));
 
 enum RunMode { withAgent, withoutAgent }
 
+void printErrorHelp() {
+  print('If this test fails, see '
+      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/fidlcat/README.md'
+      ' for details!');
+}
+
 /// Formats an IP address so that fidlcat can understand it (removes % part,
 /// adds brackets around it.)
 String formatTarget(Logger log, String target) {
@@ -112,6 +118,8 @@ void main(List<String> arguments) {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
+
+  tearDownAll(printErrorHelp);
 
   /// Simple test to ensure that fidlcat can run the echo client, and that some of the expected
   /// output is present.  It starts the agent on the target, and then launches fidlcat with the
