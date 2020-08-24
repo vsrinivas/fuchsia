@@ -120,6 +120,11 @@ zx::status<> Watchdog::Track(OperationTracker* tracker) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
+  auto found = timed_out_operations_.find(tracker->GetId());
+  if (found != timed_out_operations_.end()) {
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
+  }
+
   auto ret = healthy_operations_.insert(
       std::pair<OperationTrackerId, OperationTracker*>(tracker->GetId(), tracker));
   if (ret.second == false) {

@@ -134,11 +134,32 @@ bool CheckOccurance(const std::string& str, const std::string_view substr, int e
   return count == expected;
 }
 
+std::pair<fbl::unique_fd, fbl::unique_fd> SetupLog() {
+  int pipefd[2];
+  EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0);
+  fbl::unique_fd fd_to_close1(pipefd[0]);
+  fbl::unique_fd fd_to_close2(pipefd[1]);
+  fx_logger_activate_fallback(fx_log_get_logger(), pipefd[0]);
+
+  return {std::move(fd_to_close1), std::move(fd_to_close2)};
+}
+
 TEST(Watchdog, TryToAddDuplicate) {
   auto watchdog = CreateWatchdog(kDefaultOptions);
   EXPECT_TRUE(watchdog->Start().is_ok());
   TestOperation op(kTestOperationName1, kOperationTimeout);
   TestOperationTracker tracker(&op, watchdog.get());
+  ASSERT_EQ(watchdog->Track(&tracker).error_value(), ZX_ERR_ALREADY_EXISTS);
+}
+
+TEST(Watchdog, TryToAddDuplicateAfterTimeout) {
+  [[maybe_unused]] auto fd_pair = SetupLog();
+  auto watchdog = CreateWatchdog(kDefaultOptions);
+  EXPECT_TRUE(watchdog->Start().is_ok());
+  TestOperation op(kTestOperationName1, kOperationTimeout);
+  TestOperationTracker tracker(&op, watchdog.get());
+  sleep(kOperationTimeoutSeconds + 1);
+  ASSERT_TRUE(tracker.TimeoutHandlerCalled());
   ASSERT_EQ(watchdog->Track(&tracker).error_value(), ZX_ERR_ALREADY_EXISTS);
 }
 
@@ -183,16 +204,6 @@ TEST(Watchdog, RemoveUntrackedOperation) {
     id = tracker.GetId();
   }
   ASSERT_EQ(watchdog->Untrack(id).error_value(), ZX_ERR_NOT_FOUND);
-}
-
-std::pair<fbl::unique_fd, fbl::unique_fd> SetupLog() {
-  int pipefd[2];
-  EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0);
-  fbl::unique_fd fd_to_close1(pipefd[0]);
-  fbl::unique_fd fd_to_close2(pipefd[1]);
-  fx_logger_activate_fallback(fx_log_get_logger(), pipefd[0]);
-
-  return {std::move(fd_to_close1), std::move(fd_to_close2)};
 }
 
 TEST(Watchdog, OperationTimesOut) {
