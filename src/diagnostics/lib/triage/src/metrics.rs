@@ -628,7 +628,7 @@ impl<'a> MetricState<'a> {
             Metric::Selector(_) => {
                 MetricValue::Missing("Selectors aren't allowed in action triggers".to_owned())
             }
-            Metric::Eval(string) => self.eval_value(namespace, string),
+            Metric::Eval(string) => unwrap_for_math(&self.eval_value(namespace, string)).clone(),
         }
     }
 
@@ -1086,11 +1086,11 @@ impl<'a> MetricState<'a> {
                 operands.len()
             ));
         }
-        match self.evaluate(namespace, &operands[0]) {
+        match unwrap_for_math(&self.evaluate(namespace, &operands[0])) {
             MetricValue::Bool(true) => MetricValue::Bool(false),
             MetricValue::Bool(false) => MetricValue::Bool(true),
             MetricValue::Missing(reason) => {
-                return MetricValue::Missing(reason);
+                return MetricValue::Missing(reason.to_string());
             }
             bad => return MetricValue::Missing(format!("{:?} not boolean", bad)),
         }
@@ -1571,6 +1571,25 @@ pub(crate) mod test {
         assert_eq!(
             state.eval_value("root", "Or(Missing(missing), missing == 'Hello')"),
             MetricValue::Bool(true)
+        );
+
+        // Ensure evaluation for action converts vector values.
+        assert_eq!(
+            state.eval_value("root", "[0==0]"),
+            MetricValue::Vector(vec![MetricValue::Bool(true)])
+        );
+        assert_eq!(
+            state.eval_action_metric("root", &Metric::Eval("[0==0]".to_string())),
+            MetricValue::Bool(true)
+        );
+
+        assert_eq!(
+            state.eval_value("root", "[0==0, 0==0]"),
+            MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
+        );
+        assert_eq!(
+            state.eval_action_metric("root", &Metric::Eval("[0==0, 0==0]".to_string())),
+            MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
         );
     }
 

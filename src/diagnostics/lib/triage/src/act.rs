@@ -197,6 +197,8 @@ mod test {
         let mut eval_file = HashMap::new();
         eval_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
         eval_file.insert("false".to_string(), Metric::Eval("0==1".to_string()));
+        eval_file.insert("true_array".to_string(), Metric::Eval("[0==0]".to_string()));
+        eval_file.insert("false_array".to_string(), Metric::Eval("[0==1]".to_string()));
         let mut metrics = Metrics::new();
         metrics.insert("file".to_string(), eval_file);
         let mut actions = Actions::new();
@@ -218,6 +220,23 @@ mod test {
             }),
         );
         action_file.insert(
+            "do_true_array".to_string(),
+            Action::Warning(Warning {
+                trigger: Metric::Eval("true_array".to_string()),
+                print: "True array was fired".to_string(),
+                tag: None,
+            }),
+        );
+        action_file.insert(
+            "do_false_array".to_string(),
+            Action::Warning(Warning {
+                trigger: Metric::Eval("false_array".to_string()),
+                print: "False array was fired".to_string(),
+                tag: None,
+            }),
+        );
+
+        action_file.insert(
             "do_operation".to_string(),
             Action::Warning(Warning {
                 trigger: Metric::Eval("0 < 10".to_string()),
@@ -231,7 +250,9 @@ mod test {
         let results = context.process();
         assert!(includes(results.get_warnings(), "[WARNING] True was fired"));
         assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered"));
+        assert!(includes(results.get_warnings(), "[WARNING] True array was fired"));
         assert!(!includes(results.get_warnings(), "False was fired"));
+        assert!(!includes(results.get_warnings(), "False array was fired"));
     }
 
     #[test]
