@@ -74,7 +74,7 @@ macro_rules! fidl_translations_identical {
 macro_rules! fidl_into_struct {
     ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
      { $( $field:ident: $type:ty, )+ } ) => {
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $into_ident {
             $(
                 pub $field: $type,
@@ -106,7 +106,7 @@ macro_rules! fidl_into_struct {
 macro_rules! fidl_into_enum {
     ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
      { $( $variant:ident($type:ty), )+ } ) => {
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum $into_ident {
             $(
                 $variant($type),
@@ -462,7 +462,7 @@ impl ComponentDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
     Protocol(ExposeProtocolDecl),
@@ -471,14 +471,14 @@ pub enum ExposeDecl {
     Resolver(ExposeResolverDecl),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExposeServiceDecl {
     pub sources: Vec<ServiceSource<ExposeServiceSource>>,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferDecl {
     Service(OfferServiceDecl),
     Protocol(OfferProtocolDecl),
@@ -489,7 +489,7 @@ pub enum OfferDecl {
     Event(OfferEventDecl),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OfferServiceDecl {
     pub sources: Vec<ServiceSource<OfferServiceSource>>,
     pub target: OfferTarget,
@@ -970,7 +970,7 @@ pub enum Value {
     Null,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DictionaryValue {
     Str(String),
     StrVec(Vec<String>),
@@ -1040,7 +1040,7 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UseStorageDecl {
     Data(CapabilityPath),
     Cache(CapabilityPath),
@@ -1105,14 +1105,14 @@ impl UseStorageDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferStorageDecl {
     Data(OfferStorage),
     Cache(OfferStorage),
     Meta(OfferStorage),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OfferStorage {
     pub source: OfferStorageSource,
     pub target: OfferTarget,
@@ -1187,7 +1187,7 @@ impl OfferStorageDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UseSource {
     Parent,
     Framework,
@@ -1212,7 +1212,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExposeSource {
     Self_,
     Child(String),
@@ -1271,7 +1271,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeTarget {
 }
 
 /// A source for a service.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceSource<T> {
     /// The provider of the service, relative to a component.
     pub source: T,
@@ -1279,7 +1279,7 @@ pub struct ServiceSource<T> {
     pub source_name: CapabilityName,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DependencyType {
     Strong,
     WeakForMigration,
@@ -1303,7 +1303,7 @@ impl NativeIntoFidl<Option<fsys::DependencyType>> for DependencyType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferServiceSource {
     Parent,
     Self_,
@@ -1334,7 +1334,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
 }
 
 /// The valid sources of a service protocol's expose declaration.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExposeServiceSource {
     /// The service is exposed from the component manager itself.
     Framework,
@@ -1367,7 +1367,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeServiceSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageDirectorySource {
     Parent,
     Self_,
@@ -1397,7 +1397,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerSource {
     Parent,
     Self_,
@@ -1427,7 +1427,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolverSource {
     Parent,
     Self_,
@@ -1487,7 +1487,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferDirectorySource {
     Parent,
     Self_,
@@ -1520,7 +1520,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferStorageSource {
     Parent,
     Storage(String),
@@ -1545,7 +1545,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferRunnerSource {
     Parent,
     Self_,
@@ -1575,7 +1575,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferResolverSource {
     Parent,
     Self_,
@@ -1605,7 +1605,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferEventSource {
     Framework,
     Parent,

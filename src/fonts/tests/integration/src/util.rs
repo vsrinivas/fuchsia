@@ -34,6 +34,7 @@ where
     }
     let font_provider = providers[&fonts_cm]
         .connect_to_protocol_at_exposed_dir::<T>()
+        .await
         .context(format!("Failed to connect to exposed protocol {}", T::DEBUG_NAME))?;
     Ok(font_provider)
 }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
     fuchsia_component::client as component,
     fuchsia_syslog::{self as fxlog, fx_log_info},
@@ -11,10 +10,11 @@ use {
 
 /// Connects to the Trigger protocol, sends a request, and exits.
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() {
     fxlog::init().unwrap();
-    let trigger = component::connect_to_service::<test_protocol::TriggerMarker>()?;
-    let _ = trigger.run().await?;
+    fx_log_info!("Rendezvous starting");
+    let trigger = component::connect_to_service::<test_protocol::TriggerMarker>()
+        .expect("failed to connect to Trigger service");
+    let _ = trigger.run().await.expect("failed to invoke Trigger");
     fx_log_info!("Rendezvous complete, exiting");
-    Ok(())
 }

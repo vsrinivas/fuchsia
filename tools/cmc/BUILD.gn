@@ -116,17 +116,6 @@ test_package("cmc_integration_test") {
     ":example_bin",
   ]
 
-  resources = [
-    {
-      if (is_debug) {
-        path = rebase_path("tests/golden_debug.cm")
-      } else {
-        path = rebase_path("tests/golden_release.cm")
-      }
-      dest = "golden.cm"
-    },
-  ]
-
   meta = [
     {
       path = rebase_path("meta/example.cml")

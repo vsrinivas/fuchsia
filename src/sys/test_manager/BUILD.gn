@@ -18,6 +18,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

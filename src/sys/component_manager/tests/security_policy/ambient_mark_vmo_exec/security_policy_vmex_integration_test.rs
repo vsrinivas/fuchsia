@@ -23,8 +23,10 @@ async fn verify_ambient_vmex_default_denied() -> Result<(), Error> {
 
     let child_name = "policy_not_requested";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
-    let ops = client::connect_to_protocol_at_dir::<ftest::ProtectedOperationsMarker>(&exposed_dir)
-        .context("failed to connect to test service after bind")?;
+    let ops =
+        client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
+            .await
+            .context("failed to connect to test service after bind")?;
 
     let vmo = zx::Vmo::create(1).unwrap();
     let result = ops.ambient_replace_as_executable(vmo).await.context("fidl call failed")?;
@@ -39,8 +41,10 @@ async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
 
     let child_name = "policy_allowed";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
-    let ops = client::connect_to_protocol_at_dir::<ftest::ProtectedOperationsMarker>(&exposed_dir)
-        .context("failed to connect to test service after bind")?;
+    let ops =
+        client::connect_to_protocol_at_dir_root::<ftest::ProtectedOperationsMarker>(&exposed_dir)
+            .await
+            .context("failed to connect to test service after bind")?;
 
     let vmo = zx::Vmo::create(1).unwrap();
     let result = ops.ambient_replace_as_executable(vmo).await.context("fidl call failed")?;

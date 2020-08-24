@@ -8,15 +8,26 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.test.Suite",
+            ],
+        },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [ "/svc/fuchsia.sys2.Realm" ],
+            protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
         },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
+
+                // TODO(56604): Convert to name-based once we support name-based capabilities from
+                // component manager's namespace.
                 "/svc/fuchsia.sys2.BlockingEventSource",
             ],
         },
@@ -31,17 +42,19 @@
     ],
     offer: [
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
             from: "self",
+            to: [ "#test-collection" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
             to: [ "#test-collection" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

@@ -10,7 +10,7 @@ use fidl_fuchsia_logger::{
 use fidl_fuchsia_sys2 as fsys;
 use fio::DirectoryProxy;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol_at_dir;
+use fuchsia_component::client::connect_to_protocol_at_dir_svc;
 use fuchsia_inspect_derive::WithInspect;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
@@ -507,7 +507,7 @@ pub struct LogSinkHelper {
 
 impl LogSinkHelper {
     pub fn new(directory: &DirectoryProxy) -> Self {
-        let log_sink = connect_to_protocol_at_dir::<LogSinkMarker>(&directory)
+        let log_sink = connect_to_protocol_at_dir_svc::<LogSinkMarker>(&directory)
             .expect("cannot connect to log sink");
         let mut s = Self { log_sink: Some(log_sink), sock: None };
         s.sock = Some(s.connect());
@@ -567,8 +567,8 @@ impl LogProcessor for Listener {
 }
 
 pub fn start_listener(directory: &DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
-    let log_proxy =
-        connect_to_protocol_at_dir::<LogMarker>(&directory).expect("cannot connect to log proxy");
+    let log_proxy = connect_to_protocol_at_dir_svc::<LogMarker>(&directory)
+        .expect("cannot connect to log proxy");
     let (send_logs, recv_logs) = mpsc::unbounded();
     let mut options = LogFilterOptions {
         filter_by_pid: false,

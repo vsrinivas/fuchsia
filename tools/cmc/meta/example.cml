@@ -27,9 +27,9 @@
             path: "/svc/fuchsia.logger.Log2",
         },
         {
-            directory: "data",
-            rights: [ "r*" ],
-            path: "/data",
+            directory: "blobfs",
+            rights: [ "rw*" ],
+            path: "/volumes/blobfs",
         },
         {
             storage: "minfs",
@@ -50,8 +50,8 @@
         { runner: "elf" },
         { service: "fuchsia.fonts.Provider" },
         {
-            protocol: "/fonts/LegacyCoolFonts",
-            as: "/svc/fuchsia.fonts.LegacyProvider",
+            protocol: "fuchsia.fonts.LegacyProvider",
+            path: "/svc/fuchsia.fonts.OldProvider",
         },
         {
             event: "started",
@@ -87,8 +87,9 @@
             to: [ "#modular" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LegacyLog",
+            protocol: "fuchsia.logger.LegacyLog",
             from: "#logger",
+            as: "fuchsia.logger.OldLog",
             to: [ "#modular" ],
         },
         {
@@ -104,16 +105,15 @@
             from: "#logger",
         },
         {
-            protocol: "/loggers/fuchsia.logger.LegacyLog",
+            protocol: "fuchsia.logger.LegacyLog",
             from: "#logger",
-            as: "/svc/fuchsia.logger.LegacyLog",
+            as: "fuchsia.logger.OldLog",
             to: "parent",
         },
         {
-            directory: "/volumes/blobfs",
+            directory: "blobfs",
             from: "self",
             to: "parent",
-            rights: [ "rw*" ],
             subdir: "blob",
         },
     ],

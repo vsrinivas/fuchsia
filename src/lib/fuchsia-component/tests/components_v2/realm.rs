@@ -55,6 +55,7 @@ async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
             .context("instance creation failed")?;
         let echo_proxy = scoped_instance
             .connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()
+            .await
             .context("failed to connect to echo in exposed dir")?;
         let out = echo_proxy
             .echo_string(Some("hippos"))

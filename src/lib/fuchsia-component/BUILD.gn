@@ -9,6 +9,7 @@ rustc_library("fuchsia-component") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

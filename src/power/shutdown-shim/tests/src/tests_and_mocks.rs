@@ -148,7 +148,7 @@ async fn setup_shim(
         fclient::ScopedInstance::new(collection_name.to_string(), SHUTDOWN_SHIM_URL.to_string())
             .await?;
     let shim_statecontrol =
-        shutdown_shim.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+        shutdown_shim.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>().await?;
     Ok((shutdown_shim, shim_statecontrol))
 }
 

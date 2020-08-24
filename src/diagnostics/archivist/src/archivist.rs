@@ -345,7 +345,7 @@ mod tests {
     use fidl_fuchsia_io as fio;
     use fio::DirectoryProxy;
     use fuchsia_async as fasync;
-    use fuchsia_component::client::connect_to_protocol_at_dir;
+    use fuchsia_component::client::connect_to_protocol_at_dir_svc;
     use futures::channel::oneshot;
 
     fn init_archivist() -> Archivist {
@@ -499,7 +499,7 @@ mod tests {
             log_sink_helper1.write_log("msg 2");
             let log_sink_helper2 = LogSinkHelper::new(&directory);
 
-            let controller = connect_to_protocol_at_dir::<ControllerMarker>(&directory)
+            let controller = connect_to_protocol_at_dir_svc::<ControllerMarker>(&directory)
                 .expect("cannot connect to log proxy");
             controller.stop().unwrap();
 

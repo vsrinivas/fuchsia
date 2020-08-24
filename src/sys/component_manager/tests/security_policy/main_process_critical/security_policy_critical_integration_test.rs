@@ -26,7 +26,8 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
     let child_name = "policy_not_requested";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
-        client::connect_to_protocol_at_dir::<ftest::ExitControllerMarker>(&exposed_dir)
+        client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
+            .await
             .context("failed to connect to test service after bind")?;
 
     exit_controller.exit(1)?;
@@ -64,7 +65,8 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
     let child_name = "policy_allowed";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
-        client::connect_to_protocol_at_dir::<ftest::ExitControllerMarker>(&exposed_dir)
+        client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
+            .await
             .context("failed to connect to test service after bind")?;
 
     exit_controller.exit(0)?;
@@ -104,7 +106,8 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
     let child_name = "policy_allowed";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
     let exit_controller =
-        client::connect_to_protocol_at_dir::<ftest::ExitControllerMarker>(&exposed_dir)
+        client::connect_to_protocol_at_dir_root::<ftest::ExitControllerMarker>(&exposed_dir)
+            .await
             .context("failed to connect to test service after bind")?;
 
     exit_controller.exit(1)?;

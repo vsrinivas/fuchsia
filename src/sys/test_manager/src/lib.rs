@@ -4,9 +4,9 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::{self, ServerEnd},
+    fidl::endpoints::{self, DiscoverableService, ServerEnd},
     fidl_fuchsia_component::Error as ComponentError,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest::SuiteMarker,
@@ -188,7 +188,7 @@ impl RunningTest {
                 }
             })?;
 
-        client::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|e| {
+        Self::connect_request_to_protocol_at_dir(&dir, suite_request).await.map_err(|e| {
             fx_log_err!(
                 "Failed to connect to `fuchsia.test.Suite` protocol for `{}`: {}",
                 test_url,
@@ -199,5 +199,31 @@ impl RunningTest {
         Ok(RunningTest {
             child: Some(fsys::ChildRef { name: name, collection: Some("tests".to_string()) }),
         })
+    }
+
+    /// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`.
+    // TODO(56604): This tries to connect to the protocol under root, then falls back to /svc if
+    // that fails. Remove this fallback (and the async) once 56604 is done.
+    pub async fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
+        directory: &DirectoryProxy,
+        server_end: ServerEnd<S>,
+    ) -> Result<(), Error> {
+        // First, probe for protocol in root, to determine if we need to fall back to /svc.
+        let path = if files_async::dir_contains(directory, S::SERVICE_NAME)
+            .await
+            .context("Failed to probe for protocol")?
+        {
+            format!("{}", S::SERVICE_NAME)
+        } else {
+            format!("svc/{}", S::SERVICE_NAME)
+        };
+        directory
+            .open(
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                &path,
+                ServerEnd::new(server_end.into_channel()),
+            )
+            .context("Failed to open protocol in directory")
     }
 }

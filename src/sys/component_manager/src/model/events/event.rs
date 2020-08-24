@@ -17,6 +17,7 @@ pub enum SyncMode {
 /// Created for a particular component event.
 /// Contains the Event that occurred along with a means to resume/unblock the component manager.
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
+#[derive(Debug)]
 pub struct Event {
     /// The event itself.
     pub event: ComponentEvent,

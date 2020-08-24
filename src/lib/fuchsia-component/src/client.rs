@@ -29,7 +29,7 @@ use {
     },
     log::*,
     rand::Rng,
-    std::{fmt, fs::File, path::PathBuf, sync::Arc},
+    std::{fmt, fs::File, path::PathBuf, pin::Pin, sync::Arc},
     thiserror::Error,
 };
 
@@ -124,35 +124,44 @@ pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Prox
     connect_to_unified_service_instance::<US>(DEFAULT_SERVICE_INSTANCE)
 }
 
-/// Connect to an instance of a FIDL protocol hosted in `directory`, assumed to live under `/svc`.
-pub fn connect_to_protocol_at_dir<S: DiscoverableService>(
+/// Connect to an instance of a FIDL protocol hosted in `directory`.
+// TODO(56604): This probes for the protocol under root, then falls back to /svc if
+// it isn't there. Remove this fallback (and the async) once 56604 is done.
+pub async fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
     directory: &DirectoryProxy,
 ) -> Result<S::Proxy, Error> {
-    let node_proxy = io_util::open_node(
+    let path = if files_async::dir_contains(directory, S::SERVICE_NAME)
+        .await
+        .context("Failed to probe for protocol in directory")?
+    {
+        format!("{}", S::SERVICE_NAME)
+    } else {
+        format!("svc/{}", S::SERVICE_NAME)
+    };
+    let proxy = io_util::open_node(
+        directory,
+        &PathBuf::from(path),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+    )
+    .context("Failed to open protocol in directory")?;
+    let proxy = S::Proxy::from_channel(proxy.into_channel().unwrap());
+    Ok(proxy)
+}
+
+/// Connect to an instance of a FIDL protocol hosted in `directory`, in the `svc/` subdir.
+pub fn connect_to_protocol_at_dir_svc<S: DiscoverableService>(
+    directory: &DirectoryProxy,
+) -> Result<S::Proxy, Error> {
+    let proxy = io_util::open_node(
         directory,
         &PathBuf::from(format!("svc/{}", S::SERVICE_NAME)),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
-    let proxy = S::Proxy::from_channel(node_proxy.into_channel().unwrap());
+    let proxy = S::Proxy::from_channel(proxy.into_channel().unwrap());
     Ok(proxy)
-}
-
-/// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`, assumed to
-/// live under `/svc`.
-pub fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
-    directory: &DirectoryProxy,
-    server_end: ServerEnd<S>,
-) -> Result<(), Error> {
-    directory
-        .open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-            fidl_fuchsia_io::MODE_TYPE_SERVICE,
-            &format!("svc/{}", S::SERVICE_NAME),
-            ServerEnd::new(server_end.into_channel()),
-        )
-        .context("Failed to open protocol in directory")
 }
 
 /// Connect to the "default" instance of a FIDL Unified Service hosted on the directory protocol channel `directory`.
@@ -291,8 +300,8 @@ pub fn realm() -> Result<RealmProxy, Error> {
 pub struct ScopedInstance {
     child_name: String,
     exposed_dir: DirectoryProxy,
-    destroy_future: Option<BoxFuture<'static, ()>>,
-    destroy_waiter: Option<BoxFuture<'static, Option<Error>>>,
+    destroy_future: Option<Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>>,
+    destroy_waiter: Option<Pin<Box<dyn Future<Output = Option<Error>> + Send + Sync + 'static>>>,
 }
 
 impl ScopedInstance {
@@ -350,11 +359,10 @@ impl ScopedInstance {
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
-    /// assumed to live under `/svc`.
-    pub fn connect_to_protocol_at_exposed_dir<S: DiscoverableService>(
+    pub async fn connect_to_protocol_at_exposed_dir<S: DiscoverableService>(
         &self,
     ) -> Result<S::Proxy, Error> {
-        connect_to_protocol_at_dir::<S>(&self.exposed_dir)
+        connect_to_protocol_at_dir_root::<S>(&self.exposed_dir).await
     }
 
     /// Returns a future which can be awaited on for destruction to complete after the

@@ -303,6 +303,7 @@ impl EventStream {
         loop {
             let event = self.next().await?;
             let descriptor = EventDescriptor::try_from(&event)?;
+            eprintln!("Received descriptor {:?}", descriptor);
             if let Ok(event) = T::from_fidl(event) {
                 if expected_event_matcher.matches(&descriptor) {
                     return Ok(event);

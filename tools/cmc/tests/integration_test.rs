@@ -38,8 +38,8 @@ fn main() {
             }),
             UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Parent(ParentRef {})),
-                source_path: Some("/fonts/LegacyCoolFonts".to_string()),
-                target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                source_path: Some("fuchsia.fonts.LegacyProvider".to_string()),
+                target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Framework(FrameworkRef {})),
@@ -90,25 +90,16 @@ fn main() {
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
-                target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                target_path: Some("fuchsia.logger.OldLog".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
             }),
             ExposeDecl::Directory(ExposeDirectoryDecl {
                 source: Some(Ref::Self_(SelfRef {})),
-                source_path: Some("/volumes/blobfs".to_string()),
-                target_path: Some("/volumes/blobfs".to_string()),
+                source_path: Some("blobfs".to_string()),
+                target_path: Some("blobfs".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
-                rights: Some(
-                    fio2::Operations::Connect
-                        | fio2::Operations::ReadBytes
-                        | fio2::Operations::WriteBytes
-                        | fio2::Operations::GetAttributes
-                        | fio2::Operations::UpdateAttributes
-                        | fio2::Operations::Enumerate
-                        | fio2::Operations::Traverse
-                        | fio2::Operations::ModifyDirectory,
-                ),
+                rights: None,
                 subdir: Some("blob".to_string()),
             }),
         ];
@@ -121,9 +112,9 @@ fn main() {
             }),
             OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                source_path: Some("fuchsia.logger.LegacyLog".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
-                target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                target_path: Some("fuchsia.logger.OldLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
             }),
             OfferDecl::Event(OfferEventDecl {
@@ -144,14 +135,17 @@ fn main() {
                 source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
             }),
             CapabilityDecl::Directory(DirectoryDecl {
-                name: Some("data".to_string()),
-                source_path: Some("/data".to_string()),
+                name: Some("blobfs".to_string()),
+                source_path: Some("/volumes/blobfs".to_string()),
                 rights: Some(
                     fio2::Operations::Connect
                         | fio2::Operations::ReadBytes
+                        | fio2::Operations::WriteBytes
                         | fio2::Operations::GetAttributes
+                        | fio2::Operations::UpdateAttributes
                         | fio2::Operations::Enumerate
-                        | fio2::Operations::Traverse,
+                        | fio2::Operations::Traverse
+                        | fio2::Operations::ModifyDirectory,
                 ),
             }),
             CapabilityDecl::Storage(StorageDecl {

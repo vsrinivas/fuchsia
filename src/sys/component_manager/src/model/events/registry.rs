@@ -379,14 +379,19 @@ mod tests {
     use {
         super::*,
         crate::{
+            capability::ComponentCapability,
             config::RuntimeConfig,
             model::{
+                environment::Environment,
+                events::event::Event,
                 hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
                 moniker::AbsoluteMoniker,
+                realm::Realm,
                 testing::test_helpers::{TestModelResult, *},
             },
         },
-        fuchsia_zircon as zx,
+        cm_rust::ProtocolDecl,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         matches::assert_matches,
     };
 
@@ -427,6 +432,61 @@ mod tests {
             )),
         );
         registry.dispatch(&event).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn capability_routed_dispatch() -> Result<(), ModelError> {
+        let TestModelResult { model, .. } =
+            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let registry = EventRegistry::new(Arc::downgrade(&model));
+        let mut event_stream = registry
+            .subscribe(
+                &SubscriptionOptions::new(
+                    SubscriptionType::AboveRoot,
+                    SyncMode::Sync,
+                    ExecutionMode::Debug,
+                ),
+                vec![EventType::CapabilityRouted.into()],
+            )
+            .await
+            .expect("subscribe succeeds");
+        assert_eq!(1, registry.dispatchers_per_event_type(EventType::CapabilityRouted).await);
+
+        let realm =
+            Arc::new(Realm::new_root_realm(Environment::empty(), "test:///root".to_string()));
+        let capability = ComponentCapability::Protocol(ProtocolDecl {
+            name: "foo".into(),
+            source_path: "/svc/foo".parse().unwrap(),
+        });
+        let source =
+            CapabilitySource::Component { capability: capability.clone(), realm: realm.as_weak() };
+        let capability_provider = Arc::new(Mutex::new(None));
+        let event = ComponentEvent::new_for_test(
+            AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::CapabilityRouted { source: source.clone(), capability_provider }),
+        );
+        fasync::Task::spawn(async move {
+            registry.dispatch(&event).await.expect("failed dispatch");
+        })
+        .detach();
+
+        let event = event_stream.next().await.expect("null event");
+        assert_matches!(event, Event {
+            event: ComponentEvent {
+                result: Ok(EventPayload::CapabilityRouted {
+                    source: CapabilitySource::Component {
+                        capability, ..
+                    },
+                    ..
+                }),
+                ..
+            },
+            scope_moniker,
+            ..
+        } if capability == capability && scope_moniker == AbsoluteMoniker::root());
+
+        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

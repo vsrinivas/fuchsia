@@ -15,7 +15,7 @@ use {
     ftest_manager::LaunchOptions,
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_component::client::connect_to_protocol_at_dir,
+    fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, prelude::*},
     maplit::hashmap,
@@ -36,7 +36,8 @@ async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
         .context("bind_child fidl call failed for test manager")?
         .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
 
-    connect_to_protocol_at_dir::<ftest_manager::HarnessMarker>(&dir)
+    connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
+        .await
         .context("failed to open test suite service")
 }
 

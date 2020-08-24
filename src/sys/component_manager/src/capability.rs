@@ -97,7 +97,7 @@ impl fmt::Display for CapabilitySource {
 /// Describes a capability provided by the component manager which could be a framework capability
 /// scoped to a realm, a built-in global capability, or a capability from component manager's own
 /// namespace.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InternalCapability {
     Service(CapabilityName),
     Protocol(CapabilityNameOrPath),
@@ -297,7 +297,7 @@ pub trait CapabilityProvider: Send + Sync {
 }
 
 /// A capability being routed from a component.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ComponentCapability {
     Use(UseDecl),
     /// Models a capability used from the environment.
@@ -327,6 +327,7 @@ impl ComponentCapability {
             ComponentCapability::Offer(offer) => matches!(offer, OfferDecl::Protocol(_) |
                                 OfferDecl::Directory(_) |
                                 OfferDecl::Service(_)),
+            ComponentCapability::Protocol(_) | ComponentCapability::Directory(_) => true,
             _ => false,
         }
     }
@@ -470,6 +471,7 @@ impl ComponentCapability {
         self.source_name_or_path()
             .map(|p| format!("{}", p))
             .or_else(|| self.source_name().map(|n| format!("{}", n)))
+            .or_else(|| self.source_path().map(|p| format!("{}", p)))
             .unwrap_or_default()
     }
 
@@ -787,7 +789,7 @@ fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoni
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EnvironmentCapability {
     Runner { source_name: CapabilityName, source: RegistrationSource },
 }

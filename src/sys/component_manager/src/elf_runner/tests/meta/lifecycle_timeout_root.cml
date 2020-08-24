@@ -14,10 +14,10 @@
     ],
     use: [
         {
-            protocol: [ "/svc/fuchsia.process.Launcher" ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
         {
-            protocol: [ "/svc/fuchsia.sys2.Realm" ],
+            protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
         },
     ],
