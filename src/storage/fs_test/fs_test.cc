@@ -151,13 +151,9 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 // Note: blobfs is intentionally absent, since it is not intended to run as part of the
 // fs_test suite.
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
-  return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
-                                            TestFilesystemOptions::MinfsWithoutFvm(),
-                                            TestFilesystemOptions::DefaultMemfs(),
-#ifdef TEST_FATFS
-                                            TestFilesystemOptions::DefaultFatfs()
-#endif
-  };
+  return std::vector<TestFilesystemOptions>{
+      TestFilesystemOptions::DefaultMinfs(), TestFilesystemOptions::MinfsWithoutFvm(),
+      TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs()};
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(

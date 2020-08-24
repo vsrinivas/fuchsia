@@ -31,16 +31,13 @@ static_library("fs_test") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs",
+    "//src/storage/fuchsia-fatfs:fatfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
   ]
-  if (false) {  # Enable for fatfs
-    deps += [ "//src/storage/fuchsia-fatfs:fatfs" ]
-    defines = [ "TEST_FATFS" ]
-  }
   public_deps = [
     "//src/lib/isolated_devmgr/v2_component:client",
     "//third_party/googletest:gtest",
