@@ -68,8 +68,10 @@ void ProcessImpl::GetModules(
   session()->remote_api()->Modules(
       request, [process = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
                    const Err& err, debug_ipc::ModulesReply reply) mutable {
-        if (process)
+        if (process) {
+          process->FixupEmptyModuleNames(reply.modules);
           process->symbols_.SetModules(reply.modules);
+        }
         if (callback)
           callback(err, std::move(reply.modules));
       });
@@ -254,8 +256,9 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   threads_.erase(found);
 }
 
-void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
+void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
                             const std::vector<uint64_t>& stopped_thread_koids) {
+  FixupEmptyModuleNames(modules);
   symbols_.SetModules(modules);
 
   // If this is the first thread, we see if we need to restart.
@@ -432,6 +435,13 @@ void ProcessImpl::LoadTLSHelpers() {
                    }
                  }
                });
+  }
+}
+
+void ProcessImpl::FixupEmptyModuleNames(std::vector<debug_ipc::Module>& modules) const {
+  for (auto& m : modules) {
+    if (m.name.empty())
+      m.name = GetName();
   }
 }
 

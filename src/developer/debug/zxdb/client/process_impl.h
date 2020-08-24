@@ -62,7 +62,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
   // Notification that the list of loaded modules may have been updated.
-  void OnModules(const std::vector<debug_ipc::Module>& modules,
+  void OnModules(std::vector<debug_ipc::Module> modules,
                  const std::vector<uint64_t>& stopped_thread_koids);
 
   // Returns true if the caller should show the output. False means silence.
@@ -94,6 +94,10 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
 
   // Load the TLS helpers.
   void LoadTLSHelpers();
+
+  // Updates modules with empty names to reflect the name of the process binary. By convention,
+  // the dynamic loader will set the main binary to have a blank name.
+  void FixupEmptyModuleNames(std::vector<debug_ipc::Module>& modules) const;
 
   TargetImpl* const target_;  // The target owns |this|.
   const uint64_t koid_;

@@ -619,7 +619,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
 void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (process) {
-    process->OnModules(notify.modules, notify.stopped_thread_koids);
+    process->OnModules(std::move(notify.modules), notify.stopped_thread_koids);
   } else {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received modules notification for an "
