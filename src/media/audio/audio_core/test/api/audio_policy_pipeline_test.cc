@@ -70,7 +70,7 @@ class AudioAdminTest : public HermeticAudioTest {
 //
 void AudioAdminTest::SetUp() {
   HermeticAudioTest::SetUp();
-  FailUponUnderflows();
+  FailUponOverflowsOrUnderflows();
   SetUpVirtualAudioOutput();
   SetUpVirtualAudioInput();
 }

@@ -133,6 +133,7 @@ class TestDevice : public AudioOutput {
     return std::nullopt;
   }
   void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {}
+  zx::duration MixDeadline() const override { return zx::msec(10); }
 
  private:
   std::vector<fit::bridge<void, zx_status_t>> pipeline_update_bridges_;

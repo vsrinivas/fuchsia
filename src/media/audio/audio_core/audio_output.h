@@ -122,6 +122,10 @@ class AudioOutput : public AudioDevice {
   virtual void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
+  // The maximum amount of time it can take to run all pending mix jobs when a device
+  // wakes up to process pending jobs.
+  virtual zx::duration MixDeadline() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
+
  private:
   // Timer used to schedule periodic mixing.
   void MixTimerThunk() {

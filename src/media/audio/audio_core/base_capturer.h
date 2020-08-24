@@ -156,9 +156,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
  private:
   void UpdateState(State new_state);
 
-  void OverflowOccurred(Fixed source_start, Fixed mix_point, zx::duration overflow_duration);
-  void PartialOverflowOccurred(Fixed source_offset, int64_t mix_offset);
-
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
@@ -177,6 +174,8 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void ShutdownFromMixDomain() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void ReportOverflow(zx::time start_time, zx::time end_time)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Thunk to send ready packets back to the user, and to finish an async
   // mode stop operation.
@@ -265,12 +264,9 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_dest_frames_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
+  uint64_t overflow_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
   StopAsyncCaptureCallback pending_async_stop_cbk_;
-
-  // for glitch-debugging purposes
-  std::atomic<uint16_t> overflow_count_;
-  std::atomic<uint16_t> partial_overflow_count_;
 
   std::shared_ptr<MixStage> mix_stage_;
   std::unique_ptr<Reporter::Capturer> reporter_;

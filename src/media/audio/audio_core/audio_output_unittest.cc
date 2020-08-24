@@ -118,6 +118,7 @@ class TestAudioOutput : public AudioOutput {
       finish_mix_delegate_(span, buffer);
     }
   }
+  zx::duration MixDeadline() const override { return zx::msec(10); }
   // |AudioDevice|
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}

@@ -89,6 +89,8 @@ class ThrottleOutput : public AudioOutput {
     FX_DCHECK(false);
   }
 
+  zx::duration MixDeadline() const override { return zx::msec(1); }
+
   // AudioDevice implementation.
   // No one should ever be trying to apply gain limits for a throttle output.
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,

@@ -44,6 +44,8 @@ class DriverOutput : public AudioOutput {
   void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
+  zx::duration MixDeadline() const override { return kDefaultHighWaterNsec - kDefaultLowWaterNsec; }
+
   // AudioDevice implementation
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override;

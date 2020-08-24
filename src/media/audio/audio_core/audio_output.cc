@@ -100,6 +100,16 @@ void AudioOutput::Process() {
         FinishMixJob(*mix_frames, payload);
       }
     } while (frames_remaining > 0);
+
+    auto mono_end = async::Now(mix_domain().dispatcher());
+    if (auto dt = mono_end - mono_now; dt > MixDeadline()) {
+      TRACE_INSTANT("audio", "AudioOutput::MIX_UNDERFLOW", TRACE_SCOPE_THREAD);
+      FX_LOGS(ERROR) << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
+                     << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
+                     << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms";
+
+      reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
+    }
   }
 
   if (!next_sched_time_mono_) {

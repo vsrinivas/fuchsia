@@ -8,8 +8,8 @@ import("//src/media/audio/audio_core_package.gni")
 import("//src/media/audio/hardware.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
-loadable_module("inversion_filter") {
-  sources = [ "inversion_filter.cc" ]
+loadable_module("audio-core-api-test-effects") {
+  sources = [ "effects.cc" ]
 
   deps = [
     "//sdk/lib/media/audio/effects",
@@ -22,10 +22,10 @@ loadable_module("inversion_filter") {
   ]
 }
 
-audio_core_test_package("audio-core-with-inversion-filter") {
+audio_core_test_package("audio-core-with-test-effects") {
   effects = {
-    target = "//src/media/audio/audio_core/test/api:inversion_filter"
-    name = "inversion_filter.so"
+    target = "//src/media/audio/audio_core/test/api:audio-core-api-test-effects"
+    name = "audio-core-api-test-effects.so"
   }
 }
 
@@ -33,6 +33,12 @@ resource("audio-core-config-with-inversion-filter") {
   sources = [ "testdata/audio_core_config_with_inversion_filter.json" ]
   outputs =
       [ "data/audio-core-config-with-inversion-filter/audio_core_config.json" ]
+}
+
+resource("audio-core-config-with-sleeper-filter") {
+  sources = [ "testdata/audio_core_config_with_sleeper_filter.json" ]
+  outputs =
+      [ "data/audio-core-config-with-sleeper-filter/audio_core_config.json" ]
 }
 
 resource("audio-core-config-with-ultrasound") {
@@ -82,7 +88,8 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
   executable_deps = [ "//src/media/audio/lib/analysis" ]
   component_deps = [
     ":audio-core-config-with-inversion-filter",
-    ":audio-core-with-inversion-filter",
+    ":audio-core-config-with-sleeper-filter",
+    ":audio-core-with-test-effects",
   ]
 }
 
@@ -147,6 +154,9 @@ fuchsia_test_package("audio-core-api-pipeline-tests") {
     ":audio-renderer-pipeline-test",
   ]
   test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
     environments = hardware_envs
   }
   deps = [ "//src/media/audio/lib/audio_test_devmgr:audio-test-devmgr" ]

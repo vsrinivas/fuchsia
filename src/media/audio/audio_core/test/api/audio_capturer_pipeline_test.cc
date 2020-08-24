@@ -50,8 +50,8 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
 
   void SetUp() {
     HermeticAudioTest::SetUp();
-    // None of our tests should underflow.
-    FailUponUnderflows();
+    // None of our tests should overflow or underflow.
+    FailUponOverflowsOrUnderflows();
   }
 
   std::optional<PacketAndFrameIdx> FindFirstFrame(const std::vector<CapturedPacket>& packets,
@@ -207,32 +207,22 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
   void SetUp() {
     HermeticAudioTest::SetUp();
 
-    audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
-    AddErrorHandler(audio_capturer_, "AudioCapturer");
-
-    auto t =
-        media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, kFrameRate);
-    format_ = Format::Create(t).take_value();
-    audio_capturer_->SetPcmStreamType(t);
-
+    auto format = Format::Create<ASF::SIGNED_16>(1, kFrameRate).value();
     auto num_frames = kNumPackets * kFramesPerPacket;
-    zx::vmo audio_capturer_vmo;
-    auto status = zx::vmo::create(num_frames * sizeof(int16_t), 0, &audio_capturer_vmo);
-    ASSERT_EQ(status, ZX_OK) << "Failed to create payload buffer";
-    audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
+    capturer_ = CreateAudioCapturer(format, num_frames,
+                                    fuchsia::media::AudioCapturerConfiguration::WithInput(
+                                        fuchsia::media::InputAudioCapturerConfiguration()));
   }
 
-  std::optional<Format> format_;
-  fuchsia::media::AudioCapturerPtr audio_capturer_;
-  fuchsia::media::audio::GainControlPtr gain_control_;
+  AudioCapturerShim<ASF::SIGNED_16>* capturer_;
 };
 
 // TODO(fxbug.dev/43507): Remove this test.
 TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
   zx::time start_pts;
   size_t count = 0;
-  audio_capturer_.events().OnPacketProduced = [this, &count,
-                                               &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->capturer().events().OnPacketProduced = [this, &count,
+                                                     &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -254,7 +244,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
     count++;
   };
 
-  audio_capturer_->StartAsyncCapture(kFramesPerPacket);
+  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
 
   // To verify that we're automatically recycling packets, we need to loop
   // through the payload buffer at least twice.
@@ -277,10 +267,12 @@ class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
 };
 
 TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased) {
+  FailUponOverflowsOrUnderflows();
+
   zx::time start_pts;
   size_t count = 0;
-  audio_capturer_.events().OnPacketProduced = [this, &count,
-                                               &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->capturer().events().OnPacketProduced = [this, &count,
+                                                     &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -302,10 +294,10 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased
     count++;
 
     // Manually release.
-    audio_capturer_->ReleasePacket(p);
+    capturer_->capturer()->ReleasePacket(p);
   };
 
-  audio_capturer_->StartAsyncCapture(kFramesPerPacket);
+  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
 
   // To verify that we're automatically recycling packets, we need to loop
   // through the payload buffer at least twice.
@@ -323,8 +315,8 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   // Do NOT manually release any packets.
   zx::time start_pts;
   size_t count = 0;
-  audio_capturer_.events().OnPacketProduced = [this, &count, &start_pts,
-                                               &packets](fuchsia::media::StreamPacket p) {
+  capturer_->capturer().events().OnPacketProduced = [this, &count, &start_pts,
+                                                     &packets](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
 
     // Check that we're receiving the expected packets.
@@ -349,7 +341,7 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
     packets.push_back(p);
   };
 
-  audio_capturer_->StartAsyncCapture(kFramesPerPacket);
+  capturer_->capturer()->StartAsyncCapture(kFramesPerPacket);
 
   // We expect exactly kNumPackets.
   const zx::duration kLoopTimeout = zx::sec(10);
@@ -366,8 +358,8 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   // After releasing all packets, we should get at least one more packet.
   // This packet has a discontinuous timestamp.
   count = 0;
-  audio_capturer_.events().OnPacketProduced = [this, &count,
-                                               &start_pts](fuchsia::media::StreamPacket p) {
+  capturer_->capturer().events().OnPacketProduced = [this, &count,
+                                                     &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("after release, packet %lu", count));
 
     // All further packets should be some time after the endpoint of the last released packet.
@@ -382,12 +374,15 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   };
 
   for (auto& p : packets) {
-    audio_capturer_->ReleasePacket(p);
+    capturer_->capturer()->ReleasePacket(p);
   }
   RunLoopWithTimeoutOrUntil([this, &count]() { return ErrorOccurred() || count > 0; },
                             kLoopTimeout);
   ASSERT_FALSE(ErrorOccurred());
   ASSERT_GT(count, 0u);
+
+  // There should be at least one overflow.
+  capturer_->expected_inspect_properties().children["overflows"].ExpectUintNonzero("count");
 }
 
 ////// Need to add similar tests for the Capture pipeline

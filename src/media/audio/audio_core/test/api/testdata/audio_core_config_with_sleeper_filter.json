@@ -35,8 +35,8 @@
         "effects": [
           {
             "lib": "audio-core-api-test-effects.so",
-            "effect": "inversion_filter",
-            "name": "inverter"
+            "effect": "sleeper_filter",
+            "name": "sleeper"
           }
         ]
       }

@@ -44,9 +44,9 @@ class HermeticAudioTest : public TestFixture {
   void SetUp() override;
   void TearDown() override;
 
-  // Register that the test expects no audio underflows. This expectation will be checked by
-  // TearDown().
-  void FailUponUnderflows() { disallow_underflows_ = true; }
+  // Register that the test expects no audio underflows or overflow.
+  // This expectation will be checked by TearDown().
+  void FailUponOverflowsOrUnderflows() { disallow_overflows_and_underflows_ = true; }
 
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -119,7 +119,7 @@ class HermeticAudioTest : public TestFixture {
 
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 
-  bool disallow_underflows_ = false;
+  bool disallow_overflows_and_underflows_ = false;
 };
 
 }  // namespace media::audio::test

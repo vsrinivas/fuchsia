@@ -45,7 +45,7 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   void SetUp() {
     HermeticAudioTest::SetUp();
     // None of our tests should underflow.
-    FailUponUnderflows();
+    FailUponOverflowsOrUnderflows();
     // The output can store exactly 1s of audio data.
     output_ = CreateOutput({{0xff, 0x00}}, format_, 48000);
     renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
@@ -316,6 +316,45 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
                                << "\ntotal_magn_other = " << result.total_magn_other;
 }
 
+class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
+        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-sleeper-filter",
+    });
+  }
+
+  AudioRendererPipelineUnderflowTest()
+      : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
+
+  void SetUp() override {
+    HermeticAudioTest::SetUp();
+    // The output can store exactly 1s of audio data.
+    output_ = CreateOutput({{0xff, 0x00}}, format_, 48000);
+    renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
+  }
+
+  const TypedFormat<ASF::SIGNED_16> format_;
+  VirtualOutput<ASF::SIGNED_16>* output_ = nullptr;
+  AudioRendererShim<ASF::SIGNED_16>* renderer_ = nullptr;
+};
+
+// Validate that a slow effects pipeline registers an underflow.
+TEST_F(AudioRendererPipelineUnderflowTest, HasUnderflow) {
+  // Inject one packet and wait for it to be rendered.
+  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, kPacketFrames);
+  auto packets = renderer_->AppendPackets({&input_buffer});
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, packets);
+
+  // Wait an extra 20ms to account for the sleeper filter's delay.
+  RunLoopWithTimeout(zx::msec(20));
+
+  // Expect an underflow.
+  output_->expected_inspect_properties().children["pipeline underflows"].ExpectUintNonzero("count");
+}
+
 class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
  protected:
   // Matches the value in audio_core_config_with_inversion_filter.json
@@ -323,7 +362,7 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-inversion-filter",
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
         .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
     });
   }
@@ -423,7 +462,7 @@ class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
-        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-inversion-filter",
+        .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
         .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
     });
   }

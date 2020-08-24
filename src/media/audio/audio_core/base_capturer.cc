@@ -21,18 +21,12 @@
 namespace media::audio {
 namespace {
 
-// To what extent should client-side under/overflows be logged? (A "client-side underflow" or
-// "client-side overflow" refers to when part of a data section is discarded because its start
-// timestamp had passed.) For each Capturer, we will log the first overflow. For subsequent
-// occurrences, depending on audio_core's logging level, we throttle how frequently these are
-// displayed. If log_level is set to TRACE or SPEW, all client-side overflows are logged -- at
-// log_level -1: VLOG TRACE -- as specified by kCaptureOverflowTraceInterval. If set to INFO, we
-// log less often, at log_level 1: INFO, throttling by factor kCaptureOverflowInfoInterval. If set
-// to WARNING or higher, we throttle these even more, specified by kCaptureOverflowErrorInterval.
-// To disable all logging of client-side overflows, set kLogCaptureOverflow to false.
-//
+// To what extent should client-side overflows be logged? (A "client-side overflow" refers to when
+// part of a data section is discarded because its start timestamp had passed.) For each Capturer,
+// we will log the first overflow. For subsequent occurrences, depending on audio_core's logging
+// level, we throttle how frequently these are displayed. If log_level is set to TRACE or SPEW, all
+// client-side overflows are logged. If set to INFO or higher, we log less often.
 static constexpr bool kLogCaptureOverflow = true;
-static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
@@ -65,8 +59,6 @@ BaseCapturer::BaseCapturer(
       min_fence_time_(zx::nsec(0)),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
-      overflow_count_(0u),
-      partial_overflow_count_(0u),
       reporter_(Reporter::Singleton().CreateCapturer()) {
   FX_DCHECK(mix_domain_);
 
@@ -531,7 +523,7 @@ zx_status_t BaseCapturer::Process() {
     // 1) We are OperatingSync and our user is not supplying packets fast enough.
     // 2) We are OperatingAsync and our user is not releasing packets fast enough.
     //
-    // Either way, this is an underflow. Invalidate the frames_to_ref_clock transformation and make
+    // Either way, this is an overflow. Invalidate the frames_to_ref_clock transformation and make
     // sure we don't have a wakeup timer pending.
     if (!mix_state) {
       ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
@@ -544,10 +536,14 @@ zx_status_t BaseCapturer::Process() {
       }
 
       // Wait until we have another packet or have shut down.
+      auto overflow_start = zx::clock::get_monotonic();
       pq->WaitForPendingPacket();
       if (state_.load() == State::Shutdown) {
         return ZX_OK;
       }
+
+      auto overflow_end = zx::clock::get_monotonic();
+      ReportOverflow(overflow_start, overflow_end);
 
       // Have another packet: continue capturing.
       continue;
@@ -664,68 +660,24 @@ zx_status_t BaseCapturer::Process() {
   }  // while (true)
 }
 
-void BaseCapturer::OverflowOccurred(Fixed frac_source_start, Fixed frac_source_mix_point,
-                                    zx::duration overflow_duration) {
-  TRACE_INSTANT("audio", "BaseCapturer::OverflowOccurred", TRACE_SCOPE_PROCESS);
-  uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
+void BaseCapturer::ReportOverflow(zx::time start_time, zx::time end_time) {
+  overflow_count_++;
 
+  TRACE_INSTANT("audio", "BaseCapturer::OVERFLOW", TRACE_SCOPE_THREAD);
   if constexpr (kLogCaptureOverflow) {
-    auto overflow_msec = static_cast<double>(overflow_duration.to_nsecs()) / ZX_MSEC(1);
-
-    std::ostringstream stream;
-    stream << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/" << kCaptureOverflowErrorInterval
-           << "): source-start " << frac_source_start.raw_value() << " missed mix-point "
-           << frac_source_mix_point.raw_value() << " by " << std::setprecision(4) << overflow_msec
-           << " ms";
-
-    if ((kCaptureOverflowErrorInterval > 0) &&
-        (overflow_count % kCaptureOverflowErrorInterval == 0)) {
-      FX_LOGS(ERROR) << stream.str();
-    } else if ((kCaptureOverflowInfoInterval > 0) &&
-               (overflow_count % kCaptureOverflowInfoInterval == 0)) {
-      FX_LOGS(INFO) << stream.str();
-
-    } else if ((kCaptureOverflowTraceInterval > 0) &&
-               (overflow_count % kCaptureOverflowTraceInterval == 0)) {
-      FX_LOGS(TRACE) << stream.str();
+    auto duration_ms = static_cast<double>((end_time - start_time).to_nsecs()) / ZX_MSEC(1);
+    if ((overflow_count_ - 1) % kCaptureOverflowErrorInterval == 0) {
+      FX_LOGS(ERROR) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
+                     << std::setprecision(4) << duration_ms << " ms";
+    } else if ((overflow_count_ - 1) % kCaptureOverflowInfoInterval == 0) {
+      FX_LOGS(INFO) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
+                    << std::setprecision(4) << duration_ms << " ms";
+    } else {
+      FX_LOGS(TRACE) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
+                     << std::setprecision(4) << duration_ms << " ms";
     }
   }
-}
-
-void BaseCapturer::PartialOverflowOccurred(Fixed frac_source_offset, int64_t dest_mix_offset) {
-  TRACE_INSTANT("audio", "BaseCapturer::PartialOverflowOccurred", TRACE_SCOPE_PROCESS);
-
-  // Slips by less than four source frames do not necessarily indicate overflow. A slip of this
-  // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion
-  // ratio is sufficiently large (it can be as large as 4:1).
-  if (frac_source_offset.Absolute() >= 4) {
-    uint16_t partial_overflow_count = std::atomic_fetch_add<uint16_t>(&partial_overflow_count_, 1u);
-    if constexpr (kLogCaptureOverflow) {
-      std::ostringstream stream;
-      stream << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
-             << kCaptureOverflowErrorInterval << "): shifting by "
-             << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-             << frac_source_offset.Absolute().raw_value() << " source subframes (" << std::dec
-             << frac_source_offset.Floor() << " frames) and " << dest_mix_offset
-             << " mix (capture) frames";
-
-      if ((kCaptureOverflowErrorInterval > 0) &&
-          (partial_overflow_count % kCaptureOverflowErrorInterval == 0)) {
-        FX_LOGS(ERROR) << stream.str();
-      } else if ((kCaptureOverflowInfoInterval > 0) &&
-                 (partial_overflow_count % kCaptureOverflowInfoInterval == 0)) {
-        FX_LOGS(INFO) << stream.str();
-      } else if ((kCaptureOverflowTraceInterval > 0) &&
-                 (partial_overflow_count % kCaptureOverflowTraceInterval == 0)) {
-        FX_LOGS(TRACE) << stream.str();
-      }
-    }
-  } else {
-    if constexpr (kLogCaptureOverflow) {
-      FX_LOGS(TRACE) << "Slipping by " << dest_mix_offset
-                     << " mix (capture) frames to align with source region";
-    }
-  }
+  reporter().Overflow(start_time, end_time);
 }
 
 void BaseCapturer::DoStopAsyncCapture() {

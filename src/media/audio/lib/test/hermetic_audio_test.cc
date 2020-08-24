@@ -63,7 +63,7 @@ void HermeticAudioTest::SetUp() {
 void HermeticAudioTest::TearDown() {
   // These expectations need to be set on all objects. The simplest way to do
   // that is to set them here, as the final step before expectations are checked.
-  if (disallow_underflows_) {
+  if (disallow_overflows_and_underflows_) {
     for (auto& [_, device] : devices_) {
       if (device.output) {
         auto& props = device.output->expected_inspect_properties();
@@ -73,6 +73,9 @@ void HermeticAudioTest::TearDown() {
     }
     for (auto& r : renderers_) {
       r->expected_inspect_properties().children["underflows"].uint_values["count"] = 0;
+    }
+    for (auto& c : capturers_) {
+      c->expected_inspect_properties().children["overflows"].uint_values["count"] = 0;
     }
   }
 
