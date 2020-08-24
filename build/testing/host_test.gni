@@ -1,0 +1,104 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test_data.gni")
+import("//build/testing/test_spec.gni")
+
+# Declares a host test.
+#
+# Since the testing infrastructure doesn't handle tests with arguments, this
+# template will generate a script that encapsulates the arguments and build the
+# relevant test_spec target. This can be used to build data driven tests by
+# invoking a host tool with a test specification.
+#
+# Note: The tool and any data dependencies it has (including files referred to
+# by the arguments) MUST be declared by using the host_test_data template.
+#
+# Parameters
+#
+#   binary_path (required)
+#     [path]: Path to the binary the test should invoke.
+#
+#   args (optional)
+#     [list of strings]: Arguments to pass to the tool.
+#
+#   target (optional)
+#     [label]: The test target. Defaults to target_name.
+#
+#   deps, environments, data_deps, public_deps, visibility
+#     Forwarded from invoker.
+#
+if (is_host) {
+  template("host_test") {
+    assert(defined(invoker.binary_path), "Requires a binary_path")
+
+    _test_path = invoker.binary_path
+
+    if (defined(invoker.args)) {
+      _test_data_target = "${target_name}_script_data"
+      _script_file = "${target_out_dir}/${target_name}.sh"
+      _test_path = _script_file
+      _test_script_target = "${target_name}_script"
+
+      host_test_data(_test_data_target) {
+        sources = [
+          _script_file,
+          invoker.binary_path,
+        ]
+        visibility = [ ":*" ]
+      }
+
+      action(_test_script_target) {
+        testonly = true
+        script = "//build/testing/create_test.sh"
+        args = [
+          rebase_path(_script_file, root_build_dir),
+          rebase_path(invoker.binary_path, root_build_dir),
+        ]
+        args += invoker.args
+        outputs = [ "${_script_file}" ]
+        visibility = [ ":*" ]
+
+        # The infra currently uses ninja to build host tests, specifying the
+        # test_spec.path field as the target. Thus we have to ensure that
+        # this target has all the dependencies neede to actually build the test.
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "deps",
+                                 "public_deps",
+                               ])
+        deps += [ ":${_test_data_target}" ]
+      }
+    }
+
+    test_spec(target_name) {
+      if (defined(invoker.target)) {
+        target = "${invoker.target}"
+      } else {
+        target = "${target_name}"
+      }
+      path = _test_path
+
+      forward_variables_from(invoker,
+                             [
+                               "environments",
+                               "visibility",
+                             ])
+
+      # If we have args, we put most deps on the script target,
+      # and here just depend on that.
+      if (defined(invoker.args)) {
+        deps = [ ":${_test_script_target}" ]
+      } else {
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "deps",
+                                 "public_deps",
+                               ])
+      }
+    }
+  }
+}

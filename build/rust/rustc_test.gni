@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/host_test.gni")
 import("//build/testing/test_spec.gni")
 
 # Defines a Rust unit test, without also compiling a separate binary or library
@@ -105,30 +106,29 @@ template("rustc_test") {
   # built-in gn rules do not support dashes
   crate_name = string_replace(package_name, "-", "_")
 
-  if (!is_fuchsia) {
-    test_output_file = "${root_out_dir}/${crate_name}"
-    test_spec_target_name = "${target_name}_spec"
-    target_from_invoker = target_name
-    test_spec(test_spec_target_name) {
-      target = ":$target_from_invoker"
-      path = test_output_file
+  exe_target_name = target_name
 
-      command = [ rebase_path(test_output_file, root_build_dir) ]
+  if (is_host) {
+    exe_target_name = "${target_name}_executable"
+    all_deps = [ ":${exe_target_name}" ]
+    if (defined(invoker.deps)) {
+      all_deps += invoker.deps
+    }
+    if (defined(invoker.non_rust_deps)) {
+      all_deps += invoker.non_rust_deps
+    }
 
-      if (defined(invoker.args)) {
-        command += invoker.args
-      }
-
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.non_rust_deps)) {
-        deps += invoker.non_rust_deps
-      }
+    host_test(target_name) {
+      binary_path = "${root_out_dir}/${crate_name}"
+      deps = all_deps
       if (defined(invoker.test_environments)) {
         environments = invoker.test_environments
       }
+      forward_variables_from(invoker,
+                             [
+                               "args",
+                               "visibility",
+                             ])
     }
   } else {
     # if not a host-side target, we don't need this since it doesn't
@@ -147,7 +147,7 @@ template("rustc_test") {
   # fail early when the user forgets to list sources
   assert(defined(invoker.sources), "sources must be listed")
 
-  executable(target_name) {
+  executable(exe_target_name) {
     # anything defined with rustc_test MUST be a test target
     testonly = true
 
@@ -185,11 +185,6 @@ template("rustc_test") {
       if (configs + _dynamic_rust_config - _dynamic_rust_config != configs) {
         data_deps += [ "//build/unification/lib/toolchain:libtest" ]
       }
-    }
-
-    if (is_linux || is_mac) {
-      # if this test is being built on host, depend on the test_spec
-      deps += [ ":$test_spec_target_name" ]
     }
 
     if (is_fuchsia) {

@@ -4,8 +4,8 @@
 
 import("//build/compiled_action.gni")
 import("//build/host.gni")
+import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
-import("//build/testing/host_test_with_args.gni")
 
 # Declares a suite of tests for a driver's bind rules.
 #
@@ -74,14 +74,14 @@ template("bind_host_test") {
       ]
     }
 
-    host_test_with_args(test_target) {
+    host_test(test_target) {
       visibility = [ ":*" ]
       if (defined(invoker.target)) {
         target = "${invoker.target}"
       } else {
         target = "${target_name}"
       }
-      tool = rebase_path("${test_data_dir}/bindc", root_build_dir)
+      binary_path = "${test_data_dir}/bindc"
 
       rules_filename = get_path_info(invoker.rules, "file")
       test_spec_filename = get_path_info(invoker.tests, "file")
