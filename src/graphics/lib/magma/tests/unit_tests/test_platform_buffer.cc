@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits>
+#include <random>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -97,8 +98,20 @@ class TestPlatformBuffer {
       ASSERT_FALSE(buffer->MapAtCpuAddr(addr, magma::page_size(), magma::page_size() * 2));
     }
 
+    uint64_t minimum_address = magma::PlatformBuffer::MinimumMappableAddress();
+    uint64_t address_region_length = magma::PlatformBuffer::MappableAddressRegionLength();
+
+    // This random generator is seeded with a fixed value, so the results should be the same on
+    // every run.
+    std::mt19937_64 random_generator;
+    std::uniform_int_distribution<uint64_t> distribution(
+        0, address_region_length / magma::page_size() - 1);
+
+    // The fraction of the address space that's mapped initially should be 1/8th or less (worst case
+    // is with ASAN), so the probability of this loop failing 100 times is 2^-300, which should be
+    // low enough.
     for (i = 0; i < 100; i++) {
-      addr += magma::page_size() * 100;
+      addr = distribution(random_generator) * magma::page_size() + minimum_address;
       if (buffer->MapAtCpuAddr(addr, 0, magma::page_size()))
         break;
     }
@@ -119,7 +132,7 @@ class TestPlatformBuffer {
     EXPECT_TRUE(buffer->UnmapCpu());
     EXPECT_TRUE(buffer->UnmapCpu());
     for (i = 0; i < 100; i++) {
-      addr += magma::page_size() * 100;
+      addr = distribution(random_generator) * magma::page_size() + minimum_address;
       if (buffer->MapAtCpuAddr(addr, 0, magma::page_size()))
         break;
     }
@@ -625,10 +638,10 @@ TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegion
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
 
-// TODO(fxbug.dev/57091)
-#if !defined(HAS_FEATURE_ASAN)
 TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 
+// TODO(fxbug.dev/57091)
+#if !defined(HAS_FEATURE_ASAN)
 TEST(PlatformBuffer, MapConstrained) { TestPlatformBuffer::MapConstrained(); }
 
 TEST(PlatformBuffer, Padding) { TestPlatformBuffer::Padding(); }
