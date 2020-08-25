@@ -29,6 +29,8 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(5);
 #[cfg(test)]
 const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(90);
 
+const MAX_NCP_DEBUG_LINE_LEN: usize = 240;
+
 /// Convenience macro for handling timeouts.
 #[macro_export]
 macro_rules! ncp_cmd_timeout (
@@ -69,6 +71,9 @@ pub struct SpinelDriver<DS> {
     exclusive_task_lock: futures::lock::Mutex<()>,
 
     did_vend_main_task: std::sync::atomic::AtomicBool,
+
+    /// Debug Output Buffer
+    ncp_debug_buffer: parking_lot::Mutex<Vec<u8>>,
 }
 
 impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
@@ -81,6 +86,7 @@ impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
             ncp_did_reset: AsyncCondition::new(),
             exclusive_task_lock: Default::default(),
             did_vend_main_task: Default::default(),
+            ncp_debug_buffer: Default::default(),
         }
     }
 }

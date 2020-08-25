@@ -64,11 +64,40 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
 /// State synchronization
 impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+    fn print_ncp_debug_line(&self, line: &[u8]) {
+        match std::str::from_utf8(line) {
+            Ok(line) => fx_log_info!("NCP-DEBUG: {:?}", line),
+            Err(_) => fx_log_info!("NCP-DEBUG: Non-UTF8: {:x?}", line),
+        }
+    }
+
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_is: {:?} {:?}", prop, value);
+        fx_log_info!("on_prop_value_is: {:?} {:x?}", prop, value);
         match prop {
+            Prop::Stream(PropStream::Debug) => {
+                let mut ncp_debug_buffer = self.ncp_debug_buffer.lock();
+
+                // Append the data to the end of the existing debug buffer.
+                std::io::Write::write_all(&mut *ncp_debug_buffer, value)
+                    .expect("Unable to write to NCP debug buffer");
+
+                // Look for newlines and print out all of the complete lines.
+                while let Some(line) = ncp_debug_buffer.split(|c| *c == b'\n').next() {
+                    self.print_ncp_debug_line(line);
+                    let len = line.len();
+                    ncp_debug_buffer.drain(..len);
+                }
+
+                // If our buffer is still larger than our max buffer size, go ahead
+                // and break up the line.
+                while ncp_debug_buffer.len() >= MAX_NCP_DEBUG_LINE_LEN {
+                    self.print_ncp_debug_line(&ncp_debug_buffer[..MAX_NCP_DEBUG_LINE_LEN]);
+                    ncp_debug_buffer.drain(..MAX_NCP_DEBUG_LINE_LEN);
+                }
+            }
+
             Prop::Net(PropNet::Saved) => {
                 let saved = bool::try_unpack_from_slice(value)?;
                 let mut driver_state = self.driver_state.lock();
