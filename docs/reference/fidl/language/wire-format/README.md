@@ -795,19 +795,16 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 
 *Flags[0]*
 
-| Bit     | Current Usage                                                                                                                                                                   | Past Usages |
-|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
-| 1       | Unused                                                                                                                                                                          |             |
-| 1       | Unused                                                                                                                                                                          |             |
-| 1       | Unused                                                                                                                                                                          |             |
-| 7 (MSB) | Unused                                                                                                                                                                          |             |
-| 6       | Unused                                                                                                                                                                          |             |
-| 5       | Unused                                                                                                                                                                          |             |
-| 4       | Unused                                                                                                                                                                          |             |
-| 3       | Unused                                                                                                                                                                          |             |
-| 2       | Unused                                                                                                                                                                          |             |
-| 1       | Unused                                                                                                                                                                          |             |
-| 0       | Unused                                                                                                                                                                          |             |
+| Bit     | Current Usage                                                | Past Usages |
+|---------|--------------------------------------------------------------|-------------|
+| 7 (MSB) | Unused                                                       |             |
+| 6       | Unused                                                       |             |
+| 5       | Unused                                                       |             |
+| 4       | Unused                                                       |             |
+| 3       | Unused                                                       |             |
+| 2       | Unused                                                       |             |
+| 1       | Unused                                                       |             |
+| 0       | | Indicates whether static unions should be encoded as xunions ([FTP-015]) |
 
 *Flags[1]*
 
@@ -847,6 +844,7 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
+[FTP-015]: /docs/contribute/governance/fidl/ftp/ftp-015.md
 [FTP-030]: /docs/contribute/governance/fidl/ftp/ftp-030.md
 [FTP-059]: /docs/contribute/governance/fidl/ftp/ftp-059.md
 [abi-compat]: /docs/development/languages/fidl/guides/abi-compat.md
