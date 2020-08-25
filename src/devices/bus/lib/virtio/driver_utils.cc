@@ -11,24 +11,25 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <ddktl/protocol/pci.h>
+
 fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> GetBtiAndBackend(
     zx_device_t* bus_device) {
   zx_status_t status;
-  pci_protocol_t pci;
+  ddk::PciProtocolClient pci(bus_device);
 
-  // grab the pci device and configuration to pass to the backend
-  if (device_get_protocol(bus_device, ZX_PROTOCOL_PCI, &pci)) {
+  if (!pci.is_valid()) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_pcie_device_info_t info;
-  status = pci_get_device_info(&pci, &info);
+  status = pci.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     return fit::error(status);
   }
 
   zx::bti bti;
-  status = pci_get_bti(&pci, 0, bti.reset_and_get_address());
+  status = pci.GetBti(0, &bti);
   if (status != ZX_OK) {
     return fit::error(status);
   }
@@ -39,14 +40,14 @@ fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> G
   // interface.
   std::unique_ptr<virtio::Backend> backend = nullptr;
   uint8_t offset;
-  if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
+  if (pci.GetFirstCapability(PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
     zxlogf(TRACE, "virtio %02x:%02x.%1x using modern PCI backend", info.bus_id, info.dev_id,
            info.func_id);
-    backend.reset(new virtio::PciModernBackend(pci, info));
+    backend.reset(new virtio::PciModernBackend(std::move(pci), info));
   } else {
     zxlogf(TRACE, "virtio %02x:%02x.%1x using legacy PCI backend", info.bus_id, info.dev_id,
            info.func_id);
-    backend.reset(new virtio::PciLegacyBackend(pci, info));
+    backend.reset(new virtio::PciLegacyBackend(std::move(pci), info));
   }
 
   status = backend->Bind();

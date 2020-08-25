@@ -14,35 +14,35 @@ namespace virtio {
 
 // These require the backend lock to be held due to the value held in
 // bar0_base_ rather than anything having to do with the IO writes.
-void PciLegacyBackend::IoReadLocked(uint16_t offset, uint8_t* val) TA_REQ(lock_) {
+void PciLegacyBackend::IoReadLocked(uint16_t offset, uint8_t* val) {
   *val = inp(static_cast<uint16_t>(bar0_base_ + offset));
   zxlogf(TRACE, "%s: IoReadLocked8(%#x) = %#x", tag(), offset, *val);
 }
-void PciLegacyBackend::IoReadLocked(uint16_t offset, uint16_t* val) TA_REQ(lock_) {
+void PciLegacyBackend::IoReadLocked(uint16_t offset, uint16_t* val) {
   *val = inpw(static_cast<uint16_t>(bar0_base_ + offset));
   zxlogf(TRACE, "%s: IoReadLocked16(%#x) = %#x", tag(), offset, *val);
 }
-void PciLegacyBackend::IoReadLocked(uint16_t offset, uint32_t* val) TA_REQ(lock_) {
+void PciLegacyBackend::IoReadLocked(uint16_t offset, uint32_t* val) {
   *val = inpd(static_cast<uint16_t>(bar0_base_ + offset));
   zxlogf(TRACE, "%s: IoReadLocked32(%#x) = %#x", tag(), offset, *val);
 }
-void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint8_t val) TA_REQ(lock_) {
+void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint8_t val) {
   outp(static_cast<uint16_t>(bar0_base_ + offset), val);
   zxlogf(TRACE, "%s: IoWriteLocked8(%#x) = %#x", tag(), offset, val);
 }
-void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint16_t val) TA_REQ(lock_) {
+void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint16_t val) {
   outpw(static_cast<uint16_t>(bar0_base_ + offset), val);
   zxlogf(TRACE, "%s: IoWriteLocked16(%#x) = %#x", tag(), offset, val);
 }
-void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint32_t val) TA_REQ(lock_) {
+void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint32_t val) {
   outpd(static_cast<uint16_t>(bar0_base_ + offset), val);
   zxlogf(TRACE, "%s: IoWriteLocked32(%#x) = %#x", tag(), offset, val);
 }
 
 zx_status_t PciLegacyBackend::Init() {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   zx_pci_bar_t bar0;
-  zx_status_t status = pci_get_bar(&pci_, 0u, &bar0);
+  zx_status_t status = pci().GetBar(0u, &bar0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Couldn't get IO bar for device: %d", tag(), status);
     return status;
@@ -60,35 +60,35 @@ zx_status_t PciLegacyBackend::Init() {
   zxlogf(INFO,
          "%s: %02x:%02x.%01x using legacy backend (io base %#04x, "
          "io size: %#04zx, device base %#04x\n",
-         tag(), info_.bus_id, info_.dev_id, info_.func_id, bar0_base_, bar0.size,
+         tag(), info().bus_id, info().dev_id, info().func_id, bar0_base_, bar0.size,
          device_cfg_offset_);
   return ZX_OK;
 }
 
 PciLegacyBackend::~PciLegacyBackend() {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   bar0_base_ = 0;
   device_cfg_offset_ = 0;
 }
 
 // value pointers are used to maintain type safety with field width
 void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint8_t* value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
 void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint16_t* value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
 void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint32_t* value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
 void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint64_t* value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   auto val = reinterpret_cast<uint32_t*>(value);
 
   IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), &val[0]);
@@ -96,21 +96,21 @@ void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint64_t* value) {
 }
 
 void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint8_t value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
 void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint16_t value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
 void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint32_t value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint64_t value) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   auto words = reinterpret_cast<uint32_t*>(&value);
   IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), words[0]);
   IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset + sizeof(uint32_t)), words[1]);
@@ -118,7 +118,7 @@ void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint64_t value) {
 
 // Get the ring size of a specific index
 uint16_t PciLegacyBackend::GetRingSize(uint16_t index) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   uint16_t val;
   IoWriteLocked(VIRTIO_PCI_QUEUE_SELECT, index);
   IoReadLocked(VIRTIO_PCI_QUEUE_SIZE, &val);
@@ -129,7 +129,7 @@ uint16_t PciLegacyBackend::GetRingSize(uint16_t index) {
 // Set up ring descriptors with the backend.
 void PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc,
                                zx_paddr_t pa_avail, zx_paddr_t pa_used) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   // Virtio 1.0 section 2.4.2
   IoWriteLocked(VIRTIO_PCI_QUEUE_SELECT, index);
   IoWriteLocked(VIRTIO_PCI_QUEUE_SIZE, count);
@@ -138,7 +138,7 @@ void PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_des
 }
 
 void PciLegacyBackend::RingKick(uint16_t ring_index) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoWriteLocked(VIRTIO_PCI_QUEUE_NOTIFY, ring_index);
   zxlogf(TRACE, "%s: kicked ring %u", tag(), ring_index);
 }
@@ -149,7 +149,7 @@ bool PciLegacyBackend::ReadFeature(uint32_t feature) {
     return false;
   }
 
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   uint32_t val;
 
   ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
@@ -165,7 +165,7 @@ void PciLegacyBackend::SetFeature(uint32_t feature) {
     return;
   }
 
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   uint32_t val;
   ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
   IoReadLocked(VIRTIO_PCI_DRIVER_FEATURES, &val);
@@ -178,13 +178,13 @@ void PciLegacyBackend::SetFeature(uint32_t feature) {
 zx_status_t PciLegacyBackend::ConfirmFeatures() { return ZX_OK; }
 
 void PciLegacyBackend::DeviceReset() {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   IoWriteLocked(VIRTIO_PCI_DEVICE_STATUS, 0u);
   zxlogf(TRACE, "%s: device reset", tag());
 }
 
 void PciLegacyBackend::SetStatusBits(uint8_t bits) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   uint8_t status;
   IoReadLocked(VIRTIO_PCI_DEVICE_STATUS, &status);
   IoWriteLocked(VIRTIO_PCI_DEVICE_STATUS, static_cast<uint8_t>(status | bits));
@@ -201,7 +201,7 @@ void PciLegacyBackend::DriverStatusOk() {
 }
 
 uint32_t PciLegacyBackend::IsrStatus() {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock guard(&lock());
   uint8_t isr_status;
   IoReadLocked(VIRTIO_PCI_ISR_STATUS, &isr_status);
   return isr_status & (VIRTIO_ISR_QUEUE_INT | VIRTIO_ISR_DEV_CFG_INT);

@@ -6,23 +6,25 @@
 
 #include <assert.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls/port.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/pci.h>
+#include <ddktl/protocol/pci.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
 
 namespace virtio {
 
-PciBackend::PciBackend(pci_protocol_t pci, zx_pcie_device_info_t info) : pci_(pci), info_(info) {
+PciBackend::PciBackend(ddk::PciProtocolClient pci, zx_pcie_device_info_t info)
+    : pci_(pci), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }
 
 zx_status_t PciBackend::Bind() {
-  zx_handle_t tmp_handle;
+  zx::interrupt interrupt;
   zx_status_t st;
 
   st = zx::port::create(/*options=*/ZX_PORT_BIND_TO_INTERRUPT, &wait_port_);
@@ -32,35 +34,35 @@ zx_status_t PciBackend::Bind() {
   }
 
   // enable bus mastering
-  if ((st = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
+  if ((st = pci().EnableBusMaster(true)) != ZX_OK) {
     zxlogf(ERROR, "%s: cannot enable bus master %d", tag(), st);
     return st;
   }
 
   // try to set up our IRQ mode
-  if ((st = pci_configure_irq_mode(&pci_, 1)) != ZX_OK) {
+  if ((st = pci().ConfigureIrqMode(1)) != ZX_OK) {
     zxlogf(ERROR, "%s: failed to configure irqs: %d", tag(), st);
     return st;
   }
 
-  if ((st = pci_map_interrupt(&pci_, 0, &tmp_handle)) != ZX_OK) {
+  if ((st = pci().MapInterrupt(0, &interrupt)) != ZX_OK) {
     zxlogf(ERROR, "%s: failed to map irq %d", tag(), st);
     return st;
   }
 
-  st = zx_interrupt_bind(tmp_handle, wait_port_.get(), /*key=*/0, /*options=*/0);
+  st = interrupt.bind(wait_port_, /*key=*/0, /*options=*/0);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: failed to bind interrupt %d", tag(), st);
     return st;
   }
 
-  irq_handle_.reset(tmp_handle);
+  irq_handle_ = std::move(interrupt);
   zxlogf(TRACE, "%s: irq handle %u", tag(), irq_handle_.get());
   return Init();
 }
 
 zx_status_t PciBackend::InterruptValid() {
-  if (!irq_handle_.get()) {
+  if (!irq_handle_) {
     return ZX_ERR_BAD_HANDLE;
   }
   return ZX_OK;
