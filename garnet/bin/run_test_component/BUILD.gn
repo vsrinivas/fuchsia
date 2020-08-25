@@ -83,7 +83,15 @@ executable("bin") {
   ]
 }
 
-package("run-test-component") {
+group("run-test-component") {
+  testonly = true
+  deps = [
+    ":run-test-component-pkg",
+    "//src/diagnostics/archivist:archivist-for-embedding",
+  ]
+}
+
+package("run-test-component-pkg") {
   testonly = true
   package_name = "run_test_component"
 

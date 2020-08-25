@@ -214,7 +214,6 @@ resource("embedding-config-file") {
 group("with_default_config") {
   deps = [
     ":archivist",
-    ":archivist-for-embedding",
     ":archivist_config",
     ":observer",
   ]

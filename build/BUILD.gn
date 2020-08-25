@@ -96,7 +96,7 @@ group("deprecated_package_underscore") {
     "//garnet/bin/power_manager:power_manager",
     "//garnet/bin/power_manager:power_manager_tests",
     "//garnet/bin/run_test_component/test:run_test_component_test",
-    "//garnet/bin/run_test_component:run-test-component",
+    "//garnet/bin/run_test_component:run-test-component-pkg",
     "//garnet/bin/run_test_component:run_test_component_unittests",
     "//garnet/bin/sched:sched_tests",
     "//garnet/bin/setui:setui_service",
