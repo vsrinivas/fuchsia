@@ -56,10 +56,10 @@ class LoadBalancer {
     // Visit all cpus and gather expected runtime
     cpu_count_ = 0;
     Context::ForEachPercpu([&](cpu_num_t logical_id, percpu* cpu) {
-      cpus_[cpu_count_++] = {
-        .performance = cpu->performance_scale,
+      cpus_[cpu_count_++] = Entry{
+        .performance = cpu->scheduler.performance_scale(),
         .logical_id = logical_id,
-        .queue_time = cpu->scheduler.predicted_queue_time_ns()
+        .queue_time = cpu->scheduler.predicted_queue_time_ns().raw_value(),
       };
       LTRACEF("QueueTime cpu: %u time: %" PRId64 "\n", logical_id, cpus_[cpu_count_ - 1].queue_time);
     });
@@ -103,7 +103,7 @@ class LoadBalancer {
  private:
   struct Entry {
     bool over_threshold = false;
-    percpu::PerformanceScale performance;
+    SchedPerformanceScale performance;
     cpu_num_t logical_id;
     // For a given thread on a cpu this is how long it should expect to queue
     // between each opportunity to run. This is our metric for cpu load.

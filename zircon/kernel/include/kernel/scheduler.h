@@ -28,6 +28,11 @@ struct percpu;
 #define SCHEDULER_TRACING_LEVEL 0
 #endif
 
+// Performance scale of a CPU relative to the highest performance CPU in the
+// system. The precision accommodates the 8bit performance values available for
+// ARM and x86.
+using SchedPerformanceScale = ffl::Fixed<int32_t, 8>;
+
 // Implements fair and deadline scheduling algorithms and manages the associated
 // per-CPU state.
 class Scheduler {
@@ -63,11 +68,30 @@ class Scheduler {
   // Returns the number of the CPU this scheduler instance is associated with.
   cpu_num_t this_cpu() const { return this_cpu_; }
 
-  zx_duration_t predicted_queue_time_ns() const {
-    return exported_total_expected_runtime_ns_.load().raw_value();
+  // Returns the index of the logical cluster of the CPU this scheduler instance
+  // is associated with.
+  size_t cluster() const { return cluster_; }
+
+  // Returns the lock-free value of the predicted queue time for the CPU this
+  // scheduler instance is associated with.
+  SchedDuration predicted_queue_time_ns() const {
+    return exported_total_expected_runtime_ns_.load();
   }
+
+  // Returns the lock-free value of the predicted deadline utilization for the
+  // CPU this scheduler instance is associated with.
   SchedUtilization predicted_deadline_utilization() const {
     return exported_total_deadline_utilization_.load();
+  }
+
+  // Returns the performance scale of the CPU this scheduler instance is
+  // associated with.
+  SchedPerformanceScale performance_scale() const { return performance_scale_; }
+
+  // Returns the reciprocal performance scale of the CPU this scheduler instance
+  // is associated with.
+  SchedPerformanceScale performance_scale_reciprocal() const {
+    return performance_scale_reciprocal_;
   }
 
   // Public entry points.
@@ -115,9 +139,10 @@ class Scheduler {
       TA_REQ(thread_lock);
 
  private:
-  // Allow percpu to init our cpu number.
+  // Allow percpu to init our cpu number and performance scale.
   friend struct percpu;
-
+  // Load balancer test.
+  friend struct LoadBalancerTestAccess;
   // Allow tests to modify our state.
   friend class LoadBalancerTest;
 
@@ -394,10 +419,24 @@ class Scheduler {
   TA_GUARDED(thread_lock)
   SchedDuration target_latency_grans_{kDefaultTargetLatency / kDefaultMinimumGranularity};
 
-  // The scheduling period threshold over which the CPU is considered
-  // oversubscribed.
-  TA_GUARDED(thread_lock)
-  SchedDuration peak_latency_grans_{kDefaultPeakLatency / kDefaultMinimumGranularity};
+  // Performance scale of this CPU relative to the highest performance CPU. This
+  // value is determined from the system topology, when available.
+  SchedPerformanceScale performance_scale_{1};
+  SchedPerformanceScale performance_scale_reciprocal_{1};
+
+  // The CPU this scheduler instance is associated with.
+  // NOTE: This member is not initialized to prevent clobbering the value set
+  // by sched_early_init(), which is called before the global ctors that
+  // initialize the rest of the members of this class.
+  // TODO(eieio): Figure out a better long-term solution to determine which
+  // CPU is associated with each instance of this class. This is needed by
+  // non-static methods that are called from arbitrary CPUs, namely Insert().
+  cpu_num_t this_cpu_;
+
+  // The index of the logical cluster this CPU belongs to. CPUs with the same
+  // logical cluster index have the best chance of good cache affinity with
+  // respect to load distribution decisions.
+  size_t cluster_{0};
 
   // Values exported for lock-free access across CPUs. These are mirrors of the
   // members of the same name without the exported_ prefix. This avoids
@@ -408,15 +447,6 @@ class Scheduler {
   // cache performance.
   RelaxedAtomic<SchedDuration> exported_total_expected_runtime_ns_{SchedNs(0)};
   RelaxedAtomic<SchedUtilization> exported_total_deadline_utilization_{SchedUtilization{0}};
-
-  // The CPU this scheduler instance is associated with.
-  // NOTE: This member is not initialized to prevent clobbering the value set
-  // by sched_early_init(), which is called before the global ctors that
-  // initialize the rest of the members of this class.
-  // TODO(eieio): Figure out a better long-term solution to determine which
-  // CPU is associated with each instance of this class. This is needed by
-  // non-static methods that are called from arbitrary CPUs, namely Insert().
-  cpu_num_t this_cpu_;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_

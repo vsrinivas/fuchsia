@@ -935,20 +935,17 @@ void Scheduler::UpdatePeriod() {
 
   DEBUG_ASSERT(runnable_fair_task_count_ >= 0);
   DEBUG_ASSERT(minimum_granularity_ns_ > 0);
-  DEBUG_ASSERT(peak_latency_grans_ > 0);
   DEBUG_ASSERT(target_latency_grans_ > 0);
 
   const int64_t num_tasks = runnable_fair_task_count_;
-  const int64_t peak_tasks = Round<int64_t>(peak_latency_grans_);
   const int64_t normal_tasks = Round<int64_t>(target_latency_grans_);
 
   // The scheduling period stretches when there are too many tasks to fit
   // within the target latency.
   scheduling_period_grans_ = SchedDuration{num_tasks > normal_tasks ? num_tasks : normal_tasks};
 
-  SCHED_LTRACEF("num_tasks=%" PRId64 " peak_tasks=%" PRId64 " normal_tasks=%" PRId64
-                " period_grans=%" PRId64 "\n",
-                num_tasks, peak_tasks, normal_tasks, scheduling_period_grans_.raw_value());
+  SCHED_LTRACEF("num_tasks=%" PRId64 " normal_tasks=%" PRId64 " period_grans=%" PRId64 "\n",
+                num_tasks, normal_tasks, scheduling_period_grans_.raw_value());
 
   trace.End(Round<uint64_t>(scheduling_period_grans_), num_tasks);
 }
@@ -1485,7 +1482,7 @@ void Scheduler::MigrateUnpinnedThreads() {
   }
 }
 
-void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, SchedWeight weight,
+void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority, SchedWeight weight,
                                    cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate) {
   SchedulerState* const state = &thread->scheduler_state();
 
@@ -1553,7 +1550,7 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
       // but has not yet transitioned to ready.
       state->discipline_ = SchedDiscipline::Fair;
       state->fair_.weight = weight;
-      thread->wait_queue_state().UpdatePriorityIfBlocked(thread, original_priority_, propagate);
+      thread->wait_queue_state().UpdatePriorityIfBlocked(thread, original_priority, propagate);
       break;
 
     default:
@@ -1561,7 +1558,7 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
   }
 }
 
-void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
+void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority,
                                      const SchedDeadlineParams& params,
                                      cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate) {
   SchedulerState* const state = &thread->scheduler_state();
@@ -1640,7 +1637,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
       // but has not yet transitioned to ready.
       state->discipline_ = SchedDiscipline::Deadline;
       state->deadline_ = params;
-      thread->wait_queue_state().UpdatePriorityIfBlocked(thread, original_priority_, propagate);
+      thread->wait_queue_state().UpdatePriorityIfBlocked(thread, original_priority, propagate);
       break;
 
     default:
@@ -1666,18 +1663,18 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   // operate in those terms here. Abstract the notion of priority once the
   // deadline scheduler is available and remove this conversion once the
   // kernel uses the abstraction throughout.
-  const int original_priority_ = state->effective_priority_;
+  const int original_priority = state->effective_priority_;
   state->base_priority_ = priority;
   state->effective_priority_ = ktl::max(state->base_priority_, state->inherited_priority_);
 
   // Perform the state-specific updates if the discipline or effective priority
   // changed.
-  if (IsDeadlineThread(thread) || state->effective_priority_ != original_priority_) {
-    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(state->effective_priority_),
+  if (IsDeadlineThread(thread) || state->effective_priority_ != original_priority) {
+    UpdateWeightCommon(thread, original_priority, PriorityToWeight(state->effective_priority_),
                        cpus_to_reschedule_mask, PropagatePI::Yes);
   }
 
-  trace.End(original_priority_, state->effective_priority_);
+  trace.End(original_priority, state->effective_priority_);
 }
 
 void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,
@@ -1700,18 +1697,18 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
   // Always set deadline threads to the highest fair priority. This is a
   // workaround until deadline priority inheritance is worked out.
   // TODO(eieio): Replace this with actual deadline PI.
-  const int original_priority_ = state->effective_priority_;
+  const int original_priority = state->effective_priority_;
   state->base_priority_ = HIGHEST_PRIORITY;
   state->inherited_priority_ = -1;
   state->effective_priority_ = state->base_priority_;
 
   // Perform the state-specific updates if the discipline or deadline params changed.
   if (changed) {
-    UpdateDeadlineCommon(thread, original_priority_, params, cpus_to_reschedule_mask,
+    UpdateDeadlineCommon(thread, original_priority, params, cpus_to_reschedule_mask,
                          PropagatePI::Yes);
   }
 
-  trace.End(original_priority_, state->effective_priority_);
+  trace.End(original_priority, state->effective_priority_);
 }
 
 void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask) {
@@ -1730,17 +1727,17 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
     return;
   }
 
-  const int original_priority_ = state->effective_priority_;
+  const int original_priority = state->effective_priority_;
   state->inherited_priority_ = priority;
   state->effective_priority_ = ktl::max(state->base_priority_, state->inherited_priority_);
 
   // Perform the state-specific updates if the effective priority changed.
-  if (state->effective_priority_ != original_priority_) {
-    UpdateWeightCommon(thread, original_priority_, PriorityToWeight(state->effective_priority_),
+  if (state->effective_priority_ != original_priority) {
+    UpdateWeightCommon(thread, original_priority, PriorityToWeight(state->effective_priority_),
                        cpus_to_reschedule_mask, PropagatePI::No);
   }
 
-  trace.End(original_priority_, state->effective_priority_);
+  trace.End(original_priority, state->effective_priority_);
 }
 
 void Scheduler::TimerTick(SchedTime now) {

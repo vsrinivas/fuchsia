@@ -155,7 +155,7 @@ class SchedulerState {
   uint64_t generation() const { return generation_; }
 
   zx_time_t last_started_running() const { return last_started_running_.raw_value(); }
-  zx_duration_t remaining_time_slice() const { return remaining_time_slice_.raw_value(); }
+  zx_duration_t time_slice_ns() const { return time_slice_ns_.raw_value(); }
   zx_duration_t runtime_ns() const { return runtime_ns_.raw_value(); }
   zx_duration_t expected_runtime_ns() const { return expected_runtime_ns_.raw_value(); }
 
@@ -216,9 +216,6 @@ class SchedulerState {
   //   * THREAD_READY: The time the thread entered the run queue.
   //   * Otherwise: The time the thread last ran.
   SchedTime last_started_running_{0};
-
-  // The duration from the last dequeue of the thread until the next preemption.
-  SchedDuration remaining_time_slice_{0};
 
   // The total time in THREAD_RUNNING state. If the thread is currently in
   // THREAD_RUNNING state, this excludes the time accrued since it last left the

@@ -79,10 +79,10 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
 
       dprintf(INFO, "CPU performance scales:\n");
       for (cpu_num_t i = 0; i < processor_count_; i++) {
-        PerformanceScale scale =
+        SchedPerformanceScale scale =
             ffl::FromRatio(performance_class[i] + 1, max_performance_class + 1);
-        processor_index_[i]->performance_scale = scale;
-        processor_index_[i]->performance_scale_reciprocal = 1 / scale;
+        processor_index_[i]->scheduler.performance_scale_ = scale;
+        processor_index_[i]->scheduler.performance_scale_reciprocal_ = 1 / scale;
         dprintf(INFO, "CPU %2u: %s\n", i, Format(scale).c_str());
       }
     } else {
@@ -99,6 +99,9 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
   for (cpu_num_t i = 0; i < processor_count_; i++) {
     processor_index_[i]->search_set.Initialize(i, processor_count_);
     processor_index_[i]->search_set.Dump();
+
+    const size_t cluster = processor_index_[i]->search_set.cluster();
+    processor_index_[i]->scheduler.cluster_ = cluster;
   }
 }
 

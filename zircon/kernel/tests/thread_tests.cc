@@ -273,14 +273,6 @@ static void event_test() {
   printf("event tests done\n");
 }
 
-static int quantum_tester(void* arg) {
-  for (;;) {
-    printf("%p: in this thread. rq %" PRIi64 "\n", Thread::Current::Get(),
-           Thread::Current::Get()->scheduler_state().remaining_time_slice());
-  }
-  return 0;
-}
-
 static Event context_switch_event;
 static Event context_switch_done_event;
 

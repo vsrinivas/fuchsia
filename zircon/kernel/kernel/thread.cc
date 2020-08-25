@@ -1423,11 +1423,11 @@ void dump_thread_locked(Thread* t, bool full_dump) {
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d,%d], remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state_), (int)t->scheduler_state().curr_cpu_,
-            (int)t->scheduler_state().last_cpu_, t->scheduler_state().hard_affinity_,
-            t->scheduler_state().soft_affinity_, t->scheduler_state().effective_priority_,
-            t->scheduler_state().base_priority_, t->scheduler_state().inherited_priority_,
-            t->scheduler_state().remaining_time_slice());
+            thread_state_to_str(t->state_), (int)t->scheduler_state().curr_cpu(),
+            (int)t->scheduler_state().last_cpu(), t->scheduler_state().hard_affinity(),
+            t->scheduler_state().soft_affinity(), t->scheduler_state().effective_priority(),
+            t->scheduler_state().base_priority(), t->scheduler_state().inherited_priority(),
+            t->scheduler_state().time_slice_ns());
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     t->stack().DumpInfo(INFO);

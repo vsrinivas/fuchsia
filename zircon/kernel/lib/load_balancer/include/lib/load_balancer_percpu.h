@@ -113,7 +113,8 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   const cpu_mask_t available_mask =
       thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask());
   const bool initial_cpu_available = ToMask(initial_cpu) & available_mask;
-  const zx_duration_t initial_runtime = GetScheduler(initial_cpu).predicted_queue_time_ns();
+  const zx_duration_t initial_runtime =
+      GetScheduler(initial_cpu).predicted_queue_time_ns().raw_value();
   // See if we are ready to shed load.
   if (initial_cpu_available && initial_runtime <= load_shed_threshold) {
     // If we are under the load-shed threshold then stick with this cpu.
@@ -130,7 +131,8 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
     if (unlikely((ToMask(cpus.cpus[i]) & available_mask) == 0))
       continue;
 
-    const zx_duration_t candidate_runtime = GetScheduler(cpus.cpus[i]).predicted_queue_time_ns();
+    const zx_duration_t candidate_runtime =
+        GetScheduler(cpus.cpus[i]).predicted_queue_time_ns().raw_value();
     if (candidate_runtime < lowest_runtime) {
       lowest_cpu = cpus.cpus[i];
       lowest_runtime = candidate_runtime;

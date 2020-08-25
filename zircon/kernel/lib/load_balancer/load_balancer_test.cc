@@ -17,6 +17,12 @@
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 
+struct LoadBalancerTestAccess {
+  static void SetPerformanceScale(Scheduler* scheduler, SchedPerformanceScale scale) {
+    scheduler->performance_scale_ = scale;
+  }
+};
+
 namespace {
 using load_balancer::CpuState;
 using load_balancer::LoadBalancer;
@@ -174,7 +180,8 @@ class LoadBalancerTest {
 
     for (size_t i = 0; i < percpus.size(); i++) {
       ASSERT_EQ(0, TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
-      TestingContext::percpus_[i]->performance_scale = ffl::FromRatio((i < 2) ? 1 : 2, 2);
+      LoadBalancerTestAccess::SetPerformanceScale(&TestingContext::percpus_[i]->scheduler,
+                                                  ffl::FromRatio((i < 2) ? 1 : 2, 2));
     }
 
     LoadBalancer<TestingContext> lb;
@@ -208,7 +215,8 @@ class LoadBalancerTest {
 
     for (size_t i = 0; i < percpus.size(); i++) {
       ASSERT_EQ(0, TestingContext::percpus_[i]->load_balancer.target_cpus().cpu_count);
-      TestingContext::percpus_[i]->performance_scale = ffl::FromRatio((i < 2) ? 1 : 2, 2);
+      LoadBalancerTestAccess::SetPerformanceScale(&TestingContext::percpus_[i]->scheduler,
+                                                  ffl::FromRatio((i < 2) ? 1 : 2, 2));
     }
 
     LoadBalancer<TestingContext> lb;
