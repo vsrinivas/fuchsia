@@ -51,6 +51,16 @@ bool CeaEdidTimingExtension::validate() const {
   if (!(dtd_start_idx <= sizeof(payload) && base_validate<CeaEdidTimingExtension>(this))) {
     return false;
   }
+
+  // If this is zero, there is no DTDs present and no non-DTD data.
+  if (dtd_start_idx == 0) {
+    return true;
+  }
+
+  if (dtd_start_idx > 0 && dtd_start_idx < offsetof(CeaEdidTimingExtension, payload)) {
+    return false;
+  }
+
   size_t offset = 0;
   size_t dbc_end = dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
   while (offset < dbc_end) {

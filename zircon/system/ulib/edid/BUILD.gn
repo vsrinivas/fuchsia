@@ -12,6 +12,8 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/zx_library.gni")
 
 zx_library("edid") {
@@ -32,4 +34,28 @@ zx_library("edid") {
     "//zircon/public/lib/zx",
   ]
   public_deps = [ "//zircon/public/lib/hwreg" ]
+}
+
+test("edid-test") {
+  sources = [ "unit-tests.cc" ]
+  deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/edid",
+  ]
+}
+
+unittest_package("edid-test-package") {
+  package_name = "edid-test"
+  deps = [ ":edid-test" ]
+  tests = [
+    {
+      name = "edid-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":edid-test-package" ]
 }

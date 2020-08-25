@@ -8,5 +8,6 @@
 # placed within the proper `tests` target under //src.
 
 group("tests") {
-  deps = []
+  testonly = true
+  deps = [ "edid:tests" ]
 }
