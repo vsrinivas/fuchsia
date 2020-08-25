@@ -313,17 +313,20 @@ mod tests {
     /// - `sender`: The channel to send the InputEvent over.
     fn send_input_event(mut sender: Sender<input_device::InputEvent>) -> input_device::InputEvent {
         let mut rng = rand::thread_rng();
+        let offset = Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 };
         let input_event = input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
-                movement: Position {
-                    x: rng.gen_range(0, 10) as f32,
-                    y: rng.gen_range(0, 10) as f32,
-                },
+                location: mouse::MouseLocation::Relative(offset),
                 phase: fidl_ui_input::PointerEventPhase::Move,
                 buttons: HashSet::new(),
+                movement: offset,
             }),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
-                mouse::MouseDeviceDescriptor { device_id: 1 },
+                mouse::MouseDeviceDescriptor {
+                    device_id: 1,
+                    absolute_x_range: None,
+                    absolute_y_range: None,
+                },
             ),
             event_time: zx::Time::get(zx::ClockId::Monotonic).into_nanos()
                 as input_device::EventTime,

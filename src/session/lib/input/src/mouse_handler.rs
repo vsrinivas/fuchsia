@@ -14,15 +14,13 @@ use {
     std::collections::HashSet,
 };
 
-/// A [`MouseCursorHandler`] tracks the mouse position and renders a cursor.
-///
-/// Clients can customize the starting position for the cursor, and also specify
-/// a custom mouse cursor to render.
+/// A [`MouseHandler`] tracks the mouse position and sends updates to clients.
 pub struct MouseHandler {
     /// The current position.
     current_position: Position,
 
-    /// The maximum position, used to bound events sent to clients.
+    /// The maximum position sent to clients, used to bound relative movements
+    /// and scale absolute positions from device coordinates.
     max_position: Position,
 
     /// A [`Sender`] used to communicate the current position.
@@ -47,7 +45,7 @@ impl InputHandler for MouseHandler {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
             } => {
-                self.update_cursor_position(&mouse_event).await;
+                self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
                 self.send_events_to_scenic(
                     mouse_event.phase,
                     &mouse_event.buttons,
@@ -63,7 +61,7 @@ impl InputHandler for MouseHandler {
 }
 
 impl MouseHandler {
-    /// Creates a new [`MouseHandler `] that sends pointer events to Scenic and tracks cursor
+    /// Creates a new [`MouseHandler`] that sends pointer events to Scenic and tracks cursor
     /// position.
     ///
     /// # Parameters
@@ -88,19 +86,28 @@ impl MouseHandler {
 
     /// Updates the current cursor position according to the received mouse event.
     ///
-    /// The updated position is sent to a client via either `self.position_sender` or
-    /// `self.cursor_location_sender`.
+    /// The updated position is sent to a client via `self.position_sender`.
     ///
     /// If there is no movement, the location is not sent to clients.
     ///
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
-    async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement == Position::zero() {
-            return;
-        }
+    /// - `device_descriptor`: The descriptor for the input device generating the input reports.
+    async fn update_cursor_position(
+        &mut self,
+        mouse_event: &mouse::MouseEvent,
+        device_descriptor: &mouse::MouseDeviceDescriptor,
+    ) {
+        self.current_position = match mouse_event.location {
+            mouse::MouseLocation::Relative(offset) if offset != Position::zero() => {
+                self.current_position + offset
+            }
+            mouse::MouseLocation::Absolute(position) if position != self.current_position => {
+                self.scale_absolute_position(&position, &device_descriptor)
+            }
+            _ => return,
+        };
 
-        self.current_position += mouse_event.movement;
         Position::clamp(&mut self.current_position, Position::zero(), self.max_position);
 
         if let Some(position_sender) = &mut self.position_sender {
@@ -147,14 +154,38 @@ impl MouseHandler {
         session.enqueue(fidl_ui_scenic::Command::Input(send_pointer_command));
         session.flush();
     }
+
+    /// Returns an absolute cursor position scaled from device coordinates to the handler's
+    /// max position.
+    ///
+    /// Returns the original position if the device descriptor does not specify ranges
+    /// for absolute coordinates.
+    ///
+    /// # Parameters
+    /// - `position`: Absolute cursor position in device coordinates.
+    /// - `device_descriptor`: The descriptor for the input device generating the input reports.
+    fn scale_absolute_position(
+        &self,
+        position: &Position,
+        device_descriptor: &mouse::MouseDeviceDescriptor,
+    ) -> Position {
+        match (device_descriptor.absolute_x_range, device_descriptor.absolute_y_range) {
+            (Some(x_range), Some(y_range)) => {
+                let range_min = Position { x: x_range.min as f32, y: y_range.min as f32 };
+                let range_max = Position { x: x_range.max as f32, y: y_range.max as f32 };
+                self.max_position * ((*position - range_min) / (range_max - range_min))
+            }
+            _ => *position,
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*, crate::testing_utilities::create_mouse_event, crate::utils::Position,
-        fidl_fuchsia_ui_scenic as fidl_ui_scenic, fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::StreamExt,
+        fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
+        fuchsia_async as fasync, fuchsia_zircon as zx, futures::StreamExt,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
@@ -162,7 +193,11 @@ mod tests {
     const SCENIC_DISPLAY_HEIGHT: f32 = 150.0;
 
     fn mouse_device_descriptor(device_id: u32) -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Mouse(mouse::MouseDeviceDescriptor { device_id })
+        input_device::InputDeviceDescriptor::Mouse(mouse::MouseDeviceDescriptor {
+            device_id,
+            absolute_x_range: None,
+            absolute_y_range: None,
+        })
     }
 
     /// Creates a PointerEvent with the given parameters.
@@ -179,7 +214,7 @@ mod tests {
         event_time: input_device::EventTime,
     ) -> fidl_ui_input::PointerEvent {
         fidl_ui_input::PointerEvent {
-            event_time: event_time,
+            event_time,
             device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
@@ -255,12 +290,13 @@ mod tests {
             SCENIC_COMPOSITOR_ID,
         );
 
-        let cursor_movement = Position { x: 50.0, y: 75.0 };
+        let cursor_relative_position = Position { x: 50.0, y: 75.0 };
+        let cursor_location = mouse::MouseLocation::Relative(cursor_relative_position);
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            cursor_movement,
+            cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -268,7 +304,7 @@ mod tests {
         )];
 
         let expected_commands = vec![create_pointer_event(
-            cursor_movement,
+            cursor_relative_position,
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
             event_time,
@@ -282,7 +318,7 @@ mod tests {
             assert_command: verify_pointer_event,
         );
 
-        let expected_cursor_location = Position { x: cursor_movement.x, y: cursor_movement.y };
+        let expected_cursor_location = cursor_relative_position;
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),
@@ -310,13 +346,15 @@ mod tests {
         );
 
         let start = Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT };
-        let cursor_movement =
-            Position { x: SCENIC_DISPLAY_WIDTH + 2.0, y: SCENIC_DISPLAY_HEIGHT + 2.0 };
+        let cursor_location = mouse::MouseLocation::Relative(Position {
+            x: SCENIC_DISPLAY_WIDTH + 2.0,
+            y: SCENIC_DISPLAY_HEIGHT + 2.0,
+        });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            cursor_movement,
+            cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -366,12 +404,12 @@ mod tests {
             SCENIC_COMPOSITOR_ID,
         );
 
-        let cursor_movement = Position { x: -20.0, y: -15.0 };
+        let cursor_location = mouse::MouseLocation::Relative(Position { x: -20.0, y: -15.0 });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            cursor_movement,
+            cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -394,6 +432,82 @@ mod tests {
         );
 
         let expected_cursor_location = Position { x: 0.0, y: 0.0 };
+        match receiver.next().await {
+            Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
+            _ => assert!(false),
+        };
+    }
+
+    // Tests that an absolute mouse move event scales the location from device coordinates to
+    // between {0, 0} and the handler's maximum position.
+    #[fasync::run_until_stalled(test)]
+    async fn move_absolute_event() {
+        const DEVICE_ID: u32 = 1;
+
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+
+        let (sender, mut receiver) = futures::channel::mpsc::channel(1);
+
+        let mut mouse_handler = MouseHandler::new(
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            Some(sender),
+            scenic_session.clone(),
+            SCENIC_COMPOSITOR_ID,
+        );
+
+        // The location is rescaled from the device coordinate system defined
+        // by `absolute_x_range` and `absolute_y_range`, to the display coordinate
+        // system defined by `max_position`.
+        //
+        //          -50 y              0 +------------------ w
+        //            |                  |         .
+        //            |                  |         .
+        //            |                  |         .
+        // -50 x -----o----- 50   ->     | . . . . . . . . .
+        //            |                  |         .
+        //         * { x: -25, y: 25 }   |    * { x: w * 0.25, y: h * 0.75 }
+        //            |                  |         .
+        //           50                h |         .
+        //
+        // Where w = SCENIC_DISPLAY_WIDTH, h = SCENIC_DISPLAY_HEIGHT
+        let cursor_location = mouse::MouseLocation::Absolute(Position { x: -25.0, y: 25.0 });
+        let descriptor = input_device::InputDeviceDescriptor::Mouse(mouse::MouseDeviceDescriptor {
+            device_id: DEVICE_ID,
+            absolute_x_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
+            absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
+        });
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let input_events = vec![create_mouse_event(
+            cursor_location,
+            fidl_ui_input::PointerEventPhase::Move,
+            HashSet::<mouse::MouseButton>::new(),
+            event_time,
+            &descriptor,
+        )];
+
+        let expected_position =
+            Position { x: SCENIC_DISPLAY_WIDTH * 0.25, y: SCENIC_DISPLAY_HEIGHT * 0.75 };
+
+        let expected_commands = vec![create_pointer_event(
+            expected_position,
+            fidl_ui_input::PointerEventPhase::Move,
+            DEVICE_ID,
+            event_time,
+        )];
+
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: mouse_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_pointer_event,
+        );
+
+        let expected_cursor_location = expected_position;
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),

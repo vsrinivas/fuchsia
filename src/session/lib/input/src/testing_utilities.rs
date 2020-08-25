@@ -64,23 +64,24 @@ pub fn create_keyboard_event(
                 fidl_ui_input2::KeyEventPhase::Pressed => pressed_keys,
                 fidl_ui_input2::KeyEventPhase::Released => released_keys
             },
-            modifiers: modifiers,
+            modifiers,
         }),
         device_descriptor: device_descriptor.clone(),
-        event_time: event_time,
+        event_time,
     }
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a mouse report.
 ///
 /// # Parameters
-/// - `x`: The x location of the mouse report, in input device coordinates.
-/// - `y`: The y location of the mouse report, in input device coordinates.
+/// - `location`: The movement or position of the mouse report, in input device coordinates.
+///     [`MouseLocation::Relative`] represents movement, and
+///     [`MouseLocation::Absolute`] represents position.
 /// - `buttons`: The buttons to report as pressed in the mouse report.
 /// - `event_time`: The time of event.
 #[cfg(test)]
 pub fn create_mouse_input_report(
-    position: Position,
+    location: mouse::MouseLocation,
     buttons: Vec<u8>,
     event_time: i64,
 ) -> fidl_input_report::InputReport {
@@ -88,10 +89,22 @@ pub fn create_mouse_input_report(
         event_time: Some(event_time),
         keyboard: None,
         mouse: Some(fidl_input_report::MouseInputReport {
-            movement_x: Some(position.x as i64),
-            movement_y: Some(position.y as i64),
-            position_x: None,
-            position_y: None,
+            movement_x: match location {
+                mouse::MouseLocation::Relative(Position { x, .. }) => Some(x as i64),
+                _ => None,
+            },
+            movement_y: match location {
+                mouse::MouseLocation::Relative(Position { y, .. }) => Some(y as i64),
+                _ => None,
+            },
+            position_x: match location {
+                mouse::MouseLocation::Absolute(Position { x, .. }) => Some(x as i64),
+                _ => None,
+            },
+            position_y: match location {
+                mouse::MouseLocation::Absolute(Position { y, .. }) => Some(y as i64),
+                _ => None,
+            },
             scroll_h: None,
             scroll_v: None,
             pressed_buttons: Some(buttons),
@@ -106,28 +119,25 @@ pub fn create_mouse_input_report(
 /// Creates a [`mouse::MouseEvent`] with the provided parameters.
 ///
 /// # Parameters
-/// - `movement_x`: The x-movement to report in the event.
-/// - `movement_y`: The y-movement to report in the event.
+/// - `location`: The mouse location to report in the event.
 /// - `phase`: The phase of the buttons in the event.
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_mouse_event(
-    movement: Position,
+    location: mouse::MouseLocation,
     phase: fidl_ui_input::PointerEventPhase,
     buttons: HashSet<mouse::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
-            movement,
-            phase,
-            buttons,
-        }),
+        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
+            location, phase, buttons,
+        )),
         device_descriptor: device_descriptor.clone(),
-        event_time: event_time,
+        event_time,
     }
 }
 
