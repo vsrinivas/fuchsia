@@ -293,7 +293,15 @@ impl_sub_enum!(Prop::Thread, PropThread);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum PropIpv6 {
-    // TODO: Populate.
+    LlAddr,
+    MlAddr,
+    MlPrefix,
+    AddressTable,
+    RouteTable,
+    IcmpPingOffload,
+    MulticastAddressTable,
+    IcmpPingOffloadMode,
+
     Unknown(u32),
 }
 impl_sub_enum!(Prop::Ipv6, PropIpv6);
@@ -440,6 +448,14 @@ impl From<Prop> for u32 {
             Thread(PropThread::MgmtSetPendingDataset) => 0x151b,
             Thread(PropThread::Unknown(x)) => x,
 
+            Ipv6(PropIpv6::LlAddr) => 0x60,
+            Ipv6(PropIpv6::MlAddr) => 0x61,
+            Ipv6(PropIpv6::MlPrefix) => 0x62,
+            Ipv6(PropIpv6::AddressTable) => 0x63,
+            Ipv6(PropIpv6::RouteTable) => 0x64,
+            Ipv6(PropIpv6::IcmpPingOffload) => 0x65,
+            Ipv6(PropIpv6::MulticastAddressTable) => 0x66,
+            Ipv6(PropIpv6::IcmpPingOffloadMode) => 0x67,
             Ipv6(PropIpv6::Unknown(x)) => x,
 
             Unknown(x) => x,
@@ -562,6 +578,14 @@ impl From<u32> for Prop {
                 Thread(PropThread::Unknown(x))
             }
 
+            0x60 => Ipv6(PropIpv6::LlAddr),
+            0x61 => Ipv6(PropIpv6::MlAddr),
+            0x62 => Ipv6(PropIpv6::MlPrefix),
+            0x63 => Ipv6(PropIpv6::AddressTable),
+            0x64 => Ipv6(PropIpv6::RouteTable),
+            0x65 => Ipv6(PropIpv6::IcmpPingOffload),
+            0x66 => Ipv6(PropIpv6::MulticastAddressTable),
+            0x67 => Ipv6(PropIpv6::IcmpPingOffloadMode),
             x if (x >= 0x60 && x < 0x70) || (x >= 0x1600 && x < 0x1700) => {
                 Ipv6(PropIpv6::Unknown(x))
             }
