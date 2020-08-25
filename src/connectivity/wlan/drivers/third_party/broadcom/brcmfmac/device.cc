@@ -100,11 +100,24 @@ brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }
 const brcmf_pub* Device::drvr() const { return brcmf_pub_.get(); }
 
 zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
+  BRCMF_DBG(WLANPHY, "Received query request from SME");
   return WlanInterface::Query(brcmf_pub_.get(), out_info);
 }
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
+  const char* role = req->role == WLAN_INFO_MAC_ROLE_CLIENT ? "client" :
+                     req->role == WLAN_INFO_MAC_ROLE_AP ? "ap" :
+                     req->role == WLAN_INFO_MAC_ROLE_MESH ? "mesh" :
+                     "unknown type";
+
+  if (req->has_init_mac_addr) {
+    BRCMF_DBG(WLANPHY, "Creating %s interface (mac: %02x:%02x:%02x:%02x:%02x:%02x)", role,
+              req->init_mac_addr[0], req->init_mac_addr[1], req->init_mac_addr[2],
+              req->init_mac_addr[3], req->init_mac_addr[4], req->init_mac_addr[5]);
+  } else {
+    BRCMF_DBG(WLANPHY, "Creating %s interface", role);
+  }
   zx_status_t status = ZX_OK;
   wireless_dev* wdev = nullptr;
   uint16_t iface_id = 0;
@@ -163,12 +176,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
   }
 
   *out_iface_id = iface_id;
+  BRCMF_DBG(WLANPHY, "Interface %d created successfully", iface_id);
   return ZX_OK;
 }
 
 zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
   zx_status_t status = ZX_OK;
 
+  BRCMF_DBG(WLANPHY, "Destroying interface %d", iface_id);
   switch (iface_id) {
     case kClientInterfaceId: {
       if (client_interface_ == nullptr) {
@@ -202,10 +217,12 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       return ZX_ERR_NOT_FOUND;
     }
   }
+  BRCMF_DBG(WLANPHY, "Interface %d destroyed successfully", iface_id);
   return ZX_OK;
 }
 
 zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
+  BRCMF_DBG(WLANPHY, "Setting country code");
   if (country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -213,10 +230,12 @@ zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
 }
 
 zx_status_t Device::WlanphyImplClearCountry() {
+  BRCMF_DBG(WLANPHY, "Clearing country");
   return WlanInterface::ClearCountry(brcmf_pub_.get());
 }
 
 zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
+  BRCMF_DBG(WLANPHY, "Received request for country from SME");
   if (out_country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

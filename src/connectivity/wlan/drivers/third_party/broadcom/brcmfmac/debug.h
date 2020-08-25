@@ -98,13 +98,15 @@ class Debug {
     kSIM = 1 << 20,
     kWLANIF = 1 << 21,
     kSIMERRINJ = 1 << 22,
+    kWLANPHY = 1 << 23,
     kALL = ~0u,
   };
 
   // Enabled debug log categories. Include WLANIF messages in the log output (at level INFO) to
   // aid in recognizing important events.
   // http://fxb/29792 - Remove WLANIF once things have stabilized.
-  static constexpr uint32_t kBrcmfMsgFilter = static_cast<uint32_t>(Filter::kWLANIF);
+  static constexpr uint32_t kBrcmfMsgFilter = static_cast<uint32_t>(Filter::kWLANIF) |
+                                              static_cast<uint32_t>(Filter::kWLANPHY);
 
   // Check if a given debugging filter class is turned on.
   static constexpr bool IsFilterOn(Filter filter) {
