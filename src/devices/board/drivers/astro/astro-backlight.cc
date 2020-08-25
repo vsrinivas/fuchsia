@@ -41,7 +41,7 @@ constexpr device_fragment_t fragments[] = {
     {countof(i2c_fragment), i2c_fragment},
 };
 
-constexpr double kMaxBrightnessInNits = 250.0;
+constexpr double kMaxBrightnessInNits = 400.0;
 
 constexpr uint8_t kInitialRegisterValues[] = {
     // Registers
