@@ -52,6 +52,11 @@ const _V1_CONTEXT: &Context = &Context {};
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 	b.iter(|| {
+		{{- if .HandleDefs }}
+		let handle_defs = vec!{{ .HandleDefs }};
+		let handle_defs = unsafe { disown_handles(handle_defs) };
+		let handle_defs = handle_defs.as_ref();
+		{{- end }}
 		{{ .Value }}
 	});
 }
@@ -63,11 +68,8 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 			let handle_defs = vec!{{ .HandleDefs }};
 			let handle_defs = unsafe { disown_handles(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
-			let value = {{ .Value }};
-			value
-			{{- else }}
-			{{ .Value }}
 			{{- end }}
+			{{ .Value }}
 		},
 		|value| {
 			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
@@ -75,6 +77,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 				Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
 			});
 		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
 		BatchSize::SmallInput,
 	);
 }
@@ -87,14 +90,15 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 			let handle_defs = unsafe { disown_handles(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			let original_value = &mut {{ .Value }};
-			let bytes = &mut Vec::<u8>::new();
-			let handles = &mut Vec::<Handle>::new();
-			Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, original_value).unwrap();
+			let mut bytes = Vec::<u8>::new();
+			let mut handles = Vec::<Handle>::new();
+			Encoder::encode_with_context(_V1_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
 			(bytes, handles, {{ .ValueType }}::new_empty())
 		},
 		|(bytes, handles, value)| {
 			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
 		},
+		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
 		BatchSize::SmallInput,
 	);
 	{{- else }}

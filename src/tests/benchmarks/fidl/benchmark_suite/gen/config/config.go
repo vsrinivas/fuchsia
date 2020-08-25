@@ -51,6 +51,7 @@ type Benchmark struct {
 	Name                     string
 	Comment                  string
 	Config                   Config
+	HandleDefs               []HandleDef
 	Allowlist                []Binding
 	Denylist                 []Binding
 	EnableSendEventBenchmark bool
@@ -68,4 +69,41 @@ type Definition struct {
 	Comment  string
 	Config   Config
 	Denylist []Binding
+}
+
+type HandleSubtype string
+
+const (
+	Handle       HandleSubtype = "handle"
+	Bti                        = "bti"
+	Channel                    = "channel"
+	Clock                      = "clock"
+	DebugLog                   = "debuglog"
+	Event                      = "event"
+	Eventpair                  = "eventpair"
+	Exception                  = "exception"
+	Fifo                       = "fifo"
+	Guest                      = "guest"
+	Interrupt                  = "interrupt"
+	Iommu                      = "iommu"
+	Job                        = "job"
+	Pager                      = "pager"
+	PciDevice                  = "pcidevice"
+	Pmt                        = "pmt"
+	Port                       = "port"
+	Process                    = "process"
+	Profile                    = "profile"
+	Resource                   = "resource"
+	Socket                     = "socket"
+	Stream                     = "stream"
+	SuspendToken               = "suspendtoken"
+	Thread                     = "thread"
+	Time                       = "timer"
+	Vcpu                       = "vcpu"
+	Vmar                       = "vmar"
+	Vmo                        = "vmo"
+)
+
+type HandleDef struct {
+	Subtype HandleSubtype
 }

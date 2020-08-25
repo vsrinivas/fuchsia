@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"gen/config"
 	gidlutil "gen/gidl/util"
 	"log"
@@ -38,6 +39,13 @@ benchmark("{{ .Name }}") {
     {{- if .EnableEchoCallBenchmark }}
     enable_echo_call_benchmark = true,
     {{- end }}
+    {{- if .HandleDefs }}
+    handle_defs = {
+    {{- range $index, $hd := .HandleDefs }}
+	    #{{ $index }} = {{ $hd }},
+    {{- end }}
+    },
+    {{- end }}
     value = {{ .Value }},
 }
 {{- end }}
@@ -51,10 +59,23 @@ type gidlTmplInput struct {
 type gidlTmplBenchmark struct {
 	Name                     string
 	Comment                  string
+	HandleDefs               []string
 	Value                    string
 	Allowlist, Denylist      string
 	EnableSendEventBenchmark bool
 	EnableEchoCallBenchmark  bool
+}
+
+func formatHandleDef(hd config.HandleDef) string {
+	return fmt.Sprintf("%s()", hd.Subtype)
+}
+
+func formatHandleDefList(defs []config.HandleDef) []string {
+	formatted := make([]string, len(defs))
+	for i := range defs {
+		formatted[i] = formatHandleDef(defs[i])
+	}
+	return formatted
 }
 
 func genGidlFile(filepath string, gidl config.GidlFile) error {
@@ -67,6 +88,7 @@ func genGidlFile(filepath string, gidl config.GidlFile) error {
 		results = append(results, gidlTmplBenchmark{
 			Name:                     benchmark.Name,
 			Comment:                  formatComment(benchmark.Comment),
+			HandleDefs:               formatHandleDefList(benchmark.HandleDefs),
 			Value:                    formatObj(1, value),
 			Allowlist:                formatBindingList(benchmark.Allowlist),
 			Denylist:                 formatBindingList(benchmark.Denylist),

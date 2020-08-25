@@ -6,6 +6,7 @@ package util
 
 import (
 	"fmt"
+	"gen/config"
 	"strings"
 )
 
@@ -75,4 +76,12 @@ func Fields(start, end int, fieldPrefix string, values ValueGenerator) string {
 		builder.WriteString(fmt.Sprintf("%s%d: %s,", fieldPrefix, i, values.next()))
 	}
 	return builder.String()
+}
+
+func RepeatHandleDef(hd config.HandleDef, n int) []config.HandleDef {
+	defs := make([]config.HandleDef, n)
+	for i := range defs {
+		defs[i] = hd
+	}
+	return defs
 }
