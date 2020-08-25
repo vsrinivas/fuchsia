@@ -126,3 +126,49 @@ fn bear_with_sei_itu_t35() -> Result<(), anyhow::Error> {
         fuchsia_async::Executor::new()?.run_singlethreaded(spec.run())
     })
 }
+
+#[test]
+fn bear_with_large_sei_itu_t35() -> Result<(), anyhow::Error> {
+    with_large_stack(|| {
+        *LOGGER;
+
+        let mut nal_stream = H264SeiItuT35 {
+            country_code: H264SeiItuT35::COUNTRY_CODE_UNITED_STATES,
+            country_code_extension: 0,
+            payload: vec![0xde, 0xad, 0xbe, 0xef],
+        }
+        .as_bytes()?;
+
+        // Appending 0s to an annex-B NAL shouldn't change the behavior.
+        nal_stream.resize(428, 0);
+        File::open(BEAR_TEST_FILE)?.read_to_end(&mut nal_stream)?;
+
+        let stream =
+            Rc::new(TimestampedStream { source: H264Stream::from(nal_stream), timestamps: 0.. });
+
+        let frame_count_validator = Rc::new(OutputPacketCountValidator {
+            expected_output_packet_count: stream.video_frame_count(),
+        });
+
+        let hash_validator = Rc::new(VideoFrameHasher { expected_digest: *BEAR_DIGEST });
+
+        let spec = TestSpec {
+            cases: vec![TestCase {
+                name: "Modified Bear with Large SEI ITU-T T.35 data test run",
+                stream: stream,
+                validators: vec![
+                    Rc::new(TerminatesWithValidator {
+                        expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
+                    }),
+                    frame_count_validator,
+                    hash_validator,
+                ],
+                stream_options: None,
+            }],
+            relation: CaseRelation::Serial,
+            stream_processor_factory: Rc::new(DecoderFactory),
+        };
+
+        fuchsia_async::Executor::new()?.run_singlethreaded(spec.run())
+    })
+}

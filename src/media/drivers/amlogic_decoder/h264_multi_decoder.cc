@@ -2410,13 +2410,13 @@ void H264MultiDecoder::PumpDecoder() {
   // of an AU that splits across multiple packets.  At the moment none of these are supported.
   SubmitDataToHardware(current_input.data.data(), current_input.length, current_input.codec_buffer,
                        current_input.buffer_start_offset);
-  // TODO(fxbug.dev/13483): We'd like to add padding here (and potentially overwrite that padding
-  // later depending) so that the decoder would decode all the input data so far without requiring
-  // more input data (roughly 512-1024 bytes more), but first we'll need a reliable way to detect
-  // when we get a pic data done interrupt only because of a frame being interrupted by padding, vs.
-  // getting a pic data done for an actual complete frame decode.  One way would be to delay moving
-  // on to the next frame until we get both the pic data done _and_ <a slice header for the next
-  // frame _or_ a config DPB>.
+  // TODO(fxbug.dev/13483): We need padding here or else the decoder may stall forever in some
+  // circumstances (e.g. if the input ends between 768 and 832 bytes in the buffer). The padding
+  // will cause corruption if the input data isn't NAL unit aligned, but that works with existing
+  // clients. In the future we could try either detecting that padding was read and caused
+  // corruption, which would trigger redecoding of the frame, or we could continually feed as much
+  // input as is available and letting the decoder lag a bit behind.
+  SubmitDataToHardware(kPadding, kPaddingSize, nullptr, 0);
 
   // After this, we'll see an interrupt from the HW, either slice header or one of the out-of-data
   // interrupts.
