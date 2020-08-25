@@ -37,9 +37,7 @@ func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	fields := utils.MakeEthernetFields(e.LinkAddress(), r.LocalLinkAddress, r.RemoteLinkAddress, protocol)
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-		h := pkt.Header.Prepend(header.EthernetMinimumSize)
-		header.Ethernet(h).Encode(&fields)
-		pkt.LinkHeader = h
+		utils.AddEthernetHeaderWithFields(&fields, pkt)
 	}
 	return e.Endpoint.WritePackets(r, gso, pkts, protocol)
 }

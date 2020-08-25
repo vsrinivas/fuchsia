@@ -5,7 +5,6 @@
 package eth_test
 
 import (
-	"bytes"
 	"fmt"
 	"math/bits"
 	"syscall/zx"
@@ -18,12 +17,12 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
+	fifotestutil "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 
 	"fidl/fuchsia/hardware/ethernet"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -106,24 +105,10 @@ func checkTXDone(txFifo zx.Handle) error {
 func TestEndpoint(t *testing.T) {
 	const maxDepth = eth_gen.FifoMaxSize / uint(unsafe.Sizeof(eth_gen.FifoEntry{}))
 
-	packetBufferCmpOptions := []cmp.Option{
-		// Ignore `noCopy` marker.
-		//
-		// https://github.com/google/gvisor/blob/2d3b9d1/pkg/tcpip/stack/packet_buffer.go#L27
-		cmpopts.IgnoreTypes(struct{}{}),
-		cmpopts.IgnoreTypes(stack.PacketBufferEntry{}),
-		cmp.Comparer(func(x, y buffer.Prependable) bool {
-			return bytes.Equal(x.View(), y.View())
-		}),
-		cmp.Comparer(func(x, y buffer.VectorisedView) bool {
-			return bytes.Equal(x.ToView(), y.ToView())
-		}),
-	}
-
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			deviceImpl, deviceFifos := testutil.MakeEthernetDevice(t, ethernet.Info{}, depth)
+			deviceImpl, deviceFifos := fifotestutil.MakeEthernetDevice(t, ethernet.Info{}, depth)
 
 			var device struct {
 				iob       eth.IOBuffer
@@ -199,9 +184,9 @@ func TestEndpoint(t *testing.T) {
 						writeSize := depth + excess
 						var pkts stack.PacketBufferList
 						for i := uint32(0); i < writeSize; i++ {
-							pkts.PushBack(&stack.PacketBuffer{
-								Header: buffer.NewPrependable(int(endpoint.MaxHeaderLength())),
-							})
+							pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
+								ReserveHeaderBytes: int(endpoint.MaxHeaderLength()),
+							}))
 						}
 
 						// Simulate zero-sized incoming packets; zero-sized packets will increment fifo stats
@@ -293,10 +278,6 @@ func TestEndpoint(t *testing.T) {
 			// Test that we build the ethernet frame correctly.
 			// Test that we don't accidentally put unused bytes on the wire.
 			const packetHeader = "foo"
-			hdr := buffer.NewPrependable(int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5)
-			if got, want := copy(hdr.Prepend(len(packetHeader)), packetHeader), len(packetHeader); got != want {
-				t.Fatalf("got copy() = %d, want = %d", got, want)
-			}
 			const body = "bar"
 			route := stack.Route{
 				LocalLinkAddress:  localLinkAddress,
@@ -315,10 +296,15 @@ func TestEndpoint(t *testing.T) {
 
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
-					if err := endpoint.WritePacket(&route, nil, protocol, &stack.PacketBuffer{
-						Data:   data,
-						Header: hdr,
-					}); err != nil {
+					pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+						ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
+						Data:               data,
+					})
+					hdr := pkt.NetworkHeader().Push(len(packetHeader))
+					if n := copy(hdr, packetHeader); n != len(packetHeader) {
+						t.Fatalf("copied %d bytes, expected %d bytes", n, len(packetHeader))
+					}
+					if err := endpoint.WritePacket(&route, nil, protocol, pkt); err != nil {
 						t.Fatal(err)
 					}
 
@@ -334,7 +320,7 @@ func TestEndpoint(t *testing.T) {
 							Pkt: &stack.PacketBuffer{
 								Data: buffer.View(b[header.EthernetMinimumSize:]).ToVectorisedView(),
 							},
-						}, packetBufferCmpOptions...); diff != "" {
+						}, testutil.PacketBufferCmpTransformer); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}); err != nil {
@@ -419,7 +405,7 @@ func TestEndpoint(t *testing.T) {
 							Pkt: &stack.PacketBuffer{
 								Data: buffer.View(payload[:extra]).ToVectorisedView(),
 							},
-						}, args, packetBufferCmpOptions...); diff != "" {
+						}, args, testutil.PacketBufferCmpTransformer); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}

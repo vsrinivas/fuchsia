@@ -14,12 +14,12 @@ import (
 
 func TestRewritePacketICMPv4(t *testing.T) {
 	var tests = []struct {
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
+		packet   func() (buffer.View, buffer.VectorisedView)
 		newAddr  tcpip.Address
 		isSource bool
 	}{
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return icmpV4Packet([]byte("payload."), &icmpV4Params{
 					srcAddr:    "\x0a\x00\x00\x00",
 					dstAddr:    "\x0a\x00\x00\x02",
@@ -34,7 +34,7 @@ func TestRewritePacketICMPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		ipv4 := header.IPv4(hdr.View())
+		ipv4 := header.IPv4(hdr)
 		transportHeader := ipv4[ipv4.HeaderLength():]
 		icmpv4 := header.ICMPv4(transportHeader)
 
@@ -74,13 +74,13 @@ func TestRewritePacketICMPv4(t *testing.T) {
 
 func TestRewritePacketUDPv4(t *testing.T) {
 	var tests = []struct {
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
+		packet   func() (buffer.View, buffer.VectorisedView)
 		newAddr  tcpip.Address
 		newPort  uint16
 		isSource bool
 	}{
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -93,7 +93,7 @@ func TestRewritePacketUDPv4(t *testing.T) {
 			true,
 		},
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr:       "\x0a\x00\x00\x00",
 					srcPort:       100,
@@ -110,7 +110,7 @@ func TestRewritePacketUDPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		ipv4 := header.IPv4(hdr.View())
+		ipv4 := header.IPv4(hdr)
 		transportHeader := ipv4[ipv4.HeaderLength():]
 		udp := header.UDP(transportHeader)
 
@@ -175,13 +175,13 @@ func TestRewritePacketUDPv4(t *testing.T) {
 
 func TestRewritePacketTCPv4(t *testing.T) {
 	var tests = []struct {
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
+		packet   func() (buffer.View, buffer.VectorisedView)
 		newAddr  tcpip.Address
 		newPort  uint16
 		isSource bool
 	}{
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -194,7 +194,7 @@ func TestRewritePacketTCPv4(t *testing.T) {
 			true,
 		},
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -210,7 +210,7 @@ func TestRewritePacketTCPv4(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		ipv4 := header.IPv4(hdr.View())
+		ipv4 := header.IPv4(hdr)
 		transportHeader := ipv4[ipv4.HeaderLength():]
 		tcp := header.TCP(transportHeader)
 
@@ -262,13 +262,13 @@ func TestRewritePacketTCPv4(t *testing.T) {
 
 func TestRewritePacketUDPv6(t *testing.T) {
 	var tests = []struct {
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
+		packet   func() (buffer.View, buffer.VectorisedView)
 		newAddr  tcpip.Address
 		newPort  uint16
 		isSource bool
 	}{
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return udpV6Packet([]byte("payload"), &udpParams{
 					srcAddr: "\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
 					srcPort: 100,
@@ -284,7 +284,7 @@ func TestRewritePacketUDPv6(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		ipv6 := header.IPv6(hdr.View())
+		ipv6 := header.IPv6(hdr)
 		transportHeader := ipv6[header.IPv6MinimumSize:]
 		udp := header.UDP(transportHeader)
 
@@ -339,13 +339,13 @@ func TestRewritePacketUDPv6(t *testing.T) {
 
 func TestRewritePacketTCPv6(t *testing.T) {
 	var tests = []struct {
-		packet   func() (buffer.Prependable, buffer.VectorisedView)
+		packet   func() (buffer.View, buffer.VectorisedView)
 		newAddr  tcpip.Address
 		newPort  uint16
 		isSource bool
 	}{
 		{
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV6Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
 					srcPort: 100,
@@ -361,7 +361,7 @@ func TestRewritePacketTCPv6(t *testing.T) {
 
 	for _, test := range tests {
 		hdr, payload := test.packet()
-		ipv6 := header.IPv6(hdr.View())
+		ipv6 := header.IPv6(hdr)
 		transportHeader := ipv6[header.IPv6MinimumSize:]
 		tcp := header.TCP(transportHeader)
 

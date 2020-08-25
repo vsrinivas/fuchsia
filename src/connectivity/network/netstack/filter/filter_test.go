@@ -26,7 +26,7 @@ func TestRun(t *testing.T) {
 		ruleset     []Rule
 		dir         Direction
 		netProto    tcpip.NetworkProtocolNumber
-		packet      func() (buffer.Prependable, buffer.VectorisedView)
+		packet      func() (buffer.View, buffer.VectorisedView)
 		want        Action
 	}{
 		{
@@ -43,7 +43,7 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -67,7 +67,7 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -91,7 +91,7 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 101,
@@ -115,14 +115,14 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				headers, payload := tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
 					dstAddr: "\x0a\x00\x00\x02",
 					dstPort: 200,
 				})
-				ip := header.IPv4(headers.View())
+				ip := header.IPv4(headers)
 				ip.SetFlagsFragmentOffset(ip.Flags(), 8)
 				return headers, payload
 			},
@@ -148,7 +148,7 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -171,7 +171,7 @@ func TestRun(t *testing.T) {
 			},
 			Incoming,
 			header.IPv4ProtocolNumber,
-			func() (buffer.Prependable, buffer.VectorisedView) {
+			func() (buffer.View, buffer.VectorisedView) {
 				return udpV4Packet([]byte("payload"), &udpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
@@ -199,7 +199,7 @@ func TestRun(t *testing.T) {
 }
 
 type Packet struct {
-	hdr     buffer.Prependable
+	hdr     buffer.View
 	payload buffer.VectorisedView
 }
 

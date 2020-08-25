@@ -956,10 +956,6 @@ func (ns *Netstack) addLoopback() error {
 		return fmt.Errorf("error adding address %s to NIC ID %d: %s", ipv4LoopbackAddressWithPrefix, nicid, err)
 	}
 
-	if err := ns.stack.AddAddressRange(nicid, ipv4.ProtocolNumber, ipv4LoopbackRoute.Destination); err != nil {
-		return fmt.Errorf("loopback: adding ipv4 subnet failed: %s", err)
-	}
-
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, ipv6Loopback); err != nil {
 		return fmt.Errorf("loopback: adding ipv6 address failed: %s", err)
 	}

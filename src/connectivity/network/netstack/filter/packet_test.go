@@ -16,10 +16,10 @@ type icmpV4Params struct {
 	srcAddr    tcpip.Address
 	dstAddr    tcpip.Address
 	icmpV4Type header.ICMPv4Type
-	code       byte
+	code       header.ICMPv4Code
 }
 
-func icmpV4Packet(payload []byte, p *icmpV4Params) (buffer.Prependable, buffer.VectorisedView) {
+func icmpV4Packet(payload []byte, p *icmpV4Params) (buffer.View, buffer.VectorisedView) {
 	hdr := buffer.NewPrependable(header.IPv4MinimumSize + header.ICMPv4MinimumSize)
 
 	// Create the ICMP header.
@@ -42,7 +42,7 @@ func icmpV4Packet(payload []byte, p *icmpV4Params) (buffer.Prependable, buffer.V
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
-	return hdr, buffer.View(payload).ToVectorisedView()
+	return hdr.View(), buffer.View(payload).ToVectorisedView()
 }
 
 type udpParams struct {
@@ -53,7 +53,7 @@ type udpParams struct {
 	noUDPChecksum bool
 }
 
-func udpV4Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.VectorisedView) {
+func udpV4Packet(payload []byte, p *udpParams) (buffer.View, buffer.VectorisedView) {
 	hdr := buffer.NewPrependable(header.IPv4MinimumSize + header.UDPMinimumSize)
 
 	// Create the UDP header.
@@ -85,10 +85,10 @@ func udpV4Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.Vecto
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
-	return hdr, buffer.View(payload).ToVectorisedView()
+	return hdr.View(), buffer.View(payload).ToVectorisedView()
 }
 
-func udpV6Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.VectorisedView) {
+func udpV6Packet(payload []byte, p *udpParams) (buffer.View, buffer.VectorisedView) {
 	hdr := buffer.NewPrependable(header.IPv6MinimumSize + header.UDPMinimumSize)
 
 	// Create the UDP header.
@@ -118,7 +118,7 @@ func udpV6Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.Vecto
 		DstAddr:       p.dstAddr,
 	})
 
-	return hdr, buffer.View(payload).ToVectorisedView()
+	return hdr.View(), buffer.View(payload).ToVectorisedView()
 }
 
 type tcpParams struct {
@@ -133,7 +133,7 @@ type tcpParams struct {
 	rcvWnd  uint16
 }
 
-func tcpV4Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.VectorisedView) {
+func tcpV4Packet(payload []byte, p *tcpParams) (buffer.View, buffer.VectorisedView) {
 	hdr := buffer.NewPrependable(header.IPv4MinimumSize + header.TCPMinimumSize + len(p.tcpOpts))
 
 	tcpHdr := hdr.Prepend(header.TCPMinimumSize + len(p.tcpOpts))
@@ -167,10 +167,10 @@ func tcpV4Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.Vecto
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
-	return hdr, buffer.View(payload).ToVectorisedView()
+	return hdr.View(), buffer.View(payload).ToVectorisedView()
 }
 
-func tcpV6Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.VectorisedView) {
+func tcpV6Packet(payload []byte, p *tcpParams) (buffer.View, buffer.VectorisedView) {
 	hdr := buffer.NewPrependable(header.IPv6MinimumSize + header.TCPMinimumSize + len(p.tcpOpts))
 
 	tcpHdr := hdr.Prepend(header.TCPMinimumSize + len(p.tcpOpts))
@@ -199,5 +199,5 @@ func tcpV6Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.Vecto
 		DstAddr:       p.dstAddr,
 	})
 
-	return hdr, buffer.View(payload).ToVectorisedView()
+	return hdr.View(), buffer.View(payload).ToVectorisedView()
 }

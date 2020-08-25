@@ -7,7 +7,6 @@
 package bridge
 
 import (
-	"fmt"
 	"hash/fnv"
 	"math"
 	"sort"
@@ -133,6 +132,9 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 
 func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	for _, l := range ep.links {
+		// We need to clone the packet buffer because each bridged endpoint may try
+		// to set the packet buffer's link header, but the header may only be set
+		// once for the lifetime of a packet buffer.
 		if err := l.WritePacket(r, gso, protocol, pkt.Clone()); err != nil {
 			return err
 		}
@@ -151,7 +153,14 @@ func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Pack
 	// (all bits set to 1 excluding the most significant bit).
 	n := int(^uint(0) >> 1)
 	for _, l := range ep.links {
-		i, err := l.WritePackets(r, gso, pkts, protocol)
+		// We need to clone the packet buffers because each bridged endpoint may try
+		// to set the packet buffers' link header, but the header may only be set
+		// once for the lifetime of a packet buffer.
+		var pktsList stack.PacketBufferList
+		for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+			pktsList.PushBack(pkt.Clone())
+		}
+		i, err := l.WritePackets(r, gso, pktsList, protocol)
 		if err != nil {
 			return 0, err
 		}
@@ -220,6 +229,9 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if flood, also deliver to ep.links."
 	if flood {
+		// We need to clone the packet buffer because the stack may attempt to set the
+		// network or transport headers which may only be done once for the lifetime
+		// of a packet buffer.
 		ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 	}
 
@@ -232,18 +244,6 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// access itself so indirectly.
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: protocol}
 
-	// The contract of WritePacket differs from that of DeliverNetworkPacket.
-	//
-	// See (*stack.NIC).forwardPacket for details.
-	outPkt := pkt.Clone()
-	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(outPkt.NetworkHeader) + len(outPkt.TransportHeader))
-	if n := copy(outPkt.Header.Prepend(len(outPkt.TransportHeader)), outPkt.TransportHeader); n != len(outPkt.TransportHeader) {
-		panic(fmt.Sprintf("copied %d bytes, expected %d", n, len(outPkt.TransportHeader)))
-	}
-	if n := copy(outPkt.Header.Prepend(len(outPkt.NetworkHeader)), outPkt.NetworkHeader); n != len(outPkt.NetworkHeader) {
-		panic(fmt.Sprintf("copied %d bytes, expected %d", n, len(outPkt.NetworkHeader)))
-	}
-
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
 		if flood {
@@ -252,7 +252,10 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if l != rxEP {
-			l.WritePacket(&r, nil, protocol, outPkt)
+			// We need to clone the packet buffers because each bridged endpoint may try
+			// to set the packet buffers' link header, but the header may only be set
+			// once for the lifetime of a packet buffer.
+			l.WritePacket(&r, nil, protocol, pkt.Clone())
 		}
 	}
 }

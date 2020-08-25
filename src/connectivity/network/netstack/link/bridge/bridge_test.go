@@ -147,10 +147,18 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ t
 func (*testNetworkDispatcher) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
+const channelEndpointHeaderLen = 1
+
+var _ stack.LinkEndpoint = (*channelEndpoint)(nil)
+
 type channelEndpoint struct {
 	stack.LinkEndpoint
 	linkAddr tcpip.LinkAddress
 	c        chan *stack.PacketBuffer
+}
+
+func (*channelEndpoint) MaxHeaderLength() uint16 {
+	return channelEndpointHeaderLen
 }
 
 func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
@@ -158,8 +166,9 @@ func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
 }
 
 func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+	_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
 	select {
-	case e.c <- packetbuffer.OutboundToInbound(pkt):
+	case e.c <- pkt:
 	default:
 		return tcpip.ErrWouldBlock
 	}
@@ -170,8 +179,9 @@ func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.Netw
 func (e *channelEndpoint) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	i := 0
 	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
+		_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
 		select {
-		case e.c <- packetbuffer.OutboundToInbound(pkt):
+		case e.c <- pkt:
 		default:
 			return i, tcpip.ErrWouldBlock
 		}
@@ -204,18 +214,50 @@ func TestBridgeWritePackets(t *testing.T) {
 
 	ep1 := makeChannelEndpoint(linkAddr1, len(data))
 	ep2 := makeChannelEndpoint(linkAddr2, len(data))
+	ep3 := makeChannelEndpoint(linkAddr3, len(data))
 
 	bep1 := bridge.NewEndpoint(&ep1)
 	bep2 := bridge.NewEndpoint(&ep2)
+	bep3 := bridge.NewEndpoint(&ep3)
 
-	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2, bep3})
+
+	t.Run("DeliverNetworkPacketToBridge", func(t *testing.T) {
+		// The bridge and channel endpoints do not care about the route, GSO
+		// or network protocol number when writing packets.
+		bridgeEP.DeliverNetworkPacketToBridge(nil /* rxEP */, linkAddr4, linkAddr5, 0 /* protocol */, stack.NewPacketBuffer(stack.PacketBufferOptions{
+			ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+			Data:               buffer.View(data[0]).ToVectorisedView(),
+		}))
+
+		// The first byte in the data from the endpoints is expected to be the link header
+		// byte which we ignore.
+		if pkt := ep1.getPacket(); pkt == nil {
+			t.Error("expected a packet on ep1")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep1 data = %x, want = %x", got, data[0])
+		}
+
+		if pkt := ep2.getPacket(); pkt == nil {
+			t.Error("expected a packet on ep2")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
+		}
+
+		if pkt := ep3.getPacket(); pkt == nil {
+			t.Error("expected a packet on ep3")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep3 data = %x, want = %x", got, data[0])
+		}
+	})
 
 	t.Run("WritePacket", func(t *testing.T) {
 		// The bridge and channel endpoints do not care about the route, GSO
 		// or network protocol number when writing packets.
-		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, &stack.PacketBuffer{
-			Data: buffer.View(data[0]).ToVectorisedView(),
-		})
+		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, stack.NewPacketBuffer(stack.PacketBufferOptions{
+			ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+			Data:               buffer.View(data[0]).ToVectorisedView(),
+		}))
 		if err != nil {
 			t.Errorf("bridgeEP.WritePacket(nil, nil, 0, _): %s", err)
 		}
@@ -231,15 +273,22 @@ func TestBridgeWritePackets(t *testing.T) {
 		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
 		}
+
+		if pkt := ep3.getPacket(); pkt == nil {
+			t.Error("expected a packet on ep3")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep3 data = %x, want = %x", got, data[0])
+		}
 	})
 
 	for i := 1; i <= len(data); i++ {
 		t.Run(fmt.Sprintf("WritePackets(N=%d)", i), func(t *testing.T) {
 			var pkts stack.PacketBufferList
 			for j := 0; j < i; j++ {
-				pkts.PushBack(&stack.PacketBuffer{
-					Data: buffer.View(data[j]).ToVectorisedView(),
-				})
+				pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
+					ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+					Data:               buffer.View(data[j]).ToVectorisedView(),
+				}))
 			}
 
 			// The bridge and channel endpoints do not care about the route, GSO
@@ -263,6 +312,12 @@ func TestBridgeWritePackets(t *testing.T) {
 					t.Errorf("(j=%d) expected a packet on ep2", j)
 				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep2 data = %x, want = %x", j, got, data[j])
+				}
+
+				if pkt := ep3.getPacket(); pkt == nil {
+					t.Errorf("(j=%d) expected a packet on ep3", j)
+				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+					t.Errorf("(j=%d) got ep3 data = %x, want = %x", j, got, data[j])
 				}
 			}
 		})

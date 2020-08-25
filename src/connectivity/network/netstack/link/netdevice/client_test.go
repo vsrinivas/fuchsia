@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -25,7 +26,6 @@ import (
 	"fidl/fuchsia/net/tun"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -52,26 +52,6 @@ func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.Li
 }
 
 func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
-
-func vectorizedViewComparer(x, y buffer.VectorisedView) bool {
-	return bytes.Equal(x.ToView(), y.ToView())
-}
-
-func prependableComparer(x, y buffer.Prependable) bool {
-	return bytes.Equal(x.View(), y.View())
-}
-
-func packetBufferCmpOptions() []cmp.Option {
-	return []cmp.Option{
-		cmp.Comparer(prependableComparer),
-		cmp.Comparer(vectorizedViewComparer),
-		// Ignore `noCopy` marker.
-		//
-		// https://github.com/google/gvisor/blob/2d3b9d1/pkg/tcpip/stack/packet_buffer.go#L27
-		cmpopts.IgnoreTypes(struct{}{}),
-		cmpopts.IgnoreUnexported(stack.PacketBufferEntry{}),
-	}
 }
 
 const TunMtu uint32 = 2048
@@ -294,9 +274,9 @@ func TestClient_WritePacket(t *testing.T) {
 		t.Fatalf("failed to start client %s", err)
 	}
 
-	if err := linkEndpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, &stack.PacketBuffer{
-		Header: buffer.NewPrependable(int(linkEndpoint.MaxHeaderLength())),
-	}); err != nil {
+	if err := linkEndpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+		ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
+	})); err != nil {
 		t.Fatalf("WritePacket failed: %s", err)
 	}
 
@@ -334,17 +314,16 @@ func TestWritePacket(t *testing.T) {
 	otherMac := getOtherMac()
 	const protocol = tcpip.NetworkProtocolNumber(45)
 	const pktBody = "bar"
-	hdr := buffer.NewPrependable(int(linkEndpoint.MaxHeaderLength()))
 	if err := linkEndpoint.WritePacket(&stack.Route{
 		LocalLinkAddress:  tcpip.LinkAddress(tunMac.Octets[:]),
 		RemoteLinkAddress: tcpip.LinkAddress(otherMac.Octets[:]),
 	},
 		nil,
 		protocol,
-		&stack.PacketBuffer{
-			Data:   buffer.View(pktBody).ToVectorisedView(),
-			Header: hdr,
-		},
+		stack.NewPacketBuffer(stack.PacketBufferOptions{
+			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
+			Data:               buffer.View(pktBody).ToVectorisedView(),
+		}),
 	); err != nil {
 		t.Fatalf("WritePacket failed: %s", err)
 	}
@@ -451,7 +430,7 @@ func TestReceivePacket(t *testing.T) {
 			Pkt: &stack.PacketBuffer{
 				Data: buffer.View(pktPayload[:extra]).ToVectorisedView(),
 			},
-		}, packetBufferCmpOptions()...); diff != "" {
+		}, testutil.PacketBufferCmpTransformer); diff != "" {
 			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -737,7 +716,7 @@ func TestPairExchangePackets(t *testing.T) {
 		if diff := cmp.Diff(pkt, DeliverNetworkPacketArgs{
 			Protocol: header.IPv4ProtocolNumber,
 			Pkt:      makeTestPacket(prefix, index),
-		}, packetBufferCmpOptions()...); diff != "" {
+		}, testutil.PacketBufferCmpTransformer); diff != "" {
 			t.Fatalf("delivered network packet mismatch (prefix=%d, index=%d) (-want +got):\n%s", prefix, index, diff)
 		}
 	}

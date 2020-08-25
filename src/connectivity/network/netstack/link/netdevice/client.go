@@ -121,12 +121,7 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 
 		data := c.getDescriptorData(descriptor)
 		n := 0
-		if w := copy(data, pkt.Header.View()); w != len(pkt.Header.View()) {
-			panic(fmt.Sprintf("failed to copy packet header to descriptor %d, want %d got %d bytes", descriptorIndex, len(pkt.Header.View()), w))
-		} else {
-			n += w
-		}
-		for _, v := range pkt.Data.Views() {
+		for _, v := range pkt.Views() {
 			if w := copy(data[n:], v); w != len(v) {
 				panic(fmt.Sprintf("failed to copy packet data to descriptor %d, want %d got %d bytes", descriptorIndex, len(v), w))
 			} else {
@@ -135,7 +130,7 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 		}
 
 		var frameType network.FrameType
-		if len(pkt.LinkHeader) != 0 {
+		if len(pkt.LinkHeader().View()) != 0 {
 			frameType = network.FrameTypeEthernet
 			// TODO(fxbug.dev/44605): Remove this padding when network device is
 			// capable of doing it by itself. For now, pad to the minimum

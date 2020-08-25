@@ -193,8 +193,8 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
 	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt *stack.PacketBuffer) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
-		used := copy(b, pkt.Header.View())
-		for _, v := range pkt.Data.Views() {
+		var used int
+		for _, v := range pkt.Views() {
 			used += copy(b[used:], v)
 		}
 		*entry = c.iob.entry(b[:used])

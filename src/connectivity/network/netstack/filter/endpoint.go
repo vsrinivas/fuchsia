@@ -13,6 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/link/nested"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -63,12 +64,14 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 	//
 	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(pkt, 0)
-	if e.filter.Run(Incoming, protocol, pkt.Header, pkt.Data) != Pass {
+	hdr := packetbuffer.ToView(pkt)
+	if e.filter.Run(Incoming, protocol, hdr, buffer.VectorisedView{}) != Pass {
 		return
 	}
 
-	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
+	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, stack.NewPacketBuffer(stack.PacketBufferOptions{
+		Data: hdr.ToVectorisedView(),
+	}))
 }
 
 // WritePacket implements stack.LinkEndpoint.
@@ -82,9 +85,12 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	//
 	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(pkt, e.MaxHeaderLength())
-	if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
-		return e.Endpoint.WritePacket(r, gso, protocol, pkt)
+	hdr := packetbuffer.ToView(pkt)
+	if e.filter.Run(Outgoing, protocol, hdr, buffer.VectorisedView{}) == Pass {
+		return e.Endpoint.WritePacket(r, gso, protocol, stack.NewPacketBuffer(stack.PacketBufferOptions{
+			ReserveHeaderBytes: int(e.MaxHeaderLength()),
+			Data:               hdr.ToVectorisedView(),
+		}))
 	}
 
 	return nil
@@ -103,9 +109,12 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		//
 		// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 		// so we don't need to create a single view here.
-		packetbuffer.EnsurePopulatedHeader(pkt, e.MaxHeaderLength())
-		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
-			filtered.PushBack(pkt)
+		hdr := packetbuffer.ToView(pkt)
+		if e.filter.Run(Outgoing, protocol, hdr, buffer.VectorisedView{}) == Pass {
+			filtered.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
+				ReserveHeaderBytes: int(e.MaxHeaderLength()),
+				Data:               hdr.ToVectorisedView(),
+			}))
 		}
 	}
 

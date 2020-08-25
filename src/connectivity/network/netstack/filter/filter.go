@@ -57,7 +57,7 @@ func (f *Filter) IsEnabled() bool {
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
-func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.Prependable, payload buffer.VectorisedView) Action {
+func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr buffer.View, payload buffer.VectorisedView) Action {
 	if f.enabled.Load().(bool) == false {
 		// The filter is disabled.
 		return Pass
@@ -72,8 +72,8 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	var transportHeader []byte
 	switch netProto {
 	case header.IPv4ProtocolNumber:
-		ipv4 := header.IPv4(hdr.View())
-		if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
+		ipv4 := header.IPv4(hdr)
+		if !ipv4.IsValid(len(hdr) + payload.Size()) {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "ipv4 packet is not valid")
 			return Drop
 		}
@@ -86,8 +86,8 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 			return Pass
 		}
 	case header.IPv6ProtocolNumber:
-		ipv6 := header.IPv6(hdr.View())
-		if !ipv6.IsValid(hdr.UsedLength() + payload.Size()) {
+		ipv6 := header.IPv6(hdr)
+		if !ipv6.IsValid(len(hdr) + payload.Size()) {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "ipv6 packet is not valid")
 			return Drop
 		}
@@ -123,7 +123,7 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	}
 }
 
-func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, transportHeader, payload); s != nil {
 		if chatty {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "icmp state found: %v", s)
@@ -211,7 +211,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 	return Pass
 }
 
-func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if len(transportHeader) < header.UDPMinimumSize {
 		syslog.VLogTf(syslog.DebugVerbosity, tag, "udp packet too short")
 		return Drop
@@ -289,7 +289,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic, tcpip.FullAddress{
 				Addr: dstAddr,
 				Port: dstPort,
-			})
+			}, nil)
 			if e != nil {
 				syslog.VLogTf(syslog.TraceVerbosity, tag, "ReservePort: %v", e)
 				return Drop
@@ -353,7 +353,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	return Pass
 }
 
-func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
+func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.View, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if len(transportHeader) < header.TCPMinimumSize {
 		syslog.VLogTf(syslog.DebugVerbosity, tag, "tcp packet too short")
 		return Drop
@@ -429,7 +429,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID, tcpip.FullAddress{
 				Addr: dstAddr,
 				Port: dstPort,
-			})
+			}, nil)
 			if err != nil {
 				syslog.WarnTf(tag, "ReservePort: %s", err)
 				return Drop

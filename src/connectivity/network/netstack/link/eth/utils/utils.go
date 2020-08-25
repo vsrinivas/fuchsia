@@ -15,9 +15,13 @@ import (
 // If local is unspecified, nicLinkAddr will be used as the local link address.
 func AddEthernetHeader(nicLinkAddr, local, remote tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	fields := MakeEthernetFields(nicLinkAddr, local, remote, protocol)
-	h := pkt.Header.Prepend(header.EthernetMinimumSize)
-	header.Ethernet(h).Encode(&fields)
-	pkt.LinkHeader = h
+	AddEthernetHeaderWithFields(&fields, pkt)
+}
+
+// AddEthernetHeaderWithFields adds the Ethernet link header to pkt.
+func AddEthernetHeaderWithFields(fields *header.EthernetFields, pkt *stack.PacketBuffer) {
+	h := pkt.LinkHeader().Push(header.EthernetMinimumSize)
+	header.Ethernet(h).Encode(fields)
 }
 
 // MakeEthernetFields returns a new Ethernet header's fields with the specified
