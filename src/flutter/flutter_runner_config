@@ -1,4 +1,4 @@
 {
-  "vsync_offset_in_us" : 0,
+  "vsync_offset_in_us" : 13200,
   "use_legacy_renderer": true
 }
