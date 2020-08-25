@@ -1394,6 +1394,7 @@ action("flash_script") {
   script = "//build/images/generate_flash_script.sh"
   outputs = [ "$root_out_dir/flash.sh" ]
   image = "$root_out_dir/zedboot.zbi"
+  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   args = [
     "--image=" + rebase_path(image, root_build_dir),
     "--output=" + rebase_path(outputs[0], root_build_dir),
@@ -1407,7 +1408,9 @@ action("flash_script") {
     "--signed=${signed_image}",
     "--product=${fastboot_product}",
     "--pre-erase-flash=${pre_erase_flash}",
+    "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
   ]
+  deps = [ ":fastboot-copy" ]
   metadata = {
     images = [
       {
@@ -1439,6 +1442,7 @@ action("flash_script_archive") {
     "--signed=${signed_image}",
     "--product=${fastboot_product}",
     "--pre-erase-flash=${pre_erase_flash}",
+    "--fastboot-path=fastboot.exe.$host_platform",
   ]
 }
 
@@ -2114,6 +2118,12 @@ group("bootserver") {
       },
     ]
   }
+}
+
+copy("fastboot-copy") {
+  sources = [ "//prebuilt/third_party/fastboot/fastboot" ]
+  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+  outputs = [ "$host_out_dir/fastboot" ]
 }
 
 group("fastboot") {

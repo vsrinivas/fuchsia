@@ -32,7 +32,7 @@ function fx-flash {
   fi
 
   if [[ ! -z "${gb_device_ip}" ]]; then
-    "flash.sh" "-s" "udp:${gb_device_ip}"
+    "./flash.sh" "-s" "udp:${gb_device_ip}"
   else
     # Process traditional fastboot over USB.
     num_devices=$(fastboot devices | wc -l)
@@ -49,6 +49,6 @@ function fx-flash {
       fastboot_args=("-s" "${serial}")
     fi
 
-    "flash.sh" "${fastboot_args[@]}"
+    "./flash.sh" "${fastboot_args[@]}"
   fi
 }
