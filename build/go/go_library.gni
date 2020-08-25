@@ -76,6 +76,10 @@ template("go_library") {
 
     outputs = [ library_file ]
 
+    metadata = {
+      go_source_list = rebase_path(go_sources)
+    }
+
     deps = []
     dependent_libraries = []
 

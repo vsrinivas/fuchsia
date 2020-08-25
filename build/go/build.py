@@ -101,6 +101,21 @@ def main():
         '--tag', help='Add a go build tag', default=[], action='append')
     parser.add_argument(
         '--cgo', help='Whether to enable CGo', action='store_true')
+    parser.add_argument(
+        '--source_list_path',
+        help='The list of sources that were listed as deps of the go binary',
+        default=[])
+    parser.add_argument(
+        '--verify_depfile_script',
+        help='The script to use to verify source listings',
+        default='')
+    parser.add_argument(
+        '--gn_target_name', help='The name of the gn target', default='')
+    parser.add_argument(
+        '--verify_depfile',
+        help=
+        'Whether or not to verify the sources in the gn targets match the generated depfile',
+        default=False)
     args = parser.parse_args()
 
     try:
@@ -324,6 +339,22 @@ def main():
             godepfile_args += [args.package]
             with open(args.depfile, 'wb') as into:
                 subprocess.check_call(godepfile_args, env=env, stdout=into)
+
+            if args.verify_depfile:
+                try:
+                    with open(args.source_list_path, 'r') as file:
+                        sources = file.readlines()
+                        verify_args = [
+                            args.verify_depfile_script,
+                            '-t',
+                            args.gn_target_name,
+                            '-d',
+                            args.depfile,
+                        ] + sources
+                        subprocess.check_call(verify_args, env=env)
+                except FileNotFoundError:
+                    # TODO(fxb/58776): This will be an error when source listings are enforced.
+                    pass
 
     return retcode
 

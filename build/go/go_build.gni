@@ -157,6 +157,19 @@ template("go_build") {
       stripped_output_path = "${output_dir}/${output_name}"
     }
 
+    source_list_file = "${target_name}.go_sources"
+    source_listings_path = target_gen_dir + "/" + source_list_file
+
+    generated_file(source_list_file) {
+      testonly = true
+      if (defined(invoker.deps)) {
+        deps = invoker.deps
+      }
+
+      data_keys = [ "go_source_list" ]
+      outputs = [ source_listings_path ]
+    }
+
     action(main_target_name) {
       forward_variables_from(invoker,
                              [
@@ -220,6 +233,12 @@ template("go_build") {
         rebase_path(sysroot),
         "--target",
         clang_target,
+        "--source_list_path",
+        source_listings_path,
+        "--verify_depfile_script",
+        rebase_path("//build/gn/verify_depfile.py", root_build_dir),
+        "--gn_target_name",
+        target_name,
       ]
 
       if (!(defined(invoker.cgo) && !invoker.cgo)) {
