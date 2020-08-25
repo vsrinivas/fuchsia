@@ -343,7 +343,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //products/core.gni:11
+From //products/core.gni:7
 
 **Overridden from the default:** `false`
 
@@ -351,7 +351,7 @@ From //build/images/args.gni:14
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //products/core.gni:11
+From //products/core.gni:7
 
 **Overridden from the default:** `false`
 
@@ -446,7 +446,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:89
+From //products/core.gni:85
 
 **Overridden from the default:** `[]`
 
@@ -454,7 +454,7 @@ From //BUILD.gn:35
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:89
+From //products/core.gni:85
 
 **Overridden from the default:** `[]`
 
@@ -829,20 +829,6 @@ From //build/images/args.gni:78
 
 From //build/fidl/args.gni:8
 
-### filter_out_of_astro
-Use this flag to exclude artifacts from Astro builds.
-This is a very hacky way of ensuring that the resulting fuchsia.zbi fits
-within the available space on device.
-This will soon enough be replaced with a proper way to select image
-artifacts based on board / product properties.
-Artifacts that are known to not be useful on Astro builds (e.g. drivers for
-other devices, tests) may be put in `if (!filter_out_of_astro)` blocks.
-TODO(45680): remove this hack.
-
-**Current value (from the default):** `false`
-
-From //build/unification/images/common_image_contents.gni:14
-
 ### firmware_prebuilts
 List of prebuilt firmware blobs to include in update packages.
 
@@ -1086,7 +1072,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:39
+From //products/bringup.gni:35
 
 **Overridden from the default:** `[]`
 
@@ -1094,7 +1080,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:39
+From //products/bringup.gni:35
 
 **Overridden from the default:** `[]`
 
@@ -1244,7 +1230,7 @@ See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 
 **Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:17
+From //products/core.gni:13
 
 **Overridden from the default:** `[]`
 
@@ -1252,7 +1238,7 @@ From //build/images/args.gni:23
 
 **Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:17
+From //products/core.gni:13
 
 **Overridden from the default:** `[]`
 
@@ -1619,7 +1605,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:19
+From //products/core.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -1627,7 +1613,7 @@ From //build/images/args.gni:67
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:19
+From //products/core.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -1710,28 +1696,6 @@ Default app id will always return no update.
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
 From //src/sys/pkg/bin/omaha-client/BUILD.gn:15
-
-### on_second_thought_keep_on_astro
-Use this flag to include previously excluded artifacts on products based on
-Astro.
-Yes, our image building system is so broken that this is currently the only
-way to accommodate the configurations we run on our infrastructure.
-
-**Current value for `target_cpu = "arm64"`:** `false`
-
-From //products/core.gni:9
-
-**Overridden from the default:** `false`
-
-From //build/unification/images/common_image_contents.gni:20
-
-**Current value for `target_cpu = "x64"`:** `false`
-
-From //products/core.gni:9
-
-**Overridden from the default:** `false`
-
-From //build/unification/images/common_image_contents.gni:20
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
@@ -1817,7 +1781,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:23
+From //products/bringup.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1825,7 +1789,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:23
+From //products/bringup.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1846,7 +1810,7 @@ product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:25
+From //products/bringup.gni:21
 
 **Overridden from the default:** `[]`
 
@@ -1854,7 +1818,7 @@ From //build/product.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:25
+From //products/bringup.gni:21
 
 **Overridden from the default:** `[]`
 
@@ -2387,7 +2351,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:91
+From //products/core.gni:87
 
 **Overridden from the default:** `[]`
 
@@ -2395,7 +2359,7 @@ From //BUILD.gn:49
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:91
+From //products/core.gni:87
 
 **Overridden from the default:** `[]`
 
