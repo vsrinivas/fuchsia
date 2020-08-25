@@ -5,23 +5,23 @@
 library conformance;
 
 strict enum StrictEnumInt8 : int8 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x01;
+    SECOND = 0x11;
 };
 
 strict enum StrictEnumInt16 : int16 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x0102;
+    SECOND = 0x1112;
 };
 
 strict enum StrictEnumInt32 : int32 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x01020304;
+    SECOND = 0x11121314;
 };
 
 strict enum StrictEnumInt64 : int64 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x0102030405060708;
+    SECOND = 0x1112131415161718;
 };
 
 strict enum StrictEnumUint8 : uint8 {
@@ -30,18 +30,18 @@ strict enum StrictEnumUint8 : uint8 {
 };
 
 strict enum StrictEnumUint16 : uint16 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x0102;
+    SECOND = 0x1112;
 };
 
 strict enum StrictEnumUint32 : uint32 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x01020304;
+    SECOND = 0x11121314;
 };
 
 strict enum StrictEnumUint64 : uint64 {
-    FIRST = 1;
-    SECOND = 2;
+    FIRST = 0x0102030405060708;
+    SECOND = 0x1112131415161718;
 };
 
 enum FlexibleEnum {

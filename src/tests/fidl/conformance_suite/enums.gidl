@@ -4,7 +4,7 @@
 
 success("StrictEnumInt8Struct") {
     value = StrictEnumInt8Struct {
-        e: 1,
+        e: 0x01,
     },
     bytes = {
         v1 = [
@@ -15,40 +15,40 @@ success("StrictEnumInt8Struct") {
 
 success("StrictEnumInt16Struct") {
     value = StrictEnumInt16Struct {
-        e: 1,
+        e: 0x0102,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, padding:6,
+            0x02, 0x01, padding:6,
         ],
     },
 }
 
 success("StrictEnumInt32Struct") {
     value = StrictEnumInt32Struct {
-        e: 1,
+        e: 0x01020304,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, 0x00, 0x00, padding:4,
+            0x04, 0x03, 0x02, 0x01, padding:4,
         ],
     },
 }
 
 success("StrictEnumInt64Struct") {
     value = StrictEnumInt64Struct {
-        e: 1,
+        e: 0x0102030405060708,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },
 }
 
 success("StrictEnumUint8Struct") {
     value = StrictEnumUint8Struct {
-        e: 1,
+        e: 0x01,
     },
     bytes = {
         v1 = [
@@ -59,33 +59,33 @@ success("StrictEnumUint8Struct") {
 
 success("StrictEnumUint16Struct") {
     value = StrictEnumUint16Struct {
-        e: 1,
+        e: 0x0102,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, padding:6,
+            0x02, 0x01, padding:6,
         ],
     },
 }
 
 success("StrictEnumUint32Struct") {
     value = StrictEnumUint32Struct {
-        e: 1,
+        e: 0x01020304,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, 0x00, 0x00, padding:4,
+            0x04, 0x03, 0x02, 0x01, padding:4,
         ],
     },
 }
 
 success("StrictEnumUint64Struct") {
     value = StrictEnumUint64Struct {
-        e: 1,
+        e: 0x0102030405060708,
     },
     bytes = {
         v1 = [
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },
 }
@@ -131,7 +131,7 @@ encode_failure("StrictEnumInt8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumInt8Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -140,7 +140,7 @@ encode_failure("StrictEnumInt16StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumInt16Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -149,7 +149,7 @@ encode_failure("StrictEnumInt32StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumInt32Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -158,7 +158,7 @@ encode_failure("StrictEnumInt64StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumInt64Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -167,7 +167,7 @@ encode_failure("StrictEnumUint8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumUint8Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -176,7 +176,7 @@ encode_failure("StrictEnumUint16StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumUint16Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -185,7 +185,7 @@ encode_failure("StrictEnumUint32StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumUint32Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -194,7 +194,7 @@ encode_failure("StrictEnumUint64StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
     value = StrictEnumUint64Struct {
-        e: 3,
+        e: 0x08, // invalid value
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
 }
@@ -203,7 +203,7 @@ decode_failure("StrictEnumInt8StructUnknownValue") {
     type = StrictEnumInt8Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, padding:7,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -213,7 +213,7 @@ decode_failure("StrictEnumInt16StructUnknownValue") {
     type = StrictEnumInt16Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, padding:6,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -223,7 +223,7 @@ decode_failure("StrictEnumInt32StructUnknownValue") {
     type = StrictEnumInt32Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, 0xaa, 0xaa, padding:4,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -233,7 +233,7 @@ decode_failure("StrictEnumInt64StructUnknownValue") {
     type = StrictEnumInt64Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -243,7 +243,7 @@ decode_failure("StrictEnumUint8StructUnknownValue") {
     type = StrictEnumUint8Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, padding:7,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -253,7 +253,7 @@ decode_failure("StrictEnumUint16StructUnknownValue") {
     type = StrictEnumUint16Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, padding:6,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -263,7 +263,7 @@ decode_failure("StrictEnumUint32StructUnknownValue") {
     type = StrictEnumUint32Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, 0xaa, 0xaa, padding:4,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
@@ -273,7 +273,7 @@ decode_failure("StrictEnumUint64StructUnknownValue") {
     type = StrictEnumUint64Struct,
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
         ],
     },
     err = STRICT_ENUM_UNKNOWN_VALUE,
