@@ -52,10 +52,11 @@ void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
   }
 }
 
-void Image::OnFenceReady(FenceReference* fence) {
+bool Image::OnFenceReady(FenceReference* fence) {
   if (wait_fence_.get() == fence) {
     wait_fence_ = nullptr;
   }
+  return wait_fence_ == nullptr;
 }
 
 void Image::StartPresent() {

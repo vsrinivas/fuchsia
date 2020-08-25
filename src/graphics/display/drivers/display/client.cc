@@ -1344,13 +1344,16 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 }
 
 void Client::OnFenceFired(FenceReference* fence) {
+  bool new_image_ready = false;
   for (auto& layer : layers_) {
     image_node_t* waiting;
     list_for_every_entry (&layer.waiting_images_, waiting, image_node_t, link) {
-      waiting->self->OnFenceReady(fence);
+      new_image_ready |= waiting->self->OnFenceReady(fence);
     }
   }
-  ApplyConfig();
+  if (new_image_ready) {
+    ApplyConfig();
+  }
 }
 
 void Client::CaptureCompleted() {

@@ -52,8 +52,8 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // Called on vsync after StartRetire has been called.
   void OnRetire() __TA_REQUIRES(mtx());
 
-  // Called on all waiting images when any fence fires.
-  void OnFenceReady(FenceReference* fence);
+  // Called on all waiting images when any fence fires. Returns true if the image is ready to present.
+  bool OnFenceReady(FenceReference* fence);
 
   // Called to reset fences when client releases the image. Releasing fences
   // is independent of the rest of the image lifecycle.
