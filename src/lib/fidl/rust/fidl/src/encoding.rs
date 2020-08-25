@@ -225,11 +225,13 @@ impl<'a> Encoder<'a> {
     }
 
     /// Returns the inline alignment of an object of type `Target` for this encoder.
+    #[inline(always)]
     pub fn inline_align_of<Target: Encodable>(&self) -> usize {
         <Target as Layout>::inline_align(&self.context)
     }
 
     /// Returns the inline size of the given object for this encoder.
+    #[inline(always)]
     pub fn inline_size_of<Target: Encodable>(&self) -> usize {
         <Target as Layout>::inline_size(&self.context)
     }
@@ -491,11 +493,13 @@ impl<'a> Decoder<'a> {
     }
 
     /// Returns the inline alignment of an object of type `Target` for this decoder.
+    #[inline(always)]
     pub fn inline_align_of<Target: Decodable>(&self) -> usize {
         <Target as Layout>::inline_align(&self.context)
     }
 
     /// Returns the inline size of an object of type `Target` for this decoder.
+    #[inline(always)]
     pub fn inline_size_of<Target: Decodable>(&self) -> usize {
         <Target as Layout>::inline_size(&self.context)
     }
@@ -572,10 +576,12 @@ pub trait LayoutObject: Layout {
 assert_obj_safe!(LayoutObject);
 
 impl<T: Layout> LayoutObject for T {
+    #[inline(always)]
     fn inline_align(&self, context: &Context) -> usize {
         <T as Layout>::inline_align(context)
     }
 
+    #[inline(always)]
     fn inline_size(&self, context: &Context) -> usize {
         <T as Layout>::inline_size(context)
     }
@@ -686,9 +692,11 @@ pub trait Decodable: Layout + Sized {
 macro_rules! impl_layout {
     ($ty:ty, align: $align:expr, size: $size:expr) => {
         impl Layout for $ty {
+            #[inline(always)]
             fn inline_size(_context: &Context) -> usize {
                 $size
             }
+            #[inline(always)]
             fn inline_align(_context: &Context) -> usize {
                 $align
             }
@@ -699,9 +707,11 @@ macro_rules! impl_layout {
 macro_rules! impl_layout_forall_T {
     ($ty:ty, align: $align:expr, size: $size:expr) => {
         impl<T: Layout> Layout for $ty {
+            #[inline(always)]
             fn inline_size(_context: &Context) -> usize {
                 $size
             }
+            #[inline(always)]
             fn inline_align(_context: &Context) -> usize {
                 $align
             }
@@ -714,10 +724,12 @@ macro_rules! impl_layout_forall_T {
 macro_rules! impl_layout_int {
     ($int_ty:ty) => {
         impl Layout for $int_ty {
+            #[inline(always)]
             fn inline_size(_context: &Context) -> usize {
                 mem::size_of::<$int_ty>()
             }
 
+            #[inline(always)]
             fn inline_align(_context: &Context) -> usize {
                 mem::size_of::<$int_ty>()
             }
@@ -778,7 +790,9 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
 // in the future (FTP-055), so we can't encode/decode by simple copy.
 macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
     impl Layout for $float_ty {
+        #[inline(always)]
         fn inline_size(_context: &Context) -> usize { mem::size_of::<$float_ty>() }
+        #[inline(always)]
         fn inline_align(_context: &Context) -> usize { mem::size_of::<$float_ty>() }
     }
 
@@ -811,18 +825,22 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
 macro_rules! impl_slice_encoding_base {
     ($prim_ty:ty) => {
         impl Layout for &[$prim_ty] {
+            #[inline(always)]
             fn inline_size(_context: &Context) -> usize {
                 16
             }
+            #[inline(always)]
             fn inline_align(_context: &Context) -> usize {
                 8
             }
         }
 
         impl Layout for Option<&[$prim_ty]> {
+            #[inline(always)]
             fn inline_size(_context: &Context) -> usize {
                 16
             }
+            #[inline(always)]
             fn inline_align(_context: &Context) -> usize {
                 8
             }
@@ -1031,7 +1049,9 @@ fn decode_array<T: Decodable>(
 
 macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     impl<T: Layout> Layout for [T; $len] {
+        #[inline(always)]
         fn inline_align(context: &Context) -> usize { T::inline_align(context) }
+        #[inline(always)]
         fn inline_size(context: &Context) -> usize { T::inline_size(context) * $len }
     }
 
@@ -1493,10 +1513,12 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(context: &$crate::encoding::Context) -> usize {
                 <$prim_ty as $crate::encoding::Layout>::inline_align(context)
             }
 
+            #[inline(always)]
             fn inline_size(context: &$crate::encoding::Context) -> usize {
                 <$prim_ty as $crate::encoding::Layout>::inline_size(context)
             }
@@ -1578,10 +1600,12 @@ macro_rules! fidl_enum {
         }
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(context: &$crate::encoding::Context) -> usize {
                 <$prim_ty as $crate::encoding::Layout>::inline_align(context)
             }
 
+            #[inline(always)]
             fn inline_size(context: &$crate::encoding::Context) -> usize {
                 <$prim_ty as $crate::encoding::Layout>::inline_size(context)
             }
@@ -1694,7 +1718,9 @@ impl Decodable for Option<Handle> {
 macro_rules! handle_based_codable {
     ($($ty:ident$(:- <$($generic:ident,)*>)*, )*) => { $(
         impl<$($($generic,)*)*> $crate::encoding::Layout for $ty<$($($generic,)*)*> {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize { 4 }
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize { 4 }
         }
 
@@ -1722,7 +1748,9 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Layout for Option<$ty<$($($generic,)*)*>> {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize { 4 }
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize { 4 }
         }
 
@@ -1750,9 +1778,11 @@ macro_rules! handle_based_codable {
 }
 
 impl Layout for zx_status::Status {
+    #[inline(always)]
     fn inline_size(_context: &Context) -> usize {
         mem::size_of::<zx_status::zx_status_t>()
     }
+    #[inline(always)]
     fn inline_align(_context: &Context) -> usize {
         mem::size_of::<zx_status::zx_status_t>()
     }
@@ -1789,9 +1819,11 @@ pub struct EpitaphBody {
 }
 
 impl Layout for EpitaphBody {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         <zx_status::Status as Layout>::inline_align(context)
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         <zx_status::Status as Layout>::inline_size(context)
     }
@@ -1841,6 +1873,7 @@ pub trait Autonull: Encodable + Decodable {
 }
 
 impl<T: Autonull> Layout for Option<&mut T> {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         if T::naturally_nullable(context) {
             <T as Layout>::inline_align(context)
@@ -1848,6 +1881,7 @@ impl<T: Autonull> Layout for Option<&mut T> {
             8
         }
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         if T::naturally_nullable(context) {
             <T as Layout>::inline_size(context)
@@ -1892,9 +1926,11 @@ impl<T: Autonull> Encodable for Option<&mut T> {
 }
 
 impl<T: Autonull> Layout for Option<Box<T>> {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         <Option<&mut T> as Layout>::inline_align(context)
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         <Option<&mut T> as Layout>::inline_size(context)
     }
@@ -1981,10 +2017,12 @@ macro_rules! fidl_struct {
         align_v1: $align_v1:expr,
     ) => {
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize {
                 $align_v1
             }
 
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize {
                 $size_v1
             }
@@ -2070,10 +2108,12 @@ macro_rules! fidl_struct_copy {
         static_assertions::const_assert_eq!(std::mem::align_of::<$name>(), $align_v1);
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize {
                 $align_v1
             }
 
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize {
                 $size_v1
             }
@@ -2162,7 +2202,9 @@ macro_rules! fidl_empty_struct {
         pub struct $name;
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
           fn inline_align(_context: &$crate::encoding::Context) -> usize { 1 }
+          #[inline(always)]
           fn inline_size(_context: &$crate::encoding::Context) -> usize { 1 }
         }
 
@@ -2417,7 +2459,9 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
         }
 
@@ -2469,9 +2513,11 @@ where
     O: Layout,
     E: Layout,
 {
+    #[inline(always)]
     fn inline_align(_context: &Context) -> usize {
         8
     }
+    #[inline(always)]
     fn inline_size(_context: &Context) -> usize {
         24
     }
@@ -2621,7 +2667,9 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Layout for $name {
+            #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            #[inline(always)]
             fn inline_size(_context: &$crate::encoding::Context) -> usize { 24 }
         }
 
@@ -2846,9 +2894,11 @@ pub struct TransactionMessage<'a, T> {
 }
 
 impl<T: Layout> Layout for TransactionMessage<'_, T> {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         cmp::max(<TransactionHeader as Layout>::inline_align(context), T::inline_align(context))
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         <TransactionHeader as Layout>::inline_size(context) + T::inline_size(context)
     }
@@ -2976,9 +3026,11 @@ pub struct PersistentMessage<'a, T> {
 }
 
 impl<T: Layout> Layout for PersistentMessage<'_, T> {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         cmp::max(<PersistentHeader as Layout>::inline_align(context), T::inline_align(context))
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         <PersistentHeader as Layout>::inline_size(context) + T::inline_size(context)
     }
@@ -3097,6 +3149,7 @@ macro_rules! tuple_impls {
             where $typ: Layout,
                   $( $ntyp: Layout, )*
         {
+            #[inline(always)]
             fn inline_align(context: &Context) -> usize {
                 let mut max = 0;
                 if max < $typ::inline_align(context) {
@@ -3110,6 +3163,7 @@ macro_rules! tuple_impls {
                 max
             }
 
+            #[inline(always)]
             fn inline_size(context: &Context) -> usize {
                 let mut offset = 0;
                 offset += $typ::inline_size(context);
@@ -3226,9 +3280,11 @@ impl Decodable for () {
 }
 
 impl<T: Layout> Layout for &mut T {
+    #[inline(always)]
     fn inline_align(context: &Context) -> usize {
         T::inline_align(context)
     }
+    #[inline(always)]
     fn inline_size(context: &Context) -> usize {
         T::inline_size(context)
     }
