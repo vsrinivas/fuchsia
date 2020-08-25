@@ -237,8 +237,6 @@ template("test_spec") {
       "AEMU",
       "QEMU",
     ]
-  } else if (board_name == "vim2") {
-    allowed_device_types = [ "Khadas Vim2 Max" ]
   } else if (board_name == "astro") {
     allowed_device_types = [ "Astro" ]
   } else if (board_name == "luis") {

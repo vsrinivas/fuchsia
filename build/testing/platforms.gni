@@ -48,11 +48,6 @@ test_platforms = [
     cpu = "arm64"
   },
   {
-    device_type = "Khadas Vim2 Max"
-    cpu = "arm64"
-  },
-
-  {
     os = "Linux"
     cpu = "x64"
   },
