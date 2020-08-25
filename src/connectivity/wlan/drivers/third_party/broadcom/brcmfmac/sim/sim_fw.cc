@@ -203,9 +203,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_GET_BANDLIST: {
       const uint32_t bandlist[] = {
-        2, // Number of bands
-        WLC_BAND_2G,
-        WLC_BAND_5G,
+          2,  // Number of bands
+          WLC_BAND_2G,
+          WLC_BAND_5G,
       };
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(bandlist))) == ZX_OK) {
         memcpy(data, bandlist, sizeof(bandlist));
@@ -283,8 +283,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
           auto req_bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
           if (!assoc_state_.opts) {
-            BRCMF_DBG(SIM, "BRCMF_C_DISASSOC is triggered without association.");
-            return ZX_ERR_BAD_STATE;
+            BRCMF_DBG(SIM, "BRCMF_C_DISASSOC issued without assoc - ignore");
+            break;
           }
           common::MacAddr bssid(assoc_state_.opts->bssid);
           ZX_ASSERT(bssid == *req_bssid);
@@ -298,6 +298,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         if (assoc_state_.state == AssocState::ASSOCIATED) {
           assoc_state_.state = AssocState::NOT_ASSOCIATED;
         }
+        status = ZX_OK;
       }
       break;
     }
@@ -1619,7 +1620,13 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
   return ZX_OK;
 }
 
+#ifdef USE_MFG_FW
+const char* kFirmwareVer =
+    "wl0: Oct  5 2018 04:50:34 version 7.45.96.34 (r783496 WLTEST) FWID 01-df2d9ead";
+#else
 const char* kFirmwareVer = "wl0: Sep 10 2018 16:37:38 version 7.35.79 (r487924) FWID 01-c76ab99a";
+#endif
+
 const char* kFirmwareCap =
     "ap sta wme 802.11d 802.11h rm cqa cac dualband ampdu ampdu_tx ampdu_rx amsdurx tdls "
     "radio_pwrsave btamp p2p proptxstatus mchan wds dwds p2po anqpo vht-prop-rates dfrts "

@@ -317,6 +317,57 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp) {
   return ZX_OK;
 }
 
+static zx_status_t brcmf_cfg80211_change_iface(struct brcmf_cfg80211_info* cfg,
+                                               struct net_device* ndev, wlan_info_mac_role_t type,
+                                               struct vif_params* params) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_vif* vif = ifp->vif;
+  int32_t infra = 0;
+  int32_t ap = 0;
+  zx_status_t err = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
+
+  BRCMF_DBG(TRACE, "Enter");
+
+  err = brcmf_vif_change_validate(cfg, vif, type);
+  if (err != ZX_OK) {
+    BRCMF_ERR("iface validation failed: err=%d", err);
+    return err;
+  }
+  switch (type) {
+    case WLAN_INFO_MAC_ROLE_CLIENT:
+      infra = 1;
+      break;
+    case WLAN_INFO_MAC_ROLE_AP:
+      ap = 1;
+      break;
+    default:
+      err = ZX_ERR_OUT_OF_RANGE;
+      goto done;
+  }
+
+  if (ap) {
+    BRCMF_DBG(INFO, "IF Type = AP");
+  } else {
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra, &fw_err);
+    if (err != ZX_OK) {
+      BRCMF_ERR("WLC_SET_INFRA error: %s, fw err %s", zx_status_get_string(err),
+                brcmf_fil_get_errstr(fw_err));
+      err = ZX_ERR_UNAVAILABLE;
+      goto done;
+    }
+    BRCMF_DBG(INFO, "IF Type = Infra");
+  }
+  vif->wdev.iftype = type;
+
+  brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
+
+done:
+  BRCMF_DBG(TRACE, "Exit");
+
+  return err;
+}
+
 /**
  * brcmf_ap_add_vif() - create a new AP virtual interface for multiple BSS
  *
@@ -330,34 +381,47 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
   struct brcmf_cfg80211_vif* vif;
   zx_status_t err;
 
-  if (brcmf_cfg80211_vif_event_armed(cfg)) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  BRCMF_DBG(INFO, "Adding vif \"%s\"", name);
-
-  err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_AP, &vif);
-  if (err != ZX_OK) {
-    if (dev_out) {
-      *dev_out = NULL;
+  // We need to create the SoftAP IF if we are not operating with manufacturing FW.
+  if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    if (brcmf_cfg80211_vif_event_armed(cfg)) {
+      return ZX_ERR_UNAVAILABLE;
     }
-    return err;
-  }
 
-  brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_ADD);
+    BRCMF_DBG(INFO, "Adding vif \"%s\"", name);
 
-  err = brcmf_cfg80211_request_ap_if(ifp);
-  if (err != ZX_OK) {
+    err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_AP, &vif);
+    if (err != ZX_OK) {
+      if (dev_out) {
+        *dev_out = NULL;
+      }
+      return err;
+    }
+
+    brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_ADD);
+
+    err = brcmf_cfg80211_request_ap_if(ifp);
+    if (err != ZX_OK) {
+      brcmf_cfg80211_disarm_vif_event(cfg);
+      goto fail;
+    }
+    /* wait for firmware event */
+    err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
     brcmf_cfg80211_disarm_vif_event(cfg);
-    goto fail;
-  }
-  /* wait for firmware event */
-  err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
-  brcmf_cfg80211_disarm_vif_event(cfg);
-  if (err != ZX_OK) {
-    BRCMF_ERR("timeout occurred");
-    err = ZX_ERR_IO;
-    goto fail;
+    if (err != ZX_OK) {
+      BRCMF_ERR("timeout occurred");
+      err = ZX_ERR_IO;
+      goto fail;
+    }
+  } else {
+    // Else reuse the existing IF itself but change its type
+    vif = ifp->vif;
+    vif->ifp = ifp;
+    err = brcmf_cfg80211_change_iface(cfg, ifp->ndev, WLAN_INFO_MAC_ROLE_AP, NULL);
+    if (err != ZX_OK) {
+      BRCMF_ERR("Unable to change IF type err: %u", err);
+      err = ZX_ERR_IO;
+      goto fail;
+    }
   }
 
   /* interface created in firmware */
@@ -473,9 +537,42 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       }
       bsscfgidx = brcmf_get_prealloced_bsscfgidx(drvr);
       if (bsscfgidx >= 0) {
+        bcme_status_t fw_err = BCME_OK;
+        ndev = drvr->iflist[bsscfgidx]->ndev;
+        struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
+
+        // Since a single IF is shared when operating with manufacturing FW, ensure
+        // AP mode is turned off when setting it up as Client (just in case it was
+        // previously operaating as an AP.
+        if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+          err =
+              brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT, NULL);
+          if (err != ZX_OK) {
+            BRCMF_ERR("Unable to change iface to client");
+            return err;
+          }
+          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+          if (err != ZX_OK) {
+            BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
+            return err;
+          }
+          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
+          if (err != ZX_OK) {
+            BRCMF_ERR("setting AP mode failed %s, fw err %s", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
+            return err;
+          }
+
+          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+          if (err != ZX_OK) {
+            BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
+            return err;
+          }
+        }
         wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
         wdev->iftype = req->role;
-        ndev = drvr->iflist[bsscfgidx]->ndev;
         ndev->sme_channel = zx::channel(req->sme_channel);
         ndev->needs_free_net_device = false;
         if (req->has_init_mac_addr) {
@@ -629,6 +726,11 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
     return ZX_ERR_IO;
   }
 
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    // If we are operating with manufacturing FW, we just have a single IF. Pretend like it was
+    // deleted.
+    return ZX_OK;
+  }
   brcmf_cfg80211_arm_vif_event(cfg, ifp->vif, BRCMF_E_IF_DEL);
 
   err = brcmf_fil_bsscfg_data_set(ifp, "interface_remove", NULL, 0);
@@ -683,57 +785,6 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
-}
-
-static zx_status_t brcmf_cfg80211_change_iface(struct brcmf_cfg80211_info* cfg,
-                                               struct net_device* ndev, uint16_t type,
-                                               struct vif_params* params) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-  struct brcmf_cfg80211_vif* vif = ifp->vif;
-  int32_t infra = 0;
-  int32_t ap = 0;
-  zx_status_t err = ZX_OK;
-  bcme_status_t fw_err = BCME_OK;
-
-  BRCMF_DBG(TRACE, "Enter");
-
-  err = brcmf_vif_change_validate(cfg, vif, type);
-  if (err != ZX_OK) {
-    BRCMF_ERR("iface validation failed: err=%d", err);
-    return err;
-  }
-  switch (type) {
-    case WLAN_INFO_MAC_ROLE_CLIENT:
-      infra = 1;
-      break;
-    case WLAN_INFO_MAC_ROLE_AP:
-      ap = 1;
-      break;
-    default:
-      err = ZX_ERR_OUT_OF_RANGE;
-      goto done;
-  }
-
-  if (ap) {
-    BRCMF_DBG(INFO, "IF Type = AP");
-  } else {
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra, &fw_err);
-    if (err != ZX_OK) {
-      BRCMF_ERR("WLC_SET_INFRA error: %s, fw err %s", zx_status_get_string(err),
-                brcmf_fil_get_errstr(fw_err));
-      err = ZX_ERR_UNAVAILABLE;
-      goto done;
-    }
-    BRCMF_DBG(INFO, "IF Type = Infra");
-  }
-  vif->wdev.iftype = type;
-
-  brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
-
-done:
-  BRCMF_DBG(TRACE, "Exit");
-
-  return err;
 }
 
 static zx_status_t brcmf_dev_escan_set_randmac(struct brcmf_if* ifp) {
@@ -2786,6 +2837,23 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     goto fail;
   }
 
+  // If we are operating with manufacturing FW, we have access to just one IF
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+      goto fail;
+    }
+    // Disable simultaneous STA/AP operation
+    status = brcmf_fil_iovar_int_set(ifp, "apsta", 0, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("Set apsta error %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+      goto fail;
+    }
+  }
+
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1, &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("SET INFRA error %s, fw err %s", zx_status_get_string(status),
@@ -2809,6 +2877,14 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     goto fail;
   }
 
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+      goto fail;
+    }
+  }
   struct brcmf_join_params join_params;
   memset(&join_params, 0, sizeof(join_params));
   // join parameters starts with ssid

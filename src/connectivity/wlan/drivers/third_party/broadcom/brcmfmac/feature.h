@@ -33,6 +33,7 @@
  * WOWL: Wake-On-WLAN.
  * P2P: peer-to-peer
  * RSDB: Real Simultaneous Dual Band
+ * MFG: Operating with manufacturing FW
  * TDLS: Tunneled Direct Link Setup
  * SCAN_RANDOM_MAC: Random MAC during (net detect) scheduled scan.
  * WOWL_ND: WOWL net detect (PNO)
@@ -56,6 +57,7 @@
   BRCMF_FEAT_DEF(WOWL)            \
   BRCMF_FEAT_DEF(P2P)             \
   BRCMF_FEAT_DEF(RSDB)            \
+  BRCMF_FEAT_DEF(MFG)             \
   BRCMF_FEAT_DEF(TDLS)            \
   BRCMF_FEAT_DEF(SCAN_RANDOM_MAC) \
   BRCMF_FEAT_DEF(WOWL_ND)         \

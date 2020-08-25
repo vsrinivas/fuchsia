@@ -19,6 +19,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
@@ -129,6 +130,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
         return ZX_ERR_NO_RESOURCES;
       }
 
+      // If we are operating with manufacturing firmware ensure SoftAP IF is also not present
+      if (brcmf_feat_is_enabled(brcmf_pub_.get(), BRCMF_FEAT_MFG)) {
+        if (ap_interface_ != nullptr) {
+          BRCMF_ERR("Simultaneous mode not supported in mfg FW - Ap IF already exists");
+          return ZX_ERR_NO_RESOURCES;
+        }
+      }
+
       if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kClientInterfaceName, nullptr, req,
                                              &wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create Client interface, %s",
@@ -151,6 +160,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       if (ap_interface_ != nullptr) {
         BRCMF_ERR("Device::WlanphyImplCreateIface() AP interface already exists");
         return ZX_ERR_NO_RESOURCES;
+      }
+
+      // If we are operating with manufacturing firmware ensure client IF is also not present
+      if (brcmf_feat_is_enabled(brcmf_pub_.get(), BRCMF_FEAT_MFG)) {
+        if (client_interface_ != nullptr) {
+          BRCMF_ERR("Simultaneous mode not supported in mfg FW - Client IF already exists");
+          return ZX_ERR_NO_RESOURCES;
+        }
       }
 
       if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kApInterfaceName, nullptr, req,

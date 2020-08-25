@@ -192,6 +192,22 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
 
   brcmf_feat_iovar_data_get(ifp, BRCMF_FEAT_DHIST, "wstats_counters", sizeof(wl_wstats_cnt_t));
 
+  // Check FW version and if it contains WLTEST then we are operating with manufacturing
+  // firmware
+  uint8_t buf[BRCMF_DCMD_SMLEN];
+  bcme_status_t fw_err;
+
+  memset(buf, 0, sizeof(buf));
+  err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf), &fw_err);
+  if (err == ZX_OK) {
+    if (strstr((const char*)buf, "WLTEST") != nullptr) {
+      ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_MFG);
+    }
+  } else {
+    // If we fail to get the version string, log the error.
+    BRCMF_ERR("MFG feature detection failed: %s, fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
   /* set chip related quirks */
   switch (drvr->bus_if->chip) {
     case BRCM_CC_43236_CHIP_ID:

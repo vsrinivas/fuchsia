@@ -17,21 +17,29 @@ config("config_sim") {
   defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
 }
 
-source_set("sim") {
+config("config_sim_mfg") {
+  defines = [
+    "CONFIG_BRCMFMAC_SIM=1",
+    "USE_MFG_FW",
+  ]
+}
+
+source_set("sim_common") {
+  testonly = true
   sources = [
     "sim.cc",
-    "sim.h",
     "sim_device.cc",
     "sim_errinj.cc",
-    "sim_errinj.h",
-    "sim_fw.cc",
-    "sim_fw.h",
     "sim_hw.cc",
+  ]
+  public = [
+    "sim.h",
+    "sim_device.h",
+    "sim_errinj.h",
+    "sim_fw.h",
     "sim_hw.h",
   ]
-  public = [ "sim_device.h" ]
   deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
@@ -41,8 +49,23 @@ source_set("sim") {
   public_deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
   ]
+}
+
+source_set("sim") {
+  testonly = true
+  sources = [ "sim_fw.cc" ]
+  public_deps = [ ":sim_common" ]
   public_configs = [ ":config_sim" ]
+  friend = [ "test/*" ]
+}
+
+source_set("sim_mfg") {
+  testonly = true
+  sources = [ "sim_fw.cc" ]
+  public_deps = [ ":sim_common" ]
+  public_configs = [ ":config_sim_mfg" ]
   friend = [ "test/*" ]
 }
