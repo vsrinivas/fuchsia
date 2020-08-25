@@ -3,6 +3,9 @@
         "binary": "bin/timekeeper"
     },
     "sandbox": {
+        "dev": [
+            "class/rtc"
+        ],
         "features": [
             "build-info"
         ],

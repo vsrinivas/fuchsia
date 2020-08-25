@@ -18,6 +18,7 @@ use {
     log::error,
     std::{fs, path::PathBuf},
     thiserror::Error,
+    time_metrics_registry::RealTimeClockEventsMetricDimensionEventType as CobaltRtcEventType,
 };
 
 lazy_static! {
@@ -34,16 +35,26 @@ const NANOS_PER_SECOND: i64 = 1_000_000_000;
 pub enum RtcCreationError {
     #[error("Could not find any RTC devices")]
     NoDevices,
-    #[error("Could not connect to RTC device: {0}")]
-    CouldNotConnect(Error),
     #[error("Found {0} RTC devices, more than the 1 we expected")]
     MultipleDevices(usize),
+    #[error("Could not connect to RTC device: {0}")]
+    CouldNotConnect(Error),
+}
+
+impl Into<CobaltRtcEventType> for RtcCreationError {
+    fn into(self) -> CobaltRtcEventType {
+        match self {
+            RtcCreationError::NoDevices => CobaltRtcEventType::NoDevices,
+            RtcCreationError::MultipleDevices(_) => CobaltRtcEventType::MultipleDevices,
+            RtcCreationError::CouldNotConnect(_) => CobaltRtcEventType::ConnectionFailed,
+        }
+    }
 }
 
 /// Interface to interact with a real-time clock. Note that the RTC hardware interface is limited
 /// to a resolution of one second; times returned by the RTC will always be a whole number of
 /// seconds and times sent to the RTC will discard any fractional second.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait Rtc {
     /// Returns the current time reported by the realtime clock.
     async fn get(&self) -> Result<zx::Time, Error>;
@@ -52,15 +63,11 @@ pub trait Rtc {
 }
 
 /// An implementation of the `Rtc` trait that connects to an RTC device in /dev/class/rtc.
-#[allow(unused)]
-struct RtcImpl {
-    /// The path the device was connected from.
-    path: String,
+pub struct RtcImpl {
     /// A proxy for the client end of a connection to the device.
     proxy: frtc::DeviceProxy,
 }
 
-#[allow(unused)]
 impl RtcImpl {
     /// Returns a new `RtcImpl` connected to the only available RTC device. Returns an Error if no
     /// devices were found, multiple devices were found, or the connection failed.
@@ -91,7 +98,7 @@ impl RtcImpl {
         service_connect(&path_str, server.into_channel()).map_err(|err| {
             RtcCreationError::CouldNotConnect(anyhow!("Failed to connect to device: {}", err))
         })?;
-        Ok(RtcImpl { path: path_str.to_string(), proxy })
+        Ok(RtcImpl { proxy })
     }
 }
 
@@ -115,7 +122,7 @@ fn zx_time_to_fidl_time(zx_time: zx::Time) -> frtc::Time {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl Rtc for RtcImpl {
     async fn get(&self) -> Result<zx::Time, Error> {
         self.proxy
@@ -167,7 +174,7 @@ impl FakeRtc {
 }
 
 #[cfg(test)]
-#[async_trait(?Send)]
+#[async_trait]
 impl Rtc for FakeRtc {
     async fn get(&self) -> Result<zx::Time, Error> {
         self.value.as_ref().map(|time| time.clone()).map_err(|msg| Error::msg(msg.clone()))
