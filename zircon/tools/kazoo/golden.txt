@@ -210,7 +210,7 @@ TEXT ·Sys_channel_create(SB),NOSPLIT,$0
 TEXT ·Sys_channel_read(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_read(SB)
 
-// func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *int, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *HandleInfo, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_read_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_read_etc(SB)
 
@@ -674,23 +674,23 @@ TEXT ·Sys_socket_shutdown(SB),NOSPLIT,$0
 TEXT ·Sys_stream_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_create(SB)
 
-// func Sys_stream_writev(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_writev(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_writev(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_writev(SB)
 
-// func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_writev_at(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_writev_at(SB)
 
-// func Sys_stream_readv(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_readv(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_readv(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_readv(SB)
 
-// func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_readv_at(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_readv_at(SB)
 
-// func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *Off) Status
+// func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *uint64) Status
 TEXT ·Sys_stream_seek(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_seek(SB)
 
@@ -746,7 +746,7 @@ TEXT ·Sys_system_get_dcache_line_size(SB),NOSPLIT,$0
 TEXT ·Sys_system_get_num_cpus(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_num_cpus(SB)
 
-// func Sys_system_get_version_string() String_view
+// func Sys_system_get_version_string() unsafe.Pointer
 TEXT ·Sys_system_get_version_string(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_version_string(SB)
 
@@ -950,7 +950,7 @@ func Sys_channel_read(handle Handle, options uint32, bytes unsafe.Pointer, handl
 
 //go:noescape
 //go:nosplit
-func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *int, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
+func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *HandleInfo, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -1414,23 +1414,23 @@ func Sys_stream_create(options uint32, vmo Handle, seek uint64, out_stream *Hand
 
 //go:noescape
 //go:nosplit
-func Sys_stream_writev(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+func Sys_stream_writev(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 
 //go:noescape
 //go:nosplit
-func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 
 //go:noescape
 //go:nosplit
-func Sys_stream_readv(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+func Sys_stream_readv(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 
 //go:noescape
 //go:nosplit
-func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 
 //go:noescape
 //go:nosplit
-func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *Off) Status
+func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *uint64) Status
 
 //go:noescape
 //go:nosplit
@@ -1486,7 +1486,7 @@ func Sys_system_get_num_cpus() uint32
 
 //go:noescape
 //go:nosplit
-func Sys_system_get_version_string() String_view
+func Sys_system_get_version_string() unsafe.Pointer
 
 //go:noescape
 //go:nosplit
@@ -1684,7 +1684,7 @@ TEXT ·Sys_channel_create(SB),NOSPLIT,$0
 TEXT ·Sys_channel_read(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_read(SB)
 
-// func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *int, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
+// func Sys_channel_read_etc(handle Handle, options uint32, bytes unsafe.Pointer, handles *HandleInfo, num_bytes uint32, num_handles uint32, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_read_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_read_etc(SB)
 
@@ -2148,23 +2148,23 @@ TEXT ·Sys_socket_shutdown(SB),NOSPLIT,$0
 TEXT ·Sys_stream_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_create(SB)
 
-// func Sys_stream_writev(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_writev(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_writev(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_writev(SB)
 
-// func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_writev_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_writev_at(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_writev_at(SB)
 
-// func Sys_stream_readv(handle Handle, options uint32, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_readv(handle Handle, options uint32, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_readv(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_readv(SB)
 
-// func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *Iovec, num_vector uint, actual *uint) Status
+// func Sys_stream_readv_at(handle Handle, options uint32, offset uint64, vector *uintptr, num_vector uint, actual *uint) Status
 TEXT ·Sys_stream_readv_at(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_readv_at(SB)
 
-// func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *Off) Status
+// func Sys_stream_seek(handle Handle, whence uint32, offset int64, out_seek *uint64) Status
 TEXT ·Sys_stream_seek(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_stream_seek(SB)
 
@@ -2220,7 +2220,7 @@ TEXT ·Sys_system_get_dcache_line_size(SB),NOSPLIT,$0
 TEXT ·Sys_system_get_num_cpus(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_num_cpus(SB)
 
-// func Sys_system_get_version_string() String_view
+// func Sys_system_get_version_string() unsafe.Pointer
 TEXT ·Sys_system_get_version_string(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_version_string(SB)
 

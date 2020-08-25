@@ -272,9 +272,11 @@ std::string GetGoName(const Type& type) {
   if (name == "zx_handle_disposition_t")
     return "HandleDisposition";
   if (name == "zx_handle_info_t")
-    return "int";
-  if (name == "zx_off_t")
+    return "HandleInfo";
+  if (name == "Off" || name == "zx_off_t")
     return "uint64";
+  if (name == "Iovec")
+    return "uintptr";
   if (name == "zx_pci_bar_t")
     return "uintptr";
   if (name == "zx_pci_init_arg_t")
@@ -297,6 +299,8 @@ std::string GetGoName(const Type& type) {
     return "int";
   if (name == "zx_wait_item_t")
     return "WaitItem";
+  if (name == "String_view")
+    return "unsafe.Pointer";
   return name;
 }
 
