@@ -1284,6 +1284,7 @@ mod tests {
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let mlme_query = MlmeQueryProxy::new(proxy);
+        let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface_device = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
@@ -1291,6 +1292,7 @@ mod tests {
             stats_sched,
             mlme_query,
             device_info,
+            shutdown_sender,
         };
         (iface_device, stats_requests)
     }

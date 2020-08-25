@@ -105,11 +105,19 @@ pub async fn serve_device_requests(
                         responder.send(zx::sys::ZX_OK, Some(resp).as_mut())?;
 
                         let serve_sme_fut = serve_sme_fut.map(move |result| {
-                            if let Err(e) = result {
-                                let msg = format!("error serving iface {}: {}", iface_id, e);
-                                error!("{}", msg);
-                                inspect_log!(inspect_tree.device_events.lock(), msg: msg);
-                            }
+                            let msg = match result {
+                                Ok(()) => {
+                                    let msg = format!("iface {} shutdown gracefully", iface_id);
+                                    info!("{}", msg);
+                                    msg
+                                }
+                                Err(e) => {
+                                    let msg = format!("error serving iface {}: {}", iface_id, e);
+                                    error!("{}", msg);
+                                    msg
+                                }
+                            };
+                            inspect_log!(inspect_tree.device_events.lock(), msg: msg);
                             inspect_tree.notify_iface_removed(iface_id);
                         });
                         fasync::Task::spawn(serve_sme_fut).detach();
@@ -224,6 +232,11 @@ async fn destroy_iface<'a>(
     info!("destroy_iface(id = {})", id);
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
     let phy_ownership = &iface.phy_ownership;
+
+    // Shutdown the corresponding SME first. We don't want to send requests to MLME while we're mid-shutdown.
+    if let Err(e) = iface.shutdown_sender.clone().send(()).await {
+        error!("Error shutting down SME before iface removal: {:?}", e);
+    }
 
     let phy = phys.get(&phy_ownership.phy_id).ok_or(zx::Status::NOT_FOUND)?;
     let mut phy_req = fidl_wlan_dev::DestroyIfaceRequest { id: phy_ownership.phy_assigned_id };
@@ -1255,6 +1268,7 @@ mod tests {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let (shutdown_sender, _) = mpsc::channel(1);
         let mlme_query = MlmeQueryProxy::new(proxy);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
@@ -1263,6 +1277,7 @@ mod tests {
             stats_sched,
             mlme_query,
             device_info,
+            shutdown_sender,
         };
         FakeClientIface { iface, _stats_requests: stats_requests, new_sme_clients: sme_receiver }
     }
@@ -1278,6 +1293,7 @@ mod tests {
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let mlme_query = MlmeQueryProxy::new(proxy);
+        let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
@@ -1285,6 +1301,7 @@ mod tests {
             stats_sched,
             mlme_query,
             device_info,
+            shutdown_sender,
         };
         FakeApIface { iface, _stats_requests: stats_requests, new_sme_clients: sme_receiver }
     }

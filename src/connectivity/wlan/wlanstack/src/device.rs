@@ -59,6 +59,7 @@ pub struct PhyDevice {
 pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
 pub type ApSmeServer = mpsc::UnboundedSender<super::station::ap::Endpoint>;
 pub type MeshSmeServer = mpsc::UnboundedSender<super::station::mesh::Endpoint>;
+pub type ShutdownSender = mpsc::Sender<()>;
 
 pub enum SmeServer {
     Client(ClientSmeServer),
@@ -72,6 +73,7 @@ pub struct IfaceDevice {
     pub stats_sched: StatsScheduler,
     pub mlme_query: MlmeQueryProxy,
     pub device_info: DeviceInfo,
+    pub shutdown_sender: ShutdownSender,
 }
 
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
@@ -136,6 +138,7 @@ pub fn create_and_serve_sme(
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
+    let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
     let (sme, sme_fut) = create_sme(
         cfg,
         mlme_proxy.clone(),
@@ -145,6 +148,7 @@ pub fn create_and_serve_sme(
         cobalt_sender,
         iface_tree_holder.clone(),
         inspect_tree.hash_key.clone(),
+        shutdown_receiver,
     );
 
     info!("new iface #{} with role '{:?}'", id, device_info.role);
@@ -162,7 +166,14 @@ pub fn create_and_serve_sme(
     }
     ifaces.insert(
         id,
-        IfaceDevice { phy_ownership, sme_server: sme, stats_sched, mlme_query, device_info },
+        IfaceDevice {
+            phy_ownership,
+            sme_server: sme,
+            stats_sched,
+            mlme_query,
+            device_info,
+            shutdown_sender,
+        },
     );
 
     Ok(async move {
@@ -184,12 +195,13 @@ fn create_sme<S>(
     cobalt_sender: CobaltSender,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     inspect_hash_key: [u8; 8],
+    mut shutdown_receiver: mpsc::Receiver<()>,
 ) -> (SmeServer, impl Future<Output = Result<(), Error>>)
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
 {
     let device_info = clone_utils::clone_device_info(device_info);
-    match device_info.role {
+    let (server, sme_fut) = match device_info.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
@@ -217,7 +229,14 @@ where
                 station::mesh::serve(proxy, device_info, event_stream, receiver, stats_requests);
             (SmeServer::Mesh(sender), FutureObj::new(Box::new(fut)))
         }
-    }
+    };
+    let sme_fut_with_shutdown = async move {
+        select! {
+            sme_fut = sme_fut.fuse() => sme_fut,
+            shutdown_response = shutdown_receiver.select_next_some() => Ok(()),
+        }
+    };
+    (server, sme_fut_with_shutdown)
 }
 
 #[cfg(test)]
@@ -230,6 +249,7 @@ mod tests {
         fuchsia_cobalt::{self, CobaltSender},
         fuchsia_inspect::{assert_inspect_tree, Inspector},
         futures::channel::mpsc,
+        futures::future::join,
         futures::sink::SinkExt,
         futures::task::Poll,
         pin_utils::pin_mut,
@@ -300,6 +320,7 @@ mod tests {
         let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
         let (sender, _) = mpsc::unbounded();
         let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
         iface_map.insert(
             5,
             IfaceDevice {
@@ -308,6 +329,7 @@ mod tests {
                 stats_sched,
                 mlme_query: MlmeQueryProxy::new(mlme_proxy),
                 device_info: fake_device_info(),
+                shutdown_sender,
             },
         );
         iface_map.get(&5).expect("expected iface");
@@ -323,5 +345,48 @@ mod tests {
                 "1": contains { msg: "iface removed: #5" },
             },
         });
+    }
+
+    #[test]
+    fn sme_shutdown_signal() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (mlme_proxy, _mlme_server) =
+            create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+        let iface_tree_holder = inspect_tree.create_iface_child(1);
+        let (sender, _receiver) = mpsc::channel(1);
+        let cobalt_sender = CobaltSender::new(sender);
+
+        // Assert that the IfaceMap is initially empty.
+        assert!(iface_map.get(&5).is_none());
+
+        let serve_fut = create_and_serve_sme(
+            ServiceCfg::default(),
+            5,
+            PhyOwnership { phy_id: 1, phy_assigned_id: 2 },
+            mlme_proxy,
+            iface_map.clone(),
+            inspect_tree.clone(),
+            iface_tree_holder,
+            cobalt_sender,
+            fake_device_info(),
+        )
+        .expect("failed to create SME");
+
+        // Assert that the IfaceMap now has an entry for the new iface.
+        assert!(iface_map.get(&5).is_some());
+
+        pin_mut!(serve_fut);
+
+        // Progress to cause SME creation and serving.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // SME closes on shutdown.
+        let mut shutdown_sender = iface_map.get(&5).unwrap().shutdown_sender.clone();
+        let shutdown_signal = shutdown_sender.send(());
+        let mut shutdown_fut = join(serve_fut, shutdown_signal);
+        assert_variant!(exec.run_until_stalled(&mut shutdown_fut), Poll::Ready((Ok(()), Ok(()))));
     }
 }
