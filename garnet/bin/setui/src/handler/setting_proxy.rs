@@ -33,7 +33,7 @@ enum ActiveControllerRequest {
     /// Request to add an active request from a ControllerState.
     AddActive(ActiveRequest),
     /// Request to remove an active request from a ControllerState.
-    RemoveActive(u64),
+    RemoveActive(u64, SettingEvent),
 }
 
 pub struct SettingProxy {
@@ -132,8 +132,8 @@ impl SettingProxy {
                                 ActiveControllerRequest::AddActive(active_request) => {
                                     proxy.add_active_request(active_request).await;
                                 }
-                                ActiveControllerRequest::RemoveActive(id) => {
-                                    proxy.remove_active_request(id).await;
+                                ActiveControllerRequest::RemoveActive(id, event) => {
+                                    proxy.remove_active_request(id, event).await;
                                 }
                             }
                         }
@@ -290,11 +290,14 @@ impl SettingProxy {
     /// Should only be called once a request is finished processing.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    async fn remove_active_request(&mut self, id: u64) {
+    async fn remove_active_request(&mut self, id: u64, event: SettingEvent) {
         let request_index = self.active_requests.iter().position(|r| r.id == id);
-        let removed_request =
-            self.active_requests.remove(request_index.expect("request ID not found"));
-        debug_assert!(removed_request.is_some());
+        let removed_request = self
+            .active_requests
+            .remove(request_index.expect("request ID not found"))
+            .expect("request should be present");
+
+        removed_request.client.reply(core::Payload::Event(event)).send();
 
         // Since the previous request finished, resume processing.
         self.process_active_requests().await;
@@ -330,7 +333,6 @@ impl SettingProxy {
             .send();
 
         let id = active_request.id;
-        let client = active_request.client;
         let active_controller_sender_clone = self.active_controller_sender.clone();
         let setting_type = self.setting_type;
 
@@ -341,45 +343,27 @@ impl SettingProxy {
         // loop below never receives a result.
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
-                match message_event {
+                if let Some(event) = match message_event {
                     MessageEvent::Message(handler::Payload::Result(result), _) => {
-                        match result {
-                            Err(_) => {
-                                // Handle ControllerError.
-
-                                // TODO(fxb/57171): add retry logic. If unable to succeed with
-                                // retries, reply with error. Consider breaking out a separate
-                                // function to reduce rightward drift.
-                                client
-                                    .reply(core::Payload::Event(SettingEvent::Response(id, result)))
-                                    .send();
-                            }
-                            Ok(_) => {
-                                client
-                                    .reply(core::Payload::Event(SettingEvent::Response(id, result)))
-                                    .send();
-                            }
-                        }
-                        break;
+                        // TODO(fxb/57171): add retry logic. If unable to succeed with
+                        // retries, reply with error. Consider breaking out a separate
+                        // function to reduce rightward drift.
+                        Some(SettingEvent::Response(id, result))
                     }
-                    MessageEvent::Status(Status::Undeliverable) => {
-                        client
-                            .reply(core::Payload::Event(SettingEvent::Response(
-                                id,
-                                Err(ControllerError::UndeliverableError(setting_type, request)),
-                            )))
-                            .send();
-                        break;
-                    }
-                    _ => {}
+                    MessageEvent::Status(Status::Undeliverable) => Some(SettingEvent::Response(
+                        id,
+                        Err(ControllerError::UndeliverableError(setting_type, request.clone())),
+                    )),
+                    _ => None,
+                } {
+                    // Mark the request as having been handled after retries have been
+                    // attempted and the client has been notified.
+                    active_controller_sender_clone
+                        .unbounded_send(ActiveControllerRequest::RemoveActive(id, event))
+                        .ok();
+                    return;
                 }
             }
-
-            // Mark the request as having been handled after retries have been
-            // attempted and the client has been notified.
-            active_controller_sender_clone
-                .unbounded_send(ActiveControllerRequest::RemoveActive(id))
-                .ok();
         })
         .detach();
     }
