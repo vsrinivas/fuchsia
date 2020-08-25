@@ -115,9 +115,6 @@ declare_args() {
 #     ]
 #   }
 if (current_toolchain == dart_toolchain) {
-  _strict_deps_label = "//tools/dart-strict-deps:strict_deps($host_toolchain)"
-  _strict_deps_path = get_label_info(_strict_deps_label, "root_out_dir") +
-                      "/dart-tools/strict_deps"
   template("dart_library") {
     forward_variables_from(invoker,
                            [
@@ -152,8 +149,6 @@ if (current_toolchain == dart_toolchain) {
     } else {
       assert(false, "Must specify either a package_name or infer_package_name")
     }
-    _disable_strict_deps_check = defined(invoker.disable_strict_deps_check) &&
-                                 invoker.disable_strict_deps_check
 
     dart_deps = []
     if (defined(invoker.deps)) {
@@ -431,6 +426,21 @@ if (current_toolchain == dart_toolchain) {
       not_needed(invoker, [ "options_file" ])
     }
 
+    ################################
+    # Dart strict deps
+    #
+    # Ensures that this target specifies all of the Dart packages that it
+    # imports as direct dependencies.
+
+    disable_strict_deps_check = defined(invoker.disable_strict_deps_check) &&
+                                invoker.disable_strict_deps_check
+
+    # Opting out of strict deps requires that the package is present
+    # in a global allow-list.
+    if (disable_strict_deps_check) {
+      group_deps += [ "//build/dart:disable_strict_deps_check_allowlist" ]
+    }
+
     group("${invoker.target_name}_dart_build_info_self_marker") {
       metadata = {
         dart_build_info = [
@@ -454,24 +464,22 @@ if (current_toolchain == dart_toolchain) {
           dart_deps + [ ":${invoker.target_name}_dart_build_info_self_marker" ]
     }
 
+    _strict_deps_tool_label =
+        "//tools/dart-strict-deps:strict_deps($host_toolchain)"
+    _strict_deps_tool_path =
+        get_label_info(_strict_deps_tool_label, "root_out_dir") +
+        "/dart-tools/strict_deps"
     _strict_deps_stamp =
         "${invoker.target_gen_dir}/${invoker.target_name}_strict_deps.report"
-
-    # Excluded to prevent circular dependencies
-    _strict_deps_package_excludes = [
-      "strict_deps_dart_library",
-      "dart_strict_deps_lib",
-      "dart_strict_deps_proto",
-    ]
 
     action("${invoker.target_name}_strict_deps") {
       deps = [
         ":$_dart_package_config_target_name",
         ":${invoker.target_name}_dart_build_info",
-        _strict_deps_label,
+        _strict_deps_tool_label,
       ]
       outputs = [ _strict_deps_stamp ]
-      script = _strict_deps_path
+      script = _strict_deps_tool_path
       args = [
         "--metadata-file",
         rebase_path(_metadata_collection_results_path, root_build_dir),
@@ -482,12 +490,24 @@ if (current_toolchain == dart_toolchain) {
       ]
     }
 
-    _is_third_party_lib =
-        string_replace(target_gen_dir, "third_party", "") != target_gen_dir
-    _is_protobuf = string_replace(target_name, "protoc", "") != target_name
+    # The strict deps tool is excluded from the strict deps check to
+    # prevent a circular dependency.
+    _strict_deps_package_excludes = [
+      "strict_deps_dart_library",
+      "dart_strict_deps_lib",
+      "dart_strict_deps_proto",
+    ]
     _package_excludes_contains_target =
         _strict_deps_package_excludes + [ target_name ] - [ target_name ] !=
         _strict_deps_package_excludes
+
+    _full_target_label = get_label_info(":$target_name", "label_no_toolchain")
+
+    # TODO(fxbug.dev/58781): Check against `//third_party/dart-pkg/pub`
+    # once Flutter package_config.json files can be properly parsed.
+    _is_third_party_lib =
+        string_replace(_full_target_label, "//third_party/dart-pkg", "") !=
+        _full_target_label
 
     group(target_name) {
       # dart_deps are added here to ensure they are fully built.
@@ -495,16 +515,12 @@ if (current_toolchain == dart_toolchain) {
       # depended on.
       deps = dart_deps
 
-      # Strict dependencies check ensures that targets explicitly define its
-      #   dependencies .
-      # Third party libraries and the check tool itself are not checked to prevent circular dependencies
-      if (!_disable_strict_deps_check && !_package_excludes_contains_target &&
-          !_is_protobuf && !_is_third_party_lib) {
+      if (!disable_strict_deps_check && !_package_excludes_contains_target &&
+          !_is_third_party_lib) {
         deps += [ ":${invoker.target_name}_strict_deps" ]
       } else {
         not_needed([
                      "_package_excludes_contains_target",
-                     "_is_protobuf",
                      "_is_third_party_lib",
                    ])
       }
@@ -512,8 +528,6 @@ if (current_toolchain == dart_toolchain) {
       public_deps = group_deps
 
       metadata = _metadata
-
-      not_needed(invoker, [ "disable_strict_deps_check" ])
     }
 
     ################################################
