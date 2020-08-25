@@ -297,3 +297,12 @@ union.test.json.llcpp.h.golden
 union.test.json.rs.golden
 union.test.json.syz.txt.golden
 union.test.json_test_base.h.golden
+vectors.test.json
+vectors.test.json.cc.golden
+vectors.test.json.go.golden
+vectors.test.json.h.golden
+vectors.test.json.llcpp.cc.golden
+vectors.test.json.llcpp.h.golden
+vectors.test.json.rs.golden
+vectors.test.json.syz.txt.golden
+vectors.test.json_test_base.h.golden

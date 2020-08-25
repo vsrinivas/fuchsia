@@ -1,0 +1,10 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.json;
+
+struct ExampleUseOfVectors {
+    bytes vector_of_uint8;
+    vector<vector<bool>:MAX>:MAX vector_of_vector_of_bool;
+};
