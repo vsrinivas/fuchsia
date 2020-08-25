@@ -6,8 +6,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     time_metrics_registry::{
+        RealTimeClockEventsMetricDimensionEventType as RtcEventType,
         TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
-        TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+        REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
     },
 };
 
@@ -15,6 +16,8 @@ use {
 pub trait CobaltDiagnostics {
     /// Records a Timekeeper lifecycle event.
     fn log_lifecycle_event(&mut self, event_type: LifecycleEventType);
+    /// Records an RTC interaction event.
+    fn log_rtc_event(&mut self, event_type: RtcEventType);
 }
 
 /// A connection to the real Cobalt service.
@@ -40,6 +43,10 @@ impl CobaltDiagnostics for CobaltDiagnosticsImpl {
     fn log_lifecycle_event(&mut self, event_type: LifecycleEventType) {
         self.sender.log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event_type);
     }
+
+    fn log_rtc_event(&mut self, event_type: RtcEventType) {
+        self.sender.log_event(REAL_TIME_CLOCK_EVENTS_METRIC_ID, event_type);
+    }
 }
 
 #[cfg(test)]
@@ -57,12 +64,22 @@ mod test {
         let mut diagnostics = CobaltDiagnosticsImpl { sender };
 
         diagnostics.log_lifecycle_event(LifecycleEventType::InitializedBeforeUtcStart);
-
         assert_eq!(
             mpsc_receiver.next().await,
             Some(CobaltEvent {
                 metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
                 event_codes: vec![LifecycleEventType::InitializedBeforeUtcStart as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            })
+        );
+
+        diagnostics.log_rtc_event(RtcEventType::ReadFailed);
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::REAL_TIME_CLOCK_EVENTS_METRIC_ID,
+                event_codes: vec![RtcEventType::ReadFailed as u32],
                 component: None,
                 payload: EventPayload::Event(Event),
             })
@@ -80,8 +97,10 @@ pub mod fake {
 
     /// The data shared between a `FakeCobaltDiagnostics` and the associated `FakeCobaltMonitor`.
     struct Data {
-        /// An ordered list of the life cycle events received since the last reset.
+        /// An ordered list of the lifecycle events received since the last reset.
         lifecycle_events: Vec<LifecycleEventType>,
+        /// An ordered list of the RTC events received since the last reset.
+        rtc_events: Vec<RtcEventType>,
     }
 
     /// A fake implementation of `CobaltDiagnostics` that allows for easy unit testing via an
@@ -98,7 +117,7 @@ pub mod fake {
     impl FakeCobaltDiagnostics {
         /// Constructs a new `FakeCobaltDiagnostics`/`FakeCobaltMonitor` pair.
         pub fn new() -> (Self, FakeCobaltMonitor) {
-            let data = Arc::new(Mutex::new(Data { lifecycle_events: vec![] }));
+            let data = Arc::new(Mutex::new(Data { lifecycle_events: vec![], rtc_events: vec![] }));
             (FakeCobaltDiagnostics { data: Arc::clone(&data) }, FakeCobaltMonitor { data })
         }
     }
@@ -107,6 +126,11 @@ pub mod fake {
         fn log_lifecycle_event(&mut self, event_type: LifecycleEventType) {
             let mut data = self.data.lock().expect("Error aquiring mutex");
             data.lifecycle_events.push(event_type);
+        }
+
+        fn log_rtc_event(&mut self, event_type: RtcEventType) {
+            let mut data = self.data.lock().expect("Error aquiring mutex");
+            data.rtc_events.push(event_type);
         }
     }
 
@@ -120,11 +144,17 @@ pub mod fake {
         pub fn reset(&mut self) {
             let mut data = self.data.lock().expect("Error aquiring mutex");
             data.lifecycle_events.clear();
+            data.rtc_events.clear();
         }
 
         /// Panics if the supplied slice does not match the received lifecycle events.
         pub fn assert_lifecycle_events(&self, expected: &[LifecycleEventType]) {
             assert_eq!(self.data.lock().expect("Error aquiring mutex").lifecycle_events, expected);
+        }
+
+        /// Panics if the supplied slice does not match the received RTC events.
+        pub fn assert_rtc_events(&self, expected: &[RtcEventType]) {
+            assert_eq!(self.data.lock().expect("Error aquiring mutex").rtc_events, expected);
         }
     }
 
@@ -133,8 +163,8 @@ pub mod fake {
         use super::*;
 
         #[test]
-        fn log_events() {
-            let (mut diagnostics, monitor) = FakeCobaltDiagnostics::new();
+        fn log_and_reset_lifecycle_events() {
+            let (mut diagnostics, mut monitor) = FakeCobaltDiagnostics::new();
             monitor.assert_lifecycle_events(&[]);
 
             diagnostics.log_lifecycle_event(LifecycleEventType::ReadFromStash);
@@ -145,19 +175,30 @@ pub mod fake {
                 LifecycleEventType::ReadFromStash,
                 LifecycleEventType::StartedUtcFromTimeSource,
             ]);
-        }
-
-        #[test]
-        fn reset() {
-            let (mut diagnostics, mut monitor) = FakeCobaltDiagnostics::new();
-            diagnostics.log_lifecycle_event(LifecycleEventType::ReadFromStash);
-            monitor.assert_lifecycle_events(&[LifecycleEventType::ReadFromStash]);
 
             monitor.reset();
             monitor.assert_lifecycle_events(&[]);
 
-            diagnostics.log_lifecycle_event(LifecycleEventType::InitializedBeforeUtcStart);
-            monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
+            diagnostics.log_lifecycle_event(LifecycleEventType::ReadFromStash);
+            monitor.assert_lifecycle_events(&[LifecycleEventType::ReadFromStash]);
+        }
+
+        #[test]
+        fn log_and_reset_rtc_events() {
+            let (mut diagnostics, mut monitor) = FakeCobaltDiagnostics::new();
+            monitor.assert_rtc_events(&[]);
+
+            diagnostics.log_rtc_event(RtcEventType::ReadFailed);
+            monitor.assert_rtc_events(&[RtcEventType::ReadFailed]);
+
+            diagnostics.log_rtc_event(RtcEventType::ReadSucceeded);
+            monitor.assert_rtc_events(&[RtcEventType::ReadFailed, RtcEventType::ReadSucceeded]);
+
+            monitor.reset();
+            monitor.assert_rtc_events(&[]);
+
+            diagnostics.log_rtc_event(RtcEventType::ReadFailed);
+            monitor.assert_rtc_events(&[RtcEventType::ReadFailed]);
         }
     }
 }

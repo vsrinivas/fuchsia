@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::{health::Reporter, Inspector, IntProperty, Node, Property, UintProperty},
+    fuchsia_inspect::{
+        health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, UintProperty,
+    },
     fuchsia_zircon as zx,
     futures::FutureExt,
     lazy_static::lazy_static,
     log::warn,
     std::sync::Arc,
+    time_metrics_registry::RealTimeClockEventsMetricDimensionEventType as RtcEventType,
 };
 
 const ONE_MILLION: u32 = 1_000_000;
@@ -148,11 +151,46 @@ impl ClockDetailsNode {
     }
 }
 
+/// An inspect `Node` and properties used to describe interactions with a real time clock.
+struct RealTimeClockNode {
+    /// The number of successful writes to the RTC.
+    _write_success_counter: UintProperty,
+    /// The number of failed writes to the RTC.
+    _write_failure_counter: UintProperty,
+    /// The inspect Node these fields are exported to.
+    _node: Node,
+}
+
+impl RealTimeClockNode {
+    /// Constructs a new `RealTimeClockNode`, recording the initial state.
+    pub fn new(node: Node, initial_event: RtcEventType, initial_time: Option<zx::Time>) -> Self {
+        node.record_string("initialization", format!("{:?}", initial_event));
+        if let Some(time) = initial_time {
+            node.record_int("initial_time", time.into_nanos());
+        }
+        RealTimeClockNode {
+            _write_success_counter: node.create_uint("write_successes", 0u64),
+            _write_failure_counter: node.create_uint("write_failures", 0u64),
+            _node: node,
+        }
+    }
+
+    /// Records an attempt to write to the clock.
+    pub fn write(&mut self, success: bool) {
+        match success {
+            true => self._write_success_counter.add(1),
+            false => self._write_failure_counter.add(1),
+        }
+    }
+}
+
 /// The complete set of Timekeeper information exported through Inspect.
 // Note: The inspect trait is implemented manually since some nodes are lazily created.
 pub struct InspectDiagnostics {
     /// The monotonic time at which the network became available, in nanoseconds.
     network_available_monotonic: Option<IntProperty>,
+    /// Details of interactions with the real time clock.
+    rtc: Option<RealTimeClockNode>,
     /// The details of the most recent update to the UTC zx::Clock.
     last_update: Option<ClockDetailsNode>,
     /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
@@ -176,6 +214,7 @@ impl InspectDiagnostics {
 
         let mut diagnostics = InspectDiagnostics {
             network_available_monotonic: None,
+            rtc: None,
             last_update: None,
             clock: Arc::clone(&clock),
             node: node.clone_weak(),
@@ -199,6 +238,26 @@ impl InspectDiagnostics {
         if self.network_available_monotonic.is_none() {
             self.network_available_monotonic =
                 Some(self.node.create_int("network_available_monotonic", monotonic_time()));
+        }
+    }
+
+    /// Records the outcome of initalizing and reading the real time clock.
+    #[allow(unused)]
+    pub fn rtc_initialize(&mut self, event: RtcEventType, time: Option<zx::Time>) {
+        if self.rtc.is_none() {
+            self.rtc = Some(RealTimeClockNode::new(
+                self.node.create_child("real_time_clock"),
+                event,
+                time,
+            ));
+        }
+    }
+
+    /// Records an attempt to write to the real time clock.
+    #[allow(unused)]
+    pub fn rtc_write(&mut self, success: bool) {
+        if let Some(ref mut rtc_node) = self.rtc {
+            rtc_node.write(success);
         }
     }
 
@@ -232,6 +291,7 @@ mod tests {
     };
 
     const BACKSTOP_TIME: i64 = 111111111;
+    const RTC_INITIAL_TIME: i64 = 111111234;
     const RATE_ADJUST: u32 = 222;
     const ERROR_BOUNDS: u64 = 4444444444;
     const GENERATION_COUNTER: u32 = 7777;
@@ -372,6 +432,45 @@ mod tests {
                 "fuchsia.inspect.Health": contains {
                     status: "OK",
                 },
+            }
+        );
+    }
+
+    #[test]
+    fn real_time_clock() {
+        let dummy_clock = Arc::new(
+            zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(BACKSTOP_TIME)))
+                .unwrap(),
+        );
+        let inspector = &Inspector::new();
+        let mut inspect_diagnostics =
+            InspectDiagnostics::new(inspector.root(), Arc::clone(&dummy_clock));
+        inspect_diagnostics.rtc_initialize(
+            RtcEventType::ReadSucceeded,
+            Some(zx::Time::from_nanos(RTC_INITIAL_TIME)),
+        );
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                real_time_clock: contains {
+                    initialization: "ReadSucceeded",
+                    initial_time: RTC_INITIAL_TIME,
+                    write_successes: 0u64,
+                    write_failures: 0u64,
+                }
+            }
+        );
+
+        inspect_diagnostics.rtc_write(true);
+        inspect_diagnostics.rtc_write(true);
+        inspect_diagnostics.rtc_write(false);
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                real_time_clock: contains {
+                    write_successes: 2u64,
+                    write_failures: 1u64,
+                }
             }
         );
     }
