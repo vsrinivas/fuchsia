@@ -98,6 +98,7 @@ golib("github.com/googleapis/gax-go/v2") {
 golib("github.com/google/btree") {
 }
 golib("github.com/google/go-cmp") {
+  deps = [ ":golang.org/x/xerrors" ]
 }
 golib("github.com/golang/groupcache/lru") {
 }
@@ -169,6 +170,8 @@ golib("golang.org/x/sys") {
 go_library("golang.org/x/text") {
   name = "golang.org/x/text/..."
   source_dir = "//third_party/golibs/github.com/golang/text"
+}
+golib("golang.org/x/xerrors") {
 }
 
 ### google.golang.org/*
