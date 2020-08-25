@@ -195,6 +195,51 @@ func TestFromDOT(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "omit output not in build graph",
+			// build b: rule a
+			// Note in the graph "0x11108f0" doesn't exist, although `rule` claims to
+			// produce it.
+			dot: `digraph ninja {
+"0x1110870" [label="b"]
+"0x11107e0" [label="rule", shape=ellipse]
+"0x11107e0" -> "0x1110870"
+"0x11107e0" -> "0x11108f0"
+"0x11109a0" -> "0x11107e0" [arrowhead=none]
+"0x11109a0" [label="a"]
+}`,
+			want: Graph{
+				Nodes: map[int64]*Node{
+					0x11109a0: {
+						ID:   0x11109a0,
+						Path: "a",
+						Outs: []*Edge{
+							{
+								Inputs:  []int64{0x11109a0},
+								Outputs: []int64{0x1110870}, // Note 0x11108f0 is omitted.
+								Rule:    "rule",
+							},
+						},
+					},
+					0x1110870: {
+						ID:   0x1110870,
+						Path: "b",
+						In: &Edge{
+							Inputs:  []int64{0x11109a0},
+							Outputs: []int64{0x1110870}, // Note 0x11108f0 is omitted.
+							Rule:    "rule",
+						},
+					},
+				},
+				Edges: []*Edge{
+					{
+						Inputs:  []int64{0x11109a0},
+						Outputs: []int64{0x1110870}, // Note 0x11108f0 is omitted.
+						Rule:    "rule",
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			got, err := FromDOT(strings.NewReader(tc.dot))
@@ -524,7 +569,11 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 
 	for _, e := range graph.Edges {
 		if isPhony, gotNilStep := e.Rule == "phony", e.Step == nil; isPhony != gotNilStep {
-			t.Errorf("Invalid edge after `PopulateEdges`, isPhony (%t) != gotNilStep (%t), outputs of this edge: %v", isPhony, gotNilStep, graph.pathsOf(e.Outputs))
+			var outputs []string
+			for _, output := range e.Outputs {
+				outputs = append(outputs, graph.Nodes[output].Path)
+			}
+			t.Errorf("Invalid edge after `PopulateEdges`, isPhony (%t) != gotNilStep (%t), outputs of this edge: %v", isPhony, gotNilStep, outputs)
 		}
 	}
 }

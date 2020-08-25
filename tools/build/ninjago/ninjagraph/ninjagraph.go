@@ -156,20 +156,26 @@ func (g *Graph) addEdge(e *Edge) error {
 		n.Outs = append(n.Outs, e)
 	}
 
+	var outputs []int64
 	for _, output := range e.Outputs {
 		n, ok := g.Nodes[output]
 		if !ok {
-			// TODO(jayzhuang): there are plenty of edges, in the test ninja.dot file
-			// at least, pointing to non-existent nodes. Figure out why and whether we
-			// should return error here.
+			// Skip this output because it is not included in the build graph.
+			//
+			// This is possible when a rule produces multiple outputs, and some of
+			// those outputs are not explicitly included in the build graph. For
+			// example, some rule produces both stripped and unstripped versions of a
+			// binary, and the unstripped ones are not included in the build graph.
 			continue
 		}
+		outputs = append(outputs, output)
 		if n.In != nil {
 			return fmt.Errorf("multiple edges claim to produce %x as output", output)
 		}
 		n.In = e
 	}
 
+	e.Outputs = outputs
 	g.Edges = append(g.Edges, e)
 	return nil
 }
@@ -305,7 +311,7 @@ func FromDOT(r io.Reader) (Graph, error) {
 			// Chunk the edges to reduce channel IO, this significantly reduces runtime.
 			if len(es) > 10_000 {
 				edges <- es
-				es = []*Edge{}
+				es = nil
 			}
 		}
 		edges <- es
@@ -330,7 +336,7 @@ func FromDOT(r io.Reader) (Graph, error) {
 			// Chunk the edges to reduce channel IO, this significantly reduces runtime.
 			if len(es) > 10_000 {
 				edges <- es
-				es = []*Edge{}
+				es = nil
 			}
 		}
 		edges <- es
@@ -360,17 +366,15 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 
 	for _, step := range steps {
 		// Index all outputs, otherwise the edges can miss steps due to missing
-		// nodes, which is something we need to fix. If steps are only indexed on
-		// their main output, and that output node is missing from the graph, we
-		// can't draw a link between the step and its corresponding edge.
+		// nodes. If steps are only indexed on their main output, and that output
+		// node is missing from the graph, we can't draw a link between the step and
+		// its corresponding edge.
 		//
 		// For example, if a step has its main output set to `foo`, and also
 		// produces `bar` and `baz`, we want to index this step on all three of the
-		// outputs. This way, if an edge missed `foo` in its output (cause by the
-		// Ninja graph bug), it can still be associated with the step since it can
-		// match on both other outputs.
-		//
-		// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
+		// outputs. This way, if an edge missed `foo` in its output (possible when
+		// the output node is not included in the build graph), it can still be
+		// associated with the step since it can match on both other outputs.
 		for _, out := range append(step.Outs, step.Out) {
 			if _, ok := stepByOut[out]; ok {
 				return fmt.Errorf("multiple steps claim to produce the same output %s", out)
@@ -386,45 +390,43 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 			continue
 		}
 
+		var nodes []*Node
+		for _, output := range edge.Outputs {
+			node := g.Nodes[output]
+			if node == nil {
+				return fmt.Errorf("node %x not found, yet an edge claims to produce it, invalid graph", output)
+			}
+			nodes = append(nodes, node)
+		}
+
 		// Look for the corresponding ninjalog step for this edge. We do this by
 		// matching outputs: for each output we look for the build step that
 		// produced it, and associate that with the edge. Along the way we also
 		// check all the outputs claimed by this edge is produced by the same step,
 		// so there is a 1-to-1 mapping between them.
 		var step *ninjalog.Step
-		for _, output := range edge.Outputs {
-			node, ok := g.Nodes[output]
-			if !ok {
-				// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
-				continue
-			}
-
+		for _, node := range nodes {
 			s, ok := stepByOut[node.Path]
 			if !ok {
 				return fmt.Errorf("no steps are producing output %s, yet an edge claims to produce it", node.Path)
 			}
 			if step != nil && step.CmdHash != s.CmdHash {
-				return fmt.Errorf("multiple steps match the same edge on outputs %v, previous step: %#v, this step: %#v", g.pathsOf(edge.Outputs), step, s)
+				return fmt.Errorf("multiple steps match the same edge on outputs %v, previous step: %#v, this step: %#v", pathsOf(nodes), step, s)
 			}
 			step = &s
 		}
 		if step == nil {
-			return fmt.Errorf("no build steps found for build edge with output(s): %v", g.pathsOf(edge.Outputs))
+			return fmt.Errorf("no build steps found for build edge with output(s): %v", pathsOf(nodes))
 		}
 		edge.Step = step
 	}
 	return nil
 }
 
-func (g *Graph) pathsOf(outputs []int64) []string {
+func pathsOf(nodes []*Node) []string {
 	var paths []string
-	for _, o := range outputs {
-		node, ok := g.Nodes[o]
-		if !ok {
-			// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
-			continue
-		}
-		paths = append(paths, node.Path)
+	for _, n := range nodes {
+		paths = append(paths, n.Path)
 	}
 	return paths
 }
@@ -450,7 +452,7 @@ func (g *Graph) buildTimeOf(id int64) (time.Duration, error) {
 	}
 
 	if node.In.Rule != "phony" && node.In.Step == nil {
-		return 0, fmt.Errorf("edge with outputs %v has no step associated to it, this should not happen if edges are correctly populated", g.pathsOf(node.In.Outputs))
+		return 0, fmt.Errorf("input edge to node %q has not step associated to it, this should not happen if edges are correctly populated", node.Path)
 	}
 
 	var maxBuildTime time.Duration
