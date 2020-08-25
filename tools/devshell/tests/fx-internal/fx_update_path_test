@@ -1,0 +1,52 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test the fx-update-path function from //scripts/fx-env.sh
+
+BT_FILE_DEPS=(
+    "scripts/fx-env.sh"
+    "tools/devshell/lib/prebuilt.sh"
+    "tools/devshell/lib/vars.sh"
+)
+
+
+FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." >/dev/null 2>&1 && pwd)"
+
+TEST_fx_update_path() {
+    . "${FUCHSIA_DIR}/scripts/fx-env.sh"
+    BT_ASSERT_FUNCTION_EXISTS fx-update-path
+
+    # make sure $FUCHSIA_DIR isn't in the path
+    BT_ASSERT [[ "${PATH#*${FUCHSIA_DIR}}" == "${PATH}" ]]
+
+    fx-update-path
+
+    # make sure jiri and git directories are in the path
+    for d in "${FUCHSIA_DIR}/.jiri_root/bin" "${FUCHSIA_DIR}/scripts/git"; do
+        BT_ASSERT [[ ":${PATH#*:${d}:}:" != ":${PATH}:" ]]
+    done
+
+    # change FUCHSIA_DIR to a newly named symlink to the current one
+    readonly OLD_FUCHSIA_DIR="${FUCHSIA_DIR}"
+    readonly TEMP_DIR="$(mktemp -d -t new-fuchsia-dir-XXXXXXXXX)"
+    FUCHSIA_DIR="${TEMP_DIR}/fuchsia"
+    ln -s "${OLD_FUCHSIA_DIR}" "${FUCHSIA_DIR}"
+
+    # make sure the new $FUCHSIA_DIR isn't in the path
+    BT_ASSERT [[ "${PATH#*${FUCHSIA_DIR}}" == "${PATH}" ]]
+
+    fx-update-path
+
+    # make sure the old $FUCHSIA_DIR isn't in the path
+    BT_ASSERT [[ "${PATH#*${OLD_FUCHSIA_DIR}}" == "${PATH}" ]]
+
+    # make sure jiri and git directories are in the path
+    for d in "${FUCHSIA_DIR}/.jiri_root/bin" "${FUCHSIA_DIR}/scripts/git"; do
+        BT_ASSERT [[ ":${PATH#*:${d}:}:" != ":${PATH}:" ]]
+    done
+}
+
+
+BT_RUN_TESTS "$@"

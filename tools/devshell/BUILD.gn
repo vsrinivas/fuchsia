@@ -17,6 +17,7 @@ test_scripts = [
   "tests/fx-internal/devfinder_usage_test",
   "tests/fx-internal/fx_helpers_test",
   "tests/fx-internal/fx_test",
+  "tests/fx-internal/fx_update_path_test",
   "tests/fx-internal/metrics_test",
   "tests/fx-internal/mock_test",
   "tests/fx-internal/optional-features_test",
@@ -61,8 +62,9 @@ host_test_data("fx_bash_tests") {
       source_base_dir = "//scripts"
       target_base_dir = "scripts"
       files = [
-        "//scripts/fx",
+        "//scripts/fx-env.sh",
         "//scripts/fx-help.awk",
+        "//scripts/fx",
       ]
     },
     {

@@ -33,25 +33,34 @@ function __fx_env_main() {
     export FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
   fi
 
-  # __patched_path <old-regex> <new-component>
-  # Prints a new path value based on the current $PATH, removing path components
-  # that match <old-regex> and adding <new-component> to the end.
-  function __patched_path {
-    local old_regex="$1"
-    local new_component="$2"
-    local stripped
-    # Put each PATH component on a line, delete any lines that match the regex,
-    # then glue back together with ':' characters.
-    stripped="$(
-        set -o pipefail &&
-        echo "${PATH}" |
-        tr ':' '\n' |
-        grep -v -E "^${old_regex}$" |
-        tr '\n' ':'
-    )"
-    # The trailing newline will have become a colon, so no need to add another
-    # one here.
-    echo "${stripped}${new_component}"
+  # __update_path <suffix> <suffix>...
+  # Removes old $PATH members who match any of the suffixes and then adds them
+  # back prefixed by $FUCHSIA_DIR.
+  function __update_path {
+    if [[ -n "${ZSH_VERSION}" ]]; then
+      local s
+      for s in $*; do
+        path[$path[(i)*/$s]]=("$FUCHSIA_DIR/$s")
+      done
+    else
+      local -a path
+      local s i found
+      IFS=':' read -r -a path <<< "$PATH"
+      for s in "$@"; do
+        found=
+        for i in "${!path[@]}"; do
+          if [[ ${path[$i]} = */$s ]]; then
+            found=yes
+            path[$i]="$FUCHSIA_DIR/$s"
+            break
+          fi
+        done
+        if [[ -z "$found" ]]; then
+          path+=("$FUCHSIA_DIR/$s")
+        fi
+      done
+      PATH="$(IFS=:; echo "${path[*]}")"
+    fi
   }
 
   ### fx-update-path: add useful tools to the PATH
@@ -59,30 +68,12 @@ function __fx_env_main() {
   # Add tools to path, removing prior tools directory if any. This also
   # matches the Zircon tools directory added by zset, so add it back too.
   function fx-update-path {
-    local jiri_bin_dir="${FUCHSIA_DIR}/.jiri_root/bin"
-    export PATH="$(__patched_path "${jiri_bin_dir}" "${jiri_bin_dir}")"
-
-    export PATH="$(__patched_path "${FUCHSIA_DIR}/scripts/git" "${FUCHSIA_DIR}/scripts/git")"
-
-    local rust_dir="$(source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh" && echo -n "${PREBUILT_RUST_DIR}/bin")"
-    export PATH="$(__patched_path "${rust_dir}" "${rust_dir}")"
-
-    # XXX(raggi): these can get stale, so this really needs rework. Probably the
-    # only way to handle this more correctly is to wrap fx in a function that
-    # re-runs fx-update-path whenever `fx set` or `fx use` succeed.
-    local fuchsia_tools_dir="$(fx-config-read 2>/dev/null; echo "${FUCHSIA_BUILD_DIR}/tools")"
-    local zircon_tools_dir="$(fx-config-read 2>/dev/null; echo "${ZIRCON_TOOLS_DIR}")"
-
-    if [[ -n "${fuchsia_tools_dir}" ]]; then
-      export PATH="$(__patched_path \
-        "${FUCHSIA_OUT_DIR}/[^/]*/tools" \
-        "${fuchsia_tools_dir}")"
-    fi
-    if [[ -n "${zircon_tools_dir}" ]]; then
-      export PATH="$(__patched_path \
-        "${FUCHSIA_OUT_DIR}/[^/]*/tools" \
-        "${zircon_tools_dir}")"
-    fi
+    local rust_dir="$(source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh" && echo -n "${PREBUILT_RUST_DIR}/bin")"
+    __update_path \
+      .jiri_root/bin \
+      scripts/git \
+      ${rust_dir#${FUCHSIA_DIR}/}
+    export PATH
   }
 
   ### fx-prompt-info: prints the current configuration for display in a prompt
