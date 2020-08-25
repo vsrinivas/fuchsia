@@ -4,6 +4,7 @@
 
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
+use fuchsia_async::TimeoutExt as _;
 use futures::{FutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, std_ip};
 use netemul::EnvironmentUdpSocket as _;
@@ -781,5 +782,360 @@ async fn test_interfaces_changed_race() -> Result {
         .try_collect()
         .await?;
     }
+    Ok(())
+}
+
+/// Tests that competing interface change events are reported by
+/// fuchsia.net.interfaces/Watcher in the correct order.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_interfaces_watcher_race() -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("interfaces_watcher_race")
+        .context("failed to create netstack environment")?;
+    let interface_state = env
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+    for _ in 0..100 {
+        let (watcher, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        let () = interface_state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, server)
+            .context("failed to initialize interface watcher")?;
+
+        let ep = sandbox
+            // We don't need to run variants for this test, all we care about is
+            // the Netstack race. Use NetworkDevice because it's lighter weight.
+            .create_endpoint::<netemul::NetworkDevice, _>("ep")
+            .await
+            .context("failed to create fixed ep")?
+            .into_interface_in_environment(&env)
+            .await
+            .context("failed to install in environment")?;
+
+        const ADDR: fidl_fuchsia_net::Subnet =
+            fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 24 };
+
+        // Bring the link up, enable the interface, and add an IP address
+        // "non-sequentially" (as much as possible) to cause races in Netstack
+        // when reporting events.
+        let ((), (), ()) = futures::future::try_join3(
+            ep.set_link_up(true).map(|r| r.context("failed to bring link up")),
+            ep.enable_interface().map(|r| r.context("failed to enable interface")),
+            ep.add_ip_addr(ADDR).map(|r| r.context("failed to add address")),
+        )
+        .await?;
+
+        let id = ep.id();
+        let () = futures::stream::try_unfold(
+            (watcher, false, false, false),
+            |(watcher, present, up, has_addr)| async move {
+                let event = watcher.watch().await.context("failed to watch")?;
+
+                let (mut new_present, mut new_up, mut new_has_addr) = (present, up, has_addr);
+                match event {
+                    fidl_fuchsia_net_interfaces::Event::Added(properties)
+                    | fidl_fuchsia_net_interfaces::Event::Exists(properties) => {
+                        if properties.id == Some(id) {
+                            assert!(!present, "duplicate added/exists event");
+                            new_present = true;
+                            new_up = properties
+                                .online
+                                .expect("added/exists event missing online property");
+                            new_has_addr = properties
+                                .addresses
+                                .expect("added/exists event missing addresses property")
+                                .iter()
+                                .any(|a| a.addr == Some(ADDR));
+                        }
+                    }
+                    fidl_fuchsia_net_interfaces::Event::Changed(properties) => {
+                        if properties.id == Some(id) {
+                            assert!(present, "property change event before added or exists event");
+                            if let Some(online) = properties.online {
+                                new_up = online;
+                            }
+                            if let Some(addresses) = properties.addresses {
+                                new_has_addr = addresses.iter().any(|a| a.addr == Some(ADDR));
+                            }
+                        }
+                    }
+                    fidl_fuchsia_net_interfaces::Event::Removed(removed_id) => {
+                        if removed_id == id {
+                            assert!(present, "removed event before added or exists");
+                            new_present = false;
+                        }
+                    }
+                    _ => {}
+                }
+                println!(
+                    "Observed interfaces, previous state = ({}, {}, {}), new state = ({}, {}, {})",
+                    present, up, has_addr, new_present, new_up, new_has_addr
+                );
+
+                // Verify that none of the observed states can be seen as
+                // "undone" by bad event ordering in Netstack. We don't care
+                // about the order in which we see the events since we're
+                // intentionally racing some things, only that nothing tracks
+                // back.
+
+                if present {
+                    // Device should not disappear.
+                    assert!(new_present, "out of order events, device disappeared");
+                }
+                if up {
+                    // Device should not go offline.
+                    assert!(new_up, "out of order events, device went offline");
+                }
+                if has_addr {
+                    // Address should not disappear.
+                    assert!(new_has_addr, "out of order events, address disappeared");
+                }
+                Result::Ok(if new_present && new_up && new_has_addr {
+                    // We got everything we wanted, end the stream.
+                    None
+                } else {
+                    // Continue folding with the new state.
+                    Some(((), (watcher, new_present, new_up, new_has_addr)))
+                })
+            },
+        )
+        .try_collect()
+        .await?;
+    }
+    Ok(())
+}
+
+fn empty_interface_properties(id: u64) -> fidl_fuchsia_net_interfaces::Properties {
+    fidl_fuchsia_net_interfaces::Properties {
+        id: Some(id),
+        online: None,
+        device_class: None,
+        addresses: None,
+        has_default_ipv4_route: None,
+        has_default_ipv6_route: None,
+    }
+}
+
+/// Test interface changes are reported through the interface watcher.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_interfaces_watcher() -> Result {
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")?;
+
+    let interface_state = env
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+
+    let initialize_watcher = || async {
+        let (watcher, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        let () = interface_state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, server)
+            .context("failed to initialize interface watcher")?;
+
+        let event = watcher.watch().await.context("failed to watch")?;
+        if let fidl_fuchsia_net_interfaces::Event::Exists(properties) = event {
+            assert_eq!(
+                properties.device_class,
+                Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                    fidl_fuchsia_net_interfaces::Empty {}
+                ))
+            );
+        } else {
+            panic!("got {:?}, want loopback interface exists event", event);
+        }
+
+        assert_eq!(
+            watcher.watch().await.context("failed to watch")?,
+            fidl_fuchsia_net_interfaces::Event::Idle(fidl_fuchsia_net_interfaces::Empty {})
+        );
+        Result::Ok(watcher)
+    };
+
+    let blocking_watcher =
+        futures::stream::try_unfold(initialize_watcher().await?, |watcher| async move {
+            Ok(Some((watcher.watch().await.context("watch failed")?, watcher)))
+        });
+    pin_utils::pin_mut!(blocking_watcher);
+    async fn blocking_watch<S>(watcher: &mut S) -> Result<Option<S::Ok>>
+    where
+        S: futures::stream::TryStream<Error = anyhow::Error> + std::marker::Unpin,
+    {
+        watcher
+            .try_next()
+            .map(|e| match e {
+                Ok(Some(e)) => Ok(Some(e)),
+                Ok(None) => Err(anyhow::anyhow!("watcher event stream ended")),
+                Err(e) => Err(e.into()),
+            })
+            .on_timeout(
+                fuchsia_async::Time::after(fuchsia_zircon::Duration::from_millis(50)),
+                || Ok(None),
+            )
+            .await
+    }
+    let watcher = initialize_watcher().await?;
+
+    // Add an interface.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let dev = sandbox
+        .create_endpoint::<netemul::NetworkDevice, _>("ep")
+        .await
+        .context("failed to create endpoint")?
+        .into_interface_in_environment(&env)
+        .await
+        .context("failed to add endpoint to Netstack")?;
+    let () = dev.set_link_up(true).await.context("failed to bring device up")?;
+    let id = dev.id();
+    let want = fidl_fuchsia_net_interfaces::Event::Added(fidl_fuchsia_net_interfaces::Properties {
+        id: Some(id),
+        online: Some(false),
+        device_class: Some(fidl_fuchsia_net_interfaces::DeviceClass::Device(
+            fidl_fuchsia_hardware_network::DeviceClass::Unknown,
+        )),
+        addresses: Some(vec![]),
+        has_default_ipv4_route: Some(false),
+        has_default_ipv6_route: Some(false),
+    });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after interface addition"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Set the link to up.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let () = dev.enable_interface().await.context("failed to bring device up")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            online: Some(true),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after link up"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Add an address.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let mut subnet = fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 };
+    let () = stack
+        .add_interface_address(id, &mut subnet)
+        .await
+        .squash_result()
+        .context("failed to add address")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            addresses: Some(vec![fidl_fuchsia_net_interfaces::Address { addr: Some(subnet) }]),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after address addition"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Add a default route.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let mut default_v4_subnet = fidl_fuchsia_net::Subnet { addr: fidl_ip!(0.0.0.0), prefix_len: 0 };
+    let () = stack
+        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet: default_v4_subnet,
+            destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(
+                fidl_ip!(192.168.255.254),
+            ),
+        })
+        .await
+        .squash_result()
+        .context("failed to add default route")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            has_default_ipv4_route: Some(true),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after default route addition"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Remove the default route.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let () = stack
+        .del_forwarding_entry(&mut default_v4_subnet)
+        .await
+        .squash_result()
+        .context("failed to delete default route")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            has_default_ipv4_route: Some(false),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after default route removal"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Remove the added address.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let () = stack
+        .del_interface_address(id, &mut subnet)
+        .await
+        .squash_result()
+        .context("failed to add address")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            addresses: Some(vec![]),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after address removal"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Set the link to down.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    let () = dev.set_link_up(false).await.context("failed to bring device up")?;
+    let want =
+        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+            online: Some(false),
+            ..empty_interface_properties(id)
+        });
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
+
+    // Remove the ethernet interface.
+    assert_eq!(blocking_watch(&mut blocking_watcher).await.context("watch should block")?, None);
+    std::mem::drop(dev);
+    let want = fidl_fuchsia_net_interfaces::Event::Removed(id);
+    assert_eq!(
+        blocking_watch(&mut blocking_watcher)
+            .await?
+            .ok_or(anyhow::anyhow!("hanging get failed to resolve after interface removal"))?,
+        want
+    );
+    assert_eq!(watcher.watch().await.context("failed to watch")?, want);
     Ok(())
 }
