@@ -27,10 +27,7 @@ group("tests") {
     "//src/tests/fidl_go_conformance:tests",
     "//third_party/go:go_fidl_tests",
     "//tools/fidl:tests",
-
-    # Disabling to land cross-repo change, see Id796b02eb0dad1e90d5b14b76b9473eb08c29054
-    # "//topaz/bin/fidl_bindings_test/test:fidl_bindings_test",
-    "//topaz/tests/dart_fidl_benchmarks",
+    "//topaz/bundles/fidl:tests",
     "//zircon/system/ulib/fidl-async-2/test",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
   ]
