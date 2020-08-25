@@ -4,10 +4,6 @@
 
 import("//products/bringup.gni")
 
-# bringup.gni turns off filtering for Astro, but here we reeeeaaally want to
-# turn it off to keep the image size reasonable.
-on_second_thought_keep_on_astro = false
-
 bootfs_only = false
 
 kernel_cmdline_args -= [

@@ -4,10 +4,6 @@
 
 bootfs_only = true
 
-# This forces all tests and related artifacts to remain on system images
-# even on Astro boards from which they are usually excluded.
-on_second_thought_keep_on_astro = true
-
 kernel_cmdline_args = [
   "blobfs.userpager=true",
   "console.shell=true",
