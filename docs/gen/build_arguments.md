@@ -33,6 +33,15 @@ List of file paths to every font asset. Populated in fonts.gni.
 
 From //src/fonts/build/font_args.gni:35
 
+### all_toolchain_variants
+*These should never be set as a build argument.*
+It will be set below and passed to other toolchains through toolchain_args
+(see variant_toolchain.gni).
+
+**Current value (from the default):** `[]`
+
+From //build/config/BUILDCONFIG.gn:1083
+
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
@@ -804,7 +813,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:816
+From //build/config/BUILDCONFIG.gn:841
 
 ### fastboot_product
 
@@ -1304,6 +1313,12 @@ Each element of the list is one variant, which is a scope defining:
       so the list of config names forming each variant must be unique
       among the lists in `known_variants + extra_variants`.
 
+  `tags` (optional)
+      [list of strings] A list of liberal strings describing properties
+      of the toolchain instances created from this variant scope. See
+      //build/toolchain/variant_tags.gni for the list of available
+      values and their meaning.
+
   `toolchain_args` (optional)
       [scope] Each variable defined in this scope overrides a
       build argument in the toolchain context of this variant.
@@ -1323,21 +1338,21 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/lto:thinlto"]
 }, {
   configs = ["//build/config/profile"]
-  instrumented = true
+  tags = ["instrumented"]
 }, {
   configs = ["//build/config/scudo"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
-  instrumented = true
+  tags = ["instrumented", "instrumentation-runtime"]
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov"]
-  instrumented = true
+  tags = ["instrumented", "instrumentation-runtime"]
 }, {
   configs = ["//build/config/sanitizers:asan"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  instrumented = true
+  tags = ["asan", "instrumented", "instrumentation-runtime"]
   toolchain_args = {
   use_scudo = false
 }
@@ -1346,7 +1361,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  instrumented = true
+  tags = ["asan", "instrumented", "instrumentation-runtime"]
   toolchain_args = {
   use_scudo = false
 }
@@ -1355,7 +1370,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  instrumented = true
+  tags = ["asan", "instrumented", "instrumentation-runtime"]
   toolchain_args = {
   use_scudo = false
 }
@@ -1364,8 +1379,8 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  instrumented = true
   name = "asan_no_detect_leaks"
+  tags = ["asan", "instrumented", "instrumentation-runtime"]
   toolchain_args = {
   asan_default_options = "detect_leaks=0"
   use_scudo = false
@@ -1375,24 +1390,24 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  instrumented = true
   name = "asan-fuzzer"
   remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
+  tags = ["asan", "instrumented", "instrumentation-runtime", "fuzzer"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
   use_scudo = false
 }
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:fuzzer", "//build/config:icf"]
-  instrumented = true
   name = "ubsan-fuzzer"
   remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
+  tags = ["fuzzer", "instrumented", "instrumentation-runtime"]
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:741
+From //build/config/BUILDCONFIG.gn:755
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2066,7 +2081,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1046
+From //build/config/BUILDCONFIG.gn:1073
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2075,7 +2090,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1051
+From //build/config/BUILDCONFIG.gn:1078
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2093,12 +2108,14 @@ a list that can be spliced into [`select_variant`](#select_variant).
   host = true
   variant = "asan_no_detect_leaks"
 }, {
-  dir = ["//zircon/tools/blobfs"]
-  host = true
-  variant = false
-}, {
   host = true
   variant = "asan"
+}]
+}, {
+  name = "host_profile"
+  select_variant = [{
+  host = true
+  variant = "profile"
 }]
 }, {
   name = "kasan"
@@ -2109,7 +2126,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:862
+From //build/config/BUILDCONFIG.gn:887
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2299,6 +2316,10 @@ This variable is a scope giving details about the current toolchain:
         [string] This is "-${toolchain_variant.name}", "" if name is empty.
     `toolchain_variant.is_pic_default`
         [bool] This is true in `shlib_toolchain`.
+    `toolchain_variant.tags`
+        [list of strings] A list of liberal strings, each one describing a
+        property of this toolchain instance. See
+        //build/toolchain/variant_tags.gni for more details.
     `toolchain_variant.configs`
         [list of configs] A list of configs that are added to all linkable
         targets for this toolchain() instance.
@@ -2310,9 +2331,8 @@ This variable is a scope giving details about the current toolchain:
         [list of configs] Same a remove_common_configs, but only applies
         to non-executable (e.g. shared_library()) targets.
     `toolchain_variant.instrumented`
-        [boolean] A flag that is true iff this toolchain generates
-        instrumented code (for sanitizers, code-coverage analysis or
-        fuzzing).
+        [boolean] A convenience flag that is true iff "instrumented" is
+        part of toolchain_variant.tags.
     `toolchain_variant.with_shared`
         [boolean] True iff this toolchain() instance has a secondary
         toolchain to build ELF shared-library code.
@@ -2327,7 +2347,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:126
+From //build/config/BUILDCONFIG.gn:129
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2355,7 +2375,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:836
+From //build/config/BUILDCONFIG.gn:861
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2742,7 +2762,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:143
+From //build/config/BUILDCONFIG.gn:146
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
