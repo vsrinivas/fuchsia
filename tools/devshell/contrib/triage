@@ -189,7 +189,7 @@ else
 
   for data_path in "${unzipped_data_dirs[@]}"
   do
-    $diag_tool_exe -b "$data_path/inspect.json" generate "$temp_dir/diag_out"
+    $diag_tool_exe --snapshot "$data_path/inspect.json" generate "$temp_dir/diag_out"
     cat "$temp_dir/diag_out" >> "$temp_dir/diag_all"
     echo >> "$temp_dir/diag_all" # diag_tool output has no final newline
   done
