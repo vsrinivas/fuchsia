@@ -16,8 +16,8 @@
 #include "sherlock-gpios.h"
 #include "sherlock.h"
 
-// TODO(fxbug.dev/52506): Re-enable when 54011 is resolved.
-//#define ENABLE_BT
+// Enables BT PCM audio.
+#define ENABLE_BT
 
 namespace sherlock {
 
@@ -214,6 +214,9 @@ zx_status_t Sherlock::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(9), ua_strength_level1, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(10), ua_strength_level1, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOX(11), ua_strength_level1, nullptr);
 #endif
 
   // PDM pin assignments.
@@ -386,7 +389,11 @@ zx_status_t Sherlock::AudioInit() {
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
-    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    if (is_sherlock) {
+      snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    } else {
+      snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
+    }
     metadata.is_input = false;
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
@@ -405,7 +412,11 @@ zx_status_t Sherlock::AudioInit() {
     };
 
     pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "sherlock-pcm-audio-out";
+    if (is_sherlock) {
+      tdm_dev.name = "sherlock-pcm-audio-out";
+    } else {
+      tdm_dev.name = "luis-pcm-audio-out";
+    }
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
@@ -480,7 +491,11 @@ zx_status_t Sherlock::AudioInit() {
     };
     metadata::AmlConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
-    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    if (is_sherlock) {
+      snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    } else {
+      snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
+    }
     metadata.is_input = true;
     // Compatible clocks with other TDM drivers.
     metadata.mClockDivFactor = 10;
@@ -489,7 +504,7 @@ zx_status_t Sherlock::AudioInit() {
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
     metadata.number_of_channels = 1;
-    metadata.swaps_mask = 0x0200;
+    metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
@@ -499,7 +514,11 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
     pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "sherlock-pcm-audio-in";
+    if (is_sherlock) {
+      tdm_dev.name = "sherlock-pcm-audio-in";
+    } else {
+      tdm_dev.name = "luis-pcm-audio-in";
+    }
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;

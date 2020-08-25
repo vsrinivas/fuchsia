@@ -73,18 +73,10 @@ zx_status_t AmlG12TdmStream::InitHW() {
       // 4/3 bitoffset, 2 slots (regardless of number of channels), 32 bits/slot, 16 bits/sample.
       // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
       // to provide i2s framing.
-      if (metadata_.is_input) {
-        if (metadata_.tdm.type == metadata::TdmType::I2s) {
-          bits_per_bitoffset = 4;
-        } else {
-          bits_per_bitoffset = 6;
-        }
+      if (metadata_.tdm.type == metadata::TdmType::I2s) {
+        bits_per_bitoffset = 3;
       } else {
-        if (metadata_.tdm.type == metadata::TdmType::I2s) {
-          bits_per_bitoffset = 3;
-        } else {
-          bits_per_bitoffset = 5;
-        }
+        bits_per_bitoffset = 4;
       }
       number_of_slots = 2;
       bits_per_slot = 32;
@@ -103,10 +95,10 @@ zx_status_t AmlG12TdmStream::InitHW() {
                metadata_.number_of_channels);
         return ZX_ERR_NOT_SUPPORTED;
       }
-      // bitoffset = 4/3, 1 slot, 16 bits/slot, 32 bits/sample.
+      // bitoffset = 3, 1 slot, 16 bits/slot, 32 bits/sample.
       // For output bitoffest 3 places msb of sample one sclk period after fsync to provide PCM
       // framing.
-      bits_per_bitoffset = metadata_.is_input ? 4 : 3;
+      bits_per_bitoffset = 3;
       number_of_slots = 1;
       bits_per_slot = 32;
       bits_per_sample = 16;
@@ -116,7 +108,8 @@ zx_status_t AmlG12TdmStream::InitHW() {
       break;
   }
   aml_audio_->ConfigTdmSlot(bits_per_bitoffset, number_of_slots - 1, bits_per_slot - 1,
-                            bits_per_sample - 1, metadata_.mix_mask);
+                            bits_per_sample - 1, metadata_.mix_mask,
+                            metadata_.tdm.type == metadata::TdmType::I2s);
   aml_audio_->ConfigTdmSwaps(metadata_.swaps);
   for (size_t i = 0; i < kMaxLanes; ++i) {
     status = aml_audio_->ConfigTdmLane(i, metadata_.lanes_enable_mask[i], lanes_mutes[i]);
@@ -149,8 +142,7 @@ zx_status_t AmlG12TdmStream::InitHW() {
       case metadata::TdmType::LeftJustified:
         // lrduty = 32 sclk cycles (write 31) for i2s
         // invert sclk = true = sclk is rising edge in middle of bit for i2s
-        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 31, 63,
-                                        metadata_.tdm.type == metadata::TdmType::I2s);
+        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 31, 63, true);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
           return status;
@@ -160,7 +152,7 @@ zx_status_t AmlG12TdmStream::InitHW() {
         // lrduty = 1 sclk cycles (write 0) for PCM
         // TODO(andresoportus): For now we set lrduty to 2 sclk cycles (write 1), 1 does not work.
         // invert sclk = false = sclk is falling edge in middle of bit for PCM
-        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor, 1, 31, false);
+        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 1, 31, true);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
           return status;
@@ -507,7 +499,6 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       break;
     }
   }
-
   if (req.frames_per_second != dai_formats_[0].frame_rate ||
       req.channels_to_use_bitmask != channels_to_use_) {
     for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {

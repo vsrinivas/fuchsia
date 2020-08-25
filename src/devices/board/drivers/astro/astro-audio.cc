@@ -17,8 +17,8 @@
 #include "astro-gpios.h"
 #include "astro.h"
 
-// TODO(fxbug.dev/52506): Re-enable when 54011 is resolved.
-//#define ENABLE_BT
+// Enables BT PCM audio.
+// #define ENABLE_BT
 
 namespace astro {
 
@@ -156,7 +156,6 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOX(8), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(9), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(10), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(11), ua, nullptr);

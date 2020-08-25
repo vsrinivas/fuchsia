@@ -31,7 +31,7 @@ class AmlTdmDevice {
 
   // Configures placement of data on the tdm bus
   virtual void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
-                             uint8_t bits_per_sample, uint8_t mix_mask) = 0;
+                             uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) = 0;
 
   // Configures Lanes.
   virtual zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) = 0;
@@ -96,7 +96,7 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
       aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
-                     uint8_t bits_per_sample, uint8_t mix_mask) override;
+                     uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) override;
   zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override;
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
@@ -181,7 +181,7 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
       aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
-                     uint8_t bits_per_sample, uint8_t mix_mask) override;
+                     uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) override;
   zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override;
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;

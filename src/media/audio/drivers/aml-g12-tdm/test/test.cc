@@ -188,6 +188,8 @@ TEST(AmlG12Tdm, InitializeI2sOut) {
   // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
   mock[0x584].ExpectWrite(0x02000F20);
 
+  mock[0x050].ExpectWrite(0xc1807c3f);  // SCLK CTRL, enabled, 24 sdiv, 31 lrduty, 63 lrdiv.
+
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
@@ -793,8 +795,10 @@ TEST(AmlG12Tdm, InitializeI2sIn) {
 
   // Configure TDM IN for I2S.
   mock[0x380].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM IN CTRL0 disable.
-  // TDM IN CTRL config, I2S, source TDM IN C, bitoffset 4, 2 slots, 16 bits per slot.
-  mock[0x380].ExpectWrite(0x0024001f);
+  // TDM IN CTRL config, I2S, source TDM IN C, I2S mode, bitoffset 3, 2 slots, 16 bits per slot.
+  mock[0x380].ExpectWrite(0x4023001f);
+
+  mock[0x050].ExpectWrite(0xc1807c3f);  // SCLK CTRL, enabled, 24 sdiv, 31 lrduty, 63 lrdiv.
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -820,8 +824,10 @@ TEST(AmlG12Tdm, InitializePcmIn) {
 
   // Configure TDM IN for PCM.
   mock[0x380].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM IN CTRL0 disable.
-  // TDM IN CTRL config, TDM, source TDM IN C, bitoffset 4, 1 slot, 32 bits per slot.
-  mock[0x380].ExpectWrite(0x0024001f);
+  // TDM IN CTRL config, TDM, source TDM IN C, TDM mode, bitoffset 3, 1 slot, 32 bits per slot.
+  mock[0x380].ExpectWrite(0x0023001f);
+
+  mock[0x050].ExpectWrite(0xc180041f);  // SCLK CTRL, enabled, 24 sdiv, 1 lrduty, 31 lrdiv.
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;

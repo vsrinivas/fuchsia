@@ -95,7 +95,7 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
   // Setup TDM.
 
   // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample (works for 32 in codec), no mixing.
-  lib_->ConfigTdmSlot(3, 1, 31, 15, 0);
+  lib_->ConfigTdmSlot(3, 1, 31, 15, 0, true);
 
   // Lane0 right channel.
   lib_->ConfigTdmSwaps(0x00000010);

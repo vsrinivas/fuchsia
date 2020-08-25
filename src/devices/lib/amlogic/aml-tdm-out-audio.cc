@@ -129,7 +129,7 @@ zx_status_t AmlTdmOutDevice::SetBuffer(zx_paddr_t buf, size_t len) {
     mix_mask - lanes to mix L+R.
 */
 void AmlTdmOutDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
-                                    uint8_t bits_per_sample, uint8_t mix_mask) {
+                                    uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) {
   switch (version_) {
     case metadata::AmlVersion::kS905D2G: {
       uint32_t reg0 = bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (mix_mask << 20);

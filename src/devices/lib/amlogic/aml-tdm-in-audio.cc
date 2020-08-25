@@ -11,6 +11,7 @@
 #include <soc/aml-common/aml-tdm-audio.h>
 
 // Only enable for testing without configuring loopback in the BT chip.
+// Disable metadata::AmlConfig swaps first.
 //#define ENABLE_BT_LOOPBACK
 
 // static
@@ -43,7 +44,9 @@ void AmlTdmInDevice::Initialize() {
 
   // Set the sclk and lrclk sources to the chosen mclk channel
   zx_off_t ptr = EE_AUDIO_CLK_TDMIN_A_CTL + tdm_ch_ * sizeof(uint32_t);
-  mmio_.Write32((0x03 << 30) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
+  // Read TDMIN in the raising edge (we clock TDMOUT in the falling edge).
+  constexpr bool sclk_inv = true;
+  mmio_.Write32((0x03 << 30) | (sclk_inv << 29) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
 
   // Enable DDR ARB, and enable this ddr channels bit.
   mmio_.SetBits32((1 << 31) | (1 << (toddr_ch_)), EE_AUDIO_ARB_CTRL);
@@ -130,7 +133,7 @@ zx_status_t AmlTdmInDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 // bits_per_sample - number of bits in sample minus one.
 // mix_mask - lanes to mix L+R.
 void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
-                                   uint8_t bits_per_sample, uint8_t mix_mask) {
+                                   uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) {
   switch (version_) {
     case metadata::AmlVersion::kS905D2G: {
       uint32_t src = 0;
@@ -148,8 +151,7 @@ void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_
 #ifdef ENABLE_BT_LOOPBACK
       src += 3;
 #endif
-      bool tdm_mode = (bits_per_slot + 1) / (bits_per_sample + 1) != 2;
-      uint32_t reg0 = (tdm_mode << 30) |    // TDM mode.
+      uint32_t reg0 = (i2s_mode << 30) |    // TDM/I2S mode.
                       (src << 20) |         // Source for TDMIN.
                       (bit_offset << 16) |  // Add delay to ws or data for skew modification.
                       bits_per_slot;
