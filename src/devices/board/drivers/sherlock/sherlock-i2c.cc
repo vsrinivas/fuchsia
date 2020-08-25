@@ -101,6 +101,38 @@ static const i2c_channel_t luis_i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    // 0P8_EE_BUCK - platform
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x60,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // CPU_A_BUCK - platform
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x60,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // 0P8_EE_BUCK - form factor
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x6a,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // CPU_A_BUCK - form factor
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x69,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 static const i2c_channel_t sherlock_i2c_channels[] = {
