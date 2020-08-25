@@ -12,9 +12,6 @@ declare_args() {
 
   # The list of environment names to include in "basic_envs".
   basic_env_names = [ "emu" ]
-
-  # Whether to use AEMU instead of QEMU as the default emulator environment.
-  use_aemu_as_default = true
 }
 
 _all_named_envs = []
@@ -148,7 +145,7 @@ if (host_os == "linux") {
 
 # Allow selection of AEMU as the default EMU.
 emu_env = qemu_env
-if (use_aemu_as_default && target_cpu == "x64") {
+if (target_cpu == "x64") {
   emu_env = {
   }
   emu_env = aemu_env

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
-import("//build/testing/aemu.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
@@ -109,24 +108,6 @@ template("test_spec") {
     assert(_max_severity_allowed_val + [ _log_settings.max_severity ] -
                [ _log_settings.max_severity ] != _max_severity_allowed_val,
            "Invalid 'log_settings.max_severity': " + _log_settings.max_severity)
-  }
-
-  # TODO(51418): Remove after AEMU is generally available and all existing
-  # tests work.
-  # Check `package_url` against the list of known AEMU failures.
-  if (defined(invoker.package_url) &&
-      [ invoker.package_url ] + aemu_known_failures - aemu_known_failures ==
-      []) {
-    # Force redirect `emu_env` to `qemu_env`.
-    if (environments + [ emu_env ] - [ emu_env ] != environments) {
-      environments -= [ emu_env ]
-      environments += [ qemu_env ]
-    }
-
-    # Fail if user attempts to force `aemu_env` without removing from the
-    # block list.
-    assert(environments + [ aemu_env ] - [ aemu_env ] == environments,
-           "Unable to set `aemu_env` for test in //build/testing/aemu.gni")
   }
 
   # Call "expanding" the operation that takes a scope
