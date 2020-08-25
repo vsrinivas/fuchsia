@@ -52,8 +52,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
     let test = OpaqueTestBuilder::new(
         "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/consumer-component.cm",
     )
-    .component_manager_url("fuchsia-pkg://fuchsia.com/utc-time-tests#meta/component_manager.cmx")
-    .config("/pkg/data/cm_config")
+    .add_extra_arg("--maintain-utc-clock")
     .add_dir_handle("/boot", client.into())
     .build()
     .await

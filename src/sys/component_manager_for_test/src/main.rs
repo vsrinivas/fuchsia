@@ -6,6 +6,7 @@ use {
     anyhow::{Context, Error},
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
+        elf_runner::ElfRunner,
         model::{
             binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
         },
@@ -19,7 +20,7 @@ use {
     fuchsia_syslog as syslog,
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// Returns a usage message for the supported arguments.
@@ -62,12 +63,13 @@ fn main() -> Result<(), Error> {
 
 // Run root component and expose services.
 async fn run_root(args: startup::Arguments) -> Result<(), Error> {
+    // Create an ELF runner for the root component.
+    let runner = Arc::new(ElfRunner::new(&args, None));
+
     // Set up environment.
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)
-        .populate_config_from_args()
-        .await?
-        .add_elf_runner()?
+        .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?
         .build()
         .await?;

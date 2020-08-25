@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
+        elf_runner::ElfRunner,
         model::{
             binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
         },
@@ -18,7 +19,7 @@ use {
     fuchsia_syslog as syslog,
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// Runs a component exposing the `fuchsia.component.test.Trigger` protocol, plumbing it through
@@ -35,16 +36,16 @@ async fn main() -> Result<(), Error> {
         }
     };
 
+    // Create an ELF runner for the root component.
+    let runner = Arc::new(ElfRunner::new(&args, None));
+
     // Set up environment.
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)
-        .populate_config_from_args()
-        .await?
-        .add_elf_runner()?
+        .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?
         .build()
         .await?;
-
     let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
 
     let root_moniker = AbsoluteMoniker::root();

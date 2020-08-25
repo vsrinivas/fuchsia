@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
+        elf_runner::ElfRunner,
         model::{
             binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
         },
@@ -18,7 +19,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// This is a temporary workaround to allow command line tools to connect to the session manager
@@ -84,11 +85,12 @@ async fn main() -> Result<(), Error> {
         }
     };
 
+    // Create an ELF runner for the root component.
+    let runner = Arc::new(ElfRunner::new(&args, None));
+
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)
-        .populate_config_from_args()
-        .await?
-        .add_elf_runner()?
+        .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?
         .build()
         .await?;

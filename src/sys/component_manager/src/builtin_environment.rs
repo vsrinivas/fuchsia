@@ -14,12 +14,11 @@ use {
             root_resource::RootResource,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             system_controller::SystemController,
-            time::{create_and_start_utc_clock, UtcTimeMaintainer},
+            time::UtcTimeMaintainer,
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
         config::RuntimeConfig,
-        elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
@@ -63,9 +62,12 @@ use {
     },
 };
 
+// Re-export so that the component_manager binary can see it.
+pub use crate::builtin::time::create_and_start_utc_clock;
 // Allow shutdown to take up to an hour.
 pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
+// TODO(viktard): Merge Arguments, RuntimeConfig and root_component_url from ModelParams
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     args: Option<Arguments>,
@@ -88,63 +90,15 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
-    pub fn use_default_config(self) -> Self {
-        self.set_runtime_config(RuntimeConfig::default())
-    }
-
-    pub async fn populate_config_from_args(mut self) -> Result<Self, Error> {
-        let args =
-            self.args.as_ref().ok_or(format_err!("Arguments should be set to populate config."))?;
-        if self.runtime_config.is_some() {
-            return Err(format_err!("Unable to populate config from args: already set."));
-        }
-        self.runtime_config = match RuntimeConfig::load_from_file(&args).await {
-            Ok((config, path)) => {
-                info!("Loaded runtime config from {}", path.display());
-                Ok(Some(config))
-            }
-            Err(err) => Err(format_err!("Failed to load runtime config: {}", err)),
-        }?;
-        Ok(self)
-    }
-
+    /// Unless set, `RuntimeConfig` will be loaded from a file specified by `args`.
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
         self.runtime_config = Some(runtime_config);
         self
     }
 
-    /// Create a UTC clock if required.
-    /// Not every instance of component_manager running on the system maintains a
-    /// UTC clock. Only the root component_manager should have the `maintain-utc-clock`
-    /// config flag set.
-    pub async fn create_and_start_utc_clock(mut self) -> Result<Self, Error> {
-        let runtime_config = self
-            .runtime_config
-            .as_ref()
-            .ok_or(format_err!("Runtime config should be set to start utc clock."))?;
-        self.utc_clock = if runtime_config.maintain_utc_clock {
-            Some(Arc::new(
-                create_and_start_utc_clock().await.context("failed to create UTC clock")?,
-            ))
-        } else {
-            None
-        };
-        Ok(self)
-    }
-
     pub fn set_utc_clock(mut self, clock: Arc<Clock>) -> Self {
         self.utc_clock = Some(clock);
         self
-    }
-
-    pub fn add_elf_runner(self) -> Result<Self, Error> {
-        let runtime_config = self
-            .runtime_config
-            .as_ref()
-            .ok_or(format_err!("Runtime config should be set to add elf runner."))?;
-
-        let runner = Arc::new(ElfRunner::new(&runtime_config, self.utc_clock.clone()));
-        Ok(self.add_runner("elf".into(), runner))
     }
 
     pub fn add_runner(
@@ -213,9 +167,17 @@ impl BuiltinEnvironmentBuilder {
 
     pub async fn build(self) -> Result<BuiltinEnvironment, Error> {
         let args = self.args.unwrap_or_default();
-        let runtime_config = self
-            .runtime_config
-            .ok_or(format_err!("Runtime config is required for BuiltinEnvironment."))?;
+        let runtime_config = if let Some(runtime_config) = self.runtime_config {
+            runtime_config
+        } else {
+            match RuntimeConfig::load_from_file(&args).await {
+                Ok((config, path)) => {
+                    info!("Loaded runtime config from {}", path.display());
+                    config
+                }
+                Err(err) => panic!("Failed to load runtime config: {}", err),
+            }
+        };
 
         let runner_map = self
             .runners
@@ -230,7 +192,6 @@ impl BuiltinEnvironmentBuilder {
                 )
             })
             .collect();
-
         let params = ModelParams {
             root_component_url: args.root_component_url.clone(),
             root_environment: Environment::new_root(
@@ -281,9 +242,9 @@ impl BuiltinEnvironmentBuilder {
 /// BuiltinEnvironmentBuilder to construct one.
 ///
 /// The available built-in capabilities depends on the configuration provided in Arguments:
-/// * If [RuntimeConfig::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
+/// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
 ///   is available.
-/// * If [RuntimeConfig::maintain_utc_clock] is true, a fuchsia.time.Maintenance service is
+/// * If [Arguments::maintain_utc_clock] is true, a fuchsia.time.Maintenance service is
 ///   available.
 pub struct BuiltinEnvironment {
     pub model: Arc<Model>,
@@ -336,7 +297,7 @@ impl BuiltinEnvironment {
         };
 
         // Set up ProcessLauncher if available.
-        let process_launcher = if runtime_config.use_builtin_process_launcher {
+        let process_launcher = if args.use_builtin_process_launcher {
             let process_launcher = Arc::new(ProcessLauncher::new());
             model.root_realm.hooks.install(process_launcher.hooks()).await;
             Some(process_launcher)

@@ -1,5 +1,3 @@
 {
   "debug": false,
-  "maintain_utc_clock": true,
-  "use_builtin_process_launcher": true,
 }

@@ -18,8 +18,6 @@ struct Config {
     debug: Option<bool>,
     list_children_batch_size: Option<u32>,
     security_policy: Option<SecurityPolicy>,
-    use_builtin_process_launcher: Option<bool>,
-    maintain_utc_clock: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -45,19 +43,9 @@ impl Into<component_internal::Config> for Config {
             (None, None)
         };
 
-        let Config {
-            debug,
-            list_children_batch_size,
-            use_builtin_process_launcher,
-            maintain_utc_clock,
-            ..
-        } = self;
-
         component_internal::Config {
-            debug,
-            list_children_batch_size,
-            use_builtin_process_launcher,
-            maintain_utc_clock,
+            debug: self.debug,
+            list_children_batch_size: self.list_children_batch_size,
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     ambient_mark_vmo_exec,
@@ -76,8 +64,7 @@ macro_rules! extend_if_unset {
                     return Err(format_err!("Conflicting field found: {:?}", stringify!($field)))
                 }
                 (None, Some(_)) => $value.$field,
-                (Some(_), None) => $target.$field,
-                (&None, &None) => None,
+                _ => $target.$field,
             };
         )+
     };
@@ -91,8 +78,6 @@ impl Config {
 
     fn extend(mut self, another: Config) -> Result<Self, Error> {
         extend_if_unset!(self, another, debug);
-        extend_if_unset!(self, another, use_builtin_process_launcher);
-        extend_if_unset!(self, another, maintain_utc_clock);
         extend_if_unset!(self, another, list_children_batch_size);
         extend_if_unset!(self, another, security_policy);
         Ok(self)
@@ -116,10 +101,13 @@ pub fn from_args() -> Result<(), Error> {
 }
 
 fn compile(args: Args) -> Result<(), Error> {
-    let configs =
-        args.input.iter().map(Config::from_json_file).collect::<Result<Vec<Config>, _>>()?;
-    let config_json =
-        configs.into_iter().try_fold(Config::default(), |acc, next| acc.extend(next))?;
+    let config_json = args
+        .input
+        .iter()
+        .map(Config::from_json_file)
+        .take_while(Result::is_ok)
+        .map(Result::unwrap)
+        .try_fold(Config::default(), |acc, next| acc.extend(next))?;
     let mut config_fidl: component_internal::Config = config_json.into();
     let bytes = encode_persistent(&mut config_fidl)?;
     let mut file = File::create(args.output)?;
@@ -135,15 +123,13 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_values() -> Result<(), Error> {
+    fn test_debug() -> Result<(), Error> {
         let tmp_dir = TempDir::new().unwrap();
         let output_path = tmp_dir.path().join("config");
         let input_path = tmp_dir.path().join("foo.json");
         let input = r#"{
             debug: true,
             list_children_batch_size: 123,
-            maintain_utc_clock: false,
-            use_builtin_process_launcher: true,
             security_policy: {
                 job_policy: {
                     main_process_critical: [ "/", "/bar" ],
@@ -163,8 +149,6 @@ mod tests {
             config,
             component_internal::Config {
                 debug: Some(true),
-                maintain_utc_clock: Some(false),
-                use_builtin_process_launcher: Some(true),
                 list_children_batch_size: Some(123),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
@@ -193,31 +177,6 @@ mod tests {
         let args =
             Args { output: output_path.clone(), input: vec![input_path, another_input_path] };
         assert!(compile(args).is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn test_merge() -> Result<(), Error> {
-        let tmp_dir = TempDir::new().unwrap();
-        let output_path = tmp_dir.path().join("config");
-
-        let input_path = tmp_dir.path().join("foo.json");
-        let input = "{\"debug\": true,}";
-        File::create(&input_path).unwrap().write_all(input.as_bytes()).unwrap();
-
-        let another_input_path = tmp_dir.path().join("bar.json");
-        let another_input = "{\"list_children_batch_size\": 42,}";
-        File::create(&another_input_path).unwrap().write_all(another_input.as_bytes()).unwrap();
-
-        let args =
-            Args { output: output_path.clone(), input: vec![input_path, another_input_path] };
-        compile(args)?;
-
-        let mut bytes = Vec::new();
-        File::open(output_path)?.read_to_end(&mut bytes)?;
-        let config: component_internal::Config = decode_persistent(&bytes)?;
-        assert_eq!(config.debug, Some(true));
-        assert_eq!(config.list_children_batch_size, Some(42));
         Ok(())
     }
 }
