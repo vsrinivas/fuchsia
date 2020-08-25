@@ -40,7 +40,6 @@ rustc_test("netstack_integration_test_bin") {
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
