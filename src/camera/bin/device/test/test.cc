@@ -477,8 +477,6 @@ TEST_F(DeviceTest, SetResolution) {
   constexpr fuchsia::math::Size kExpectedSize{.width = 1280, .height = 720};
   constexpr fuchsia::math::Size kRequestedSize2{.width = 1, .height = 1};
   constexpr fuchsia::math::Size kExpectedSize2{.width = 1024, .height = 576};
-  constexpr fuchsia::math::Size kRequestedSize3{.width = 1280, .height = 720};
-  constexpr fuchsia::math::Size kExpectedSize3{.width = 1280, .height = 720};
   bool callback_received = false;
   stream->WatchResolution([&](fuchsia::math::Size coded_size) {
     EXPECT_GE(coded_size.width, kExpectedDefaultSize.width);
@@ -499,14 +497,6 @@ TEST_F(DeviceTest, SetResolution) {
   stream->WatchResolution([&](fuchsia::math::Size coded_size) {
     EXPECT_GE(coded_size.width, kExpectedSize2.width);
     EXPECT_GE(coded_size.height, kExpectedSize2.height);
-    callback_received = true;
-  });
-  RunLoopUntilFailureOr(callback_received);
-  callback_received = false;
-  stream->SetResolution(kRequestedSize3);
-  stream->WatchResolution([&](fuchsia::math::Size coded_size) {
-    EXPECT_GE(coded_size.width, kExpectedSize3.width);
-    EXPECT_GE(coded_size.height, kExpectedSize3.height);
     callback_received = true;
   });
   RunLoopUntilFailureOr(callback_received);
@@ -859,12 +849,6 @@ TEST_F(DeviceTest, GetProperties) {
     EXPECT_EQ(properties.frame_rate.denominator, configs[0].streams[0].frame_rate.denominator);
     EXPECT_EQ(properties.image_format.coded_width, configs[0].streams[0].image_format.coded_width);
     EXPECT_EQ(properties.image_format.coded_height,
-              configs[0].streams[0].image_format.coded_height);
-    ASSERT_TRUE(properties.supported_resolutions.has_value());
-    ASSERT_FALSE(properties.supported_resolutions->empty());
-    EXPECT_EQ(static_cast<uint32_t>(properties.supported_resolutions->at(0).width),
-              configs[0].streams[0].image_format.coded_width);
-    EXPECT_EQ(static_cast<uint32_t>(properties.supported_resolutions->at(0).height),
               configs[0].streams[0].image_format.coded_height);
     properties_returned = true;
   });
