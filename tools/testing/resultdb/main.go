@@ -39,7 +39,9 @@ func main() {
 			log.Fatal(err)
 		}
 		testResults := SummaryToResultSink(summary, outputRoot)
-		requests = append(requests, createTestResultsRequests(testResults, 50)...)
+		// Group 500 testResults per ReportTestResultsRequest. This reduces the number of HTTP calls
+		// we make to result_sink. 500 is the maximum number of testResults allowed.
+		requests = append(requests, createTestResultsRequests(testResults, 500)...)
 	}
 
 	ctx, err := resultSinkCtx()
