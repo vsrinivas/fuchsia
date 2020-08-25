@@ -213,3 +213,10 @@ table CreateFrameParams {
     /// Popup Frames created by the Frame will have a name derived from the parent Frame's name.
     2: string:MAX debug_name;
 };
+
+/// Used by web.Context clients to delegate web.Frame hosting capabilities to selected peers.
+[Discoverable]
+protocol FrameHost {
+    /// Behaves identically to [`fuchsia.web.Context/CreateFrameWithParams`].
+    CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
+};
