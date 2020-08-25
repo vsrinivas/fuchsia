@@ -61,6 +61,10 @@ test_platforms = [
     cpu = "arm64"
   },
   {
+    device_type = "Luis"
+    cpu = "arm64"
+  },
+  {
     os = "Mac"
     cpu = "x64"
   },

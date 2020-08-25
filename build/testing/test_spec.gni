@@ -260,6 +260,8 @@ template("test_spec") {
     allowed_device_types = [ "Khadas Vim2 Max" ]
   } else if (board_name == "astro") {
     allowed_device_types = [ "Astro" ]
+  } else if (board_name == "luis") {
+    allowed_device_types = [ "Luis" ]
   } else if (board_name == "sherlock") {
     allowed_device_types = [ "Sherlock" ]
   } else if (board_name == "nelson") {
