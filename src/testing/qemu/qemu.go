@@ -209,7 +209,8 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 	args = append(args, "-m", "8192")
 
 	if params.Networking {
-		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no")
+		args = append(args, "-netdev", "tap,id=net0,ifname=qemu,script=no,downscript=no")
+		args = append(args, "-device", "virtio-net-pci,netdev=net0,mac=52:54:00:12:34:56")
 	} else {
 		args = append(args, "-net", "none")
 	}
