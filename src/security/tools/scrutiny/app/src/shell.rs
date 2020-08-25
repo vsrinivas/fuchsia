@@ -9,7 +9,14 @@ use {
         error::ShellError,
     },
     anyhow::{Error, Result},
-    log::info,
+    log::{info, warn},
+    rustyline::{
+        completion::{Completer, FilenameCompleter, Pair},
+        error::ReadlineError,
+        highlight::Highlighter,
+        hint::Hinter,
+        CompletionType, Config, Editor, Helper,
+    },
     scrutiny::{
         engine::{
             dispatcher::{ControllerDispatcher, DispatcherError},
@@ -19,17 +26,90 @@ use {
         model::controller::ConnectionMode,
     },
     serde_json::{self, json, Value},
+    std::borrow::Cow::{self, Borrowed},
     std::collections::{HashMap, VecDeque},
-    std::io::{stdin, stdout, Write},
     std::process,
     std::sync::{Arc, Mutex, RwLock},
     termion::{self, clear, color, cursor, style},
 };
 
+#[allow(dead_code)]
+struct ScrutinyHelper {
+    dispatcher: Arc<RwLock<ControllerDispatcher>>,
+    file_completer: FilenameCompleter,
+}
+
+impl ScrutinyHelper {
+    fn new(dispatcher: Arc<RwLock<ControllerDispatcher>>) -> Self {
+        Self { dispatcher, file_completer: FilenameCompleter::new() }
+    }
+}
+
+impl Completer for ScrutinyHelper {
+    type Candidate = Pair;
+    fn complete(&self, line: &str, _pos: usize) -> Result<(usize, Vec<Pair>), ReadlineError> {
+        let tokens = line.split(" ").collect::<Vec<&str>>();
+        // If we have more than 1 token then just use the file completer.
+        if tokens.len() <= 1 {
+            let mut controllers = self.dispatcher.read().unwrap().controllers_all();
+            controllers.append(&mut BuiltinCommand::commands());
+            let mut matches = vec![];
+            let search_term = tokens.first().unwrap();
+            for controller in controllers.iter() {
+                let mut command = str::replace(&controller, "/api/", "");
+                command = str::replace(&command, "/", ".");
+                if command.starts_with(search_term) {
+                    matches.push(Pair {
+                        display: command.clone(),
+                        replacement: command.trim_start_matches(search_term).to_string(),
+                    });
+                }
+            }
+            return Ok((line.len(), matches));
+        } else {
+            let current_param = tokens.last().unwrap();
+            if current_param.starts_with('-') {
+                let mut namespace = tokens.first().unwrap().to_string();
+                if !namespace.starts_with("/api") {
+                    namespace = str::replace(&namespace, ".", "/");
+                    namespace.insert_str(0, "/api/");
+                    if let Ok(hints) = self.dispatcher.read().unwrap().hints(namespace) {
+                        let mut matches = vec![];
+                        for (param, _data_type) in hints.iter() {
+                            if param.starts_with(current_param) {
+                                matches.push(Pair {
+                                    display: param.clone(),
+                                    replacement: param[current_param.len()..].to_string(),
+                                });
+                            }
+                        }
+                        return Ok((line.len(), matches));
+                    }
+                }
+            }
+        }
+        Ok((line.len(), vec![]))
+    }
+}
+
+impl Hinter for ScrutinyHelper {
+    fn hint(&self, _line: &str, _pos: usize) -> Option<String> {
+        None
+    }
+}
+
+impl Highlighter for ScrutinyHelper {
+    fn highlight_prompt<'p>(&self, prompt: &'p str) -> Cow<'p, str> {
+        Borrowed(prompt)
+    }
+}
+
+impl Helper for ScrutinyHelper {}
+
 pub struct Shell {
     manager: Arc<Mutex<PluginManager>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
-    history: VecDeque<String>,
+    readline: Editor<ScrutinyHelper>,
 }
 
 impl Shell {
@@ -37,24 +117,40 @@ impl Shell {
         manager: Arc<Mutex<PluginManager>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
     ) -> Self {
-        Self { manager, dispatcher, history: VecDeque::with_capacity(2048) }
+        let config = Config::builder()
+            .history_ignore_space(true)
+            .completion_type(CompletionType::List)
+            .build();
+        let mut readline = Editor::with_config(config);
+        let helper = ScrutinyHelper::new(dispatcher.clone());
+        readline.set_helper(Some(helper));
+        if let Err(_) = readline.load_history("/tmp/scrutiny_history") {
+            warn!("No shell history available");
+        }
+        Self { manager, dispatcher, readline }
     }
 
     fn prompt(&mut self) -> Option<String> {
-        let stdin = stdin();
-        let mut stdout = stdout();
-
-        write!(stdout, "{reset}{yellow_bg}{black_fg}{arrow}{reset}{black_fg}{yellow_bg} scrutiny {reset}{yellow_fg}{arrow}{reset} ",
+        let prompt = format!("{reset}{yellow_bg}{black_fg}{arrow}{reset}{black_fg}{yellow_bg} scrutiny {reset}{yellow_fg}{arrow}{reset} ",
             black_fg = color::Fg(color::Black),
             yellow_fg = color::Fg(color::Yellow),
             yellow_bg = color::Bg(color::Yellow),
             arrow = "\u{E0B0}",
             reset = style::Reset,
-        ).unwrap();
-        stdout.flush().unwrap();
-        let mut buffer = String::new();
-        stdin.read_line(&mut buffer).unwrap();
-        Some(buffer)
+        );
+
+        let readline = self.readline.readline(&prompt);
+        if let Err(e) = self.readline.save_history("/tmp/scrutiny_history") {
+            warn!("Failed to save scrutiny shell history: {}", e);
+        }
+
+        match readline {
+            Ok(line) => {
+                self.readline.add_history_entry(line.as_str());
+                Some(line)
+            }
+            _ => None,
+        }
     }
 
     fn builtin(&mut self, command: String) -> bool {
@@ -143,8 +239,8 @@ impl Shell {
                 }
                 Builtin::History => {
                     let mut count = 1;
-                    for entry in self.history.iter() {
-                        print!("{} {}", count, entry);
+                    for entry in self.readline.history().iter() {
+                        println!("{} {}", count, entry);
                         count += 1;
                     }
                 }
@@ -248,7 +344,6 @@ impl Shell {
         if command.is_empty() {
             return;
         }
-        self.history.push_front(command.clone());
         info!("Command: {}", command);
 
         if self.builtin(command.clone()) {
@@ -272,7 +367,33 @@ impl Shell {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        scrutiny::model::{
+            controller::{DataController, HintDataType},
+            model::DataModel,
+        },
+        tempfile::tempdir,
+        uuid::Uuid,
+    };
+
+    #[derive(Default)]
+    struct FakeController {}
+    impl DataController for FakeController {
+        fn query(&self, _: Arc<DataModel>, _: Value) -> Result<Value> {
+            Ok(json!(""))
+        }
+
+        fn hints(&self) -> Vec<(String, HintDataType)> {
+            vec![("--baz".to_string(), HintDataType::NoType)]
+        }
+    }
+
+    fn test_model() -> Arc<DataModel> {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        Arc::new(DataModel::connect(uri).unwrap())
+    }
 
     #[test]
     fn test_parse_command_errors() {
@@ -293,5 +414,34 @@ mod tests {
     fn test_help_ok() {
         assert_eq!(Shell::parse_command("help").is_ok(), true);
         assert_eq!(Shell::parse_command("help zbi.bootfs").is_ok(), true);
+    }
+
+    #[test]
+    fn test_hinter_empty() {
+        let data_model = test_model();
+        let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(data_model)));
+        let helper = ScrutinyHelper::new(dispatcher);
+        let result = helper.complete("", 0).unwrap();
+        assert_eq!(result.1.len(), BuiltinCommand::commands().len());
+    }
+
+    #[test]
+    fn test_hinter() {
+        let data_model = test_model();
+        let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(data_model)));
+        let fake = Arc::new(FakeController::default());
+        let namespace = "/api/test/foo/bar".to_string();
+        dispatcher.write().unwrap().add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
+        let helper = ScrutinyHelper::new(dispatcher);
+        let result = helper.complete("", 0).unwrap();
+        assert_eq!(result.1.len(), BuiltinCommand::commands().len() + 1);
+        let result = helper.complete("test.foo.ba", 0).unwrap();
+        assert_eq!(result.1.len(), 1);
+        let result = helper.complete("test.foo.bar -", 0).unwrap();
+        assert_eq!(result.1.len(), 1);
+        let result = helper.complete("test.foo.bar --a", 0).unwrap();
+        assert_eq!(result.1.len(), 0);
+        let result = helper.complete("test.foo.bar --b", 0).unwrap();
+        assert_eq!(result.1.len(), 1);
     }
 }

@@ -11,6 +11,18 @@ pub enum ConnectionMode {
     Remote = 2,
 }
 
+/// The data type of the hint improving the intelligence of the hinter about how
+/// to fill in the next parameter.
+#[derive(Copy, Clone)]
+pub enum HintDataType {
+    // There is no hintable data type to match this hint type.
+    NoType,
+    // This parameter refers to a file and so we should hint files.
+    File,
+    // This parameter refers to a package url so we should hint package urls.
+    PackageUrl,
+}
+
 /// The DataController trait is responsible for querying the data model.
 pub trait DataController: Send + Sync {
     /// Takes an immutable copy of the model and some query specific to this
@@ -33,5 +45,11 @@ pub trait DataController: Send + Sync {
     /// modifies the local system.
     fn connection_mode(&self) -> ConnectionMode {
         ConnectionMode::Remote
+    }
+
+    /// Returns a vector of parameter hints for the command line shell followed
+    /// by an optional hinter type like a file or a url etc.
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        Vec::new()
     }
 }

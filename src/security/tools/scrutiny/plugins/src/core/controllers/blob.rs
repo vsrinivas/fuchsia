@@ -5,7 +5,10 @@
 use {
     crate::core::{artifact::ArtifactGetter, package_getter::PackageGetter},
     anyhow::{anyhow, Result},
-    scrutiny::{model::controller::DataController, model::model::DataModel},
+    scrutiny::{
+        model::controller::{DataController, HintDataType},
+        model::model::DataModel,
+    },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::env,
@@ -58,8 +61,13 @@ impl DataController for BlobController {
             return Err(anyhow!("Unable to retrieve blobs, failed to construct getter."));
         }
     }
+
     fn description(&self) -> String {
         "Returns a base64 encoded blob for the given merkle.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--merkle".to_string(), HintDataType::NoType)]
     }
 }
 

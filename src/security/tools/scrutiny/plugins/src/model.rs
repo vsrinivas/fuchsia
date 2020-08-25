@@ -10,7 +10,7 @@ use {
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
-        model::controller::DataController,
+        model::controller::{DataController, HintDataType},
         model::model::*,
         plugin,
     },
@@ -40,8 +40,13 @@ impl DataController for ComponentSearchController {
         }
         Ok(json!(response))
     }
+
     fn description(&self) -> String {
         "Searches for matching component urls across all components.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--url".to_string(), HintDataType::NoType)]
     }
 }
 
@@ -68,8 +73,13 @@ impl DataController for ManifestSearchController {
         }
         Ok(json!(response))
     }
+
     fn description(&self) -> String {
         "Searches for matching manifest file names in all packages.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--manifest".to_string(), HintDataType::NoType)]
     }
 }
 
@@ -97,8 +107,13 @@ impl DataController for PackageSearchController {
         }
         Ok(json!(response))
     }
+
     fn description(&self) -> String {
         "Searches for matching file names in all packages.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--files".to_string(), HintDataType::NoType)]
     }
 }
 
@@ -125,6 +140,10 @@ impl DataController for RouteSearchController {
     }
     fn description(&self) -> String {
         "Searches for matching service names across all routes.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--service_name".to_string(), HintDataType::NoType)]
     }
 }
 

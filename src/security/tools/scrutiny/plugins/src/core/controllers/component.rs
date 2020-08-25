@@ -5,7 +5,7 @@
 use {
     anyhow::{Error, Result},
     scrutiny::{
-        model::controller::DataController,
+        model::controller::{DataController, HintDataType},
         model::model::{DataModel, ManifestData},
     },
     serde::{Deserialize, Serialize},
@@ -54,6 +54,10 @@ impl DataController for ComponentIdGraphController {
     fn description(&self) -> String {
         "Returns a specific component given its internal id.".to_string()
     }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--component_id".to_string(), HintDataType::NoType)]
+    }
 }
 
 #[derive(Default)]
@@ -86,8 +90,13 @@ impl DataController for ComponentFromUriGraphController {
             format!("Could not find manifest matching component uri {}.", req.uri),
         )))
     }
+
     fn description(&self) -> String {
         "Returns the internal component id of a component from its url.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--uri".to_string(), HintDataType::NoType)]
     }
 }
 
@@ -140,8 +149,13 @@ impl DataController for RawManifestGraphController {
             format!("Could not find manifest matching component_id {}.", req.component_id),
         )))
     }
+
     fn description(&self) -> String {
         "Returns the raw manifest of a given component_id.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--component_id".to_string(), HintDataType::NoType)]
     }
 }
 

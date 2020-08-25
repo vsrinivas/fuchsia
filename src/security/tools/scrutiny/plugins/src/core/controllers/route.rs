@@ -4,7 +4,10 @@
 
 use {
     anyhow::{Error, Result},
-    scrutiny::{model::controller::DataController, model::model::DataModel},
+    scrutiny::{
+        model::controller::{DataController, HintDataType},
+        model::model::DataModel,
+    },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
@@ -70,8 +73,13 @@ impl DataController for ComponentUsesGraphController {
 
         Ok(serde_json::to_value(resp)?)
     }
+
     fn description(&self) -> String {
         "Returns all the services a given component uses.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--component_id".to_string(), HintDataType::NoType)]
     }
 }
 
@@ -121,8 +129,13 @@ impl DataController for ComponentUsedGraphController {
 
         Ok(serde_json::to_value(resp)?)
     }
+
     fn description(&self) -> String {
         "Returns all the components a given component is used by.".to_string()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![("--component_id".to_string(), HintDataType::NoType)]
     }
 }
 

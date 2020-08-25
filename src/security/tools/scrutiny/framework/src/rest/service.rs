@@ -28,7 +28,7 @@ impl RestService {
         port: u16,
     ) {
         let addr = format!("127.0.0.1:{}", port);
-        println!("⚫ Server: http://{}\n", addr);
+        println!("• Server: http://{}\n", addr);
         thread::spawn(move || RestService::run(dispatcher, visualizer, addr));
     }
 

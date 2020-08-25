@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::controller::{ConnectionMode, DataController},
+    crate::model::controller::{ConnectionMode, DataController, HintDataType},
     crate::model::model::DataModel,
     anyhow::{Error, Result},
     serde_json::value::Value,
@@ -106,6 +106,16 @@ impl ControllerDispatcher {
         }
     }
 
+    /// Attempts to return the hints for this particular controller.
+    pub fn hints(&self, namespace: String) -> Result<Vec<(String, HintDataType)>> {
+        let controllers = self.controllers.read().unwrap();
+        if let Some(instance) = controllers.get(&namespace) {
+            Ok(instance.controller.hints())
+        } else {
+            Err(Error::new(DispatcherError::NamespaceDoesNotExist(namespace)))
+        }
+    }
+
     /// Returns all of the controller namespaces.
     pub fn controllers_all(&self) -> Vec<String> {
         let controllers = self.controllers.read().unwrap();
@@ -164,6 +174,10 @@ mod tests {
 
         fn connection_mode(&self) -> ConnectionMode {
             self.mode.clone()
+        }
+
+        fn hints(&self) -> Vec<(String, HintDataType)> {
+            vec![("foo".to_string(), HintDataType::NoType)]
         }
     }
 
@@ -243,14 +257,29 @@ mod tests {
     }
 
     #[test]
+    fn test_hints() {
+        let data_model = test_model();
+        let mut dispatcher = ControllerDispatcher::new(data_model);
+        let fake = Arc::new(FakeController::new("fake_result"));
+        let namespace = "/foo/bar".to_string();
+        dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
+        assert_eq!(dispatcher.hints(namespace).unwrap()[0].0, "foo");
+    }
+
+    #[test]
     fn test_local_only() {
         let data_model = test_model();
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let fake = Arc::new(FakeController::new_local("fake_result"));
         let namespace = "/foo/bar".to_string();
         dispatcher.add(Uuid::new_v4(), namespace.clone(), fake).unwrap();
-        assert_eq!(dispatcher.query(ConnectionMode::Remote, namespace.clone(), json!("")).is_ok(), false);
-        assert_eq!(dispatcher.query(ConnectionMode::Local, namespace.clone(), json!("")).is_ok(), true);
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Remote, namespace.clone(), json!("")).is_ok(),
+            false
+        );
+        assert_eq!(
+            dispatcher.query(ConnectionMode::Local, namespace.clone(), json!("")).is_ok(),
+            true
+        );
     }
-
 }

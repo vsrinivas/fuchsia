@@ -39,6 +39,19 @@ impl BuiltinCommand {
             _ => None,
         }
     }
+
+    /// Vector of all builtin commands used for tab completion.
+    pub fn commands() -> Vec<String> {
+        vec![
+            "plugin.load".to_string(),
+            "plugin.unload".to_string(),
+            "clear".to_string(),
+            "help".to_string(),
+            "history".to_string(),
+            "exit".to_string(),
+        ]
+    }
+
     pub fn usage() {
         println!(
             "
