@@ -4,7 +4,7 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
-        { protocol: "/svc/fidl.test.components.Trigger" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
+        { protocol: "fidl.test.components.Trigger" },
     ],
 }

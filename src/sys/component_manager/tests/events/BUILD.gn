@@ -78,6 +78,7 @@ test_package("events_integration_test") {
     "components:chained_interpose_echo_factory_bin",
     "components:echo_client_for_events_bin",
     "components:echo_reporter_bin",
+    "components:echo_server_for_events_bin",
     "components:interpose_echo_looper_bin",
     "components:nested_reporter_bin",
     "components:realm_offered_bin",
@@ -87,18 +88,12 @@ test_package("events_integration_test") {
     "components:synthesis_reporter_bin",
     "components:trigger_client_bin",
     "components:trigger_server_bin",
-    "//examples/components/routing/echo_server",
   ]
 
   meta = [
     {
       path = rebase_path("components/async/meta/reporter.cml")
       dest = "async_reporter.cm"
-    },
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
     },
     {
       path = rebase_path("components/interpose/meta/echo_looper.cml")
@@ -123,6 +118,10 @@ test_package("events_integration_test") {
     {
       path = rebase_path("components/scoped/meta/echo_client.cml")
       dest = "echo_client.cm"
+    },
+    {
+      path = rebase_path("components/scoped/meta/echo_server.cml")
+      dest = "echo_server.cm"
     },
     {
       path = rebase_path("components/scoped/meta/echo_reporter.cml")
@@ -206,7 +205,7 @@ test_package("events_integration_test") {
       name = "chained_interpose_echo_factory"
     },
     {
-      name = "echo_server"
+      name = "scoped_echo_server"
     },
     {
       name = "nested_reporter"

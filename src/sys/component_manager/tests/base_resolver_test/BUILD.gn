@@ -84,8 +84,7 @@ test_package("base_resolver_test") {
       dest = "root.cm"
     },
     {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
+      path = rebase_path("meta/echo_server.cml")
       dest = "echo_server.cm"
     },
     {

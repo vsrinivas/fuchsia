@@ -54,8 +54,8 @@ async fn main() {
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     let expected_entries = hashmap! {
-        "/foo".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
-        "/bar".to_string() => vec![format!("baz/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
+        "foo".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
+        "bar".to_string() => vec![format!("baz/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
     };
 
     let mut seen = HashSet::new();

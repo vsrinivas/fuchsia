@@ -15,7 +15,7 @@
         {
             storage: "mystorage",
             from: "#memfs",
-            path: "/memfs",
+            backing_dir: "memfs",
         },
     ],
     offer: [

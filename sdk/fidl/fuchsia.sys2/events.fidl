@@ -235,6 +235,8 @@ flexible union EventPayload {
 
 /// Payload for CapabilityReady events
 table CapabilityReadyPayload {
+    // TODO(56604): Once name-based capabilities have landed, this (and the
+    // filter field) should be a name.
     /// The path of the capability.
     1: string:fuchsia.component.MAX_PATH_LENGTH path;
 

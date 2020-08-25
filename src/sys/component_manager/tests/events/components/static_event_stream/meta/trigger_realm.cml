@@ -20,12 +20,12 @@
             to: [ "#trigger_server" ],
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#trigger_server",
             to: [ "#trigger_client" ],
         },
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "#trigger_server",
             to: [ "#trigger_client" ],
         },

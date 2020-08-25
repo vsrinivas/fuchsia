@@ -199,6 +199,22 @@ rustc_binary("echo_client_for_events_bin") {
   sources = [ "scoped/echo_client.rs" ]
 }
 
+rustc_binary("echo_server_for_events_bin") {
+  name = "scoped_echo_server"
+  edition = "2018"
+  source_root = "scoped/echo_server.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "scoped/echo_server.rs" ]
+}
+
 rustc_binary("stub_component_bin") {
   name = "stub_component"
   edition = "2018"

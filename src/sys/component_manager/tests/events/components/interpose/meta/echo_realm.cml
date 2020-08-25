@@ -17,7 +17,7 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: [ "#echo_looper" ],
         },

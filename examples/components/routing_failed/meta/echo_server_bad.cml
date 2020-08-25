@@ -17,9 +17,5 @@
             protocol: "/svc/fidl.examples.routing.echo.Echo2",
             from: "self",
         },
-        {
-            directory: "/hub",
-            from: "framework",
-        },
     ],
 }

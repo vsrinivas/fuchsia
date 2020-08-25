@@ -5,11 +5,11 @@
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.WorkScheduler",
+            protocol: "fuchsia.sys2.WorkScheduler",
             from: "parent",
         },
         {
-            protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
+            protocol: "fuchsia.sys2.WorkSchedulerControl",
             from: "parent",
         },
     ],

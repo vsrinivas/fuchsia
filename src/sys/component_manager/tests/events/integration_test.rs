@@ -263,9 +263,9 @@ async fn event_capability_ready() {
     messages.sort_unstable();
     assert_eq!(
         vec![
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /bar on ./child:0",
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /foo on ./child:0",
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error /bleep on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw bar on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw foo on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error bleep on ./child:0",
         ],
         messages
     );

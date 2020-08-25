@@ -27,9 +27,12 @@
             startup: "lazy",
         },
     ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         { runner: "elf" },
@@ -41,7 +44,7 @@
             to: [ "#reporter" ],
         },
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
             to: [ "#reporter" ],
         },

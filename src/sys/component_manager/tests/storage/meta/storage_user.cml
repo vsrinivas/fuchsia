@@ -2,6 +2,13 @@
     program: {
         binary: "bin/storage_user",
     },
+    capabilities: [
+        {
+            directory: "data",
+            rights: [ "rw*" ],
+            path: "/data",
+        },
+    ],
     use: [
         { runner: "elf" },
         { storage: "data" },
@@ -9,9 +16,8 @@
     ],
     expose: [
         {
-            directory: "/data",
+            directory: "data",
             from: "self",
-            rights: [ "rw*" ],
         },
     ],
 }

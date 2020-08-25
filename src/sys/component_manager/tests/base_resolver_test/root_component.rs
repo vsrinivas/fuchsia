@@ -35,14 +35,14 @@ async fn main() -> Result<(), Error> {
     panic!("This is an unreachable statement!");
 }
 
-// Simulate a fake pkgfs Directory service that only contains a single package, "echo_server".
+// Simulate a fake pkgfs Directory service that only contains a single package, "base_resolver_test".
 // This fake is more complex than the one in fuchsia_base_pkg_resolver.rs because it needs to
 // support an intermediate Directory.Open call, to open the 'pkgfs root' when initializing the
 // resolver, rather than a single Open straight to the faked package. The fake therefore has two modes:
 //   1. FakePkgfs::new will initially support opening path "pkgfs/", and handles that open by creating a
 //   new fake connection of the 2nd mode.
 //   2. The 2nd mode fakes a connection inside the pkgfs root directory, and thus supports opening
-//   path "packages/echo_server/0/". It handles that open by connecting to this component's own real
+//   path "packages/base_resolver_test/0/". It handles that open by connecting to this component's own real
 //   package directory.
 // TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding to
 // the test's real package directory because Rust vfs does not yet support OPEN_RIGHT_EXECUTABLE.
@@ -86,17 +86,17 @@ impl FakePkgfs {
     }
 
     fn handle_open(inside_pkgfs: bool, path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
-        // Only support opening the echo_server package's directory. All other paths just drop the
-        // server_end.
+        // Only support opening the base_resolver_test package's directory. All other paths just
+        // drop the server_end.
         let path = Path::new(path);
         let mut path_iter = path.iter();
 
-        // If the fake connection is in 'inside_pkg' mode, only support opening the echo_server
-        // package's directory. Otherwise, only support opening 'pkgfs/'. All other paths just drop
-        // the server_end so the client observes PEER_CLOSED>
+        // If the fake connection is in 'inside_pkg' mode, only support opening the
+        // base_resolver_test package's directory. Otherwise, only support opening 'pkgfs/'. All
+        // other paths just drop the server_end so the client observes PEER_CLOSED>
         let (expected_path, expected_len) = match inside_pkgfs {
             false => (Path::new("pkgfs/"), 1),
-            true => (Path::new("packages/echo_server/0"), 3),
+            true => (Path::new("packages/base_resolver_test/0"), 3),
         };
         if path_iter.by_ref().take(expected_len).cmp(expected_path.iter())
             != std::cmp::Ordering::Equal

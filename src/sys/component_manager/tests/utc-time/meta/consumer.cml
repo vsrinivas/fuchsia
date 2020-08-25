@@ -7,8 +7,8 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.time.Maintenance" },
-        { protocol: "/svc/componentmanager.test.TestOutcomeReport" },
+        { protocol: "fuchsia.time.Maintenance" },
+        { protocol: "componentmanager.test.TestOutcomeReport" },
         { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
 }

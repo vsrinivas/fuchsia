@@ -2,16 +2,21 @@
     program: {
         binary: "bin/memfs",
     },
+    capabilities: [
+        {
+            directory: "memfs",
+            rights: [ "rw*" ],
+            path: "/svc/fuchsia.io.Directory",
+        },
+    ],
     use: [
         { runner: "elf" },
         { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            directory: "/svc/fuchsia.io.Directory",
+            directory: "memfs",
             from: "self",
-            as: "/memfs",
-            rights: [ "rw*" ],
         },
     ],
 }

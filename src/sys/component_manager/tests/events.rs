@@ -105,12 +105,15 @@ impl EventSource {
         I: Injector,
     {
         let matcher = matcher.unwrap_or(EventMatcher::new());
-        if matcher.capability_id.is_some()
-            && matcher.capability_id != Some(injector.capability_path())
-        {
-            return Err(format_err!("Unexpected Capability Id provided"));
+        if let Some(capability_id) = matcher.capability_id.as_ref() {
+            if capability_id != I::Marker::NAME
+            // TODO(56604): Remove support for path-based.
+            && capability_id != &format!("/svc/{}", I::Marker::NAME)
+            {
+                return Err(format_err!("Unexpected Capability Id provided"));
+            }
         }
-        let matcher = matcher.expect_capability_id(injector.capability_path());
+        let matcher = matcher.expect_capability_id(I::Marker::NAME);
         let mut event_stream = self.subscribe(vec![CapabilityRouted::NAME]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
@@ -167,7 +170,10 @@ impl EventSource {
                         };
 
                         if let Ok(payload) = &event.result {
-                            if payload.capability_id == interposer.capability_path() {
+                            if payload.capability_id == I::Marker::NAME
+                            // TODO(56604): Remove support for path-based.
+                            || payload.capability_id == format!("/svc/{}", I::Marker::NAME)
+                            {
                                 event
                                     .interpose(interposer.clone())
                                     .await
@@ -412,10 +418,6 @@ pub trait Injector: Send + Sync {
         self: Arc<Self>,
         mut request_stream: <<Self as Injector>::Marker as ServiceMarker>::RequestStream,
     ) -> Result<(), Error>;
-
-    fn capability_path(&self) -> String {
-        format!("/svc/{}", Self::Marker::NAME)
-    }
 }
 
 /// An Interposer allows a test to sit between a service and a client
@@ -435,10 +437,6 @@ pub trait Interposer: Send + Sync {
         mut request_stream: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
         to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
     ) -> Result<(), Error>;
-
-    fn capability_path(&self) -> String {
-        format!("/svc/{}", Self::Marker::NAME)
-    }
 }
 
 /// A protocol that allows routing capabilities over FIDL.
@@ -601,6 +599,7 @@ impl EventMatcher {
         let matches_capability_id = match (&self.capability_id, &other.capability_id) {
             (Some(capability_id), Some(other_capability_id)) => {
                 capability_id == other_capability_id
+                    || &format!("/svc/{}", capability_id) == other_capability_id
             }
             (Some(_), None) => false,
             (None, _) => true,

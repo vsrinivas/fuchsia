@@ -9,6 +9,9 @@
             startup: "lazy",
         },
     ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -18,7 +21,7 @@
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "framework",
         },
         {
@@ -32,6 +35,8 @@
         {
             event: [ "capability_requested" ],
             from: "framework",
+
+            // TODO(56604): This filter should take the capability name, not path.
             filter: { path: "/svc/fidl.test.components.Trigger" },
         },
         {
@@ -45,11 +50,11 @@
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
         },
     ],

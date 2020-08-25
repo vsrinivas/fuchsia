@@ -2,12 +2,15 @@
     program: {
         binary: "bin/chained_interpose_echo_factory",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.echofactory.EchoFactory" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.echofactory.EchoFactory",
+            protocol: "fuchsia.test.echofactory.EchoFactory",
             from: "self",
         },
     ],

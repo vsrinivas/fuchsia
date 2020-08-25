@@ -9,13 +9,16 @@
             startup: "lazy",
         },
     ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "framework",
         },
         {
@@ -29,11 +32,11 @@
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
         },
     ],

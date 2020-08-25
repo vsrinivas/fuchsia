@@ -15,7 +15,7 @@
     // Route EchoFactory service from server to client.
     offer: [
         {
-            protocol: "/svc/fuchsia.test.echofactory.EchoFactory",
+            protocol: "fuchsia.test.echofactory.EchoFactory",
             from: "#echo_factory",
             to: [ "#echo_client" ],
         },

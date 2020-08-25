@@ -4,7 +4,7 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
-        { protocol: "/svc/fuchsia.test.echofactory.EchoFactory" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
+        { protocol: "fuchsia.test.echofactory.EchoFactory" },
     ],
 }

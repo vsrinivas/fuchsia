@@ -7,18 +7,19 @@
             name: "echo_server",
 
             // This will be resolved by the base package resolver
-            url: "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
+            url: "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/echo_server.cm",
         },
     ],
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     expose: [
         {
+            // TODO(56604): Switch to name-based.
             directory: "/pkgfs",
             from: "self",
             rights: [ "rx*" ],

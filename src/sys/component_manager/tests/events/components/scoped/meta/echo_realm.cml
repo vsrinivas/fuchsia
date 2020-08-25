@@ -22,12 +22,12 @@
             to: [ "#echo_reporter" ],
         },
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_reporter",
             to: [ "#echo_client" ],
         },
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "#echo_reporter",
             to: [ "#echo_client" ],
         },

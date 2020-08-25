@@ -13,12 +13,12 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.sys2.WorkScheduler",
+            protocol: "fuchsia.sys2.WorkScheduler",
             from: "#worker_child",
             to: [ "#worker_sibling" ],
         },
         {
-            protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
+            protocol: "fuchsia.sys2.WorkSchedulerControl",
             from: "parent",
             to: [ "#worker_sibling" ],
         },

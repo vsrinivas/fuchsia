@@ -4,15 +4,15 @@
     },
     use: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "framework",
         },
 
         // Offered by the parent realm "nested"
         {
             protocol: [
-                "/svc/fidl.test.components.Trigger",
                 "/svc/fuchsia.sys2.BlockingEventSource",
+                "fidl.test.components.Trigger",
             ],
         },
         {

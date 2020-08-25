@@ -19,17 +19,17 @@
         {
             storage: "mystorage",
             from: "#memfs",
-            path: "/memfs",
+            backing_dir: "memfs",
         },
     ],
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "framework",
         },
         {

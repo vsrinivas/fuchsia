@@ -28,7 +28,7 @@
             ],
         },
         {
-            protocol: [ "/svc/fidl.examples.routing.echo.Echo" ],
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
             from: "framework",
         },
         {

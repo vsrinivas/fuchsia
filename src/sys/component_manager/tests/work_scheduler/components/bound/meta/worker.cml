@@ -2,20 +2,23 @@
     program: {
         binary: "bin/bound_worker",
     },
+    capabilities: [
+        { protocol: "fuchsia.sys2.Worker" },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.sys2.WorkSchedulerControl" },
+        { protocol: "fuchsia.sys2.WorkSchedulerControl" },
         {
             protocol: [
-                "/svc/fuchsia.sys2.WorkScheduler",
-                "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
+                "fuchsia.sys2.WorkScheduler",
+                "fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
             ],
             from: "framework",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.sys2.Worker",
+            protocol: "fuchsia.sys2.Worker",
             from: "self",
             to: "framework",
         },

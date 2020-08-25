@@ -2,34 +2,52 @@
     program: {
         binary: "bin/capability_ready_child",
     },
+    capabilities: [
+        {
+            directory: "foo",
+            rights: [ "r*" ],
+            path: "/foo",
+        },
+        {
+            directory: "mar",
+            rights: [ "r*" ],
+            path: "/mar",
+        },
+        {
+            directory: "qux",
+            rights: [ "r*" ],
+            path: "/qux",
+        },
+        {
+            directory: "bleep",
+            rights: [ "r*" ],
+            path: "/bleep",
+        },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            directory: "/foo",
+            directory: "foo",
             from: "self",
             to: "framework",
-            rights: [ "r*" ],
         },
         {
-            directory: "/mar",
+            directory: "mar",
             from: "self",
-            as: "/bar",
+            as: "bar",
             to: "framework",
-            rights: [ "r*" ],
         },
         {
-            directory: "/qux",
+            directory: "qux",
             from: "self",
             to: "framework",
-            rights: [ "r*" ],
         },
         {
-            directory: "/bleep",
+            directory: "bleep",
             from: "self",
             to: "framework",
-            rights: [ "r*" ],
         },
     ],
 }
