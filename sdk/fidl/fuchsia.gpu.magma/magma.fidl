@@ -136,7 +136,7 @@ protocol Primary {
     /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
     /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching
     /// device.
-    AccessPerformanceCounters(handle<event> access_token);
+    AccessPerformanceCounters(zx.handle:EVENT access_token);
 
     /// Returns true if any AccessPerformanceCounters message has succeeded.
     IsPerformanceCounterAccessEnabled() -> (bool enabled);
@@ -211,7 +211,7 @@ protocol Primary {
 protocol PerformanceCounterAccess {
     /// This access token is not used as an event, but is instead passed to
     /// Primary.EnablePerformanceCounterAccess.
-    GetPerformanceCountToken() -> (handle<event> access_token);
+    GetPerformanceCountToken() -> (zx.handle:EVENT access_token);
 };
 
 protocol PerformanceCounterEvents {

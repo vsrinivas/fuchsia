@@ -251,7 +251,7 @@ table CapabilityRequestedPayload {
 
     /// A handle to the server end of the channel to host
     /// capability.
-    2: handle<channel> capability;
+    2: zx.handle:CHANNEL capability;
 };
 
 /// Payload for CapabilityRouted events

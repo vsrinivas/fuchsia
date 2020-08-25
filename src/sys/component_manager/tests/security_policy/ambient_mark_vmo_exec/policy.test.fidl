@@ -10,5 +10,5 @@ using zx;
 protocol ProtectedOperations {
     // Attempts to use zx_vmo_replace_as_executable on the given VMO handle using an invalid
     // resource handle, which exercises the ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
-    AmbientReplaceAsExecutable(handle<vmo> vmo) -> (handle<vmo> vmo) error zx.status;
+    AmbientReplaceAsExecutable(zx.handle:VMO vmo) -> (zx.handle:VMO vmo) error zx.status;
 };

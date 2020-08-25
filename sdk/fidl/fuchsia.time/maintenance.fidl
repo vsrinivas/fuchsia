@@ -4,6 +4,8 @@
 
 library fuchsia.time;
 
+using zx;
+
 /// Provides access to a UTC clock for the purposes of
 /// keeping it up-to-date with external time sources.
 ///
@@ -12,5 +14,5 @@ library fuchsia.time;
 [Discoverable]
 protocol Maintenance {
     /// Retrieve a UTC clock handle with write rights.
-    GetWritableUtcClock() -> (handle<clock> utc_clock);
+    GetWritableUtcClock() -> (zx.handle:CLOCK utc_clock);
 };
