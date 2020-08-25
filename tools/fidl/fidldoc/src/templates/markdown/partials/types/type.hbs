@@ -2,7 +2,9 @@
     {{~ pl experimental_maybe_from_type_alias.name @root.name ~}}
 {{~ else ~}}
 {{#if (eq type.kind "vector") ~}}
-    {{> vector }}
+    {{~ #with type ~}}
+        {{> vector }}
+    {{~ /with ~}}
 {{~ else ~}}
     {{~ #if (eq type.kind "array") ~}}
         {{~ type.element_type.subtype ~}}[{{~ type.element_count ~}}]

@@ -1,9 +1,15 @@
-{{~ #if (eq type.element_type.kind "identifier") ~}}
-    vector&lt;{{~ pl type.element_type.identifier @root.name ~}}&gt;
+{{~ #if (eq element_type.kind "identifier") ~}}
+    vector&lt;{{~ pl element_type.identifier @root.name ~}}&gt;
 {{~ else ~}}
-    {{~ #if type.element_type.subtype ~}}
-        vector&lt;{{~ type.element_type.subtype ~}}&gt;
+    {{~ #if (eq element_type.kind "vector") ~}}
+        {{~ #with element_type ~}}
+            vector&lt;{{> vector }}&gt;
+        {{~ /with ~}}
     {{~ else ~}}
-        vector&lt;{{~ type.element_type.kind ~}}&gt;
+        {{~ #if element_type.subtype ~}}
+            vector&lt;{{~ element_type.subtype ~}}&gt;
+        {{~ else ~}}
+            vector&lt;{{~ element_type.kind ~}}&gt;
+        {{~ /if ~}}
     {{~ /if ~}}
 {{~ /if ~}}

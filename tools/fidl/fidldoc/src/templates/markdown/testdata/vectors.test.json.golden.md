@@ -23,7 +23,7 @@
         </tr><tr>
             <td><code>vector_of_vector_of_bool</code></td>
             <td>
-                <code>vector&lt;vector&gt;</code>
+                <code>vector&lt;vector&lt;bool&gt;&gt;</code>
             </td>
             <td></td>
             <td>No default</td>
