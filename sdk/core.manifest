@@ -163,7 +163,6 @@ sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
 sdk://tools/arm64/fidlgen
 sdk://tools/arm64/fvm
-sdk://tools/arm64/loglistener
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
 sdk://tools/arm64/pm
@@ -179,7 +178,6 @@ sdk://tools/fidlc
 sdk://tools/fidlcat
 sdk://tools/fidlgen
 sdk://tools/fvm
-sdk://tools/loglistener
 sdk://tools/merkleroot
 sdk://tools/minfs
 sdk://tools/pm
@@ -195,7 +193,6 @@ sdk://tools/x64/fidlc
 sdk://tools/x64/fidlcat
 sdk://tools/x64/fidlgen
 sdk://tools/x64/fvm
-sdk://tools/x64/loglistener
 sdk://tools/x64/merkleroot
 sdk://tools/x64/minfs
 sdk://tools/x64/pm

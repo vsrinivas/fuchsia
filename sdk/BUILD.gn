@@ -207,7 +207,6 @@ sdk_molecule("core_tools") {
     "//src/sys/pkg/bin/far:bin_sdk",
     "//src/sys/pkg/bin/pm:pm_bin_sdk",
     "//tools/bootserver_old:bootserver_sdk",
-    "//tools/loglistener:loglistener_sdk",
     "//tools/net/device-finder:device-finder_sdk",
     "//tools/symbol-index:symbol_index_sdk",
     "//zircon/public/tool/fidl-format:fidl-format_sdk",

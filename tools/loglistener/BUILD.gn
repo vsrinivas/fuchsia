@@ -3,16 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/sdk/sdk_host_tool.gni")
 
 executable("loglistener") {
   sources = [ "loglistener.c" ]
-}
-
-sdk_host_tool("loglistener_sdk") {
-  category = "partner"
-  output_name = "loglistener"
-  deps = [ ":loglistener" ]
 }
 
 install_host_tools("host") {

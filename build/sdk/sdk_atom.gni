@@ -326,7 +326,6 @@ sdk_legacy_tool_allowlist = [
   "fidlgen",
   "fidlgen_dart",
   "fvm",
-  "loglistener",
   "merkleroot",
   "minfs",
   "pm",
