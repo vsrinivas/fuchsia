@@ -49,7 +49,7 @@ use {
 };
 
 // Value taken from legacy state machine.
-const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
+const MAX_AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 
 async fn monitor_client_events(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -76,8 +76,9 @@ async fn monitor_client_connectivity(
     saved_networks: Arc<SavedNetworksManager>,
     selector: Arc<NetworkSelector>,
 ) {
+    let mut retry_interval: i64 = 1;
     loop {
-        fasync::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()).await;
+        fasync::Timer::new(retry_interval.seconds().after_now()).await;
 
         if saved_networks.known_network_count().await == 0 {
             // No saved networks, autoconnect won't succeed. Don't perform a scan/connection attempt
@@ -89,10 +90,17 @@ async fn monitor_client_connectivity(
         if temp_iface_manager.has_idle_client() {
             drop(temp_iface_manager);
             info!("Detected idle interface, scanning to allow automatic reconnect");
-            scan_for_network_selector(iface_manager.clone(), selector.clone()).await;
+            if scan_for_network_selector(iface_manager.clone(), selector.clone()).await.is_ok() {
+                // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+                connect_to_best_network(iface_manager.clone(), selector.clone()).await;
 
-            // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
-            connect_to_best_network(iface_manager.clone(), selector.clone()).await;
+                // Reset the retry interval to 1 second.
+                retry_interval = 1;
+            } else {
+                retry_interval = (2 * retry_interval).min(MAX_AUTO_CONNECT_RETRY_SECONDS);
+            }
+        } else {
+            retry_interval = 1;
         }
     }
 }
