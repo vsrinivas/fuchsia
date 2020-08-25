@@ -13,8 +13,6 @@
 # needed, but we don't currently have a good way to determine the
 # subset that is useful to Zedboot.
 
-import("//build/unification/images/common_image_contents.gni")
-
 zedboot_deps = []
 
 # Core things needed for booting (local and netboot).
@@ -52,7 +50,6 @@ zedboot_deps += [
   "//src/devices/block/bin/gpt",
   "//src/devices/block/bin/lsblk",
   "//src/devices/nand/bin/nand-util",
-  "//src/devices/usb/bin/lsusb",
   "//src/security/bin/syscall-check",
   "//src/storage/bin/dd",
   "//src/storage/bin/fsck",
@@ -67,18 +64,13 @@ zedboot_deps += [
 
 # Finally, everything which used to come from the Zircon build as a monolith.
 zedboot_deps += [
+  "//bundles/drivers:usb-host-stack",
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
-  "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
-  "//src/connectivity/ethernet/drivers/asix-88179",
-  "//src/connectivity/ethernet/drivers/asix-88772b",
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/ethertap",
   "//src/connectivity/ethernet/drivers/rndis-function",
-  "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
-  "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
-  "//src/connectivity/ethernet/drivers/usb-cdc-function",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",
   "//src/connectivity/network/drivers/network-device",
   "//src/devices/bin/driver_manager",
@@ -87,7 +79,6 @@ zedboot_deps += [
   "//src/devices/block/drivers/fvm",
   "//src/devices/block/drivers/ramdisk",
   "//src/devices/block/drivers/ums-function",
-  "//src/devices/block/drivers/usb-mass-storage",
   "//src/devices/block/drivers/zxcrypt",
   "//src/devices/board/drivers/integration-test",
   "//src/devices/board/drivers/machina",
@@ -102,7 +93,6 @@ zedboot_deps += [
   "//src/devices/light-sensor/drivers/ams-light",
   "//src/devices/light-sensor/drivers/lite-on",
   "//src/devices/misc/drivers/cpu-trace",
-  "//src/devices/ml/drivers/usb-harriet",
   "//src/devices/nand/drivers/aml-rawnand",
   "//src/devices/nand/drivers/broker:nand-broker",
   "//src/devices/nand/drivers/nand",
@@ -117,8 +107,6 @@ zedboot_deps += [
   "//src/devices/rtc/drivers/fallback",
   "//src/devices/securemem/drivers/aml-securemem",
   "//src/devices/serial/drivers/aml-uart",
-  "//src/devices/serial/drivers/ftdi",
-  "//src/devices/serial/drivers/usb-cdc-acm",
   "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
@@ -128,10 +116,6 @@ zedboot_deps += [
   "//src/devices/tests/sysdev",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
-  "//src/devices/usb/drivers/usb-bus",
-  "//src/devices/usb/drivers/usb-composite",
-  "//src/devices/usb/drivers/usb-dfu",
-  "//src/devices/usb/drivers/usb-hub",
   "//src/devices/usb/drivers/usb-peripheral",
   "//src/devices/usb/drivers/usb-peripheral-test",
   "//src/devices/usb/drivers/usb-test/fx3",
@@ -147,7 +131,6 @@ zedboot_deps += [
   "//src/media/audio/drivers/aml-g12-tdm",
   "//src/media/audio/drivers/astro-pdm-input",
   "//src/media/audio/drivers/codecs/tas27xx",
-  "//src/media/audio/drivers/usb-audio",
   "//src/power/shutdown-shim",
   "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
@@ -158,8 +141,6 @@ zedboot_deps += [
   "//src/ui/input/drivers/hid-buttons",
   "//src/ui/input/drivers/hid-input-report",
   "//src/ui/input/drivers/hidctl",
-  "//src/ui/input/drivers/usb-hid",
-  "//src/ui/input/drivers/usb-hid",
   "//src/ui/light/drivers/aml-light",
   "//zircon/third_party/dev/ethernet/e1000",
 ]
@@ -169,8 +150,4 @@ if (target_cpu == "arm64") {
     "//src/devices/board/drivers/astro",
     "//src/devices/usb/drivers/xhci-rewrite:xhci",
   ]
-}
-
-if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
-  zedboot_deps += [ "//src/devices/usb/drivers/usb-test/flash-programmer" ]
 }

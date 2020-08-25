@@ -207,6 +207,9 @@ group("tests") {
     "//zircon/third_party/ulib/linenoise/test:linenoise-test-bootfs-test",
   ]
 
+  # Tests without metadata.
+  deps += [ "//src/devices/usb/drivers/usb-bus:usb-device" ]
+
   # The following targets contribute tests to the zbi.
   deps += [ "//build/unification/future/images:legacy_tests" ] +
           common_test_contents
@@ -218,5 +221,6 @@ group("tests") {
     "//src/devices/serial/bin/serial-test",
     "//src/devices/tests/sysdev",
     "//src/devices/usb/bin/xdc-test",
+    "//src/devices/usb/drivers/usb-test/flash-programmer",
   ]
 }

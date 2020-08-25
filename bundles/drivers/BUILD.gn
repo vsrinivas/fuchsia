@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("usb-host-stack") {
+  deps = [
+    "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
+    "//src/connectivity/ethernet/drivers/asix-88179",
+    "//src/connectivity/ethernet/drivers/asix-88772b",
+    "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
+    "//src/devices/block/drivers/usb-mass-storage",
+    "//src/devices/ml/drivers/usb-harriet",
+    "//src/devices/serial/drivers/ftdi",
+    "//src/devices/serial/drivers/usb-cdc-acm",
+    "//src/devices/usb/bin/lsusb",
+    "//src/devices/usb/drivers/usb-bus",
+    "//src/devices/usb/drivers/usb-composite",
+    "//src/devices/usb/drivers/usb-dfu",
+    "//src/devices/usb/drivers/usb-hub",
+    "//src/media/audio/drivers/usb-audio",
+    "//src/ui/input/drivers/usb-hid",
+  ]
+}

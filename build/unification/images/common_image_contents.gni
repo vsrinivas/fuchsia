@@ -25,19 +25,14 @@ declare_args() {
 # build and is mostly used by image targets under //build/images.
 common_image_contents = [
   "//build/info:bootfs",
+  "//bundles/drivers:usb-host-stack",
   "//src/bringup/bin/trace-benchmark",
   "//src/bringup/bundles:bootstrap",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
-  "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
-  "//src/connectivity/ethernet/drivers/asix-88179",
-  "//src/connectivity/ethernet/drivers/asix-88772b",
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/ethertap",
   "//src/connectivity/ethernet/drivers/rndis-function",
-  "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
-  "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
-  "//src/connectivity/ethernet/drivers/usb-cdc-function",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",
   "//src/connectivity/network/bin/ping",
   "//src/connectivity/network/drivers/network-device",
@@ -64,7 +59,6 @@ common_image_contents = [
   "//src/devices/block/drivers/fvm",
   "//src/devices/block/drivers/ramdisk",
   "//src/devices/block/drivers/ums-function",
-  "//src/devices/block/drivers/usb-mass-storage",
   "//src/devices/block/drivers/zxcrypt",
   "//src/devices/board/drivers/integration-test",
   "//src/devices/board/drivers/machina",
@@ -84,7 +78,6 @@ common_image_contents = [
   "//src/devices/light-sensor/drivers/ams-light",
   "//src/devices/light-sensor/drivers/lite-on",
   "//src/devices/misc/drivers/cpu-trace",
-  "//src/devices/ml/drivers/usb-harriet",
   "//src/devices/nand/bin/nand-loader",
   "//src/devices/nand/bin/nand-util",
   "//src/devices/nand/drivers/aml-rawnand",
@@ -103,23 +96,16 @@ common_image_contents = [
   "//src/devices/rtc/drivers/fallback",
   "//src/devices/securemem/drivers/aml-securemem",
   "//src/devices/serial/drivers/aml-uart",
-  "//src/devices/serial/drivers/ftdi",
-  "//src/devices/serial/drivers/usb-cdc-acm",
   "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/spi/bin/spiutil",
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
   "//src/devices/thermal/bin/thermal-cli",
-  "//src/devices/usb/bin/lsusb",
   "//src/devices/usb/bin/usb-fwloader",
   "//src/devices/usb/bin/usbctl",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
-  "//src/devices/usb/drivers/usb-bus",
-  "//src/devices/usb/drivers/usb-composite",
-  "//src/devices/usb/drivers/usb-dfu",
-  "//src/devices/usb/drivers/usb-hub",
   "//src/devices/usb/drivers/usb-peripheral",
   "//src/devices/usb/drivers/usb-peripheral-test",
   "//src/devices/usb/drivers/usb-test/fx3",
@@ -136,7 +122,6 @@ common_image_contents = [
   "//src/media/audio/drivers/aml-g12-tdm",
   "//src/media/audio/drivers/astro-pdm-input",
   "//src/media/audio/drivers/codecs/tas27xx",
-  "//src/media/audio/drivers/usb-audio",
   "//src/media/audio/tools/audio-driver-ctl:bin",
   "//src/power/shutdown-shim:bootfs",
   "//src/security/bin/syscall-check",
@@ -175,8 +160,6 @@ common_image_contents = [
   "//src/ui/input/drivers/hid",
   "//src/ui/input/drivers/hid-buttons",
   "//src/ui/input/drivers/hidctl",
-  "//src/ui/input/drivers/usb-hid",
-  "//src/ui/input/drivers/usb-hid",
   "//src/ui/light/drivers/aml-light",
   "//src/zircon/bin/kcounter",
   "//src/zircon/bin/kstress",
@@ -198,11 +181,4 @@ if (target_cpu == "arm64") {
   ]
 } else if (target_cpu == "x64") {
   common_image_contents += [ "//src/devices/bin/acpidump" ]
-}
-
-if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
-  common_image_contents += [
-    "//src/devices/usb/drivers/usb-bus:usb-device",
-    "//src/devices/usb/drivers/usb-test/flash-programmer",
-  ]
 }
