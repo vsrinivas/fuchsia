@@ -79,45 +79,50 @@ type buildStats struct {
 	CatBuildTimes []catBuildTime
 }
 
-func constructGraph(ps paths) (ninjagraph.Graph, error) {
+// constructGraph constructs a ninjagraph based on files from input paths, and
+// populates it with information from ninjalog and compdb.
+//
+// Steps used to populate the graph are also returned so they can be used in
+// later steps.
+func constructGraph(ps paths) (ninjagraph.Graph, []ninjalog.Step, error) {
 	f, err := os.Open(ps.ninjalog)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("opening ninjalog: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("opening ninjalog: %v", err)
 	}
 	defer f.Close()
 	njl, err := ninjalog.Parse(*ninjalogPath, f)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("parsing ninjalog: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing ninjalog: %v", err)
 	}
 	steps := ninjalog.Dedup(njl.Steps)
 
 	f, err = os.Open(ps.compdb)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("opening compdb: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("opening compdb: %v", err)
 	}
 	defer f.Close()
 	commands, err := compdb.Parse(f)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("parsing compdb: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing compdb: %v", err)
 	}
 	steps = ninjalog.Populate(steps, commands)
 
 	f, err = os.Open(ps.graph)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("openinng Ninja graph: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("openinng Ninja graph: %v", err)
 	}
 	defer f.Close()
 	graph, err := ninjagraph.FromDOT(f)
 	if err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("parsing Ninja graph: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("parsing Ninja graph: %v", err)
 	}
 	if err := graph.PopulateEdges(steps); err != nil {
-		return ninjagraph.Graph{}, fmt.Errorf("populating graph edges with build steps: %v", err)
+		return ninjagraph.Graph{}, nil, fmt.Errorf("populating graph edges with build steps: %v", err)
 	}
-	return graph, nil
+	return graph, steps, nil
 }
 
-func extractBuildStats(g ninjagraph.Graph) (buildStats, error) {
+func extractBuildStats(g ninjagraph.Graph, steps []ninjalog.Step) (buildStats, error) {
 	criticalPath, err := g.CriticalPath()
 	if err != nil {
 		return buildStats{}, err
@@ -125,22 +130,34 @@ func extractBuildStats(g ninjagraph.Graph) (buildStats, error) {
 
 	ret := buildStats{}
 	for _, step := range criticalPath {
-		a := action{
-			Start: step.Start,
-			End:   step.End,
-		}
-		if step.Command != nil {
-			a.Command = step.Command.Command
-		}
-		// TODO(jayzhuang): populate `Category` and `Rule` when they are made
-		// available on step or command.
-		ret.CriticalPath = append(ret.CriticalPath, a)
+		ret.CriticalPath = append(ret.CriticalPath, toAction(step))
 	}
 
-	// TODO(jayzhuang): populate the `Slowests` and `CatBuildTimes` when support
-	// is added to ninjagraph.
+	for _, step := range ninjalog.SlowestSteps(steps, 30) {
+		ret.Slowests = append(ret.Slowests, toAction(step))
+	}
 
+	for _, stat := range ninjalog.StatsByType(steps, nil, func(s ninjalog.Step) string { return s.Category() }) {
+		ret.CatBuildTimes = append(ret.CatBuildTimes, catBuildTime{
+			Category:  stat.Type,
+			BuildTime: stat.Time,
+		})
+	}
 	return ret, nil
+}
+
+func toAction(s ninjalog.Step) action {
+	a := action{
+		Start:    s.Start,
+		End:      s.End,
+		Category: s.Category(),
+	}
+	if s.Command != nil {
+		a.Command = s.Command.Command
+	}
+	// TODO(jayzhuang): populate `Rule` when they are made available on step or
+	// command.
+	return a
 }
 
 func serializeBuildStats(s buildStats, w io.Writer) error {
@@ -167,7 +184,7 @@ func main() {
 	}
 
 	log.Infof("Reading input files and constructing graph.")
-	graph, err := constructGraph(paths{
+	graph, steps, err := constructGraph(paths{
 		ninjalog: *ninjalogPath,
 		compdb:   *compdbPath,
 		graph:    *graphPath,
@@ -177,7 +194,7 @@ func main() {
 	}
 
 	log.Infof("Extracting build stats from graph.")
-	stats, err := extractBuildStats(graph)
+	stats, err := extractBuildStats(graph, steps)
 	if err != nil {
 		log.Errorf("Failed to extract build stats from graph: %v", err)
 	}

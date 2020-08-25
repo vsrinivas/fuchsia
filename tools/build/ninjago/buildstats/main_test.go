@@ -17,7 +17,7 @@ import (
 var testDataDir = flag.String("test_data_dir", "", "Path to the test DOT file")
 
 func TestExtractAndSerializeBuildStats(t *testing.T) {
-	graph, err := constructGraph(paths{
+	graph, steps, err := constructGraph(paths{
 		ninjalog: filepath.Join(*testDataDir, "ninja_log"),
 		compdb:   filepath.Join(*testDataDir, "compdb.json"),
 		graph:    filepath.Join(*testDataDir, "graph.dot"),
@@ -26,21 +26,28 @@ func TestExtractAndSerializeBuildStats(t *testing.T) {
 		t.Fatalf("Failed to construct graph: %v", err)
 	}
 
-	stats, err := extractBuildStats(graph)
+	stats, err := extractBuildStats(graph, steps)
 	if err != nil {
 		t.Fatalf("Failed to extract build stats: %v", err)
+	}
+	if len(stats.CriticalPath) == 0 {
+		t.Errorf("Critical path in stats is emtpy, expect non-empty")
+	}
+	if len(stats.Slowests) == 0 {
+		t.Errorf("Slowest builds in stats is empty, expect non-empty")
+	}
+	if len(stats.CatBuildTimes) == 0 {
+		t.Errorf("Build times by category in stats is empty, expect non-empty")
 	}
 
 	buffer := new(bytes.Buffer)
 	if err := serializeBuildStats(stats, buffer); err != nil {
 		t.Fatalf("Failed to serialize build stats: %v", err)
 	}
-
 	var gotStats buildStats
 	if err := json.NewDecoder(buffer).Decode(&gotStats); err != nil {
 		t.Fatalf("Failed to deserialize build stats: %v", err)
 	}
-
 	if diff := cmp.Diff(stats, gotStats); diff != "" {
 		t.Errorf("build stats diff after deserialization (-want, +got):\n%s", diff)
 	}
