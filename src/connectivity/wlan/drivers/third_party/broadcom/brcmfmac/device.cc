@@ -174,6 +174,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       if (client_interface_ == nullptr) {
         return ZX_ERR_NOT_FOUND;
       }
+      client_interface_->BeginShuttingDown();
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, client_interface_->wdev())) !=
           ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s",

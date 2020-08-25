@@ -174,6 +174,8 @@ void WlanInterface::DdkAsyncRemove() {
 
 void WlanInterface::DdkRelease() { delete this; }
 
+void WlanInterface::BeginShuttingDown() { shutting_down_ = true; }
+
 // static
 wlan_info_mac_role_t WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
   wlan_info_mac_role_t mac_role = 0;
@@ -354,7 +356,11 @@ void WlanInterface::Stop() { brcmf_if_stop(wdev_->netdev); }
 void WlanInterface::Query(wlanif_query_info_t* info) { brcmf_if_query(wdev_->netdev, info); }
 
 void WlanInterface::StartScan(const wlanif_scan_req_t* req) {
-  brcmf_if_start_scan(wdev_->netdev, req);
+  // TODO(58783): We sometimes see these requests after DdkAsyncRemove is called, which can cause
+  // issues in the driver.
+  if (!shutting_down_) {
+    brcmf_if_start_scan(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::JoinReq(const wlanif_join_req_t* req) { brcmf_if_join_req(wdev_->netdev, req); }
@@ -421,7 +427,8 @@ void WlanInterface::DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   brcmf_if_data_queue_tx(wdev_->netdev, options, netbuf, completion_cb, cookie);
 }
 
-WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
+WlanInterface::WlanInterface()
+    : zx_device_(nullptr), wdev_(nullptr), device_(nullptr), shutting_down_(false) {}
 
 WlanInterface::~WlanInterface() {}
 

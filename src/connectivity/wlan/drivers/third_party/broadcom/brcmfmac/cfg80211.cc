@@ -3010,7 +3010,7 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s",
             result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
             : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
-            : result.result_code == WLAN_JOIN_RESULT_INTERNAL_ERROR         ? "internal error"
+            : result.result_code == WLAN_JOIN_RESULT_INTERNAL_ERROR  ? "internal error"
                                                                      : "unknown");
   wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }

@@ -44,6 +44,7 @@ class WlanInterface {
   // Device operations.
   void DdkAsyncRemove();
   void DdkRelease();
+  void BeginShuttingDown();
 
   static wlan_info_mac_role_t GetMacRoles(struct brcmf_pub* drvr);
   static bool IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_type_t phy_type);
@@ -89,6 +90,7 @@ class WlanInterface {
   zx_device_t* zx_device_;
   wireless_dev* wdev_;
   Device* device_;
+  bool shutting_down_;
 };
 }  // namespace brcmfmac
 }  // namespace wlan
