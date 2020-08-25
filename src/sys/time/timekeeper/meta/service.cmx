@@ -6,9 +6,6 @@
         "dev": [
             "class/rtc"
         ],
-        "features": [
-            "build-info"
-        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.TimeService",
