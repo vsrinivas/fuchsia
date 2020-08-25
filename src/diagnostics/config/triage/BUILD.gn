@@ -29,6 +29,7 @@ if (is_host) {
       "intl.flutter_jit.triage",
       "intl.flutter_jit_product.triage",
       "intl.triage",
+      "scenic.triage",
       "stash.triage",
       "stash_secure.triage",
       "timezone.triage",

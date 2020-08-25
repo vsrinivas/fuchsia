@@ -1,0 +1,81 @@
+{
+    select: {
+        total_rendered_frames: "INSPECT:scenic.cmx:root/scenic/FrameScheduler/Frame Stats/frame_history/total:rendered_frames",
+        total_dropped_frames: "INSPECT:scenic.cmx:root/scenic/FrameScheduler/Frame Stats/frame_history/total:dropped_frames",
+        total_delayed_frames: "INSPECT:scenic.cmx:root/scenic/FrameScheduler/Frame Stats/frame_history/total:delayed_rendered_frames",
+        sample_array: "INSPECT:scenic.cmx:root/scenic/FrameScheduler/Frame Stats/frame_history/minutes_ago/*:total_frames",
+    },
+    eval: {
+        measurement_count: "Count(sample_array)",
+
+        // We measure over 10 minutes.
+        measurement_period_seconds: "60 * measurement_count",
+
+        // Calculate average frames per second.
+        // Our target is 60FPS, so we figure out how many frames fit in
+        // the last measurement period, subtract the number of frames we
+        // failed to fit, and then see how many we could have rendered per second.
+        frames_per_second: "(60 * measurement_period_seconds - total_dropped_frames - total_delayed_frames) // measurement_period_seconds",
+        delay_ratio: "total_delayed_frames / total_rendered_frames",
+    },
+    act: {
+        dropped_frames: {
+            type: "Warning",
+            trigger: "total_dropped_frames > 0",
+            print: "We dropped some frames in the past 10 minutes. Please file bugs under Scenic.",
+        },
+        delayed_frames: {
+            type: "Warning",
+            trigger: "delay_ratio > .05",
+            print: "We delayed over 5% of frames in the past 10 minutes. Please file bugs under Scenic.",
+        },
+        frames_per_second: {
+            type: "Gauge",
+            value: "frames_per_second",
+        },
+        delayed_frames_percentage: {
+            type: "Gauge",
+            value: "delay_ratio",
+            format: "percentage",
+        },
+    },
+    test: {
+        all_ok: {
+            no: [
+                "dropped_frames",
+                "delayed_frames",
+            ],
+            yes: [],
+            values: {
+                total_rendered_frames: 1,
+                total_dropped_frames: 0,
+                total_delayed_frames: 0,
+            },
+        },
+        any_dropped_frames: {
+            no: [
+                "delayed_frames",
+            ],
+            yes: [
+                "dropped_frames",
+            ],
+            values: {
+                total_rendered_frames: 1,
+                total_dropped_frames: 1,
+                total_delayed_frames: 0,
+            },
+        },
+        five_percent_delay: {
+            no: [],
+            yes: [
+                "dropped_frames",
+                "delayed_frames",
+            ],
+            values: {
+                total_rendered_frames: 100,
+                total_dropped_frames: 1,
+                total_delayed_frames: 6,
+            },
+        },
+    },
+}
