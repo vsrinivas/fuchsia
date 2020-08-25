@@ -111,6 +111,13 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
 }
 
 void DeviceWatcherImpl::UpdateClients() {
+  if (!initial_update_received_) {
+    initial_update_received_ = true;
+    while (!requests_.empty()) {
+      OnNewRequest(std::move(requests_.front()));
+      requests_.pop();
+    }
+  }
   async::PostTask(loop_.dispatcher(), [this]() {
     for (auto& client : clients_) {
       client.second->UpdateDevices(devices_);
@@ -124,6 +131,10 @@ fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> DeviceWatcherImpl
 
 void DeviceWatcherImpl::OnNewRequest(
     fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request) {
+  if (!initial_update_received_) {
+    requests_.push(std::move(request));
+    return;
+  }
   auto result = Client::Create(*this, client_id_next_, std::move(request), loop_.dispatcher());
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error());
@@ -132,7 +143,6 @@ void DeviceWatcherImpl::OnNewRequest(
   auto client = result.take_value();
   async::PostTask(loop_.dispatcher(),
                   [this, client = std::move(client), id = client_id_next_]() mutable {
-                    client->UpdateDevices(devices_);
                     clients_[id] = std::move(client);
                   });
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
@@ -148,6 +158,7 @@ DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
   auto client = std::make_unique<DeviceWatcherImpl::Client>(watcher);
 
   client->id_ = id;
+  client->UpdateDevices(watcher.devices_);
 
   zx_status_t status = client->binding_.Bind(request.TakeChannel(), dispatcher);
   if (status != ZX_OK) {

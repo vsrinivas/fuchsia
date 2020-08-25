@@ -16,6 +16,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <queue>
 #include <set>
 #include <unordered_map>
 
@@ -78,6 +79,8 @@ class DeviceWatcherImpl {
   DevicesMap devices_;
   ClientId client_id_next_ = 1;
   std::unordered_map<ClientId, std::unique_ptr<Client>> clients_;
+  bool initial_update_received_ = false;
+  std::queue<fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher>> requests_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_WATCHER_DEVICE_WATCHER_IMPL_H_
