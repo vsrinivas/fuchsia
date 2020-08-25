@@ -155,12 +155,14 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => false,
             MetricValue::Missing(reason) => {
                 self.action_results
-                    .add_warning(format!("[ERROR] In config '{}': {}", namespace, reason));
+                    .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
                 false
             }
             other => {
-                self.action_results
-                    .add_warning(format!("[ERROR] In config '{}': {}", namespace, other));
+                self.action_results.add_warning(format!(
+                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    namespace, other
+                ));
                 false
             }
         };
