@@ -2116,6 +2116,19 @@ group("bootserver") {
   }
 }
 
+group("fastboot") {
+  metadata = {
+    images = [
+      {
+        archive = true
+        name = "fastboot"
+        path = rebase_path("//prebuilt/third_party/fastboot/fastboot")
+        type = "exe.$host_platform"
+      },
+    ]
+  }
+}
+
 group("archive-extras") {
   metadata = {
     # Not actually images, but historically required entries to be included in
@@ -2157,6 +2170,7 @@ group("default-images") {
 
   deps = [
     ":bootserver",
+    ":fastboot",
     ":flash_script",
     ":paver-script",
     ":qemu-kernel",
