@@ -450,6 +450,50 @@ TEST_P(SwapchainTest, CreateForSrgb) {
   test.CreateSwapchain(1, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 }
 
+TEST_P(SwapchainTest, AcquireFence) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.init_);
+
+  zx::channel endpoint0, endpoint1;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
+
+  // Create FakeImagePipe that can consume BuffercollectionToken.
+  test.imagepipe_ = std::make_unique<FakeImagePipe>(
+      fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(endpoint1)),
+      /*should_present=*/true);
+
+  VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
+      .imagePipeHandle = endpoint0.release(),
+      .pNext = nullptr,
+  };
+  VkSurfaceKHR surface;
+  EXPECT_EQ(VK_SUCCESS,
+            vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info, nullptr, &surface));
+
+  VkSwapchainKHR swapchain;
+  EXPECT_EQ(VK_SUCCESS,
+            test.CreateSwapchainHelper(surface, VK_FORMAT_R8G8B8A8_UNORM,
+                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &swapchain));
+
+  VkFence fence;
+  VkFenceCreateInfo info{
+      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = 0};
+  vkCreateFence(test.vk_device_, &info, nullptr, &fence);
+
+  uint32_t image_index;
+  EXPECT_EQ(VK_ERROR_DEVICE_LOST,
+            test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE, fence,
+                                         &image_index));
+  vkDestroyFence(test.vk_device_, fence, nullptr);
+
+  vkDestroySurfaceKHR(test.vk_instance_, surface, nullptr);
+}
+
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
 
 class SwapchainFidlTest : public ::testing::TestWithParam<bool /* protected_memory */> {};

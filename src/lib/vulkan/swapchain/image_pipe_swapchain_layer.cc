@@ -333,10 +333,13 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
 VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
                                                    uint64_t timeout, VkSemaphore semaphore,
                                                    VkFence fence, uint32_t* pImageIndex) {
-  // TODO(MA-264) handle this correctly
-  assert(fence == VK_NULL_HANDLE);
-
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
+  if (fence) {
+    // TODO(MA-264) handle this correctly
+    swapchain->DebugMessage(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                            "Image pipe swapchain doesn't support fences.");
+    return VK_ERROR_DEVICE_LOST;
+  }
   return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
 }
 
