@@ -17,6 +17,7 @@
 
 namespace a11y {
 namespace {
+
 constexpr char kNextActionLabel[] = "Next Action";
 constexpr char kPreviousActionLabel[] = "Previous Action";
 constexpr char kExploreActionLabel[] = "Explore Action";
@@ -25,16 +26,48 @@ constexpr char kThreeFingerUpSwipeActionLabel[] = "Three finger Up Swipe Action"
 constexpr char kThreeFingerDownSwipeActionLabel[] = "Three finger Down Swipe Action";
 constexpr char kThreeFingerLeftSwipeActionLabel[] = "Three finger Left Swipe Action";
 constexpr char kThreeFingerRightSwipeActionLabel[] = "Three finger Right Swipe Action";
+
 }  // namespace
+
+// Private implementation of the registry for the Screen Reader use only. Note that only the Screen
+// Reader will be able to access the methods implemented here.
+class ScreenReader::ScreenReaderActionRegistryImpl : public ScreenReaderActionRegistry {
+ public:
+  ScreenReaderActionRegistryImpl() = default;
+  ~ScreenReaderActionRegistryImpl() override = default;
+  void AddAction(std::string name, std::unique_ptr<ScreenReaderAction> action) override {
+    actions_.insert({std::move(name), std::move(action)});
+  }
+
+  ScreenReaderAction* GetActionByName(const std::string& name) override {
+    auto action_it = actions_.find(name);
+    if (action_it == actions_.end()) {
+      FX_LOGS(ERROR) << "No Screen Reader action found with string :" << name;
+      return nullptr;
+    }
+    return action_it->second.get();
+  }
+
+ private:
+  std::unordered_map<std::string, std::unique_ptr<ScreenReaderAction>> actions_;
+};
+
+ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
+                           SemanticsSource* semantics_source,
+                           GestureListenerRegistry* gesture_listener_registry)
+    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry,
+                   std::make_unique<ScreenReaderActionRegistryImpl>()) {}
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            a11y::SemanticsSource* semantics_source,
-                           a11y::GestureListenerRegistry* gesture_listener_registry)
-    : context_(std::move(context)), gesture_listener_registry_(gesture_listener_registry) {
+                           a11y::GestureListenerRegistry* gesture_listener_registry,
+                           std::unique_ptr<ScreenReaderActionRegistry> action_registry)
+    : context_(std::move(context)),
+      gesture_listener_registry_(gesture_listener_registry),
+      action_registry_(std::move(action_registry)) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
-
-  InitializeServicesAndAction();
+  InitializeActions();
 }
 
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
@@ -159,55 +192,47 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   FX_DCHECK(gesture_bind_status);
 }
 
-void ScreenReader::InitializeServicesAndAction() {
-  // Initialize Screen reader supported "Actions".
-  actions_.insert(std::make_pair(kExploreActionLabel, std::make_unique<a11y::ExploreAction>(
-                                                          action_context_.get(), context_.get())));
-  actions_.insert(std::make_pair(kDefaultActionLabel, std::make_unique<a11y::DefaultAction>(
-                                                          action_context_.get(), context_.get())));
-  actions_.insert(std::make_pair(
+void ScreenReader::InitializeActions() {
+  action_registry_->AddAction(kExploreActionLabel, std::make_unique<a11y::ExploreAction>(
+                                                       action_context_.get(), context_.get()));
+  action_registry_->AddAction(kDefaultActionLabel, std::make_unique<a11y::DefaultAction>(
+                                                       action_context_.get(), context_.get()));
+  action_registry_->AddAction(
       kPreviousActionLabel,
       std::make_unique<a11y::LinearNavigationAction>(
-          action_context_.get(), context_.get(), a11y::LinearNavigationAction::kPreviousAction)));
-  actions_.insert(std::make_pair(kNextActionLabel, std::make_unique<a11y::LinearNavigationAction>(
-                                                       action_context_.get(), context_.get(),
-                                                       a11y::LinearNavigationAction::kNextAction)));
+          action_context_.get(), context_.get(), a11y::LinearNavigationAction::kPreviousAction));
+  action_registry_->AddAction(kNextActionLabel, std::make_unique<a11y::LinearNavigationAction>(
+                                                    action_context_.get(), context_.get(),
+                                                    a11y::LinearNavigationAction::kNextAction));
 
-  actions_.insert(
-      std::make_pair(kThreeFingerUpSwipeActionLabel,
-                     std::make_unique<a11y::ThreeFingerSwipeAction>(
-                         action_context_.get(), context_.get(), gesture_listener_registry_,
-                         fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_UP)));
+  action_registry_->AddAction(kThreeFingerUpSwipeActionLabel,
+                              std::make_unique<a11y::ThreeFingerSwipeAction>(
+                                  action_context_.get(), context_.get(), gesture_listener_registry_,
+                                  fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_UP));
 
-  actions_.insert(
-      std::make_pair(kThreeFingerDownSwipeActionLabel,
-                     std::make_unique<a11y::ThreeFingerSwipeAction>(
-                         action_context_.get(), context_.get(), gesture_listener_registry_,
-                         fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_DOWN)));
+  action_registry_->AddAction(kThreeFingerDownSwipeActionLabel,
+                              std::make_unique<a11y::ThreeFingerSwipeAction>(
+                                  action_context_.get(), context_.get(), gesture_listener_registry_,
+                                  fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_DOWN));
 
-  actions_.insert(
-      std::make_pair(kThreeFingerLeftSwipeActionLabel,
-                     std::make_unique<a11y::ThreeFingerSwipeAction>(
-                         action_context_.get(), context_.get(), gesture_listener_registry_,
-                         fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_LEFT)));
+  action_registry_->AddAction(kThreeFingerLeftSwipeActionLabel,
+                              std::make_unique<a11y::ThreeFingerSwipeAction>(
+                                  action_context_.get(), context_.get(), gesture_listener_registry_,
+                                  fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_LEFT));
 
-  actions_.insert(
-      std::make_pair(kThreeFingerRightSwipeActionLabel,
-                     std::make_unique<a11y::ThreeFingerSwipeAction>(
-                         action_context_.get(), context_.get(), gesture_listener_registry_,
-                         fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_RIGHT)));
+  action_registry_->AddAction(kThreeFingerRightSwipeActionLabel,
+                              std::make_unique<a11y::ThreeFingerSwipeAction>(
+                                  action_context_.get(), context_.get(), gesture_listener_registry_,
+                                  fuchsia::accessibility::gesture::Type::THREE_FINGER_SWIPE_RIGHT));
 }
 
 bool ScreenReader::ExecuteAction(const std::string& action_name,
                                  ScreenReaderAction::ActionData action_data) {
-  auto action_pair = actions_.find(action_name);
-
-  if (action_pair == actions_.end()) {
-    FX_LOGS(ERROR) << "No action found with string :" << action_name;
+  auto* action = action_registry_->GetActionByName(action_name);
+  if (!action) {
     return false;
   }
-
-  action_pair->second->Run(action_data);
+  action->Run(action_data);
   return true;
 }
 

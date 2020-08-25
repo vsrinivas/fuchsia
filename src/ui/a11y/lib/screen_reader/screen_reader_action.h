@@ -45,6 +45,9 @@ class ScreenReaderAction {
   virtual void Run(ActionData process_data) = 0;
 
  protected:
+  // Constructor for mocks.
+  ScreenReaderAction() = default;
+
   // Helper function to call hit testing based on ActionContext and ActionData.
   void ExecuteHitTesting(
       ActionContext* context, ActionData process_data,
@@ -77,6 +80,19 @@ class ScreenReaderAction {
   ScreenReaderContext* screen_reader_context_;
 };
 
-}  // namespace a11y
+// An interface to retrieeve actions.
+class ScreenReaderActionRegistry {
+ public:
+  ScreenReaderActionRegistry() = default;
+  virtual ~ScreenReaderActionRegistry() = default;
 
+  // Adds an |action| with |name| to the registry. |name| can be later used to retrieeve this
+  // action.
+  virtual void AddAction(std::string name, std::unique_ptr<ScreenReaderAction> action) = 0;
+
+  // Returns the action registered with |name|, nullptr if not found.
+  virtual ScreenReaderAction* GetActionByName(const std::string& name) = 0;
+};
+
+}  // namespace a11y
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_ACTION_H_

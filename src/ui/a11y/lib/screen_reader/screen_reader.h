@@ -37,6 +37,12 @@ class ScreenReader {
   ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                a11y::SemanticsSource* semantics_source,
                a11y::GestureListenerRegistry* gesture_listener_registry);
+  // Same as above, but accepts a custom |action_registry|.
+  ScreenReader(std::unique_ptr<ScreenReaderContext> context,
+               a11y::SemanticsSource* semantics_source,
+               a11y::GestureListenerRegistry* gesture_listener_registry,
+               std::unique_ptr<ScreenReaderActionRegistry> action_registry);
+
   ~ScreenReader() = default;
 
   void BindGestures(a11y::GestureHandler* gesture_handler);
@@ -44,8 +50,9 @@ class ScreenReader {
   ScreenReaderContext* context() { return context_.get(); }
 
  private:
-  // Initializes services and binds actions to gesture manager.
-  void InitializeServicesAndAction();
+  class ScreenReaderActionRegistryImpl;
+
+  void InitializeActions();
 
   // Helps finding the appropriate Action based on Action Name and calls Run()
   // for the matched Action.
@@ -56,14 +63,15 @@ class ScreenReader {
   // Stores information about the Screen Reader state.
   std::unique_ptr<ScreenReaderContext> context_;
 
-  // Maps action names to screen reader actions.
-  std::unordered_map<std::string, std::unique_ptr<ScreenReaderAction>> actions_;
-
   // Stores Action context which is required to build an Action.
   std::unique_ptr<ScreenReaderAction::ActionContext> action_context_;
 
   // Pointer to Gesture Listener Registry.
   GestureListenerRegistry* gesture_listener_registry_;
+  // Maps action names to screen reader actions.
+  // Different triggering methods may invoke the same action. For example, both one finger tap and
+  // dragging the finger on the screen invoke the explore action.
+  std::unique_ptr<ScreenReaderActionRegistry> action_registry_;
 };
 
 }  // namespace a11y

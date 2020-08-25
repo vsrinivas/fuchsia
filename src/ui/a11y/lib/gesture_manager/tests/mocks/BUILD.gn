@@ -6,9 +6,13 @@ source_set("mocks") {
   testonly = true
 
   sources = [
+    "mock_gesture_handler.cc",
+    "mock_gesture_handler.h",
     "mock_gesture_listener.cc",
     "mock_gesture_listener.h",
   ]
+
+  public_deps = [ "//src/ui/a11y/lib/gesture_manager" ]
   deps = [
     "//sdk/fidl/fuchsia.accessibility.gesture",
     "//sdk/lib/fidl/cpp",

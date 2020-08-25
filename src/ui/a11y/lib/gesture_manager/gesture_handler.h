@@ -57,33 +57,36 @@ class GestureHandler {
   using OnGestureCallback = fit::function<void(zx_koid_t, fuchsia::math::PointF)>;
 
   explicit GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback);
-  ~GestureHandler() = default;
+  virtual ~GestureHandler() = default;
 
   // Binds the action defined in |callback| with the gesture |kOneFingerSingleTap|. The action is
   // invoked only after the gesture is detected.
-  bool BindOneFingerSingleTapAction(OnGestureCallback callback);
+  virtual bool BindOneFingerSingleTapAction(OnGestureCallback callback);
 
   // Binds the action defined in |callback| with the gesture |kOneFingerDoubleTap|. The action is
   // invoked only after the gesture is detected.
-  bool BindOneFingerDoubleTapAction(OnGestureCallback callback);
+  virtual bool BindOneFingerDoubleTapAction(OnGestureCallback callback);
 
   // Binds the actions with the gesture |kOneFingerDrag|.
   // They are called when the drag starts, updates and completes, respectively.
-  bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
-                               OnGestureCallback on_complete);
+  virtual bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
+                                       OnGestureCallback on_complete);
 
   // Binds the action defined in |callback| with the |gesture_type|. Returns true if the |callback|
   // is bound, false otherwise
-  bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type);
+  virtual bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type);
 
   // Binds the action defined in |callback| with the |kTwoFingerSingleTap|. The
   // action is invoked only after the gesture is detected.
-  bool BindTwoFingerSingleTapAction(OnGestureCallback callback);
+  virtual bool BindTwoFingerSingleTapAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();
 
- private:
+ protected:
+  // Constructor for mocks.
+  GestureHandler() = default;
+
   // The handlers for each gesture recognizer event.
   struct GestureEventHandlers {
     OnGestureCallback on_start;
@@ -93,6 +96,7 @@ class GestureHandler {
 
   enum class GestureEvent { kStart, kUpdate, kComplete };
 
+ private:
   // Calls an action bound to |gesture_type| if it exists.
   void OnGesture(const GestureType gesture_type, const GestureEvent gesture_event,
                  GestureArguments args);
