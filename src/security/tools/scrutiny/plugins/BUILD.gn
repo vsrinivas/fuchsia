@@ -52,6 +52,7 @@ if (!is_fuchsia) {
       "src/engine.rs",
       "src/lib.rs",
       "src/model.rs",
+      "src/toolkit.rs",
     ]
   }
 }

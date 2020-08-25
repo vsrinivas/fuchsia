@@ -225,7 +225,9 @@ impl PluginManager {
 
     /// Returns a list of all plugin descriptors registered with the system.
     pub fn plugins(&self) -> Vec<PluginDescriptor> {
-        self.plugins.keys().map(|k| k.clone()).collect()
+        let mut plugins: Vec<PluginDescriptor> = self.plugins.keys().map(|k| k.clone()).collect();
+        plugins.sort();
+        plugins
     }
 
     /// Returns the state the plugin is currently in.
@@ -480,5 +482,19 @@ mod tests {
                 .is_err(),
             true
         );
+    }
+
+    #[test]
+    fn test_plugins_sorted() {
+        let mut manager = create_manager();
+        let plugin_one = Box::new(TestPluginOne::new());
+        let plugin_one_desc = plugin_one.descriptor().clone();
+        let plugin_two = Box::new(TestPluginTwo::new());
+        let plugin_two_desc = plugin_two.descriptor().clone();
+        manager.register_and_load(plugin_two).expect("failed to load plugin two");
+        manager.register_and_load(plugin_one).expect("failed to load plugin one");
+        let plugins = manager.plugins();
+        assert_eq!(plugins[0], plugin_one_desc);
+        assert_eq!(plugins[1], plugin_two_desc);
     }
 }

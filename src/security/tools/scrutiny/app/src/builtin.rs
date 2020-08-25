@@ -34,7 +34,7 @@ impl BuiltinCommand {
             "plugin.unload" => Some(Self { program: Builtin::PluginUnload, args }),
             "clear" => Some(Self { program: Builtin::Clear, args }),
             "exit" => Some(Self { program: Builtin::Exit, args }),
-            "help" => Some(Self { program: Builtin::Help, args }),
+            "h" | "help" => Some(Self { program: Builtin::Help, args }),
             "history" => Some(Self { program: Builtin::History, args }),
             _ => None,
         }
@@ -80,6 +80,7 @@ mod tests {
         assert_eq!(BuiltinCommand::parse("clear").unwrap().program, Builtin::Clear);
         assert_eq!(BuiltinCommand::parse("exit").unwrap().program, Builtin::Exit);
         assert_eq!(BuiltinCommand::parse("help").unwrap().program, Builtin::Help);
+        assert_eq!(BuiltinCommand::parse("h").unwrap().program, Builtin::Help);
         assert_eq!(BuiltinCommand::parse("history").unwrap().program, Builtin::History);
         assert_eq!(BuiltinCommand::parse("AAAtestAAA").is_none(), true);
     }

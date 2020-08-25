@@ -12,7 +12,9 @@ mod shell;
 use {
     crate::scrutiny::ScrutinyApp,
     anyhow::Result,
-    scrutiny_plugins::{core::core::CorePlugin, engine::EnginePlugin, model::ModelPlugin},
+    scrutiny_plugins::{
+        core::core::CorePlugin, engine::EnginePlugin, model::ModelPlugin, toolkit::ToolkitPlugin,
+    },
 };
 
 fn main() -> Result<()> {
@@ -20,5 +22,6 @@ fn main() -> Result<()> {
     app.plugin(CorePlugin::new())?;
     app.plugin(ModelPlugin::new())?;
     app.plugin(EnginePlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;
+    app.plugin(ToolkitPlugin::new())?;
     app.run()
 }

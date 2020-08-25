@@ -9,7 +9,7 @@ use {
 };
 
 /// Core identifying information about the plugin.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct PluginDescriptor {
     // A unique name for the plugin.
     name: String,
