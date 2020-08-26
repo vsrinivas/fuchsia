@@ -23,6 +23,8 @@ use fuchsia_syslog::macros::*;
 use fuchsia_zircon::Duration;
 use lowpan_driver_common::AsyncCondition;
 
+const DEFAULT_SCAN_DWELL_TIME_MS: u16 = 100;
+
 #[cfg(not(test))]
 const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(5);
 

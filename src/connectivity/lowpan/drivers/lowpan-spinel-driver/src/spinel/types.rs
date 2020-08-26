@@ -123,6 +123,45 @@ pub struct SpinelPropValueRef<'a> {
 #[derive(Debug, Clone, Copy)]
 pub struct ProtocolVersion(pub u32, pub u32);
 
+/// The MAC section of a spinel network scan result
+#[spinel_packed("ESSC")]
+#[derive(Debug)]
+pub struct NetScanResultMac {
+    pub long_addr: EUI64,
+    pub short_addr: u16,
+    pub panid: u16,
+    pub lqi: u8,
+}
+
+/// The NET section of a spinel network scan result
+#[spinel_packed("iCUdd")]
+#[derive(Debug)]
+pub struct NetScanResultNet {
+    pub net_type: u32,
+    pub flags: u8,
+    pub network_name: Vec<u8>,
+    pub xpanid: Vec<u8>,
+    pub steering_data: Vec<u8>,
+}
+
+/// A spinel network scan result
+#[spinel_packed("Ccdd")]
+#[derive(Debug)]
+pub struct NetScanResult {
+    pub channel: u8,
+    pub rssi: i8,
+    pub mac: NetScanResultMac,
+    pub net: NetScanResultNet,
+}
+
+/// A spinel energy scan result
+#[spinel_packed("Cc")]
+#[derive(Debug)]
+pub struct EnergyScanResult {
+    pub channel: u8,
+    pub rssi: i8,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

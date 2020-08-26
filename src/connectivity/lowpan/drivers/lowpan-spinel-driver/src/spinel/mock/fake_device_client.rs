@@ -11,6 +11,7 @@ use futures::channel::mpsc;
 use futures::future::LocalBoxFuture;
 use matches::assert_matches;
 use parking_lot::Mutex;
+use spinel_pack::EUI64;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -36,6 +37,10 @@ impl Default for FakeSpinelDevice {
         properties.insert(Prop::Net(PropNet::MasterKey), vec![]);
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
         properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
+        properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
+        properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
+        properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
+        properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
         properties.insert(
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
@@ -59,6 +64,10 @@ impl FakeSpinelDevice {
         properties.insert(Prop::Net(PropNet::Xpanid), vec![0, 0, 0, 0, 0, 0, 0, 0]);
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
         properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
+        properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
+        properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
+        properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
+        properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
         properties.insert(
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
@@ -111,9 +120,233 @@ impl FakeSpinelDevice {
         frame: SpinelFrameRef<'_>,
         prop: Prop,
         new_value: &[u8],
-    ) -> Option<Vec<u8>> {
+    ) -> Option<Vec<Vec<u8>>> {
         let mut response: Vec<u8> = vec![];
         match prop {
+            Prop::Mac(PropMac::ScanState) => {
+                match ScanState::try_unpack_from_slice(new_value).ok()? {
+                    ScanState::Energy => {
+                        let mut full_response: Vec<Vec<u8>> = vec![];
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "Ciii",
+                                frame.header,
+                                Cmd::PropValueIs,
+                                prop,
+                                ScanState::Energy
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiCc",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::EnergyScanResult),
+                                11,
+                                -70
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiCc",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::EnergyScanResult),
+                                12,
+                                -60
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiCc",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::EnergyScanResult),
+                                13,
+                                -50
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "Ciii",
+                                0x80,
+                                Cmd::PropValueIs,
+                                prop,
+                                ScanState::Idle
+                            )
+                            .unwrap();
+                            response
+                        });
+                        return Some(full_response);
+                    }
+                    ScanState::Beacon => {
+                        let mut full_response: Vec<Vec<u8>> = vec![];
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "Ciii",
+                                frame.header,
+                                Cmd::PropValueIs,
+                                prop,
+                                ScanState::Beacon
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiD",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::ScanBeacon),
+                                NetScanResult {
+                                    channel: 11,
+                                    rssi: -60,
+                                    mac: NetScanResultMac {
+                                        long_addr: EUI64([
+                                            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+                                        ]),
+                                        short_addr: 0xfffe,
+                                        panid: 0xaaaa,
+                                        lqi: 127,
+                                    },
+                                    net: NetScanResultNet {
+                                        net_type: 2,
+                                        flags: 0,
+                                        network_name: b"net_chan_11".to_vec(),
+                                        xpanid: vec![
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                                        ],
+                                        steering_data: vec![],
+                                    }
+                                },
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiD",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::ScanBeacon),
+                                NetScanResult {
+                                    channel: 12,
+                                    rssi: -70,
+                                    mac: NetScanResultMac {
+                                        long_addr: EUI64([
+                                            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
+                                        ]),
+                                        short_addr: 0xfffe,
+                                        panid: 0xaaaa,
+                                        lqi: 127,
+                                    },
+                                    net: NetScanResultNet {
+                                        net_type: 2,
+                                        flags: 0,
+                                        network_name: b"net_chan_12".to_vec(),
+                                        xpanid: vec![
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+                                        ],
+                                        steering_data: vec![],
+                                    }
+                                },
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "CiiD",
+                                0x80,
+                                Cmd::PropValueInserted,
+                                Prop::Mac(PropMac::ScanBeacon),
+                                NetScanResult {
+                                    channel: 13,
+                                    rssi: -65,
+                                    mac: NetScanResultMac {
+                                        long_addr: EUI64([
+                                            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03
+                                        ]),
+                                        short_addr: 0xfffe,
+                                        panid: 0xaaaa,
+                                        lqi: 127,
+                                    },
+                                    net: NetScanResultNet {
+                                        net_type: 2,
+                                        flags: 0,
+                                        network_name: b"net_chan_13".to_vec(),
+                                        xpanid: vec![
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
+                                        ],
+                                        steering_data: vec![],
+                                    }
+                                },
+                            )
+                            .unwrap();
+                            response
+                        });
+
+                        full_response.push({
+                            let mut response: Vec<u8> = vec![];
+                            spinel_write!(
+                                &mut response,
+                                "Ciii",
+                                0x80,
+                                Cmd::PropValueIs,
+                                prop,
+                                ScanState::Idle
+                            )
+                            .unwrap();
+                            response
+                        });
+                        return Some(full_response);
+                    }
+                    _ => {
+                        spinel_write!(
+                            &mut response,
+                            "Ciii",
+                            frame.header,
+                            Cmd::PropValueIs,
+                            Prop::LastStatus,
+                            Status::Unimplemented
+                        )
+                        .unwrap();
+                    }
+                }
+            }
             prop => {
                 let mut properties = self.properties.lock();
                 if let Some(value) = properties.get_mut(&prop) {
@@ -141,7 +374,7 @@ impl FakeSpinelDevice {
                 }
             }
         }
-        Some(response)
+        Some(vec![response])
     }
 
     fn handle_get_prop(&self, frame: SpinelFrameRef<'_>, prop: Prop) -> Option<Vec<u8>> {
@@ -308,9 +541,7 @@ impl FakeSpinelDevice {
                 let mut payload = frame.payload.iter();
                 let prop = Prop::try_unpack(&mut payload).ok();
                 let value = <&[u8]>::try_unpack(&mut payload).unwrap();
-                prop.and_then(|prop| self.handle_set_prop(frame, prop, value))
-                    .map(|r| vec![r])
-                    .unwrap_or(vec![])
+                prop.and_then(|prop| self.handle_set_prop(frame, prop, value)).unwrap_or(vec![])
             }
             Cmd::NetClear => {
                 self.handle_net_clear();

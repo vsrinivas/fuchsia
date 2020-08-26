@@ -148,6 +148,16 @@ async fn test_spinel_lowpan_driver() {
                 ConnectivityState::Offline
             );
 
+            traceln!("app_task: Performing energy scan...");
+            let energy_scan_stream = driver
+                .start_energy_scan(&fidl_fuchsia_lowpan_device::EnergyScanParameters::empty());
+            assert_eq!(energy_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
+
+            traceln!("app_task: Performing network scan...");
+            let network_scan_stream = driver
+                .start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::empty());
+            assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
+
             traceln!("app_task: Setting disabled...");
             assert_eq!(driver.set_active(false).await, Ok(()));
             traceln!("app_task: Did disable!");

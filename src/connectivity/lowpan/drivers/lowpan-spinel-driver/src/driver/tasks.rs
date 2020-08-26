@@ -109,6 +109,8 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                 .await?;
         }
 
+        fx_log_info!("online_loop: Waiting");
+
         futures::future::pending().await
     }
 
@@ -146,6 +148,8 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                 fx_log_err!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
             }
         } // API task lock goes out of scope here
+
+        fx_log_info!("offline_loop: Waiting");
 
         futures::future::pending().await
     }

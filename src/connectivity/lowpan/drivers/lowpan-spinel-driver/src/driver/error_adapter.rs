@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::spinel::Status;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon_status::Status as ZxStatus;
 use std::fmt::Debug;
@@ -24,6 +25,13 @@ impl From<ErrorAdapter<anyhow::Error>> for ZxStatus {
             *status
         } else if err.0.is::<crate::spinel::Canceled>() {
             ZxStatus::CANCELED
+        } else if let Some(status) = err.0.downcast_ref::<Status>() {
+            match status {
+                Status::Unimplemented => ZxStatus::NOT_SUPPORTED,
+                Status::InvalidArgument => ZxStatus::INVALID_ARGS,
+                Status::InvalidState => ZxStatus::BAD_STATE,
+                _ => ZxStatus::INTERNAL,
+            }
         } else {
             fx_log_err!("Unhandled error when casting to ZxStatus: {:?}", err);
             ZxStatus::INTERNAL

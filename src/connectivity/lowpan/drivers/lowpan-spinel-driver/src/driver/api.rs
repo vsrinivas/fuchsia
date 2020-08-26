@@ -6,16 +6,105 @@ use super::*;
 use crate::prelude::*;
 use crate::spinel::*;
 
+use anyhow::Error;
 use async_trait::async_trait;
 use fasync::Time;
+use fidl_fuchsia_lowpan::BeaconInfo;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters,
-    ProvisioningMonitorMarker,
+    DeviceState, EnergyScanParameters, NetworkScanParameters, ProvisioningMonitorMarker,
 };
-use futures::future::ready;
+use fuchsia_async::TimeoutExt;
 use futures::stream::BoxStream;
-use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt as _, ZxResult};
+use futures::{StreamExt, TryFutureExt};
+use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt, ZxResult};
+use spinel_pack::TryUnpack;
+use std::convert::TryInto;
+
+/// Helpers for API-related tasks.
+impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+    async fn set_scan_mask(&self, scan_mask: Option<&Vec<u16>>) -> Result<(), Error> {
+        if let Some(mask) = scan_mask {
+            let u8_mask = mask.iter().try_fold(
+                Vec::<u8>::new(),
+                |mut acc, &x| -> Result<Vec<u8>, Error> {
+                    acc.push(TryInto::<u8>::try_into(x)?);
+                    Ok(acc)
+                },
+            )?;
+
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropMac::ScanMask.into(), u8_mask))
+                .await?
+        } else {
+            self.frame_handler.send_request(CmdPropValueSet(PropMac::ScanMask.into(), ())).await?
+        }
+        Ok(())
+    }
+
+    fn start_generic_scan<'a, R, FInit, SStream>(
+        &'a self,
+        init_task: FInit,
+        stream: SStream,
+    ) -> BoxStream<'a, ZxResult<R>>
+    where
+        R: Send + 'a,
+        FInit: Send + Future<Output = Result<futures::lock::MutexGuard<'a, ()>, Error>> + 'a,
+        SStream: Send + Stream<Item = Result<R, Error>> + 'a,
+    {
+        enum InternalScanState<'a, R> {
+            Init(
+                crate::future::BoxFuture<'a, ZxResult<futures::lock::MutexGuard<'a, ()>>>,
+                BoxStream<'a, ZxResult<R>>,
+            ),
+            Running(futures::lock::MutexGuard<'a, ()>, BoxStream<'a, ZxResult<R>>),
+            Done,
+        };
+
+        let init_task = init_task
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self));
+
+        let stream = stream.map_err(|e| ZxStatus::from(ErrorAdapter(e)));
+
+        futures::stream::unfold(
+            InternalScanState::Init(init_task.boxed(), stream.boxed()),
+            move |mut last_state: InternalScanState<'_, R>| async move {
+                last_state = match last_state {
+                    InternalScanState::Init(init_task, stream) => {
+                        fx_log_info!("generic_scan: initializing");
+                        match init_task.await {
+                            Ok(lock) => InternalScanState::Running(lock, stream),
+                            Err(err) => return Some((Err(err), InternalScanState::Done)),
+                        }
+                    }
+                    last_state => last_state,
+                };
+
+                if let InternalScanState::Running(lock, mut stream) = last_state {
+                    fx_log_info!("generic_scan: getting next");
+                    if let Some(next) = stream
+                        .next()
+                        .cancel_upon(self.ncp_did_reset.wait(), Some(Err(ZxStatus::CANCELED)))
+                        .on_timeout(Time::after(DEFAULT_TIMEOUT), move || {
+                            fx_log_err!("generic_scan: Timeout");
+                            self.ncp_is_misbehaving();
+                            Some(Err(ZxStatus::TIMED_OUT))
+                        })
+                        .await
+                    {
+                        return Some((next, InternalScanState::Running(lock, stream)));
+                    }
+                }
+
+                fx_log_info!("generic_scan: Done");
+
+                None
+            },
+        )
+        .boxed()
+    }
+}
 
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
@@ -143,11 +232,16 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         // Finally, issue a software reset command to make sure that
         // we have a clean slate.
-        self.frame_handler
+        let ret = self
+            .frame_handler
             .send_request(CmdReset)
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
             .await
-            .or(ret)
+            .or(ret)?;
+
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        Ok(ret)
     }
 
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
@@ -335,16 +429,206 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
     fn start_energy_scan(
         &self,
-        _params: &EnergyScanParameters,
-    ) -> BoxStream<'_, ZxResult<Vec<EnergyScanResult>>> {
-        ready(Err(ZxStatus::NOT_SUPPORTED)).into_stream().boxed()
+        params: &EnergyScanParameters,
+    ) -> BoxStream<'_, ZxResult<Vec<fidl_fuchsia_lowpan_device::EnergyScanResult>>> {
+        fx_log_info!("Got energy scan command: {:?}", params);
+
+        let channels = params.channels.clone();
+        let dwell_time = params.dwell_time_ms;
+
+        let init_task = async move {
+            // Wait for our turn.
+            let lock = self.wait_for_api_task_lock().await;
+
+            // Wait until we are ready.
+            self.wait_for_state(DriverState::is_initialized).await;
+
+            // Set the channel mask.
+            self.set_scan_mask(channels.as_ref()).await?;
+
+            // Set dwell time.
+            if let Some(dwell_time) = dwell_time {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(
+                        PropMac::ScanPeriod.into(),
+                        TryInto::<u16>::try_into(dwell_time)?,
+                    ))
+                    .await?
+            } else {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(
+                        PropMac::ScanPeriod.into(),
+                        DEFAULT_SCAN_DWELL_TIME_MS,
+                    ))
+                    .await?
+            }
+
+            // Start the scan.
+            self.frame_handler
+                .send_request(
+                    CmdPropValueSet(PropMac::ScanState.into(), ScanState::Energy).verify(),
+                )
+                .await?;
+
+            traceln!("energy_scan: Scan started!");
+
+            Ok(lock)
+        };
+
+        let stream = self.frame_handler.inspect_as_stream(|frame| {
+            traceln!("energy_scan: Inspecting {:?}", frame);
+            if frame.cmd == Cmd::PropValueInserted {
+                match SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("energy_scan")
+                {
+                    Ok(prop_value) if prop_value.prop == Prop::Mac(PropMac::EnergyScanResult) => {
+                        let mut iter = prop_value.value.iter();
+                        let result = match EnergyScanResult::try_unpack(&mut iter) {
+                            Ok(val) => val,
+                            Err(err) => return Some(Err(err)),
+                        };
+                        fx_log_info!("energy_scan: got result: {:?}", result);
+
+                        Some(Ok(Some(vec![fidl_fuchsia_lowpan_device::EnergyScanResult {
+                            channel_index: Some(result.channel as u16),
+                            max_rssi: Some(result.rssi as i32),
+                            ..fidl_fuchsia_lowpan_device::EnergyScanResult::empty()
+                        }])))
+                    }
+                    Err(err) => Some(Err(err)),
+                    _ => None,
+                }
+            } else if frame.cmd == Cmd::PropValueIs {
+                match SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("energy_scan")
+                {
+                    Ok(prop_value) if prop_value.prop == Prop::Mac(PropMac::ScanState) => {
+                        let mut iter = prop_value.value.iter();
+                        if Some(ScanState::Energy) != ScanState::try_unpack(&mut iter).ok() {
+                            fx_log_info!("energy_scan: scan ended");
+                            Some(Ok(None))
+                        } else {
+                            None
+                        }
+                    }
+                    Err(err) => Some(Err(err)),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        });
+
+        self.start_generic_scan(init_task, stream)
     }
 
     fn start_network_scan(
         &self,
-        _params: &NetworkScanParameters,
+        params: &NetworkScanParameters,
     ) -> BoxStream<'_, ZxResult<Vec<BeaconInfo>>> {
-        ready(Err(ZxStatus::NOT_SUPPORTED)).into_stream().boxed()
+        fx_log_info!("Got network scan command: {:?}", params);
+
+        let channels = params.channels.clone();
+        let tx_power = params.tx_power_dbm;
+
+        let init_task = async move {
+            // Wait for our turn.
+            let lock = self.wait_for_api_task_lock().await;
+
+            // Wait until we are ready.
+            self.wait_for_state(DriverState::is_initialized).await;
+
+            // Set the channel mask.
+            self.set_scan_mask(channels.as_ref()).await?;
+
+            // Set beacon request transmit power
+            if let Some(tx_power) = tx_power {
+                // Saturate to signed 8-bit integer
+                let tx_power = if tx_power > i8::MAX as i32 {
+                    i8::MAX as i32
+                } else if tx_power < i8::MIN as i32 {
+                    i8::MIN as i32
+                } else {
+                    tx_power
+                };
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropPhy::TxPower.into(), tx_power))
+                    .await?
+            }
+
+            // Start the scan.
+            self.frame_handler
+                .send_request(
+                    CmdPropValueSet(PropMac::ScanState.into(), ScanState::Beacon).verify(),
+                )
+                .await?;
+
+            Ok(lock)
+        };
+
+        let stream = self.frame_handler.inspect_as_stream(|frame| {
+            if frame.cmd == Cmd::PropValueInserted {
+                match SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("network_scan")
+                {
+                    Ok(prop_value) if prop_value.prop == Prop::Mac(PropMac::ScanBeacon) => {
+                        let mut iter = prop_value.value.iter();
+                        let result = match NetScanResult::try_unpack(&mut iter) {
+                            Ok(val) => val,
+                            Err(err) => {
+                                // There was an error parsing the scan result.
+                                // We don't treat this as fatal, we just skip this entry.
+                                // We do print out the error, though.
+                                fx_log_warn!(
+                                    "Unable to parse network scan result: {:?} ({:x?})",
+                                    err,
+                                    prop_value.value
+                                );
+                                return None;
+                            }
+                        };
+
+                        fx_log_info!("network_scan: got result: {:?}", result);
+
+                        Some(Ok(Some(vec![BeaconInfo {
+                            identity: Identity {
+                                raw_name: Some(result.net.network_name),
+                                channel: Some(result.channel as u16),
+                                panid: Some(result.mac.panid),
+                                xpanid: Some(result.net.xpanid),
+                                ..Identity::empty()
+                            },
+                            rssi: result.rssi as i32,
+                            lqi: result.mac.lqi,
+                            address: result.mac.long_addr.0.to_vec(),
+                            flags: vec![],
+                        }])))
+                    }
+                    Err(err) => Some(Err(err)),
+                    _ => None,
+                }
+            } else if frame.cmd == Cmd::PropValueIs {
+                match SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("network_scan")
+                {
+                    Ok(prop_value) if prop_value.prop == Prop::Mac(PropMac::ScanState) => {
+                        let mut iter = prop_value.value.iter();
+                        if Some(ScanState::Beacon) != ScanState::try_unpack(&mut iter).ok() {
+                            fx_log_info!("network_scan: scan ended");
+                            Some(Ok(None))
+                        } else {
+                            None
+                        }
+                    }
+                    Err(err) => Some(Err(err)),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        });
+
+        self.start_generic_scan(init_task, stream)
     }
 
     async fn reset(&self) -> ZxResult<()> {

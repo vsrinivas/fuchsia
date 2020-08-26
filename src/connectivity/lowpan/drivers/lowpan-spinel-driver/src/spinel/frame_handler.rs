@@ -6,19 +6,47 @@ use super::*;
 use crate::prelude::*;
 
 use anyhow::Error;
-use futures::channel::oneshot;
+use derivative::Derivative;
+use futures::channel::{mpsc, oneshot};
+use futures::future::BoxFuture;
 use futures::sink::Sink;
+use futures::stream::BoxStream;
+use futures::task::{Context, Poll};
+use futures::FutureExt;
 use parking_lot::Mutex;
+use slab::Slab;
+use static_assertions::_core::pin::Pin;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Implements outbound Spinel frame handling and response tracking.
 ///
 /// Note that this type doesn't handle state tracking: that is
 /// handled by the type that uses this struct.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct FrameHandler<S> {
     requests: RequestTracker,
     spinel_sink: futures::lock::Mutex<S>,
+    #[derivative(Debug = "ignore")]
+    inspectors: Mutex<Slab<Box<dyn FrameInspector>>>,
+}
+
+trait FrameInspector: Send {
+    /// Inspects an inbound spinel frame. Returns true if more frames are
+    /// wanted, false if this inspector has finished.
+    fn inspect(&mut self, frame: SpinelFrameRef<'_>) -> bool;
+}
+
+/// Blanket implementation of `FrameInspector` for all
+/// closures that match the signature of `inspect(...)`
+impl<T> FrameInspector for T
+where
+    T: FnMut(SpinelFrameRef<'_>) -> bool + Send,
+{
+    fn inspect(&mut self, frame: SpinelFrameRef<'_>) -> bool {
+        self(frame)
+    }
 }
 
 impl<S> FrameHandler<S> {
@@ -27,12 +55,50 @@ impl<S> FrameHandler<S> {
         FrameHandler {
             requests: Default::default(),
             spinel_sink: futures::lock::Mutex::new(spinel_sink),
+            inspectors: Mutex::new(Slab::with_capacity(4)),
         }
     }
 
     /// Cancels all pending requests in the request tracker.
     pub fn clear(&self) {
         self.requests.clear();
+        self.inspectors.lock().clear();
+    }
+}
+
+pub struct InspectAsStream<'a, T>
+where
+    T: Send,
+{
+    future: Option<BoxFuture<'a, Result<(), Error>>>,
+    receiver: mpsc::Receiver<Result<T, Error>>,
+}
+
+impl<T: Send> InspectAsStream<'_, T> {
+    fn poll_next_unpin(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<T, Error>>> {
+        if let Some(future) = self.future.as_mut() {
+            match future.poll_unpin(cx) {
+                Poll::Ready(Err(x)) => {
+                    self.future = None;
+                    return Poll::Ready(Some(Err(x)));
+                }
+                Poll::Ready(Ok(())) => self.future = None,
+                Poll::Pending => (),
+            }
+        }
+
+        self.receiver.poll_next_unpin(cx)
+    }
+}
+
+impl<T> Stream for InspectAsStream<'_, T>
+where
+    T: Send,
+{
+    type Item = Result<T, Error>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.get_mut().poll_next_unpin(cx)
     }
 }
 
@@ -58,7 +124,134 @@ where
             }
         }
 
+        let mut inspectors = self.inspectors.lock();
+        if !inspectors.is_empty() {
+            // We don't want to use `with_capacity` here
+            // because removing inspectors happens infrequently.
+            // this allows us to avoid needing an allocation
+            // for every received frame.
+            let mut to_remove = Vec::new();
+
+            for (i, inspector) in inspectors.iter_mut() {
+                if !inspector.inspect(frame) {
+                    to_remove.push(i);
+                }
+            }
+
+            for i in to_remove {
+                inspectors.remove(i);
+            }
+        }
+
         Ok(())
+    }
+
+    /// Inserts a closure to be executed for every inbound frame.
+    ///
+    /// As long as the closure returns `None`, additional inbound frames
+    /// will continue to be handled. Otherwise the inspector is removed
+    /// and the value returned from the closure is returned from the future.
+    ///
+    /// This allows API tasks to monitor the inbound packet stream for
+    /// asynchronous notifications that are not responses to commands,
+    /// such as for scan results.
+    pub fn inspect<'a, F, R>(&self, mut func: F) -> BoxFuture<'a, Result<R, Error>>
+    where
+        F: Send + FnMut(SpinelFrameRef<'_>) -> Option<Result<R, Error>> + 'static,
+        R: Send + Sized + Debug + 'static,
+    {
+        // Create a one-shot channel to handle our response.
+        let (sender, receiver) = oneshot::channel();
+
+        // Put the sender in an option so that we can prove to the
+        // compiler that we are only going to call it once.
+        let mut sender = Some(sender);
+
+        // Create our inspector as a closure. This is invoked whenever
+        // we get a frame.
+        //
+        // This works because closures with this signature have a blanket
+        // implementation of the `FrameInspector` trait.
+        let inspector = move |frame: SpinelFrameRef<'_>| -> bool {
+            traceln!("FrameHandler::inspect_inbound_frames: inspector invoked with {:?}", frame);
+            if Some(false) == sender.as_ref().map(oneshot::Sender::is_canceled) {
+                match func(frame) {
+                    None => true,
+                    Some(ret) => {
+                        if let Some(sender) = sender.take() {
+                            // This only fails if the receiver is gone and in
+                            // that case we really don't care because the
+                            // request was cancelled.
+                            let _ = sender.send(ret);
+                        }
+                        false
+                    }
+                }
+            } else {
+                false
+            }
+        };
+
+        // Simultaneously put our closure in a Mutex and cast it
+        // as a `dyn ResponseHandler`. This will be held onto by
+        // the enclosing future.
+        let inspector = Box::new(inspector) as Box<dyn FrameInspector>;
+
+        self.inspectors.lock().insert(inspector);
+
+        async move { receiver.await? }.boxed()
+    }
+
+    /// Creates a stream based on a closure that is executed for every inbound frame.
+    ///
+    /// The return value from the closure is interpreted in one of the following
+    /// four ways:
+    ///
+    /// * `None` - Do not append anything to the stream, and continue processing.
+    /// * `Some(Ok(None))` - Do not append anything to the stream, and STOP processing.
+    /// * `Some(Ok(Some(X)))` - Append value `X` to the stream as `Ok(X)` and continue processing.
+    /// * `Some(Err(X))` - Append error `X` to the stream as `Err(X)` and STOP processing.
+    ///
+    /// As long as the closure returns `None` or `Some(Ok(Some(_)))`, additional
+    /// inbound frames will continue to be handled. Otherwise the inspector is removed
+    /// and the stream canceled.
+    ///
+    /// This allows API tasks to monitor the inbound packet stream for asynchronous
+    /// notifications that are not responses to commands, such as for scan results.
+    pub fn inspect_as_stream<F, R>(&self, mut func: F) -> BoxStream<'_, Result<R, Error>>
+    where
+        F: Send + FnMut(SpinelFrameRef<'_>) -> Option<Result<Option<R>, Error>> + 'static,
+        R: Send + Sized + Debug + 'static,
+    {
+        // Create a one-shot channel to handle our response.
+        let (sender, receiver) = mpsc::channel(4);
+
+        // Put the sender in an option so that we can close it.
+        let mut sender = Some(sender);
+
+        let future = self.inspect(move |frame| -> Option<Result<(), Error>> {
+            match func(frame) {
+                Some(Ok(Some(r))) => {
+                    if let Some(sender) = sender.as_mut() {
+                        if let Err(err) = sender.try_send(Ok(r)) {
+                            return Some(Err(err.into_send_error().into()));
+                        }
+                    }
+                    None
+                }
+                Some(Ok(None)) => {
+                    sender = None;
+                    Some(Ok(()))
+                }
+                Some(Err(e)) => {
+                    sender = None;
+                    Some(Err(e))
+                }
+                None => None,
+            }
+        });
+
+        InspectAsStream { future: Some(future.boxed()), receiver }.boxed()
     }
 
     /// Sends a request to the device, asynchronously returning the response.

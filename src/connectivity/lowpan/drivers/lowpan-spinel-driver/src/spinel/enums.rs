@@ -479,11 +479,6 @@ impl From<u32> for Prop {
             9 => Lock,
             12 => HostPowerState,
             13 => McuPowerState,
-            112 => Stream(PropStream::Debug),
-            113 => Stream(PropStream::Raw),
-            114 => Stream(PropStream::Net),
-            115 => Stream(PropStream::NetInsecure),
-            0x3Bc0 => Stream(PropStream::Mfg),
 
             0x1000 => Gpio(PropGpio::Config),
             0x1002 => Gpio(PropGpio::State),
@@ -590,6 +585,11 @@ impl From<u32> for Prop {
                 Ipv6(PropIpv6::Unknown(x))
             }
 
+            112 => Stream(PropStream::Debug),
+            113 => Stream(PropStream::Raw),
+            114 => Stream(PropStream::Net),
+            115 => Stream(PropStream::NetInsecure),
+            0x3Bc0 => Stream(PropStream::Mfg),
             x if (x >= 0x70 && x < 0x80) || (x >= 0x1700 && x < 0x1800) => {
                 Stream(PropStream::Unknown(x))
             }
@@ -1129,6 +1129,48 @@ impl From<u32> for Cap {
             x if x >= 2000000 && x < 2097152 => Experimental(x),
 
             x => Unknown(x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum ScanState {
+    Idle,
+    Beacon,
+    Energy,
+    Discover,
+    Unknown(u32),
+}
+impl_spinel_pack_uint!(ScanState);
+impl_spinel_unpack_uint!(ScanState);
+
+impl std::fmt::Display for ScanState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl From<ScanState> for u32 {
+    fn from(state: ScanState) -> Self {
+        match state {
+            ScanState::Idle => 0,
+            ScanState::Beacon => 1,
+            ScanState::Energy => 2,
+            ScanState::Discover => 3,
+
+            ScanState::Unknown(x) => x,
+        }
+    }
+}
+
+impl From<u32> for ScanState {
+    fn from(id: u32) -> Self {
+        match id {
+            0 => ScanState::Idle,
+            1 => ScanState::Beacon,
+            2 => ScanState::Energy,
+            3 => ScanState::Discover,
+            x => ScanState::Unknown(x),
         }
     }
 }

@@ -9,6 +9,8 @@ use futures::prelude::*;
 
 use anyhow::Error;
 use fasync::Time;
+use fuchsia_async::TimeoutExt;
+use futures::TryFutureExt;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
 

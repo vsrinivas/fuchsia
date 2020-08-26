@@ -185,6 +185,38 @@ impl TryPackAs<str> for String {
     }
 }
 
+impl TryPackAs<str> for [u8] {
+    fn pack_as_len(&self) -> io::Result<usize> {
+        Ok(self.len() + 1)
+    }
+
+    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        let string = std::str::from_utf8(self)
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))?;
+        TryPackAs::<str>::try_pack_as(string, buffer)
+    }
+}
+
+impl TryPackAs<str> for &[u8] {
+    fn pack_as_len(&self) -> io::Result<usize> {
+        TryPackAs::<str>::pack_as_len(*self)
+    }
+
+    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        TryPackAs::<str>::try_pack_as(*self, buffer)
+    }
+}
+
+impl TryPackAs<str> for Vec<u8> {
+    fn pack_as_len(&self) -> io::Result<usize> {
+        TryPackAs::<str>::pack_as_len(self.as_slice())
+    }
+
+    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        TryPackAs::<str>::try_pack_as(self.as_slice(), buffer)
+    }
+}
+
 impl TryPack for [u8] {
     fn pack_len(&self) -> io::Result<usize> {
         TryPackAs::<[u8]>::pack_as_len(self)
@@ -387,6 +419,18 @@ impl<'a> TryUnpackAs<'a, str> for &'a str {
 impl<'a> TryUnpackAs<'a, str> for String {
     fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
         <&str>::try_unpack(iter).map(ToString::to_string)
+    }
+}
+
+impl<'a> TryUnpackAs<'a, str> for &'a [u8] {
+    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+        <&str as TryUnpackAs<str>>::try_unpack_as(iter).map(str::as_bytes)
+    }
+}
+
+impl<'a> TryUnpackAs<'a, str> for Vec<u8> {
+    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+        <&[u8] as TryUnpackAs<str>>::try_unpack_as(iter).map(<[u8]>::to_vec)
     }
 }
 
@@ -668,6 +712,15 @@ mod tests {
         let out = Vec::<&str>::try_unpack_from_slice(buffer).unwrap();
 
         assert_eq!(out.as_slice(), &["123", "456"]);
+    }
+
+    #[test]
+    fn test_string_as_vec() {
+        let buffer: &[u8] = &[0x31, 0x32, 0x33, 0x00];
+
+        let out = <&[u8] as TryUnpackAs<str>>::try_unpack_as_from_slice(buffer).unwrap();
+
+        assert_eq!(out, &[0x31, 0x32, 0x33]);
     }
 
     #[test]

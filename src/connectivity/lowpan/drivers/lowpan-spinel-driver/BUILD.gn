@@ -30,11 +30,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:slab",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
