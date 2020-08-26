@@ -94,6 +94,7 @@ group("chromium_tests_group") {
     # extra storage in configurations that use them both.
     ":tzdata_for_base_unittests",
     ":tzdata_for_chromium_tests_base_unittests",
+    ":tzdata_for_media_unittests",
   ]
 }
 
@@ -136,6 +137,11 @@ icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
 
 icu_tzdata_config_data("tzdata_for_base_unittests") {
   for_pkg = "base_unittests"
+  testonly = true
+}
+
+icu_tzdata_config_data("tzdata_for_media_unittests") {
+  for_pkg = "media_unittests"
   testonly = true
 }
 
