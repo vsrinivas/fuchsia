@@ -227,7 +227,22 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_LINGER:
-		return C.struct_linger{}, nil
+		// TODO(tamird): Remove this when upstream supports UDP correctly.
+		if transProto != tcp.ProtocolNumber {
+			return C.struct_linger{}, nil
+		}
+		var v tcpip.LingerOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		linger := C.struct_linger{
+			l_linger: C.int(v.Timeout.Seconds()),
+		}
+		if v.Enabled {
+			linger.l_onoff = 1
+		}
+
+		return linger, nil
 
 	case C.SO_SNDTIMEO:
 		return nil, tcpip.ErrNotSupported
@@ -622,6 +637,16 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOptBool(tcpip.KeepaliveEnabledOption, v != 0)
+
+	case C.SO_LINGER:
+		var linger C.struct_linger
+		if err := linger.Unmarshal(optVal); err != nil {
+			return tcpip.ErrInvalidOptionValue
+		}
+		return ep.SetSockOpt(tcpip.LingerOption{
+			Enabled: linger.l_onoff != 0,
+			Timeout: time.Second * time.Duration(linger.l_linger),
+		})
 
 	case C.SO_SNDTIMEO:
 		return tcpip.ErrNotSupported

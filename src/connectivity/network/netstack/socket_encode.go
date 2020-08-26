@@ -44,6 +44,15 @@ func copyAsBytes(b []byte, val interface{}) int {
 	})))
 }
 
+func (v *C.struct_linger) Unmarshal(data []byte) error {
+	const size = C.sizeof_struct_linger
+
+	if n := copy((*[size]byte)(unsafe.Pointer(v))[:], data); n < size {
+		return fmt.Errorf("short %T: %d/%d", v, n, size)
+	}
+	return nil
+}
+
 func (v *C.struct_ip_mreq) Unmarshal(data []byte) error {
 	const size = C.sizeof_struct_ip_mreq
 

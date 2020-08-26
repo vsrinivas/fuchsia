@@ -2105,17 +2105,9 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   so_linger.l_linger = 0;
   socklen_t optlen = sizeof(so_linger);
 
-  // TODO(rheacock): revisit this when the below issue is fixed:
-  // https://github.com/google/gvisor/issues/1400
-#if defined(__linux__)
   // Set SO_LINGER is supported in Linux so we do not expect to receive an error.
   EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &so_linger, optlen), 0)
       << strerror(errno);
-#else
-  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &so_linger, optlen), -1)
-      << strerror(errno);
-  EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
-#endif
 
   // Close the server to trigger a TCP Reset now that linger is 0.
   EXPECT_EQ(close(server.release()), 0) << strerror(errno);
