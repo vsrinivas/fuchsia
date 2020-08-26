@@ -203,8 +203,8 @@ fi
 # Need to make the SDK storage-full.blk writable so that the copy is writable as well, otherwise fvm extend fails in lib/fvm.sh
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
-echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
-chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
+echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_FOR_EMU"
+chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_FOR_EMU"
 
 if (( "${#EMU_ARGS[@]}" )); then
   "${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}" "${EMU_ARGS[@]}"

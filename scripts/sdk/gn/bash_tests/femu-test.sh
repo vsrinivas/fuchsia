@@ -15,6 +15,16 @@ AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
 GRPCWEBPROXY_VERSION="git_revision:unknown"
 GRPCWEBPROXY_LABEL="$(echo "${GRPCWEBPROXY_VERSION}" | tr ':/' '_')"
 
+function run_femu_wrapper() {
+  # femu.sh will run "fvm decompress" to convert the given fvm image format into
+  # an intermediate raw image suffixed by ".decompress". The image is then used for
+  # extension. Since the fvm tool is faked and does nothing in the test, we need
+  # to fake the intermediate decompressed image.
+  cp "${FUCHSIA_WORK_DIR}/image/storage-full.blk" \
+    "${FUCHSIA_WORK_DIR}/image/storage-full.blk.decompressed"
+  gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" "$@"
+}
+
 # Verifies that the correct emulator command is run by femu, do not activate the network interface
 TEST_femu_standalone() {
 
@@ -29,11 +39,15 @@ TEST_femu_standalone() {
   export DISPLAY="fakedisplay"
 
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
+  #BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
+  BT_EXPECT run_femu_wrapper
 
-  # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
-  # shellcheck disable=SC1090
-  source "${MOCKED_FVM}.mock_state"
+  # Verify that the image first goes through a decompress process by fvm
+  source "${MOCKED_FVM}.mock_state.1"
+  gn-test-check-mock-args _ANY_ _ANY_ decompress --default _ANY_
+
+  # Verify that the image will be extended to double the size
+  source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 
   # Check that fpave.sh was called to download the needed system images
@@ -71,7 +85,7 @@ TEST_femu_arm64() {
   export DISPLAY="fakedisplay"
 
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+  BT_EXPECT run_femu_wrapper \
     --experiment-arm64 \
     --image qemu-arm64 \
     --software-gpu
@@ -124,15 +138,18 @@ INPUT
   fi
 
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+  BT_EXPECT run_femu_wrapper \
     "${NETWORK_ARGS[*]}" \
     --unknown-arg1-to-qemu \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
     --unknown-arg2-to-qemu
 
-  # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
-  # shellcheck disable=SC1090
-  source "${MOCKED_FVM}.mock_state"
+  # Verify that the image first goes through a decompress process by fvm
+  source "${MOCKED_FVM}.mock_state.1"
+  gn-test-check-mock-args _ANY_ _ANY_ decompress --default _ANY_
+
+  # Verify that the image will be extended to double the size
+  source "${MOCKED_FVM}.mock_state.2"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 
   # Check that fpave.sh was called to download the needed system images
@@ -196,12 +213,12 @@ INPUT
 
   if is-mac; then
     # grpcwebproxy does not work on OSX, so check there is an error message
-    BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    BT_EXPECT_FAIL run_femu_wrapper \
       -x 1234 \
       > femu_error_output.txt 2>&1
   else
     # Run command with the default grpcwebproxy.
-    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    BT_EXPECT run_femu_wrapper \
       -x 1234
 
     # Verify that the default grpcwebproxy binary is called correctly
@@ -211,7 +228,7 @@ INPUT
     gn-test-check-mock-partial --server_http_debug_port 1234
 
     # Run command and test the -X for a manually provided grpcwebproxy.
-    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    BT_EXPECT run_femu_wrapper \
       -x 1234 -X "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir"
 
     # Verify that the grpcwebproxy binary is called correctly
@@ -229,10 +246,10 @@ TEST_femu_ufw() {
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   if is-mac; then
-    BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    BT_EXPECT_FAIL run_femu_wrapper \
       --setup-ufw > femu_ufw_error.txt 2>&1
   else
-    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    BT_EXPECT run_femu_wrapper \
       --setup-ufw
 
     # Check that ufw was called via sudo

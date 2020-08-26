@@ -47,9 +47,9 @@ args+=(-z "${kernelzbi}")
 fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
   --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
 
-if [ -n "$IMAGE_FVM_RAW" ]; then
+if [ -n "$IMAGE_FVM_FOR_EMU" ]; then
   fvmimg="${imgdir}/fvm.blk"
-  fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" $fvmimg
+  fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FOR_EMU}" $fvmimg
   args+=(-d -D "${fvmimg}" --diskfmt=raw)
 fi
 

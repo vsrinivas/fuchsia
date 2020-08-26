@@ -1000,7 +1000,10 @@ generate_fvm("fvm.blk") {
         type = "blk"
       },
     ]
-    image_paths = [ "IMAGE_FVM_RAW=$rebased_output_name" ]
+    image_paths = [
+      "IMAGE_FVM_RAW=$rebased_output_name",
+      "IMAGE_FVM_FOR_EMU=$rebased_output_name",
+    ]
   }
 }
 default_image_deps += [ ":fvm.blk" ]

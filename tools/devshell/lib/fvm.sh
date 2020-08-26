@@ -4,18 +4,26 @@
 # found in the LICENSE file.
 
 # Arguments:
-#   - raw image file
-#   - extended image file
-#   - (optional) size of extended image file, defaults to original*2
+#   - Input fvm. The format can be raw or compressed.
+#   - output image file
+#   - (optional) desired minimum disk-size of the output fvm image, defaults to twice the
+#     uncompressed size of the given image. If the requested size is already smaller than the
+#     disk-size specified in the metadata, the disk-size will remain the same. It is guaranteed
+#     that the file size of the output image is the same as the disk-size in the metadata.
 function fx-fvm-extend-image {
-  fvmraw=$1
+  fvm_in=$1
   fvmimg=$2
+
+  # Store the decompressed file with a deterministic path to facilitate testing
+  "${HOST_OUT_DIR}/fvm" "${fvm_in}.decompressed" decompress --default "${fvm_in}"
+  # Rename the decompressed file to |fvmimg| and perform extension.
+  mv "${fvm_in}.decompressed" "${fvmimg}"
 
   stat_flags=()
   if [[ $(uname) == "Darwin" ]]; then
     stat_flags+=("-x")
   fi
-  stat_output=$(stat "${stat_flags[@]}" "${fvmraw}")
+  stat_output=$(stat "${stat_flags[@]}" "${fvmimg}")
   if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
     size="${BASH_REMATCH[1]}"
     recommended_size=$((size * 2))
@@ -28,10 +36,7 @@ function fx-fvm-extend-image {
     else
       newsize="${recommended_size}"
     fi
-    # We must take a copy of the build artifact, rather than re-use it, as we
-    # need to modify it in order to extend it.
     echo -n "Creating disk image..."
-    cp "${fvmraw}" "${fvmimg}"
     "${HOST_OUT_DIR}/fvm" "${fvmimg}" extend --length "${newsize}" --length-is-lowerbound
     echo "done"
   else
