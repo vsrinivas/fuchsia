@@ -6,23 +6,33 @@ package codegen
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
 )
 
-// basePath holds the base path to the directory containing goldens.
-var basePath = func() string {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
+// hostPlatform reproduces the same format os-arch variant as cipd does.
+func hostPlatform() string {
+	o := runtime.GOOS
+	if o == "darwin" {
+		o = "mac"
 	}
-	return filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
-}()
+	switch a := runtime.GOARCH; a {
+	case "amd64":
+		return o + "-x64"
+	default:
+		return o + "-" + a
+	}
+}
+
+var clangFormatFlag = flag.String("clang-format", "../../../../prebuilt/third_party/clang/"+hostPlatform()+"/bin", "Path to directory containing clang-format; only used in GN build")
+var testDataFlag = flag.String("test_data_dir", "../../../../garnet/go/src/fidl/compiler/backend/goldens", "Path to golden; only used in GN build")
 
 type example string
 
@@ -40,10 +50,7 @@ func (s example) goldenSource() string {
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
+	return !os.IsNotExist(err) && !info.IsDir()
 }
 
 type closeableBytesBuffer struct {
@@ -54,31 +61,21 @@ func (bb *closeableBytesBuffer) Close() error {
 	return nil
 }
 
-var testPath = func() string {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Dir(testPath)
-}()
-
-var clangFormatPath = filepath.Join(testPath, "test_data", "fidlgen_libfuzzer", "clang-format")
-
 func TestCodegenHeader(t *testing.T) {
-	for _, filename := range typestest.AllExamples(basePath) {
-		path := filepath.Join(basePath, example(filename).goldenHeader())
+	clangFormat := filepath.Join(*clangFormatFlag, "clang-format")
+	for _, filename := range typestest.AllExamples(*testDataFlag) {
+		path := filepath.Join(*testDataFlag, example(filename).goldenHeader())
 		if !fileExists(path) {
 			t.Logf("No golden: %s", path)
 			continue
 		}
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(basePath, filename)
+			fidl := typestest.GetExample(*testDataFlag, filename)
 			tree := cpp.CompileLibFuzzer(fidl)
 			prepareTree(fidl.Name, &tree)
-			header := typestest.GetGolden(basePath, example(filename).goldenHeader())
-
-			buf := new(closeableBytesBuffer)
-			formatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(buf)
+			want := typestest.GetGolden(*testDataFlag, example(filename).goldenHeader())
+			buf := closeableBytesBuffer{}
+			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,27 +83,26 @@ func TestCodegenHeader(t *testing.T) {
 				t.Fatalf("unexpected error while generating header: %s", err)
 			}
 			formatterPipe.Close()
-
-			typestest.AssertCodegenCmp(t, header, buf.Bytes())
+			typestest.AssertCodegenCmp(t, want, buf.Bytes())
 		})
 	}
 }
 
 func TestCodegenSource(t *testing.T) {
-	for _, filename := range typestest.AllExamples(basePath) {
-		path := filepath.Join(basePath, example(filename).goldenSource())
+	clangFormat := filepath.Join(*clangFormatFlag, "clang-format")
+	for _, filename := range typestest.AllExamples(*testDataFlag) {
+		path := filepath.Join(*testDataFlag, example(filename).goldenSource())
 		if !fileExists(path) {
 			t.Logf("No golden: %s", path)
 			continue
 		}
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(basePath, filename)
+			fidl := typestest.GetExample(*testDataFlag, filename)
 			tree := cpp.CompileLibFuzzer(fidl)
 			prepareTree(fidl.Name, &tree)
-			source := typestest.GetGolden(basePath, example(filename).goldenSource())
-
-			buf := new(closeableBytesBuffer)
-			formatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(buf)
+			want := typestest.GetGolden(*testDataFlag, example(filename).goldenSource())
+			buf := closeableBytesBuffer{}
+			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,8 +110,7 @@ func TestCodegenSource(t *testing.T) {
 				t.Fatalf("unexpected error while generating source: %s", err)
 			}
 			formatterPipe.Close()
-
-			typestest.AssertCodegenCmp(t, source, buf.Bytes())
+			typestest.AssertCodegenCmp(t, want, buf.Bytes())
 		})
 	}
 }

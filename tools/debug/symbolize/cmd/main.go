@@ -99,13 +99,13 @@ func main() {
 		if _, err := os.Stat(symbolIndex); !os.IsNotExist(err) {
 			file, err := os.Open(symbolIndex)
 			if err != nil {
-				log.Fatalf("failed to open %q: %w", err)
+				log.Fatalf("failed to open: %s", err)
 			}
 			defer file.Close()
 
 			index, err := symbolize.LoadIndex(file)
 			if err != nil {
-				log.Fatalf("failed to load the symbol-index: %w", err)
+				log.Fatalf("failed to load the symbol-index: %s", err)
 			}
 			for _, entry := range index {
 				if fi, err := os.Stat(entry.SymbolPath); !os.IsNotExist(err) {

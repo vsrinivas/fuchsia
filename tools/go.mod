@@ -27,8 +27,8 @@ require (
 replace (
 	cloud.google.com/go => ../third_party/golibs/github.com/googleapis/google-cloud-go
 	github.com/creack/pty => ../third_party/golibs/github.com/creack/pty
+	github.com/flynn/go-tuf => ../third_party/golibs/github.com/flynn/go-tuf
 	github.com/go-yaml/yaml => ../third_party/golibs/github.com/go-yaml/yaml
-	github.com/golang/glog => ../third_party/golibs/github.com/golang/glog
 	github.com/golang/protobuf => ../third_party/golibs/github.com/golang/protobuf
 	github.com/google/go-cmp => ../third_party/golibs/github.com/google/go-cmp
 	github.com/google/subcommands => ../third_party/golibs/github.com/google/subcommands

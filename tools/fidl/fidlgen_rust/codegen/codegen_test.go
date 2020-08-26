@@ -6,9 +6,10 @@ package codegen
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
@@ -16,19 +17,23 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
 )
 
-var testPath = func() string {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
+// hostPlatform reproduces the same format os-arch variant as cipd does.
+func hostPlatform() string {
+	o := runtime.GOOS
+	if o == "darwin" {
+		o = "mac"
 	}
-	return filepath.Dir(testPath)
-}()
+	switch a := runtime.GOARCH; a {
+	case "amd64":
+		return o + "-x64"
+	default:
+		return o + "-" + a
+	}
+}
 
-var (
-	basePath          = filepath.Join(testPath, "test_data", "fidlgen")
-	rustfmtPath       = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt")
-	rustfmtConfigPath = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt.toml")
-)
+var rustFmtConfigFlag = flag.String("rustfmt-toml", "../../../.././rustfmt.toml", "Path to rustfmt.toml; only used in GN build")
+var rustFmtFlag = flag.String("rustfmt", "../../../../prebuilt/third_party/rust_tools/"+hostPlatform()+"/bin", "Path to directory containing rustfmt; only used in GN build")
+var testDataFlag = flag.String("test_data_dir", "../../../../garnet/go/src/fidl/compiler/backend/goldens", "Path to golden; only used in GN build")
 
 type closeableBytesBuffer struct {
 	bytes.Buffer
@@ -39,15 +44,13 @@ func (bb *closeableBytesBuffer) Close() error {
 }
 
 func TestCodegen(t *testing.T) {
-	for _, filename := range typestest.AllExamples(basePath) {
+	for _, filename := range typestest.AllExamples(*testDataFlag) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(basePath, filename)
-			tree := ir.Compile(fidl)
-			implDotRs := typestest.GetGolden(basePath, fmt.Sprintf("%s.rs.golden", filename))
-
-			actualImplDotRs := new(closeableBytesBuffer)
-			formatter := common.NewFormatter(rustfmtPath, "--config-path", rustfmtConfigPath)
-			actualFormattedImplDotRs, err := formatter.FormatPipe(actualImplDotRs)
+			tree := ir.Compile(typestest.GetExample(*testDataFlag, filename))
+			want := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.rs.golden", filename))
+			buf := closeableBytesBuffer{}
+			formatter := common.NewFormatter(filepath.Join(*rustFmtFlag, "rustfmt"), "--config-path", *rustFmtConfigFlag)
+			actualFormattedImplDotRs, err := formatter.FormatPipe(&buf)
 			if err != nil {
 				t.Fatalf("unable to create format pipe: %s", err)
 			}
@@ -57,8 +60,7 @@ func TestCodegen(t *testing.T) {
 			if err := actualFormattedImplDotRs.Close(); err != nil {
 				t.Fatalf("unexpected error while closing formatter: %s", err)
 			}
-
-			typestest.AssertCodegenCmp(t, implDotRs, actualImplDotRs.Bytes())
+			typestest.AssertCodegenCmp(t, want, buf.Bytes())
 		})
 	}
 }

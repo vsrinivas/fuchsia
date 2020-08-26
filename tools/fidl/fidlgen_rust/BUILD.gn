@@ -31,24 +31,32 @@ install_host_tools("host") {
 if (is_host) {
   go_test("fidlgen_rust_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
+      "--rustfmt",
+      rebase_path("$root_out_dir/test_data/fidlgen_rust", root_build_dir),
+      "--rustfmt-toml",
+      rebase_path("$root_out_dir/test_data/fidlgen_rust/rustfmt.toml",
+                  root_build_dir),
+    ]
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
     ]
-    non_go_deps = [ ":test_data" ]
+    non_go_deps = [ ":rustfmt" ]
   }
 
   go_test("fidlgen_rust_ir_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir" ]
-
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
     ]
+    non_go_deps = [ ":rustfmt" ]
   }
 
-  host_test_data("test_data") {
+  host_test_data("rustfmt") {
     sources = [
       "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
       "//rustfmt.toml",

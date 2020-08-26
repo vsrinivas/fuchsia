@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -18,29 +19,23 @@ import (
 // AllExamples returns all examples by filename.
 // See also #GetExample.
 func AllExamples(basePath string) []string {
-	// Trim spurious trailing slash.
-	basePath = strings.TrimRight(basePath, "/")
 	paths, err := filepath.Glob(filepath.Join(basePath, "*.json"))
 	if err != nil {
 		panic(err)
 	}
 	if len(paths) == 0 {
-		panic("Wrong. There should be a few JSON golden.")
+		panic(fmt.Sprintf("There should be a few JSON golden, didn't find any in %s", basePath))
 	}
 	examples := make([]string, 0, len(paths))
 	for _, path := range paths {
 		examples = append(examples, path[len(basePath)+1:])
 	}
+	sort.Strings(examples)
 	return examples
 }
 
 // GetExample retrieves an example by filename, and parses it.
 func GetExample(basePath, filename string) types.Root {
-	// Trim spurious trailing slash.
-	basePath = strings.TrimRight(basePath, "/")
-	if strings.HasPrefix(filename, "/") {
-		panic(fmt.Sprintf("ensure filename doesn't have / prefix: %q", filename))
-	}
 	fidl, err := types.ReadJSONIr(filepath.Join(basePath, filename))
 	if err != nil {
 		panic(err)

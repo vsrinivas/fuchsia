@@ -44,7 +44,12 @@ go_binary("fidlgen") {
 if (is_host) {
   go_test("fidlgen_hlcpp_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
+      "--clang-format",
+      rebase_path("$root_out_dir/test_data/fidlgen_hlcpp", root_build_dir),
+    ]
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
@@ -54,6 +59,6 @@ if (is_host) {
 
   host_test_data("clang_format") {
     sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-    outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/clang-format" ]
+    outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/{{source_file_part}}" ]
   }
 }

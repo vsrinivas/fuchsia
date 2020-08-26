@@ -5,37 +5,26 @@
 package codegen
 
 import (
+	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
 )
 
-// basePath holds the base path to the directory containing goldens.
-var basePath = func() string {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
-}()
+var testDataFlag = flag.String("test_data_dir", "../../../../garnet/go/src/fidl/compiler/backend/goldens", "Path to golden; only used in GN build")
 
 func TestCodegenImplDotGo(t *testing.T) {
-	for _, filename := range typestest.AllExamples(basePath) {
+	for _, filename := range typestest.AllExamples(*testDataFlag) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(basePath, filename)
-			tree := ir.Compile(fidl)
-			implDotGo := typestest.GetGolden(basePath, fmt.Sprintf("%s.go.golden", filename))
-
-			actualImplDotGo, err := NewGenerator().generateImplDotGo(tree)
+			tree := ir.Compile(typestest.GetExample(*testDataFlag, filename))
+			want := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.go.golden", filename))
+			got, err := NewGenerator().generateImplDotGo(tree)
 			if err != nil {
 				t.Fatalf("unexpected error while generating impl.go: %s", err)
 			}
-
-			typestest.AssertCodegenCmp(t, implDotGo, actualImplDotGo)
+			typestest.AssertCodegenCmp(t, want, got)
 		})
 	}
 }

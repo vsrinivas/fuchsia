@@ -31,7 +31,10 @@ install_host_tools("host") {
 if (is_host) {
   go_test("fidlgen_go_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
+    ]
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",

@@ -37,6 +37,18 @@ func TestEndToEnd(t *testing.T) {
 		t.Skip("skipping e2e test in short mode")
 	}
 
+	if v, ok := os.LookupEnv("FUCHSIA_DIR"); v == "" {
+		// Likely running in "go test" mode.
+		os.Setenv("FUCHSIA_DIR", "../..")
+		if !ok {
+			defer os.Unsetenv("FUCHSIA_DIR")
+		} else {
+			defer os.Setenv("FUCHSIA_DIR", v)
+		}
+		// If "../../out/default.zircon/tools/fvm" is not present, print out an
+		// error message to run fx build.
+	}
+
 	out := runCommand(t, "version")
 	if m, err := regexp.MatchString(`^v\d+\.\d+\.\d+\n$`, out); err != nil || !m {
 		t.Fatalf("unxpected output: %s", out)

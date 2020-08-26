@@ -29,11 +29,21 @@ install_host_tools("host") {
 if (is_host) {
   go_test("fidlgen_llcpp_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/codegen" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
+      "--clang-format",
+      rebase_path("$root_out_dir/test_data/fidlgen_llcpp", root_build_dir),
+    ]
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
     ]
-    non_go_deps = [ "//garnet/go/src/fidl:clang_format" ]
+    non_go_deps = [ ":clang_format" ]
+  }
+
+  host_test_data("clang_format") {
+    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
+    outputs = [ "$root_out_dir/test_data/fidlgen_llcpp/{{source_file_part}}" ]
   }
 }

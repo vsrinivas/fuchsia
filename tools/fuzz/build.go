@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -77,6 +77,8 @@ var Archs = map[string]struct {
 	"arm64": {"qemu-system-aarch64", "qemu-boot-shim.bin"},
 }
 
+var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
+
 // NewLocalFuchsiaBuild will create a BaseBuild with path layouts corresponding
 // to a local Fuchsia checkout
 func NewLocalFuchsiaBuild() (Build, error) {
@@ -85,22 +87,22 @@ func NewLocalFuchsiaBuild() (Build, error) {
 		return nil, fmt.Errorf("FUCHSIA_DIR not set")
 	}
 
-	fxBuildDir := path.Join(fuchsiaDir, ".fx-build-dir")
+	fxBuildDir := filepath.Join(fuchsiaDir, ".fx-build-dir")
 	contents, err := ioutil.ReadFile(fxBuildDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %s", fxBuildDir, err)
 	}
 
-	buildDir := path.Join(fuchsiaDir, strings.TrimSpace(string(contents)))
+	buildDir := filepath.Join(fuchsiaDir, strings.TrimSpace(string(contents)))
 	zirconBuildDir := buildDir + ".zircon"
-	prebuiltDir := path.Join(fuchsiaDir, "prebuilt")
+	prebuiltDir := filepath.Join(fuchsiaDir, "prebuilt")
 
 	platform, ok := Platforms[runtime.GOOS]
 	if !ok {
 		return nil, fmt.Errorf("unsupported os: %s", runtime.GOOS)
 	}
 
-	fxConfig := path.Join(buildDir, "fx.config")
+	fxConfig := filepath.Join(buildDir, "fx.config")
 	file, err := os.Open(fxConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %q: %s", fxConfig, err)
@@ -135,25 +137,25 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	kernel := archInfo.Kernel
 	platform += "-" + arch
 
-	clangDir := path.Join(prebuiltDir, "third_party/clang", platform)
-	qemuDir := path.Join(prebuiltDir, "third_party/qemu", platform)
+	clangDir := filepath.Join(prebuiltDir, "third_party/clang", platform)
+	qemuDir := filepath.Join(prebuiltDir, "third_party/qemu", platform)
 	build := &BaseBuild{
 		Paths: map[string]string{
-			"zbi":             path.Join(buildDir, "fuchsia.zbi"),
-			"fvm":             path.Join(zirconBuildDir, "tools", "fvm"),
-			"zbitool":         path.Join(zirconBuildDir, "tools", "zbi"),
-			"blk":             path.Join(buildDir, "obj", "build", "images", "fvm.blk"),
-			"qemu":            path.Join(qemuDir, "bin", binary),
-			"kernel":          path.Join(zirconBuildDir, kernel),
-			"symbolize":       path.Join(buildDir, "host_x64", "symbolize"),
-			"llvm-symbolizer": path.Join(clangDir, "bin", "llvm-symbolizer"),
-			"fuzzers.json":    path.Join(buildDir, "fuzzers.json"),
-			"sshdir":          path.Join(fuchsiaDir, ".ssh"),
+			"zbi":             filepath.Join(buildDir, "fuchsia.zbi"),
+			"fvm":             filepath.Join(zirconBuildDir, "tools", "fvm"),
+			"zbitool":         filepath.Join(zirconBuildDir, "tools", "zbi"),
+			"blk":             filepath.Join(buildDir, "obj", "build", "images", "fvm.blk"),
+			"qemu":            filepath.Join(qemuDir, "bin", binary),
+			"kernel":          filepath.Join(zirconBuildDir, kernel),
+			"symbolize":       filepath.Join(buildDir, hostDir, "symbolize"),
+			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
+			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),
+			"sshdir":          filepath.Join(fuchsiaDir, ".ssh"),
 		},
 		IDs: []string{
-			path.Join(clangDir, "lib", "debug", ".build-id"),
-			path.Join(buildDir, ".build-id"),
-			path.Join(zirconBuildDir, ".build-id"),
+			filepath.Join(clangDir, "lib", "debug", ".build-id"),
+			filepath.Join(buildDir, ".build-id"),
+			filepath.Join(zirconBuildDir, ".build-id"),
 		},
 	}
 	if err := build.LoadFuzzers(); err != nil {

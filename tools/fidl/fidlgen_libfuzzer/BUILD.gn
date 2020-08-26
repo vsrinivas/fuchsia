@@ -32,7 +32,12 @@ if (is_host) {
   go_test("fidlgen_libfuzzer_test") {
     gopackages =
         [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/codegen" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
+      "--clang-format",
+      rebase_path("$root_out_dir/test_data/fidlgen_libfuzzer", root_build_dir),
+    ]
     deps = [
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
@@ -42,6 +47,7 @@ if (is_host) {
 
   host_test_data("clang_format") {
     sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-    outputs = [ "$root_out_dir/test_data/fidlgen_libfuzzer/clang-format" ]
+    outputs =
+        [ "$root_out_dir/test_data/fidlgen_libfuzzer/{{source_file_part}}" ]
   }
 }

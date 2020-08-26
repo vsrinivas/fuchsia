@@ -14,13 +14,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var testDataDir = flag.String("test_data_dir", "", "Path to the test DOT file")
+var testDataFlag = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
 
 func TestExtractAndSerializeBuildStats(t *testing.T) {
 	graph, steps, err := constructGraph(paths{
-		ninjalog: filepath.Join(*testDataDir, "ninja_log"),
-		compdb:   filepath.Join(*testDataDir, "compdb.json"),
-		graph:    filepath.Join(*testDataDir, "graph.dot"),
+		ninjalog: filepath.Join(*testDataFlag, "ninja_log"),
+		compdb:   filepath.Join(*testDataFlag, "compdb.json"),
+		graph:    filepath.Join(*testDataFlag, "graph.dot"),
 	})
 	if err != nil {
 		t.Fatalf("Failed to construct graph: %v", err)

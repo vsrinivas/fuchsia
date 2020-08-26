@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var testDataFlag = flag.String("test_data_dir", "", "Path to golden files; only used in GN build")
+var testDataFlag = flag.String("test_data_dir", "", "Path to test data; only used in GN build")
 
 func TestPatternsMatchExamples(t *testing.T) {
 	wantDirs := []string{"examples", "patterns"}

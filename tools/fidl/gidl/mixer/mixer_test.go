@@ -6,11 +6,12 @@ package mixer
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"math"
-	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,27 +19,31 @@ import (
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 )
 
-var testDataPath = func() string {
-	path, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(filepath.Dir(path), "test_data", "gidl")
-}()
+var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
 
-var testSchema = func() Schema {
-	path := filepath.Join(testDataPath, "mixer.test.fidl.json")
+func testDataDir() string {
+	base := filepath.Join("..", "..", "..", "..")
+	c, err := ioutil.ReadFile(filepath.Join(base, ".fx-build-dir"))
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(base, strings.TrimSpace(string(c)), hostDir, "test_data", "gidl")
+}
+
+var testDataFlag = flag.String("test_data_dir", testDataDir(), "Path to golden files; only used in GN build")
+
+func testSchema(t *testing.T) Schema {
+	path := filepath.Join(*testDataFlag, "mixer.test.fidl.json")
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic("please run fidl testdata/mixer.test.fidl")
+		t.Fatalf("please \"fx build %s/test_data/gidl/mixer.test.fidl.json\" first then \"go test\" again", hostDir)
 	}
-	var root fidlir.Root
-	err = json.Unmarshal(bytes, &root)
-	if err != nil {
-		panic(fmt.Sprintf("failed to unmarshal %s: %s", path, err))
+	root := fidlir.Root{}
+	if err = json.Unmarshal(bytes, &root); err != nil {
+		t.Fatalf("failed to unmarshal %s: %s", path, err)
 	}
 	return BuildSchema(root)
-}()
+}
 
 // checkStruct is a helper function to test the Declaration for a struct.
 func checkStruct(t *testing.T, decl *StructDecl, expectedName string, expectedNullable bool) {
@@ -56,7 +61,7 @@ func checkStruct(t *testing.T, decl *StructDecl, expectedName string, expectedNu
 }
 
 func TestLookupDeclByNameNonNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleStruct", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStruct", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -64,7 +69,7 @@ func TestLookupDeclByNameNonNullable(t *testing.T) {
 }
 
 func TestLookupDeclByNameNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleStruct", true)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStruct", true)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -72,7 +77,7 @@ func TestLookupDeclByNameNullable(t *testing.T) {
 }
 
 func TestLookupDeclByNameFailure(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ThisIsNotAStruct", false)
+	decl, ok := testSchema(t).lookupDeclByName("ThisIsNotAStruct", false)
 	if ok {
 		t.Fatalf("lookupDeclByName unexpectedly succeeded: %#v", decl)
 	}
@@ -83,7 +88,7 @@ func TestLookupDeclByTypeSuccess(t *testing.T) {
 		Kind:             fidlir.PrimitiveType,
 		PrimitiveSubtype: fidlir.Bool,
 	}
-	decl, ok := testSchema.lookupDeclByType(typ)
+	decl, ok := testSchema(t).lookupDeclByType(typ)
 	if !ok {
 		t.Fatalf("lookupDeclByType failed")
 	}
@@ -99,7 +104,7 @@ func TestExtractDeclarationSuccess(t *testing.T) {
 			{Key: gidlir.FieldKey{Name: "s"}, Value: "foo"},
 		},
 	}
-	decl, err := testSchema.ExtractDeclaration(value, nil)
+	decl, err := testSchema(t).ExtractDeclaration(value, nil)
 	if err != nil {
 		t.Fatalf("ExtractDeclaration failed: %s", err)
 	}
@@ -111,7 +116,7 @@ func TestExtractDeclarationNotDefined(t *testing.T) {
 		Name:   "ThisIsNotAStruct",
 		Fields: []gidlir.Field{},
 	}
-	decl, err := testSchema.ExtractDeclaration(value, nil)
+	decl, err := testSchema(t).ExtractDeclaration(value, nil)
 	if err == nil {
 		t.Fatalf("ExtractDeclaration unexpectedly succeeded: %#v", decl)
 	}
@@ -127,7 +132,7 @@ func TestExtractDeclarationDoesNotConform(t *testing.T) {
 			{Key: gidlir.FieldKey{Name: "ThisIsNotAField"}, Value: "foo"},
 		},
 	}
-	decl, err := testSchema.ExtractDeclaration(value, nil)
+	decl, err := testSchema(t).ExtractDeclaration(value, nil)
 	if err == nil {
 		t.Fatalf("ExtractDeclaration unexpectedly succeeded: %#v", decl)
 	}
@@ -143,7 +148,7 @@ func TestExtractDeclarationUnsafeSuccess(t *testing.T) {
 			{Key: gidlir.FieldKey{Name: "ThisIsNotAField"}, Value: "foo"},
 		},
 	}
-	decl, err := testSchema.ExtractDeclarationUnsafe(value)
+	decl, err := testSchema(t).ExtractDeclarationUnsafe(value)
 	if err != nil {
 		t.Fatalf("ExtractDeclarationUnsafe failed: %s", err)
 	}
@@ -151,7 +156,7 @@ func TestExtractDeclarationUnsafeSuccess(t *testing.T) {
 }
 
 func TestExtractDeclarationByNameSuccess(t *testing.T) {
-	decl, err := testSchema.ExtractDeclarationByName("ExampleStruct")
+	decl, err := testSchema(t).ExtractDeclarationByName("ExampleStruct")
 	if err != nil {
 		t.Fatalf("ExtractDeclarationUnsafe failed: %s", err)
 	}
@@ -383,7 +388,7 @@ func TestHandleDeclConforms(t *testing.T) {
 }
 
 func TestBitsDeclConforms(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleBits", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleBits", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -410,7 +415,7 @@ func TestBitsDeclConforms(t *testing.T) {
 }
 
 func TestEnumDeclConforms(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleEnum", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleEnum", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -437,7 +442,7 @@ func TestEnumDeclConforms(t *testing.T) {
 }
 
 func TestStructDeclConformsNonNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleStruct", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStruct", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -472,7 +477,7 @@ func TestStructDeclConformsNonNullable(t *testing.T) {
 }
 
 func TestStructDeclConformsNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleStruct", true)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStruct", true)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -493,7 +498,7 @@ func TestStructDeclConformsNullable(t *testing.T) {
 }
 
 func TestTableDeclConforms(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleTable", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleTable", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -528,7 +533,7 @@ func TestTableDeclConforms(t *testing.T) {
 }
 
 func TestFlexibleUnionDeclConformsNonNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleFlexibleUnion", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleFlexibleUnion", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -581,7 +586,7 @@ func TestFlexibleUnionDeclConformsNonNullable(t *testing.T) {
 }
 
 func TestUnionDeclConformsNullable(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleFlexibleUnion", true)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleFlexibleUnion", true)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -602,7 +607,7 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 }
 
 func TestStrictUnionConforms(t *testing.T) {
-	decl, ok := testSchema.lookupDeclByName("ExampleStrictUnion", false)
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStrictUnion", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -629,7 +634,7 @@ func TestArrayDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{},
 		&ArrayDecl{
-			schema: testSchema,
+			schema: testSchema(t),
 			typ: fidlir.Type{
 				Kind:         fidlir.ArrayType,
 				ElementCount: &two,
@@ -655,7 +660,7 @@ func TestVectorDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{},
 		&VectorDecl{
-			schema: testSchema,
+			schema: testSchema(t),
 			typ: fidlir.Type{
 				Kind:         fidlir.VectorType,
 				ElementCount: &two,
@@ -685,7 +690,7 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 			},
 		},
 		&VectorDecl{
-			schema: testSchema,
+			schema: testSchema(t),
 			typ: fidlir.Type{
 				Kind: fidlir.VectorType,
 				ElementType: &fidlir.Type{

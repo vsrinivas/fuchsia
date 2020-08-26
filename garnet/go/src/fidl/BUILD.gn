@@ -21,11 +21,6 @@ if (is_host) {
     non_go_deps = [ "compiler/backend/goldens" ]
   }
 
-  host_test_data("clang_format") {
-    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-    outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
-  }
-
   go_test("fidlgen_common_test") {
     gopackages =
         [ "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common" ]

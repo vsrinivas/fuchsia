@@ -18,7 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
-var testDataDir = flag.String("test_data_dir", "", "Path to the test DOT file")
+var testDataFlag = flag.String("test_data_dir", "../test_data", "Path to ../test_data/; only used in GN build")
 
 func TestFromDOT(t *testing.T) {
 	for _, tc := range []struct {
@@ -281,7 +281,7 @@ func TestFromDOTErrors(t *testing.T) {
 }
 
 func TestFromDOTLargeFile(t *testing.T) {
-	dotFilePath := filepath.Join(*testDataDir, "graph.dot")
+	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
 	dotFile, err := os.Open(dotFilePath)
 	if err != nil {
 		t.Fatalf("Failed to open file %q: %s", dotFilePath, err)
@@ -305,7 +305,7 @@ func TestFromDOTLargeFile(t *testing.T) {
 
 func BenchmarkFromDOT(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		dotFilePath := filepath.Join(*testDataDir, "graph.dot")
+		dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
 		dotFile, err := os.Open(dotFilePath)
 		if err != nil {
 			b.Fatalf("Failed to open file %q: %s", dotFilePath, err)
@@ -528,7 +528,7 @@ func TestPopulateEdgesErrors(t *testing.T) {
 // TODO(jayzhuang): This test should probably be separated into an integration
 // test.
 func TestPopulateEdgesWithRealBuild(t *testing.T) {
-	ninjaLogPath := filepath.Join(*testDataDir, "ninja_log")
+	ninjaLogPath := filepath.Join(*testDataFlag, "ninja_log")
 	ninjaLogFile, err := os.Open(ninjaLogPath)
 	if err != nil {
 		t.Fatalf("Failed to open Ninja log with path %s: %v", ninjaLogPath, err)
@@ -540,7 +540,7 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 	}
 	steps := ninjalog.Dedup(ninjaLog.Steps)
 
-	compdbPath := filepath.Join(*testDataDir, "compdb.json")
+	compdbPath := filepath.Join(*testDataFlag, "compdb.json")
 	compdbFile, err := os.Open(compdbPath)
 	if err != nil {
 		t.Fatalf("Failed to open compdb with path %s: %v", compdbPath, err)
@@ -552,7 +552,7 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 	}
 	steps = ninjalog.Populate(steps, commands)
 
-	dotFilePath := filepath.Join(*testDataDir, "graph.dot")
+	dotFilePath := filepath.Join(*testDataFlag, "graph.dot")
 	dotFile, err := os.Open(dotFilePath)
 	if err != nil {
 		t.Fatalf("Failed to open Ninja graph with path %s: %v", dotFilePath, err)

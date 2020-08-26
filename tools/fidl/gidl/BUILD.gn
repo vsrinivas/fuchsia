@@ -63,7 +63,10 @@ if (is_host) {
 
   go_test("gidl_mixer_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer" ]
-
+    args = [
+      "--test_data_dir",
+      rebase_path("$root_out_dir/test_data/gidl", root_build_dir),
+    ]
     deps = [ ":lib" ]
     non_go_deps = [ ":gidl_mixer_test_json" ]
   }
