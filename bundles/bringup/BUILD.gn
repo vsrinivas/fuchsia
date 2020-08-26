@@ -192,6 +192,7 @@ group("tests") {
     "//zircon/system/utest/pty:pty-bootfs-test",
     "//zircon/system/utest/qsort:qsort-bootfs-test",
     "//zircon/system/utest/race-tests:race-tests-bootfs-test",
+    "//zircon/system/utest/runtests-utils:runtests-utils-bootfs-test",
     "//zircon/system/utest/service:service-llcpp-test-bootfs-test",
     "//zircon/system/utest/stdio:stdio-test-package",
     "//zircon/system/utest/svchost:svchost-bootfs-test",

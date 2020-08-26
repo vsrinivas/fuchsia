@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 import("//build/unification/zbi/generated_resource.gni")
 import("//build/unification/zbi/resource.gni")
 
@@ -261,4 +262,9 @@ group("test-scripts") {
     ":test-with-output-fail.sh",
     ":test-with-output-succeed.sh",
   ]
+}
+
+bootfs_test("runtests-utils-bootfs-test") {
+  name = "runtests-utils"
+  deps = [ ":runtests-utils" ]
 }

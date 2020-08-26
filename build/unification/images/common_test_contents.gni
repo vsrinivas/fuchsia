@@ -72,7 +72,6 @@ common_test_contents = [
   "//zircon/system/utest/core:vmar",
   "//zircon/system/utest/core:vmo",
   "//zircon/system/utest/msd",
-  "//zircon/system/utest/runtests-utils",
 ]
 
 if (target_cpu == "x64") {
