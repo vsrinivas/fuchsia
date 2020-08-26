@@ -8,11 +8,12 @@
 #include <lib/fit/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
+#include <zircon/device/sysmem.h>
 #include <zircon/fidl.h>
 
 #include <deque>
 
-#include <ddktl/protocol/gdc.h>
+#include <ddktl/protocol/camerahwaccel.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

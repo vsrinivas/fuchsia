@@ -7,7 +7,10 @@
 
 #include <vector>
 
-#include "../task/task.h"
+#include <ddktl/protocol/gdc.h>
+#include <fbl/array.h>
+
+#include "src/camera/drivers/hw_accel/task/task.h"
 
 namespace gdc {
 class GdcTask : public generictask::GenericTask {

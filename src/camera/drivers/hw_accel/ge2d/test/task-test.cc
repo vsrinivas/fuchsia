@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../../task/task.h"
+#include "src/camera/drivers/hw_accel/task/task.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/image-format/image_format.h>
 #include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -25,7 +24,7 @@
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
-#include "../ge2d.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 #include "src/camera/drivers/test_utils/fake-buffer-collection.h"
 
 namespace ge2d {

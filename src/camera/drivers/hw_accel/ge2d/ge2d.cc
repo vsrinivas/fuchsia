@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ge2d.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
@@ -20,7 +20,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d-regs.h"
 

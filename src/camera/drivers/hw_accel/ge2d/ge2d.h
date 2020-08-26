@@ -12,7 +12,6 @@
 #endif
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
@@ -30,9 +29,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <hw/reg.h>
 
-#include "ge2d-task.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d-task.h"
 
 namespace ge2d {
 // |Ge2dDevice| is spawned by the driver in |ge2d.cc|

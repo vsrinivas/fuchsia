@@ -12,7 +12,7 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/ge2d.h>
 
-#include "../task/task.h"
+#include "src/camera/drivers/hw_accel/task/task.h"
 
 namespace ge2d {
 

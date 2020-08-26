@@ -5,10 +5,6 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_TEST_GE2D_ON_DEVICE_TEST_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_TEST_GE2D_ON_DEVICE_TEST_H_
 
-#include <memory>
-
-#include <zxtest/zxtest.h>
-
 namespace ge2d {
 // |Ge2dDeviceTester| is spawned by the driver in |ge2d.cc|
 class Ge2dDevice;

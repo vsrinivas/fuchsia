@@ -2,30 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test.gni")
+source_set("device_test") {
+  sources = [
+    "ge2d-on-device-test.cc",
+    "ge2d-on-device-test.h",
+  ]
+  deps = [
+    "//src/camera/drivers/hw_accel/ge2d:lib",
+    "//src/camera/drivers/test_utils",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/driver-unit-test",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/image-format",
+  ]
+}
 
 executable("test") {
   output_name = "ge2d-test"
   testonly = true
-  sources = [
-    "../ge2d-task.cc",
-    "../ge2d.cc",
-    "task-test.cc",
-  ]
+  sources = [ "task-test.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.ge2d",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/camera/drivers/hw_accel/task:camera-task",
+    "//src/camera/drivers/hw_accel/ge2d:lib",
     "//src/camera/drivers/test_utils",
-    "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
@@ -33,18 +40,11 @@ executable("test") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
-    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }

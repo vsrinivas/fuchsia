@@ -12,13 +12,10 @@
 #endif
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/fidl.h>
 
-#include <atomic>
 #include <deque>
 #include <unordered_map>
 
@@ -27,10 +24,8 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/gdc.h>
-#include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <hw/reg.h>
 
 #include "gdc-task.h"
 

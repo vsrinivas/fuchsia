@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../../task/task.h"
+#include "src/camera/drivers/hw_accel/task/task.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
@@ -24,8 +24,8 @@
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
-#include "../gdc-regs.h"
-#include "../gdc.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc-regs.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc.h"
 #include "src/camera/drivers/test_utils/fake-buffer-collection.h"
 
 namespace gdc {

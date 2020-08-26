@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gdc.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc.h"
 
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
@@ -21,7 +21,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
-#include "gdc-regs.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc-regs.h"
 
 namespace gdc {
 

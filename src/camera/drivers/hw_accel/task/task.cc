@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "task.h"
+#include "src/camera/drivers/hw_accel/task/task.h"
 
 #include <lib/syslog/global.h>
 #include <stdint.h>
@@ -10,8 +10,6 @@
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
 
 constexpr auto kTag = "GenericTask";
 

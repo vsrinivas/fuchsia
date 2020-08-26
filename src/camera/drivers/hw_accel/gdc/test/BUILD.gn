@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test.gni")
-
 executable("test") {
   output_name = "gdc-test"
   testonly = true
@@ -12,33 +9,19 @@ executable("test") {
   sources = [ "task-test.cc" ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.gdc",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/hw_accel/gdc:source",
     "//src/camera/drivers/test_utils",
-    "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
   ]
 }

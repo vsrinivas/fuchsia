@@ -7,8 +7,7 @@
 
 #include <ddk/binding.h>
 
-#include "ge2d.h"
-#include "src/camera/drivers/hw_accel/ge2d/test/ge2d-on-device-test.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 
 namespace ge2d {
 namespace {
