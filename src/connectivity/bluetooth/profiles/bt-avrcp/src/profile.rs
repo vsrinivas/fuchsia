@@ -268,14 +268,16 @@ pub fn connect_and_advertise(
         create_request_stream().context("Couldn't create ConnectionTarget")?;
 
     let service_defs = vec![make_controller_service_definition(), make_target_service_definition()];
-    let _ = profile_svc.advertise(
-        &mut service_defs.into_iter(),
-        ChannelParameters {
-            channel_mode: Some(ChannelMode::EnhancedRetransmission),
-            ..ChannelParameters::new_empty()
-        },
-        connection_client,
-    );
+    profile_svc
+        .advertise(
+            &mut service_defs.into_iter(),
+            ChannelParameters {
+                channel_mode: Some(ChannelMode::EnhancedRetransmission),
+                ..ChannelParameters::new_empty()
+            },
+            connection_client,
+        )
+        .check()?;
 
     info!("Advertised Service");
 

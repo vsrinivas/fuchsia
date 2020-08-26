@@ -146,7 +146,7 @@ async fn advertise(
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
-    let _ = profile_svc.advertise(&mut svc_defs.into_iter(), params, connect_client);
+    profile_svc.advertise(&mut svc_defs.into_iter(), params, connect_client).check()?;
 
     let (end_ad_sender, end_ad_receiver) = oneshot::channel::<()>();
     let service_id = state.write().services.insert(SdpService {
