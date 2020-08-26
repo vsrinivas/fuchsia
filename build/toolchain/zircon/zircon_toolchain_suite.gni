@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/variant_toolchain_suite.gni")
+import("//build/toolchain/zircon/zircon_toolchain.gni")
+
+template("zircon_toolchain_suite") {
+  variant_toolchain_suite(target_name) {
+    toolchain_template = "zircon_toolchain"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("zircon_toolchain_suite") {
+  with_shared = true
+}

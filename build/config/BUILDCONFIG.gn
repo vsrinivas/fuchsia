@@ -1296,6 +1296,9 @@ template("variant_target") {
   if (defined(invoker.exclude_toolchain_tags)) {
     exclude_toolchain_tags += invoker.exclude_toolchain_tags
   }
+  if (defined(toolchain_variant.exclude_variant_tags)) {
+    exclude_toolchain_tags += toolchain_variant.exclude_variant_tags
+  }
 
   # These are not actually used in all possible if branches below,
   # so defang GN's extremely sensitive "unused variable" errors.

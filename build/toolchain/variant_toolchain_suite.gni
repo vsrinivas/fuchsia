@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# NOTE: Event though this file does not directly reference clang_toolchain(),
-# invoking it through toolchain_template below, GN will refuse to compile if
-# the template is not previously defined.
+# NOTE: Event though this file does not directly reference clang_toolchain()
+# nor zircon_toolchain(), invoking it through toolchain_template below, GN will
+# refuse to compile if the template is not previously defined.
 import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/toolchain_tags.gni")
 import("//build/toolchain/variant_tags.gni")
+import("//build/toolchain/zircon/zircon_toolchain.gni")
 
 # Private subroutine of variant_toolchain_suite(), below, used to instantiate
 # a single variant toolchain() instance.
@@ -94,7 +96,16 @@ template("_variant_toolchain") {
 #     Optional: If these toolchains will have a "-shared" companion.
 #     (Each variant toolchain has its own "-shared" companion.)
 #
-#  toolchain_args:
+#   toolchain_tags:
+#     Optional: A list of tags applied to each toolchain instantiated in this
+#     suite. See //build/toolchain/toolchain_tags.gni for the list of valid
+#     values and their meaning.
+#
+#   exclude_variant_tags:
+#     Optional: A list of variant tags that this toolchain suite should
+#     *not* instantiate.
+#
+#   toolchain_args:
 #     Optional: Scope of common variables to be set in the variant toolchains'
 #     toolchain_args scope. Note that values in each selected variant's
 #     toolchain_args scope will override these values.
@@ -108,6 +119,25 @@ template("variant_toolchain_suite") {
   # or the other., and have .base.
   is_host = defined(invoker.toolchain_os) && invoker.toolchain_os == host_os
   not_needed([ "is_host" ])
+
+  exclude_tags = []
+  if (defined(invoker.exclude_variant_tags)) {
+    exclude_tags = invoker.exclude_variant_tags
+    _unknown_tags = exclude_tags + all_variant_tags - all_variant_tags
+    assert(
+        _unknown_tags == [],
+        "Unknown exclude_variant_tags ${_unknown_tags} in toolchain suite definition ${target_name}")
+  }
+
+  if (defined(invoker.toolchain_tags)) {
+    _unknown_tags = []
+    _unknown_tags =
+        invoker.toolchain_tags + all_toolchain_tags - all_toolchain_tags
+    assert(
+        _unknown_tags == [],
+        "Unknown toolchain_tags ${_unknown_tags} in toolchain suite definition ${target_name}")
+  }
+
   variants = []
   foreach(variant, all_toolchain_variants) {
     variants += [
@@ -138,6 +168,12 @@ template("variant_toolchain_suite") {
           assert(
               unknown_tags == [],
               "Unknown tags ${unknown_tags} in variant definition: ${variant}")
+        }
+
+        if (defined(invoker.toolchain_tags)) {
+          tags += invoker.toolchain_tags
+          tags -= invoker.toolchain_tags
+          tags += invoker.toolchain_tags
         }
 
         # Recompute `instrumented` flag based on tags.
@@ -183,8 +219,12 @@ template("variant_toolchain_suite") {
         assert(defined(selector.variant),
                "`select_variant` clause missing `variant` field: $selector")
         if (selector.variant == variant.name) {
-          variant_used = true
           selectors_used[i] = true
+
+          # Only use the variant if its tags allow it.
+          if (variant.tags + exclude_tags - exclude_tags == variant.tags) {
+            variant_used = true
+          }
         } else if (selector.variant == false) {
           selectors_used[i] = true
         }
@@ -193,6 +233,12 @@ template("variant_toolchain_suite") {
     }
 
     if (variant_used) {
+      # Ensure that the exclude tags list is passed to toolchain_variant,
+      # as it will be used in BUILDCONFIG.gn by variant_target()
+      if (exclude_tags != []) {
+        variant.exclude_variant_tags = exclude_tags
+      }
+
       _variant_toolchain("${target_name}${variant.suffix}") {
         toolchain_template = invoker.toolchain_template
         toolchain_template_args = invoker_toolchain_template_args

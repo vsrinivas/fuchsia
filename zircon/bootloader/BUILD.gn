@@ -6,7 +6,7 @@ if (current_toolchain == default_toolchain) {
   # In the default toolchain, simply define the bootloader toolchains
   # to be used to build Gigaboot as a Win32 PE32+ executable.
 
-  import("//build/toolchain/zircon/zircon_toolchain.gni")
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 
   # Define a Zircon EFI toolchain. These are required to build the Gigaboot
   # bootloader (see //zircon/bootloader/README.md)
@@ -16,29 +16,22 @@ if (current_toolchain == default_toolchain) {
   #      Fuchsia device CPU name (e.g. "x64" or "arm64")
   #      Type: string
   #
-  #    toolchain_variant_args: [optional]
-  #      Optional toolchain_variant_args passed to the toolchain.
-  #      Type: scope
-  #
   template("zircon_efi_toolchain") {
-    zircon_toolchain(target_name) {
+    zircon_toolchain_suite(target_name) {
       cpu = invoker.cpu
       os = "win"
       environment = "efi"
       gcc = false
-      shlib = false
-
+      with_shared = false
+      exclude_variant_tags = [
+        "instrumented",
+        "gcc",
+      ]
       toolchain_variant_args = {
-        configs = []
-        remove_common_configs = []
-
-        if (defined(invoker.toolchain_variant_args)) {
-          forward_variables_from(invoker.toolchain_variant_args, "*")
-        }
-        configs += [ "//zircon/bootloader:efi_config" ]
+        configs = [ "//zircon/bootloader:efi_config" ]
 
         # TODO: harmless, but just to match build.mk
-        remove_common_configs +=
+        remove_common_configs =
             [ "//build/config/zircon:default_frame_pointers" ]
       }
     }

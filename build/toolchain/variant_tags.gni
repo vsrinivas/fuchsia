@@ -31,4 +31,9 @@ all_variant_tags = [
 
   # The `fuzzer` tag is used for variants that implement fuzzers only.
   "fuzzer",
+
+  # The `gcc` tag is used for variants that use GCC instead of Clang to
+  # build C/C++ binaries. This should only be used for Zircon specific
+  # toolchains.
+  "gcc",
 ]

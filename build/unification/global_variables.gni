@@ -10,7 +10,8 @@
 is_gcc = zircon_toolchain != false && zircon_toolchain.is_gcc
 
 # `is_kernel` is true for kernel-specific toolchains.
-is_kernel = false
+is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+            toolchain_variant.tags
 
 # `toolchain` is a scope used by the Zircon build to describe the current toolchain.
 # Its layout is very different from `toolchain_variant` so try to mimic it here.
