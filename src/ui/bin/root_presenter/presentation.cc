@@ -7,6 +7,8 @@
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
@@ -37,12 +39,14 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 }  // namespace
 
 Presentation::Presentation(
-    fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
+    sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
+    scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
-    int32_t display_startup_rotation_adjustment)
-    : scenic_(scenic),
+    int32_t display_startup_rotation_adjustment, std::function<void()> on_client_death)
+    : component_context_(component_context),
+      scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       activity_notifier_(activity_notifier),
@@ -50,22 +54,18 @@ Presentation::Presentation(
       renderer_(session_),
       scene_(session_),
       camera_(scene_),
-      view_holder_node_(session),
-      root_node_(session_),
-      view_holder_(session, std::move(view_holder_token), "root_presenter"),
+      a11y_session_(scenic),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       a11y_binding_(this),
       safe_presenter_(safe_presenter),
+      safe_presenter_a11y_(&a11y_session_),
       weak_factory_(this) {
+  FX_DCHECK(component_context_);
   FX_DCHECK(compositor_id != 0);
   FX_DCHECK(safe_presenter_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
-  scene_.AddChild(root_node_);
-  root_node_.SetTranslation(0.f, 0.f, -0.1f);  // TODO(SCN-371).
-  root_node_.AddChild(view_holder_node_);
-  view_holder_node_.Attach(view_holder_);
 
   // Create the root view's scene.
   // TODO(SCN-1255): we add a directional light and a point light, expecting
@@ -99,6 +99,35 @@ Presentation::Presentation(
 
   SetScenicDisplayRotation();
 
+  {    // Set up views and view holders.
+    {  // Set up the root view.
+      auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
+      auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+      fidl::Clone(view_ref, &root_view_ref_);
+      root_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+                                "Root View Holder");
+      root_view_.emplace(session_, std::move(internal_view_token), std::move(control_ref),
+                         std::move(view_ref), "Root View");
+    }
+
+    {  // Set up the "accessibility view"
+      auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
+      auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+      fidl::Clone(view_ref, &a11y_view_ref_);
+      a11y_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+                                "A11y View Holder");
+      a11y_view_.emplace(&a11y_session_, std::move(internal_view_token), std::move(control_ref),
+                         std::move(view_ref), "A11y View");
+    }
+
+    client_view_holder_.emplace(&a11y_session_, std::move(view_holder_token), "Client View Holder");
+
+    // Connect it all up.
+    scene_.AddChild(root_view_holder_.value());
+    root_view_->AddChild(a11y_view_holder_.value());
+    a11y_view_->AddChild(client_view_holder_.value());
+  }
+
   // Link ourselves to the presentation interface once screen dimensions are
   // available for us to present into.
   FX_CHECK(!presentation_binding_.is_bound());
@@ -108,7 +137,32 @@ Presentation::Presentation(
         if (weak) {
           // Get display parameters and propagate values appropriately.
           weak->InitializeDisplayModel(std::move(display_info));
-          weak->safe_presenter_->QueuePresent([] {});
+          weak->safe_presenter_->QueuePresent([weak] {
+            if (weak) {
+              // TODO(fxbug.dev/56345): Stop staggering presents.
+              weak->safe_presenter_a11y_.QueuePresent([] {});
+            }
+          });
+        }
+      });
+
+  FX_DCHECK(root_view_holder_);
+  FX_DCHECK(root_view_);
+  FX_DCHECK(a11y_view_holder_);
+  FX_DCHECK(a11y_view_);
+  FX_DCHECK(client_view_holder_);
+
+  a11y_session_.set_event_handler(
+      [on_client_death = std::move(on_client_death),
+       client_id = client_view_holder_->id()](std::vector<fuchsia::ui::scenic::Event> events) {
+        for (const auto& event : events) {
+          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+              event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
+              event.gfx().view_disconnected().view_holder_id == client_id) {
+            // Client died.
+            on_client_death();  // This kills the Presentation, so exit immediately to be safe.
+            return;
+          }
         }
       });
 }
@@ -136,7 +190,12 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log, bool present_changes
   bool updated = ApplyDisplayModelChangesHelper(print_log);
 
   if (updated && present_changes) {
-    safe_presenter_->QueuePresent([] {});
+    safe_presenter_->QueuePresent([weak = weak_factory_.GetWeakPtr()] {
+      if (weak) {
+        // TODO(fxbug.dev/56345): Stop staggering presents.
+        weak->safe_presenter_a11y_.QueuePresent([] {});
+      }
+    });
   }
   return updated;
 }
@@ -158,82 +217,90 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
 
   // Layout size
   {
-    float metrics_width = display_metrics_.width_in_pp();
-    float metrics_height = display_metrics_.height_in_pp();
+    // Set the root view to native resolution and orientation (i.e. no rotation) of the display.
+    // This lets us delegate touch coordinate transformations to Scenic.
+    const float raw_metrics_width = static_cast<float>(display_metrics_.width_in_px());
+    const float raw_metrics_height = static_cast<float>(display_metrics_.height_in_px());
+    root_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, raw_metrics_width,
+                                         raw_metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+  }
+
+  const bool is_90_degree_rotation = abs(display_startup_rotation_adjustment_ % 180) == 90;
+
+  {  // Set a11y and client views' resolutions to pips.
+    float metrics_width = static_cast<float>(display_metrics_.width_in_pp());
+    float metrics_height = static_cast<float>(display_metrics_.height_in_pp());
 
     // Swap metrics on left/right tilt.
-    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+    if (is_90_degree_rotation) {
       std::swap(metrics_width, metrics_height);
     }
 
-    view_holder_.SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width, metrics_height,
-                                   0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    a11y_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
+                                         metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    client_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
+                                           metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
     FX_VLOGS(2) << "DisplayModel layout: " << metrics_width << ", " << metrics_height;
   }
 
-  // Device pixel scale.
-  {
+  // Remaining transformations are only applied to a11y view and automatically propagated down to
+  // client view through the scene graph.
+
+  {  // Scale a11y view to full device size.
     float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
     float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
-
     // Swap metrics on left/right tilt.
-    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
+    if (is_90_degree_rotation) {
       std::swap(metrics_scale_x, metrics_scale_y);
     }
 
-    scene_.SetScale(metrics_scale_x, metrics_scale_y, 1.f);
+    a11y_view_holder_->SetScale(metrics_scale_x, metrics_scale_y, 1.f);
     FX_VLOGS(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", " << metrics_scale_y;
   }
 
-  // Anchor
-  {
-    float anchor_x = display_metrics_.width_in_pp() / 2;
-    float anchor_y = display_metrics_.height_in_pp() / 2;
-
-    // Swap anchors on left/right tilt.
-    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
-      std::swap(anchor_x, anchor_y);
-    }
-
-    view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
-    FX_VLOGS(2) << "DisplayModel anchor: " << anchor_x << ", " << anchor_y;
-  }
-
-  // Rotate
-  {
-    glm::quat display_rotation =
+  {  // Rotate a11y view to match desired display orientation.
+    const glm::quat display_rotation =
         glm::quat(glm::vec3(0, 0, glm::radians<float>(display_startup_rotation_adjustment_)));
-    view_holder_node_.SetRotation(display_rotation.x, display_rotation.y, display_rotation.z,
-                                  display_rotation.w);
+    a11y_view_holder_->SetRotation(display_rotation.x, display_rotation.y, display_rotation.z,
+                                   display_rotation.w);
   }
 
-  const DisplayModel::DisplayInfo& display_info = display_model_.display_info();
+  {  // Adjust a11y view position for rotation.
+    const float metrics_w = display_metrics_.width_in_px();
+    const float metrics_h = display_metrics_.height_in_px();
 
-  // Center everything.
-  {
-    float info_w = display_info.width_in_px;
-    float info_h = display_info.height_in_px;
-    float metrics_w = display_metrics_.width_in_px();
-    float metrics_h = display_metrics_.height_in_px();
-    float density_w = display_metrics_.x_scale_in_px_per_pp();
-    float density_h = display_metrics_.y_scale_in_px_per_pp();
-
-    // Swap metrics on left/right tilt.
-    if (abs(display_startup_rotation_adjustment_ % 180) == 90) {
-      std::swap(metrics_w, metrics_h);
-      std::swap(density_w, density_h);
+    float left_offset = 0;
+    float top_offset = 0;
+    uint32_t degrees_rotated = abs(display_startup_rotation_adjustment_ % 360);
+    switch (degrees_rotated) {
+      case 0:
+        left_offset = 0;
+        top_offset = 0;
+        break;
+      case 90:
+        left_offset = metrics_w;
+        top_offset = 0;
+        break;
+      case 180:
+        left_offset = metrics_w;
+        top_offset = metrics_h;
+        break;
+      case 270:
+        left_offset = 0;
+        top_offset = metrics_h;
+        break;
+      default:
+        FX_LOGS(ERROR) << "Unsupported rotation";
+        break;
     }
 
-    float left_offset = (info_w - metrics_w) / density_w / 2;
-    float top_offset = (info_h - metrics_h) / density_h / 2;
-
-    view_holder_node_.SetTranslation(left_offset, top_offset, 0.f);
+    a11y_view_holder_->SetTranslation(left_offset, top_offset, 0.f);
     FX_VLOGS(2) << "DisplayModel translation: " << left_offset << ", " << top_offset;
   }
 
   // Today, a layer needs the display's physical dimensions to render correctly.
-  layer_.SetSize(static_cast<float>(display_info.width_in_px),
-                 static_cast<float>(display_info.height_in_px));
+  layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
+                 static_cast<float>(display_metrics_.height_in_px()));
 
   return true;
 }

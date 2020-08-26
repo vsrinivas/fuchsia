@@ -42,12 +42,12 @@ namespace root_presenter {
 class Presentation : fuchsia::ui::policy::Presentation,
                      fuchsia::accessibility::MagnificationHandler {
  public:
-  Presentation(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-               scenic::ResourceId compositor_id,
+  Presentation(sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
+               scenic::Session* session, scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
-               int32_t display_startup_rotation_adjustment);
+               int32_t display_startup_rotation_adjustment, std::function<void()> on_client_death);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -57,7 +57,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   void OnDeviceRemoved(uint32_t device_id);
 
   const scenic::Layer& layer() const { return layer_; }
-  const scenic::ViewHolder& view_holder() const { return view_holder_; }
 
  private:
   // |fuchsia::ui::policy::Presentation|
@@ -87,6 +86,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
 
+  const sys::ComponentContext* component_context_;
+
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
   scenic::ResourceId compositor_id_;
@@ -95,12 +96,41 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;
+
+  // Scene topology:
+  // [1] = owned by |session_|, [2] = owned by |a11y_session_|, [3] = owned by client
+  //
+  // [1] scene
+  //       |
+  // [1] root view holder
+  //       |
+  // [1] root view
+  //       |
+  // [1] a11y view holder
+  //       |
+  // [2] a11y view
+  //       |
+  // [2] client view holder
+  //       |
+  // [3] client view
+
   // TODO(SCN-254): put camera before scene.
   scenic::Scene scene_;
   scenic::Camera camera_;
-  scenic::EntityNode view_holder_node_;
-  scenic::EntityNode root_node_;
-  scenic::ViewHolder view_holder_;
+  std::optional<scenic::View> root_view_;
+  std::optional<scenic::ViewHolder> root_view_holder_;
+  fuchsia::ui::views::ViewRef root_view_ref_;
+
+  // |a11y_view_holder_| uses:
+  // - It's used to set scale, rotation and translation for all child views.
+  // - It's kept in sync with the client view for their ViewProperties.
+  // - It is used as the target for fuchsia::ui::pointerinjector to make transforms simpler.
+  scenic::Session a11y_session_;
+  std::optional<scenic::View> a11y_view_;
+  std::optional<scenic::ViewHolder> a11y_view_holder_;
+  fuchsia::ui::views::ViewRef a11y_view_ref_;
+
+  std::optional<scenic::ViewHolder> client_view_holder_;
 
   bool display_model_initialized_ = false;
 
@@ -127,7 +157,10 @@ class Presentation : fuchsia::ui::policy::Presentation,
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
 
+  // |safe_presenter_| is passed in at construction together with the root session.
   SafePresenter* safe_presenter_ = nullptr;
+  // |safe_presenter_a11y_| is internal and created for |a11y_session_|.
+  SafePresenter safe_presenter_a11y_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 

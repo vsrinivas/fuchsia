@@ -87,10 +87,6 @@ class App : public fuchsia::ui::policy::Presenter,
   void InitializeServices();
   void Reset();
 
-  // Used to receive a ViewDisconnected event, which causes root_presenter to
-  // shut down; can handle other Scenic events in the future.
-  void HandleScenicEvent(const fuchsia::ui::scenic::Event& event);
-
   void SetPresentation(std::unique_ptr<Presentation> presentation);
   void ShutdownPresentation();
 

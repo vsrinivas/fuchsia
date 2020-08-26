@@ -73,9 +73,10 @@ void App::PresentView(
   }
 
   auto presentation = std::make_unique<Presentation>(
-      scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), safe_presenter_.get(), &activity_notifier_,
-      display_startup_rotation_adjustment);
+      component_context_.get(), scenic_.get(), session_.get(), compositor_->id(),
+      std::move(view_holder_token), std::move(presentation_request), safe_presenter_.get(),
+      &activity_notifier_, display_startup_rotation_adjustment,
+      /*on_client_death*/ [this] { ShutdownPresentation(); });
 
   SetPresentation(std::move(presentation));
 }
@@ -192,11 +193,6 @@ void App::InitializeServices() {
       FX_LOGS(ERROR) << "Session died, destroying presentation.";
       Reset();
     });
-    session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
-      for (auto& event : events) {
-        HandleScenicEvent(event);
-      }
-    });
 
     safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
 
@@ -248,27 +244,6 @@ void App::Reset() {
   compositor_ = nullptr;
   session_ = nullptr;
   scenic_.Unbind();
-}
-
-void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
-  switch (event.Which()) {
-    case fuchsia::ui::scenic::Event::Tag::kGfx:
-      switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          FX_DCHECK(presentation_ && event.gfx().view_disconnected().view_holder_id ==
-                                         presentation_->view_holder().id());
-          FX_LOGS(INFO) << "Root presenter: Content view terminated.";
-          ShutdownPresentation();
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-    default: {
-      break;
-    }
-  }
 }
 
 void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
