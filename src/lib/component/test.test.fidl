@@ -1,0 +1,17 @@
+// Copyright 2020 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+library bindingstest;
+
+using zx;
+
+protocol Test1 {
+    Echo(string? in) -> (string? out);
+    NoResponse();
+    EmptyResponse() -> ();
+    -> Surprise(string foo);
+    // 7 is READ | TRANSFER | DUPLICATE
+    // TODO(fxbug.dev/43948) Replace with zx.rights.READ | ...
+    EchoHandleRights(zx.handle:<PORT, 7> h) -> (uint32 rights);
+};

@@ -44,12 +44,9 @@ copy("copy_test_utils") {
 go_test("fidl_go_conformance_tests") {
   test = true
   gopackages = [ "conformance_tests" ]
-  deps = [
-    ":conformance_tests_library",
-  ]
-  non_go_deps = [
-    ":conformance_suite",
-  ]
+  deps = [ ":conformance_tests_library" ]
+  non_go_deps = [ ":conformance_suite" ]
+
   # This runs both on target device and as a host test.
   # In both cases, it needs to build a go toolchain rather than using a prebuilt because
   # it is testing the fidl package, which is implemented in the toolcahin itself.
