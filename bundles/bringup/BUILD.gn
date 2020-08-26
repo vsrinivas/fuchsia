@@ -102,7 +102,6 @@ group("tests") {
     "//zircon/system/ulib/fzl/test:fzl-bootfs-test",
     "//zircon/system/ulib/fzl/test:fzl-zxtest-bootfs-test",
     "//zircon/system/ulib/gpt/test:gpt-unit-bootfs-test",
-    "//zircon/system/ulib/hid-parser/test:hid-parser-bootfs-test",
     "//zircon/system/ulib/hwreg/test:libhwreg-bootfs-test",
     "//zircon/system/ulib/hwreg/test:libhwreg-i2c-bootfs-test",
     "//zircon/system/ulib/id_allocator/test:id_allocator-test-bootfs-test",
