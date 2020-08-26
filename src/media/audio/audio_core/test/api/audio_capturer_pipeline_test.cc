@@ -48,10 +48,10 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
 
   AudioLoopbackPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
 
-  void SetUp() {
-    HermeticAudioTest::SetUp();
+  void TearDown() override {
     // None of our tests should overflow or underflow.
-    FailUponOverflowsOrUnderflows();
+    ExpectNoOverflowsOrUnderflows();
+    HermeticAudioTest::TearDown();
   }
 
   std::optional<PacketAndFrameIdx> FindFirstFrame(const std::vector<CapturedPacket>& packets,
@@ -267,8 +267,6 @@ class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
 };
 
 TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased) {
-  FailUponOverflowsOrUnderflows();
-
   zx::time start_pts;
   size_t count = 0;
   capturer_->capturer().events().OnPacketProduced = [this, &count,
@@ -307,6 +305,7 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased
 
   ASSERT_FALSE(ErrorOccurred());
   ASSERT_GT(count, 2 * kNumPackets);
+  ExpectNoOverflowsOrUnderflows();
 }
 
 TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyReleased) {
@@ -382,7 +381,12 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   ASSERT_GT(count, 0u);
 
   // There should be at least one overflow.
-  capturer_->expected_inspect_properties().children["overflows"].ExpectUintNonzero("count");
+  ExpectInspectMetrics(capturer_, {
+                                      .children =
+                                          {
+                                              {"overflows", {.nonzero_uints = {"count"}}},
+                                          },
+                                  });
 }
 
 ////// Need to add similar tests for the Capture pipeline

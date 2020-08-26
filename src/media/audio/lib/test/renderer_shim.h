@@ -16,7 +16,6 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
@@ -94,9 +93,7 @@ class RendererShimImpl {
   void ClearPayload() { payload_buffer_.Clear(); }
 
   // For validating properties exported by inspect.
-  // By default, there are no expectations.
   size_t inspect_id() const { return inspect_id_; }
-  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
 
  protected:
   RendererShimImpl(Format format, size_t payload_frame_count)
@@ -118,8 +115,6 @@ class RendererShimImpl {
   TimelineRate pts_ticks_per_second_;
   TimelineRate pts_ticks_per_frame_;
   PacketVector queued_packets_;
-
-  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

@@ -16,7 +16,6 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
-#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
@@ -60,9 +59,7 @@ class VirtualDevice {
   zx::time NextSynchronizedTimestamp(zx::time min_time = zx::time(0)) const;
 
   // For validating properties exported by inspect.
-  // By default, there are no expectations.
   size_t inspect_id() const { return inspect_id_; }
-  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
 
  protected:
   VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
@@ -89,8 +86,6 @@ class VirtualDevice {
   uint64_t ring_pos_ = 0;
   uint64_t running_ring_pos_ = 0;
   uint64_t token_;
-
-  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 using VirtualOutputImpl = VirtualDevice<fuchsia::virtualaudio::Output>;

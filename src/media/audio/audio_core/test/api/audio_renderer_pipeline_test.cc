@@ -42,13 +42,17 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
  protected:
   AudioRendererPipelineTest() : format_(Format::Create<SampleType>(2, kFrameRate).value()) {}
 
-  void SetUp() {
+  void SetUp() override {
     HermeticAudioTest::SetUp();
-    // None of our tests should underflow.
-    FailUponOverflowsOrUnderflows();
     // The output can store exactly 1s of audio data.
     output_ = CreateOutput({{0xff, 0x00}}, format_, 48000);
     renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
+  }
+
+  void TearDown() override {
+    // None of our tests should underflow.
+    ExpectNoOverflowsOrUnderflows();
+    HermeticAudioTest::TearDown();
   }
 
   // All pipeline tests send batches of packets. This method returns the suggested size for
@@ -352,7 +356,12 @@ TEST_F(AudioRendererPipelineUnderflowTest, HasUnderflow) {
   RunLoopWithTimeout(zx::msec(20));
 
   // Expect an underflow.
-  output_->expected_inspect_properties().children["pipeline underflows"].ExpectUintNonzero("count");
+  ExpectInspectMetrics(output_, {
+                                    .children =
+                                        {
+                                            {"pipeline underflows", {.nonzero_uints = {"count"}}},
+                                        },
+                                });
 }
 
 class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {

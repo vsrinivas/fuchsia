@@ -4,6 +4,8 @@
 
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
+#include <lib/inspect/cpp/hierarchy.h>
+
 #include <sstream>
 #include <vector>
 
@@ -55,51 +57,6 @@ void HermeticAudioTest::SetUp() {
 }
 
 void HermeticAudioTest::TearDown() {
-  // These expectations need to be set on all objects. The simplest way to do
-  // that is to set them here, as the final step before expectations are checked.
-  if (disallow_overflows_and_underflows_) {
-    for (auto& [_, device] : devices_) {
-      if (device.output) {
-        auto& props = device.output->expected_inspect_properties();
-        props.children["device underflows"].uint_values["count"] = 0;
-        props.children["pipeline underflows"].uint_values["count"] = 0;
-      }
-    }
-    for (auto& r : renderers_) {
-      r->expected_inspect_properties().children["underflows"].uint_values["count"] = 0;
-    }
-    for (auto& c : capturers_) {
-      c->expected_inspect_properties().children["overflows"].uint_values["count"] = 0;
-    }
-  }
-
-  // Validate inspect metrics.
-  auto audio_core_inspect =
-      environment_->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
-  for (auto& [_, device] : devices_) {
-    if (device.output) {
-      CheckInspectHierarchy(
-          audio_core_inspect,
-          {"output devices", fxl::StringPrintf("%03lu", device.output->inspect_id())},
-          device.output->expected_inspect_properties());
-    } else {
-      CheckInspectHierarchy(
-          audio_core_inspect,
-          {"input devices", fxl::StringPrintf("%03lu", device.input->inspect_id())},
-          device.input->expected_inspect_properties());
-    }
-  }
-  for (auto& r : renderers_) {
-    CheckInspectHierarchy(audio_core_inspect,
-                          {"renderers", fxl::StringPrintf("%lu", r->inspect_id())},
-                          r->expected_inspect_properties());
-  }
-  for (auto& c : capturers_) {
-    CheckInspectHierarchy(audio_core_inspect,
-                          {"capturers", fxl::StringPrintf("%lu", c->inspect_id())},
-                          c->expected_inspect_properties());
-  }
-
   // Remove all components.
   for (auto& [_, device] : devices_) {
     device.output = nullptr;
@@ -403,16 +360,67 @@ fuchsia::media::AudioDeviceEnumeratorPtr HermeticAudioTest::TakeOwnershipOfAudio
   return std::move(audio_dev_enum_);
 }
 
-void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
-                                              const std::vector<std::string>& path,
-                                              const ExpectedInspectProperties& expected) {
+void HermeticAudioTest::ExpectNoOverflowsOrUnderflows() {
+  for (auto& [_, device] : devices_) {
+    if (device.output) {
+      ExpectInspectMetrics(device.output.get(),
+                           {
+                               .children =
+                                   {
+                                       {"device underflows", {.uints = {{"count", 0}}}},
+                                       {"pipeline underflows", {.uints = {{"count", 0}}}},
+                                   },
+                           });
+    }
+  }
+  for (auto& r : renderers_) {
+    ExpectInspectMetrics(r.get(), {
+                                      .children =
+                                          {
+                                              {"underflows", {.uints = {{"count", 0}}}},
+                                          },
+                                  });
+  }
+  for (auto& c : capturers_) {
+    ExpectInspectMetrics(c.get(), {
+                                      .children =
+                                          {
+                                              {"overflows", {.uints = {{"count", 0}}}},
+                                          },
+                                  });
+  }
+}
+
+void HermeticAudioTest::ExpectInspectMetrics(VirtualOutputImpl* output,
+                                             const ExpectedInspectProperties& props) {
+  ExpectInspectMetrics({"output devices", fxl::StringPrintf("%03lu", output->inspect_id())}, props);
+}
+
+void HermeticAudioTest::ExpectInspectMetrics(VirtualInputImpl* input,
+                                             const ExpectedInspectProperties& props) {
+  ExpectInspectMetrics({"input devices", fxl::StringPrintf("%03lu", input->inspect_id())}, props);
+}
+
+void HermeticAudioTest::ExpectInspectMetrics(RendererShimImpl* renderer,
+                                             const ExpectedInspectProperties& props) {
+  ExpectInspectMetrics({"renderers", fxl::StringPrintf("%lu", renderer->inspect_id())}, props);
+}
+
+void HermeticAudioTest::ExpectInspectMetrics(CapturerShimImpl* capturer,
+                                             const ExpectedInspectProperties& props) {
+  ExpectInspectMetrics({"capturers", fxl::StringPrintf("%lu", capturer->inspect_id())}, props);
+}
+
+void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& path,
+                                             const ExpectedInspectProperties& props) {
+  auto root = environment_->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
   auto path_string = fxl::JoinStrings(path, "/");
   auto h = root.GetByPath(path);
   if (!h) {
     ADD_FAILURE() << "Missing inspect hierarchy for " << path_string;
     return;
   }
-  expected.Check(path_string, *h);
+  ExpectedInspectProperties::Check(props, path_string, *h);
 }
 
 // Explicitly instantiate all possible implementations.

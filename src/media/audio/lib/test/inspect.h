@@ -17,33 +17,31 @@ namespace media::audio::test {
 // Describes a set of properties that must exist at an inspect node.
 struct ExpectedInspectProperties {
   std::unordered_map<std::string, ExpectedInspectProperties> children;
-  // Properties that must have specific values.
-  std::unordered_map<std::string, double> double_values;
-  std::unordered_map<std::string, uint64_t> uint_values;
-  // Properties that must have any non-zero value.
-  std::unordered_set<std::string> double_nonzero;
-  std::unordered_set<std::string> uint_nonzero;
 
-  // Shorthands to make calling code more readable.
-  void ExpectDoubleNonzero(const std::string& property_name) {
-    double_nonzero.insert(property_name);
-  }
-  void ExpectUintNonzero(const std::string& property_name) { uint_nonzero.insert(property_name); }
+  // Properties that must have specific values.
+  std::unordered_map<std::string, double> doubles;
+  std::unordered_map<std::string, uint64_t> uints;
+
+  // Properties that must have any non-zero value.
+  std::unordered_set<std::string> nonzero_doubles;
+  std::unordered_set<std::string> nonzero_uints;
 
   // Compare the properties at the given hierachy to the expected values.
-  void Check(const std::string& path, const inspect::Hierarchy& h) const {
-    for (auto& [name, expected_child] : children) {
+  // The path is used for debug output.
+  static void Check(const ExpectedInspectProperties& props, const std::string& path,
+                    const inspect::Hierarchy& h) {
+    for (auto& [name, expected_child] : props.children) {
       auto child = h.GetByPath({name});
       if (!child) {
         ADD_FAILURE() << "missing node: " << path << "/" << name;
         continue;
       }
-      expected_child.Check(path + "/" + name, *child);
+      Check(expected_child, path + "/" + name, *child);
     }
-    CheckValue<inspect::DoublePropertyValue>(path, h.node(), double_values);
-    CheckValue<inspect::UintPropertyValue>(path, h.node(), uint_values);
-    CheckNonZero<inspect::DoublePropertyValue, double>(path, h.node(), double_nonzero);
-    CheckNonZero<inspect::UintPropertyValue, uint64_t>(path, h.node(), uint_nonzero);
+    CheckValue<inspect::DoublePropertyValue>(path, h.node(), props.doubles);
+    CheckValue<inspect::UintPropertyValue>(path, h.node(), props.uints);
+    CheckNonZero<inspect::DoublePropertyValue, double>(path, h.node(), props.nonzero_doubles);
+    CheckNonZero<inspect::UintPropertyValue, uint64_t>(path, h.node(), props.nonzero_uints);
   }
 
  private:

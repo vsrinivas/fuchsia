@@ -13,7 +13,6 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
@@ -39,9 +38,7 @@ class CapturerShimImpl {
   size_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
   // For validating properties exported by inspect.
-  // By default, there are no expectations.
   size_t inspect_id() const { return inspect_id_; }
-  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
 
  protected:
   CapturerShimImpl(Format format, size_t payload_frame_count)
@@ -58,7 +55,6 @@ class CapturerShimImpl {
 
   fuchsia::media::AudioCapturerPtr capturer_;
   VmoBackedBuffer payload_buffer_;
-  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

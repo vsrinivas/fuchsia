@@ -39,6 +39,7 @@ class AudioAdminTest : public HermeticAudioTest {
   static constexpr int16_t kVirtualInputSampleValue = 0x3333;
 
   void SetUp() override;
+  void TearDown() override;
 
   void SetUpVirtualAudioOutput();
   void SetUpVirtualAudioInput();
@@ -70,9 +71,13 @@ class AudioAdminTest : public HermeticAudioTest {
 //
 void AudioAdminTest::SetUp() {
   HermeticAudioTest::SetUp();
-  FailUponOverflowsOrUnderflows();
   SetUpVirtualAudioOutput();
   SetUpVirtualAudioInput();
+}
+
+void AudioAdminTest::TearDown() {
+  ExpectNoOverflowsOrUnderflows();
+  HermeticAudioTest::TearDown();
 }
 
 // SetUpVirtualAudioOutput

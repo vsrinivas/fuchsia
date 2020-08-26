@@ -19,7 +19,6 @@
 #include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/virtual_device.h"
-#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h"
 
 namespace media::audio::test {
 
@@ -44,10 +43,6 @@ class HermeticAudioTest : public TestFixture {
     FX_CHECK(ptr) << "No Environment; Did you forget to call SetUp?";
     return ptr;
   }
-
-  // Register that the test expects no audio underflows or overflow.
-  // This expectation will be checked by TearDown().
-  void FailUponOverflowsOrUnderflows() { disallow_overflows_and_underflows_ = true; }
 
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -80,6 +75,15 @@ class HermeticAudioTest : public TestFixture {
                                                                  size_t frame_count,
                                                                  bool wait_for_creation = true);
 
+  // Validate inspect metrics.
+  void ExpectInspectMetrics(VirtualOutputImpl* output, const ExpectedInspectProperties& props);
+  void ExpectInspectMetrics(VirtualInputImpl* input, const ExpectedInspectProperties& props);
+  void ExpectInspectMetrics(RendererShimImpl* renderer, const ExpectedInspectProperties& props);
+  void ExpectInspectMetrics(CapturerShimImpl* capturer, const ExpectedInspectProperties& props);
+
+  // Fail the test if there are any overflow or underflows.
+  void ExpectNoOverflowsOrUnderflows();
+
   // Unbind and forget about the given object.
   void Unbind(VirtualOutputImpl* device);
   void Unbind(VirtualInputImpl* device);
@@ -105,8 +109,8 @@ class HermeticAudioTest : public TestFixture {
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
   void OnDefaultDeviceChanged(uint64_t old_default_token, uint64_t new_default_token);
-  void CheckInspectHierarchy(const inspect::Hierarchy& root, const std::vector<std::string>& path,
-                             const ExpectedInspectProperties& expected);
+  void ExpectInspectMetrics(const std::vector<std::string>& path,
+                            const ExpectedInspectProperties& props);
 
   struct DeviceInfo {
     std::unique_ptr<VirtualOutputImpl> output;
@@ -124,8 +128,6 @@ class HermeticAudioTest : public TestFixture {
   std::unique_ptr<HermeticAudioEnvironment> environment_;
   fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
-
-  bool disallow_overflows_and_underflows_ = false;
 };
 
 }  // namespace media::audio::test
