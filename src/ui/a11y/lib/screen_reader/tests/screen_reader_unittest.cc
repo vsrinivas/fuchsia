@@ -125,6 +125,7 @@ TEST_F(ScreenReaderTest, GestureHandlersAreRegisteredIntheRightOrder) {
               ElementsAre(GestureType::kThreeFingerUpSwipe, GestureType::kThreeFingerDownSwipe,
                           GestureType::kThreeFingerLeftSwipe, GestureType::kThreeFingerRightSwipe,
                           GestureType::kOneFingerDownSwipe, GestureType::kOneFingerUpSwipe,
+                          GestureType::kOneFingerLeftSwipe, GestureType::kOneFingerRightSwipe,
                           GestureType::kOneFingerDoubleTap, GestureType::kOneFingerSingleTap,
                           GestureType::kOneFingerDrag, GestureType::kTwoFingerSingleTap));
 }
@@ -142,6 +143,10 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
       GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
   mock_gesture_handler_.TriggerGesture(
       GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerLeftSwipe);  // Corresponds to a physical up.
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerRightSwipe);  // Corresponds to a physical down.
   mock_gesture_handler_.TriggerGesture(GestureType::kOneFingerDoubleTap);
   // Note that since one finger single tap and drag both trigger the explore action, we expect to
   // see it twice in the list of called actions.
@@ -152,8 +157,9 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
       mock_action_registry_ptr_->invoked_actions(),
       ElementsAre(StrEq("Three finger Right Swipe Action"), StrEq("Three finger Left Swipe Action"),
                   StrEq("Three finger Up Swipe Action"), StrEq("Three finger Down Swipe Action"),
-                  StrEq("Next Action"), StrEq("Previous Action"), StrEq("Default Action"),
-                  StrEq("Explore Action"), StrEq("Explore Action")));
+                  StrEq("Next Action"), StrEq("Previous Action"),
+                  StrEq("Previous Semantic Level Action"), StrEq("Next Semantic Level Action"),
+                  StrEq("Default Action"), StrEq("Explore Action"), StrEq("Explore Action")));
 }
 
 TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {

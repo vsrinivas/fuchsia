@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "fuchsia/accessibility/gesture/cpp/fidl.h"
+#include "src/ui/a11y/lib/screen_reader/change_semantic_level_action.h"
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 #include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
@@ -26,6 +27,8 @@ constexpr char kThreeFingerUpSwipeActionLabel[] = "Three finger Up Swipe Action"
 constexpr char kThreeFingerDownSwipeActionLabel[] = "Three finger Down Swipe Action";
 constexpr char kThreeFingerLeftSwipeActionLabel[] = "Three finger Left Swipe Action";
 constexpr char kThreeFingerRightSwipeActionLabel[] = "Three finger Right Swipe Action";
+constexpr char kPreviousSemanticLevelActionLabel[] = "Previous Semantic Level Action";
+constexpr char kNextSemanticLevelActionLabel[] = "Next Semantic Level Action";
 
 }  // namespace
 
@@ -141,6 +144,28 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       GestureHandler::kOneFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
 
+  // Add one finger Left swipe recognizer. This corresponds to a physical one finger Up swipe.
+  gesture_bind_status = gesture_handler->BindSwipeAction(
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        ScreenReaderAction::ActionData action_data;
+        action_data.current_view_koid = viewref_koid;
+        action_data.local_point = point;
+        ExecuteAction(kPreviousSemanticLevelActionLabel, action_data);
+      },
+      GestureHandler::kOneFingerLeftSwipe);
+  FX_DCHECK(gesture_bind_status);
+
+  // Add one finger Right swipe recognizer. This corresponds to a physical one finger Down swipe.
+  gesture_bind_status = gesture_handler->BindSwipeAction(
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        ScreenReaderAction::ActionData action_data;
+        action_data.current_view_koid = viewref_koid;
+        action_data.local_point = point;
+        ExecuteAction(kNextSemanticLevelActionLabel, action_data);
+      },
+      GestureHandler::kOneFingerRightSwipe);
+  FX_DCHECK(gesture_bind_status);
+
   // Add OneFingerDoubleTap recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerDoubleTapAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
@@ -204,6 +229,14 @@ void ScreenReader::InitializeActions() {
   action_registry_->AddAction(kNextActionLabel, std::make_unique<a11y::LinearNavigationAction>(
                                                     action_context_.get(), context_.get(),
                                                     a11y::LinearNavigationAction::kNextAction));
+  action_registry_->AddAction(
+      kNextSemanticLevelActionLabel,
+      std::make_unique<ChangeSemanticLevelAction>(ChangeSemanticLevelAction::Direction::kForward,
+                                                  action_context_.get(), context_.get()));
+  action_registry_->AddAction(
+      kPreviousSemanticLevelActionLabel,
+      std::make_unique<ChangeSemanticLevelAction>(ChangeSemanticLevelAction::Direction::kBackward,
+                                                  action_context_.get(), context_.get()));
 
   action_registry_->AddAction(kThreeFingerUpSwipeActionLabel,
                               std::make_unique<a11y::ThreeFingerSwipeAction>(
