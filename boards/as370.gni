@@ -16,6 +16,7 @@ _common_bootfs_deps = [
   "//src/devices/power/drivers/as370-power",
   "//src/devices/thermal/drivers/as370-thermal",
   "//src/devices/usb/drivers/as370-usb-phy",
+  "//src/devices/usb/drivers/dwc2",
   "//src/media/audio/drivers/as370-pdm-input",
   "//src/media/audio/drivers/as370-tdm-output",
   "//src/media/audio/drivers/codecs/max98373",

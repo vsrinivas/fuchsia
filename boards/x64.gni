@@ -10,6 +10,7 @@ board_name = "x64"
 
 _common_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/realtek-8111",
+  "//src/devices/bin/acpidump",
   "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/mbr",
   "//src/devices/block/drivers/nvme",
@@ -27,6 +28,7 @@ _common_bootfs_deps = [
   "//src/graphics/display/drivers/simple:simple.intel",
   "//src/graphics/display/drivers/simple:simple.nv",
   "//src/graphics/display/drivers/simple:simple.vmware",
+  "//src/media/audio/bin/ihda",
   "//src/media/audio/drivers/alc5514",
   "//src/media/audio/drivers/alc5663",
   "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
@@ -35,6 +37,7 @@ _common_bootfs_deps = [
   "//src/media/audio/drivers/max98927",
   "//src/ui/input/drivers/i2c-hid",
   "//src/ui/input/drivers/pc-ps2",
+  "//zircon/third_party/dev/ethernet/e1000",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 

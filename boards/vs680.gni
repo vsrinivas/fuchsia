@@ -11,6 +11,7 @@ _common_bootfs_deps = [
   "//src/devices/power/drivers/vs680-power",
   "//src/devices/spi/drivers/dw-spi",
   "//src/devices/thermal/drivers/vs680-thermal",
+  "//src/devices/usb/drivers/dwc2",
 ]
 
 board_bootfs_labels += _common_bootfs_deps
