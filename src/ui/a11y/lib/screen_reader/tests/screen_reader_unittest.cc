@@ -87,10 +87,11 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         mock_speaker_ptr_(context_ptr_->mock_speaker_ptr()),
         mock_action_registry_(std::make_unique<MockScreenReaderActionRegistryImpl>()),
         mock_action_registry_ptr_(mock_action_registry_.get()),
-        screen_reader_(std::move(context_), &view_manager_, &gesture_listener_registry_,
-                       std::move(mock_action_registry_)),
+        screen_reader_(std::make_unique<a11y::ScreenReader>(std::move(context_), &view_manager_,
+                                                            &gesture_listener_registry_,
+                                                            std::move(mock_action_registry_))),
         semantic_provider_(&view_manager_) {
-    screen_reader_.BindGestures(&mock_gesture_handler_);
+    screen_reader_->BindGestures(&mock_gesture_handler_);
     gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
 
     semantic_provider_.SetSemanticsEnabled(true);
@@ -113,7 +114,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
   std::unique_ptr<MockScreenReaderActionRegistryImpl> mock_action_registry_;
   MockScreenReaderActionRegistryImpl* mock_action_registry_ptr_;
-  a11y::ScreenReader screen_reader_;
+  std::unique_ptr<a11y::ScreenReader> screen_reader_;
   MockSemanticProvider semantic_provider_;
 };  // namespace
 
@@ -167,6 +168,27 @@ TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {
   // the gesture handler. Verify that the results of the callback are seen when it runs.
   mock_gesture_handler_.TriggerGesture(GestureType::kTwoFingerSingleTap);
   EXPECT_TRUE(mock_speaker_ptr_->ReceivedCancel());
+}
+
+TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
+  // The screen reader object has already been initialized, check if it announced it:
+  EXPECT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->message_ids()[0],
+            fuchsia::intl::l10n::MessageIds ::SCREEN_READER_ON_HINT);
+  // Because the Screen Reader owns the speaker, when it is destroyed, so is the speaker.
+  // This callback makes sure that we have the chance to take a last look at the speaker before it
+  // goes out of scope.
+  bool callback_ran = false;
+  MockScreenReaderContext::MockSpeaker::OnDestructionCallback callback =
+      [&callback_ran](MockScreenReaderContext::MockSpeaker* speaker) {
+        callback_ran = true;
+        EXPECT_EQ(speaker->message_ids().size(), 2u);
+        EXPECT_EQ(speaker->message_ids()[1],
+                  fuchsia::intl::l10n::MessageIds ::SCREEN_READER_OFF_HINT);
+      };
+  mock_speaker_ptr_->set_on_destruction_callback(std::move(callback));
+  screen_reader_.reset();
+  EXPECT_TRUE(callback_ran);
 }
 
 }  // namespace

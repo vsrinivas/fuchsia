@@ -43,7 +43,7 @@ class ScreenReader {
                a11y::GestureListenerRegistry* gesture_listener_registry,
                std::unique_ptr<ScreenReaderActionRegistry> action_registry);
 
-  ~ScreenReader() = default;
+  ~ScreenReader();
 
   void BindGestures(a11y::GestureHandler* gesture_handler);
 
@@ -59,6 +59,9 @@ class ScreenReader {
   // Functions returns false, if no action matches the provided "action_name",
   // returns true if Run() is called.
   bool ExecuteAction(const std::string& action_name, ScreenReaderAction::ActionData action_data);
+
+  // Speaks the message represented by |message_id|.
+  void SpeakMessage(fuchsia::intl::l10n::MessageIds message_id);
 
   // Stores information about the Screen Reader state.
   std::unique_ptr<ScreenReaderContext> context_;

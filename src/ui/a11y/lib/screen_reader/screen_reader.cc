@@ -71,6 +71,11 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
   InitializeActions();
+  SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT);
+}
+
+ScreenReader::~ScreenReader() {
+  SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
 }
 
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
@@ -267,6 +272,13 @@ bool ScreenReader::ExecuteAction(const std::string& action_name,
   }
   action->Run(action_data);
   return true;
+}
+
+void ScreenReader::SpeakMessage(fuchsia::intl::l10n::MessageIds message_id) {
+  auto* speaker = context_->speaker();
+  auto promise =
+      speaker->SpeakMessageByIdPromise(message_id, {.interrupt = true, .save_utterance = false});
+  context_->executor()->schedule_task(std::move(promise));
 }
 
 }  // namespace a11y

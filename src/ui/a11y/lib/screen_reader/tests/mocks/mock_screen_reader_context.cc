@@ -46,4 +46,15 @@ MockScreenReaderContext::MockScreenReaderContext() : ScreenReaderContext() {
   speaker_ = std::move(mock_speaker);
 }
 
+MockScreenReaderContext::MockSpeaker::~MockSpeaker() {
+  if (on_destruction_callback_) {
+    on_destruction_callback_(this);
+  }
+}
+
+void MockScreenReaderContext::MockSpeaker::set_on_destruction_callback(
+    OnDestructionCallback callback) {
+  on_destruction_callback_ = std::move(callback);
+}
+
 }  // namespace accessibility_test
