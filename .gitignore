@@ -96,3 +96,9 @@ json_generator_tests_*.txt
 # fxb/55387, fxb/57231: keep go.sum files in subdirectory but do not commit them
 # for now.
 /*/go.sum
+
+# jiri generate-gitmodules can be used to generate a .gitmodules file that
+# reflects the repos that jiri checked out. This is useful for tooling (like
+# vscode) that is aware of submodules. This generated .gitmodules file
+# shouldn't be tracked in source control.
+/.gitmodules
