@@ -24,6 +24,11 @@ for arg in "$@"; do
   fi
 done
 
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
+
 qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
 args=(
@@ -34,7 +39,8 @@ args=(
 
 # Construction of a qcow image prevents qemu from writing back to the
 # build-produced image file, which could cause timestamp issues with that file.
-# Construction of the new ZBI adds //.ssh/authorized_keys for SSH access.
+# Construction of the new ZBI adds ~/.ssh/fuchsia_authorized_keys for SSH
+# access.
 imgdir="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
 if [[ ! -d "${imgdir}" ]]; then
   echo >&2 "Failed to create temporary directory"
@@ -45,7 +51,7 @@ trap 'rm -rf "$imgdir"' EXIT
 kernelzbi="${imgdir}/fuchsia-ssh.zbi"
 args+=(-z "${kernelzbi}")
 fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
-  --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+  --entry "data/ssh/authorized_keys=${authkeys_path}"
 
 if [ -n "$IMAGE_FVM_FOR_EMU" ]; then
   fvmimg="${imgdir}/fvm.blk"

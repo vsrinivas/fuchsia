@@ -105,7 +105,8 @@ if [[ -n "${port}" ]]; then
   export FUCHSIA_SSH_PORT="${port}"
 fi
 
-export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"
+FUCHSIA_SSH_KEY="$(get-ssh-privkey)" || exit $?
+export FUCHSIA_SSH_KEY
 export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 
 _args=(

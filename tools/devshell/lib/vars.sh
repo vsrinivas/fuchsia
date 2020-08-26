@@ -256,6 +256,68 @@ function _looks_like_ipv6 {
   [[ "${#colons}" -le 7 ]] || return 1
 }
 
+function _print_ssh_warning {
+  fx-warn "Cannot load device SSH credentials. $@"
+  fx-warn "Run 'tools/ssh-keys/gen-ssh-keys.sh' to regenerate."
+}
+
+# Checks if default SSH keys are missing.
+#
+# The argument specifies which line of the manifest to retrieve and verify for
+# existence.
+#
+# "key": The SSH identity file (private key). Append ".pub" for the
+#   corresponding public key.
+# "auth": The authorized_keys file.
+function _get-ssh-key {
+  local -r _SSH_MANIFEST="${FUCHSIA_DIR}/.fx-ssh-path"
+
+  local filepath
+  local -r which="$1"
+  if [[ ! "${which}" =~ ^(key|auth)$ ]]; then
+    fx-error "_get-ssh-key: invalid argument '$1'. Must be either 'key' or 'auth'"
+    exit 1
+  fi
+
+  if [[ ! -f "${_SSH_MANIFEST}" ]]; then
+    _print_ssh_warning "File not found: ${_SSH_MANIFEST}."
+    return 1
+  fi
+
+  { read privkey && read authkey; } < "${_SSH_MANIFEST}"
+
+  if [[ -z $privkey || -z $authkey ]]; then
+    _print_ssh_warning "Manifest file ${_SSH_MANIFEST} is malformed."
+    return 1
+  fi
+
+  if [[ $which == "auth" ]]; then
+    filepath="${authkey}"
+  elif [[ $which == "key" ]]; then
+    filepath="${privkey}"
+  fi
+
+  if [[ ! -f "${filepath}" ]]; then
+    _print_ssh_warning "File not found: ${filepath}."
+    return 1
+  fi
+
+  echo "${filepath}"
+}
+
+# Prints path to the default SSH key. These credentials are created by a
+# jiri hook.
+#
+# The corresponding public key is stored in "$(get-ssh-privkey).pub".
+function get-ssh-privkey {
+  _get-ssh-key key
+}
+
+# Prints path to the default authorized_keys to include on Fuchsia devices.
+function get-ssh-authkeys {
+  _get-ssh-key auth
+}
+
 function is_macos {
   [[ "$(uname -s)" == "Darwin" ]]
 }

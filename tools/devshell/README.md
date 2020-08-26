@@ -261,3 +261,16 @@ have regular tests integrated with the Fuchsia build.
 For example, the `fx test` subcommand is written in Dart and has tests
 defined in its [BUILD.gn](/scripts/fxtest/BUILD.gn) file.
 
+## Default device SSH keys
+
+When you check out the Fuchsia tree, a jiri hook generates a default set of SSH credentials on your machine. These are used to pave Fuchsia devices and to connect to devices during development. You can find these keys stored in your home directory by default:
+
+* SSH private key (identity file): `~/.ssh/fuchsia_ed25519`
+* SSH public key: `~/.ssh/fuchsia_ed25519.pub`
+* List of public keys that allow connection to the Fuchsia device: `~/.ssh/fuchsia_authorized_keys`
+
+These paths are stored in a manifest in the root of your Fuchsia checkout. This file contains the _absolute_ path to the Fuchsia private key and the _absolute_ path to the Fuchsia-specific authorized_keys file, one on each line.
+
+* Manifest: `//.fx-ssh-path`
+
+Previously, these credentials were stored inside the Fuchsia tree as `//.ssh/pkey`, `//.ssh/pkey.pub`, and `//.ssh/authorized_keys`. If SSH credentials are found in both locations and don't match, jiri update will fail. If you find yourself in this situation, remove one of the sets of keys and run jiri run-hooks.

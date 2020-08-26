@@ -6,26 +6,44 @@
 #### CATEGORY=Device management
 ### start a remote interactive shell in the target device
 
-## usage: fx shell [-h|--help] [<command>]
+## usage: fx shell [-h|--help] [--info | <command>]
 ##
 ## Creates an SSH connection with a device and executes a command.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
+##   --info       Show information about SSH keys and the target device and exit.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
+show_only=false
 case $1 in
+  --info)
+    show_only=true
+    shift
+    ;;
   -h|--help)
-  fx-command-help
-  exit 0
-  ;;
+    fx-command-help
+    exit 0
+    ;;
 esac
 
-if [[ ! -f "${FUCHSIA_DIR}/.ssh/pkey" ]]; then
-  fx-warn "Generated SSH key is missing, connections may fail"
-  fx-warn "Remove ${FUCHSIA_DIR}/.ssh/authorized_keys and run jiri run-hooks to regenerate"
+if $show_only; then
+  echo -n "SSH port: "
+  get-device-ssh-port
+  echo -n "SSH device address: "
+  get-fuchsia-device-addr
+  echo -n "SSH private key file: "
+  get-ssh-privkey
+  echo -n "SSH authorized keys file: "
+  get-ssh-authkeys
+
+  exit 0
 fi
+
+get-ssh-privkey > /dev/null
+
+# Warns if key is not available. Result is discarded.
 
 args=()
 device_port="$(get-device-ssh-port)" || exit $?

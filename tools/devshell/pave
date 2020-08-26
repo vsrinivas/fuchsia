@@ -19,7 +19,12 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-auth_keys_args=(--authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "$@")
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
+
+auth_keys_args=(--authorized-keys "${authkeys_path}" "$@")
 if fx-is-bringup; then
   auth_keys_args=()
 fi

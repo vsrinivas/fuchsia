@@ -56,6 +56,11 @@ if [[ ! -x "${netboot_script}" ]]; then
   exit 1
 fi
 
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
+
 tmpdir="${FUCHSIA_BUILD_DIR}.netboot.tmp"
 mkdir "${tmpdir}"
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -71,12 +76,12 @@ cp "${netboot_script}" "${tmpdir}"
 mkdir "${tmpdir}/host_x64"
 cp "${HOST_OUT_DIR}/bootserver" "${tmpdir}/host_x64/bootserver"
 
-# Make a temporary image that adds in the .ssh/authorized_keys file.
+# Make a temporary image that adds in the ~/.ssh/fuchsia_authorized_keys file.
 # Netboot doesn't require special compression. fxb/43305 for more info.
 fx-zbi-default-compression \
   -o "${tmpdir}/${IMAGE_NETBOOT_ZBI}" \
   "${FUCHSIA_BUILD_DIR}/${IMAGE_NETBOOT_ZBI}" \
-  "--entry=data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+  "--entry=data/ssh/authorized_keys=${authkeys_path}"
 
 # Now run the copied script, which will use the temporary ZBI.
 "${tmpdir}/netboot.sh" "${name_args[@]}" -1 "$@"

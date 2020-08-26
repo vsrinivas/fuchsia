@@ -67,6 +67,11 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
+
 if cached=( $(load_remote_info "$host") ); then
   host="${cached[0]}"
   dir="${cached[1]}"
@@ -105,5 +110,5 @@ if "${pave}"; then
     args+=(-n $(get-device-name))
   fi
 
-  ./pave.sh --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "${args[@]}"
+  ./pave.sh --authorized-keys "${authkeys_path}" "${args[@]}"
 fi

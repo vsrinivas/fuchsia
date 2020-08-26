@@ -39,7 +39,7 @@ function usage {
   echo "    Defaults to ${FUCHSIA_BUCKET}."
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
+  echo "    ${HOME}/.ssh/fuchsia_authorized_keys, which is generated if needed."
   echo "  [--private-key <identity file>]"
   echo "    Uses additional private key when using ssh to access the device."
   echo "  [--device-name <device hostname>]"
