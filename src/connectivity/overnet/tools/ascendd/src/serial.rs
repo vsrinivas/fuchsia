@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, Error};
+use anyhow::{bail, format_err, Context as _, Error};
 use async_std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::{stdin, stdout},
 };
 use futures::{
@@ -17,7 +17,7 @@ use serial_link::{
     run::{run, Role},
 };
 use std::{
-    os::unix::io::AsRawFd,
+    os::unix::io::{AsRawFd, FromRawFd},
     pin::Pin,
     sync::Weak,
     task::{Context, Poll},
@@ -34,9 +34,8 @@ use termios::{
 pub async fn run_serial_link_handlers(
     router: Weak<Router>,
     descriptors: &str,
-    output_sink: impl AsyncWrite + Unpin,
+    output_sink: impl AsyncWrite + Unpin + Send,
 ) -> Result<(), Error> {
-    eprintln!("SERIAL DESCRIPTORS: {}", descriptors);
     let output_sink = &Mutex::new(output_sink);
     futures::stream::iter(serial_link::descriptor::parse(&descriptors).await?.into_iter())
         .map(Ok)
@@ -47,13 +46,25 @@ pub async fn run_serial_link_handlers(
                     Descriptor::StdioPipe => {
                         run(Role::Client, stdin(), stdout(), router, OutputSink::new(output_sink))
                             .await
+                            .context("serial-over-stdio")
                     }
                     Descriptor::Device { path, config } => {
-                        let f = File::open(path).await?;
+                        let f = OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .create(false)
+                            .open(&path)
+                            .await?;
                         apply_config(&f, config)?;
-                        let (f_read, f_write) = f.split();
+                        // async-std only allows reads or writes at a given time on an FD,
+                        // but we'll need to do both. dup the fd here and use one for reading,
+                        // and the other for writing.
+                        let f_dup = nix::unistd::dup(f.as_raw_fd())?;
+                        let f_read = unsafe { File::from_raw_fd(f_dup) };
+                        let f_write = f;
                         run(Role::Client, f_read, f_write, router, OutputSink::new(output_sink))
                             .await
+                            .with_context(move || format_err!("serial over {:?}", path))
                     }
                 }
             }

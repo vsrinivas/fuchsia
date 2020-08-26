@@ -151,7 +151,7 @@ async fn run_stream(
     .map(drop)
 }
 
-pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin) -> Result<(), Error> {
+pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
     let Opt { sockpath, serial } = opt;
 
     let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());

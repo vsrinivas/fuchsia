@@ -4,7 +4,8 @@
 
 //! Component that allows access to the kernel's debug serial line
 
-use anyhow::Error;
+use anyhow::{Context as _, Error};
+use fasync::Task;
 use fidl_fuchsia_boot::RootResourceMarker;
 use fidl_fuchsia_hardware_serial::{
     Class, NewDeviceProxy_Request, NewDeviceProxy_RequestStream, NewDeviceRequest,
@@ -22,39 +23,37 @@ enum IncomingService {
     NewDeviceProxy(NewDeviceProxy_RequestStream),
 }
 
-fn write_thread(mut rx: mpsc::Receiver<Vec<u8>>) {
-    fasync::Executor::new().unwrap().run_singlethreaded(async move {
-        while let Some(data) = rx.next().await {
-            if let Err(e) = zx::Status::ok(unsafe { zx_debug_write(data.as_ptr(), data.len()) }) {
-                log::warn!("zx_debug_write failed: {:?}", e);
-                return;
-            }
-            std::thread::sleep(std::time::Duration::from_micros(30 * data.len() as u64));
-        }
-    })
+async fn writer_task(mut rx: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
+    while let Some(data) = rx.next().await {
+        log::trace!("write bytes: {:?}", data);
+        zx::Status::ok(unsafe { zx_debug_write(data.as_ptr(), data.len()) })
+            .context("zx_debug_write failed: check your kernel command line; is kernel.enable-serial-syscalls=true, and kernel.serial=<<whatever is appropriate for your platform>>")?;
+        std::thread::sleep(std::time::Duration::from_micros(30 * data.len() as u64));
+    }
+    Ok(())
 }
 
-fn read_thread(mut tx: mpsc::Sender<Vec<u8>>, root_resource: zx::Resource) {
-    fasync::Executor::new().unwrap().run_singlethreaded(async move {
-        loop {
-            let mut buffer = [0u8; 1024];
-            let mut actual = 0usize;
-            if let Err(e) = zx::Status::ok(unsafe {
-                zx_debug_read(
-                    root_resource.raw_handle(),
-                    buffer.as_mut_ptr(),
-                    buffer.len(),
-                    &mut actual,
-                )
-            }) {
-                log::warn!("zx_debug_read failed: {:?}", e);
-                return;
-            }
-            if let Err(e) = tx.send((&buffer[..actual]).to_vec()).await {
-                log::warn!("failed to send read to channel: {:?}", e);
-            }
+async fn reader_task(
+    mut tx: mpsc::Sender<Vec<u8>>,
+    root_resource: zx::Resource,
+) -> Result<(), Error> {
+    loop {
+        let mut buffer = [0u8; 1024];
+        let mut actual = 0usize;
+        zx::Status::ok(unsafe {
+            zx_debug_read(
+                root_resource.raw_handle(),
+                buffer.as_mut_ptr(),
+                buffer.len(),
+                &mut actual,
+            )
+        })
+        .context("zx_debug_read")?;
+        log::trace!("got bytes: {:?}", &buffer[..actual]);
+        if let Err(e) = tx.send((&buffer[..actual]).to_vec()).await {
+            log::warn!("failed to send read to channel: {:?}", e);
         }
-    })
+    }
 }
 
 #[fasync::run_singlethreaded]
@@ -72,40 +71,43 @@ async fn main() -> Result<(), Error> {
     let (tx_write, rx_write) = mpsc::channel(0);
     let (tx_read, rx_read) = mpsc::channel(0);
 
-    let read_thread = std::thread::spawn(move || read_thread(tx_read, root_resource));
-    let write_thread = std::thread::spawn(move || write_thread(rx_write));
-
     let reader = &Mutex::new(Some(rx_read));
 
-    fs.for_each_concurrent(None, move |requests| {
-        let tx_write = tx_write.clone();
+    let r = future::try_join3(
+        Task::blocking(reader_task(tx_read, root_resource)),
+        Task::blocking(writer_task(rx_write)),
         async move {
-            let IncomingService::NewDeviceProxy(requests) = requests;
-            let r = requests
-                .try_for_each_concurrent(None, move |request| {
+            fs.for_each_concurrent(None, move |IncomingService::NewDeviceProxy(requests)| {
+                let tx_write = tx_write.clone();
+                requests.for_each_concurrent(None, move |request| {
                     let tx_write = tx_write.clone();
                     async move {
-                        if let Some(mut r) = reader.lock().await.take() {
-                            run_safe(request, &mut tx_write.clone(), &mut r).await;
-                            *reader.lock().await = Some(r);
-                        } else {
-                            log::warn!("Failed to acquire root resource (already taken)")
+                        match request {
+                            Ok(request) => {
+                                if let Some(mut r) = reader.lock().await.take() {
+                                    run_safe(request, &mut tx_write.clone(), &mut r).await;
+                                    *reader.lock().await = Some(r);
+                                } else {
+                                    log::warn!("Failed to acquire root resource (already taken)")
+                                }
+                            }
+                            Err(e) => log::warn!("Bad incoming request: {:?}", e),
                         }
-                        Ok(())
                     }
                 })
-                .await;
-            if let Err(e) = r {
-                log::warn!("Request stream failed: {:?}", e);
-            }
-        }
-    })
+            })
+            .await;
+            Ok(())
+        },
+    )
+    .map_ok(drop)
     .await;
 
-    read_thread.join().unwrap();
-    write_thread.join().unwrap();
+    if let Err(e) = &r {
+        log::error!("main loop failed: {:?}", e);
+    }
 
-    Ok(())
+    r
 }
 
 async fn run_safe(
@@ -137,11 +139,11 @@ async fn run(
     requests
         .map_err(Into::into)
         .try_for_each_concurrent(None, |req| async move {
-            log::info!("handle request: {:?}", req);
+            log::trace!("handle request: {:?}", req);
             match req {
                 NewDeviceRequest::Read { responder } => {
                     if let Some(read) = read.lock().await.next().await {
-                        log::info!("got read: {:?}", read);
+                        log::trace!("got read: {:?}", read);
                         responder.send(&mut Ok(read))?;
                     } else {
                         log::info!("no read (read thread done?)");
