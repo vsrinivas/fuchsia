@@ -8,7 +8,7 @@
 
 # Internal template for copying a directory of files and adding
 # the files to the test dependency metadata.
-template("_host_testa_data_impl_data_copy") {
+template("_host_script_test_data_impl_data_copy") {
   copy(target_name) {
     sources = invoker.source_files
     outputs = [ "${invoker.dest_path}/{{source_file_part}}" ]
@@ -29,7 +29,7 @@ template("_host_testa_data_impl_data_copy") {
 #       data - a scope as defined in host_test_data.
 #       data_deps
 #       visibility
-template("host_testa_data_impl_data_set_copy") {
+template("host_script_test_data_impl_data_set_copy") {
   set = invoker.data
   last_dir = "/"
   base_dir = set.target_base_dir
@@ -52,7 +52,7 @@ template("host_testa_data_impl_data_set_copy") {
     # make sure the file is under the source base directory.
     if (last_dir != sub_dir && file_set != []) {
       copy_target_name = "${target_name}_dir${dir_count}"
-      _host_testa_data_impl_data_copy(copy_target_name) {
+      _host_script_test_data_impl_data_copy(copy_target_name) {
         dest_path = "${root_out_dir}/${data_path}/${base_dir}/${last_dir}"
         source_files = file_set
         forward_variables_from(invoker,
@@ -73,7 +73,7 @@ template("host_testa_data_impl_data_set_copy") {
   # write out the last copy
   if (file_set != []) {
     copy_target_name = "${target_name}_dir${dir_count}"
-    _host_testa_data_impl_data_copy(copy_target_name) {
+    _host_script_test_data_impl_data_copy(copy_target_name) {
       dest_path = "${root_out_dir}/${data_path}/${base_dir}/${last_dir}"
       source_files = file_set
       forward_variables_from(invoker,

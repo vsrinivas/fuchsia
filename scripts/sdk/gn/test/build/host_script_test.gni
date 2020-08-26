@@ -5,7 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/test_spec.gni")
-import("//scripts/sdk/gn/test/build/host_test_data_impl.gni")
+import("//scripts/sdk/gn/test/build/host_script_test_data_impl.gni")
 
 # Templates for defining host tests that are based which require
 # many runtime files. The impetus for this is creating a way to
@@ -13,8 +13,8 @@ import("//scripts/sdk/gn/test/build/host_test_data_impl.gni")
 #
 # The two top level templates are:
 #
-# host_test_data
-# host_test_script
+# host_script_test_data
+# host_script_test
 
 # Define a data set for a host test.
 #
@@ -48,7 +48,7 @@ import("//scripts/sdk/gn/test/build/host_test_data_impl.gni")
 #                             as in the source tree.
 #         * files           - The list of source files to copy from soure_base_dir.
 #
-template("host_test_data") {
+template("host_script_test_data") {
   forward_variables_from(invoker,
                          [
                            "data_path",
@@ -66,7 +66,7 @@ template("host_test_data") {
     assert(defined(set.target_base_dir),
            "Error: target_base_dir not found for dataset entry $set")
     assert(defined(set.files), "Error: files not found for dataset entry $set")
-    host_testa_data_impl_data_set_copy("dataset_set$set_count") {
+    host_script_test_data_impl_data_set_copy("dataset_set$set_count") {
       data_path = invoker.data_path
       data = set
     }
@@ -100,7 +100,7 @@ template("host_test_data") {
 #       This must be a part of the path of test_script.
 #
 #   Standard GN parameters: data_deps
-template("host_test_script") {
+template("host_script_test") {
   forward_variables_from(invoker,
                          [
                            "test_script",

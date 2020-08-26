@@ -39,7 +39,7 @@ test_scripts = [
 # directory within the data_path.
 #
 # There are multiple datasets, one for each unique source_base_dir.
-host_test_data("gn_sdk_bash_tests") {
+host_script_test_data("gn_sdk_bash_tests") {
   data_path = "gn_sdk_bash_tests"
   datasets = [
     {
@@ -112,7 +112,7 @@ generated_file("run_all_bash_tests_driver") {
   }
 }
 
-host_test_script("gn_sdk_script_tests") {
+host_script_test("gn_sdk_script_tests") {
   # Script path is relative to $testroot
   test_root = "gn_sdk_bash_tests"
   test_script =

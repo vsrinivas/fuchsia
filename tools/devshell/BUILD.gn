@@ -55,7 +55,7 @@ test_scripts = [
 # directory within the data_path.
 #
 # There are multiple datasets, one for each unique source_base_dir.
-host_test_data("fx_bash_tests") {
+host_script_test_data("fx_bash_tests") {
   data_path = "fx_bash_tests"
   datasets = [
     {
@@ -164,7 +164,7 @@ generated_file("run_fx_bash_tests_driver") {
   }
 }
 
-host_test_script("fx_script_tests") {
+host_script_test("fx_script_tests") {
   # Script path is relative to $testroot
   test_root = "fx_bash_tests"
   test_script = "fx_bash_tests/tools/devshell/run_fx_bash_tests_driver.sh"
