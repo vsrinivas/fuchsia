@@ -51,6 +51,13 @@ source_set("mixer") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/timeline",
   ]
+
+  # Some of these components can see massive slow downs without the benefit of optimizations. The
+  # additional CPU load caused by running these without optimizations enabled can result in audio
+  # glitches on debug builds. This results in adding proper optimizations while maintaining other
+  # aspects of the debug configuration (ex: DCHECK is still enabled).
+  configs -= [ "//build/config:default_optimize" ]
+  configs += [ "//build/config:optimize_speed" ]
 }
 
 group("tests") {
