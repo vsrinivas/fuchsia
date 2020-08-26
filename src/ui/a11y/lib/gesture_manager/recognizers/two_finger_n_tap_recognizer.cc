@@ -40,9 +40,11 @@ TwoFingerNTapRecognizer::~TwoFingerNTapRecognizer() = default;
 void TwoFingerNTapRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_DCHECK(contest_);
-  FX_DCHECK(pointer_event.has_pointer_id()) << "Pointer event is missing pointer id.";
+  FX_DCHECK(pointer_event.has_pointer_id())
+      << DebugName() << ": Pointer event is missing pointer id.";
   const auto pointer_id = pointer_event.pointer_id();
-  FX_DCHECK(pointer_event.has_phase()) << "Pointer event is missing phase information.";
+  FX_DCHECK(pointer_event.has_phase())
+      << DebugName() << ": Pointer event is missing phase information.";
   switch (pointer_event.phase()) {
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       // If we receive a DOWN event when there are already two fingers on the
@@ -82,7 +84,8 @@ void TwoFingerNTapRecognizer::HandleEvent(
         // new_event matches with the previous event.
         if (!StartInfoExist(pointer_event) ||
             !ValidatePointerEvent(start_info_by_finger_.at(pointer_id), pointer_event)) {
-          FX_LOGS(INFO) << "Pointer Event is not a valid pointer event. Dropping current event.";
+          FX_LOGS(INFO) << DebugName()
+                        << ": Pointer Event is not a valid pointer event. Dropping current event.";
           contest_.reset();
           break;
         }
@@ -118,7 +121,7 @@ void TwoFingerNTapRecognizer::HandleEvent(
 
     case fuchsia::ui::input::PointerEventPhase::MOVE:
       FX_DCHECK(contest_->fingers_on_screen.find(pointer_id) != contest_->fingers_on_screen.end())
-          << "Pointer MOVE event received without preceding DOWN event.";
+          << DebugName() << ": Pointer MOVE event received without preceding DOWN event.";
 
       // Validate the pointer_event for the gesture being performed.
       if (!EventIsValid(pointer_event)) {
@@ -128,7 +131,7 @@ void TwoFingerNTapRecognizer::HandleEvent(
 
     case fuchsia::ui::input::PointerEventPhase::UP:
       FX_DCHECK(contest_->fingers_on_screen.find(pointer_id) != contest_->fingers_on_screen.end())
-          << "Pointer UP event received without preceding DOWN event.";
+          << DebugName() << ": Pointer UP event received without preceding DOWN event.";
 
       // Validate pointer_event for the gesture being performed.
       if (!EventIsValid(pointer_event)) {
@@ -183,7 +186,7 @@ void TwoFingerNTapRecognizer::HandleEvent(
 }
 
 void TwoFingerNTapRecognizer::ResetGesture(const std::string& reason) {
-  FX_LOGS(INFO) << reason;
+  FX_LOGS(INFO) << DebugName() << ": " << reason;
   start_info_by_finger_.clear();
   contest_.reset();
 }
@@ -205,7 +208,7 @@ bool TwoFingerNTapRecognizer::EventIsValid(
 }
 bool TwoFingerNTapRecognizer::StartInfoExist(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  FX_DCHECK(pointer_event.has_pointer_id()) << "Pointer event missing pointer id.";
+  FX_DCHECK(pointer_event.has_pointer_id()) << DebugName() << ": Pointer event missing pointer id.";
   const auto pointer_id = pointer_event.pointer_id();
   return start_info_by_finger_.find(pointer_id) != start_info_by_finger_.end();
 }

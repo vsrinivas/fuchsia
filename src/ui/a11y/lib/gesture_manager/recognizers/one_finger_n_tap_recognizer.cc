@@ -38,14 +38,16 @@ OneFingerNTapRecognizer::~OneFingerNTapRecognizer() = default;
 void OneFingerNTapRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_DCHECK(contest_);
-  FX_DCHECK(pointer_event.has_phase()) << "Pointer event is missing phase information.";
+  FX_DCHECK(pointer_event.has_phase())
+      << DebugName() << ": Pointer event is missing phase information.";
   switch (pointer_event.phase()) {
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       // If a tap is already detected, make sure the pointer_id and device_id of the new event,
       // matches with the previous one.
       if (contest_->number_of_taps_detected) {
         if (!ValidatePointerEvent(gesture_start_info_, pointer_event)) {
-          FX_LOGS(INFO) << "Pointer Event is not a valid pointer event. Dropping current event.";
+          FX_LOGS(INFO) << DebugName()
+                        << ": Pointer Event is not a valid pointer event. Dropping current event.";
           contest_.reset();
           break;
         }
@@ -54,7 +56,8 @@ void OneFingerNTapRecognizer::HandleEvent(
       // Check if pointer event has all the required fields and initialize gesture_start_info and
       // gesture_context.
       if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
-        FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
+        FX_LOGS(INFO) << DebugName()
+                      << ": Pointer Event is missing required fields. Dropping current event.";
         contest_.reset();
         break;
       }
@@ -64,7 +67,8 @@ void OneFingerNTapRecognizer::HandleEvent(
       // tap.
       if (contest_->tap_in_progress ||
           !PointerEventIsValidTap(gesture_start_info_, pointer_event)) {
-        FX_LOGS(INFO) << "Pointer Event is not valid for current gesture."
+        FX_LOGS(INFO) << DebugName()
+                      << ": Pointer Event is not valid for current gesture."
                          "Dropping current event.";
         contest_.reset();
         break;
@@ -80,7 +84,7 @@ void OneFingerNTapRecognizer::HandleEvent(
 
     case fuchsia::ui::input::PointerEventPhase::MOVE:
       FX_DCHECK(contest_->tap_in_progress)
-          << "Pointer MOVE event received without preceding DOWN event.";
+          << DebugName() << ": Pointer MOVE event received without preceding DOWN event.";
 
       // Validate the pointer_event for the gesture being performed.
       if (!ValidateEvent(pointer_event)) {
@@ -90,7 +94,7 @@ void OneFingerNTapRecognizer::HandleEvent(
 
     case fuchsia::ui::input::PointerEventPhase::UP:
       FX_DCHECK(contest_->tap_in_progress)
-          << "Pointer Up event received without preceding DOWN event.";
+          << DebugName() << ": Pointer Up event received without preceding DOWN event.";
 
       // Validate pointer_event for the gesture being performed.
       if (!ValidateEvent(pointer_event)) {

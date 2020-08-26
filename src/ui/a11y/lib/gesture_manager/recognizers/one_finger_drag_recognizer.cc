@@ -60,7 +60,7 @@ void OneFingerDragRecognizer::HandleEvent(
 
     case fuchsia::ui::input::PointerEventPhase::MOVE:
       FX_DCHECK(contest_->pointer_count)
-          << "Pointer MOVE event received without preceding DOWN event.";
+          << DebugName() << ": Pointer MOVE event received without preceding DOWN event.";
       if (contest_->pointer_count > 1) {
         // Ignore pointers past the first.
         return;
