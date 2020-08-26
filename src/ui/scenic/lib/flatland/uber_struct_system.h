@@ -60,11 +60,15 @@ class UberStructSystem {
     std::queue<PendingUberStruct> pending_structs_;
   };
 
-  // Allocates a Queue for |session_id| and returns a shared reference to that Queue. When all
-  // external references to the Queue are destroyed, the UberStructSystem will erase all resources
-  // related to that session, including pending UberStructs and the current UberStruct in the
-  // snapshot. This function should only be called once for each |session_id|.
+  // Allocates an UberStructQueue for |session_id| and returns a shared reference to that
+  // UberStructQueue. Callers should call |RemoveSession| when the session associated with that
+  // |session_id| has exited to clean up the allocated resources.
   std::shared_ptr<UberStructQueue> AllocateQueueForSession(scheduling::SessionId session_id);
+
+  // Removes the UberStructQueue and current UberStruct associated with |session_id|. Any
+  // PendingUberStructs pushed into the queue after this call will never be published to the
+  // InstanceMap.
+  void RemoveSession(scheduling::SessionId session_id);
 
   // Commits a new UberStruct to the instance map for each key/value pair in |sessions_to_update|.
   // All pending UberStructs associated each SessionId with lower PresentIds will be discarded.
@@ -81,9 +85,6 @@ class UberStructSystem {
   size_t GetSessionCount();
 
  private:
-  // Cleans up sessions whose Queues have no external references.
-  void CleanupSessions();
-
   // The queue of UberStructs pending for each active session. Flatland instances push UberStructs
   // onto these queues using |UberStructQueue::Push()|. This UberStructSystem removes entries using
   // |UberStructQueue::Pop()|. Both of those operations are threadsafe, but the map itself is only

@@ -196,13 +196,6 @@ class FlatlandTest : public gtest::TestLoopFixture {
   void TearDown() override {
     RunLoopUntilIdle();
 
-    // Trigger cleanup of Flatland sessions.
-    uber_struct_system_->UpdateSessions({});
-
-    auto snapshot = uber_struct_system_->Snapshot();
-    EXPECT_TRUE(snapshot.empty());
-    EXPECT_EQ(uber_struct_system_->GetSessionCount(), 0ul);
-
     auto link_topologies = link_system_->GetResolvedTopologyLinks();
     EXPECT_TRUE(link_topologies.empty());
 

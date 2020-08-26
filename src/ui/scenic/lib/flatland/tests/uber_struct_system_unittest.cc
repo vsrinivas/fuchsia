@@ -104,20 +104,47 @@ TEST(UberStructSystemTest, InstanceIdUniqueness) {
   EXPECT_EQ(handles.size(), kNumThreads * kNumInstanceIds * kNumHandles);
 }
 
-TEST(UberStructSystemTest, QueueDestructionCleansUpSession) {
+TEST(UberStructSystemTest, RemoveSessionCleansUpSession) {
   UberStructSystem system;
 
-  {
-    auto queue = system.AllocateQueueForSession(1);
+  const scheduling::SessionId kSession1 = 1;
+  const scheduling::SessionId kSession2 = 2;
 
-    EXPECT_EQ(system.GetSessionCount(), 1ul);
+  auto queue1 = system.AllocateQueueForSession(kSession1);
+  auto queue2 = system.AllocateQueueForSession(kSession2);
 
-    // |queue| falls out of scope, which triggers session cleanup on the next session update.
-  }
+  EXPECT_EQ(system.GetSessionCount(), 2ul);
 
+  queue1->Push(0, std::make_unique<UberStruct>());
   system.ForceUpdateAllSessions();
 
+  auto snapshot = system.Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+  EXPECT_EQ(snapshot.count(kSession1), 1ul);
+  EXPECT_EQ(snapshot.count(kSession2), 0ul);
+
+  // Queue an UberStruct for kSession2, but don't update sessions.
+  queue2->Push(0, std::make_unique<UberStruct>());
+
+  // Remove kSession2, update sessions, and ensure the UberStruct didn't make it to the
+  // InstanceMap.
+  system.RemoveSession(kSession2);
+  system.ForceUpdateAllSessions();
+
+  EXPECT_EQ(system.GetSessionCount(), 1ul);
+
+  snapshot = system.Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+  EXPECT_EQ(snapshot.count(kSession1), 1ul);
+  EXPECT_EQ(snapshot.count(kSession2), 0ul);
+
+  // Remove kSession1 and ensure the system is empty.
+  system.RemoveSession(kSession1);
+
   EXPECT_EQ(system.GetSessionCount(), 0ul);
+
+  snapshot = system.Snapshot();
+  EXPECT_TRUE(snapshot.empty());
 }
 
 TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {

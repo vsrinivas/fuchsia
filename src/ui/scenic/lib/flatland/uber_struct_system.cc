@@ -25,6 +25,13 @@ std::shared_ptr<UberStructSystem::UberStructQueue> UberStructSystem::AllocateQue
   return queue_kv->second;
 }
 
+void UberStructSystem::RemoveSession(scheduling::SessionId session_id) {
+  FX_DCHECK(pending_structs_queues_.count(session_id));
+
+  pending_structs_queues_.erase(session_id);
+  uber_struct_map_.erase(session_id);
+}
+
 void UberStructSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update) {
   for (const auto& [session_id, present_id] : sessions_to_update) {
@@ -49,8 +56,6 @@ void UberStructSystem::UpdateSessions(
       pending_struct = queue_kv->second->Pop();
     }
   }
-
-  CleanupSessions();
 }
 
 void UberStructSystem::ForceUpdateAllSessions(size_t max_updates_per_queue) {
@@ -67,27 +72,11 @@ void UberStructSystem::ForceUpdateAllSessions(size_t max_updates_per_queue) {
       }
     }
   }
-
-  CleanupSessions();
 }
 
 UberStruct::InstanceMap UberStructSystem::Snapshot() { return uber_struct_map_; }
 
 size_t UberStructSystem::GetSessionCount() { return pending_structs_queues_.size(); }
-
-void UberStructSystem::CleanupSessions() {
-  // Find and cleanup UberStructQueues with no external references, indicated by the shared_ptr
-  // having a use_count() of 1.
-  auto iter = pending_structs_queues_.begin();
-  while (iter != pending_structs_queues_.end()) {
-    if (iter->second.use_count() == 1) {
-      uber_struct_map_.erase(iter->first);
-      iter = pending_structs_queues_.erase(iter);
-    } else {
-      ++iter;
-    }
-  }
-}
 
 // |UberStructSystem::Queue| implementations.
 
