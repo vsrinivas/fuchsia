@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <lib/bootfs/parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
@@ -25,6 +24,8 @@
 #include <lz4/lz4frame.h>
 #include <zbi-bootfs/zbi-bootfs.h>
 #include <zstd/zstd.h>
+
+#include "src/lib/bootfs/parser.h"
 
 namespace zbi_bootfs {
 

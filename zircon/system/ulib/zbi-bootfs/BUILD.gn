@@ -28,10 +28,10 @@ zx_library("zbi-bootfs") {
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
+    "//src/lib/bootfs",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/zstd",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

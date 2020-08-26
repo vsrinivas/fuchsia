@@ -17,7 +17,6 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <lib/bootfs/parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/resource.h>
@@ -32,6 +31,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
+
+#include "src/lib/bootfs/parser.h"
 
 namespace {
 

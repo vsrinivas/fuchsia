@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/bootfs/parser.h>
 #include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -22,7 +22,7 @@
 #include <fs/vfs_types.h>
 #include <launchpad/launchpad.h>
 
-#include "lib/zx/time.h"
+#include "src/lib/bootfs/parser.h"
 #include "util.h"
 
 namespace fio = ::llcpp::fuchsia::io;

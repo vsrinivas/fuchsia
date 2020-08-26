@@ -13,7 +13,6 @@ _migrated_fuzzers = [
   "//src/storage/blobfs/test:zstd-fuzzer",
   "//src/storage/blobfs/test:zstd-seekable-fuzzer",
   "//src/storage/blobfs/test:zstd-seekable-symmetric-fuzzer",
-  "//zircon/system/ulib/bootfs/test:bootfs-parser-fuzzer",
   "//zircon/system/ulib/elfload/test:elfload-fuzzer",
   "//zircon/system/ulib/fs/journal/test:journal-entry-fuzzer",
   "//zircon/system/ulib/fs/journal/test:journal-fuzzer",

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/bootfs/parser.h"
+
 #include <inttypes.h>
-#include <lib/bootfs/parser.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

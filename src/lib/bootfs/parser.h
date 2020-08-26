@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_BOOTFS_PARSER_H_
+#define SRC_LIB_BOOTFS_PARSER_H_
 
 #include <lib/zx/vmo.h>
 #include <stdint.h>
@@ -50,3 +51,5 @@ class Parser {
 };
 
 }  // namespace bootfs
+
+#endif  // SRC_LIB_BOOTFS_PARSER_H_

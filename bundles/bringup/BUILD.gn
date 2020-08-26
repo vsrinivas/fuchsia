@@ -67,7 +67,6 @@ group("tests") {
     "//zircon/system/ulib/backtrace-request/test:backtrace-request-integration-bootfs-test",
     "//zircon/system/ulib/bitmap/test:bitmap-bootfs-test",
     "//zircon/system/ulib/block-client/test:block-client-unit-bootfs-test",
-    "//zircon/system/ulib/bootfs/test:bootfs-test-bootfs-test",
     "//zircon/system/ulib/c/test:atexit-bootfs-test",
     "//zircon/system/ulib/c/test:debugdata-bootfs-test",
     "//zircon/system/ulib/c/test:posix-clocks-bootfs-test",

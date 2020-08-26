@@ -1,4 +1,4 @@
-Rust implementation of zircon/system/ulib/bootfs/parser.cpp
+Rust implementation of //src/lib/bootfs
 ==============================================================
 
 This repository contains generated bindings for a portion of the Zircon bootfs library and bootfs.h
