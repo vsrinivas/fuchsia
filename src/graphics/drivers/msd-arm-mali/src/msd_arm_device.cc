@@ -238,7 +238,7 @@ bool MsdArmDevice::InitializeHardware() {
 }
 
 std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id) {
-  auto connection = MsdArmConnection::Create(client_id, this, use_status2_);
+  auto connection = MsdArmConnection::Create(client_id, this);
   if (connection) {
     std::lock_guard<std::mutex> lock(connection_list_mutex_);
     connection_list_.push_back(connection);
@@ -1218,7 +1218,6 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
       return MAGMA_STATUS_OK;
 
     case kMsdArmVendorQueryTodoRemoveFxb47016:
-      use_status2_ = true;
       *value_out = 0;
       return MAGMA_STATUS_OK;
 

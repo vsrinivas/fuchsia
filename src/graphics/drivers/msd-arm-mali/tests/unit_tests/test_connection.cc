@@ -71,7 +71,7 @@ class DeregisterConnectionOwner : public FakeConnectionOwner {
 
 void* g_test_token;
 uint32_t g_test_data_size;
-magma_arm_mali_status2 g_status;
+magma_arm_mali_status g_status;
 
 void TestCallback(void* token, msd_notification_t* notification) {
   g_test_token = token;
@@ -307,7 +307,7 @@ class TestConnection {
 
   void Notification() {
     FakeConnectionOwner owner;
-    auto connection = MsdArmConnection::Create(0, &owner, true);
+    auto connection = MsdArmConnection::Create(0, &owner);
     EXPECT_TRUE(connection);
     MsdArmAtom atom(connection, 0, 1, 5, magma_arm_mali_user_data{7, 8}, 0);
 
@@ -333,7 +333,7 @@ class TestConnection {
 
   void DestructionNotification() {
     FakeConnectionOwner owner;
-    auto connection = MsdArmConnection::Create(0, &owner, true);
+    auto connection = MsdArmConnection::Create(0, &owner);
     EXPECT_TRUE(connection);
 
     uint32_t token;

@@ -254,8 +254,6 @@ class MsdArmDevice : public msd_device_t,
   std::mutex connection_list_mutex_;
   MAGMA_GUARDED(connection_list_mutex_)
   std::vector<std::weak_ptr<MsdArmConnection>> connection_list_;
-
-  bool use_status2_ = false;
 };
 
 #endif  // MSD_ARM_DEVICE_H

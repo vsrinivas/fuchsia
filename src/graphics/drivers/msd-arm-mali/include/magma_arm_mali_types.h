@@ -129,14 +129,7 @@ struct magma_arm_mali_atom {
   magma_arm_mali_dependency dependencies[2];
 } __attribute__((packed));
 
-// TODO(fxb/47016) remove
 struct magma_arm_mali_status {
-  uint32_t result_code;
-  uint8_t atom_number;
-  magma_arm_mali_user_data data;
-} __attribute__((packed));
-
-struct magma_arm_mali_status2 {
   magma_arm_mali_user_data data;
   uint32_t result_code;
   uint8_t atom_number;
