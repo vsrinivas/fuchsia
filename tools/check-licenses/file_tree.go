@@ -31,6 +31,15 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 						return filepath.SkipDir
 					}
 				}
+
+				for _, customProjectLicense := range config.CustomProjectLicenses {
+					if path == customProjectLicense.ProjectRoot {
+						metrics.increment("num_single_license_files")
+						file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
+						return nil
+					}
+				}
+
 				return nil
 			} else {
 				for _, skipFile := range config.SkipFiles {
@@ -42,7 +51,7 @@ func NewFileTree(config *Config, metrics *Metrics) *FileTree {
 			}
 			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
 				metrics.increment("num_single_license_files")
-				file_tree.addSingleLicenseFile(path)
+				file_tree.addSingleLicenseFile(path, filepath.Base(path))
 			} else {
 				if isValidExtension(path, config) {
 					metrics.increment("num_non_single_license_files")
@@ -95,9 +104,9 @@ func (file_tree *FileTree) addFile(path string) {
 	curr.files = append(curr.files, filepath.Base(path))
 }
 
-func (file_tree *FileTree) addSingleLicenseFile(path string) {
+func (file_tree *FileTree) addSingleLicenseFile(path string, base string) {
 	curr := file_tree.getSetCurr(path)
-	curr.singleLicenseFiles[filepath.Base(path)] = []*License{}
+	curr.singleLicenseFiles[base] = []*License{}
 }
 
 func (file_tree *FileTree) getProjectLicense(path string) *FileTree {

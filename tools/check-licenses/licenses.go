@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -54,8 +55,11 @@ func (licenses *Licenses) Init(root string) error {
 			return err
 		}
 		str := string(bytes)
+		// Update regex to ignore multiple white spaces, newlines, comments.
+		updatedRegex := strings.ReplaceAll(str, "\n", `[\s\\#\*]*`)
+		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*]*`)
 		licenses.add(&License{
-			pattern:  regexp.MustCompile(str),
+			pattern:  regexp.MustCompile(updatedRegex),
 			category: info.Name(),
 		})
 		return nil

@@ -10,23 +10,29 @@ import (
 	"os"
 )
 
+type CustomProjectLicense struct {
+	ProjectRoot     string
+	LicenseLocation string
+}
+
 // Config values are populated from the the json file at the default or user-specified path
 type Config struct {
-	FilesRegex          []string `json:"filesRegex,omitempty"`
-	SkipDirs            []string `json:"skipDirs"`
-	SkipFiles           []string `json:"skipFiles"`
-	TextExtensionList   []string `json:"textExtensionList"`
-	MaxReadSize         int      `json:"maxReadSize"`
-	SeparatorWidth      int      `json:"separatorWidth"`
-	OutputFilePrefix    string   `json:"outputFilePrefix"`
-	OutputFileExtension string   `json:"outputFileExtension"`
-	Product             string   `json:"product"`
-	SingleLicenseFiles  []string `json:"singleLicenseFiles"`
-	LicensePatternDir   string   `json:"licensePatternDir"`
-	BaseDir             string   `json:"baseDir"`
-	Target              string   `json:"target"`
-	LogLevel            string   `json:"logLevel"`
-	TextExtensions      map[string]struct{}
+	FilesRegex            []string               `json:"filesRegex,omitempty"`
+	SkipDirs              []string               `json:"skipDirs"`
+	SkipFiles             []string               `json:"skipFiles"`
+	TextExtensionList     []string               `json:"textExtensionList"`
+	MaxReadSize           int                    `json:"maxReadSize"`
+	SeparatorWidth        int                    `json:"separatorWidth"`
+	OutputFilePrefix      string                 `json:"outputFilePrefix"`
+	OutputFileExtension   string                 `json:"outputFileExtension"`
+	Product               string                 `json:"product"`
+	SingleLicenseFiles    []string               `json:"singleLicenseFiles"`
+	LicensePatternDir     string                 `json:"licensePatternDir"`
+	CustomProjectLicenses []CustomProjectLicense `json:"CustomProjectLicenses"`
+	BaseDir               string                 `json:"baseDir"`
+	Target                string                 `json:"target"`
+	LogLevel              string                 `json:"logLevel"`
+	TextExtensions        map[string]struct{}
 }
 
 // Init populates Config object with values found in the json config file

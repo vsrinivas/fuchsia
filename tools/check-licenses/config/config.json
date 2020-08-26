@@ -41,12 +41,21 @@
   "outputFileExtension": "html.gz",
   "product": "astro",
   "singleLicenseFiles": [
-    "LICENSE",
-    "License",
-    "README",
-    "NOTICE",
+    "license",
+    "readme",
+    "notice",
     "copying",
-    "COPYING"
+    "copyright"
+  ],
+  "customProjectLicenses" : [
+    {
+      "projectRoot": "prebuilt/third_party/rust/linux-x64",
+      "licenseLocation": "share/doc/rust/COPYRIGHT"
+    },
+    {
+      "projectRoot": "prebuilt/third_party/cmake/linux-x64",
+      "licenseLocation": "doc/cmake-3.10/Copyright.txt"
+    }
   ],
   "goldenLicenses": "golden",
   "licensePatternDir": "tools/check-licenses/golden/patterns",

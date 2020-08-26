@@ -1,0 +1,13 @@
+(?i)\s*(Copyright \(C\) [\d]{4}-[\d]{4} Free Software Foundation, Inc\.)?
+\s*This file is part of GCC\.
+\s*GCC is free software; you can redistribute it and\/or modify it under
+\s*the terms of the GNU General Public License as published by the Free
+\s*Software Foundation; either version 3, or \(at your option\) any later
+\s*version\.
+\s*GCC is distributed in the hope that it will be useful, but WITHOUT ANY
+\s*WARRANTY; without even the implied warranty of MERCHANTABILITY or
+\s*FITNESS FOR A PARTICULAR PURPOSE\. \s*See the GNU General Public License
+\s*for more details\.
+\s*You should have received a copy of the GNU General Public License
+\s*along with GCC; see the file COPYING3. \s*If not see
+<http:\/\/www.gnu.org\/licenses\/>.\s*\*\/
