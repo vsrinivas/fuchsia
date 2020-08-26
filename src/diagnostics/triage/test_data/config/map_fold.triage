@@ -13,8 +13,8 @@
         // "Missing" always causes "Missing"
         basics_ok4: "Missing(missing == missing)",
 
-        // A vector containing Missing isn't Missing
-        basics_ok5: "Not(Missing( [missing] ))",
+        // A vector containing Missing is Missing (returned when a selector can't match its moniker)
+        basics_ok5: "Missing( [missing] )",
         basics_ok: "And(basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5)",
         double: "Fn([a], a * 2)",
         map_ok1: "Map(double, [1, 2, 3]) == [2, 4, 6]",

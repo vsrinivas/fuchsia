@@ -486,7 +486,6 @@ pub enum Expression {
     // TODO(cphoenix): Check on load that all operators have a legal number of operands.
     Function(Function, Vec<Expression>),
     Vector(Vec<Expression>),
-    IsMissing(Vec<Expression>),
     Metric(String),
     Value(MetricValue),
 }
@@ -706,10 +705,6 @@ impl<'a> MetricState<'a> {
                 Expression::Vector(expressions) => {
                     Expression::Vector(substitute_all(expressions, bindings))
                 }
-                // TODO(cphoenix): IsMissing belongs in the Function's, not in Expression.
-                Expression::IsMissing(expressions) => {
-                    Expression::IsMissing(substitute_all(expressions, bindings))
-                }
                 Expression::Metric(name) => match bindings.get(name) {
                     None => Expression::Metric(name.to_string()),
                     Some(value) => Expression::Value(value.clone().clone()),
@@ -866,7 +861,6 @@ impl<'a> MetricState<'a> {
     fn evaluate(&self, namespace: &str, e: &Expression) -> MetricValue {
         match e {
             Expression::Function(f, operands) => self.evaluate_function(namespace, f, operands),
-            Expression::IsMissing(operands) => self.is_missing(namespace, operands),
             Expression::Metric(name) => self.metric_value_by_name(namespace, name),
             Expression::Value(value) => value.clone(),
             Expression::Vector(values) => {
@@ -1101,10 +1095,16 @@ impl<'a> MetricState<'a> {
         if operands.len() != 1 {
             return MetricValue::Missing(format!("Bad operand"));
         }
-        match self.evaluate(namespace, &operands[0]) {
-            MetricValue::Missing(_) => MetricValue::Bool(true),
-            _ => MetricValue::Bool(false),
-        }
+        MetricValue::Bool(match self.evaluate(namespace, &operands[0]) {
+            MetricValue::Missing(_) => true,
+            // TODO(58922): Well-designed errors and special cases, not hacks
+            MetricValue::Vector(contents) if contents.len() == 0 => true,
+            MetricValue::Vector(contents) if contents.len() == 1 => match contents[0] {
+                MetricValue::Missing(_) => true,
+                _ => false,
+            },
+            _ => false,
+        })
     }
 }
 
@@ -1704,6 +1704,23 @@ pub(crate) mod test {
             diagnostic_array,
             vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
         );
+    }
+
+    // TODO(58922): Modify or probably delete this function after better error design.
+    #[test]
+    fn test_missing_hacks() -> Result<(), Error> {
+        macro_rules! eval {
+            ($e:expr) => {
+                MetricState::evaluate_math(&config::parse::parse_expression($e)?)
+            };
+        }
+        assert_eq!(eval!("Missing(2>'a')"), MetricValue::Bool(true));
+        assert_eq!(eval!("Missing([])"), MetricValue::Bool(true));
+        assert_eq!(eval!("Missing([2>'a'])"), MetricValue::Bool(true));
+        assert_eq!(eval!("Missing([2>'a', 2>'a'])"), MetricValue::Bool(false));
+        assert_eq!(eval!("Missing([2>1])"), MetricValue::Bool(false));
+        assert_eq!(eval!("Or(Missing(2>'a'), 2>'a')"), MetricValue::Bool(true));
+        Ok(())
     }
 
     // Correct operation of annotations is tested via annotation_tests.triage.
