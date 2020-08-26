@@ -47,8 +47,8 @@ group("tools") {
     "//src/sys/tools/cs",
     "//src/sys/tools/log",
     "//src/sys/tools/runmany",
-    "//src/ui/tools/tiles_ctl",
     "//src/ui/tools:scenic",
+    "//src/ui/tools/tiles_ctl",
     "//third_party/boringssl:boringssl_tool",
     "//third_party/curl",
     "//third_party/iperf",
@@ -73,6 +73,7 @@ group("tests") {
     "//garnet/packages/tests:all",
     "//scripts:tests",
     "//src:tests",
+    "//third_party/go:tests",
     "//tools:tests",
     "//topaz:tests",
   ]

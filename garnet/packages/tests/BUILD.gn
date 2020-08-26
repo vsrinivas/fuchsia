@@ -165,7 +165,6 @@ group("all") {
     "//src/virtualization/tests",
     "//third_party/boringssl:boringssl_fuzzers",
     "//third_party/boringssl:boringssl_tests",
-    "//third_party/go:go_stdlib_tests",
     "//third_party/libc-tests:nacl-libc-tests",
     "//tools/whereiscl:whereiscl_test($host_toolchain)",
   ]
