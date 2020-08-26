@@ -69,7 +69,10 @@ dart_tool("fuchsia_asset_builder") {
 
   disable_analysis = true
 
-  deps = [ ":flutter_tools" ]
+  deps = [
+    ":flutter_tools",
+    "//third_party/dart-pkg/pub/args",
+  ]
 }
 
 dart_tool("fuchsia_tester") {
