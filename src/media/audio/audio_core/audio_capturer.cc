@@ -137,8 +137,6 @@ void AudioCapturer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
     return;
   }
 
-  reporter().SetStreamType(stream_type);
-
   // Success, record our new format.
   UpdateFormat(format_result.take_value());
 
@@ -191,8 +189,7 @@ fuchsia::media::Usage AudioCapturer::GetStreamUsage() const {
 
 void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
   if (volume_command.ramp.has_value()) {
-    FX_LOGS(WARNING)
-        << "Capturer gain ramping is not implemented";
+    FX_LOGS(WARNING) << "Capturer gain ramping is not implemented";
   }
 
   context().link_matrix().ForEachSourceLink(

@@ -39,6 +39,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::In
   FX_DCHECK(create_result.is_ok());
 
   format_ = {create_result.take_value()};
+  reporter().SetFormat(*format_);
   create_callback_(std::move(reference_clock_out), format_->stream_type());
   create_callback_ = nullptr;
   return BaseRenderer::InitializeDestLink(dest);

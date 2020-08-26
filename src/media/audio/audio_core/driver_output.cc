@@ -345,8 +345,6 @@ void DriverOutput::OnDriverInfoFetched() {
     ShutdownSelf();
   });
 
-  reporter().SetDriverName(driver()->manufacturer_name() + ' ' + driver()->product_name());
-
   if (state_ != State::FetchingFormats) {
     FX_LOGS(ERROR) << "Unexpected GetFormatsComplete while in state "
                    << static_cast<uint32_t>(state_);
@@ -379,7 +377,6 @@ void DriverOutput::OnDriverInfoFetched() {
     return;
   }
 
-  // TODO(mpuryear): Save to the hub the configured format for this output.
   auto format_result = Format::Create(fuchsia::media::AudioStreamType{
       .sample_format = pref_fmt,
       .channels = pref_chan,
@@ -510,6 +507,8 @@ void DriverOutput::OnDriverStartComplete() {
     FX_LOGS(ERROR) << "Unexpected StartComplete while in state " << static_cast<uint32_t>(state_);
     return;
   }
+
+  reporter().SetDriverInfo(*driver());
 
   // Set up the mix task in the AudioOutput.
   //

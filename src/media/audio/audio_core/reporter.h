@@ -15,8 +15,11 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
+
+class AudioDriver;
 
 // A singleton instance of |Reporter| handles instrumentation concerns (e.g.
 // exposing information via inspect, cobalt, etc) for an audio_core instance.
@@ -60,7 +63,7 @@ class Reporter {
     virtual void StartSession(zx::time start_time) = 0;
     virtual void StopSession(zx::time stop_time) = 0;
 
-    virtual void SetDriverName(const std::string& driver_name) = 0;
+    virtual void SetDriverInfo(const AudioDriver& driver) = 0;
     virtual void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                              fuchsia::media::AudioGainValidFlags set_flags) = 0;
   };
@@ -81,7 +84,7 @@ class Reporter {
     virtual void StopSession(zx::time stop_time) = 0;
 
     virtual void SetUsage(RenderUsage usage) = 0;
-    virtual void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) = 0;
+    virtual void SetFormat(const Format& format) = 0;
     virtual void SetGain(float gain_db) = 0;
     virtual void SetGainWithRamp(float gain_db, zx::duration duration,
                                  fuchsia::media::audio::RampType ramp_type) = 0;
@@ -104,7 +107,7 @@ class Reporter {
     virtual void StopSession(zx::time stop_time) = 0;
 
     virtual void SetUsage(CaptureUsage usage) = 0;
-    virtual void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) = 0;
+    virtual void SetFormat(const Format& format) = 0;
     virtual void SetGain(float gain_db) = 0;
     virtual void SetGainWithRamp(float gain_db, zx::duration duration,
                                  fuchsia::media::audio::RampType ramp_type) = 0;

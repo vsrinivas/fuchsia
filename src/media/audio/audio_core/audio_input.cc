@@ -87,7 +87,6 @@ void AudioInput::OnWakeup() {
 void AudioInput::OnDriverInfoFetched() {
   TRACE_DURATION("audio", "AudioInput::OnDriverInfoFetched");
   state_ = State::Idle;
-  reporter_->SetDriverName(driver()->manufacturer_name() + ' ' + driver()->product_name());
 
   auto profile = config().input_device_profile(driver()->persistent_unique_id());
   uint32_t pref_fps = profile.rate();
@@ -127,8 +126,6 @@ void AudioInput::OnDriverInfoFetched() {
     return;
   }
 
-  // TODO(mpuryear): Save to the hub the configured format for this input.
-
   // Send config request; recompute distance between start|end sampling fences.
   driver()->Configure(selected_format, kMaxFenceDistance);
 
@@ -147,6 +144,8 @@ void AudioInput::OnDriverStartComplete() {
   if (!driver()->plugged()) {
     driver()->Stop();
   }
+
+  reporter_->SetDriverInfo(*driver());
 }
 
 void AudioInput::OnDriverStopComplete() {

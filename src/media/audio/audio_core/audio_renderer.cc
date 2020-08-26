@@ -109,7 +109,7 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   }
   format_ = {format_result.take_value()};
 
-  reporter().SetStreamType(stream_type);
+  reporter().SetFormat(*format_);
 
   context().route_graph().SetRendererRoutingProfile(
       *this, {.routable = true, .usage = StreamUsage::WithRenderUsage(usage_)});

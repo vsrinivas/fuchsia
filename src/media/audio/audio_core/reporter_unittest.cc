@@ -168,33 +168,42 @@ TEST_F(ReporterTest, DeviceMetrics) {
       GetHierarchy(),
       ChildrenMatch(UnorderedElementsAre(
           AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(
-                    AllOf(ChildrenMatch(UnorderedElementsAre(
-                              NodeMatches(AllOf(NameMatches("device underflows"),
-                                                PropertyList(UnorderedElementsAre(
-                                                    UintIs("count", 0), UintIs("duration (ns)", 0),
-                                                    UintIs("session count", 0))))),
-                              NodeMatches(AllOf(NameMatches("pipeline underflows"),
-                                                PropertyList(UnorderedElementsAre(
-                                                    UintIs("count", 0), UintIs("duration (ns)", 0),
-                                                    UintIs("session count", 0))))))),
-                          NodeMatches(AllOf(
-                              NameMatches("output_device"),
-                              PropertyList(UnorderedElementsAre(
-                                  StringIs("driver name", "unknown"), DoubleIs("gain db", 0.0),
-                                  BoolIs("muted", false), BoolIs("agc supported", false),
-                                  BoolIs("agc enabled", false))))))))),
+                ChildrenMatch(UnorderedElementsAre(AllOf(
+                    ChildrenMatch(UnorderedElementsAre(
+                        NodeMatches(AllOf(
+                            NameMatches("driver"),
+                            PropertyList(UnorderedElementsAre(
+                                UintIs("external delay (ns)", 0),
+                                UintIs("external delay + fifo delay (ns)", 0),
+                                UintIs("fifo delay (ns)", 0), UintIs("fifo depth in frames", 0),
+                                StringIs("name", "unknown"))))),
+                        NodeMatches(AllOf(
+                            NameMatches("format"),
+                            PropertyList(UnorderedElementsAre(StringIs("sample format", "unknown"),
+                                                              UintIs("channels", 0),
+                                                              UintIs("frames per second", 0))))),
+                        NodeMatches(AllOf(NameMatches("device underflows"),
+                                          PropertyList(UnorderedElementsAre(
+                                              UintIs("count", 0), UintIs("duration (ns)", 0),
+                                              UintIs("session count", 0))))),
+                        NodeMatches(AllOf(NameMatches("pipeline underflows"),
+                                          PropertyList(UnorderedElementsAre(
+                                              UintIs("count", 0), UintIs("duration (ns)", 0),
+                                              UintIs("session count", 0))))))),
+                    NodeMatches(AllOf(
+                        NameMatches("output_device"),
+                        PropertyList(UnorderedElementsAre(
+                            DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                            BoolIs("agc supported", false), BoolIs("agc enabled", false))))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(
                     AllOf(NameMatches("input_device"),
                           PropertyList(UnorderedElementsAre(
-                              StringIs("driver name", "unknown"), DoubleIs("gain db", 0.0),
-                              BoolIs("muted", false), BoolIs("agc supported", false),
-                              BoolIs("agc enabled", false)))))))),
+                              DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                              BoolIs("agc supported", false), BoolIs("agc enabled", false)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
-  output_device->SetDriverName("The Driver");
   output_device->StartSession(zx::time(0));
   output_device->DeviceUnderflow(zx::time(10), zx::time(15));
   output_device->DeviceUnderflow(zx::time(25), zx::time(30));
@@ -208,21 +217,16 @@ TEST_F(ReporterTest, DeviceMetrics) {
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("output devices")),
-          ChildrenMatch(UnorderedElementsAre(AllOf(
-              ChildrenMatch(UnorderedElementsAre(
-                  NodeMatches(AllOf(NameMatches("device underflows"),
-                                    PropertyList(UnorderedElementsAre(
-                                        UintIs("count", 3), UintIs("duration (ns)", 11),
-                                        UintIs("session count", 2))))),
-                  NodeMatches(AllOf(NameMatches("pipeline underflows"),
-                                    PropertyList(UnorderedElementsAre(
-                                        UintIs("count", 1), UintIs("duration (ns)", 3),
-                                        UintIs("session count", 2))))))),
-              NodeMatches(AllOf(NameMatches("output_device"),
-                                PropertyList(UnorderedElementsAre(
-                                    StringIs("driver name", "The Driver"), DoubleIs("gain db", 0.0),
-                                    BoolIs("muted", false), BoolIs("agc supported", false),
-                                    BoolIs("agc enabled", false))))))))))));
+          ChildrenMatch(Contains(ChildrenMatch(IsSupersetOf({
+              NodeMatches(AllOf(
+                  NameMatches("device underflows"),
+                  PropertyList(UnorderedElementsAre(UintIs("count", 3), UintIs("duration (ns)", 11),
+                                                    UintIs("session count", 2))))),
+              NodeMatches(AllOf(
+                  NameMatches("pipeline underflows"),
+                  PropertyList(UnorderedElementsAre(UintIs("count", 1), UintIs("duration (ns)", 3),
+                                                    UintIs("session count", 2))))),
+          }))))))));
 }
 
 // Tests method Device::SetGainInfo.
@@ -384,23 +388,28 @@ TEST_F(ReporterTest, RendererMetrics) {
                                     PropertyList(UnorderedElementsAre(
                                         UintIs("count", 0), UintIs("duration (ns)", 0),
                                         UintIs("session count", 0))))),
+                  NodeMatches(AllOf(NameMatches("format"),
+                                    PropertyList(UnorderedElementsAre(
+                                        StringIs("sample format", "unknown"), UintIs("channels", 0),
+                                        UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(AllOf(NameMatches("1"),
-                                PropertyList(UnorderedElementsAre(
-                                    UintIs("sample format", 0), UintIs("channels", 0),
-                                    UintIs("frames per second", 0), DoubleIs("gain db", 0.0),
-                                    BoolIs("muted", false), UintIs("calls to SetGainWithRamp", 0),
-                                    UintIs("min lead time (ns)", 0),
-                                    DoubleIs("pts continuity threshold (s)", 0.0),
-                                    DoubleIs("final stream gain (post-volume) dbfs", 0),
-                                    StringIs("usage", "default"))))))))))));
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(UnorderedElementsAre(
+                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                      UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
+                      DoubleIs("pts continuity threshold (s)", 0.0),
+                      DoubleIs("final stream gain (post-volume) dbfs", 0),
+                      StringIs("usage", "default"))))))))))));
 
-  fuchsia::media::AudioStreamType stream_type{
-      .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
-      .channels = 2,
-      .frames_per_second = 48000};
   renderer->SetUsage(RenderUsage::MEDIA);
-  renderer->SetStreamType(stream_type);
+  renderer->SetFormat(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value());
   renderer->AddPayloadBuffer(0, 4096);
   renderer->AddPayloadBuffer(10, 8192);
   renderer->SendPacket(fuchsia::media::StreamPacket{
@@ -428,6 +437,11 @@ TEST_F(ReporterTest, RendererMetrics) {
                                     PropertyList(UnorderedElementsAre(
                                         UintIs("count", 1), UintIs("duration (ns)", 5),
                                         UintIs("session count", 1))))),
+                  NodeMatches(AllOf(
+                      NameMatches("format"),
+                      PropertyList(UnorderedElementsAre(StringIs("sample format", "SIGNED_16"),
+                                                        UintIs("channels", 2),
+                                                        UintIs("frames per second", 48000))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")),
                         ChildrenMatch(UnorderedElementsAre(
                             NodeMatches(AllOf(NameMatches("0"),
@@ -439,9 +453,6 @@ TEST_F(ReporterTest, RendererMetrics) {
               NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(UnorderedElementsAre(
-                      UintIs("sample format", static_cast<uint64_t>(stream_type.sample_format)),
-                      UintIs("channels", stream_type.channels),
-                      UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), BoolIs("muted", true),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0),
@@ -463,21 +474,26 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                     PropertyList(UnorderedElementsAre(
                                         UintIs("count", 0), UintIs("duration (ns)", 0),
                                         UintIs("session count", 0))))),
+                  NodeMatches(AllOf(NameMatches("format"),
+                                    PropertyList(UnorderedElementsAre(
+                                        StringIs("sample format", "unknown"), UintIs("channels", 0),
+                                        UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(AllOf(NameMatches("1"),
-                                PropertyList(UnorderedElementsAre(
-                                    UintIs("sample format", 0), UintIs("channels", 0),
-                                    UintIs("frames per second", 0), DoubleIs("gain db", 0.0),
-                                    BoolIs("muted", false), UintIs("min fence time (ns)", 0),
-                                    UintIs("calls to SetGainWithRamp", 0),
-                                    StringIs("usage", "default"))))))))))));
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(UnorderedElementsAre(
+                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                      UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
+                      StringIs("usage", "default"))))))))))));
 
-  fuchsia::media::AudioStreamType stream_type{
-      .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
-      .channels = 2,
-      .frames_per_second = 48000};
   capturer->SetUsage(CaptureUsage::FOREGROUND);
-  capturer->SetStreamType(stream_type);
+  capturer->SetFormat(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value());
   capturer->AddPayloadBuffer(0, 4096);
   capturer->AddPayloadBuffer(10, 8192);
   capturer->SendPacket(fuchsia::media::StreamPacket{
@@ -499,6 +515,11 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                     PropertyList(UnorderedElementsAre(
                                         UintIs("count", 0), UintIs("duration (ns)", 0),
                                         UintIs("session count", 0))))),
+                  NodeMatches(AllOf(
+                      NameMatches("format"),
+                      PropertyList(UnorderedElementsAre(StringIs("sample format", "SIGNED_16"),
+                                                        UintIs("channels", 2),
+                                                        UintIs("frames per second", 48000))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")),
                         ChildrenMatch(UnorderedElementsAre(
                             NodeMatches(AllOf(NameMatches("0"),
@@ -507,16 +528,12 @@ TEST_F(ReporterTest, CapturerMetrics) {
                             NodeMatches(AllOf(NameMatches("10"), PropertyList(UnorderedElementsAre(
                                                                      UintIs("size", 8192),
                                                                      UintIs("packets", 1)))))))))),
-              NodeMatches(AllOf(
-                  NameMatches("1"),
-                  PropertyList(UnorderedElementsAre(
-                      UintIs("sample format", static_cast<uint64_t>(stream_type.sample_format)),
-                      UintIs("channels", stream_type.channels),
-                      UintIs("frames per second", stream_type.frames_per_second),
-                      DoubleIs("gain db", -1.0), BoolIs("muted", true),
-                      UintIs("min fence time (ns)", 2'000'000),
-                      UintIs("calls to SetGainWithRamp", 2),
-                      StringIs("usage", "CaptureUsage::FOREGROUND"))))))))))));
+              NodeMatches(AllOf(NameMatches("1"),
+                                PropertyList(UnorderedElementsAre(
+                                    DoubleIs("gain db", -1.0), BoolIs("muted", true),
+                                    UintIs("min fence time (ns)", 2'000'000),
+                                    UintIs("calls to SetGainWithRamp", 2),
+                                    StringIs("usage", "CaptureUsage::FOREGROUND"))))))))))));
 }
 
 }  // namespace

@@ -71,6 +71,8 @@ BaseCapturer::BaseCapturer(
 
   if (format) {
     UpdateFormat(*format);
+  } else {
+    reporter().SetFormat(format_);
   }
 
   zx_status_t status =
@@ -799,6 +801,8 @@ void BaseCapturer::UpdateFormat(Format format) {
   // Record our new format.
   FX_DCHECK(state_.load() == State::WaitingForVmo);
   format_ = format;
+
+  reporter().SetFormat(format);
 
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.

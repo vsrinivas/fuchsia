@@ -5,7 +5,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 
 namespace media::audio {
@@ -28,7 +28,7 @@ class OutputDeviceNop : public Reporter::OutputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverName(const std::string& driver_name) override {}
+  void SetDriverInfo(const AudioDriver& driver) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
   void DeviceUnderflow(zx::time start_time, zx::time end_time) override {}
@@ -40,7 +40,7 @@ class InputDeviceNop : public Reporter::InputDevice {
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverName(const std::string& driver_name) override {}
+  void SetDriverInfo(const AudioDriver& driver) override {}
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {}
 };
@@ -51,7 +51,7 @@ class RendererNop : public Reporter::Renderer {
   void StopSession(zx::time stop_time) override {}
 
   void SetUsage(RenderUsage usage) override {}
-  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
+  void SetFormat(const Format& format) override {}
   void SetGain(float gain_db) override {}
   void SetGainWithRamp(float gain_db, zx::duration duration,
                        fuchsia::media::audio::RampType ramp_type) override {}
@@ -72,7 +72,7 @@ class CapturerNop : public Reporter::Capturer {
   void StopSession(zx::time stop_time) override {}
 
   void SetUsage(CaptureUsage usage) override {}
-  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {}
+  void SetFormat(const Format& format) override {}
   void SetGain(float gain_db) override {}
   void SetGainWithRamp(float gain_db, zx::duration duration,
                        fuchsia::media::audio::RampType ramp_type) override {}
@@ -146,6 +146,77 @@ class Reporter::OverflowUnderflowTracker {
   const uint32_t cobalt_time_since_last_event_or_session_start_metric_id_;
 };
 
+class FormatInfo {
+ public:
+  FormatInfo(inspect::Node& parent_node, const std::string& name)
+      : node_(parent_node.CreateChild(name)),
+        sample_format_(node_.CreateString("sample format", "unknown")),
+        channels_(node_.CreateUint("channels", 0)),
+        frames_per_second_(node_.CreateUint("frames per second", 0)) {}
+
+  void Set(const Format& f) {
+    switch (f.sample_format()) {
+      case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+        sample_format_.Set("UNSIGNED_8");
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_16:
+        sample_format_.Set("SIGNED_16");
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+        sample_format_.Set("SIGNED_24_IN_32");
+        break;
+      case fuchsia::media::AudioSampleFormat::FLOAT:
+        sample_format_.Set("FLOAT");
+        break;
+      default:
+        sample_format_.Set("unknown");
+        FX_LOGS(ERROR) << "Unhandled sample stream_type type "
+                       << fidl::ToUnderlying(f.sample_format());
+        break;
+    }
+    channels_.Set(f.channels());
+    frames_per_second_.Set(f.frames_per_second());
+  }
+
+ private:
+  inspect::Node node_;
+  inspect::StringProperty sample_format_;
+  inspect::UintProperty channels_;
+  inspect::UintProperty frames_per_second_;
+};
+
+class DeviceDriverInfo {
+ public:
+  DeviceDriverInfo(inspect::Node& parent_node)
+      : node_(parent_node.CreateChild("driver")),
+        name_(node_.CreateString("name", "unknown")),
+        total_delay_(node_.CreateUint("external delay + fifo delay (ns)", 0)),
+        external_delay_(node_.CreateUint("external delay (ns)", 0)),
+        fifo_delay_(node_.CreateUint("fifo delay (ns)", 0)),
+        fifo_depth_(node_.CreateUint("fifo depth in frames", 0)),
+        format_(parent_node, "format") {}
+
+  void Set(const AudioDriver& d) {
+    name_.Set(d.manufacturer_name() + ' ' + d.product_name());
+    total_delay_.Set((d.external_delay() + d.fifo_depth_duration()).get());
+    external_delay_.Set(d.external_delay().get());
+    fifo_delay_.Set(d.fifo_depth_duration().get());
+    fifo_depth_.Set(d.fifo_depth_frames());
+    if (auto f = d.GetFormat(); f.has_value()) {
+      format_.Set(*f);
+    }
+  }
+
+ private:
+  inspect::Node node_;
+  inspect::StringProperty name_;
+  inspect::UintProperty total_delay_;
+  inspect::UintProperty external_delay_;
+  inspect::UintProperty fifo_delay_;
+  inspect::UintProperty fifo_depth_;
+  FormatInfo format_;
+};
+
 class DeviceGainInfo {
  public:
   DeviceGainInfo(inspect::Node& node)
@@ -187,7 +258,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name)
       : node_(impl.outputs_node.CreateChild(name)),
-        driver_name_(node_.CreateString("driver name", "unknown")),
+        driver_info_(node_),
         gain_info_(node_),
         device_underflows_(
             std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -216,7 +287,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
     pipeline_underflows_->StopSession(stop_time);
   }
 
-  void SetDriverName(const std::string& driver_name) override { driver_name_.Set(driver_name); }
+  void SetDriverInfo(const AudioDriver& driver) override { driver_info_.Set(driver); }
 
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
@@ -233,7 +304,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 
  private:
   inspect::Node node_;
-  inspect::StringProperty driver_name_;
+  DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
   std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
   std::unique_ptr<OverflowUnderflowTracker> pipeline_underflows_;
@@ -242,14 +313,12 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  public:
   InputDeviceImpl(Reporter::Impl& impl, const std::string& name)
-      : node_(impl.inputs_node.CreateChild(name)),
-        driver_name_(node_.CreateString("driver name", "unknown")),
-        gain_info_(node_) {}
+      : node_(impl.inputs_node.CreateChild(name)), driver_info_(node_), gain_info_(node_) {}
 
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
-  void SetDriverName(const std::string& driver_name) override { driver_name_.Set(driver_name); }
+  void SetDriverInfo(const AudioDriver& driver) override { driver_info_.Set(driver); }
 
   void SetGainInfo(const fuchsia::media::AudioGainInfo& gain_info,
                    fuchsia::media::AudioGainValidFlags set_flags) override {
@@ -258,26 +327,20 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
 
  private:
   inspect::Node node_;
-  inspect::StringProperty driver_name_;
+  DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
 };
 
 class ClientPort {
  public:
   ClientPort(inspect::Node& node)
-      : sample_format_(node.CreateUint("sample format", 0)),
-        channels_(node.CreateUint("channels", 0)),
-        frames_per_second_(node.CreateUint("frames per second", 0)),
+      : format_(node, "format"),
         payload_buffers_node_(node.CreateChild("payload buffers")),
         gain_db_(node.CreateDouble("gain db", 0.0)),
         muted_(node.CreateBool("muted", false)),
         set_gain_with_ramp_calls_(node.CreateUint("calls to SetGainWithRamp", 0)) {}
 
-  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) {
-    sample_format_.Set(static_cast<uint64_t>(stream_type.sample_format));
-    channels_.Set(stream_type.channels);
-    frames_per_second_.Set(stream_type.frames_per_second);
-  }
+  void SetFormat(const Format& format) { format_.Set(format); }
 
   void SetGain(float gain_db) { gain_db_.Set(gain_db); }
   void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -309,10 +372,7 @@ class ClientPort {
   }
 
  private:
-  inspect::UintProperty sample_format_;
-  inspect::UintProperty channels_;
-  inspect::UintProperty frames_per_second_;
-
+  FormatInfo format_;
   inspect::Node payload_buffers_node_;
 
   struct PayloadBuffer {
@@ -355,9 +415,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   void StopSession(zx::time stop_time) override { underflows_->StopSession(stop_time); }
 
   void SetUsage(RenderUsage usage) override { usage_.Set(RenderUsageToString(usage)); }
-  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
-    client_port_.SetStreamType(stream_type);
-  }
+  void SetFormat(const Format& format) override { client_port_.SetFormat(format); }
   void SetGain(float gain_db) override { client_port_.SetGain(gain_db); }
   void SetGainWithRamp(float gain_db, zx::duration duration,
                        fuchsia::media::audio::RampType ramp_type) override {
@@ -415,10 +473,7 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
   void StopSession(zx::time stop_time) override { overflows_->StopSession(stop_time); }
 
   void SetUsage(CaptureUsage usage) override { usage_.Set(CaptureUsageToString(usage)); }
-
-  void SetStreamType(const fuchsia::media::AudioStreamType& stream_type) override {
-    client_port_.SetStreamType(stream_type);
-  }
+  void SetFormat(const Format& format) override { client_port_.SetFormat(format); }
   void SetGain(float gain_db) override { client_port_.SetGain(gain_db); }
   void SetGainWithRamp(float gain_db, zx::duration duration,
                        fuchsia::media::audio::RampType ramp_type) override {
