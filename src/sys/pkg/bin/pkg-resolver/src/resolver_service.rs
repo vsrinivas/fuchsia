@@ -239,7 +239,7 @@ async fn hash_from_base_or_repo_or_cache(
                     pkg_url,
                     rewritten_url,
                     blob,
-                    tuf_err
+                    anyhow!(tuf_err)
                 );
                 blob
             }
@@ -326,7 +326,7 @@ async fn package_from_base_or_repo_or_cache(
                 pkg_url,
                 rewritten_url,
                 blob,
-                tuf_err
+                anyhow!(tuf_err)
             );
             blob
         }
