@@ -906,4 +906,65 @@ TEST_F(DeviceTest, BindFailureOk) {
   loop.Shutdown();
 }
 
+TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
+  fuchsia::camera3::StreamPtr stream;
+  constexpr uint32_t kMaxCampingBuffers = 1;
+  std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
+  auto stream_impl = std::make_unique<StreamImpl>(
+      fake_properties_, fake_legacy_config_, stream.NewRequest(),
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+          fit::function<void(uint32_t)> callback, uint32_t format_index) {
+        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
+        ASSERT_TRUE(result.is_ok());
+        legacy_stream_fake = result.take_value();
+        token.BindSync()->Close();
+        callback(kMaxCampingBuffers);
+      },
+      nop);
+
+  constexpr uint32_t kCycleCount = 10;
+  std::vector<fuchsia::camera3::FrameInfo> frames(kCycleCount);
+  for (uint32_t i = 0; i < kCycleCount; ++i) {
+    fuchsia::sysmem::BufferCollectionTokenHandle token;
+    allocator_->AllocateSharedCollection(token.NewRequest());
+    stream->SetBufferCollection(std::move(token));
+    bool frame_received = false;
+    stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+      fuchsia::sysmem::BufferCollectionSyncPtr collection;
+      allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
+      constexpr fuchsia::sysmem::BufferCollectionConstraints constraints{
+          .usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+          .min_buffer_count_for_camping = kMaxCampingBuffers,
+          .image_format_constraints_count = 1,
+          .image_format_constraints{
+              {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+                .color_spaces_count = 1,
+                .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
+                .min_coded_width = 1,
+                .min_coded_height = 1}}}};
+      collection->SetConstraints(true, constraints);
+      zx_status_t status = ZX_OK;
+      fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+      collection->WaitForBuffersAllocated(&status, &buffers);
+      EXPECT_EQ(status, ZX_OK);
+      collection->Close();
+      stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) {
+        // Keep the frame; do not release it.
+        frames[i] = std::move(info);
+        frame_received = true;
+      });
+      fuchsia::camera2::FrameAvailableInfo frame_info;
+      frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+      frame_info.buffer_id = i;
+      frame_info.metadata.set_timestamp(0);
+      while (!HasFailure() && !legacy_stream_fake->IsStreaming()) {
+        RunLoopUntilIdle();
+      }
+      ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
+    });
+    RunLoopUntilFailureOr(frame_received);
+  }
+}
+
 }  // namespace camera
