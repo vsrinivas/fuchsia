@@ -6,8 +6,11 @@
 
 use {
     anyhow::{anyhow, Error},
+    argh::FromArgs,
     async_utils::event::Event,
-    fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
+    fidl_fuchsia_bluetooth_a2dp::{
+        AudioModeMarker, AudioModeProxy, AudioModeRequest, AudioModeRequestStream, Role,
+    },
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleState},
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{self as fasync, Time, TimeoutExt},
@@ -209,8 +212,60 @@ fn handle_client_connection(
     .detach();
 }
 
+/// Run as a client of the AudioMode service rather than a server, using the first argument to
+/// indicate requested a2dp role.
+async fn request_role(svc: AudioModeProxy, role: impl Into<Role>) {
+    let role = role.into();
+    let res = svc.set_role(role).await;
+    println!("{:?}: {:?}", role, res);
+}
+
+/// Define the command line arguments.
+#[derive(FromArgs)]
+#[argh(description = "Manage A2DP profile roles as server or client")]
+struct Opt {
+    #[argh(positional)]
+    /// if provided, this argument causes the component to act as a client to set a role.
+    client_role: Option<RoleArg>,
+}
+
+/// Argument that can be passed to the component to represent the `Role`.
+enum RoleArg {
+    Source,
+    Sink,
+}
+
+impl From<RoleArg> for Role {
+    fn from(arg: RoleArg) -> Self {
+        match arg {
+            RoleArg::Source => Role::Source,
+            RoleArg::Sink => Role::Sink,
+        }
+    }
+}
+
+impl std::str::FromStr for RoleArg {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s_lower = s.to_lowercase();
+        Ok(match &*s_lower {
+            "src" | "source" => Self::Source,
+            "snk" | "sink" => Self::Sink,
+            _ => return Err(anyhow!("Invalid positional value {}", s)),
+        })
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() {
+    let opts: Opt = argh::from_env();
+    if let Some(role) = opts.client_role {
+        let svc =
+            client::connect_to_service::<AudioModeMarker>().expect("AudioMode service to exist");
+        request_role(svc, role).await;
+        return;
+    }
+
     fuchsia_syslog::init_with_tags(&["a2dp-manager"]).expect("Can't init logger");
     let launcher = client::launcher().expect("connect to Launcher service");
     let (sender, receiver) = mpsc::channel(0);
@@ -230,6 +285,7 @@ async fn main() {
 mod tests {
     use {
         super::{test_util::*, *},
+        async_helpers::traits::PollExt,
         fidl::endpoints::RequestStream as _,
         fidl_fuchsia_bluetooth_a2dp::AudioModeMarker,
         fidl_fuchsia_sys::LauncherMarker,
@@ -280,14 +336,18 @@ mod tests {
         let expected_urls = into_urls(role);
         // Construct a request that can be sent into the `handle_requests` function.
         let mut response = proxy.set_role(role);
-        let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+        let request = ex
+            .run_until_stalled(&mut stream.next())
+            .unwrap() // Poll
+            .unwrap() // Option
+            .unwrap(); // Result
         assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
         let _ = ex.run_until_stalled(&mut handler);
 
         let next_n = launcher.next_n(expected_urls.len());
         pin_mut!(next_n);
-        let source_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+        let source_components = ex.run_until_stalled(&mut next_n).unwrap();
         assert_expected_components!(expected_urls, &source_components);
 
         // Drive the FIDL request/response to completion.
@@ -310,14 +370,18 @@ mod tests {
             let expected_urls = into_urls(role);
             // Construct a request that can be sent into the `handle_requests` function.
             let mut response = proxy.set_role(role);
-            let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+            let request = ex
+                .run_until_stalled(&mut stream.next())
+                .unwrap() // Poll
+                .unwrap() // Option
+                .unwrap(); // Result
             assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
             let _ = ex.run_until_stalled(&mut handler);
 
             let next_n = launcher.next_n(expected_urls.len());
             pin_mut!(next_n);
-            let source_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+            let source_components = ex.run_until_stalled(&mut next_n).unwrap();
             assert_expected_components!(expected_urls, &source_components);
 
             // Drive the FIDL request/response to completion.
@@ -331,7 +395,11 @@ mod tests {
             let expected_urls = into_urls(role);
 
             let mut response = proxy.set_role(role);
-            let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+            let request = ex
+                .run_until_stalled(&mut stream.next())
+                .unwrap() // Poll
+                .unwrap() // Option
+                .unwrap(); //Result
             assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
             let _ = ex.run_until_stalled(&mut handler);
@@ -340,7 +408,7 @@ mod tests {
 
             let next_n = launcher.next_n(expected_urls.len());
             pin_mut!(next_n);
-            let sink_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+            let sink_components = ex.run_until_stalled(&mut next_n).unwrap();
             assert_expected_components!(expected_urls, sink_components);
 
             // Drive the FIDL request/response to completion.
@@ -364,14 +432,18 @@ mod tests {
             let expected_urls = into_urls(role);
             // Construct a request that can be sent into the `handle_requests` function.
             let mut response = proxy.set_role(role);
-            let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+            let request = ex
+                .run_until_stalled(&mut stream.next())
+                .unwrap() // Poll
+                .unwrap() // Option
+                .unwrap(); // Result
             assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
             let _ = ex.run_until_stalled(&mut handler);
 
             let next_n = launcher.next_n(expected_urls.len());
             pin_mut!(next_n);
-            let source_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+            let source_components = ex.run_until_stalled(&mut next_n).unwrap();
             assert_expected_components!(expected_urls, &source_components);
 
             // Drive the FIDL request/response to completion.
@@ -384,7 +456,11 @@ mod tests {
             let role = Role::Source;
 
             let _ = proxy.set_role(role);
-            let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+            let request = ex
+                .run_until_stalled(&mut stream.next())
+                .unwrap() // Poll
+                .unwrap() // Option
+                .unwrap(); // Result
             assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
             let _ = ex.run_until_stalled(&mut handler);
@@ -412,14 +488,18 @@ mod tests {
         let expected_urls = into_urls(role);
         // Construct a request that can be sent into the `handle_requests` function.
         let mut response = proxy.set_role(role);
-        let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+        let request = ex
+            .run_until_stalled(&mut stream.next())
+            .unwrap() // Poll
+            .unwrap() // Option
+            .unwrap(); // Result
         assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
         let _ = ex.run_until_stalled(&mut handler);
 
         let next_n = launcher.next_n(expected_urls.len());
         pin_mut!(next_n);
-        let source_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+        let source_components = ex.run_until_stalled(&mut next_n).unwrap();
         assert_expected_components!(expected_urls, &source_components);
 
         // Drive the FIDL request/response to completion.
@@ -450,7 +530,11 @@ mod tests {
         let role = Role::Source;
         // Construct a request that can be sent into the `handle_requests` function.
         let mut response = proxy.set_role(role);
-        let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+        let request = ex
+            .run_until_stalled(&mut stream.next())
+            .unwrap() // Poll
+            .unwrap() // Option
+            .unwrap(); // Result
         assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
 
         // Handler should process some work and return pending indicating that it can continue
@@ -460,5 +544,29 @@ mod tests {
         // The response is an error because the launcher_proxy in use by the handler could not
         // launch the component.
         assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Err(_)));
+    }
+
+    #[test]
+    fn client_mode() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
+        let fut = request_role(proxy, RoleArg::Source);
+        pin_mut!(fut);
+        // pump request_role
+        let _ = exec.run_until_stalled(&mut fut);
+
+        let request = exec.run_until_stalled(&mut stream.next()).unwrap();
+        assert_matches!(request, Some(Ok(AudioModeRequest::SetRole { role: Role::Source, ..})));
+
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
+        let fut = request_role(proxy, RoleArg::Sink);
+        pin_mut!(fut);
+        // pump request_role
+        let _ = exec.run_until_stalled(&mut fut);
+
+        let request = exec.run_until_stalled(&mut stream.next()).unwrap();
+        assert_matches!(request, Some(Ok(AudioModeRequest::SetRole { role: Role::Sink, ..})));
     }
 }

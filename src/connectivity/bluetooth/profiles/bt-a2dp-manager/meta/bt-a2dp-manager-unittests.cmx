@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.bluetooth.a2dp.AudioMode",
             "fuchsia.logger.LogSink"
         ]
     }

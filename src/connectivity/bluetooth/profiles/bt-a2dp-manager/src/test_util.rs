@@ -15,20 +15,6 @@ use {
     std::future::Future,
 };
 
-/// Unwraps the value contained in a Poll::Ready value or panics.
-///
-/// Params:
-///     $poll: Poll<T>
-#[macro_export]
-macro_rules! unwrap_ready {
-    ($poll:expr) => {
-        match $poll {
-            Poll::Ready(value) => value,
-            Poll::Pending => panic!("called `unwrap_ready!` on a `Poll::Pending` value"),
-        }
-    };
-}
-
 /// Based on the expected_role, assert that exactly the expected components are contained in
 /// `child_components`.
 ///
