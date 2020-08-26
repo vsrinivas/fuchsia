@@ -66,7 +66,7 @@ impl Image {
     pub(crate) fn matches_base(filename: impl Into<String>, base: &str) -> Option<Self> {
         let filename = filename.into();
 
-        match crate::util::strip_prefix(&filename, base) {
+        match filename.strip_prefix(base) {
             None | Some("_") => None,
             Some("") => Some(Self { filename, type_separator: None }),
             Some(subtype) if !subtype.starts_with('_') => None,

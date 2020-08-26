@@ -93,7 +93,7 @@ fn resolve(requests: &[String], available: &BTreeSet<String>) -> UnverifiedImage
     let mut res = vec![];
 
     for request in requests {
-        match crate::util::strip_suffix(&request, SUBTYPE_SUFFIX) {
+        match request.strip_suffix(SUBTYPE_SUFFIX) {
             Some(prefix) => {
                 for candidate in available.iter() {
                     if let Some(request) = Image::matches_base(candidate, prefix) {

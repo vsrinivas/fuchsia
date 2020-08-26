@@ -46,7 +46,6 @@ rustc_library("update-package") {
     "src/name.rs",
     "src/packages.rs",
     "src/update_mode.rs",
-    "src/util.rs",
     "src/version.rs",
   ]
 }

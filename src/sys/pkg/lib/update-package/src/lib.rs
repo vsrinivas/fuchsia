@@ -13,7 +13,6 @@ mod images;
 mod name;
 mod packages;
 mod update_mode;
-mod util;
 mod version;
 
 pub use crate::{
