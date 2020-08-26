@@ -150,14 +150,7 @@ impl Drop for ScopedJob {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::logs::{LogStreamReader, LogWriter},
-        fuchsia_async as fasync,
-        fuchsia_runtime::job_default,
-        fuchsia_zircon as zx,
-        std::mem::drop,
-    };
+    use {super::*, fuchsia_runtime::job_default, fuchsia_zircon as zx};
 
     #[test]
     fn scoped_job_works() {
@@ -190,22 +183,5 @@ mod tests {
 
         // make sure we got back same job handle.
         assert_eq!(ret_job.raw_handle(), raw_handle);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn log_writer_reader_work() {
-        let (sock1, sock2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let mut log_writer = LogWriter::new(fasync::Socket::from_socket(sock1).unwrap());
-
-        let reader = LoggerStream::new(sock2).unwrap();
-        let reader = LogStreamReader::new(reader);
-
-        log_writer.write_str("this is string one.".to_owned()).await.unwrap();
-        log_writer.write_str("this is string two.".to_owned()).await.unwrap();
-        drop(log_writer);
-
-        let actual = reader.get_logs().await.unwrap();
-        let actual = std::str::from_utf8(&actual).unwrap();
-        assert_eq!(actual, "this is string one.this is string two.".to_owned());
     }
 }

@@ -16,7 +16,7 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init()?;
+    fuchsia_syslog::init_with_tags(&["go_test_runner"])?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(

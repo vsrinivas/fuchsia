@@ -172,9 +172,8 @@ impl TestServer {
         // Load bearing to hold job guard.
         let (process, _job, mut stdlogger, _stdin_socket) =
             launch_component_process::<RunTestError>(&component, args).await?;
-        let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(KernelError::CreateSocket)
-            .unwrap();
+        let (test_logger, log_client) =
+            zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                 .map_err(FidlError::CreateProxy)
@@ -197,12 +196,19 @@ impl TestServer {
             if bytes.is_empty() {
                 continue;
             }
+
             let is_last_byte_newline = *bytes.last().unwrap() == NEWLINE;
             let mut iter = bytes.split(|&x| x == NEWLINE).peekable();
             while let Some(b) = iter.next() {
+                if iter.peek() == None && b.len() == 0 {
+                    continue;
+                }
                 buffer.extend_from_slice(b);
 
                 if buffer.len() >= BUF_THRESHOLD {
+                    if iter.peek() != None || is_last_byte_newline {
+                        buffer.push(NEWLINE)
+                    }
                     test_logger.write(&buffer).await?;
                     buffer.clear();
                     continue;
@@ -223,6 +229,9 @@ impl TestServer {
                         skipped = true;
                     }
                 } else {
+                    if iter.peek() != None || is_last_byte_newline {
+                        buffer.push(NEWLINE)
+                    }
                     test_logger.write(&buffer).await?;
                 }
                 buffer.clear()
@@ -245,7 +254,7 @@ impl TestServer {
         // gotest returns 0 is test succeeds and 1 if test fails. This will check if test ended
         // abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_logger.write("Test exited abnormally".as_bytes()).await?;
+            test_logger.write_str("Test exited abnormally\n").await?;
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed) })
                 .map_err(RunTestError::SendFinish)?;

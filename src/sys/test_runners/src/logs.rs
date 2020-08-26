@@ -148,7 +148,7 @@ impl LogWriter {
         Self { logger }
     }
 
-    pub async fn write_str(&mut self, s: String) -> Result<usize, LogError> {
+    pub async fn write_str(&mut self, s: &str) -> Result<usize, LogError> {
         self.write(s.as_bytes()).await
     }
 
@@ -169,8 +169,8 @@ mod tests {
         let reader = LoggerStream::new(sock2).unwrap();
         let reader = LogStreamReader::new(reader);
 
-        log_writer.write_str("this is string one.".to_owned()).await.unwrap();
-        log_writer.write_str("this is string two.".to_owned()).await.unwrap();
+        log_writer.write_str("this is string one.").await.unwrap();
+        log_writer.write_str("this is string two.").await.unwrap();
         drop(log_writer);
 
         let actual = reader.get_logs().await.unwrap();

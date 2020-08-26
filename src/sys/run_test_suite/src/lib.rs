@@ -146,17 +146,21 @@ pub async fn run_test<W: Write>(
                             writeln!(writer, "[{}]\t{}", result_str, test_case_name)
                                 .expect("Cannot write logs");
                         }
-                        TestEvent::LogMessage { test_case_name, msg } => {
+                        TestEvent::LogMessage { test_case_name, mut msg } => {
                             if !test_cases_executed.contains(&test_case_name) {
                                 return Err(anyhow::anyhow!(
                                     "test case: '{}' was never started, still got a log",
                                     test_case_name
                                 ));
                             }
-                            let msgs = msg.trim().split("\n");
-                            for msg in msgs {
-                                writeln!(writer, "[{}]\t{}", test_case_name, msg).expect("Cannot write logs");
+                            // check if last byte is newline and remove it as we are already
+                            // printing a newline.
+                            if msg.ends_with("\n") {
+                                msg.truncate(msg.len()-1)
                             }
+                            // TODO(anmittal): buffer by newline or something else.
+                            writeln!(writer, "[output - {}]:\n{}", test_case_name, msg).expect("Cannot write logs");
+
                         }
                         TestEvent::Finish => {
                             successful_completion = true;

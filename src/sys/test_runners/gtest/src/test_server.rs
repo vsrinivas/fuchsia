@@ -347,9 +347,8 @@ impl TestServer {
         let (process, _job, mut stdlogger) =
             launch_component_process::<RunTestError>(&component, names, args).await?;
 
-        let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(KernelError::CreateSocket)
-            .unwrap();
+        let (test_logger, log_client) =
+            zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
@@ -387,6 +386,7 @@ impl TestServer {
             while let Some(buf) = iter.next() {
                 let exclude = PREFIXES_TO_EXCLUDE.iter().any(|p| buf.starts_with(p));
                 if !exclude {
+                    let buf = [buf, &[NEWLINE]].concat();
                     test_logger.write(&buf).await?;
                 }
             }
@@ -404,7 +404,7 @@ impl TestServer {
 
         // gtest returns 0 is test succeeds and 1 if test fails. This will test if test ended abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_logger.write("Test exited abnormally".as_bytes()).await?;
+            test_logger.write_str("Test exited abnormally\n").await?;
 
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed) })
@@ -419,7 +419,7 @@ impl TestServer {
             Err(e) => {
                 // TODO(45857): Introduce Status::InternalError.
                 test_logger
-                    .write_str(format!("Error reading test result:{:?}", IoError::File(e)))
+                    .write_str(&format!("Error reading test result:{:?}\n", IoError::File(e)))
                     .await?;
 
                 case_listener_proxy
@@ -438,9 +438,7 @@ impl TestServer {
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
             // TODO(45857): Introduce Status::InternalError.
             test_logger
-                .write_str(
-                    "unexpected output, should have received exactly one test result.".to_string(),
-                )
+                .write_str("unexpected output, should have received exactly one test result.\n")
                 .await?;
 
             case_listener_proxy

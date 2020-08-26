@@ -11,9 +11,13 @@ use std::str::from_utf8;
 macro_rules! assert_output {
     ($output:expr, $expected_output:expr) => {
         let mut expected_output = $expected_output.split("\n").collect::<Vec<_>>();
+
+        // no need to check for lines starting with "[output - ". We just want to make sure that
+        // we are printing important details.
         let mut output = from_utf8(&$output)
             .expect("we should not get utf8 error.")
             .split("\n")
+            .filter(|x| !x.starts_with("[output - "))
             .collect::<Vec<_>>();
 
         expected_output.sort();
@@ -37,19 +41,19 @@ async fn launch_and_test_no_clean_exit() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [PASSED]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [PASSED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
     assert_output!(output, expected_output);
@@ -76,19 +80,19 @@ async fn launch_and_test_passing_v2_test() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [PASSED]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [PASSED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
     assert_output!(output, expected_output);
@@ -115,9 +119,9 @@ async fn launch_and_test_with_filter() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
     assert_output!(output, expected_output);
@@ -194,9 +198,9 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [PASSED]	Example.Test1
 [RUNNING]	Example.Test2
 [SKIPPED]	Example.Test2
@@ -235,19 +239,19 @@ async fn launch_and_test_disabled_test_include_disabled() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [PASSED]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [PASSED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [FAILED]	Example.Test3
 ";
     assert_output!(output, expected_output);
@@ -282,19 +286,19 @@ async fn launch_and_test_failing_test() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [PASSED]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [FAILED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
 
@@ -324,17 +328,17 @@ async fn launch_and_test_incomplete_test() {
 
     let expected_output = "[RUNNING]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [PASSED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 
 The following test(s) never completed:
 Example.Test1
@@ -368,19 +372,19 @@ async fn launch_and_test_invalid_test() {
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
 [ERROR]	Example.Test1
 [RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
 [PASSED]	Example.Test2
 [RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
 [ERROR]	Example.Test3
 ";
     assert_output!(output, expected_output);

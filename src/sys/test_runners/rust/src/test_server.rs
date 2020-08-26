@@ -75,7 +75,7 @@ impl SuiteServer for TestServer {
             let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
             info!("Running test {}", test);
 
-            let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::STREAM)
                 .map_err(KernelError::CreateSocket)
                 .unwrap();
 
@@ -322,6 +322,7 @@ impl TestServer {
             match bytes.iter().rposition(|&x| x == newline) {
                 Some(i) => {
                     buf.extend_from_slice(&bytes[0..=i]);
+                    buf.push(newline);
                     test_logger.write(&buf).await?;
                     buf.clear();
                     buf.extend_from_slice(&bytes[i + 1..]);
@@ -346,7 +347,7 @@ impl TestServer {
         match process_info.return_code {
             TR_OK => Ok(ftest::Result_ { status: Some(ftest::Status::Passed) }),
             TR_FAILED => {
-                test_logger.write_str("test failed.\n".to_owned()).await?;
+                test_logger.write_str("test failed.\n").await?;
                 Ok(ftest::Result_ { status: Some(ftest::Status::Failed) })
             }
             other => Err(RunTestError::UnexpectedReturnCode(other)),
