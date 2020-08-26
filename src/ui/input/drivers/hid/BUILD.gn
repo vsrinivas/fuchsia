@@ -62,9 +62,6 @@ test("hid-test") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  # TODO(47416): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("hid-test-package") {
