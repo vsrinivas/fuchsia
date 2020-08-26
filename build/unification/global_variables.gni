@@ -11,3 +11,15 @@ is_gcc = zircon_toolchain != false && zircon_toolchain.is_gcc
 
 # `is_kernel` is true for kernel-specific toolchains.
 is_kernel = false
+
+# `toolchain` is a scope used by the Zircon build to describe the current toolchain.
+# Its layout is very different from `toolchain_variant` so try to mimic it here.
+toolchain = {
+  if (is_fuchsia) {
+    environment = "user"
+  } else if (is_host) {
+    environment = "host"
+  } else {
+    environment = "unknown"
+  }
+}
