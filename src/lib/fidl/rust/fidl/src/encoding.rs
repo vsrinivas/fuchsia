@@ -537,8 +537,7 @@ pub trait Layout {
     where
         Self: Sized;
 
-    /// Returns `slice` viewed as bytes for types that support encoding and
-    /// decoding by simple copy. For all other types, returns `None`.
+    /// Returns true iff the type can be encoded or decoded via simple copy.
     ///
     /// Simple copying only works for types when (1) the Rust data layout
     /// matches the FIDL wire format, and (2) no validation is required. This is
@@ -549,11 +548,12 @@ pub trait Layout {
     /// For more information:
     /// https://doc.rust-lang.org/reference/type-layout.html#primitive-data-layout
     /// https://doc.rust-lang.org/reference/types/numeric.html
-    fn slice_as_bytes(_slice: &mut [Self]) -> Option<&mut [u8]>
+    #[inline(always)]
+    fn supports_simple_copy() -> bool
     where
         Self: Sized,
     {
-        None
+        false
     }
 }
 
@@ -719,7 +719,7 @@ macro_rules! impl_layout_forall_T {
     };
 }
 
-// Implements `Layout` for a primitive integer type, overriding `slice_as_bytes`
+// Implements `Layout` for a primitive integer type, overriding `supports_simple_copy`
 // to enable encoding and decoding by simple copy.
 macro_rules! impl_layout_int {
     ($int_ty:ty) => {
@@ -734,8 +734,9 @@ macro_rules! impl_layout_int {
                 mem::size_of::<$int_ty>()
             }
 
-            fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
-                Some(zerocopy::AsBytes::as_bytes_mut(slice))
+            #[inline(always)]
+            fn supports_simple_copy() -> bool {
+                true
             }
         }
     };
@@ -903,7 +904,7 @@ macro_rules! impl_slice_encoding_by_copy {
                 if self.len() == 0 {
                     return Ok(());
                 }
-                // Encode by simple copy. See Layout::slice_as_bytes for more info.
+                // Encode by simple copy. See Layout::supports_simple_copy for more info.
                 let bytes = zerocopy::AsBytes::as_bytes(*self);
                 encoder.append_out_of_line_bytes(bytes);
                 Ok(())
@@ -1004,44 +1005,51 @@ impl Decodable for i8 {
 }
 
 /// Encodes `slice` as a FIDL array.
-fn encode_array<T: Encodable>(
+unsafe fn encode_array<T: Encodable>(
     slice: &mut [T],
     encoder: &mut Encoder<'_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    match T::slice_as_bytes(slice) {
-        Some(bytes) => {
-            // Encode by simple copy. See Layout::slice_as_bytes for more info.
-            encoder.buf[offset..offset + bytes.len()].copy_from_slice(bytes);
+    let stride = encoder.inline_size_of::<T>();
+    if T::supports_simple_copy() {
+        if slice.is_empty() {
+            return Ok(());
         }
-        None => {
-            let stride = encoder.inline_size_of::<T>();
-            for (i, item) in slice.iter_mut().enumerate() {
-                item.encode(encoder, offset + i * stride, recursion_depth)?;
-            }
+        let len = slice.len();
+        // Safety: index 0 is in bounds due to early return when slice.is_empty().
+        let src = slice.get_unchecked(0) as *const T as *const u8;
+        let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
+        std::ptr::copy_nonoverlapping(src, dst, len * stride);
+    } else {
+        for (i, item) in slice.iter_mut().enumerate() {
+            item.encode(encoder, offset + i * stride, recursion_depth)?;
         }
     }
     Ok(())
 }
 
 /// Decodes a FIDL array into `slice`.
-fn decode_array<T: Decodable>(
+unsafe fn decode_array<T: Decodable>(
     slice: &mut [T],
     decoder: &mut Decoder<'_>,
     offset: usize,
 ) -> Result<()> {
-    match T::slice_as_bytes(slice) {
-        Some(bytes) => {
-            // Decode by simple copy. See Layout::slice_as_bytes for more info.
-            let size = bytes.len();
-            bytes.copy_from_slice(&decoder.buf[offset..offset + size]);
+    let stride = decoder.inline_size_of::<T>();
+    if T::supports_simple_copy() {
+        if slice.is_empty() {
+            return Ok(());
         }
-        None => {
-            let stride = decoder.inline_size_of::<T>();
-            for (i, item) in slice.iter_mut().enumerate() {
-                item.decode(decoder, offset + i * stride)?;
-            }
+        let len = slice.len();
+        // Safety: offset is guaranteed to be within the buffer because of the same
+        // property as unsafe_decode -- the offset is always within an inline object
+        // in the buffer.
+        let src: *const u8 = decoder.buf.get_unchecked(offset);
+        let dst = slice.get_unchecked_mut(0) as *mut T as *mut u8;
+        std::ptr::copy_nonoverlapping(src, dst, len * stride);
+    } else {
+        for (i, item) in slice.iter_mut().enumerate() {
+            item.decode(decoder, offset + i * stride)?;
         }
     }
     Ok(())
@@ -1056,7 +1064,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Encodable> Encodable for [T; $len] {
-        fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
             encode_array(self, encoder, offset, recursion_depth)
         }
     }
@@ -1073,7 +1081,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
             }
         }
 
-        fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             decode_array(self, decoder, offset)
         }
     }
@@ -1237,7 +1245,7 @@ fn decode_vector<T: Decodable>(
     let len = len as usize;
     let bytes_len = len * decoder.inline_size_of::<T>();
     decoder.read_out_of_line(bytes_len, |decoder, offset| {
-        if T::slice_as_bytes(vec).is_some() {
+        if T::supports_simple_copy() {
             // Safety: The uninitalized elements are immediately written by
             // `decode_array`, which always succeeds in the simple copy case.
             unsafe {
@@ -1246,7 +1254,11 @@ fn decode_vector<T: Decodable>(
         } else {
             vec.resize_with(len, T::new_empty);
         }
-        decode_array(vec, decoder, offset)?;
+        // Safety:
+        //   `vec` has `len` elements based on the above code.
+        unsafe {
+            decode_array(vec, decoder, offset)?;
+        }
         Ok(true)
     })
 }
@@ -2118,23 +2130,15 @@ macro_rules! fidl_struct_copy {
                 $size_v1
             }
 
-            fn slice_as_bytes(slice: &mut [Self]) -> Option<&mut [u8]> {
+            #[inline(always)]
+            fn supports_simple_copy() -> bool {
                 #![allow(unreachable_code)]
+                // Copy as byte array if there is no padding.
                 $(
                     $padding_offset; // Force this to be the padding repeat list.
-                    return None;
+                    return false;
                 )*
-                // # Safety:
-                // - Data is valid for $size_v1 * slice.len() bytes.
-                // - The memory will exist for the duration of the slice (given input arg).
-                //
-                // zerocopy::AsBytes and zerocopy::FromBytes should be implemented in this
-                // case, but they can't be used because they aren't implemented in the
-                // case with padding (which exits with None above).
-                unsafe {
-                    let obj_ptr = std::mem::transmute::<*mut $name, *mut u8>(slice.get_unchecked_mut(0));
-                    Some(std::slice::from_raw_parts_mut(obj_ptr, $size_v1 * slice.len()))
-                }
+                true
             }
         }
 
