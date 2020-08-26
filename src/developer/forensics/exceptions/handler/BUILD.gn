@@ -3,24 +3,6 @@
 # found in the LICENSE file.
 
 ###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("exe") {
-  output_name = "exception_handler"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/exceptions:constants",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-###############################################################################
 # SOURCES
 ###############################################################################
 source_set("lib") {
@@ -55,5 +37,21 @@ source_set("lib") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
+  ]
+}
+
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/exceptions:constants",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

@@ -12,9 +12,10 @@
 #include "src/developer/forensics/feedback_data/main_service.h"
 #include "src/developer/forensics/utils/component/component.h"
 
-int main(int argc, const char** argv) {
-  using namespace ::forensics::feedback_data;
+namespace forensics {
+namespace feedback_data {
 
+int main() {
   syslog::SetTags({"forensics", "feedback"});
 
   forensics::component::Component component;
@@ -51,3 +52,6 @@ int main(int argc, const char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace feedback_data
+}  // namespace forensics

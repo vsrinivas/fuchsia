@@ -208,7 +208,7 @@ group("tests") {
     ":exception-broker-tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/forensics/exceptions",
+    "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics/testing/fakes:fake-crash-reporter",
   ]
 }

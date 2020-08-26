@@ -2,72 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//src/sys/build/components.gni")
-
-###############################################################################
-# PACKAGES
-###############################################################################
-# We use a template to keep the real and fake packages in sync.
-template("crash_reports_package") {
-  fuchsia_package(target_name) {
-    deps = [ ":crash_reports" ]
-  }
-
-  # Suppress unused variable warnings as the invoker is expected to be empty.
-  not_needed(invoker, "*")
-}
-
-# The real package.
-crash_reports_package("crash-reports") {
-}
-
-# A fake package for integration test purposes to make sure any config_data() for the real
-# package does not impact the component used in the integration test.
-crash_reports_package("fake-crash-reports") {
-}
-
-# A fake package for integration test purposes where we want a valid override config_data() that
-# only affects the fake package.
-crash_reports_package("fake-crash-reports-valid-override-config") {
-}
-
-# A fake package for integration test purposes where we want an invalid override config_data() that
-# only affects the fake package.
-crash_reports_package("fake-crash-reports-invalid-override-config") {
-}
-
-###############################################################################
-# COMPONENTS
-###############################################################################
-fuchsia_component("crash_reports") {
-  manifest = "meta/crash_reports.cmx"
-
-  deps = [
-    ":default_config",
-    ":main",
-  ]
-}
-
-###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("main") {
-  output_name = "crash_reports"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":main_service",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/utils/component",
-    "//src/lib/timekeeper:system",
-  ]
-}
-
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -246,6 +180,23 @@ source_set("errors") {
   ]
 }
 
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
+
+  deps = [
+    ":main_service",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils/component",
+    "//src/lib/timekeeper:system",
+  ]
+}
+
 source_set("privacy_settings_ptr") {
   sources = [
     "privacy_settings_ptr.cc",
@@ -401,32 +352,4 @@ source_set("store") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
-}
-
-###############################################################################
-# RESOURCES
-###############################################################################
-resource("default_config") {
-  sources = [ "configs/default.json" ]
-
-  outputs = [ "data/default_config.json" ]
-}
-
-###############################################################################
-# CONFIGS
-###############################################################################
-config_data("production_config") {
-  for_pkg = "crash-reports"
-
-  sources = [ "configs/production.json" ]
-
-  outputs = [ "override_config.json" ]
-}
-
-config_data("upload_to_prod_server_config") {
-  for_pkg = "crash-reports"
-
-  sources = [ "configs/upload_to_prod_server.json" ]
-
-  outputs = [ "override_config.json" ]
 }

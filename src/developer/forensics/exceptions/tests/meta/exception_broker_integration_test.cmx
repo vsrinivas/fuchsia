@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exceptions#meta/exceptions.cmx",
-                "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/exceptions#meta/exceptions.cmx",
+                "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/copy-forensics#meta/exceptions.cmx",
+                "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/copy-forensics#meta/exceptions.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx",
                 "fuchsia.feedback.testing.FakeCrashReporterQuerier": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx"
             },

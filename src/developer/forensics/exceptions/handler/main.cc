@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/forensics/exceptions/handler/main.h"
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -16,10 +18,11 @@
 #include "src/developer/forensics/exceptions/constants.h"
 #include "src/developer/forensics/exceptions/handler/handler.h"
 
-int main(int argc, char** argv) {
-  using namespace forensics::exceptions;
-  using namespace forensics::exceptions::handler;
+namespace forensics {
+namespace exceptions {
+namespace handler {
 
+int main(int argc, const char** argv) {
   syslog::SetTags({"forensics", "exception"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -27,8 +30,9 @@ int main(int argc, char** argv) {
 
   fit::promise<> handle_exception;
 
-  // Besides the process name, we are expecting either (1) no argument and the exception on the
-  // startup handle or (2) the crashed process name as argument, indicating an expired exception.
+  // Besides the process name (argv[0]), we are expecting either:
+  // * no other argument and the exception on the startup handle
+  // * the crashed process name and koid as next arguments, indicating an expired exception.
   if (argc == 1) {
     zx::exception exception(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     if (!exception.is_valid()) {
@@ -55,3 +59,7 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace handler
+}  // namespace exceptions
+}  // namespace forensics

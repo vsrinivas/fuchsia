@@ -4,8 +4,8 @@
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reports-valid-override-config#meta/crash_reports.cmx",
-                "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/fake-crash-reports#meta/crash_reports.cmx",
+                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/copy-forensics-valid-crash-reports-override-config#meta/crash_reports.cmx",
+                "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/copy-forensics-valid-crash-reports-override-config#meta/crash_reports.cmx",
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake-data-provider#meta/fake_data_provider.cmx",
                 "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/fake-device-id-provider#meta/fake_device_id_provider.cmx",
                 "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",

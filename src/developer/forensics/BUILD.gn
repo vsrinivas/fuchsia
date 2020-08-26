@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//src/sys/build/components.gni")
 
 ###############################################################################
@@ -11,12 +12,9 @@ group("forensics") {
   testonly = true
 
   deps = [
+    ":pkg",
     ":tests",
-    "crash_reports:crash-reports",
     "crasher",
-    "exceptions",
-    "feedback_data",
-    "last_reboot:last-reboot",
     "snapshot",
   ]
 }
@@ -36,11 +34,11 @@ group("tests") {
 }
 
 group("infra_configs") {
-  deps = [ "crash_reports:upload_to_prod_server_config" ]
+  deps = [ ":crash_reports_upload_to_prod_server_config" ]
 }
 
 group("production_configs") {
-  deps = [ "crash_reports:production_config" ]
+  deps = [ ":crash_reports_production_config" ]
 }
 
 ###############################################################################
@@ -51,7 +49,12 @@ template("forensics_package") {
   fuchsia_package(target_name) {
     package_name = invoker.package_name
 
-    deps = [ "feedback_data" ]
+    deps = [
+      ":crash_reports",
+      ":exceptions",
+      ":feedback_data",
+      ":last_reboot",
+    ]
   }
 }
 
@@ -66,4 +69,138 @@ forensics_package("pkg") {
 # * any config_data() for the real package does not impact any component used in the test.
 forensics_package("copy-pkg") {
   package_name = "copy-forensics"
+}
+
+# A copy package for integration test purposes where we want a valid override config_data()
+# for crash_reports that only affects that copy package.
+forensics_package("copy-pkg-valid-crash-reports-override-config") {
+  package_name = "copy-forensics-valid-crash-reports-override-config"
+}
+
+# A copy package for integration test purposes where we want an invalid override config_data()
+# for crash_reports that only affects that copy package.
+forensics_package("copy-pkg-invalid-crash-reports-override-config") {
+  package_name = "copy-forensics-invalid-crash-reports-override-config"
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("crash_reports") {
+  manifest = "crash_reports/meta/crash_reports.cmx"
+
+  deps = [
+    ":crash_reports_default_config",
+    ":crash_reports_exe",
+  ]
+}
+
+fuchsia_component("exceptions") {
+  manifest = "exceptions/meta/exceptions.cmx"
+
+  deps = [
+    ":exception_handler_exe",
+    ":exceptions_exe",
+  ]
+}
+
+fuchsia_component("feedback_data") {
+  manifest = "feedback_data/meta/feedback_data.cmx"
+
+  deps = [
+    ":feedback_data_config",
+    ":feedback_data_exe",
+    ":system_log_recorder_exe",
+  ]
+}
+
+fuchsia_component("last_reboot") {
+  manifest = "last_reboot/meta/last_reboot.cmx"
+
+  deps = [ ":last_reboot_exe" ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+# We use a template to have multiple copies of the same binary named differently.
+template("forensics_unified_binary") {
+  executable(target_name) {
+    output_name = invoker.output_name
+
+    sources = [ "unified_binary.cc" ]
+
+    deps = [
+      "crash_reports:main",
+      "exceptions:main",
+      "exceptions/handler:main",
+      "feedback_data:main",
+      "feedback_data/system_log_recorder:main",
+      "last_reboot:main",
+      "//sdk/lib/syslog/cpp",
+    ]
+  }
+}
+
+forensics_unified_binary("crash_reports_exe") {
+  output_name = "crash_reports"
+}
+
+forensics_unified_binary("exceptions_exe") {
+  output_name = "exceptions"
+}
+
+forensics_unified_binary("exception_handler_exe") {
+  output_name = "exception_handler"
+}
+
+forensics_unified_binary("feedback_data_exe") {
+  output_name = "feedback_data"
+}
+
+forensics_unified_binary("last_reboot_exe") {
+  output_name = "last_reboot"
+}
+
+forensics_unified_binary("system_log_recorder_exe") {
+  output_name = "system_log_recorder"
+}
+
+###############################################################################
+# CONFIGS
+###############################################################################
+resource("crash_reports_default_config") {
+  sources = [ "crash_reports/configs/default.json" ]
+
+  outputs = [ "data/crash_reports/default_config.json" ]
+}
+
+config_data("crash_reports_production_config") {
+  for_pkg = "forensics"
+
+  sources = [ "crash_reports/configs/production.json" ]
+
+  outputs = [ "crash_reports/override_config.json" ]
+}
+
+config_data("crash_reports_upload_to_prod_server_config") {
+  for_pkg = "forensics"
+
+  sources = [ "crash_reports/configs/upload_to_prod_server.json" ]
+
+  outputs = [ "crash_reports/override_config.json" ]
+}
+
+resource("feedback_data_config") {
+  sources = [ "feedback_data/config.json" ]
+
+  outputs = [ "data/feedback_data/config.json" ]
+}
+
+config_data("exceptions_enable_jitd_on_startup") {
+  for_pkg = "forensics"
+
+  sources = [ "exceptions/configs/jitd_on_startup.json" ]
+
+  outputs = [ "exceptions/enable_jitd_on_startup.json" ]
 }

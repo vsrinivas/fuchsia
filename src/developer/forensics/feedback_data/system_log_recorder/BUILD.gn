@@ -3,10 +3,13 @@
 # found in the LICENSE file.
 
 ###############################################################################
-# EXECUTABLES
+# SOURCES
 ###############################################################################
-executable("system_log_recorder") {
-  sources = [ "main.cc" ]
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
 
   deps = [
     ":src",
@@ -21,9 +24,6 @@ executable("system_log_recorder") {
   ]
 }
 
-###############################################################################
-# SOURCES
-###############################################################################
 source_set("src") {
   public = [ "system_log_recorder.h" ]
 

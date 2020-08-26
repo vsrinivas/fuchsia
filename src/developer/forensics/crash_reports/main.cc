@@ -15,9 +15,10 @@
 #include "src/developer/forensics/crash_reports/main_service.h"
 #include "src/developer/forensics/utils/component/component.h"
 
-int main(int argc, const char** argv) {
-  using namespace ::forensics::crash_reports;
+namespace forensics {
+namespace crash_reports {
 
+int main() {
   syslog::SetTags({"forensics", "crash"});
 
   forensics::component::Component component;
@@ -50,3 +51,6 @@ int main(int argc, const char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace crash_reports
+}  // namespace forensics

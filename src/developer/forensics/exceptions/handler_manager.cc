@@ -47,8 +47,8 @@ std::optional<zx::process> SpawnHandler(std::array<const char*, argc> args,
 std::optional<zx::process> SpawnHandler(const std::string& crashed_process_name,
                                         const std::string& crashed_process_koid) {
   const std::string handler_name(MakeCrashedProcessName(crashed_process_name));
-  const std::array<const char*, 4> args = {
-      handler_name.c_str(),
+  const std::array<const char*, 5> args = {
+      handler_name.c_str() /* process name */,
       crashed_process_name.c_str(),
       crashed_process_koid.c_str(),
       nullptr,
@@ -62,8 +62,8 @@ std::optional<zx::process> SpawnHandler(const std::string& crashed_process_name,
 std::optional<zx::process> SpawnHandler(zx::exception exception,
                                         const std::string& crashed_process_name) {
   const std::string handler_name(MakeCrashedProcessName(crashed_process_name));
-  const std::array<const char*, 2> args = {
-      handler_name.c_str(),
+  const std::array<const char*, 3> args = {
+      handler_name.c_str() /* process name */,
       nullptr,
   };
   const std::array actions = {

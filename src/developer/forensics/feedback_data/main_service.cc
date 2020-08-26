@@ -52,7 +52,10 @@ MainService::MainService(async_dispatcher_t* dispatcher,
 
 void MainService::SpawnSystemLogRecorder() {
   zx_handle_t process;
-  const char* argv[] = {/*process_name=*/"system_log_recorder", nullptr};
+  const char* argv[] = {
+      "system_log_recorder" /* process name */,
+      nullptr,
+  };
   if (const zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                                             "/pkg/bin/system_log_recorder", argv, &process);
       status != ZX_OK) {

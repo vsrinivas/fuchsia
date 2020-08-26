@@ -19,8 +19,8 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
-const char kOverrideConfigPath[] = "/config/data/override_config.json";
+const char kDefaultConfigPath[] = "/pkg/data/crash_reports/default_config.json";
+const char kOverrideConfigPath[] = "/config/data/crash_reports/override_config.json";
 const char kCrashRegisterPath[] = "/tmp/crash_register.json";
 
 }  // namespace

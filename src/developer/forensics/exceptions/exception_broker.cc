@@ -22,7 +22,7 @@ namespace {
 using fuchsia::exception::ExceptionInfo;
 using fuchsia::exception::ProcessException;
 
-constexpr char kEnableJitdConfigPath[] = "/config/data/enable_jitd_on_startup.json";
+constexpr char kEnableJitdConfigPath[] = "/config/data/exceptions/enable_jitd_on_startup.json";
 
 }  // namespace
 

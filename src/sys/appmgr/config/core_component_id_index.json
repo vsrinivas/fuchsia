@@ -90,7 +90,7 @@
         {
             instance_id: "de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3",
             appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/last-reboot#meta/last_reboot.cmx",
+                url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cmx",
                 realm_path: [
                     "app",
                     "sys"

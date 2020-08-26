@@ -2,45 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//src/sys/build/components.gni")
-
-###############################################################################
-# PACKAGES
-###############################################################################
-fuchsia_package("exceptions") {
-  deps = [ ":component" ]
-}
-
-###############################################################################
-# COMPONENTS
-###############################################################################
-fuchsia_component("component") {
-  component_name = "exceptions"
-
-  manifest = "meta/exceptions.cmx"
-
-  deps = [
-    ":exe",
-    "handler:exe",
-  ]
-}
-
-###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("exe") {
-  output_name = "exceptions"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":lib",
-    "//src/developer/forensics/exceptions:constants",
-    "//src/developer/forensics/utils/component",
-  ]
-}
-
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -78,13 +39,15 @@ source_set("lib") {
   ]
 }
 
-###############################################################################
-# CONFIGS
-###############################################################################
-config_data("enable_jitd_on_startup") {
-  for_pkg = "exceptions"
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
 
-  sources = [ "configs/jitd_on_startup.json" ]
-
-  outputs = [ "enable_jitd_on_startup.json" ]
+  deps = [
+    ":lib",
+    "//src/developer/forensics/exceptions:constants",
+    "//src/developer/forensics/utils/component",
+  ]
 }

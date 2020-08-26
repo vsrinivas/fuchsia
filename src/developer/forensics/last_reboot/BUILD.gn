@@ -2,40 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
-
-###############################################################################
-# PACKAGES
-###############################################################################
-fuchsia_package("last-reboot") {
-  deps = [ ":last_reboot" ]
-}
-
-###############################################################################
-# COMPONENTS
-###############################################################################
-fuchsia_component("last_reboot") {
-  manifest = "meta/last_reboot.cmx"
-
-  deps = [ ":main" ]
-}
-
-###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("main") {
-  output_name = "last_reboot"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":main_service",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/utils/component",
-  ]
-}
-
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -54,6 +20,20 @@ source_set("last_reboot_info_provider") {
     ":reboot_reason",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
+}
+
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
+
+  deps = [
+    ":main_service",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/utils/component",
   ]
 }
 

@@ -10,6 +10,8 @@
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
+namespace forensics {
+namespace exceptions {
 namespace {
 
 void LogProcessLimboStatus(const ::forensics::exceptions::ProcessLimboManager& limbo) {
@@ -24,8 +26,6 @@ void LogProcessLimboStatus(const ::forensics::exceptions::ProcessLimboManager& l
 }  // namespace
 
 int main() {
-  using namespace ::forensics::exceptions;
-
   syslog::SetTags({"forensics", "exception"});
 
   forensics::component::Component component;
@@ -65,3 +65,6 @@ int main() {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace exceptions
+}  // namespace forensics

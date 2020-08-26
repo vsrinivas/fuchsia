@@ -2,50 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//src/sys/build/components.gni")
-
-###############################################################################
-# COMPONENTS
-###############################################################################
-fuchsia_component("feedback_data") {
-  manifest = "meta/feedback_data.cmx"
-
-  deps = [
-    ":feedback_data_config",
-    ":main",
-    "system_log_recorder",
-  ]
-}
-
-###############################################################################
-# CONFIGS
-###############################################################################
-resource("feedback_data_config") {
-  sources = [ "config.json" ]
-
-  outputs = [ "data/feedback_data/config.json" ]
-}
-
-###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("main") {
-  output_name = "feedback_data"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":main_service",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/utils/component",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -264,5 +220,22 @@ source_set("integrity_reporter") {
 
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
+  ]
+}
+
+source_set("main") {
+  sources = [
+    "main.cc",
+    "main.h",
+  ]
+
+  deps = [
+    ":main_service",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/utils/component",
+    "//zircon/public/lib/zx",
   ]
 }

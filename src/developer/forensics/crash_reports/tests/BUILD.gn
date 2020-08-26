@@ -306,19 +306,19 @@ resource("test_data") {
 # CONFIGS
 ###############################################################################
 config_data("invalid_override_config") {
-  for_pkg = "fake-crash-reports-invalid-override-config"
+  for_pkg = "copy-forensics-invalid-crash-reports-override-config"
 
   sources = [ "configs/invalid_override.json" ]
 
-  outputs = [ "override_config.json" ]
+  outputs = [ "crash_reports/override_config.json" ]
 }
 
 config_data("valid_override_config") {
-  for_pkg = "fake-crash-reports-valid-override-config"
+  for_pkg = "copy-forensics-valid-crash-reports-override-config"
 
   sources = [ "configs/valid_override.json" ]
 
-  outputs = [ "override_config.json" ]
+  outputs = [ "crash_reports/override_config.json" ]
 }
 
 ###############################################################################
@@ -488,9 +488,9 @@ group("tests") {
     # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack",
-    "//src/developer/forensics/crash_reports:fake-crash-reports",
-    "//src/developer/forensics/crash_reports:fake-crash-reports-invalid-override-config",
-    "//src/developer/forensics/crash_reports:fake-crash-reports-valid-override-config",
+    "//src/developer/forensics:copy-pkg",
+    "//src/developer/forensics:copy-pkg-invalid-crash-reports-override-config",
+    "//src/developer/forensics:copy-pkg-valid-crash-reports-override-config",
     "//src/developer/forensics/testing/fakes:fake-data-provider",
     "//src/developer/forensics/testing/fakes:fake-device-id-provider",
     "//src/diagnostics/archivist",

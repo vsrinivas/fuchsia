@@ -13,6 +13,8 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
+namespace forensics {
+namespace last_reboot {
 namespace {
 
 constexpr char kTmpGracefulRebootReason[] = "/tmp/graceful_reboot_reason.txt";
@@ -53,9 +55,7 @@ void SetNotAFdr() {
 
 }  // namespace
 
-int main(int argc, char** argv) {
-  using namespace ::forensics::last_reboot;
-
+int main() {
   syslog::SetTags({"forensics", "reboot"});
 
   forensics::component::Component component;
@@ -95,3 +95,6 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace last_reboot
+}  // namespace forensics
