@@ -28,7 +28,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
-                     DeviceIdProvider* device_id_provider)
+                     DeviceIdProvider* device_id_provider, const bool is_first_instance)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
@@ -36,7 +36,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_(attachment_allowlist),
       static_annotations_(
           feedback_data::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
-      static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_, cobalt)),
+      static_attachments_(
+          feedback_data::GetStaticAttachments(attachment_allowlist_, cobalt, is_first_instance)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "

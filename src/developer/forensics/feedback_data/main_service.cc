@@ -24,7 +24,8 @@ const char kDataRegisterPath[] = "/tmp/data_register.json";
 
 std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    inspect::Node* root_node) {
+                                                    inspect::Node* root_node,
+                                                    const bool is_first_instance) {
   Config config;
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
@@ -33,18 +34,19 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     return nullptr;
   }
 
-  return std::make_unique<MainService>(dispatcher, std::move(services), root_node, config);
+  return std::make_unique<MainService>(dispatcher, std::move(services), root_node, config,
+                                       is_first_instance);
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services, inspect::Node* root_node,
-                         Config config)
+                         Config config, const bool is_first_instance)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(dispatcher_, services),
       device_id_provider_(kDeviceIdPath),
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
-                 config.attachment_allowlist, &device_id_provider_),
+                 config.attachment_allowlist, &device_id_provider_, is_first_instance),
       data_provider_(dispatcher_, services,
                      IntegrityReporter(config.annotation_allowlist, config.attachment_allowlist),
                      &cobalt_, &datastore_),

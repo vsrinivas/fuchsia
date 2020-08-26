@@ -21,7 +21,8 @@ int main() {
   forensics::component::Component component;
 
   std::unique_ptr<MainService> main_service =
-      MainService::TryCreate(component.Dispatcher(), component.Services(), component.InspectRoot());
+      MainService::TryCreate(component.Dispatcher(), component.Services(), component.InspectRoot(),
+                             component.IsFirstInstance());
   if (!main_service) {
     return EXIT_FAILURE;
   }

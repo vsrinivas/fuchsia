@@ -36,7 +36,8 @@ class MainServiceTest : public UnitTestFixture {
   void SetUp() {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
-    main_service_ = MainService::TryCreate(dispatcher(), services(), &InspectRoot());
+    main_service_ = MainService::TryCreate(dispatcher(), services(), &InspectRoot(),
+                                           /*is_first_instance=*/true);
   }
 
  protected:

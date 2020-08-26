@@ -13,7 +13,8 @@ namespace feedback_data {
 
 // Synchronously fetches the static attachments, i.e. the attachments that don't change during a
 // boot cycle.
-Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt);
+Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt,
+                                 bool is_first_instance);
 
 }  // namespace feedback_data
 }  // namespace forensics

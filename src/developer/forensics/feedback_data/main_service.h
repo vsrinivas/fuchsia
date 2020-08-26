@@ -34,10 +34,10 @@ class MainService {
   // cannot be instantiated.
   static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                inspect::Node* root_node);
+                                                inspect::Node* root_node, bool is_first_instance);
 
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-              inspect::Node* root_node, Config config);
+              inspect::Node* root_node, Config config, bool is_first_instance);
 
   void SpawnSystemLogRecorder();
 

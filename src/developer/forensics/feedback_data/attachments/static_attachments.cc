@@ -72,18 +72,23 @@ void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
   }
 }
 
-AttachmentValue BuildAttachmentValue(const AttachmentKey& key, cobalt::Logger* cobalt) {
+AttachmentValue BuildAttachmentValue(const AttachmentKey& key, cobalt::Logger* cobalt,
+                                     const bool is_first_instance) {
   if (key == kAttachmentBuildSnapshot) {
     return ReadAttachmentValueFromFilepath(key, "/config/build-info/snapshot");
   } else if (key == kAttachmentLogSystemPrevious) {
-    // If the single /tmp file for the logs from the previous boot cycle does not exist yet, we need
-    // to create it by aggregating the content stored in the /cache files for the current boot
-    // cycle that are still containing the content from the previous boot cycle.
+    // If this is the first instance of the component since boot, we have to create the /tmp log
+    // file. Otherwise we can return it immediately if it exists (it wouldn't on a pave for
+    // instance).
     //
-    // This assumes that the static attachments are fetched before any log persistence for the
-    // current boot cycle as this would overwrite these /cache files with the content for the
-    // current boot cycle.
-    if (!std::filesystem::exists(kPreviousLogsFilePath)) {
+    if (is_first_instance) {
+      FX_CHECK(!std::filesystem::exists(kPreviousLogsFilePath));
+      // The /tmp log file is created it by aggregating the content stored in the /cache files for
+      // the current boot cycle that are still containing the content from the previous boot cycle.
+      //
+      // This assumes that the static attachments are fetched before any log persistence for the
+      // current boot cycle as this would overwrite these /cache files with the content for the
+      // current boot cycle.
       CreatePreviousLogsFile(cobalt);
     }
     return ReadAttachmentValueFromFilepath(key, kPreviousLogsFilePath);
@@ -104,10 +109,11 @@ AttachmentKeys RestrictAllowlist(const AttachmentKeys& allowlist) {
 
 }  // namespace
 
-Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt) {
+Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt,
+                                 const bool is_first_instance) {
   Attachments attachments;
   for (const auto& key : RestrictAllowlist(allowlist)) {
-    attachments.insert({key, BuildAttachmentValue(key, cobalt)});
+    attachments.insert({key, BuildAttachmentValue(key, cobalt, is_first_instance)});
   }
   return attachments;
 }

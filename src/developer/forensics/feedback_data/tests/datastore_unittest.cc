@@ -13,6 +13,7 @@
 #include <lib/zx/time.h>
 
 #include <cstddef>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -83,10 +84,11 @@ class DatastoreTest : public UnitTestFixture {
 
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
-                      const AttachmentKeys& attachment_allowlist) {
+                      const AttachmentKeys& attachment_allowlist,
+                      const bool is_first_instance = true) {
     datastore_ =
         std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, &device_id_provider_);
+                                    attachment_allowlist, &device_id_provider_, is_first_instance);
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -493,7 +495,8 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
+                 /*is_first_instance=*/false);
 
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -511,7 +514,8 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
   const std::string previous_log_contents = "";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
+                 /*is_first_instance=*/false);
 
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -524,6 +528,32 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
+}
+
+TEST_F(DatastoreTest, GetAttachments_PreviousSyslogNotFirstInstance) {
+  // Simulate a case where there is no logs from the previous boot cycle and then a restart during
+  // the current boot cycle. We want to make sure that we are not including the logs for the
+  // current boot cycle as "previous boot logs".
+  for (const auto& filepath : kCurrentLogsFilePaths) {
+    WriteFile(filepath, "Test data.");
+  }
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
+                 /*is_first_instance=*/false);
+
+  ::fit::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.value(),
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure))}));
+
+  EXPECT_THAT(GetStaticAttachments(),
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure))}));
+
+  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
+  for (const auto& file : kCurrentLogsFilePaths) {
+    ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
+  }
 }
 
 TEST_F(DatastoreTest, GetAttachments_SysLog) {
