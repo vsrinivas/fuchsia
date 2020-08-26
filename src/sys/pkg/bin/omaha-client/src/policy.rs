@@ -78,10 +78,13 @@ impl Policy for FuchsiaPolicy {
             .periodic_interval
             .unless(protocol_state.server_dictated_poll_interval);
 
-        let interval = match policy_data.interval_fuzz_seed {
-            Some(interval_fuzz_seed) => fuzz_interval(interval, interval_fuzz_seed),
-            None => interval,
-        };
+        let interval =
+            match (policy_data.interval_fuzz_seed, policy_data.config.fuzz_percentage_range) {
+                (Some(fuzz_seed), Some(fuzz_range)) => {
+                    fuzz_interval(interval, fuzz_seed, fuzz_range)
+                }
+                _ => interval,
+            };
 
         // The `CheckTiming` to return is primarily based on the state of the `last_update_time`.
         //
@@ -185,18 +188,23 @@ impl Policy for FuchsiaPolicy {
     }
 }
 
-fn fuzz_interval(interval: Duration, interval_fuzz_seed: u64) -> Duration {
+fn fuzz_interval(
+    interval: Duration,
+    interval_fuzz_seed: u64,
+    fuzz_percentage_range: u32,
+) -> Duration {
     // Check that the interval can be fuzzed without overflowing.
-    if interval.checked_add(interval.mul_f32(0.125)).is_none() {
+    if interval.checked_add(interval.mul_f32(fuzz_percentage_range as f32 / 200.0)).is_none() {
+        log::warn!("The interval should never be this large: {:?}", interval);
         return interval;
     }
-    // Fuzz the interval up to 25%
-    // TODO: fxb/58413: Make this configurable in the PolicyConfig.
-    let eighth_interval = interval / 8;
-    let fuzz_percentage = interval_fuzz_seed as f32 / std::u64::MAX as f32;
-    let quarter_interval = interval / 4;
 
-    interval - eighth_interval + quarter_interval.mul_f32(fuzz_percentage)
+    let half_fuzzed_interval = interval.mul_f32(fuzz_percentage_range as f32 / 200.0);
+    let fuzzed_interval = interval.mul_f32(fuzz_percentage_range as f32 / 100.0);
+
+    let fuzz_percentage = interval_fuzz_seed as f32 / std::u64::MAX as f32;
+
+    interval - half_fuzzed_interval + fuzzed_interval.mul_f32(fuzz_percentage)
 }
 
 /// FuchsiaPolicyEngine just gathers the current time and hands it off to the FuchsiaPolicy as the
@@ -506,6 +514,7 @@ pub struct PolicyConfig {
     pub startup_delay: Duration,
     pub retry_delay: Duration,
     pub allow_reboot_when_idle: bool,
+    pub fuzz_percentage_range: Option<u32>,
 }
 
 impl From<Option<PolicyConfigJson>> for PolicyConfig {
@@ -530,6 +539,7 @@ impl From<Option<PolicyConfigJson>> for PolicyConfig {
                 .as_ref()
                 .and_then(|c| c.allow_reboot_when_idle)
                 .unwrap_or(true),
+            fuzz_percentage_range: config.as_ref().and_then(|c| c.fuzz_percentage_range),
         }
     }
 }
@@ -546,6 +556,7 @@ struct PolicyConfigJson {
     startup_delay_seconds: Option<u64>,
     retry_delay_seconds: Option<u64>,
     allow_reboot_when_idle: Option<bool>,
+    fuzz_percentage_range: Option<u32>,
 }
 
 impl PolicyConfigJson {
@@ -603,18 +614,26 @@ mod tests {
        }
 
         #[test]
-        fn test_fuzz_interval_lower_bounds(interval in arb_duration_up_to_percent_of_max(0.75), interval_fuzz_seed: u64) {
-            assert!(interval <= Duration::new(std::u64::MAX / 4 * 3, 0));
-            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed);
-            let lower_bound = interval.mul_f32(0.875);
+        fn test_fuzz_interval_lower_bounds(interval in arb_duration_up_to_percent_of_max(0.50),
+            interval_fuzz_seed: u64,
+            fuzz_percentage_range in 0u32..50u32) {
+            assert!(interval <= Duration::new(std::u64::MAX / 2, 0));
+            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
+
+            let lower_bound_multiplier = 1.0 - fuzz_percentage_range as f32 / 200.0;
+            let lower_bound = interval.mul_f32(lower_bound_multiplier);
             assert!(fuzzed_interval >= lower_bound);
        }
 
         #[test]
-        fn test_fuzz_interval_upper_bounds(interval in arb_duration_up_to_percent_of_max(0.75), interval_fuzz_seed: u64) {
+        fn test_fuzz_interval_upper_bounds(interval in arb_duration_up_to_percent_of_max(0.75),
+            interval_fuzz_seed: u64,
+            fuzz_percentage_range in 0u32..25u32) {
             assert!(interval <= Duration::new(std::u64::MAX / 4 * 3, 0));
-            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed);
-            let upper_bound = interval.mul_f32(1.125);
+            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
+
+            let upper_bound_multiplier = 1.0 + fuzz_percentage_range as f32 / 200.0;
+            let upper_bound = interval.mul_f32(upper_bound_multiplier);
             assert!(fuzzed_interval <= upper_bound);
        }
     }
@@ -1195,6 +1214,7 @@ mod tests {
                 startup_delay: Duration::from_secs(43),
                 retry_delay: Duration::from_secs(301),
                 allow_reboot_when_idle: true,
+                fuzz_percentage_range: None,
             }
         );
     }
@@ -1206,6 +1226,7 @@ mod tests {
             startup_delay: STARTUP_DELAY,
             retry_delay: RETRY_DELAY,
             allow_reboot_when_idle: true,
+            fuzz_percentage_range: None,
         };
         assert_eq!(PolicyConfig::default(), default_policy_config);
         assert_eq!(PolicyConfig::from(None), default_policy_config);
@@ -1224,6 +1245,7 @@ mod tests {
                 startup_delay: Duration::from_secs(123),
                 retry_delay: RETRY_DELAY,
                 allow_reboot_when_idle: true,
+                fuzz_percentage_range: None,
             }
         );
     }
