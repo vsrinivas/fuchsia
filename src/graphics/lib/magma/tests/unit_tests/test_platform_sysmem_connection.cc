@@ -252,7 +252,36 @@ class TestPlatformSysmemConnection {
       return;
     }
 
-    EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, description->coherency_domain());
+    EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_INACCESSIBLE, description->coherency_domain());
+  }
+
+  static void TestProtectedBufferBadConstraints() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints{};
+    buffer_constraints.count = 1;
+    buffer_constraints.usage = 0;
+    buffer_constraints.secure_permitted = true;
+    buffer_constraints.secure_required = true;
+    buffer_constraints.ram_domain_supported = true;
+    buffer_constraints.min_size_bytes = 1024;
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    magma_status_t status = collection->GetBufferDescription(&description).get();
+    // ram_domain_supported = true with secure_required isn't allowed.
+    EXPECT_EQ(MAGMA_STATUS_INTERNAL_ERROR, status);
   }
 
  private:
@@ -292,4 +321,8 @@ TEST(PlatformSysmemConnection, Buffer) { TestPlatformSysmemConnection::TestBuffe
 
 TEST(PlatformSysmemConnection, ProtectedBuffer) {
   TestPlatformSysmemConnection::TestProtectedBuffer();
+}
+
+TEST(PlatformSysmemConnection, ProtectedBufferBadConstraints) {
+  TestPlatformSysmemConnection::TestProtectedBufferBadConstraints();
 }
