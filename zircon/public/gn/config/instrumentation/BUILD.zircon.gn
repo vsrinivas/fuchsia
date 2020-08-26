@@ -131,9 +131,6 @@ if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
     asmflags = compiler_flags
     cflags = compiler_flags
     ldflags = compiler_flags
-
-    # TODO(TC-458): Include libunwind in libclang_rt.fuzzer.a
-    libs = [ "unwind" ]
   }
 
   group("fuzzer_deps") {
