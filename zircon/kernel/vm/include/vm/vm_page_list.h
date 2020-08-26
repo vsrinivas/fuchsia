@@ -15,6 +15,7 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
+#include <ktl/algorithm.h>
 #include <ktl/unique_ptr.h>
 #include <vm/page.h>
 #include <vm/pmm.h>
@@ -102,6 +103,8 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
   uint64_t offset() const { return obj_offset_; }
   uint64_t GetKey() const { return obj_offset_; }
 
+  uint64_t end_offset() const { return offset() + kPageFanOut * PAGE_SIZE; }
+
   void set_offset(uint64_t offset) {
     DEBUG_ASSERT(!InContainer());
     obj_offset_ = offset;
@@ -109,15 +112,30 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
 
   // for every page or marker in the node call the passed in function.
   template <typename F>
-  zx_status_t ForEveryPage(F func, uint64_t start_offset, uint64_t end_offset, uint64_t skew) {
-    return ForEveryPage(this, func, start_offset, end_offset, skew);
+  zx_status_t ForEveryPage(F func, uint64_t skew) {
+    return ForEveryPageInRange(this, func, offset(), end_offset(), skew);
   }
 
   // for every page or marker in the node call the passed in function.
   template <typename F>
-  zx_status_t ForEveryPage(F func, uint64_t start_offset, uint64_t end_offset,
-                           uint64_t skew) const {
-    return ForEveryPage(this, func, start_offset, end_offset, skew);
+  zx_status_t ForEveryPage(F func, uint64_t skew) const {
+    return ForEveryPageInRange(this, func, offset(), end_offset(), skew);
+  }
+
+  // for every page or marker in the node in the range call the passed in function. The range is
+  // assumed to be within the nodes object range.
+  template <typename F>
+  zx_status_t ForEveryPageInRange(F func, uint64_t start_offset, uint64_t end_offset,
+                                  uint64_t skew) {
+    return ForEveryPageInRange(this, func, start_offset, end_offset, skew);
+  }
+
+  // for every page or marker in the node in the range call the passed in function. The range is
+  // assumed to be within the nodes object range.
+  template <typename F>
+  zx_status_t ForEveryPageInRange(F func, uint64_t start_offset, uint64_t end_offset,
+                                  uint64_t skew) const {
+    return ForEveryPageInRange(this, func, start_offset, end_offset, skew);
   }
 
   const VmPageOrMarker& Lookup(size_t index) const {
@@ -154,20 +172,14 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
 
  private:
   template <typename S, typename F>
-  static zx_status_t ForEveryPage(S self, F func, uint64_t start_offset, uint64_t end_offset,
-                                  uint64_t skew) {
+  static zx_status_t ForEveryPageInRange(S self, F func, uint64_t start_offset, uint64_t end_offset,
+                                         uint64_t skew) {
+    // Assert that the requested range is sensible and falls within our nodes actual offset range.
     DEBUG_ASSERT(end_offset >= start_offset);
-    size_t start = 0;
-    size_t end = kPageFanOut;
-    if (start_offset > self->obj_offset_) {
-      start = (start_offset - self->obj_offset_) / PAGE_SIZE;
-    }
-    if (end_offset < self->obj_offset_) {
-      return ZX_ERR_NEXT;
-    }
-    if (end_offset < self->obj_offset_ + kPageFanOut * PAGE_SIZE) {
-      end = (end_offset - self->obj_offset_) / PAGE_SIZE;
-    }
+    DEBUG_ASSERT(start_offset >= self->obj_offset_);
+    DEBUG_ASSERT(end_offset <= self->end_offset());
+    const size_t start = (start_offset - self->obj_offset_) / PAGE_SIZE;
+    const size_t end = (end_offset - self->obj_offset_) / PAGE_SIZE;
     for (size_t i = start; i < end; i++) {
       if (!self->pages_[i].IsEmpty()) {
         zx_status_t status = func(self->pages_[i], self->obj_offset_ + i * PAGE_SIZE - skew);
@@ -303,35 +315,14 @@ class VmPageList final {
   // longer needed.
   template <typename T>
   void RemovePages(T per_page_fn, uint64_t start_offset, uint64_t end_offset) {
-    start_offset += list_skew_;
-    end_offset += list_skew_;
-
-    // Find the first node with a start after start_offset; if start_offset
-    // is in a node, it'll be in the one before that one.
-    auto start = --list_.upper_bound(start_offset);
-    if (!start.IsValid()) {
-      start = list_.begin();
-    }
-    // Find the first node which is completely after the end of the region. If
-    // end_offset falls in the middle of a node, this finds the next node.
-    const auto end = list_.lower_bound(end_offset);
-
-    // Visitor function which moves the pages from the VmPageListNode
-    // to the accumulation list.
+    // Wrapper function for turning marker reference into a pointer.
     auto per_page_func = [&per_page_fn](VmPageOrMarker& p, uint64_t offset) {
       per_page_fn(&p, offset);
       return ZX_ERR_NEXT;
     };
 
-    // Iterate through all nodes which have at least some overlap with the
-    // region, freeing the pages and erasing nodes which become empty.
-    while (start != end) {
-      auto cur = start++;
-      cur->ForEveryPage(per_page_func, start_offset, end_offset, list_skew_);
-      if (cur->IsEmpty()) {
-        list_.erase(cur);
-      }
-    }
+    ForEveryPageInRange<NodeCheck::CleanupEmpty>(this, per_page_func, start_offset, end_offset);
+    return;
   }
 
   // Returns true if there are no pages or markers in the page list.
@@ -380,8 +371,7 @@ class VmPageList final {
   template <typename S, typename F>
   static zx_status_t ForEveryPage(S self, F per_page_func) {
     for (auto& pl : self->list_) {
-      zx_status_t status = pl.ForEveryPage(
-          per_page_func, pl.offset(), pl.offset() + pl.kPageFanOut * PAGE_SIZE, self->list_skew_);
+      zx_status_t status = pl.ForEveryPage(per_page_func, self->list_skew_);
       if (unlikely(status != ZX_ERR_NEXT)) {
         if (status == ZX_ERR_STOP) {
           break;
@@ -392,26 +382,73 @@ class VmPageList final {
     return ZX_OK;
   }
 
-  template <typename S, typename F>
+  // Calls the provided callback for every page in the given range. If the CleanupNodes template
+  // argument is true then it is assumed the per_page_func may remove pages and page nodes will be
+  // checked to see if they are empty and can be cleaned up.
+  enum class NodeCheck : bool {
+    Skip = false,
+    CleanupEmpty = true,
+  };
+  template <NodeCheck NODE_CHECK = NodeCheck::Skip, typename S, typename F>
   static zx_status_t ForEveryPageInRange(S self, F per_page_func, uint64_t start_offset,
                                          uint64_t end_offset) {
     start_offset += self->list_skew_;
     end_offset += self->list_skew_;
 
-    // Find the first node with a start after start_offset; if start_offset
-    // is in a node, it'll be in the one before it.
-    auto start = --(self->list_.upper_bound(start_offset));
-    if (!start.IsValid()) {
-      start = self->list_.begin();
+    // Find the first node (if any) that will contain our starting offset.
+    auto cur =
+        self->list_.lower_bound(ROUNDDOWN(start_offset, VmPageListNode::kPageFanOut * PAGE_SIZE));
+    if (!cur) {
+      return ZX_OK;
     }
-    const auto end = self->list_.lower_bound(end_offset);
-    for (auto itr = start; itr != end; ++itr) {
-      auto& pl = *itr;
-      zx_status_t status =
-          pl.ForEveryPage(per_page_func, start_offset, end_offset, self->list_skew_);
+
+    // Handle scenario where start_offset begins not aligned to a node.
+    if (cur->offset() < start_offset) {
+      zx_status_t status = cur->ForEveryPageInRange(
+          per_page_func, start_offset, ktl::min(end_offset, cur->end_offset()), self->list_skew_);
+      auto prev = cur++;
+      if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
+        if (prev->IsEmpty()) {
+          self->list_.erase(prev);
+        }
+      }
       if (unlikely(status != ZX_ERR_NEXT)) {
         if (status == ZX_ERR_STOP) {
-          break;
+          return ZX_OK;
+        }
+        return status;
+      }
+    }
+    // Iterate through all full nodes contained in the range.
+    while (cur && cur->end_offset() < end_offset) {
+      DEBUG_ASSERT(start_offset <= cur->offset());
+      zx_status_t status = cur->ForEveryPage(per_page_func, self->list_skew_);
+      auto prev = cur++;
+      if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
+        if (prev->IsEmpty()) {
+          self->list_.erase(prev);
+        }
+      }
+      if (unlikely(status != ZX_ERR_NEXT)) {
+        if (status == ZX_ERR_STOP) {
+          return ZX_OK;
+        }
+        return status;
+      }
+    }
+    // Handle scenario where the end_offset is not aligned to the end of a node.
+    if (cur && cur->offset() < end_offset) {
+      DEBUG_ASSERT(cur->end_offset() >= end_offset);
+      zx_status_t status =
+          cur->ForEveryPageInRange(per_page_func, cur->offset(), end_offset, self->list_skew_);
+      if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
+        if (cur->IsEmpty()) {
+          self->list_.erase(cur);
+        }
+      }
+      if (unlikely(status != ZX_ERR_NEXT)) {
+        if (status == ZX_ERR_STOP) {
+          return ZX_OK;
         }
         return status;
       }
