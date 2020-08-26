@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+static_library("metric_properties") {
+  sources = [
+    "metric_properties.cc",
+    "metric_properties.h",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
+test("analytics_cpp_metric_properties_unittests") {
+  sources = [ "metric_properties_unittest.cc" ]
+
+  deps = [
+    ":metric_properties",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":analytics_cpp_metric_properties_unittests" ]
+}
