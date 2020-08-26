@@ -32,6 +32,7 @@ use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
+    fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{
@@ -46,6 +47,7 @@ use {
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
+    wlan_metrics_registry::{self as metrics},
 };
 
 // Value taken from legacy state machine.
@@ -246,8 +248,13 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
+
+    let (cobalt_api, cobalt_fut) =
+        CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let _cobalt_task = fasync::Task::spawn(cobalt_fut);
+
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
-    let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+    let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api));
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());

@@ -542,12 +542,16 @@ mod tests {
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream},
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        fuchsia_cobalt::CobaltSender,
         futures::{channel::mpsc, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         tempfile::TempDir,
         wlan_common::assert_variant,
     };
+
+    // Arbitrary number that is (much) larger than the count of metrics we might send to it
+    const MOCK_COBALT_MSG_BUFFER: usize = 100;
 
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
@@ -722,9 +726,12 @@ mod tests {
         exec: &mut fasync::Executor,
         connect_succeeds: bool,
     ) -> TestValues {
+        let (cobalt_mpsc_sender, _cobalt_mpsc_receiver) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_mpsc_sender),
+        ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -1204,8 +1211,11 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1271,8 +1281,11 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1355,8 +1368,11 @@ mod tests {
             exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
         );
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1431,8 +1447,11 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -1579,9 +1598,11 @@ mod tests {
             ))
             .expect("Failed to create a KnownEssStore"),
         );
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
-
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -1890,8 +1911,11 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let stash_id = "no_client_interface";
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector =
-            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            CobaltSender::new(cobalt_sender),
+        ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -2022,8 +2046,11 @@ mod tests {
             fidl_sme::ConnectResultCode::Success,
         ));
 
-        let selector =
-            Arc::new(network_selection::NetworkSelector::new(test_values.saved_networks));
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let selector = Arc::new(network_selection::NetworkSelector::new(
+            test_values.saved_networks,
+            CobaltSender::new(cobalt_sender),
+        ));
         let scan_results = vec![types::ScanResult {
             id: types::NetworkIdentifier {
                 ssid: b"foobar".to_vec(),
@@ -2077,8 +2104,12 @@ mod tests {
             assert!(!iface_manager.has_idle_client());
         }
 
-        let selector = Arc::new(network_selection::NetworkSelector::new(saved_networks));
-        connect_to_best_network(iface_manager.clone(), selector).await;
+        let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks,
+            CobaltSender::new(cobalt_sender),
+        ));
+        connect_to_best_network(iface_manager.clone(), network_selector).await;
     }
 
     /// Tests the case where scanning for the network selector fails.  Ensures that an error is
@@ -2086,6 +2117,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_scan_for_network_selector_fails() {
         set_logger_for_test();
+        let (cobalt_mpsc_sender, _cobalt_mpsc_receiver) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
 
         let stash_id = "test_scan_for_network_selector_fails";
         let temp_dir = TempDir::new().expect("failed to create temp dir");
@@ -2096,7 +2128,10 @@ mod tests {
                 .await
                 .expect("Failed to create a KnownEssStore"),
         );
-        let selector = Arc::new(network_selection::NetworkSelector::new(saved_networks));
+        let selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks,
+            CobaltSender::new(cobalt_mpsc_sender),
+        ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 
         assert!(scan_for_network_selector(iface_manager, selector).await.is_err());
@@ -2107,7 +2142,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_scan_for_network_selector_succeeds() {
         let saved_networks = create_network_store("test_scan_for_network_selector_succeeds").await;
-        let selector = Arc::new(network_selection::NetworkSelector::new(saved_networks));
+        let (cobalt_mpsc_sender, _cobalt_mpsc_receiver) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks,
+            CobaltSender::new(cobalt_mpsc_sender),
+        ));
 
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
@@ -2147,7 +2186,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_scan_for_network_selector_scan_error() {
         let saved_networks = create_network_store("test_scan_for_network_selector_succeeds").await;
-        let selector = Arc::new(network_selection::NetworkSelector::new(saved_networks));
+        let (cobalt_mpsc_sender, _cobalt_mpsc_receiver) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
+        let selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks,
+            CobaltSender::new(cobalt_mpsc_sender),
+        ));
 
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");

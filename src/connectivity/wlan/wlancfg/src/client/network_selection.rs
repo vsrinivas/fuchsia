@@ -8,6 +8,7 @@ use {
         config_management::{Credential, SavedNetworksManager},
     },
     async_trait::async_trait,
+    fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
     log::{error, trace},
     std::{
@@ -17,6 +18,11 @@ use {
         sync::Arc,
         time::{Duration, SystemTime},
     },
+    wlan_metrics_registry::{
+        SavedNetworkInScanResultMetricDimensionBssCount,
+        ScanResultsReceivedMetricDimensionSavedNetworksCount,
+        SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, SCAN_RESULTS_RECEIVED_METRIC_ID,
+    },
 };
 
 const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
@@ -24,6 +30,7 @@ const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minute
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     latest_scan_results: Mutex<Vec<types::ScanResult>>,
+    cobalt_api: Mutex<CobaltSender>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,8 +43,12 @@ struct InternalNetworkData {
 }
 
 impl NetworkSelector {
-    pub fn new(saved_network_manager: Arc<SavedNetworksManager>) -> Self {
-        Self { saved_network_manager, latest_scan_results: Mutex::new(Vec::new()) }
+    pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
+        Self {
+            saved_network_manager,
+            latest_scan_results: Mutex::new(Vec::new()),
+            cobalt_api: Mutex::new(cobalt_api),
+        }
     }
 
     /// Insert all saved networks into a hashmap with this module's internal data representation
@@ -120,9 +131,18 @@ impl NetworkSelector {
 #[async_trait]
 impl ScanResultUpdate for NetworkSelector {
     async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>) {
-        let scan_results = scan_results.clone();
+        // Update internal scan result cache
+        let scan_results_clone = scan_results.clone();
         let mut scan_result_guard = self.latest_scan_results.lock().await;
-        *scan_result_guard = scan_results;
+        *scan_result_guard = scan_results_clone;
+        drop(scan_result_guard);
+
+        // Record metrics for this scan
+        let saved_networks = self.load_saved_networks().await;
+        let mut cobalt_api_guard = self.cobalt_api.lock().await;
+        let cobalt_api = &mut *cobalt_api_guard;
+        record_metrics_on_scan(scan_results, saved_networks, cobalt_api);
+        drop(cobalt_api_guard);
     }
 }
 
@@ -168,26 +188,76 @@ fn find_best_network(
         .map(|(id, data)| (id.clone(), data.credential.clone()))
 }
 
+fn record_metrics_on_scan(
+    scan_results: &Vec<types::ScanResult>,
+    saved_networks: HashMap<types::NetworkIdentifier, InternalNetworkData>,
+    cobalt_api: &mut CobaltSender,
+) {
+    let mut num_saved_networks_observed = 0;
+
+    for scan_result in scan_results {
+        if let Some(_) = saved_networks.get(&scan_result.id) {
+            // This saved network was present in scan results;
+            num_saved_networks_observed += 1;
+
+            // Record how many BSSs are visible in the scan results for this saved network.
+            let num_bss = match scan_result.entries.len() {
+                0 => unreachable!(), // The ::Zero enum exists, but we shouldn't get a scan result with no BSS
+                1 => SavedNetworkInScanResultMetricDimensionBssCount::One,
+                2..=4 => SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour,
+                5..=10 => SavedNetworkInScanResultMetricDimensionBssCount::FiveToTen,
+                11..=20 => SavedNetworkInScanResultMetricDimensionBssCount::ElevenToTwenty,
+                21..=usize::MAX => SavedNetworkInScanResultMetricDimensionBssCount::TwentyOneOrMore,
+                _ => unreachable!(),
+            };
+            cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
+        }
+    }
+
+    let saved_network_count_metric = match num_saved_networks_observed {
+        0 => ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero,
+        1 => ScanResultsReceivedMetricDimensionSavedNetworksCount::One,
+        2..=4 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour,
+        5..=20 => ScanResultsReceivedMetricDimensionSavedNetworksCount::FiveToTwenty,
+        21..=40 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwentyOneToForty,
+        41..=usize::MAX => ScanResultsReceivedMetricDimensionSavedNetworksCount::FortyOneOrMore,
+        _ => unreachable!(),
+    };
+    cobalt_api.log_event(SCAN_RESULTS_RECEIVED_METRIC_ID, saved_network_count_metric);
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::util::logger::set_logger_for_test, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async as fasync, std::sync::Arc,
+        super::*, crate::util::logger::set_logger_for_test, cobalt_client::traits::AsEventCode,
+        fidl_fuchsia_cobalt::CobaltEvent, fidl_fuchsia_wlan_sme as fidl_sme,
+        fuchsia_async as fasync, fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
+        futures::channel::mpsc, rand::Rng, std::sync::Arc,
     };
 
     struct TestValues {
         network_selector: Arc<NetworkSelector>,
         saved_network_manager: Arc<SavedNetworksManager>,
+        cobalt_events: mpsc::Receiver<CobaltEvent>,
     }
 
     async fn test_setup() -> TestValues {
         set_logger_for_test();
 
         // setup modules
+        let (cobalt_api, cobalt_events) = make_fake_cobalt_connection();
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager)));
+        let network_selector =
+            Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager), cobalt_api));
 
-        TestValues { network_selector, saved_network_manager }
+        TestValues { network_selector, saved_network_manager, cobalt_events }
+    }
+
+    fn make_fake_cobalt_connection() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const MAX_METRICS_PER_QUERY: usize = 5;
+        const MAX_QUERIES: usize = 2;
+        let (sender, receiver) = mpsc::channel(MAX_METRICS_PER_QUERY * MAX_QUERIES);
+        (CobaltSender::new(sender), receiver)
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -335,8 +405,8 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn scan_results_used_to_augment_hashmap() {
-        let test_values = test_setup().await;
+    async fn scan_results_used_to_augment_hashmap_and_metrics() {
+        let mut test_values = test_setup().await;
         let network_selector = test_values.network_selector;
 
         // create some identifiers
@@ -439,6 +509,10 @@ mod tests {
         // validate the function works
         let result = network_selector.augment_networks_with_scan_data(saved_networks).await;
         assert_eq!(result, expected_result);
+
+        // check there are some metric events
+        // note: the actual metrics are checked in unit tests for the metric recording function
+        assert!(test_values.cobalt_events.try_next().unwrap().is_some());
     }
 
     #[test]
@@ -839,5 +913,197 @@ mod tests {
             network_selector.get_best_network(&vec![test_id_1.clone()]).await.unwrap(),
             (test_id_2.clone(), credential_2.clone())
         );
+    }
+
+    fn generate_random_scan_result() -> types::ScanResult {
+        let mut rng = rand::thread_rng();
+        let bss = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
+        types::ScanResult {
+            id: types::NetworkIdentifier {
+                ssid: format!("scan result rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa,
+            },
+            entries: vec![types::Bss {
+                bssid: bss.as_slice().try_into().unwrap(),
+                rssi: rng.gen_range(-100, 0),
+                frequency: rng.gen_range(2000, 6000),
+                timestamp_nanos: 0,
+            }],
+            compatibility: types::Compatibility::Supported,
+        }
+    }
+
+    fn generate_random_saved_network() -> (types::NetworkIdentifier, InternalNetworkData) {
+        let mut rng = rand::thread_rng();
+        (
+            types::NetworkIdentifier {
+                ssid: format!("saved network rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa,
+            },
+            InternalNetworkData {
+                credential: Credential::Password(
+                    format!("password {}", rng.gen::<i32>()).as_bytes().to_vec(),
+                ),
+                has_ever_connected: false,
+                rssi: None,
+                compatible: false,
+                recent_failure_count: 0,
+            },
+        )
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn recorded_metrics_on_scan() {
+        let (mut cobalt_api, mut cobalt_events) = make_fake_cobalt_connection();
+
+        // create some identifiers
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let test_id_2 = types::NetworkIdentifier {
+            ssid: "bar".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa,
+        };
+
+        let mock_scan_results = vec![
+            types::ScanResult {
+                id: test_id_1.clone(),
+                entries: vec![
+                    types::Bss {
+                        bssid: [0, 1, 2, 3, 4, 5],
+                        rssi: -14,
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                    },
+                    types::Bss {
+                        bssid: [6, 7, 8, 9, 10, 11],
+                        rssi: -10,
+                        frequency: 2410,
+                        timestamp_nanos: 1,
+                    },
+                    types::Bss {
+                        bssid: [0, 1, 2, 3, 4, 5],
+                        rssi: -20,
+                        frequency: 2400,
+                        timestamp_nanos: 0,
+                    },
+                ],
+                compatibility: types::Compatibility::Supported,
+            },
+            types::ScanResult {
+                id: test_id_2.clone(),
+                entries: vec![types::Bss {
+                    bssid: [20, 30, 40, 50, 60, 70],
+                    rssi: -15,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                }],
+                compatibility: types::Compatibility::Supported,
+            },
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+        ];
+
+        let mut mock_saved_networks = HashMap::new();
+        mock_saved_networks.insert(
+            test_id_1.clone(),
+            InternalNetworkData {
+                credential: Credential::Password("foo_pass".as_bytes().to_vec()),
+                has_ever_connected: false,
+                rssi: None,
+                compatible: false,
+                recent_failure_count: 0,
+            },
+        );
+        mock_saved_networks.insert(
+            test_id_2.clone(),
+            InternalNetworkData {
+                credential: Credential::Password("bar_pass".as_bytes().to_vec()),
+                has_ever_connected: false,
+                rssi: None,
+                compatible: false,
+                recent_failure_count: 0,
+            },
+        );
+        let random_saved_net = generate_random_saved_network();
+        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+        let random_saved_net = generate_random_saved_network();
+        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+        let random_saved_net = generate_random_saved_network();
+        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+
+        record_metrics_on_scan(&mock_scan_results, mock_saved_networks, &mut cobalt_api);
+
+        // Three BSSs present for network 1 in scan results
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                    .with_event_code(
+                        SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour.as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+        // One BSS present for network 2 in scan results
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                    .with_event_code(
+                        SavedNetworkInScanResultMetricDimensionBssCount::One.as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+        // Total of two saved networks in the scan results
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
+                    .with_event_code(
+                        ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour
+                            .as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+        // No more metrics
+        assert!(cobalt_events.try_next().is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn recorded_metrics_on_scan_no_saved_networks() {
+        let (mut cobalt_api, mut cobalt_events) = make_fake_cobalt_connection();
+
+        let mock_scan_results = vec![
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+        ];
+
+        let mock_saved_networks = HashMap::new();
+
+        record_metrics_on_scan(&mock_scan_results, mock_saved_networks, &mut cobalt_api);
+
+        // No saved networks in scan results
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
+                    .with_event_code(
+                        ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero.as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+        // No more metrics
+        assert!(cobalt_events.try_next().is_err());
     }
 }
