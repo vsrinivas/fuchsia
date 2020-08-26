@@ -182,7 +182,7 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
     const size_t end = (end_offset - self->obj_offset_) / PAGE_SIZE;
     for (size_t i = start; i < end; i++) {
       if (!self->pages_[i].IsEmpty()) {
-        zx_status_t status = func(self->pages_[i], self->obj_offset_ + i * PAGE_SIZE - skew);
+        zx_status_t status = func(&self->pages_[i], self->obj_offset_ + i * PAGE_SIZE - skew);
         if (unlikely(status != ZX_ERR_NEXT)) {
           return status;
         }
@@ -293,11 +293,11 @@ class VmPageList final {
   template <typename T>
   void RemoveAllPages(T free_page_fn) {
     // per page get a reference to the page pointer inside the page list node
-    auto per_page_func = [&free_page_fn](VmPageOrMarker& p, uint64_t offset) {
-      if (p.IsPage()) {
-        free_page_fn(p.ReleasePage());
+    auto per_page_func = [&free_page_fn](VmPageOrMarker* p, uint64_t offset) {
+      if (p->IsPage()) {
+        free_page_fn(p->ReleasePage());
       }
-      p = VmPageOrMarker::Empty();
+      *p = VmPageOrMarker::Empty();
       return ZX_ERR_NEXT;
     };
 
@@ -315,14 +315,7 @@ class VmPageList final {
   // longer needed.
   template <typename T>
   void RemovePages(T per_page_fn, uint64_t start_offset, uint64_t end_offset) {
-    // Wrapper function for turning marker reference into a pointer.
-    auto per_page_func = [&per_page_fn](VmPageOrMarker& p, uint64_t offset) {
-      per_page_fn(&p, offset);
-      return ZX_ERR_NEXT;
-    };
-
-    ForEveryPageInRange<NodeCheck::CleanupEmpty>(this, per_page_func, start_offset, end_offset);
-    return;
+    ForEveryPageInRange<NodeCheck::CleanupEmpty>(this, per_page_fn, start_offset, end_offset);
   }
 
   // Returns true if there are no pages or markers in the page list.
@@ -462,7 +455,7 @@ class VmPageList final {
                                                uint64_t end_offset) {
     uint64_t expected_next_off = start_offset;
     auto per_page_wrapper_fn = [&expected_next_off, end_offset, per_page_func, &per_gap_func](
-                                   auto& p, uint64_t off) {
+                                   auto* p, uint64_t off) {
       zx_status_t status = ZX_ERR_NEXT;
       if (expected_next_off != off) {
         status = per_gap_func(expected_next_off, off);

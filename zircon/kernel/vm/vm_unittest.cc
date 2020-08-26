@@ -2300,6 +2300,7 @@ static bool vmpl_free_pages_test() {
           list_add_tail(&list, &p->queue_node);
         }
         *page_or_marker = VmPageOrMarker::Empty();
+        return ZX_ERR_NEXT;
       },
       PAGE_SIZE * 2, (kCount - 1) * 2 * PAGE_SIZE);
   for (unsigned i = 1; i < kCount - 2; i++) {
@@ -2555,8 +2556,8 @@ static bool vmpl_page_gap_iter_test_body(vm_page_t** pages, uint32_t count, uint
 
   uint32_t idx = 0;
   zx_status_t s = list.ForEveryPageAndGapInRange(
-      [pages, stop_idx, &idx](const VmPageOrMarker& p, auto off) {
-        if (off != idx * PAGE_SIZE || !p.IsPage() || pages[idx] != p.Page()) {
+      [pages, stop_idx, &idx](const VmPageOrMarker* p, auto off) {
+        if (off != idx * PAGE_SIZE || !p->IsPage() || pages[idx] != p->Page()) {
           return ZX_ERR_INTERNAL;
         }
         if (idx == stop_idx) {
@@ -2760,14 +2761,14 @@ static bool vmpl_for_every_page_test() {
   }
 
   uint32_t idx = 0;
-  auto iter_fn = [&](const auto& p, uint64_t off) -> zx_status_t {
+  auto iter_fn = [&](const auto* p, uint64_t off) -> zx_status_t {
     EXPECT_EQ(off, offsets[idx]);
 
     if (idx % 2) {
-      EXPECT_TRUE(p.IsPage());
-      EXPECT_EQ(p.Page(), test_pages + idx);
+      EXPECT_TRUE(p->IsPage());
+      EXPECT_EQ(p->Page(), test_pages + idx);
     } else {
-      EXPECT_TRUE(p.IsMarker());
+      EXPECT_TRUE(p->IsMarker());
     }
 
     idx++;

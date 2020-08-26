@@ -162,8 +162,8 @@ bool VmPageList::IsEmpty() const { return list_.is_empty(); }
 
 bool VmPageList::HasNoPages() const {
   bool no_pages = true;
-  ForEveryPage([&no_pages](auto& p, uint64_t) {
-    if (p.IsPage()) {
+  ForEveryPage([&no_pages](auto* p, uint64_t) {
+    if (p->IsPage()) {
       no_pages = false;
       return ZX_ERR_STOP;
     } else {
@@ -187,6 +187,7 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
       release_fn(page, offset);
     }
     *page_or_marker = VmPageOrMarker::Empty();
+    return ZX_ERR_NEXT;
   };
 
   // Free pages outside of [|offset|, |end_offset|) so that the later code

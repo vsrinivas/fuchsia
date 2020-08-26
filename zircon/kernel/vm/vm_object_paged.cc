@@ -153,6 +153,7 @@ class BatchPQRemove {
         Push(page);
       }
       *p = VmPageOrMarker::Empty();
+      return ZX_ERR_NEXT;
     };
   }
 
@@ -382,6 +383,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
             *p = VmPageOrMarker::Marker();
           }
         }
+        return ZX_ERR_NEXT;
       },
       0, UINT64_MAX);
   // Release the guard so we can free any pages.
@@ -622,9 +624,9 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
   {
     PageQueues* pq = pmm_page_queues();
     Guard<SpinLock, IrqSave> guard{pq->get_lock()};
-    hidden_parent->page_list_.ForEveryPage([pq](auto& p, uint64_t off) {
-      if (p.IsPage()) {
-        vm_page_t* page = p.Page();
+    hidden_parent->page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
+      if (p->IsPage()) {
+        vm_page_t* page = p->Page();
         if (page->object.pin_count == 0) {
           AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
           pq->MoveToUnswappableLocked(page);
@@ -1087,9 +1089,9 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
   {
     PageQueues* pq = pmm_page_queues();
     Guard<SpinLock, IrqSave> guard{pq->get_lock()};
-    page_list_.ForEveryPage([pq](auto& p, uint64_t off) {
-      if (p.IsPage()) {
-        vm_page_t* page = p.Page();
+    page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
+      if (p->IsPage()) {
+        vm_page_t* page = p->Page();
         if (page->object.pin_count == 0) {
           AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
           pq->MoveToUnswappableLocked(page);
@@ -1127,9 +1129,9 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
     // their split bits need to be cleared. Note that ::ReleaseCowParentPagesLocked ensures
     // that pages outside of the parent limit range won't have their split bits set.
     removed->page_list_.ForEveryPageInRange(
-        [removed_offset = removed->parent_offset_, this](auto& page, uint64_t offset) {
+        [removed_offset = removed->parent_offset_, this](auto* page, uint64_t offset) {
           AssertHeld(lock_);
-          if (page.IsMarker()) {
+          if (page->IsMarker()) {
             return ZX_ERR_NEXT;
           }
           VmPageOrMarker* page_or_mark = page_list_.Lookup(offset + removed_offset);
@@ -1201,8 +1203,8 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
   uint64_t parent_id = original_parent_user_id_;
 
   size_t count = 0;
-  page_list_.ForEveryPage([&count](const auto& p, uint64_t) {
-    if (p.IsPage()) {
+  page_list_.ForEveryPage([&count](const auto* p, uint64_t) {
+    if (p->IsPage()) {
       count++;
     }
     return ZX_ERR_NEXT;
@@ -1233,14 +1235,14 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
   }
 
   if (verbose) {
-    auto f = [depth](const auto& p, uint64_t offset) {
+    auto f = [depth](const auto* p, uint64_t offset) {
       for (uint i = 0; i < depth + 1; ++i) {
         printf("  ");
       }
-      if (p.IsMarker()) {
+      if (p->IsMarker()) {
         printf("offset %#" PRIx64 " zero page marker\n", offset);
       } else {
-        vm_page_t* page = p.Page();
+        vm_page_t* page = p->Page();
         printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "(%c%c)\n", offset, page,
                page->paddr(), page->object.cow_left_split ? 'L' : '.',
                page->object.cow_right_split ? 'R' : '.');
@@ -1269,8 +1271,8 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   size_t count = 0;
   // TODO: Decide who pages should actually be attribtued to.
   page_list_.ForEveryPageAndGapInRange(
-      [&count](const auto& p, uint64_t off) {
-        if (p.IsPage()) {
+      [&count](const auto* p, uint64_t off) {
+        if (p->IsPage()) {
           count++;
         }
         return ZX_ERR_NEXT;
@@ -1356,14 +1358,14 @@ uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint
     uint64_t next_parent_offset = parent_offset + cur_size;
     uint64_t next_size = 0;
     parent->page_list_.ForEveryPageAndGapInRange(
-        [&parent, &cur, &attributed_ours, &sib](const auto& p, uint64_t off) {
+        [&parent, &cur, &attributed_ours, &sib](const auto* p, uint64_t off) {
           AssertHeld(cur->lock_);
           AssertHeld(sib.lock_);
           AssertHeld(parent->lock_);
-          if (p.IsMarker()) {
+          if (p->IsMarker()) {
             return ZX_ERR_NEXT;
           }
-          vm_page* page = p.Page();
+          vm_page* page = p->Page();
           if (
               // Page is explicitly owned by us
               (parent->page_attribution_user_id_ == cur->page_attribution_user_id_) ||
@@ -2049,8 +2051,8 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     // make a pass through the list to find out how many pages we need to allocate
     size_t count = (end - offset) / PAGE_SIZE;
     page_list_.ForEveryPageInRange(
-        [&count](const auto& p, auto off) {
-          if (p.IsPage()) {
+        [&count](const auto* p, auto off) {
+          if (p->IsPage()) {
             count--;
           }
           return ZX_ERR_NEXT;
@@ -2620,11 +2622,11 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [this](const auto& page, uint64_t off) {
-        if (page.IsMarker()) {
+      [this](const auto* page, uint64_t off) {
+        if (page->IsMarker()) {
           return ZX_ERR_NOT_FOUND;
         }
-        UnpinPage(page.Page(), off);
+        UnpinPage(page->Page(), off);
         return ZX_ERR_NEXT;
       },
       [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
@@ -2653,9 +2655,9 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
 
   bool found_pinned = false;
   page_list_.ForEveryPageInRange(
-      [&found_pinned, start_page_offset, end_page_offset](const auto& p, uint64_t off) {
+      [&found_pinned, start_page_offset, end_page_offset](const auto* p, uint64_t off) {
         DEBUG_ASSERT(off >= start_page_offset && off < end_page_offset);
-        if (p.IsPage() && p.Page()->object.pin_count > 0) {
+        if (p->IsPage() && p->Page()->object.pin_count > 0) {
           found_pinned = true;
           return ZX_ERR_STOP;
         }
@@ -2721,7 +2723,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
           if (!sibling_visible) {
             *page_or_mark = VmPageOrMarker::Empty();
           }
-          return;
+          return ZX_ERR_NEXT;
         }
         vm_page* page = page_or_mark->Page();
         // If the sibling can still see this page then we need to keep it around, otherwise we can
@@ -2730,7 +2732,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
         if (!sibling_visible || left ? page->object.cow_right_split : page->object.cow_left_split) {
           page = page_or_mark->ReleasePage();
           page_remover->Push(page);
-          return;
+          return ZX_ERR_NEXT;
         }
         if (skip_split_bits) {
           // If we were able to update this vmo's parent limit, that made the pages
@@ -2746,6 +2748,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
             page->object.cow_right_split = 1;
           }
         }
+        return ZX_ERR_NEXT;
       },
       parent_range_start, parent_range_end);
 }
@@ -2914,7 +2917,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
       // Tell the page source that any non-resident pages that are now out-of-bounds
       // were supplied, to ensure that any reads of those pages get woken up.
       zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-          [](const auto& p, uint64_t off) { return ZX_ERR_NEXT; },
+          [](const auto* p, uint64_t off) { return ZX_ERR_NEXT; },
           [&](uint64_t gap_start, uint64_t gap_end) {
             page_source_->OnPagesSupplied(gap_start, gap_end);
             return ZX_ERR_NEXT;
@@ -3134,12 +3137,12 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [lookup_fn, context, start_page_offset](const auto& p, uint64_t off) {
-        if (p.IsMarker()) {
+      [lookup_fn, context, start_page_offset](const auto* p, uint64_t off) {
+        if (p->IsMarker()) {
           return ZX_ERR_NO_MEMORY;
         }
         const size_t index = (off - start_page_offset) / PAGE_SIZE;
-        paddr_t pa = p.Page()->paddr();
+        paddr_t pa = p->Page()->paddr();
         zx_status_t status = lookup_fn(context, off, index, pa);
         if (status != ZX_OK) {
           if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
@@ -3265,9 +3268,9 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
   }
 
   page_list_.ForEveryPageInRange(
-      [](const auto& p, uint64_t off) {
-        if (p.IsPage()) {
-          pmm_page_queues()->Remove(p.Page());
+      [](const auto* p, uint64_t off) {
+        if (p->IsPage()) {
+          pmm_page_queues()->Remove(p->Page());
         }
         return ZX_ERR_NEXT;
       },
@@ -3422,9 +3425,9 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   // If transitioning from a cached policy we must clean/invalidate all the pages as the kernel may
   // have written to them on behalf of the user.
   if (cache_policy_ == ARCH_MMU_FLAG_CACHED && cache_policy != ARCH_MMU_FLAG_CACHED) {
-    page_list_.ForEveryPage([](const auto& p, uint64_t off) {
-      if (p.IsPage()) {
-        vm_page_t* page = p.Page();
+    page_list_.ForEveryPage([](const auto* p, uint64_t off) {
+      if (p->IsPage()) {
+        vm_page_t* page = p->Page();
         arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(page->paddr()), PAGE_SIZE);
       }
       return ZX_ERR_NEXT;
@@ -3565,11 +3568,11 @@ bool VmObjectPaged::DebugValidatePageSplitsLocked() const {
   }
   // Assume this is valid until we prove otherwise.
   bool valid = true;
-  page_list_.ForEveryPage([this, &valid](const VmPageOrMarker& page, uint64_t offset) {
-    if (!page.IsPage()) {
+  page_list_.ForEveryPage([this, &valid](const VmPageOrMarker* page, uint64_t offset) {
+    if (!page->IsPage()) {
       return ZX_ERR_NEXT;
     }
-    vm_page_t* p = page.Page();
+    vm_page_t* p = page->Page();
     AssertHeld(this->lock_);
     // We found a page in the hidden VMO, if it has been forked in either direction then we
     // expect that if we search down that path we will find that the forked page and that no
