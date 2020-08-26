@@ -1644,7 +1644,7 @@ fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
   bool done = false;
   fit::result<inspect::Hierarchy> hierarchy_or_error;
 
-  executor->schedule_task(
+  auto promise =
       inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
         {
           std::unique_lock<std::mutex> lock(m);
@@ -1652,7 +1652,9 @@ fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
           done = true;
         }
         cv.notify_all();
-      }));
+      });
+
+  executor->schedule_task(std::move(promise));
 
   std::unique_lock<std::mutex> lock(m);
   cv.wait(lock, [&done]() { return done; });
@@ -1660,28 +1662,38 @@ fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
   return hierarchy_or_error;
 }
 
-TEST_F(FdioTest, AllocateIncrementsMetricTest) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("allocate-increments-metric-thread");
-  async_dispatcher_t* dispatcher = loop.dispatcher();
-  async::Executor executor(dispatcher);
+void GetBlobsCreated(async::Executor* executor, zx_handle_t diagnostics_dir,
+                     uint64_t* blobs_created) {
+  ASSERT_NOT_NULL(executor);
+  ASSERT_NOT_NULL(blobs_created);
 
-  // Take a snapshot of the inspect tree
-  fuchsia::inspect::TreePtr tree_before;
-  ASSERT_OK(fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
-                                    tree_before.NewRequest(dispatcher).TakeChannel().release()));
-  fit::result<inspect::Hierarchy> hierarchy_or_error =
-      TakeSnapshot(std::move(tree_before), &executor);
+  fuchsia::inspect::TreePtr tree;
+  async_dispatcher_t* dispatcher = executor->dispatcher();
+  ASSERT_OK(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
+                                    tree.NewRequest(dispatcher).TakeChannel().release()));
+
+  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot(std::move(tree), executor);
   ASSERT_TRUE(hierarchy_or_error.is_ok());
   inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
 
-  // Verify that no blobs are created
   const inspect::Hierarchy* allocation_stats = hierarchy.GetByPath({"allocation_stats"});
   ASSERT_NOT_NULL(allocation_stats);
-  const inspect::UintPropertyValue* blobs_created =
+
+  const inspect::UintPropertyValue* blobs_created_value =
       allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
-  ASSERT_NOT_NULL(blobs_created);
-  ASSERT_EQ(blobs_created->value(), 0);
+  ASSERT_NOT_NULL(blobs_created_value);
+
+  *blobs_created = blobs_created_value->value();
+}
+
+TEST_F(FdioTest, AllocateIncrementsMetricTest) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("allocate-increments-metric-thread");
+  async::Executor executor(loop.dispatcher());
+
+  uint64_t blobs_created;
+  ASSERT_NO_FAILURES(GetBlobsCreated(&executor, diagnostics_dir(), &blobs_created));
+  ASSERT_EQ(blobs_created, 0);
 
   // Create a new blob with random contents on the mounted filesystem.
   std::unique_ptr<blobfs::BlobInfo> info;
@@ -1692,21 +1704,11 @@ TEST_F(FdioTest, AllocateIncrementsMetricTest) {
   ASSERT_EQ(blobfs::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
             "Failed to write Data");
 
-  // Take a snapshot of the inspect tree
-  fuchsia::inspect::TreePtr tree_after;
-  ASSERT_OK(fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
-                                    tree_after.NewRequest(dispatcher).TakeChannel().release()));
-  hierarchy_or_error = TakeSnapshot(std::move(tree_after), &executor);
-  ASSERT_TRUE(hierarchy_or_error.is_ok());
-  hierarchy = std::move(hierarchy_or_error.value());
+  ASSERT_NO_FAILURES(GetBlobsCreated(&executor, diagnostics_dir(), &blobs_created));
+  ASSERT_EQ(blobs_created, 1);
 
-  // Verify that blobs created count is incremented
-  allocation_stats = hierarchy.GetByPath({"allocation_stats"});
-  ASSERT_NOT_NULL(allocation_stats);
-  blobs_created =
-      allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
-  ASSERT_NOT_NULL(blobs_created);
-  ASSERT_EQ(blobs_created->value(), 1);
+  loop.Quit();
+  loop.JoinThreads();
 }
 
 }  // namespace

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/fit/bridge.h>
+#include <lib/fit/promise.h>
+#include <lib/fit/result.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/service/cpp/reader.h>
 
@@ -85,7 +87,10 @@ fit::promise<std::vector<std::string>> ReadAllChildNames(
 }
 
 fit::promise<Hierarchy> ReadFromTree(fuchsia::inspect::TreePtr tree) {
-  return SnapshotTreeFromTree(std::move(tree)).and_then(internal::ReadFromSnapshotTree);
+  return fit::make_promise([tree = std::move(tree)]() mutable -> fit::promise<SnapshotTree> {
+        return SnapshotTreeFromTree(std::move(tree));
+      })
+      .and_then(internal::ReadFromSnapshotTree);
 }
 
 }  // namespace inspect
