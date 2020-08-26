@@ -68,7 +68,7 @@ static const audio_stream_unique_id_t kUltrasoundInputDeviceId = {{
 class UltrasoundTest : public HermeticAudioTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
         .audio_core_config_data_path = "/pkg/data/ultrasound",
     });
   }

@@ -319,7 +319,7 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
 class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
         .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
         .audio_core_config_data_path = "/pkg/data/audio-core-config-with-sleeper-filter",
     });
@@ -361,7 +361,7 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
   static constexpr const char* kInverterEffectName = "inverter";
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
         .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
         .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
     });
@@ -461,7 +461,7 @@ class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {
   static constexpr const char* kInverterEffectName = "inverter";
 
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
         .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-with-test-effects",
         .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter",
     });

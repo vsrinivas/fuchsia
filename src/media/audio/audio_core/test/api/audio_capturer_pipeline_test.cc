@@ -260,7 +260,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
 class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
         .audio_core_arguments = {"--captures-must-release-packets"},
     });
   }

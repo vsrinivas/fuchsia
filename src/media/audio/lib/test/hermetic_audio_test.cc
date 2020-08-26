@@ -21,32 +21,26 @@
 
 namespace media::audio::test {
 
-std::unique_ptr<HermeticAudioEnvironment> HermeticAudioTest::environment_;
-fuchsia::virtualaudio::ControlSyncPtr HermeticAudioTest::virtual_audio_control_sync_;
+std::optional<HermeticAudioEnvironment::Options> HermeticAudioTest::test_suite_options_;
 
-void HermeticAudioTest::SetUpTestSuite() {
-  SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options());
+void HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options options) {
+  test_suite_options_ = options;
 }
 
-void HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options options) {
+void HermeticAudioTest::SetUpEnvironment() {
+  auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
   environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
   virtual_audio_control_sync_->Enable();
 
-  // Reset inspect ID counters. We start a new audio_core each test suite, but use a global virtual
+  // Reset inspect ID counters. We start a new audio_core each test, but use a global virtual
   // driver across all test suites, so we don't reset the virtual device IDs here.
   internal::capturer_shim_next_inspect_id = 1;
   internal::renderer_shim_next_inspect_id = 1;
 }
 
-void HermeticAudioTest::TearDownTestSuite() {
-  if (virtual_audio_control_sync_.is_bound()) {
-    virtual_audio_control_sync_->Disable();
-  }
-  environment_ = nullptr;
-}
-
 void HermeticAudioTest::SetUp() {
+  SetUpEnvironment();
   TestFixture::SetUp();
 
   environment_->ConnectToService(audio_core_.NewRequest());

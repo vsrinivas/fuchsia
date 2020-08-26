@@ -31,18 +31,19 @@ namespace media::audio::test {
 //
 class HermeticAudioTest : public TestFixture {
  protected:
-  static void SetUpTestSuite();
-  static void SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options options);
-  static void TearDownTestSuite();
-
-  static HermeticAudioEnvironment* environment() {
-    auto ptr = HermeticAudioTest::environment_.get();
-    FX_CHECK(ptr) << "No Environment; Did you forget to call SetUpTestSuite?";
-    return ptr;
-  }
+  // TestSuite functions are run once per test suite; a suite can configure
+  // HermeticAudioEnvironment::Options for all tests by calling `SetTestSuiteEnvironmentOptions()`
+  // in an override of `SetUpTestSuite()`.
+  static void SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options options);
 
   void SetUp() override;
   void TearDown() override;
+
+  HermeticAudioEnvironment* environment() {
+    auto ptr = HermeticAudioTest::environment_.get();
+    FX_CHECK(ptr) << "No Environment; Did you forget to call SetUp?";
+    return ptr;
+  }
 
   // Register that the test expects no audio underflows or overflow.
   // This expectation will be checked by TearDown().
@@ -95,8 +96,11 @@ class HermeticAudioTest : public TestFixture {
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
  private:
-  static std::unique_ptr<HermeticAudioEnvironment> environment_;
-  static fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+  // Configurable for an entire test suite by calling `SetUpTestSuiteWithOptions()`.
+  static std::optional<HermeticAudioEnvironment::Options> test_suite_options_;
+
+  // Initializes the HermeticAudioEnvironment for each test instance during `SetUp()`.
+  void SetUpEnvironment();
 
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
@@ -117,6 +121,8 @@ class HermeticAudioTest : public TestFixture {
   std::vector<std::unique_ptr<CapturerShimImpl>> capturers_;
   std::vector<std::unique_ptr<RendererShimImpl>> renderers_;
 
+  std::unique_ptr<HermeticAudioEnvironment> environment_;
+  fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 
   bool disallow_overflows_and_underflows_ = false;
