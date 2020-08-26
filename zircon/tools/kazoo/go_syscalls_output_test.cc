@@ -42,7 +42,7 @@ func Sys_selection_ktrace_read(handle Handle, data unsafe.Pointer, offset uint32
 
 //go:noescape
 //go:nosplit
-func Sys_selection_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write bool) Status
+func Sys_selection_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write uint32) Status
 
 //go:noescape
 //go:nosplit
@@ -112,7 +112,7 @@ TEXT ·Sys_selection_object_wait_one(SB),NOSPLIT,$0
 TEXT ·Sys_selection_ktrace_read(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_selection_ktrace_read(SB)
 
-// func Sys_selection_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write bool) Status
+// func Sys_selection_pci_cfg_pio_rw(handle Handle, bus uint8, dev uint8, funk uint8, offset uint8, val *uint32, width uint, write uint32) Status
 TEXT ·Sys_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB)
 

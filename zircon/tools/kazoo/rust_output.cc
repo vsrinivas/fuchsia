@@ -44,7 +44,7 @@ class Formatter {
     struct {
      public:
       void operator()(const std::monostate&) { ret = "<TODO!>"; }
-      void operator()(const TypeBool&) { ret = "bool"; }
+      void operator()(const TypeBool&) { ret = "u32"; }
       void operator()(const TypeChar&) { ret = "u8"; }
       void operator()(const TypeInt32&) { ret = "i32"; }
       void operator()(const TypeInt64&) { ret = "i64"; }

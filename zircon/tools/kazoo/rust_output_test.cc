@@ -59,7 +59,7 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_rust_various_basic_type_names(
-        a: bool,
+        a: u32,
         b: u8,
         d: i32,
         e: i64,

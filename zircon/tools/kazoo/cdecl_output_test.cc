@@ -65,7 +65,7 @@ _ZX_SYSCALL_DECL(selection_pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
     uint8_t offset,
     uint32_t* val,
     size_t width,
-    bool write))
+    uint32_t write))
 
 _ZX_SYSCALL_DECL(selection_job_set_policy, zx_status_t, /* no attributes */, 5,
     (handle, options, topic, policy, policy_size), (
@@ -203,7 +203,7 @@ KERNEL_SYSCALL(selection_pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
     uint8_t offset,
     uint32_t* val,
     size_t width,
-    bool write))
+    uint32_t write))
 
 KERNEL_SYSCALL(selection_job_set_policy, zx_status_t, /* no attributes */, 5,
     (handle, options, topic, policy, policy_size), (

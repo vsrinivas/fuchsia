@@ -443,7 +443,7 @@ TEST(JsonOutput, RustCases) {
       "arguments": [
         {
           "name": "a",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]
@@ -750,7 +750,7 @@ TEST(JsonOutput, SelectionCases) {
         },
         {
           "name": "write",
-          "type": "bool",
+          "type": "uint32_t",
           "is_array": false,
           "attributes": [
           ]

@@ -97,7 +97,7 @@ std::string CNameImpl(const Type& type) {
   struct {
    public:
     void operator()(const std::monostate&) { ret = "<TODO!>"; }
-    void operator()(const TypeBool&) { ret = "bool"; }
+    void operator()(const TypeBool&) { ret = "uint32_t"; }
     void operator()(const TypeChar&) { ret = "char"; }
     void operator()(const TypeInt32&) { ret = "int32_t"; }
     void operator()(const TypeInt64&) { ret = "int64_t"; }
@@ -206,7 +206,7 @@ std::string GetGoNameImpl(const Type& type) {
   struct {
    public:
     void operator()(const std::monostate&) { ret = "<TODO!>"; }
-    void operator()(const TypeBool&) { ret = "bool"; }
+    void operator()(const TypeBool&) { ret = "uint32"; }
     void operator()(const TypeChar&) { ret = "uint8"; }
     void operator()(const TypeInt32&) { ret = "int32"; }
     void operator()(const TypeInt64&) { ret = "int64"; }

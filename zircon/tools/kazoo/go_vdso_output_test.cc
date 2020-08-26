@@ -70,7 +70,7 @@ func vdsoCall_zx_selection_ktrace_read(handle uint32, data unsafe.Pointer, offse
 
 //go:noescape
 //go:nosplit
-func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
 
 //go:noescape
 //go:nosplit
@@ -181,8 +181,8 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
-TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
+// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
+TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -200,7 +200,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	MOVQ offset+7(FP), R8
 	MOVQ val+8(FP), R9
 	MOVQ width+16(FP), R12
-	MOVQ write+24(FP), R13
+	MOVL write+24(FP), R13
 	MOVQ SP, BP   // BP is preserved across vsdo call by the x86-64 ABI
 	ANDQ $~15, SP // stack alignment for x86-64 ABI
 	PUSHQ R13
@@ -210,7 +210,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	POPQ R12
 	POPQ R13
 	MOVQ BP, SP
-	MOVL AX, ret+25(FP)
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -338,7 +338,7 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$0-44
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
-// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
 TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	GO_ARGS
 	NO_LOCAL_POINTERS
@@ -353,7 +353,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	MOVD offset+32(FP), R4
 	MOVD val+40(FP), R5
 	MOVD width+48(FP), R6
-	MOVD write+56(FP), R7
+	MOVW write+56(FP), R7
 	BL vdso_zx_selection_pci_cfg_pio_rw(SB)
 	MOVW R0, ret+64(FP)
 	MOVD g_m(g), R21
