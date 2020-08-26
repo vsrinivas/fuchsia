@@ -313,12 +313,12 @@ at block zero describe the on-disk layout of the FVM, which may look like
 ```
 
 The partition table is made of several virtual partition
-entries(`vpart_entry_t`). In addition to containing name and partition
+entries(`VPartitionEntry`). In addition to containing name and partition
 identifiers, each of these vpart entries contains the number of allocated
 slices for this partition.
 
 The slice allocation table is made up of tightly packed slice entries
-(`slice_entry_t`). Each entry contains
+(`SliceEntry`). Each entry contains
 
  * allocation status
  * if it is allocated,

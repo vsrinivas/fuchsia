@@ -161,9 +161,6 @@ struct VPartitionEntry {
   uint8_t unsafe_name[fvm::kMaxVPartitionNameLength];
 };
 
-// TODO(gevalentino): remove after updating callsites.
-using vpart_entry_t = VPartitionEntry;
-
 static_assert(sizeof(VPartitionEntry) == 64, "Unchecked VPartitionEntry size change.");
 static_assert(internal::is_persistable<VPartitionEntry>::value,
               "VPartitionEntry must be standard layout compilant and trivial.");
@@ -212,8 +209,6 @@ struct SliceEntry {
   uint64_t data;
 };
 
-using slice_entry_t = SliceEntry;
-
 static_assert(sizeof(SliceEntry) == 8, "Unchecked SliceEntry size change.");
 static_assert(internal::is_persistable<SliceEntry>::value,
               "VSliceEntry must meet persistable constraints.");
@@ -253,7 +248,7 @@ constexpr size_t kVPartTableLength = PartitionTable::kLength;
 constexpr size_t kAllocTableOffset = AllocationTable::kOffset;
 
 constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
-  return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size), fvm::kBlockSize);
+  return fbl::round_up(sizeof(SliceEntry) * (total_size / slice_size), fvm::kBlockSize);
 }
 
 constexpr size_t MetadataSize(size_t total_size, size_t slice_size) {

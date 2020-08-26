@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_FVM_CHECK_H_
+#define FVM_FVM_CHECK_H_
+
+#include <stdarg.h>
+#include <stdlib.h>
+
+#include <utility>
 
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fvm/format.h>
-#include <stdarg.h>
-#include <stdlib.h>
-
-#include <utility>
 
 namespace fvm {
 
@@ -90,7 +92,7 @@ class Checker {
   struct Partition {
     bool Allocated() const { return entry != nullptr; }
 
-    const fvm::vpart_entry_t* entry = nullptr;
+    const fvm::VPartitionEntry* entry = nullptr;
     fbl::Vector<Slice> slices;
   };
 
@@ -103,8 +105,8 @@ class Checker {
   // Acquires a list of slices and partitions while parsing the FVM.
   //
   // Returns false if the FVM contains contradictory or invalid data.
-  bool LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
-                      const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
+  bool LoadPartitions(const size_t slice_count, const fvm::SliceEntry* slice_table,
+                      const fvm::VPartitionEntry* vpart_table, fbl::Vector<Slice>* out_slices,
                       fbl::Array<Partition>* out_partitions) const;
 
   // Displays information about |slices|, assuming they are sorted in physical slice order.
@@ -119,3 +121,5 @@ class Checker {
 };
 
 }  // namespace fvm
+
+#endif  // FVM_FVM_CHECK_H_

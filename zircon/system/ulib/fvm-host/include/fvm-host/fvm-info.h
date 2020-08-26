@@ -45,8 +45,8 @@ class FvmInfo {
   zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
 
   // Helpers to grab reference to partition/slice from metadata
-  zx_status_t GetPartition(size_t index, fvm::vpart_entry_t** out) const;
-  zx_status_t GetSlice(size_t index, fvm::slice_entry_t** out) const;
+  zx_status_t GetPartition(size_t index, fvm::VPartitionEntry** out) const;
+  zx_status_t GetSlice(size_t index, fvm::SliceEntry** out) const;
 
   fvm::Header* SuperBlock() const;
   size_t MetadataSize() const { return metadata_size_; }

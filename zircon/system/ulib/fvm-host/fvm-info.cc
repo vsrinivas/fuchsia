@@ -207,7 +207,7 @@ zx_status_t FvmInfo::Grow(size_t new_size) {
 
 zx_status_t FvmInfo::GrowForSlices(size_t slice_count) {
   size_t required_size =
-      fvm::kAllocTableOffset + (pslice_hint_ + slice_count) * sizeof(fvm::slice_entry_t);
+      fvm::kAllocTableOffset + (pslice_hint_ + slice_count) * sizeof(fvm::SliceEntry);
   return Grow(required_size);
 }
 
@@ -216,7 +216,7 @@ zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition
   CheckValid();
   for (unsigned index = vpart_hint_; index < fvm::kMaxVPartitions; index++) {
     zx_status_t status;
-    fvm::vpart_entry_t* vpart = nullptr;
+    fvm::VPartitionEntry* vpart = nullptr;
     if ((status = GetPartition(index, &vpart)) != ZX_OK) {
       fprintf(stderr, "Failed to retrieve partition %u\n", index);
       return status;
@@ -243,7 +243,7 @@ zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* ps
 
   for (uint32_t index = pslice_hint_; index <= sb->pslice_count; index++) {
     zx_status_t status;
-    fvm::slice_entry_t* slice = nullptr;
+    fvm::SliceEntry* slice = nullptr;
     if ((status = GetSlice(index, &slice)) != ZX_OK) {
       fprintf(stderr, "Failed to retrieve slice %u\n", index);
       return status;
@@ -255,7 +255,7 @@ zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* ps
 
     pslice_hint_ = index + 1;
 
-    fvm::vpart_entry_t* partition;
+    fvm::VPartitionEntry* partition;
     if ((status = GetPartition(vpart, &partition)) != ZX_OK) {
       return status;
     }
@@ -272,7 +272,7 @@ zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* ps
   return ZX_ERR_INTERNAL;
 }
 
-zx_status_t FvmInfo::GetPartition(size_t index, fvm::vpart_entry_t** out) const {
+zx_status_t FvmInfo::GetPartition(size_t index, fvm::VPartitionEntry** out) const {
   CheckValid();
 
   if (index < 1 || index > fvm::kMaxVPartitions) {
@@ -281,12 +281,12 @@ zx_status_t FvmInfo::GetPartition(size_t index, fvm::vpart_entry_t** out) const 
 
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
   uintptr_t offset =
-      static_cast<uintptr_t>(fvm::kVPartTableOffset + index * sizeof(fvm::vpart_entry_t));
-  *out = reinterpret_cast<fvm::vpart_entry_t*>(metadata_start + offset);
+      static_cast<uintptr_t>(fvm::kVPartTableOffset + index * sizeof(fvm::VPartitionEntry));
+  *out = reinterpret_cast<fvm::VPartitionEntry*>(metadata_start + offset);
   return ZX_OK;
 }
 
-zx_status_t FvmInfo::GetSlice(size_t index, fvm::slice_entry_t** out) const {
+zx_status_t FvmInfo::GetSlice(size_t index, fvm::SliceEntry** out) const {
   CheckValid();
 
   if (index < 1 || index > SuperBlock()->pslice_count) {
@@ -295,8 +295,8 @@ zx_status_t FvmInfo::GetSlice(size_t index, fvm::slice_entry_t** out) const {
 
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
   uintptr_t offset =
-      static_cast<uintptr_t>(fvm::kAllocTableOffset + index * sizeof(fvm::slice_entry_t));
-  *out = reinterpret_cast<fvm::slice_entry_t*>(metadata_start + offset);
+      static_cast<uintptr_t>(fvm::kAllocTableOffset + index * sizeof(fvm::SliceEntry));
+  *out = reinterpret_cast<fvm::SliceEntry*>(metadata_start + offset);
   return ZX_OK;
 }
 

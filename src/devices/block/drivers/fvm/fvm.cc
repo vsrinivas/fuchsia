@@ -344,7 +344,7 @@ zx_status_t VPartitionManager::Load() {
   // Iterate through the Slice Allocation table, filling the slice maps
   // of VPartitions.
   for (uint32_t i = 1; i <= GetFvmLocked()->pslice_count; i++) {
-    const slice_entry_t* entry = GetSliceEntryLocked(i);
+    const SliceEntry* entry = GetSliceEntryLocked(i);
     if (entry->IsFree()) {
       continue;
     }
@@ -402,7 +402,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
 
 zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
-    const vpart_entry_t* entry = GetVPartEntryLocked(i);
+    const VPartitionEntry* entry = GetVPartEntryLocked(i);
     if (entry->slices == 0) {
       *out = i;
       return ZX_OK;
@@ -614,22 +614,22 @@ void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, u
   pslice_allocated_count_++;
 }
 
-slice_entry_t* VPartitionManager::GetSliceEntryLocked(size_t index) const {
+SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-  uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset + index * sizeof(slice_entry_t));
+  uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset + index * sizeof(SliceEntry));
   ZX_DEBUG_ASSERT(kAllocTableOffset <= offset);
   ZX_DEBUG_ASSERT(offset < format_info_.metadata_size());
-  return reinterpret_cast<slice_entry_t*>(metadata_start + offset);
+  return reinterpret_cast<SliceEntry*>(metadata_start + offset);
 }
 
-vpart_entry_t* VPartitionManager::GetVPartEntryLocked(size_t index) const {
+VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
-  uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset + index * sizeof(vpart_entry_t));
+  uintptr_t offset = static_cast<uintptr_t>(kVPartTableOffset + index * sizeof(VPartitionEntry));
   ZX_DEBUG_ASSERT(kVPartTableOffset <= offset);
   ZX_DEBUG_ASSERT(offset < kVPartTableOffset + kVPartTableLength);
-  return reinterpret_cast<vpart_entry_t*>(metadata_start + offset);
+  return reinterpret_cast<VPartitionEntry*>(metadata_start + offset);
 }
 
 // Device protocol (FVM)

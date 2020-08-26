@@ -59,7 +59,7 @@ class VPartitionManager : public ManagerDeviceType {
 
   // Acquire access to a VPart Entry which has already been modified (and
   // will, as a consequence, not be de-allocated underneath us).
-  vpart_entry_t* GetAllocatedVPartEntry(size_t index) const TA_NO_THREAD_SAFETY_ANALYSIS {
+  VPartitionEntry* GetAllocatedVPartEntry(size_t index) const TA_NO_THREAD_SAFETY_ANALYSIS {
     auto entry = GetVPartEntryLocked(index);
     ZX_ASSERT(entry->slices > 0);
     return entry;
@@ -156,11 +156,11 @@ class VPartitionManager : public ManagerDeviceType {
 
   // Given a physical slice (acting as an index into the slice table),
   // return the associated slice entry.
-  slice_entry_t* GetSliceEntryLocked(size_t index) const TA_REQ(lock_);
+  SliceEntry* GetSliceEntryLocked(size_t index) const TA_REQ(lock_);
 
   // Given an index into the vpartition table, return the associated
   // virtual partition entry.
-  vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
+  VPartitionEntry* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
   size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
     return format_info_.GetSuperblockOffset(

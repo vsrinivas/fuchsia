@@ -117,8 +117,9 @@ bool Checker::LoadFVM(FvmInfo* out) const {
   return true;
 }
 
-bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t* slice_table,
-                             const fvm::vpart_entry_t* vpart_table, fbl::Vector<Slice>* out_slices,
+bool Checker::LoadPartitions(const size_t slice_count, const fvm::SliceEntry* slice_table,
+                             const fvm::VPartitionEntry* vpart_table,
+                             fbl::Vector<Slice>* out_slices,
                              fbl::Array<Partition>* out_partitions) const {
   fbl::Vector<Slice> slices;
   fbl::Array<Partition> partitions(new Partition[fvm::kMaxVPartitions], fvm::kMaxVPartitions);
@@ -254,7 +255,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("\n");
 
   const size_t vpart_table_start = fvm::kVPartTableOffset;
-  const size_t vpart_entry_size = sizeof(fvm::vpart_entry_t);
+  const size_t vpart_entry_size = sizeof(fvm::VPartitionEntry);
   const size_t vpart_table_size = fvm::kVPartTableLength;
   const size_t vpart_table_end = vpart_table_start + vpart_table_size;
   logger_.Log("[  Virtual Partition Table  ]\n");
@@ -265,7 +266,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("\n");
 
   const size_t slice_table_start = fvm::kAllocTableOffset;
-  const size_t slice_entry_size = sizeof(fvm::slice_entry_t);
+  const size_t slice_entry_size = sizeof(fvm::SliceEntry);
   const size_t slice_table_size = slice_entry_size * slice_count;
   const size_t slice_table_end = slice_table_start + slice_table_size;
   logger_.Log("[  Slice Allocation Table  ]\n");
@@ -275,10 +276,10 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("%-25s 0x%016zx\n", "Slice table end:", slice_table_end);
   logger_.Log("\n");
 
-  const fvm::slice_entry_t* slice_table =
-      reinterpret_cast<const fvm::slice_entry_t*>(info.valid_metadata + slice_table_start);
-  const fvm::vpart_entry_t* vpart_table =
-      reinterpret_cast<const fvm::vpart_entry_t*>(info.valid_metadata + vpart_table_start);
+  const fvm::SliceEntry* slice_table =
+      reinterpret_cast<const fvm::SliceEntry*>(info.valid_metadata + slice_table_start);
+  const fvm::VPartitionEntry* vpart_table =
+      reinterpret_cast<const fvm::VPartitionEntry*>(info.valid_metadata + vpart_table_start);
 
   fbl::Vector<Slice> slices;
   fbl::Array<Partition> partitions;

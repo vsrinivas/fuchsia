@@ -196,7 +196,7 @@ zx_status_t FvmContainer::Verify() const {
   off_t end = disk_offset_ + info_.MetadataSize() * 2;
   size_t slice_index = 1;
   for (size_t vpart_index = 1; vpart_index < fvm::kMaxVPartitions; ++vpart_index) {
-    fvm::vpart_entry_t* vpart = nullptr;
+    fvm::VPartitionEntry* vpart = nullptr;
     start = end;
 
     zx_status_t status;
@@ -320,7 +320,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
   std::vector<uint8_t> data(slice_size_);
   for (uint32_t index = 1; index <= pslice_count; index++) {
     zx_status_t status;
-    fvm::slice_entry_t* slice = nullptr;
+    fvm::SliceEntry* slice = nullptr;
     if ((status = info_.GetSlice(index, &slice)) != ZX_OK) {
       fprintf(stderr, "Failed to retrieve slice %u\n", index);
       return status;
@@ -511,7 +511,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
     extent_index++;
   }
 
-  fvm::vpart_entry_t* entry;
+  fvm::VPartitionEntry* entry;
   if ((status = info_.GetPartition(format->VpartIndex(), &entry)) != ZX_OK) {
     return status;
   }
@@ -531,7 +531,7 @@ size_t FvmContainer::CountAddedSlices() const {
   size_t required_slices = 0;
 
   for (size_t index = 1; index < fvm::kMaxVPartitions; index++) {
-    fvm::vpart_entry_t* vpart;
+    fvm::VPartitionEntry* vpart;
     ZX_ASSERT(info_.GetPartition(index, &vpart) == ZX_OK);
 
     if (vpart->slices == 0) {

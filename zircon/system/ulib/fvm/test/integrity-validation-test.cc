@@ -32,6 +32,7 @@ Header MakeHeader(size_t part_size, size_t part_table_size, size_t alloc_table_s
   superblock.vpartition_table_size = part_table_size;
   superblock.allocation_table_size = alloc_table_size;
   superblock.slice_size = kSliceSize;
+  superblock.pslice_count = part_size / kSliceSize;
   superblock.magic = fvm::kMagic;
   superblock.version = fvm::kVersion;
   superblock.generation = 1;
