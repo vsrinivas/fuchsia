@@ -516,8 +516,8 @@ btf::_fail() {
 
 #######################################
 # Outputs the absolute path to the given file, also resolving symbolic links.
-# (Note: This is equivalent to Linux readlink -f, but is also portable for
-# non-Linux environments such as Mac OS. Python 2.7 is generally assumed.)
+# (Note: This attempts to use the 'realpath' binary, and falls back to Python
+# otherwise)
 # Arguments:
 #   $1 - a relative file path. The full path does not have to exist, but
 #   all left-most path components that do exist are evaluated, resolving
@@ -531,13 +531,18 @@ btf::realpath() {
   local path="$1"
   [[ "${path}" != "" ]] \
       || btf::abort 1 "btf::realpath: input path cannot be blank"
-  local realpath=
+  local rp
   local -i status
-  realpath="$(python -c "import os; print os.path.realpath('${path}')")"
-  status=$?
-  [[ "${realpath}" != "" ]] \
+  if hash realpath >/dev/null 2>&1; then
+    rp="$(realpath -m "$path" 2>/dev/null)"
+    status=$?
+  fi
+  if [[ -z "${rp}" || ${status} -ne 0 ]]; then
+    rp="$(python -c "import os; print(os.path.realpath('${path}'))")"
+  fi
+  [[ -n "${rp}" ]] \
       || btf::abort 1 "btf::realpath: result for '${path}' was unexpectedly blank, status=${status}"
-  printf "%s" "${realpath}"
+  printf "%s" "${rp}"
   return ${status}
 }
 
