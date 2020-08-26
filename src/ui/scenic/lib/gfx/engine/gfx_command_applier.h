@@ -108,6 +108,8 @@ class GfxCommandApplier {
                                         fuchsia::ui::gfx::SetViewPropertiesCmd command);
   static bool ApplySetHitTestBehaviorCmd(Session* session,
                                          fuchsia::ui::gfx::SetHitTestBehaviorCmd command);
+  static bool ApplySetSemanticVisibilityCmd(Session* session,
+                                            fuchsia::ui::gfx::SetSemanticVisibilityCmd command);
   static bool ApplySetCameraCmd(Session* session, fuchsia::ui::gfx::SetCameraCmd command);
   static bool ApplySetCameraTransformCmd(Session* session,
                                          fuchsia::ui::gfx::SetCameraTransformCmd command);

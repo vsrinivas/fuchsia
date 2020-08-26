@@ -99,6 +99,8 @@ union Command {
     56: SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
 
     57: SetDisplayMinimumRgbCmdHACK set_display_minimum_rgb;
+
+    58: SetSemanticVisibilityCmd set_semantic_visibility;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register
@@ -375,6 +377,16 @@ struct SetClipCmd {
 struct SetHitTestBehaviorCmd {
     uint32 node_id;
     HitTestBehavior hit_test_behavior;
+};
+
+/// Sets a node's semantic visibility.
+///
+/// Discussion:
+/// By default, all nodes are semantically visible. Semantically invisible nodes and their children
+/// are ignored by hit tests performed for accessibility.
+struct SetSemanticVisibilityCmd {
+    uint32 node_id;
+    bool visible = true;
 };
 
 /// Sets the properties for a ViewHolder's attached View.

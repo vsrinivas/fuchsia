@@ -94,7 +94,8 @@ class ViewTree {
     fit::function<std::optional<glm::mat4>()> global_transform;
 
     // Park a callback that performs a hit test starting at this node.
-    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
+                       bool semantic_hit_test)>
         hit_test;
 
     // Park a function that creates an annotation ViewHolder using given ViewHolderToken.
@@ -157,7 +158,7 @@ class ViewTree {
   // all conditions are checked for the subtree, including |starting_ref_koid|.
   // If koid was found invalid the test returns with no hits.
   void HitTestFrom(zx_koid_t starting_view_koid, const escher::ray4& world_space_ray,
-                   HitAccumulator<ViewHit>* accumulator) const;
+                   HitAccumulator<ViewHit>* accumulator, bool semantic_hit_test) const;
 
   // A session may have registered one or more RefNodes (typically just one).
   // Return the *connected* RefNode KOID associated with a particular SessionId.
@@ -313,7 +314,8 @@ struct ViewTreeNewRefNode {
   fit::function<bool()> may_receive_focus;
   fit::function<bool()> is_input_suppressed;
   fit::function<std::optional<glm::mat4>()> global_transform;
-  fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+  fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
+                     bool semantic_hit_test)>
       hit_test;
   fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;

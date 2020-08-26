@@ -1040,6 +1040,76 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
   }
 }
 
+// This test checks that semantic visibility works as intended. By setting the views to semantically
+// invisble it should appear to accessibility as if they weren't hit, but other clients should still
+// observe everything as normal.
+TEST_F(AccessibilityPointerEventsTest, SemanticallyInvisible_ShouldNotBeSeenByA11y) {
+  MockAccessibilityPointerEventListener listener(input_system());
+  // Immediately reject the stream.
+  listener.SetResponses({{1, fuchsia::ui::input::accessibility::EventHandling::REJECTED}});
+
+  auto [v_a, vh_a] = scenic::ViewTokenPair::New();
+  auto [v_b, vh_b] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two views.
+  // Since we need to manipulate the scene graph, go ahead and do this all at function scope.
+  auto [root_view, root_resources] = CreateScene();
+  scenic::Session* const session = root_view.session();
+  scenic::Scene* const scene = &root_resources.scene;
+
+  scenic::ViewHolder view_holder_a(session, std::move(vh_a), "View Holder A"),
+      view_holder_b(session, std::move(vh_b), "View Holder B");
+
+  view_holder_a.SetViewProperties(k5x5x1);
+  view_holder_b.SetViewProperties(k5x5x1);
+
+  // Translate each view to control elevation.
+  view_holder_a.SetTranslation(0, 0, 1);
+  view_holder_b.SetTranslation(0, 0, 2);  // B is lower than A.
+
+  view_holder_a.SetSemanticVisibility(false);  // A is semantically invisible.
+
+  // Attach views to the scene.
+  scene->AddChild(view_holder_a);
+  scene->AddChild(view_holder_b);
+
+  RequestToPresent(session);
+
+  SessionWrapper view_a = CreateClient("a11y-view-a", std::move(v_a)),
+                 view_b = CreateClient("a11y-view-b", std::move(v_b));
+
+  // Scene is now set up; send in the input.
+  {
+    {  // Turn off parallel dispatch.
+      fuchsia::ui::input::SetParallelDispatchCmd parallel_dispatch_cmd;
+      parallel_dispatch_cmd.parallel_dispatch = false;
+
+      InputCommand input_cmd;
+      input_cmd.set_set_parallel_dispatch(std::move(parallel_dispatch_cmd));
+      session->Enqueue(std::move(input_cmd));
+    }
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
+  }
+  RunLoopUntilIdle();
+
+  // Should look to A11y like B was the top hit.
+  EXPECT_FALSE(listener.events().empty());
+  EXPECT_EQ(listener.events().front().viewref_koid(), utils::ExtractKoid(view_b.view_ref()));
+
+  // Should look to the rest like A was the top hit.
+  EXPECT_TRUE(view_b.events().empty());
+
+  ASSERT_EQ(view_a.events().size(), 3u);  // 3 since ADD gets translated to ADD + DOWN.
+  EXPECT_EQ(view_a.events()[0].pointer().phase, fuchsia::ui::input::PointerEventPhase::ADD);
+  EXPECT_TRUE(view_a.events()[1].is_focus());
+  EXPECT_EQ(view_a.events()[2].pointer().phase, fuchsia::ui::input::PointerEventPhase::DOWN);
+}
+
 // Create a larger 7x7 display, so that the scene (5x5) does not fully cover the display.
 class LargeDisplayAccessibilityPointerEventsTest : public AccessibilityPointerEventsTest {
  protected:

@@ -77,6 +77,7 @@ class Node : public Resource {
   bool SetClipPlanes(std::vector<escher::plane3> clip_planes, ErrorReporter* error_reporter);
   bool SetClipPlanesFromBBox(const escher::BoundingBox& box, ErrorReporter* error_reporter);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
+  bool SetSemanticVisibility(bool visible);
   bool SendSizeChangeHint(float width_change_factor, float height_change_factor);
 
   const escher::mat4& GetGlobalTransform() const;
@@ -89,6 +90,7 @@ class Node : public Resource {
   bool clip_to_self() const { return clip_to_self_; }
   const std::vector<escher::plane3>& clip_planes() const { return clip_planes_; }
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const { return hit_test_behavior_; }
+  bool semantically_visible() const { return semantically_visible_; }
 
   // The node's metrics as reported to the session listener.
   ::fuchsia::ui::gfx::Metrics reported_metrics() const { return reported_metrics_; }
@@ -172,6 +174,7 @@ class Node : public Resource {
   std::vector<escher::plane3> clip_planes_;
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ =
       ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
+  bool semantically_visible_ = true;
   ::fuchsia::ui::gfx::Metrics reported_metrics_;
 };
 

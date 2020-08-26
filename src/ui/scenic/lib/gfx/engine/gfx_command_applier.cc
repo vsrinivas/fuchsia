@@ -141,6 +141,8 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
       return ApplySetClipPlanesCmd(session, std::move(command.set_clip_planes()));
     case fuchsia::ui::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCmd(session, std::move(command.set_hit_test_behavior()));
+    case fuchsia::ui::gfx::Command::Tag::kSetSemanticVisibility:
+      return ApplySetSemanticVisibilityCmd(session, std::move(command.set_semantic_visibility()));
     case fuchsia::ui::gfx::Command::Tag::kSetViewProperties:
       return ApplySetViewPropertiesCmd(session, std::move(command.set_view_properties()));
     case fuchsia::ui::gfx::Command::Tag::kSetCamera:
@@ -600,6 +602,15 @@ bool GfxCommandApplier::ApplySetHitTestBehaviorCmd(
     Session* session, fuchsia::ui::gfx::SetHitTestBehaviorCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     return node->SetHitTestBehavior(command.hit_test_behavior);
+  }
+
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetSemanticVisibilityCmd(
+    Session* session, fuchsia::ui::gfx::SetSemanticVisibilityCmd command) {
+  if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
+    return node->SetSemanticVisibility(command.visible);
   }
 
   return false;

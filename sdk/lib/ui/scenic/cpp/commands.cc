@@ -874,6 +874,17 @@ fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetSemanticVisibilityCmd(uint32_t node_id, bool visible) {
+  fuchsia::ui::gfx::SetSemanticVisibilityCmd set_semantic_visibility;
+  set_semantic_visibility.node_id = node_id;
+  set_semantic_visibility.visible = visible;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_semantic_visibility(set_semantic_visibility);
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSetCameraCmd(uint32_t renderer_id, uint32_t camera_id) {
   fuchsia::ui::gfx::SetCameraCmd set_camera;
   set_camera.renderer_id = renderer_id;

@@ -213,6 +213,9 @@ class Node : public Resource {
   // Sets the node's hit test behavior.
   void SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
 
+  // Set the node's semantic visibility.
+  void SetSemanticVisibility(bool visible);
+
   // Detaches the node from its parent.
   void Detach();
 

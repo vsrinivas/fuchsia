@@ -159,13 +159,14 @@ std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
 }
 
 void ViewTree::HitTestFrom(zx_koid_t starting_view_koid, const escher::ray4& world_space_ray,
-                           HitAccumulator<ViewHit>* accumulator) const {
+                           HitAccumulator<ViewHit>* accumulator, bool semantic_hit_test) const {
   if (!IsTracked(starting_view_koid) || !IsRefNode(starting_view_koid)) {
     FX_LOGS(WARNING) << "Tried to hit test starting from invalid view.";
     return;
   }
 
-  std::get_if<RefNode>(&nodes_.at(starting_view_koid))->hit_test(world_space_ray, accumulator);
+  std::get_if<RefNode>(&nodes_.at(starting_view_koid))
+      ->hit_test(world_space_ray, accumulator, semantic_hit_test);
 }
 
 zx_status_t ViewTree::AddAnnotationViewHolder(zx_koid_t koid, ViewHolderPtr annotation) const {

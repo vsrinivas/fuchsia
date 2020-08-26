@@ -338,6 +338,11 @@ class MeasuringTape {
         Measure(_set_scale);
         break;
       }
+      case ::fuchsia::ui::gfx::Command::Tag::kSetSemanticVisibility: {
+        __attribute__((unused)) auto const& _set_semantic_visibility = value.set_semantic_visibility();
+        Measure(_set_semantic_visibility);
+        break;
+      }
       case ::fuchsia::ui::gfx::Command::Tag::kSetShape: {
         __attribute__((unused)) auto const& _set_shape = value.set_shape();
         Measure(_set_shape);
@@ -919,6 +924,10 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SetScaleCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
+  }
+
+  void Measure(const ::fuchsia::ui::gfx::SetSemanticVisibilityCmd& value) {
+    num_bytes_ += FIDL_ALIGN(8);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetShapeCmd& value) {

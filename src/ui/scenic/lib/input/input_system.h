@@ -118,7 +118,7 @@ class InputSystem : public System,
  private:
   // Perform a hit test with |event| in |view_tree| and collect results in |accumulator|.
   void HitTest(const gfx::ViewTree& view_tree, const InternalPointerEvent& event,
-               gfx::HitAccumulator<gfx::ViewHit>& accumulator) const;
+               gfx::HitAccumulator<gfx::ViewHit>& accumulator, bool semantic_hit_test) const;
 
   // Dispatches an event to a parallel set of views; set may be empty.
   // Conditionally trigger focus change request, based on |views_and_event.event.phase|.

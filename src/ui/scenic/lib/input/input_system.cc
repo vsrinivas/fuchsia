@@ -333,13 +333,14 @@ void InputSystem::RegisterListener(
 }
 
 void InputSystem::HitTest(const gfx::ViewTree& view_tree, const InternalPointerEvent& event,
-                          gfx::HitAccumulator<gfx::ViewHit>& accumulator) const {
+                          gfx::HitAccumulator<gfx::ViewHit>& accumulator,
+                          bool semantic_hit_test) const {
   if (IsOutsideViewport(event.viewport, event.position_in_viewport)) {
     return;
   }
 
   escher::ray4 world_ray = CreateWorldSpaceRay(event, view_tree);
-  view_tree.HitTestFrom(event.target, world_ray, &accumulator);
+  view_tree.HitTestFrom(event.target, world_ray, &accumulator, semantic_hit_test);
 }
 
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
@@ -461,7 +462,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
 
   if (pointer_phase == Phase::ADD) {
     gfx::ViewHitAccumulator accumulator;
-    HitTest(view_tree, event, accumulator);
+    HitTest(view_tree, event, accumulator, /*semantic_hit_test*/ false);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -535,7 +536,7 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
     {
       // Find top-hit target and send it to accessibility.
       gfx::TopHitAccumulator top_hit;
-      HitTest(view_tree, event, top_hit);
+      HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ true);
 
       if (top_hit.hit()) {
         view_ref_koid = top_hit.hit()->view_ref_koid;
@@ -600,7 +601,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    HitTest(view_tree, event, top_hit);
+    HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ false);
 
     std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
@@ -643,7 +644,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    HitTest(view_tree, event, top_hit);
+    HitTest(view_tree, event, top_hit, /*semantic_hit_test*/ false);
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;

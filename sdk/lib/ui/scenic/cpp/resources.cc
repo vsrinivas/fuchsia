@@ -204,6 +204,10 @@ void Node::SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavio
   session()->Enqueue(NewSetHitTestBehaviorCmd(id(), hit_test_behavior));
 }
 
+void Node::SetSemanticVisibility(bool visible) {
+  session()->Enqueue(NewSetSemanticVisibilityCmd(id(), visible));
+}
+
 void Node::Detach() { session()->Enqueue(NewDetachCmd(id())); }
 
 ShapeNode::ShapeNode(Session* session) : Node(session) {

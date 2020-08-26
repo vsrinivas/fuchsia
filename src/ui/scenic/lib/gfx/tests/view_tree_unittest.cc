@@ -648,10 +648,10 @@ TEST(ViewTreePrimitive, HitTestFrom) {
   }
 
   // Hit test should fire on the correct node.
-  tree.HitTestFrom(scene_koid, {}, nullptr);
+  tree.HitTestFrom(scene_koid, {}, nullptr, /*semantic_visibility*/ false);
   EXPECT_TRUE(hit_test1_triggered);
   EXPECT_FALSE(hit_test2_triggered);
-  tree.HitTestFrom(view_koid_1, {}, nullptr);
+  tree.HitTestFrom(view_koid_1, {}, nullptr, /*semantic_visibility*/ false);
   EXPECT_TRUE(hit_test2_triggered);
 
   {  // Missing hit_test should crash in debug mode.

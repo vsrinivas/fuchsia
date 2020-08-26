@@ -87,11 +87,13 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
                  : std::nullopt;
     };
 
-    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
+                       bool semantic_hit_test)>
         hit_test = [weak_ptr = GetWeakPtr()](const escher::ray4& world_space_ray,
-                                             HitAccumulator<ViewHit>* accumulator) {
+                                             HitAccumulator<ViewHit>* accumulator,
+                                             bool semantic_hit_test) {
           if (weak_ptr) {
-            HitTest(weak_ptr->GetViewNode(), world_space_ray, accumulator);
+            HitTest(weak_ptr->GetViewNode(), world_space_ray, accumulator, semantic_hit_test);
           }
         };
 

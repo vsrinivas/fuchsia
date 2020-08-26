@@ -228,7 +228,7 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{1, 1.5f};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -287,7 +287,7 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{1, 1.5f};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -348,7 +348,7 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{5, 6};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -424,7 +424,7 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{5, layer_height() / 2};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
   }
   {
@@ -432,7 +432,7 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{layer_width() / 2 + 50, layer_height() / 2};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_EQ(accumulator.hits().size(), 0u)
         << "Should see no hits since its outside the view bounds";
   }
@@ -515,10 +515,105 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
     TestHitAccumulator<NodeHit> accumulator;
     const glm::vec2 world_space_point{layer_width() / 2, layer_height() / 2};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
 
     ASSERT_EQ(accumulator.hits().size(), 1u);
     EXPECT_EQ(accumulator.hits().front().node->id(), kHittableShapeNodeId);
+  }
+}
+
+// Test to check that no hits can be detected in the subtree of a semantically invisible node when
+// performing a semantic hit test, and that it performs as normal with a regular hit test.
+// Sets up a scene with a semantically invisible entity node with a shape node child, above
+// a semantically visible shape node, and performs two hit tests that goes through both shape nodes:
+// a semantic hit test and a non-semantic hit test. Only the visible node should register a hit
+// in the semantic hit test, while both shapes should register in the non-semantic test.
+//
+// Diagram:                |  Scene graph:
+//                         |
+// vvvvvvvvvvvvvvvvvvvvvv  |     View
+// v                    v  |     /  \
+// v    (rrrrrrrrrrr)   v  |    |  EntityNode(semantically invisible)
+// v                    v  |    |    |
+// v     rrrrrrrrrrr    v  |    |  ShapeNode
+// v                    v  |    |
+// vvvvvvvvvvvvvvvvvvvvvv  | ShapeNode
+//
+// Where v represents a view, r represents the semantically visible rectangle inside that view, and
+// (r) represents the semantically invisible rectangle.
+TEST_F(SingleSessionHitTestTest, SemanticVisibilityTest) {
+  // Create our tokens for View/ViewHolder creation.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  // Create bounds for the views.
+  const std::array<float, 3> bbox_min = {0, 0, -4};
+  const std::array<float, 3> bbox_max = {10, 10, 0};
+  const std::array<float, 3> inset_min = {0, 0, 0};
+  const std::array<float, 3> inset_max = {0, 0, 0};
+
+  const uint32_t kVisibleShapeNodeId = 1007;
+  const uint32_t kInvisibleShapeNodeId = 1005;
+  CustomSession sess = CreateRootSession(1024, 768);
+  {
+    const uint32_t kViewHolderId = 1001;
+    sess.Apply(
+        scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
+    const uint32_t kViewId = 1002;
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "view"));
+    // Set the bounding box on the view holder.
+    const std::array<float, 3> bbox_min = {0.f, 0.f, -10.f};
+    const std::array<float, 3> bbox_max = {layer_width(), layer_height(), 0.f};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
+    sess.Apply(
+        scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    const uint32_t kRootNodeId = 1003;
+    sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
+
+    // Create first branch
+    const uint32_t kInvisibleEntityNodeId = 1004;
+    sess.Apply(scenic::NewCreateEntityNodeCmd(kInvisibleEntityNodeId));
+    sess.Apply(scenic::NewSetSemanticVisibilityCmd(kInvisibleEntityNodeId, /*visible*/ false));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kInvisibleEntityNodeId));
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kInvisibleShapeNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kInvisibleEntityNodeId, kInvisibleShapeNodeId));
+    // Move to middle of view.
+    sess.Apply(scenic::NewSetTranslationCmd(kInvisibleShapeNodeId,
+                                            {layer_width() / 2.f, layer_height() / 2.f, -5.f}));
+    const uint32_t kShapeId1 = 1006;
+    sess.Apply(scenic::NewCreateRectangleCmd(kShapeId1, layer_width(), layer_height()));
+    sess.Apply(scenic::NewSetShapeCmd(kInvisibleShapeNodeId, kShapeId1));
+
+    // Create second branch
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kVisibleShapeNodeId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kVisibleShapeNodeId));
+    const uint32_t kShapeId2 = 1008;
+    sess.Apply(scenic::NewCreateRectangleCmd(kShapeId2, layer_width(), layer_height()));
+    sess.Apply(scenic::NewSetShapeCmd(kVisibleShapeNodeId, kShapeId2));
+    // Move to middle of view, below InvisibleShapeNode.
+    sess.Apply(scenic::NewSetTranslationCmd(kVisibleShapeNodeId,
+                                            {layer_width() / 2.f, layer_height() / 2.f, -2.5f}));
+  }
+
+  const glm::vec2 world_space_point{layer_width() / 2, layer_height() / 2};
+  const escher::ray4 ray = CreateZRay(world_space_point);
+  {  // Semantic hit test should only register the semantically visible shape.
+    TestHitAccumulator<NodeHit> accumulator;
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ true);
+
+    ASSERT_EQ(accumulator.hits().size(), 1u);
+    EXPECT_EQ(accumulator.hits().front().node->id(), kVisibleShapeNodeId);
+  }
+
+  {  // Non-semantic hit test should see both shapes.
+    TestHitAccumulator<NodeHit> accumulator;
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
+
+    ASSERT_EQ(accumulator.hits().size(), 2u);
+    EXPECT_EQ(accumulator.hits()[0].node->id(), kInvisibleShapeNodeId);
+    EXPECT_EQ(accumulator.hits()[1].node->id(), kVisibleShapeNodeId);
   }
 }
 
@@ -577,14 +672,14 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{4, 4.5f};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_FALSE(accumulator.hits().empty());
   }
   {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{12, 4.5f};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_FALSE(accumulator.hits().empty());
   }
 }
@@ -688,7 +783,7 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
     TestHitAccumulator<NodeHit> accumulator;
     const glm::vec2 world_space_point{layer_width() / 2, layer_height() / 2};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_EQ(accumulator.hits().size(), 1u)
         << "Should only hit the shape encompassed by both views.";
     EXPECT_EQ(accumulator.hits().front().node->id(), kInnerShapeNodeId);
@@ -784,7 +879,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
     TestHitAccumulator<ViewHit> accumulator;
     const glm::vec2 world_space_point{3 * layer_width() / 4, 3 * layer_height() / 4};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     EXPECT_TRUE(accumulator.hits().empty());
   }
 }
@@ -892,7 +987,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     ViewHitAccumulator accumulator;
     const glm::vec2 world_space_point{4, 4};
     const escher::ray4 ray = CreateZRay(world_space_point);
-    HitTest(scene(), ray, &accumulator);
+    HitTest(scene(), ray, &accumulator, /*semantic_hit_test*/ false);
     accumulator.EndLayer();
     const auto& hits = accumulator.hits();
 

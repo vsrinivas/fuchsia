@@ -276,6 +276,11 @@ bool Node::SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior hit_test_behav
   return true;
 }
 
+bool Node::SetSemanticVisibility(bool visible) {
+  semantically_visible_ = visible;
+  return true;
+}
+
 bool Node::SendSizeChangeHint(float width_change_factor, float height_change_factor) {
   if (event_mask() & ::fuchsia::ui::gfx::kSizeChangeHintEventMask) {
     auto event = ::fuchsia::ui::gfx::Event();

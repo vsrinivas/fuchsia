@@ -58,11 +58,13 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
       FX_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
     };
-    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
+                       bool semantic_hit_test)>
         hit_test = [weak_ptr = GetWeakPtr()](const escher::ray4& world_space_ray,
-                                             HitAccumulator<ViewHit>* accumulator) {
+                                             HitAccumulator<ViewHit>* accumulator,
+                                             bool semantic_hit_test) {
           if (weak_ptr) {
-            HitTest(weak_ptr.get(), world_space_ray, accumulator);
+            HitTest(weak_ptr.get(), world_space_ray, accumulator, semantic_hit_test);
           }
         };
 

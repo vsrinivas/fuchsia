@@ -33,9 +33,12 @@ std::optional<ViewHit> CreateViewHit(const NodeHit& hit) {
 
 // Checks if a node is hit by a ray. |local_ray| is the ray in the local space of the node.
 Node::IntersectionInfo HitTestSingleNode(const Node* node, escher::ray4 local_ray,
-                                         Node::IntersectionInfo parent_intersection) {
-  // Bail if hit testing is suppressed or if the ray is clipped.
+                                         Node::IntersectionInfo parent_intersection,
+                                         bool semantic_hit_test) {
+  // Bail if hit testing is suppressed, the ray is clipped or if we're doing a semantic test and the
+  // node is invisible to it.
   if (node->hit_test_behavior() == ::fuchsia::ui::gfx::HitTestBehavior::kSuppress ||
+      (semantic_hit_test && !node->semantically_visible()) ||
       (node->clip_to_self() && node->ClipsRay(local_ray))) {
     return Node::IntersectionInfo{.did_hit = false, .continue_with_children = false};
   }
@@ -53,7 +56,7 @@ struct HitTestNode {
 }  // namespace
 
 void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
-             HitAccumulator<NodeHit>* accumulator) {
+             HitAccumulator<NodeHit>* accumulator, bool semantic_hit_test) {
   FX_DCHECK(starting_node);
   FX_DCHECK(accumulator);
 
@@ -70,8 +73,8 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
     const escher::ray4 local_ray = world_to_local_transform * world_space_ray;
 
     // Perform hit test.
-    const Node::IntersectionInfo local_intersection =
-        HitTestSingleNode(current_node.node, local_ray, current_node.parent_intersection);
+    const Node::IntersectionInfo local_intersection = HitTestSingleNode(
+        current_node.node, local_ray, current_node.parent_intersection, semantic_hit_test);
 
     if (local_intersection.did_hit) {
       FX_VLOGS(2) << "\tHit: " << current_node.node->global_id();
@@ -91,11 +94,11 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
 }
 
 void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
-             HitAccumulator<ViewHit>* accumulator) {
+             HitAccumulator<ViewHit>* accumulator, bool semantic_hit_test) {
   MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
       accumulator, [](const NodeHit& hit) { return CreateViewHit(hit); });
 
-  HitTest(starting_node, world_space_ray, &transforming_accumulator);
+  HitTest(starting_node, world_space_ray, &transforming_accumulator, semantic_hit_test);
   transforming_accumulator.EndLayer();
 }
 
