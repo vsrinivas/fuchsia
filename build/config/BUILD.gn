@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/clang/crash_diagnostics.gni")
+import("//build/config/clang/time_trace.gni")
 import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
 import("//build/rust/config.gni")
@@ -132,6 +133,14 @@ config("crash-diagnostics-dir") {
   }
 }
 
+config("time-trace") {
+  if (!is_gcc && time_trace) {
+    cflags = [ "-ftime-trace" ]
+    asmflags = cflags
+    ldflags = cflags
+  }
+}
+
 config("compiler") {
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
@@ -152,7 +161,10 @@ config("compiler") {
     }
   }
 
-  configs += [ ":crash-diagnostics-dir" ]
+  configs += [
+    ":crash-diagnostics-dir",
+    ":time-trace",
+  ]
 }
 
 # We want to force a recompile and relink of the world whenever our toolchain
