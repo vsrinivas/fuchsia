@@ -906,10 +906,13 @@ TEST_F(DeviceTest, BindFailureOk) {
   loop.Shutdown();
 }
 
-TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
+TEST_F(DeviceTest, SetBufferCollectionAgainWhileFramesHeld) {
+  constexpr uint32_t kCycleCount = 10;
+  uint32_t cycle = 0;
+
   fuchsia::camera3::StreamPtr stream;
   constexpr uint32_t kMaxCampingBuffers = 1;
-  std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
+  std::array<std::unique_ptr<FakeLegacyStream>, kCycleCount> legacy_stream_fakes;
   auto stream_impl = std::make_unique<StreamImpl>(
       fake_properties_, fake_legacy_config_, stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
@@ -917,15 +920,14 @@ TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
         ASSERT_TRUE(result.is_ok());
-        legacy_stream_fake = result.take_value();
+        legacy_stream_fakes[cycle] = result.take_value();
         token.BindSync()->Close();
         callback(kMaxCampingBuffers);
       },
       nop);
 
-  constexpr uint32_t kCycleCount = 10;
   std::vector<fuchsia::camera3::FrameInfo> frames(kCycleCount);
-  for (uint32_t i = 0; i < kCycleCount; ++i) {
+  for (cycle = 0; cycle < kCycleCount; ++cycle) {
     fuchsia::sysmem::BufferCollectionTokenHandle token;
     allocator_->AllocateSharedCollection(token.NewRequest());
     stream->SetBufferCollection(std::move(token));
@@ -951,19 +953,44 @@ TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
       collection->Close();
       stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) {
         // Keep the frame; do not release it.
-        frames[i] = std::move(info);
+        frames[cycle] = std::move(info);
         frame_received = true;
       });
       fuchsia::camera2::FrameAvailableInfo frame_info;
       frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
-      frame_info.buffer_id = i;
+      frame_info.buffer_id = cycle;
       frame_info.metadata.set_timestamp(0);
-      while (!HasFailure() && !legacy_stream_fake->IsStreaming()) {
+      while (!HasFailure() && !legacy_stream_fakes[cycle]->IsStreaming()) {
         RunLoopUntilIdle();
       }
-      ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
+      ASSERT_EQ(legacy_stream_fakes[cycle]->SendFrameAvailable(std::move(frame_info)), ZX_OK);
     });
     RunLoopUntilFailureOr(frame_received);
+  }
+}
+
+TEST_F(DeviceTest, FrameWaiterTest) {
+  {  // Test that destructor of a non-triggered waiter does not panic.
+    zx::eventpair client;
+    zx::eventpair server;
+    ASSERT_EQ(zx::eventpair::create(0, &client, &server), ZX_OK);
+    bool signaled = false;
+    {
+      FrameWaiter waiter(dispatcher(), std::move(server), [&] { signaled = true; });
+      RunLoopUntilIdle();
+    }
+    RunLoopUntilIdle();
+    EXPECT_FALSE(signaled);
+  }
+
+  {  // Test that closing the client endpoint triggers the wait.
+    zx::eventpair client;
+    zx::eventpair server;
+    ASSERT_EQ(zx::eventpair::create(0, &client, &server), ZX_OK);
+    bool signaled = false;
+    FrameWaiter waiter(dispatcher(), std::move(server), [&] { signaled = true; });
+    client.reset();
+    RunLoopUntilFailureOr(signaled);
   }
 }
 

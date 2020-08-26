@@ -8,11 +8,13 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 // Safely unbinds a client connection, doing so on the connection's thread if it differs from the
 // caller's thread.
@@ -102,6 +104,39 @@ struct MuteState {
   bool operator==(const MuteState& other) const {
     return other.software_muted == software_muted && other.hardware_muted == hardware_muted;
   }
+};
+
+// Wraps an async::Wait and frame release fence such that object lifetime requirements are enforced
+// automatically, namely that the waited-upon object must outlive the wait object.
+class FrameWaiter {
+ public:
+  FrameWaiter(async_dispatcher_t* dispatcher, zx::eventpair fence, fit::closure signaled)
+      : fence_(std::move(fence)),
+        wait_(fence_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
+              fit::bind_member(this, &FrameWaiter::Handler)),
+        signaled_(std::move(signaled)) {
+    wait_.Begin(dispatcher);
+  }
+  ~FrameWaiter() {
+    wait_.Cancel();
+    signaled_ = nullptr;
+    fence_.reset();
+  }
+
+ private:
+  void Handler(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+               const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+      return;
+    }
+    // |signaled_| may delete |this|, so move it to a local before calling it. This ensures captures
+    // are persisted for the duration of the callback.
+    auto signaled = std::move(signaled_);
+    signaled();
+  }
+  zx::eventpair fence_;
+  async::Wait wait_;
+  fit::closure signaled_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_UTIL_H_

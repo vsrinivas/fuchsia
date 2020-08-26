@@ -144,7 +144,7 @@ class StreamImpl {
   std::queue<uint64_t> frame_sinks_;
   bool frame_sink_warning_sent_ = false;
   std::queue<fuchsia::camera3::FrameInfo> frames_;
-  std::map<uint32_t, std::unique_ptr<async::Wait>> frame_waiters_;
+  std::map<uint32_t, std::unique_ptr<FrameWaiter>> frame_waiters_;
   fuchsia::math::Size current_resolution_;
   MuteState mute_state_;
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
