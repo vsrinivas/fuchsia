@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "bin/bugreport_integration_test_exe"
+        "binary": "bin/snapshotter_integration_test_exe"
     },
     "sandbox": {
         "features": [

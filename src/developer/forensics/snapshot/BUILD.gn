@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("snapshot") {
+  testonly = true
+
+  deps = [ ":pkg" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+package("pkg") {
+  package_name = "snapshot"
+
+  binaries = [
+    {
+      # TODO(50926): remove the "bugreport" alias when all clients have switched
+      # to invoking "snapshot".
+      name = "bugreport"
+      source = "snapshot"
+
+      # This allows us to invoke `bugreport` on the device, but prevents us
+      # from using fuchsia_package().
+      shell = true
+    },
+    {
+      name = "snapshot"
+
+      # This allows us to invoke `snapshot` on the device, but prevents us
+      # from using fuchsia_package().
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/snapshot.cmx"
+      dest = "snapshot.cmx"
+    },
+  ]
+
+  deps = [
+    ":main",
+    "//build/validate:non_production_tag",
+  ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("main") {
+  output_name = "snapshot"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":snapshotter",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("snapshotter") {
+  sources = [
+    "snapshotter.cc",
+    "snapshotter.h",
+  ]
+
+  public_deps = [ "//sdk/lib/sys/cpp" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//zircon/public/lib/zx",
+  ]
+}

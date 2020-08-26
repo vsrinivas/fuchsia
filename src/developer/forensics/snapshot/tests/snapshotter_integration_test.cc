@@ -7,42 +7,42 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/bugreport/bug_reporter.h"
+#include "src/developer/forensics/snapshot/snapshotter.h"
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace forensics {
-namespace bugreport {
+namespace snapshot {
 namespace {
 
-class BugReporterIntegrationTest : public testing::Test {
+class SnapshotterIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
-    ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_));
+    ASSERT_TRUE(tmp_dir_.NewTempFile(&snapshot_path_));
   }
 
  protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
-  std::string bugreport_path_;
+  std::string snapshot_path_;
 
  private:
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(BugReporterIntegrationTest, SmokeTest) {
-  ASSERT_TRUE(MakeBugReport(environment_services_, bugreport_path_.data()));
+TEST_F(SnapshotterIntegrationTest, SmokeTest) {
+  ASSERT_TRUE(MakeSnapshot(environment_services_, snapshot_path_.data()));
 
-  // We simply assert that we can unpack the bugreport archive.
+  // We simply assert that we can unpack the snapshot archive.
   fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromFilename(bugreport_path_, &vmo));
+  ASSERT_TRUE(fsl::VmoFromFilename(snapshot_path_, &vmo));
   fuchsia::mem::Buffer buffer = std::move(vmo).ToTransport();
   std::map<std::string, std::string> unpacked_attachments;
   ASSERT_TRUE(Unpack(buffer, &unpacked_attachments));
 }
 
 }  // namespace
-}  // namespace bugreport
+}  // namespace snapshot
 }  // namespace forensics

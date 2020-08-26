@@ -57,4 +57,4 @@ from the previous boot. These messages appear when running [`fx snapshot`].
 [Viewing]: /docs/development/logs/viewing.md
 [feedback data]: /src/developer/forensics/feedback_data
 [persistent disk store]: /src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h
-[`fx snapshot`]: /src/developer/forensics/bugreport/README.md
+[`fx snapshot`]: /src/developer/forensics/snapshot/README.md

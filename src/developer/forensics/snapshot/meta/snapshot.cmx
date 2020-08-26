@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/bugreport"
+        "binary": "bin/snapshot"
     },
     "sandbox": {
         "services": [

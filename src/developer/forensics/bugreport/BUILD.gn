@@ -2,74 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
-###############################################################################
-# PACKAGES
-###############################################################################
-# TODO(50926): rename the package and component to "snapshot".
-package("bugreport") {
-  binaries = [
-    {
-      # TODO(50926): remove the "bugreport" alias when all clients have switched
-      # to invoking "snapshot".
-      name = "bugreport"
-      source = "bugreport"
-
-      # This allows us to invoke `bugreport` on the device, but prevents us
-      # from using fuchsia_package().
-      shell = true
-    },
-    {
-      name = "snapshot"
-      source = "bugreport"
-
-      # This allows us to invoke `snapshot` on the device, but prevents us
-      # from using fuchsia_package().
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/bugreport.cmx"
-      dest = "bugreport.cmx"
-    },
-  ]
-
-  deps = [
-    ":main",
-    "//build/validate:non_production_tag",
-  ]
-}
-
-###############################################################################
-# EXECUTABLES
-###############################################################################
-executable("main") {
-  output_name = "bugreport"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":bug_reporter",
-    "//sdk/lib/sys/cpp",
-  ]
-}
-
-###############################################################################
-# SOURCES
-###############################################################################
-source_set("bug_reporter") {
-  sources = [
-    "bug_reporter.cc",
-    "bug_reporter.h",
-  ]
-
-  public_deps = [ "//sdk/lib/sys/cpp" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//zircon/public/lib/zx",
-  ]
+# TODO(50926): delete once all dependencies have been migrated.
+group("bugreport") {
+  deps = [ "//src/developer/forensics/snapshot:pkg" ]
 }

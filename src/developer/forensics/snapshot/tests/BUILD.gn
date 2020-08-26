@@ -7,14 +7,14 @@ import("//src/sys/build/components.gni")
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("bugreport_integration_test_exe") {
+executable("snapshotter_integration_test_exe") {
   testonly = true
 
-  sources = [ "bug_reporter_integration_test.cc" ]
+  sources = [ "snapshotter_integration_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.mem",
-    "//src/developer/forensics/bugreport:bug_reporter",
+    "//src/developer/forensics/snapshot:snapshotter",
     "//src/developer/forensics/utils:archive",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -23,17 +23,17 @@ executable("bugreport_integration_test_exe") {
   ]
 }
 
-executable("bugreport_unittest_exe") {
+executable("snapshotter_unittest_exe") {
   testonly = true
 
-  sources = [ "bug_reporter_unittest.cc" ]
+  sources = [ "snapshotter_unittest.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/bugreport:bug_reporter",
+    "//src/developer/forensics/snapshot:snapshotter",
     "//src/developer/forensics/testing/stubs:data_provider",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -49,29 +49,29 @@ executable("bugreport_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("bugreport_integration_test") {
+fuchsia_component("snapshotter_integration_test") {
   testonly = true
 
-  manifest = "meta/bugreport_integration_test.cmx"
+  manifest = "meta/snapshotter_integration_test.cmx"
 
-  deps = [ ":bugreport_integration_test_exe" ]
+  deps = [ ":snapshotter_integration_test_exe" ]
 }
 
-fuchsia_component("bugreport_unittest") {
+fuchsia_component("snapshotter_unittest") {
   testonly = true
 
-  manifest = "meta/bugreport_unittest.cmx"
+  manifest = "meta/snapshotter_unittest.cmx"
 
-  deps = [ ":bugreport_unittest_exe" ]
+  deps = [ ":snapshotter_unittest_exe" ]
 }
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-fuchsia_test_package("bugreport-tests") {
+fuchsia_test_package("snapshot-tests") {
   test_components = [
-    ":bugreport_integration_test",
-    ":bugreport_unittest",
+    ":snapshotter_integration_test",
+    ":snapshotter_unittest",
   ]
 }
 
@@ -82,7 +82,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":bugreport-tests",
+    ":snapshot-tests",
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/developer/forensics/testing/fakes:fake-data-provider",

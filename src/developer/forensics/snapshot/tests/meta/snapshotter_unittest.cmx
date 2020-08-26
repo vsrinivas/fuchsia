@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/bugreport_unittest_exe"
+        "binary": "bin/snapshotter_unittest_exe"
     },
     "sandbox": {
         "features": [

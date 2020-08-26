@@ -12,12 +12,12 @@ group("forensics") {
 
   deps = [
     ":tests",
-    "bugreport",
     "crash_reports:crash-reports",
     "crasher",
     "exceptions",
     "feedback_data",
     "last_reboot:last-reboot",
+    "snapshot",
   ]
 }
 
@@ -25,12 +25,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    "bugreport/tests",
     "crash_reports/tests",
     "exceptions/tests",
     "feedback_data/system_log_recorder/tests",
     "feedback_data/tests",
     "last_reboot/tests",
+    "snapshot/tests",
     "utils/tests",
   ]
 }

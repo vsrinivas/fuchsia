@@ -6,10 +6,10 @@
 
 #include <cstdlib>
 
-#include "src/developer/forensics/bugreport/bug_reporter.h"
+#include "src/developer/forensics/snapshot/snapshotter.h"
 
 int main(int argc, char** argv) {
-  return ::forensics::bugreport::MakeBugReport(sys::ServiceDirectory::CreateFromNamespace())
+  return ::forensics::snapshot::MakeSnapshot(sys::ServiceDirectory::CreateFromNamespace())
              ? EXIT_SUCCESS
              : EXIT_FAILURE;
 }

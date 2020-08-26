@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/bugreport/bug_reporter.h"
+#include "src/developer/forensics/snapshot/snapshotter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/zx/time.h>
@@ -12,9 +12,9 @@
 #include <cstdio>
 
 namespace forensics {
-namespace bugreport {
+namespace snapshot {
 
-bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* out_filename) {
+bool MakeSnapshot(std::shared_ptr<sys::ServiceDirectory> services, const char* out_filename) {
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
 
@@ -57,5 +57,5 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* 
   }
 }
 
-}  // namespace bugreport
+}  // namespace snapshot
 }  // namespace forensics
