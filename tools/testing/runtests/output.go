@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 )
@@ -18,18 +19,22 @@ const (
 	FailureSignature = "[runtests][FAILED]"
 )
 
-var (
-	resultSignatureRE = regexp.MustCompile(fmt.Sprintf("(%s|%s)", regexp.QuoteMeta(SuccessSignature), regexp.QuoteMeta(FailureSignature)))
-	resultMatchLength = len(SuccessSignature) // Assumes len(SuccessSignature) == len(FailureSignature)
-)
+// TestPassed reads in the output from a runtests invocation of a single test and returns whether
+// that test succeeded. The expected signature, eg "[runtests][PASSED] /test/name", must match the
+// one in
+// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/system/ulib/runtests-utils/fuchsia-run-test.cc
+func TestPassed(ctx context.Context, testOutput io.Reader, name string) (bool, error) {
+	resultSignature := fmt.Sprintf("(%s|%s) %s", regexp.QuoteMeta(SuccessSignature), regexp.QuoteMeta(FailureSignature), regexp.QuoteMeta(name))
+	resultSignatureRE, err := regexp.Compile(resultSignature)
+	if err != nil {
+		return false, fmt.Errorf("unable to compile regular expression for test name %v: %w", name, err)
+	}
+	resultMatchLength := len(SuccessSignature) + 1 + len(name) // Assumes len(SuccessSignature) == len(FailureSignature)
 
-// TestPassed reads in the output from a runtests invocation of a single test
-// and returns whether that test succeeded.
-func TestPassed(ctx context.Context, testOutput io.Reader) (bool, error) {
 	m := iomisc.NewPatternMatchingReader(testOutput, resultSignatureRE, resultMatchLength)
 	match, err := iomisc.ReadUntilMatch(ctx, m, nil)
 	if err != nil {
 		return false, fmt.Errorf("unable to derive test result from runtests output: %w", err)
 	}
-	return string(match) == SuccessSignature, nil
+	return strings.HasPrefix(string(match), SuccessSignature), nil
 }

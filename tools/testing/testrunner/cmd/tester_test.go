@@ -275,6 +275,7 @@ func TestSerialTester(t *testing.T) {
 	tester := fuchsiaSerialTester{socket: socket}
 	test := testsharder.Test{
 		Test: build.Test{
+			Name: "myfoo",
 			Path: "foo",
 		},
 	}
@@ -296,8 +297,9 @@ func TestSerialTester(t *testing.T) {
 		}
 
 		// At this point, the tester will be blocked reading from the socket.
-		if _, err := io.WriteString(serial, runtests.SuccessSignature); err != nil {
-			t.Errorf("failed to write %s to serial", runtests.SuccessSignature)
+		successReturn := runtests.SuccessSignature + " " + test.Name
+		if _, err := io.WriteString(serial, successReturn); err != nil {
+			t.Errorf("failed to write %s to serial", successReturn)
 		}
 
 		select {
@@ -322,8 +324,9 @@ func TestSerialTester(t *testing.T) {
 		}
 
 		// At this point, the tester will be blocked reading from the socket.
-		if _, err := io.WriteString(serial, runtests.FailureSignature); err != nil {
-			t.Errorf("failed to write %s to serial", runtests.FailureSignature)
+		failureReturn := runtests.FailureSignature + " " + test.Name
+		if _, err := io.WriteString(serial, failureReturn); err != nil {
+			t.Errorf("failed to write %s to serial", failureReturn)
 		}
 
 		select {

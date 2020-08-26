@@ -312,7 +312,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 		return nil, fmt.Errorf("failed to write to serial socket: %v", err)
 	}
 
-	success, err := runtests.TestPassed(ctx, t.socket)
+	success, err := runtests.TestPassed(ctx, t.socket, test.Name)
 
 	if err != nil {
 		return nil, err

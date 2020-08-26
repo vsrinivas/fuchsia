@@ -605,6 +605,9 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     return std::make_unique<Result>(test_name, FAILED_TO_RETURN_CODE, 0, duration_milliseconds);
   }
 
+  // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
+  // match test names and outcomes. Changes to this format must be matched in
+  // https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/tools/testing/runtests/output.go
   std::unique_ptr<Result> result;
   if (proc_info.return_code == 0) {
     fprintf(stderr, "%s %s passed", kSuccessSignature, test_name);
