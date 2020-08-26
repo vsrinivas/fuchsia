@@ -78,3 +78,12 @@ in your configuration:
 `bt-a2dp-manager` does not start any profile automatically, and will need to be
 called with an initial role after system startup to make one available.
 
+#### Switching Profiles on the Command Line
+
+The bt-a2dp-manager component can operate as a client of the `AudioMode` service when run with a
+command line argument:
+
+```
+$ run bt-a2dp-manager source  # Set mode to source role.
+$ run bt-a2dp-manager sink  # Set mode to sink role.
+```
