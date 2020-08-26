@@ -12,7 +12,6 @@ use_vboot = true
 
 _common_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/realtek-8111",
-  "//src/devices/bin/acpidump",
   "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/mbr",
   "//src/devices/block/drivers/nvme",
@@ -25,7 +24,6 @@ _common_bootfs_deps = [
   "//src/devices/serial/drivers/uart16550",
   "//src/devices/usb/drivers/xhci:xhci-x86",
   "//src/graphics/display/drivers/intel-i915",
-  "//src/media/audio/bin/ihda",
   "//src/media/audio/drivers/alc5514",
   "//src/media/audio/drivers/alc5663",
   "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",

@@ -31,7 +31,6 @@ _common_bootfs_deps = [
   "//src/media/audio/drivers/mt8167-tdm-output",
   "//src/ui/backlight/drivers/sg-micro",
   "//src/ui/input/drivers/bma253",
-  "//src/ui/input/drivers/focaltech",
 ]
 
 board_bootfs_labels += _common_bootfs_deps
