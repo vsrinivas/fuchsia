@@ -13,6 +13,7 @@
 
 #include <fvm/format.h>
 #include <fvm/fvm.h>
+#include <fvm/sparse-reader.h>
 
 #include "fvm-host/container.h"
 
@@ -261,21 +262,18 @@ zx_status_t FvmContainer::Verify() const {
 }
 
 zx_status_t FvmContainer::Extend(size_t disk_size) {
-  if (disk_size <= disk_size_) {
-    if (extend_length_type_ == ExtendLengthType::LOWER_BOUND) {
-      fprintf(stderr,
-              "Current size %" PRIu64
-              " is already greater than or equal to target disk size %zu.\n",
-              disk_size_, disk_size);
-      return ZX_OK;
-    } else {
-      fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
-              disk_size, disk_size_);
-      return ZX_ERR_INVALID_ARGS;
-    }
-  } else if (disk_offset_) {
+  if (disk_offset_) {
     fprintf(stderr, "Cannot extend FVM within another container\n");
     return ZX_ERR_BAD_STATE;
+  }
+
+  if (disk_size <= disk_size_) {
+    if (extend_length_type_ == ExtendLengthType::LOWER_BOUND) {
+      return ResizeImageFileToDiskSize();
+    }
+    fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
+            disk_size, disk_size_);
+    return ZX_ERR_INVALID_ARGS;
   }
 
   const char* temp = ".tmp";
@@ -428,6 +426,14 @@ zx_status_t FvmContainer::ResizeImageFileToFit() {
   size_t required_data_size = CountAddedSlices() * slice_size_;
   size_t minimal_size = disk_offset_ + required_data_size + 2 * info_.MetadataSize();
   if (ftruncate(fd_.get(), minimal_size) != 0) {
+    fprintf(stderr, "Failed to truncate fvm container");
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+
+zx_status_t FvmContainer::ResizeImageFileToDiskSize() {
+  if (ftruncate(fd_.get(), disk_size_ + disk_offset_) != 0) {
     fprintf(stderr, "Failed to truncate fvm container");
     return ZX_ERR_IO;
   }

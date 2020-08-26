@@ -168,6 +168,9 @@ class FvmContainer final : public Container {
   // Helper function to determine the type of android sparse image block type.
   AndroidSparseChunkType DetermineAndroidSparseChunkType(const uint32_t* buffer, size_t block_size,
                                                          size_t block_start);
+  // Counterpart of ResizeImageFileToFit(). It resizes the image file to be equal to the disk-size
+  // specified in the header plus disk-offset.
+  zx_status_t ResizeImageFileToDiskSize();
   void FinalizeNonEmptySegmentsInfo();
 };
 

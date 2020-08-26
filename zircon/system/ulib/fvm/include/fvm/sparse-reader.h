@@ -109,6 +109,8 @@ class SparseReader {
   zx_status_t ReadData(uint8_t* data, size_t length, size_t* actual);
   // Write decompressed data into new file
   zx_status_t WriteDecompressed(fbl::unique_fd outfd);
+  // A util function that reuses SparseReader logic to implement lz4 file decompression.
+  static zx_status_t DecompressLZ4File(const char* in_file, const char* out_file);
 
  private:
   static zx_status_t CreateHelper(std::unique_ptr<ReaderInterface> reader, bool verbose,
@@ -126,6 +128,8 @@ class SparseReader {
   zx_status_t ReadRaw(uint8_t* data, size_t length, size_t* actual);
 
   void PrintStats() const;
+
+  zx_status_t SetupLZ4();
 
   // True if sparse file is compressed
   bool compressed_;

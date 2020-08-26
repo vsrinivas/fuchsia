@@ -74,8 +74,9 @@ int usage(void) {
           " superblock, bitmaps, inodes, and journal different partitions. All of the\n"
           " reservations for non-data blocks are considered as used.\n");
   fprintf(stderr,
-          " decompress : Decompresses a compressed sparse file. --sparse input path is"
-          " required.\n");
+          " decompress : Decompresses a compressed sparse/raw file. --sparse/lz4/default input "
+          "path is required. If option is set to --default, the tool will attempt to detect the "
+          "input format\n");
   fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
   fprintf(stderr,
           " --slice [bytes] - specify slice size - only valid on container creation.\n"
@@ -101,6 +102,8 @@ int usage(void) {
   fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
   fprintf(stderr, " --default [path] - Add generic path\n");
   fprintf(stderr, " --sparse [path] - Path to compressed sparse file\n");
+  fprintf(stderr, " --lz4 [path] - Path to lz4 compressed raw file\n");
+  fprintf(stderr, " --raw [path] - Path to raw fvm image file\n");
   fprintf(stderr,
           " --resize-image-file-to-fit - When used with create/extend command, the output image "
           "file will "
@@ -109,7 +112,7 @@ int usage(void) {
           "flashing\n");
   fprintf(stderr,
           " --android-sparse-format - When used with create command, the image will be converted "
-          "to android sparse image.");
+          "to android sparse image.\n");
   fprintf(
       stderr,
       " --length-is-lowerbound - When used with extend command, if current disk size is already "
@@ -305,6 +308,102 @@ zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
 
   fprintf(stderr, "Unknown disk type: '%s'. Expected 'file' or 'mtd'.\n", type_str);
   return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t IsRawFvmImageFile(const char* path, size_t offset, bool* result) {
+  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
+  if (!fd) {
+    fprintf(stderr, "Fail to open file %s\n", path);
+    return ZX_ERR_IO;
+  }
+  std::unique_ptr<FvmContainer> container;
+  *result = FvmContainer::CreateExisting(path, offset, &container) == ZX_OK;
+  return ZX_OK;
+}
+
+zx_status_t IsFvmSparseImageFile(const char* path, bool* result) {
+  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
+  if (!fd) {
+    fprintf(stderr, "Fail to open file %s\n", path);
+    return ZX_ERR_IO;
+  }
+  std::unique_ptr<fvm::SparseReader> reader;
+  *result = fvm::SparseReader::CreateSilent(std::move(fd), &reader) == ZX_OK;
+  return ZX_OK;
+}
+
+zx_status_t IsLZ4CompressedFile(const char* path, bool* result) {
+  constexpr uint32_t kLZ4Magic = 0x184D2204;
+  fbl::unique_fd fd(open(path, O_RDONLY, 0644));
+  if (!fd) {
+    fprintf(stderr, "Fail to open file %s\n", path);
+    return ZX_ERR_IO;
+  }
+  uint32_t magic;
+  if (read(fd.get(), &magic, sizeof(magic)) != sizeof(magic)) {
+    fprintf(stderr, "Fail to read from file %s\n", path);
+    return ZX_ERR_IO;
+  }
+  *result = magic == kLZ4Magic;
+  return ZX_OK;
+}
+
+const char* DetermineImageInputTypeOption(const char* input_path, size_t offset) {
+  bool result;
+  if (IsRawFvmImageFile(input_path, offset, &result) != ZX_OK) {
+    return nullptr;
+  }
+  if (result) {
+    return "--raw";
+  }
+
+  if (IsFvmSparseImageFile(input_path, &result) != ZX_OK) {
+    return nullptr;
+  }
+  if (result) {
+    return "--sparse";
+  }
+
+  if (IsLZ4CompressedFile(input_path, &result) != ZX_OK) {
+    return nullptr;
+  }
+  if (result) {
+    return "--lz4";
+  }
+
+  return nullptr;
+}
+
+zx_status_t CopyFile(const char* dst, const char* src) {
+  constexpr size_t kBufferLength = 1024 * 1024;
+  fbl::unique_fd fd_src(open(src, O_RDONLY, 0644));
+  if (!fd_src) {
+    fprintf(stderr, "Unable to open source file %s\n", src);
+    return ZX_ERR_IO;
+  }
+
+  fbl::unique_fd fd_dst(open(dst, O_RDWR | O_CREAT, 0644));
+  if (!fd_dst) {
+    fprintf(stderr, "Unable to create output file %s\n", dst);
+    return ZX_ERR_IO;
+  }
+
+  std::vector<uint8_t> buffer(kBufferLength);
+  while (true) {
+    ssize_t read_bytes = read(fd_src.get(), buffer.data(), kBufferLength);
+    if (read_bytes < 0) {
+      fprintf(stderr, "Failed to read data from image file\n");
+      return ZX_ERR_IO;
+    } else if (read_bytes == 0) {
+      break;
+    }
+
+    if (write(fd_dst.get(), buffer.data(), read_bytes) != read_bytes) {
+      fprintf(stderr, "BlockReader: failed to write to output\n");
+      return ZX_ERR_IO;
+    }
+  }
+  return ZX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -621,6 +720,12 @@ int main(int argc, char** argv) {
     if (fvmContainer->Extend(length) != ZX_OK) {
       return -1;
     }
+
+    if (resize_image_file_to_fit) {
+      if (auto status = fvmContainer->ResizeImageFileToFit(); status != ZX_OK) {
+        return status;
+      }
+    }
   } else if (!strcmp(command, "sparse")) {
     if (offset) {
       fprintf(stderr, "Invalid sparse flags\n");
@@ -655,29 +760,44 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    char* input_type = argv[i];
-    char* input_path = argv[i + 1];
+    const char* input_type = argv[i];
+    const char* input_path = argv[i + 1];
 
-    if (strcmp(input_type, "--sparse")) {
+    if (!strcmp(input_type, "--default")) {
+      if (!(input_type = DetermineImageInputTypeOption(input_path, offset))) {
+        fprintf(stderr, "Fail to detect input file format\n");
+        return -1;
+      }
+    }
+
+    if (!strcmp(input_type, "--sparse")) {
+      std::unique_ptr<SparseContainer> compressedContainer;
+      if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
+        return -1;
+      }
+
+      if (compressedContainer->Decompress(path) != ZX_OK) {
+        return -1;
+      }
+
+      std::unique_ptr<SparseContainer> sparseContainer;
+      if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+        return -1;
+      }
+
+      if (sparseContainer->Verify() != ZX_OK) {
+        return -1;
+      }
+    } else if (!strcmp(input_type, "--lz4")) {
+      if (fvm::SparseReader::DecompressLZ4File(input_path, path) != ZX_OK) {
+        return -1;
+      }
+    } else if (!strcmp(input_type, "--raw")) {
+      if (CopyFile(path, input_path) != ZX_OK) {
+        return -1;
+      }
+    } else {
       usage();
-      return -1;
-    }
-
-    std::unique_ptr<SparseContainer> compressedContainer;
-    if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
-      return -1;
-    }
-
-    if (compressedContainer->Decompress(path) != ZX_OK) {
-      return -1;
-    }
-
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
-      return -1;
-    }
-
-    if (sparseContainer->Verify() != ZX_OK) {
       return -1;
     }
   } else if (!strcmp(command, "size")) {

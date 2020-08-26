@@ -10,6 +10,7 @@
 #include <cinttypes>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace fvm {
 
@@ -148,51 +149,59 @@ zx_status_t SparseReader::ReadMetadata() {
     }
 
     compressed_ = true;
-    // Initialize decompression context
-    LZ4F_errorCode_t errc = LZ4F_createDecompressionContext(&dctx_, LZ4F_VERSION);
-    if (LZ4F_isError(errc)) {
-      fprintf(stderr, "SparseReader: could not initialize decompression: %s\n",
-              LZ4F_getErrorName(errc));
-      return ZX_ERR_INTERNAL;
-    }
-
-    size_t src_sz = 4;
-    size_t dst_sz = 0;
-    std::unique_ptr<uint8_t[]> inbufptr(new uint8_t[src_sz]);
-
-    uint8_t* inbuf = inbufptr.get();
-
-    // Read first 4 bytes to let LZ4 tell us how much it expects in the first pass.
-    status = reader_->Read(inbuf, src_sz, &actual);
-    if (status != ZX_OK || actual < src_sz) {
-      fprintf(stderr, "SparseReader: could not read from input\n");
-      return ZX_ERR_IO;
-    }
-
-    // Run decompress once to find out how much data we should read for the next decompress run
-    // Since we are not yet decompressing any actual data, the dst_buffer is null
-    to_read_ = LZ4F_decompress(dctx_, nullptr, &dst_sz, inbuf, &src_sz, NULL);
-    if (LZ4F_isError(to_read_)) {
-      fprintf(stderr, "SparseReader: could not decompress header: %s\n",
-              LZ4F_getErrorName(to_read_));
-      return ZX_ERR_INTERNAL;
-    }
-
-    if (to_read_ > LZ4_MAX_BLOCK_SIZE) {
-      to_read_ = LZ4_MAX_BLOCK_SIZE;
-    }
-
-    // Initialize data buffers
-    zx_status_t status;
-    if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &out_)) != ZX_OK) {
-      return status;
-    } else if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &in_)) != ZX_OK) {
+    if (auto status = SetupLZ4(); status != ZX_OK) {
       return status;
     }
   }
 
   return ZX_OK;
-}  // namespace fvm
+}
+
+zx_status_t SparseReader::SetupLZ4() {
+  zx_status_t status;
+  size_t actual;
+  // Initialize decompression context
+  LZ4F_errorCode_t errc = LZ4F_createDecompressionContext(&dctx_, LZ4F_VERSION);
+  if (LZ4F_isError(errc)) {
+    fprintf(stderr, "SparseReader: could not initialize decompression: %s\n",
+            LZ4F_getErrorName(errc));
+    return ZX_ERR_INTERNAL;
+  }
+
+  size_t src_sz = 4;
+  size_t dst_sz = 0;
+  std::unique_ptr<uint8_t[]> inbufptr(new uint8_t[src_sz]);
+
+  uint8_t* inbuf = inbufptr.get();
+
+  // Read first 4 bytes to let LZ4 tell us how much it expects in the first pass.
+  status = reader_->Read(inbuf, src_sz, &actual);
+  if (status != ZX_OK || actual < src_sz) {
+    fprintf(stderr, "SparseReader: could not read from input\n");
+    return ZX_ERR_IO;
+  }
+
+  // Run decompress once to find out how much data we should read for the next decompress run
+  // Since we are not yet decompressing any actual data, the dst_buffer is null
+  to_read_ = LZ4F_decompress(dctx_, nullptr, &dst_sz, inbuf, &src_sz, NULL);
+  if (LZ4F_isError(to_read_)) {
+    fprintf(stderr, "SparseReader: could not decompress header: %s\n", LZ4F_getErrorName(to_read_));
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (to_read_ > LZ4_MAX_BLOCK_SIZE) {
+    to_read_ = LZ4_MAX_BLOCK_SIZE;
+  }
+
+  // Initialize data buffers
+  if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &out_)) != ZX_OK) {
+    return status;
+  } else if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &in_)) != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
 
 zx_status_t SparseReader::InitializeBuffer(size_t size, Buffer* out_buffer) {
   if (size < LZ4_MAX_BLOCK_SIZE) {
@@ -375,6 +384,43 @@ void SparseReader::PrintStats() const {
            total_time_ / zx_ticks_per_second());
 #endif
   }
+}
+
+zx_status_t SparseReader::DecompressLZ4File(const char* in_file, const char* out_file) {
+  fbl::unique_fd fd_in(open(in_file, O_RDONLY, 0644));
+  if (!fd_in) {
+    fprintf(stderr, "Unable to open input lz4 file %s\n", in_file);
+    return ZX_ERR_IO;
+  }
+
+  fbl::unique_fd fd_out(open(out_file, O_RDWR | O_CREAT, 0644));
+  if (!fd_out) {
+    fprintf(stderr, "Unable to create output file %s\n", out_file);
+    return ZX_ERR_IO;
+  }
+
+  std::unique_ptr<SparseReader> reader(
+      new SparseReader(std::make_unique<FileReader>(std::move(fd_in)), false));
+  reader->compressed_ = true;
+  reader->SetupLZ4();
+  // Read/write decompressed data in LZ4_MAX_BLOCK_SIZE chunks.
+  std::vector<uint8_t> buffer(LZ4_MAX_BLOCK_SIZE);
+  while (true) {
+    zx_status_t status;
+    size_t length;
+    if ((status = reader->ReadData(buffer.data(), LZ4_MAX_BLOCK_SIZE, &length)) != ZX_OK) {
+      if (status == ZX_ERR_OUT_OF_RANGE) {
+        return ZX_OK;
+      }
+      return status;
+    }
+
+    if (write(fd_out.get(), buffer.data(), length) != static_cast<ssize_t>(length)) {
+      fprintf(stderr, "BlockReader: failed to write to output\n");
+      return ZX_ERR_IO;
+    }
+  }
+  return ZX_OK;
 }
 
 }  // namespace fvm

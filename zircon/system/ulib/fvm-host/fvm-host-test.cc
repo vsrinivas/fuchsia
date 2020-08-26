@@ -790,6 +790,22 @@ TEST_F(FvmHostTest, ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength) {
   DestroyFvm();
 }
 
+TEST_F(FvmHostTest, ExtendToSmallerThanCurrentSizeResizeImageFileSizeToDiskSize) {
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true);
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container),
+            "Failed to initialize fvm container");
+  ASSERT_OK(container->Extend(kContainerSize * 2));
+  ASSERT_OK(container->ResizeImageFileToFit());
+  container->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
+  ASSERT_OK(container->Extend(2 * kContainerSize - 1));
+  // Validate that extend will reset image file size to be equal to the disk size.
+  off_t current_size;
+  StatFile(fvm_path, &current_size);
+  ASSERT_EQ(kContainerSize * 2, current_size);
+  DestroyFvm();
+}
+
 namespace {
 constexpr size_t kAndroidSparseBlockSize = 4096;
 
@@ -929,6 +945,40 @@ TEST_F(FvmHostTest, CompressWithLZ4) {
   uint32_t magic;
   ASSERT_EQ(read(fd.get(), &magic, sizeof(magic)), sizeof(magic));
   ASSERT_EQ(magic, 0x184D2204);
+}
+
+TEST_F(FvmHostTest, DecompressLZ4) {
+  std::unique_ptr<FvmContainer> out;
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
+  ASSERT_OK(out->CompressWithLZ4());
+  out.reset();
+  // Decompress to a file using path |sparse_path|.
+  ASSERT_OK(fvm::SparseReader::DecompressLZ4File(fvm_path, sparse_path));
+  // Load the fvm from the decompressed file
+  std::unique_ptr<FvmContainer> fvm_container;
+  ASSERT_OK(FvmContainer::CreateExisting(sparse_path, 0, &fvm_container));
+
+  // Compare that the decompressed image is the same as the original image.
+  // |fvm_path| is now a compressed image, need to recreate it.
+  DestroyFvm();
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
+
+  off_t original, decompressed;
+  StatFile(fvm_path, &original);
+  StatFile(sparse_path, &decompressed);
+  ASSERT_EQ(original, decompressed);
+
+  fbl::unique_fd fd_original(open(fvm_path, O_RDONLY, 0644));
+  ASSERT_TRUE(fd_original);
+  fbl::unique_fd fd_decompressed(open(fvm_path, O_RDONLY, 0644));
+  ASSERT_TRUE(fd_decompressed);
+
+  std::vector<uint8_t> original_data(original), decompressed_data(decompressed);
+  ASSERT_EQ(read(fd_original.get(), original_data.data(), original), original);
+  ASSERT_EQ(read(fd_decompressed.get(), decompressed_data.data(), decompressed), decompressed);
+  ASSERT_BYTES_EQ(original_data.data(), decompressed_data.data(), original);
+
+  DestroyFvm();
 }
 
 // Test extend with values that ensure the FVM metadata size will increase.
