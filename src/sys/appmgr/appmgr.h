@@ -36,6 +36,8 @@ struct AppmgrArgs {
   std::optional<fuchsia::sys::LoaderPtr> loader;
   bool run_virtual_console;
   zx::channel trace_server_channel;
+  // This function is called after appmgr completes its stop logic
+  fit::function<void(zx_status_t)> stop_callback;
 };
 
 struct LifecycleComponent {
