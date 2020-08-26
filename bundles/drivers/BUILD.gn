@@ -2,17 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("bootstrap") {
-  deps = [
-    "//src/connectivity/ethernet/drivers/ethernet",
-    "//src/connectivity/network/drivers/network-device",
-    "//src/devices/bundles:bootstrap",
-    "//src/graphics/display/drivers/display",
-    "//src/ui/input/drivers/hid",
-    "//src/ui/input/drivers/hid-buttons",
-  ]
-}
-
 group("usb-host-stack") {
   deps = [
     "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
