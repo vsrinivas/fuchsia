@@ -724,20 +724,24 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
   if (!logger) {
     return;
   }
+
   auto e = fuchsia::cobalt::CobaltEvent{
       .metric_id = metric_id,
       .event_codes = event_codes,
       .payload = fuchsia::cobalt::EventPayload::WithElapsedMicros(d.get()),
   };
-  logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
-    if (status == fuchsia::cobalt::Status::OK) {
-      return;
-    }
-    if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
-      FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
-    } else {
-      FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
-    }
+
+  impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
+    logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
+      if (status == fuchsia::cobalt::Status::OK) {
+        return;
+      }
+      if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
+        FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
+      } else {
+        FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
+      }
+    });
   });
 }
 
