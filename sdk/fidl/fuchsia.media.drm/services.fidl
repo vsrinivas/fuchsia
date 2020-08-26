@@ -62,6 +62,9 @@ protocol KeySystem {
     /// the `KeySystem` does not support data stores and one was provided, then
     /// the server should close the `cdm`.
     ///
+    /// If the `data_store_id` does not exist, the `cdm` will be closed with a
+    /// `ZX_ERR_NOT_FOUND` epitaph.
+    ///
     /// + request `data_store_id` the data store that should be used by the
     ///   `ContentDecryptionModule`.
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
