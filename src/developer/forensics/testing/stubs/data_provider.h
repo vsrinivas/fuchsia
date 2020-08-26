@@ -89,6 +89,21 @@ class DataProviderTracksNumConnections : public DataProviderBase {
   size_t num_connections_ = 0;
 };
 
+class DataProviderTracksNumCalls : public DataProviderBase {
+ public:
+  DataProviderTracksNumCalls(size_t expected_num_calls) : expected_num_calls_(expected_num_calls) {}
+  ~DataProviderTracksNumCalls();
+
+  // |fuchsia::feedback::DataProvider|
+  void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                   GetSnapshotCallback callback) override;
+
+ private:
+  const size_t expected_num_calls_;
+
+  size_t num_calls_{0};
+};
+
 class DataProviderNeverReturning : public DataProviderBase {
  public:
   // |fuchsia::feedback::DataProvider|

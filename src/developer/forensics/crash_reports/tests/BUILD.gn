@@ -112,12 +112,15 @@ executable("data_provider_ptr_unittest_exe") {
 
   deps = [
     "//src/developer/forensics/crash_reports:data_provider_ptr",
+    "//src/developer/forensics/crash_reports:errors",
+    "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:data_provider",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fsl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -450,10 +453,10 @@ fuchsia_test_package("crash-reports-tests") {
     ":config_unittest",
     ":crash_register_unittest",
     ":crash_reporter_unittest",
-    ":data_provider_ptr_unittest",
     ":crash_reports_integration_test",
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
+    ":data_provider_ptr_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",
     ":privacy_settings_ptr_unittest",

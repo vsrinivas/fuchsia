@@ -304,8 +304,6 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                                           MatchesKey(kAnnotationSystemLastRebootReason),
                                           MatchesKey(kAnnotationSystemLastRebootUptime),
                                           MatchesKey(kAnnotationSystemUpdateChannelCurrent),
-                                          MatchesKey(kAnnotationDebugSnapshotPoolSize),
-                                          MatchesKey(kAnnotationDebugSnapshotPoolUuid),
                                       }));
 
   ASSERT_TRUE(snapshot.has_archive());

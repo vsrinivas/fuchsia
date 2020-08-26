@@ -25,7 +25,6 @@
 #include "src/developer/forensics/feedback_data/image_conversion.h"
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -46,12 +45,6 @@ const zx::duration kDefaultDataTimeout = zx::sec(30);
 // 10 seconds seems reasonable to take a screenshot.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
-// Delta between snapshot requests that can be pooled together.
-//
-// We don't want it to be too high as data would get stale, e.g., logs, and we don't want it to be
-// too low as we wouldn't benefit as much from pooling.
-const zx::duration kSnapshotRequestPoolingDelta = zx::sec(5);
-
 }  // namespace
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
@@ -63,8 +56,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       integrity_reporter_(integrity_reporter),
       cobalt_(cobalt),
       datastore_(datastore),
-      executor_(dispatcher_),
-      request_manager_(kSnapshotRequestPoolingDelta, std::make_unique<timekeeper::SystemClock>()) {}
+      executor_(dispatcher_) {}
 
 void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
                                 GetBugreportCallback callback) {
@@ -89,13 +81,6 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
   const zx::duration timeout = (params.has_collection_timeout_per_data())
                                    ? zx::duration(params.collection_timeout_per_data())
                                    : kDefaultDataTimeout;
-
-  const auto request_reference = request_manager_.Manage(timeout, std::move(callback));
-
-  // The request is managed by an existing reference.
-  if (!request_reference.has_value()) {
-    return;
-  }
 
   const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
@@ -151,14 +136,13 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
 
             return ::fit::ok(std::move(snapshot));
           })
-          .then([this, request_reference = request_reference.value(),
-                 timer_id](::fit::result<Snapshot>& result) {
+          .then([this, callback = std::move(callback), timer_id](::fit::result<Snapshot>& result) {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
-              request_manager_.Respond(request_reference, Snapshot());
+              callback(Snapshot());
             } else {
               cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kSuccess, timer_id);
-              request_manager_.Respond(request_reference, result.take_value());
+              callback(result.take_value());
             }
           });
 

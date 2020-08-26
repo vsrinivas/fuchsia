@@ -230,16 +230,6 @@ void AddSnapshotAsAttachment(fuchsia::feedback::Snapshot snapshot,
 void AddSnapshot(::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
                  std::map<std::string, std::string>* annotations,
                  std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  if (snapshot.is_error()) {
-    (*annotations)["debug.snapshot.error"] = ToReason(snapshot.error());
-    return;
-  }
-
-  if (snapshot.value().IsEmpty()) {
-    (*annotations)["debug.snapshot.empty"] = "true";
-    return;
-  }
-
   AddSnapshotAnnotations(snapshot.value(), annotations);
 
   AddSnapshotAsAttachment(snapshot.take_value(), attachments);

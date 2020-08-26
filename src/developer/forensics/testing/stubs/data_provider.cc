@@ -72,6 +72,17 @@ void DataProviderTracksNumConnections::GetSnapshot(fuchsia::feedback::GetSnapsho
   callback(Snapshot());
 }
 
+DataProviderTracksNumCalls::~DataProviderTracksNumCalls() {
+  FX_CHECK(expected_num_calls_ == num_calls_) << "Expected " << expected_num_calls_ << " calls\n"
+                                              << "Made " << num_calls_ << " calls";
+}
+
+void DataProviderTracksNumCalls::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                             GetSnapshotCallback callback) {
+  ++num_calls_;
+  callback(Snapshot());
+}
+
 void DataProviderSnapshotOnly::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                            GetSnapshotCallback callback) {
   callback(std::move(Snapshot().set_archive(std::move(snapshot_))));

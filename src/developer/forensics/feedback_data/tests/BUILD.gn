@@ -378,26 +378,6 @@ executable("screenshot_ptr_unittest_exe") {
   ]
 }
 
-executable("snapshot_request_manager_unittest_exe") {
-  testonly = true
-
-  sources = [ "snapshot_request_manager_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data:snapshot_request_manager",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/lib/fsl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("system_log_ptr_unittest_exe") {
   testonly = true
 
@@ -647,14 +627,6 @@ fuchsia_component("screenshot_ptr_unittest") {
   deps = [ ":screenshot_ptr_unittest_exe" ]
 }
 
-fuchsia_component("snapshot_request_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/snapshot_request_manager_unittest.cmx"
-
-  deps = [ ":snapshot_request_manager_unittest_exe" ]
-}
-
 fuchsia_component("system_log_ptr_unittest") {
   testonly = true
 
@@ -683,7 +655,6 @@ fuchsia_test_package("feedback-data-tests") {
     ":main_service_unittest",
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
-    ":snapshot_request_manager_unittest",
     ":system_log_ptr_unittest",
   ]
 

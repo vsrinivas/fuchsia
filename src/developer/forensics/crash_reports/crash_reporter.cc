@@ -26,6 +26,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -36,6 +37,12 @@ using fuchsia::feedback::Snapshot;
 
 constexpr zx::duration kChannelOrDeviceIdTimeout = zx::sec(30);
 constexpr zx::duration kSnapshotTimeout = zx::min(2);
+
+// Delta between snapshot requests that can be pooled together.
+//
+// We don't want it to be too high as data would get stale, e.g., logs, and we don't want it to be
+// too low as we wouldn't benefit as much from pooling.
+constexpr zx::duration kSnapshotPoolingDelta = zx::sec(5);
 
 }  // namespace
 
@@ -71,7 +78,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       queue_(dispatcher_, services_, info_context, crash_server_.get()),
       info_(info_context),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
-      data_provider_ptr_(dispatcher_, services_),
+      data_provider_ptr_(dispatcher_, services_, kSnapshotPoolingDelta,
+                         std::make_unique<timekeeper::SystemClock>()),
       device_id_provider_ptr_(dispatcher_, services_) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);

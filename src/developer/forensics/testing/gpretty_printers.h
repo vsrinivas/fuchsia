@@ -56,7 +56,7 @@ inline void Format(const char ch, std::stringstream* output) {
   } else if (ch >= ' ' && ch <= '~') {
     *output << ch;
   } else {
-    *output << "{0x" << ((int) ch & 0xFF) << "}";
+    *output << "{0x" << ((int)ch & 0xFF) << "}";
   }
 }
 
@@ -73,7 +73,7 @@ inline std::string Format(const std::string& input) {
   return output.str();
 }
 
-} // pretty
+}  // namespace pretty
 
 void PrintTo(const AnnotationOr& value, std::ostream* os) {
   *os << fostr::Indent;
@@ -128,6 +128,16 @@ void PrintTo(const Attachment& attachment, std::ostream* os) {
   } else {
     *os << attachment.value;
   }
+  *os << fostr::Outdent;
+}
+
+// Pretty-prints Annotation in gTest matchers instead of the default byte string in case of failed
+// expectations.
+void PrintTo(const Annotation& annotation, std::ostream* os) {
+  *os << fostr::Indent;
+  *os << fostr::NewLine << "key: " << annotation.key;
+  *os << fostr::NewLine << "value: ";
+  *os << fostr::NewLine << "value: " << annotation.value;
   *os << fostr::Outdent;
 }
 

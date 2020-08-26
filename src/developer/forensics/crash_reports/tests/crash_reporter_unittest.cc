@@ -119,6 +119,15 @@ PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_
   return settings;
 }
 
+template <typename K, typename V>
+std::vector<testing::internal::PairMatcher<K, V>> Linearize(const std::map<K, V>& annotations) {
+  std::vector<testing::internal::PairMatcher<K, V>> linearized;
+  for (const auto& [k, v] : annotations) {
+    linearized.push_back(testing::Pair(k, v));
+  }
+  return linearized;
+}
+
 // Unit-tests the implementation of the fuchsia.feedback.CrashReporter FIDL interface.
 //
 // This does not test the environment service. It directly instantiates the class, without
@@ -227,16 +236,16 @@ class CrashReporterTest : public UnitTestFixture {
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
         {"should_process", "false"},
+        {"debug.snapshot.pool.delta-seconds", Not(IsEmpty())},
+        {"debug.snapshot.pool.size", Not(IsEmpty())},
+        {"debug.snapshot.pool.uuid", Not(IsEmpty())},
     };
     for (const auto& [key, value] : expected_extra_annotations) {
       expected_annotations[key] = value;
     }
 
-    EXPECT_EQ(crash_server_->latest_annotations().size(), expected_annotations.size());
-    for (const auto& [key, value] : expected_annotations) {
-      EXPECT_THAT(crash_server_->latest_annotations(),
-                  testing::Contains(testing::Pair(key, value)));
-    }
+    EXPECT_THAT(crash_server_->latest_annotations(),
+                testing::UnorderedElementsAreArray(Linearize(expected_annotations)));
   }
 
   // Checks that on the crash server the keys for the attachments received match the
