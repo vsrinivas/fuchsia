@@ -8,6 +8,7 @@
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
+#include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
 #include <lib/async/default.h>
@@ -21,6 +22,7 @@ PlatformManagerImpl PlatformManagerImpl::sInstance;
 
 WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
 

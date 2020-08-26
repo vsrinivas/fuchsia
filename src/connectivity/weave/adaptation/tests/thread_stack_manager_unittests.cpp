@@ -15,6 +15,7 @@
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 // clang-format on
 
+#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl {
@@ -39,6 +40,7 @@ using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
 using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
+using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 
 const char kFakeInterfaceName[] = "fake0";
 
@@ -259,6 +261,7 @@ class ThreadStackManagerTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     RunFixtureLoop();
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ASSERT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
   }
 

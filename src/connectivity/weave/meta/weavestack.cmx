@@ -13,6 +13,7 @@
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.lowpan.device.Lookup",
             "fuchsia.net.NameLookup",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",

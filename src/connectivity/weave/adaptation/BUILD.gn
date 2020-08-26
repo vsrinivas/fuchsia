@@ -27,6 +27,8 @@ openweave_adaptation_layer("adaptation") {
     "platform_manager_impl.cpp",
     "platform_manager_impl.h",
     "profile_support.cpp",
+    "thread_stack_manager_delegate_impl.cpp",
+    "thread_stack_manager_delegate_impl.h",
     "thread_stack_manager_impl.cpp",
     "thread_stack_manager_impl.h",
     "warm_platform_config.h",

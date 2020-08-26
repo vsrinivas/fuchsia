@@ -16,6 +16,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "configuration_manager_delegate_impl.h"
+#include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -139,6 +140,7 @@ class BLEManagerTest : public WeaveTestFixture {
     PlatformMgrImpl().SetDispatcher(event_loop_.dispatcher());
     PlatformMgrImpl().GetSystemLayer().Init(nullptr);
 
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().IsWoBLEEnabled(), true);
 

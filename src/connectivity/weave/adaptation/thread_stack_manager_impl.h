@@ -22,8 +22,61 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
  private:
   ThreadStackManagerImpl() = default;
 
-  // ThreadStackManager implementations. Public for testing purposes only.
  public:
+  /**
+   * Delegate class to handle platform-specific implementations of the
+   * ThreadStackManager API surface. This enables tests to swap out the
+   * implementation of the static ThreadStackManager instance.
+   */
+  class Delegate {
+   public:
+    friend class ThreadStackManagerImpl;
+    virtual ~Delegate() = default;
+   private:
+    // Initialize the implementation.
+    virtual WEAVE_ERROR InitThreadStack() = 0;
+    // Determine if the supplied IPAddress is accessible by a route through the
+    // Thread interface.
+    virtual bool HaveRouteToAddress(const IPAddress& destAddr) = 0;
+    // Handle a DeviceLayer platform event.
+    virtual void OnPlatformEvent(const WeaveDeviceEvent* event) = 0;
+    // Determine if Thread is enabled/active.
+    virtual bool IsThreadEnabled() = 0;
+    // Attempt to set whether Thread is enabled/active.
+    virtual WEAVE_ERROR SetThreadEnabled(bool val) = 0;
+    // Determine if Thread is provisioned.
+    virtual bool IsThreadProvisioned() = 0;
+    // Determine if the Thread device is attached to the network.
+    virtual bool IsThreadAttached() = 0;
+    // Retrieve the Thread provision.
+    virtual WEAVE_ERROR GetThreadProvision(Internal::DeviceNetworkInfo& netInfo, bool includeCredentials) = 0;
+    // Set the Thread provision.
+    virtual WEAVE_ERROR SetThreadProvision(const Internal::DeviceNetworkInfo& netInfo) = 0;
+    // Clear/remove the Thread provision.
+    virtual void ClearThreadProvision() = 0;
+    // Determine the current device type of the Thread device.
+    virtual ConnectivityManager::ThreadDeviceType GetThreadDeviceType() = 0;
+    // Determine if there is mesh connectivity.
+    virtual bool HaveMeshConnectivity() = 0;
+    // Log a Weave event for the Thread statistics.
+    virtual WEAVE_ERROR GetAndLogThreadStatsCounters() = 0;
+    // Log a Weave event for a minimimal Thread topology.
+    virtual WEAVE_ERROR GetAndLogThreadTopologyMinimal() = 0;
+    // Log a Weave event for a full Thread topology.
+    virtual WEAVE_ERROR GetAndLogThreadTopologyFull() = 0;
+  };
+
+  // Sets the delegate containing the platform-specific implementation. It is
+  // invalid to invoke the ThreadStackManager without setting a delegate
+  // first. However, the OpenWeave surface requires a no-constructor
+  // instantiation of this class, so it is up to the caller to enforce this.
+  void SetDelegate(std::unique_ptr<Delegate> delegate);
+
+  // Gets the delegate currently in use. This may return nullptr if no delegate
+  // was set on this class.
+  Delegate* GetDelegate();
+
+  // ThreadStackManager implementations. Public for testing purposes only.
   WEAVE_ERROR _InitThreadStack();
 
   void _ProcessThreadActivity() {}
@@ -37,7 +90,9 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
 
   bool _HaveRouteToAddress(const IPAddress& destAddr);
 
-  WEAVE_ERROR _GetPrimary802154MACAddress(uint8_t* buf);
+  WEAVE_ERROR _GetPrimary802154MACAddress(uint8_t* buf) {
+    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+  }
 
   void _OnPlatformEvent(const WeaveDeviceEvent* event);
 
@@ -76,12 +131,7 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
 
  private:
   static ThreadStackManagerImpl sInstance;
-  std::string interface_name_;
-
-  fuchsia::lowpan::device::DeviceSyncPtr device_;
-
-  zx_status_t GetProtocols(fuchsia::lowpan::device::Protocols protocols);
-  zx_status_t GetDeviceState(fuchsia::lowpan::device::DeviceState* state);
+  std::unique_ptr<Delegate> delegate_;
 };
 
 inline ThreadStackManager& ThreadStackMgr() { return ThreadStackManagerImpl::sInstance; }

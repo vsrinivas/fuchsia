@@ -27,6 +27,7 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "configuration_manager_delegate_impl.h"
+#include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -188,6 +189,7 @@ class ConfigurationManagerTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   }
