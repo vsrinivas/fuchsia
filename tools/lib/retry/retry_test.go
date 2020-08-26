@@ -12,7 +12,8 @@ import (
 
 func TestRetry(t *testing.T) {
 	const tries = 5
-	t.Run("error", func(t *testing.T) {
+
+	t.Run("retries until function returns nil", func(t *testing.T) {
 		var i int
 		err := Retry(context.Background(), &ZeroBackoff{}, func() error {
 			i++
@@ -26,10 +27,11 @@ func TestRetry(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 		if i != tries {
-			t.Errorf("invalid number of tries: %d", i)
+			t.Errorf("got %d tries, wanted %d", i, tries)
 		}
 	})
-	t.Run("cancel", func(t *testing.T) {
+
+	t.Run("stops retrying after context is canceled", func(t *testing.T) {
 		var i int
 		ctx, cancel := context.WithCancel(context.Background())
 		err := Retry(ctx, &ZeroBackoff{}, func() error {
@@ -43,11 +45,12 @@ func TestRetry(t *testing.T) {
 		if err == nil {
 			t.Error("error is nil")
 		}
-		if err.Error() != "try 5" {
-			t.Errorf("unexpected error: %v", err)
+		expectedErr := "try 5"
+		if err.Error() != expectedErr {
+			t.Errorf("got error: %v, wanted: %s", err, expectedErr)
 		}
 		if i != tries {
-			t.Errorf("invalid number of tries: %d", i)
+			t.Errorf("got %d tries, wanted %d", i, tries)
 		}
 	})
 }

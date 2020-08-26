@@ -9,27 +9,47 @@ import (
 	"time"
 )
 
-// Retry the operation using the provided back-off policy until it succeeds,
-// or the context is cancelled.
+// Retry the operation using the provided back-off policy until it succeeds, or
+// the context is cancelled. Any intermediate errors (but not the final error)
+// returned by the function will be sent on the given channel, if the channel is
+// non-nil.
 func Retry(ctx context.Context, b Backoff, f func() error, c chan<- error) error {
-	var err error
-	var next time.Duration
-
 	b.Reset()
+	var timer *time.Timer
 	for {
-		if err = f(); err == nil {
-			break
+		err := f()
+		if err == nil {
+			return nil
 		}
 
-		if next = b.Next(); next == Stop {
+		next := b.Next()
+		if next == Stop {
 			return err
 		}
 
-		timer := time.NewTimer(next)
+		if timer == nil {
+			timer = time.NewTimer(next)
+			defer timer.Stop()
+		} else {
+			// Reset() is only safe to call after the timer has fired and its
+			// channel has been drained. At this point in the loop we know that
+			// the timer's channel was drained on the last iteration (otherwise
+			// we would have exited the loop), so it's safe to call Reset().
+			timer.Reset(next)
+		}
+
+		// If the context has already been canceled, exit immediately rather
+		// than entering the select statement to ensure determinism when the
+		// backoff is zero. If multiple channels in a select statement are ready
+		// when entering the statement, Go will randomly choose one, which is
+		// not the desired behavior here - we always want to stop once the
+		// context gets canceled.
+		if ctx.Err() != nil {
+			return err
+		}
 
 		select {
 		case <-ctx.Done():
-			timer.Stop()
 			return err
 		case <-timer.C:
 			if c != nil {
@@ -37,6 +57,4 @@ func Retry(ctx context.Context, b Backoff, f func() error, c chan<- error) error
 			}
 		}
 	}
-
-	return err
 }
