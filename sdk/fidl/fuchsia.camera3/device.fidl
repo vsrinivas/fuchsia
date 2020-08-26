@@ -7,7 +7,6 @@ library fuchsia.camera3;
 const uint32 MAX_IDENTIFIER_LENGTH = 256;
 const uint32 MAX_CONFIGURATIONS_PER_CAMERA = 256;
 const uint32 MAX_STREAMS_PER_CONFIGURATION = 256;
-const uint32 MAX_RESOLUTIONS_PER_STREAM = 1024;
 
 /// A Device represents a unique physical camera present in the system. Only one client may connect
 /// to an unbound physical camera, however the "Rebind" method can be used to create multiple
@@ -23,7 +22,14 @@ protocol Device {
     /// Returns a list of configurations supported by the camera. All cameras will have at least
     /// one configuration. The values returned are immutable - they will not change for the
     /// lifetime of the client's connection to the Camera.
+    [Transitional, Deprecated = "Use GetConfigurations2"]
     GetConfigurations() -> (vector<Configuration>:MAX_CONFIGURATIONS_PER_CAMERA configurations);
+
+    /// Returns a list of configurations supported by the camera. All cameras will have at least
+    /// one configuration. The values returned are immutable - they will not change for the
+    /// lifetime of the client's connection to the Camera.
+    [Transitional]
+    GetConfigurations2() -> (vector<Configuration2>:MAX_CONFIGURATIONS_PER_CAMERA configurations);
 
     /// Returns the index of the current configuration when it has changed from a previously
     /// returned configuration, or is called by a client for the first time.
@@ -57,4 +63,10 @@ protocol Device {
 struct Configuration {
     /// Descriptions of streams that are concurrently available in the configuration.
     vector<StreamProperties>:MAX_STREAMS_PER_CONFIGURATION streams;
+};
+
+/// Describes a distinct configuration for the camera.
+table Configuration2 {
+    /// Descriptions of streams that are concurrently available in the configuration.
+    1: vector<StreamProperties2>:MAX_STREAMS_PER_CONFIGURATION streams;
 };

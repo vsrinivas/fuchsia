@@ -176,7 +176,7 @@ void DeviceImpl::PostSetConfiguration(uint32_t index) {
 
 void DeviceImpl::SetConfiguration(uint32_t index) {
   streams_.clear();
-  streams_.resize(configurations_[index].streams.size());
+  streams_.resize(configurations_[index].streams().size());
   current_configuration_index_ = index;
   FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
@@ -264,7 +264,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   };
 
   streams_[index] = std::make_unique<StreamImpl>(
-      configurations_[current_configuration_index_].streams[index],
+      configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
       std::move(on_stream_requested), std::move(on_no_clients));
 }

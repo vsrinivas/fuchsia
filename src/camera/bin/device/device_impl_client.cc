@@ -58,7 +58,19 @@ void DeviceImpl::Client::GetIdentifier(GetIdentifierCallback callback) {
 }
 
 void DeviceImpl::Client::GetConfigurations(GetConfigurationsCallback callback) {
-  callback(device_.configurations_);
+  std::vector<fuchsia::camera3::Configuration> configurations;
+  for (const auto& configuration : device_.configurations_) {
+    std::vector<fuchsia::camera3::StreamProperties> streams;
+    for (const auto& stream : configuration.streams()) {
+      streams.push_back(Convert(stream));
+    }
+    configurations.push_back({.streams = std::move(streams)});
+  }
+  callback(std::move(configurations));
+}
+
+void DeviceImpl::Client::GetConfigurations2(GetConfigurations2Callback callback) {
+  callback(fidl::Clone(device_.configurations_));
 }
 
 void DeviceImpl::Client::WatchCurrentConfiguration(WatchCurrentConfigurationCallback callback) {

@@ -29,7 +29,7 @@ class StreamImpl {
   using StreamRequestedCallback = fit::function<void(
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
       fidl::InterfaceRequest<fuchsia::camera2::Stream>, fit::function<void(uint32_t)>, uint32_t)>;
-  StreamImpl(const fuchsia::camera3::StreamProperties& properties,
+  StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
@@ -104,6 +104,7 @@ class StreamImpl {
 
     // |fuchsia::camera3::Stream|
     void GetProperties(GetPropertiesCallback callback) override;
+    void GetProperties2(GetProperties2Callback callback) override;
     void SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) override;
     void WatchCropRegion(WatchCropRegionCallback callback) override;
     void SetResolution(fuchsia::math::Size coded_size) override;
@@ -130,7 +131,7 @@ class StreamImpl {
   };
 
   async::Loop loop_;
-  const fuchsia::camera3::StreamProperties& properties_;
+  const fuchsia::camera3::StreamProperties2& properties_;
   const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;
   uint32_t legacy_stream_format_index_ = 0;

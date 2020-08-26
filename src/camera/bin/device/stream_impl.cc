@@ -24,7 +24,7 @@ static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) 
           .height = static_cast<int32_t>(format.coded_height)};
 }
 
-StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
+StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
@@ -35,7 +35,7 @@ StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
-  current_resolution_ = ConvertToSize(properties.image_format);
+  current_resolution_ = ConvertToSize(properties.image_format());
   OnNewRequest(std::move(request));
   ZX_ASSERT(loop_.StartThread("Camera Stream Thread") == ZX_OK);
 }
@@ -286,7 +286,7 @@ void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) 
     auto& client = it->second;
 
     // Begin with the full resolution.
-    auto best_size = ConvertToSize(properties_.image_format);
+    auto best_size = ConvertToSize(properties_.image_format());
     if (coded_size.width > best_size.width || coded_size.height > best_size.height) {
       client->PostCloseConnection(ZX_ERR_INVALID_ARGS);
       return;

@@ -110,6 +110,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
     // |fuchsia::camera3::Device|
     void GetIdentifier(GetIdentifierCallback callback) override;
     void GetConfigurations(GetConfigurationsCallback callback) override;
+    void GetConfigurations2(GetConfigurations2Callback callback) override;
     void WatchCurrentConfiguration(WatchCurrentConfigurationCallback callback) override;
     void SetCurrentConfiguration(uint32_t index) override;
     void WatchMuteState(WatchMuteStateCallback callback) override;
@@ -134,7 +135,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> button_listener_binding_;
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
-  std::vector<fuchsia::camera3::Configuration> configurations_;
+  std::vector<fuchsia::camera3::Configuration2> configurations_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   uint32_t current_configuration_index_ = 0;

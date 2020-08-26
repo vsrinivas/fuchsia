@@ -121,14 +121,17 @@ void StreamImpl::Client::CloseConnection(zx_status_t status) {
 
 void StreamImpl::Client::GetProperties(GetPropertiesCallback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::GetProperties");
-  fuchsia::camera3::StreamProperties properties;
-  stream_.properties_.Clone(&properties);
-  callback(std::move(properties));
+  callback(Convert(stream_.properties_));
+}
+
+void StreamImpl::Client::GetProperties2(GetProperties2Callback callback) {
+  TRACE_DURATION("camera", "StreamImpl::Client::GetProperties2");
+  callback(fidl::Clone(stream_.properties_));
 }
 
 void StreamImpl::Client::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
   TRACE_DURATION("camera", "StreamImpl::Client::SetCropRegion");
-  if (!stream_.properties_.supports_crop_region) {
+  if (!stream_.properties_.supports_crop_region()) {
     CloseConnection(ZX_ERR_NOT_SUPPORTED);
     return;
   }

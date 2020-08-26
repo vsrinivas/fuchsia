@@ -31,27 +31,45 @@ inline void Unbind(fidl::InterfacePtr<T>& p) {
 }
 
 // Converts a camera2.hal.Config to a camera3.Configuration
-inline fit::result<fuchsia::camera3::Configuration, zx_status_t> Convert(
+inline fit::result<fuchsia::camera3::Configuration2, zx_status_t> Convert(
     const fuchsia::camera2::hal::Config& config) {
   if (config.stream_configs.empty()) {
     FX_LOGS(ERROR) << "Config reported no streams.";
     return fit::error(ZX_ERR_INTERNAL);
   }
-  fuchsia::camera3::Configuration ret{};
+  std::vector<fuchsia::camera3::StreamProperties2> streams;
   for (const auto& stream_config : config.stream_configs) {
     if (stream_config.image_formats.empty()) {
       FX_LOGS(ERROR) << "Stream reported no image formats.";
       return fit::error(ZX_ERR_INTERNAL);
     }
-    fuchsia::camera3::StreamProperties stream_properties{};
-    stream_properties.frame_rate.numerator = stream_config.frame_rate.frames_per_sec_numerator;
-    stream_properties.frame_rate.denominator = stream_config.frame_rate.frames_per_sec_denominator;
-    stream_properties.image_format = stream_config.image_formats[0];
+    fuchsia::camera3::StreamProperties2 stream_properties;
+    stream_properties.set_frame_rate(
+        {.numerator = stream_config.frame_rate.frames_per_sec_numerator,
+         .denominator = stream_config.frame_rate.frames_per_sec_denominator});
+    stream_properties.set_image_format(stream_config.image_formats[0]);
     // TODO(50908): Detect ROI support during initialization.
-    stream_properties.supports_crop_region = true;
-    ret.streams.push_back(std::move(stream_properties));
+    stream_properties.set_supports_crop_region(true);
+    std::vector<fuchsia::math::Size> supported_resolutions;
+    for (const auto& format : stream_config.image_formats) {
+      supported_resolutions.push_back({.width = static_cast<int32_t>(format.coded_width),
+                                       .height = static_cast<int32_t>(format.coded_height)});
+    }
+    stream_properties.set_supported_resolutions(std::move(supported_resolutions));
+    streams.push_back(std::move(stream_properties));
   }
+  fuchsia::camera3::Configuration2 ret;
+  ret.set_streams(std::move(streams));
   return fit::ok(std::move(ret));
+}
+
+// Converts a valid camera3.StreamProperties2 to a camera3.StreamProperties, dropping the
+// |supported_resolutions| field.
+inline fuchsia::camera3::StreamProperties Convert(
+    const fuchsia::camera3::StreamProperties2& properties) {
+  return {.image_format = properties.image_format(),
+          .frame_rate = properties.frame_rate(),
+          .supports_crop_region = properties.supports_crop_region()};
 }
 
 // Waits until |deadline| for |event| to signal all bits in |signals_all| or any bits in

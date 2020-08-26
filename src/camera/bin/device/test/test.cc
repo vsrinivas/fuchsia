@@ -38,7 +38,11 @@ class DeviceTest : public gtest::RealLoopFixture {
  protected:
   DeviceTest()
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-        fake_listener_registry_(async_get_default_dispatcher()) {}
+        fake_listener_registry_(async_get_default_dispatcher()) {
+    fake_properties_.set_image_format({});
+    fake_properties_.set_frame_rate({});
+    fake_properties_.set_supports_crop_region({});
+  }
 
   void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());
@@ -108,7 +112,7 @@ class DeviceTest : public gtest::RealLoopFixture {
   std::unique_ptr<DeviceImpl> device_;
   std::unique_ptr<FakeController> controller_;
   fuchsia::sysmem::AllocatorPtr allocator_;
-  fuchsia::camera3::StreamProperties fake_properties_;
+  fuchsia::camera3::StreamProperties2 fake_properties_;
   fuchsia::camera2::hal::StreamConfig fake_legacy_config_;
   FakeDeviceListenerRegistry fake_listener_registry_;
 };
@@ -142,7 +146,7 @@ TEST_F(DeviceTest, ConvertConfig) {
   auto result = Convert(a);
   ASSERT_TRUE(result.is_ok());
   auto b = result.take_value();
-  EXPECT_EQ(a.stream_configs.size(), b.streams.size());
+  EXPECT_EQ(a.stream_configs.size(), b.streams().size());
 }
 
 TEST_F(DeviceTest, GetFrames) {
@@ -477,6 +481,8 @@ TEST_F(DeviceTest, SetResolution) {
   constexpr fuchsia::math::Size kExpectedSize{.width = 1280, .height = 720};
   constexpr fuchsia::math::Size kRequestedSize2{.width = 1, .height = 1};
   constexpr fuchsia::math::Size kExpectedSize2{.width = 1024, .height = 576};
+  constexpr fuchsia::math::Size kRequestedSize3{.width = 1280, .height = 720};
+  constexpr fuchsia::math::Size kExpectedSize3{.width = 1280, .height = 720};
   bool callback_received = false;
   stream->WatchResolution([&](fuchsia::math::Size coded_size) {
     EXPECT_GE(coded_size.width, kExpectedDefaultSize.width);
@@ -497,6 +503,14 @@ TEST_F(DeviceTest, SetResolution) {
   stream->WatchResolution([&](fuchsia::math::Size coded_size) {
     EXPECT_GE(coded_size.width, kExpectedSize2.width);
     EXPECT_GE(coded_size.height, kExpectedSize2.height);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+  callback_received = false;
+  stream->SetResolution(kRequestedSize3);
+  stream->WatchResolution([&](fuchsia::math::Size coded_size) {
+    EXPECT_GE(coded_size.width, kExpectedSize3.width);
+    EXPECT_GE(coded_size.height, kExpectedSize3.height);
     callback_received = true;
   });
   RunLoopUntilFailureOr(callback_received);
@@ -849,6 +863,16 @@ TEST_F(DeviceTest, GetProperties) {
     EXPECT_EQ(properties.frame_rate.denominator, configs[0].streams[0].frame_rate.denominator);
     EXPECT_EQ(properties.image_format.coded_width, configs[0].streams[0].image_format.coded_width);
     EXPECT_EQ(properties.image_format.coded_height,
+              configs[0].streams[0].image_format.coded_height);
+    properties_returned = true;
+  });
+  RunLoopUntilFailureOr(properties_returned);
+  properties_returned = false;
+  stream->GetProperties2([&](fuchsia::camera3::StreamProperties2 properties) {
+    ASSERT_FALSE(properties.supported_resolutions().empty());
+    EXPECT_EQ(static_cast<uint32_t>(properties.supported_resolutions().at(0).width),
+              configs[0].streams[0].image_format.coded_width);
+    EXPECT_EQ(static_cast<uint32_t>(properties.supported_resolutions().at(0).height),
               configs[0].streams[0].image_format.coded_height);
     properties_returned = true;
   });
