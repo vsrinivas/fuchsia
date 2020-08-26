@@ -234,13 +234,7 @@ impl RepoUrl {
 
     /// Returns the channel name of the repo, if exists.
     pub fn channel(&self) -> Option<&str> {
-        // TODO: replace with `.strip_suffix(".fuchsia.com")` once that's stable.
-        let suffix = ".fuchsia.com";
-        if self.host.ends_with(suffix) {
-            self.host[..self.host.len() - suffix.len()].split('.').nth(1)
-        } else {
-            None
-        }
+        self.host.strip_suffix(".fuchsia.com")?.split('.').nth(1)
     }
 }
 
