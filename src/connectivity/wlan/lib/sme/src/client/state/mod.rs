@@ -27,7 +27,7 @@ use {
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
     link_state::LinkState,
-    log::{error, warn},
+    log::{error, info, warn},
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wep_deprecated,
@@ -932,6 +932,14 @@ fn log_state_change(
             StateChangeContext::Disconnect { msg, reason_code, locally_initiated }
                 if start_state != IDLE_STATE =>
             {
+                info!(
+                    "{} => {}, ctx: `{}`, locally_initiated: {}",
+                    start_state,
+                    new_state.state_name(),
+                    msg,
+                    locally_initiated
+                );
+
                 inspect_log!(context.inspect.state_events.lock(), {
                     from: start_state,
                     to: new_state.state_name(),
