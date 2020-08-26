@@ -12,13 +12,14 @@
 namespace fvm {
 
 // Helper class for obtaining information about the format of a FVM, such as superblock offsets,
-// metadata size, allocated sizes, etc.
+// metadata size, allocated sizes, etc. It wraps a superblock (the "Header" structure) while
+// keeping the Header a plain struct to ensure it stays PoD.
 //
 // This class is copyable assignable, and moveable.
 class FormatInfo {
  public:
-  // Returns a FormatInfo from a Fvm header and a disk size.
-  static FormatInfo FromSuperBlock(const Header& superblock);
+  FormatInfo() = default;
+  FormatInfo(const Header& header) : header_(header) {}
 
   // Assumes a superblock created from the given disk for the given disk size, with slice size. (No
   // Preallocated metadata headers for future growth).
@@ -28,19 +29,22 @@ class FormatInfo {
   // |initial_size| and eventually will grow up to |max_size| with |slice_size|.
   static FormatInfo FromPreallocatedSize(size_t initial_size, size_t max_size, size_t slice_size);
 
-  // Returns the size of the addressable metadata in a FVM header.
-  size_t metadata_size() const { return metadata_size_; }
+  // Access to the underlying header block. The hash of this structure may not be up-to-date.
+  const Header& header() const { return header_; }
 
-  // Returns the size of the allocated metadata SuperBlock. This may be bigger than |metadata_size_|
-  // if there was extra space pre allocated for allowing fvm growing.
-  size_t metadata_allocated_size() const { return metadata_allocated_size_; }
+  // Returns the size of the addressable metadata in a FVM header.
+  size_t metadata_size() const;
+
+  // Returns the size of the allocated metadata SuperBlock. This may be bigger than
+  // metadata_size() if there was extra space pre allocated for allowing fvm growing.
+  size_t metadata_allocated_size() const;
 
   // Returns the number of addressable slices for the superblock, this is the number of physical
   // slices.
-  size_t slice_count() const { return slice_count_; }
+  size_t slice_count() const;
 
   // Returns the size of each slice in the described block.
-  size_t slice_size() const { return slice_size_; }
+  size_t slice_size() const { return header_.slice_size; }
 
   // Returns the offset of the given superblock. The first superblock is considered primary, in
   // terms of position.
@@ -51,7 +55,7 @@ class FormatInfo {
   // Returns the offset from the start of the disk to beginning of |pslice| physical slice.
   // Note: pslice is 1-indexed.
   size_t GetSliceStart(size_t pslice) const {
-    return 2 * metadata_allocated_size_ + (pslice - 1) * slice_size_;
+    return 2 * metadata_allocated_size() + (pslice - 1) * slice_size();
   }
 
   // Returns the maximum number of slices that can be addressed from the maximum possible size of
@@ -64,7 +68,7 @@ class FormatInfo {
   // |disk_size|.
   size_t GetMaxAddressableSlices(uint64_t disk_size) const {
     size_t slice_count =
-        std::min(GetMaxAllocatableSlices(), UsableSlicesCount(disk_size, slice_size_));
+        std::min(GetMaxAllocatableSlices(), UsableSlicesCount(disk_size, slice_size()));
     // Because the allocation table is 1-indexed and pslices are 0 indexed on disk, if the number of
     // slices fit perfectly in the metadata, the allocated buffer won't be big enough to address
     // them all. This only happens when the rounded up block value happens to match the disk size.
@@ -78,21 +82,11 @@ class FormatInfo {
 
   // Returns the maximum partition size the current metadata can grow to.
   size_t GetMaxPartitionSize() const {
-    return GetSliceStart(1) + GetMaxAllocatableSlices() * slice_size_;
+    return GetSliceStart(1) + GetMaxAllocatableSlices() * slice_size();
   }
 
  private:
-  // Size in bytes of addressable metadata.
-  size_t metadata_size_ = 0;
-
-  // Size in bytes of the allocated size of metadata.
-  size_t metadata_allocated_size_ = 0;
-
-  // Number of addressable slices.
-  size_t slice_count_ = 0;
-
-  // Size of the slices.
-  size_t slice_size_ = 0;
+  Header header_ = {};
 };
 
 // Update's the metadata's hash field to accurately reflect the contents of metadata.

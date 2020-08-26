@@ -19,19 +19,6 @@ constexpr size_t kAllocTableSize = fvm::AllocTableLength(kMaxDiskSize, kFvmSlize
 
 constexpr size_t kPartitionTableSize = fvm::kVPartTableLength;
 
-Header MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_table_size) {
-  Header superblock;
-  superblock.fvm_partition_size = part_size;
-  superblock.vpartition_table_size = part_table_size;
-  superblock.allocation_table_size = alloc_table_size;
-  superblock.slice_size = kFvmSlizeSize;
-  superblock.version = fvm::kMagic;
-  superblock.magic = fvm::kVersion;
-  superblock.generation = 1;
-  UpdateHash(&superblock, sizeof(Header));
-  return superblock;
-}
-
 size_t CalculateSliceStart(size_t part_size, size_t part_table_size, size_t allocation_table_size) {
   // Round Up to the next block.
   return 2 *
@@ -39,8 +26,8 @@ size_t CalculateSliceStart(size_t part_size, size_t part_table_size, size_t allo
 }
 
 TEST(FvmInfoTest, FromSuperblockNoGaps) {
-  Header superblock = MakeSuperBlock(kMaxDiskSize, kPartitionTableSize, kAllocTableSize);
-  FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
+  FormatInfo format_info =
+      FormatInfo::FromPreallocatedSize(kMaxDiskSize, kMaxDiskSize, kFvmSlizeSize);
 
   // When there is no gap allocated and metadata size should match.
   EXPECT_EQ(fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize), format_info.metadata_size());
@@ -66,8 +53,8 @@ TEST(FvmInfoTest, FromSuperblockNoGaps) {
 }
 
 TEST(FvmInfoTest, FromSuperblockWithGaps) {
-  Header superblock = MakeSuperBlock(kInitialDiskSize, kPartitionTableSize, kAllocTableSize);
-  FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
+  FormatInfo format_info =
+      FormatInfo::FromPreallocatedSize(kInitialDiskSize, kPartitionTableSize, kFvmSlizeSize);
 
   EXPECT_EQ(fvm::MetadataSize(kInitialDiskSize, kFvmSlizeSize), format_info.metadata_size());
   EXPECT_EQ(fvm::MetadataSize(kMaxDiskSize, kFvmSlizeSize), format_info.metadata_allocated_size());

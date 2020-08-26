@@ -218,7 +218,7 @@ zx_status_t VPartitionManager::Load() {
     return status;
   }
 
-  format_info_ = FormatInfo::FromSuperBlock(sb);
+  format_info_ = FormatInfo(sb);
 
   // Validate the superblock, confirm the slice size
   if ((format_info_.slice_size() * VSliceMax()) / VSliceMax() != format_info_.slice_size()) {
@@ -304,14 +304,14 @@ zx_status_t VPartitionManager::Load() {
           GetFvmLocked()->allocation_table_size;
 
   // Recalculate format info for the valid metadata header.
-  format_info_ = FormatInfo::FromSuperBlock(*GetFvmLocked());
+  format_info_ = FormatInfo(*GetFvmLocked());
   if (metadata_should_grow) {
     size_t new_slice_count = format_info_.GetMaxAddressableSlices(DiskSize());
     size_t target_partition_size =
         format_info_.GetSliceStart(1) + new_slice_count * format_info_.slice_size();
     GetFvmLocked()->fvm_partition_size = target_partition_size;
     GetFvmLocked()->pslice_count = new_slice_count;
-    format_info_ = FormatInfo::FromSuperBlock(*GetFvmLocked());
+    format_info_ = FormatInfo(*GetFvmLocked());
 
     // Persist the growth.
     if ((status = WriteFvmLocked()) != ZX_OK) {

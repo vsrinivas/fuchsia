@@ -71,7 +71,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     return false;
   }
   const fvm::Header* superblock = reinterpret_cast<fvm::Header*>(header.get());
-  const fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
+  const fvm::FormatInfo format_info(*superblock);
   if (format_info.slice_size() % block_size_ != 0) {
     logger_.Error("Slice size not divisible by block size\n");
     return false;
@@ -224,7 +224,7 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
 bool Checker::CheckFVM(const FvmInfo& info) const {
   auto superblock = reinterpret_cast<const fvm::Header*>(info.valid_metadata);
   auto invalid_superblock = reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
-  fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
+  fvm::FormatInfo format_info(*superblock);
 
   logger_.Log("[  FVM Info  ]\n");
   logger_.Log("Version: %" PRIu64 "\n", superblock->version);

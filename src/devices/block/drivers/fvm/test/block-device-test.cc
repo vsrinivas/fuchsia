@@ -88,7 +88,7 @@ class BlockDeviceTest : public zxtest::Test {
         std::make_unique<VPartitionManager>(nullptr, info, block_op_size, block_device_.proto());
 
     Header superblock = MakeSuperBlock(kDiskSize, kPartitionTableSize, kAllocTableSize);
-    FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
+    FormatInfo format_info(superblock);
     device_->SetFormatInfoForTest(format_info);
 
     partition_ = std::make_unique<VPartition>(device_.get(), 1, block_op_size);

@@ -91,32 +91,35 @@ bool CheckHash(const void* metadata, size_t metadata_size) {
 
 }  // namespace
 
-FormatInfo FormatInfo::FromSuperBlock(const Header& superblock) {
-  FormatInfo format_info;
-  format_info.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
-  format_info.metadata_size_ =
-      MetadataSizeOrZero(superblock.fvm_partition_size, superblock.slice_size);
-  format_info.slice_size_ = superblock.slice_size;
-  format_info.slice_count_ =
-      UsableSlicesCountOrZero(superblock.fvm_partition_size, format_info.metadata_allocated_size(),
-                              format_info.slice_size());
-  return format_info;
-}
-
 FormatInfo FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
                                             size_t slice_size) {
-  FormatInfo format_info;
-  format_info.metadata_allocated_size_ = MetadataSizeOrZero(max_size, slice_size);
-  format_info.metadata_size_ = MetadataSizeOrZero(initial_size, slice_size);
-  format_info.slice_size_ = slice_size;
-  format_info.slice_count_ = UsableSlicesCountOrZero(
-      initial_size, format_info.metadata_allocated_size(), format_info.slice_size());
-  return format_info;
+  Header header = {};
+  header.magic = kMagic;
+  header.version = kVersion;
+  header.pslice_count =
+      UsableSlicesCountOrZero(initial_size, MetadataSizeOrZero(max_size, slice_size), slice_size);
+  header.slice_size = slice_size;
+  header.fvm_partition_size = initial_size;
+  header.vpartition_table_size = kVPartTableLength;
+  header.allocation_table_size = AllocTableLength(max_size, slice_size);
+  header.generation = 1;
+
+  return FormatInfo(header);
 }
 
 FormatInfo FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
   return FromPreallocatedSize(disk_size, disk_size, slice_size);
 }
+
+size_t FormatInfo::metadata_size() const {
+  return MetadataSizeOrZero(header_.fvm_partition_size, header_.slice_size);
+}
+
+size_t FormatInfo::metadata_allocated_size() const {
+  return kAllocTableOffset + header_.allocation_table_size;
+}
+
+size_t FormatInfo::slice_count() const { return header_.pslice_count; }
 
 void UpdateHash(void* metadata, size_t metadata_size) {
   Header* header = static_cast<Header*>(metadata);
@@ -129,11 +132,11 @@ void UpdateHash(void* metadata, size_t metadata_size) {
 zx_status_t ValidateHeader(const void* metadata, const void* backup, size_t metadata_size,
                            const void** out) {
   const Header* primary_header = static_cast<const Header*>(metadata);
-  FormatInfo primary_info = FormatInfo::FromSuperBlock(*primary_header);
+  FormatInfo primary_info(*primary_header);
   size_t primary_metadata_size = primary_info.metadata_size();
 
   const Header* backup_header = static_cast<const Header*>(backup);
-  FormatInfo backup_info = FormatInfo::FromSuperBlock(*backup_header);
+  FormatInfo backup_info(*backup_header);
   size_t backup_metadata_size = backup_info.metadata_size();
 
   auto check_value_consitency = [metadata_size](const Header* header, const FormatInfo& info) {
@@ -190,8 +193,8 @@ zx_status_t ValidateHeader(const void* metadata, const void* backup, size_t meta
   if (!primary_valid) {
     fprintf(stderr, "fvm: Primary metadata invalid\n");
   }
-  bool backup_valid = check_value_consitency(backup_header, backup_info) &&
-                      CheckHash(backup, backup_metadata_size);
+  bool backup_valid =
+      check_value_consitency(backup_header, backup_info) && CheckHash(backup, backup_metadata_size);
   if (!backup_valid) {
     fprintf(stderr, "fvm: Secondary metadata invalid\n");
   }

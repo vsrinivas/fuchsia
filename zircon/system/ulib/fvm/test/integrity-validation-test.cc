@@ -26,30 +26,16 @@ struct Metadata {
   size_t capacity;
 };
 
-Header MakeHeader(size_t part_size, size_t part_table_size, size_t alloc_table_size) {
-  Header superblock;
-  superblock.fvm_partition_size = part_size;
-  superblock.vpartition_table_size = part_table_size;
-  superblock.allocation_table_size = alloc_table_size;
-  superblock.slice_size = kSliceSize;
-  superblock.pslice_count = part_size / kSliceSize;
-  superblock.magic = fvm::kMagic;
-  superblock.version = fvm::kVersion;
-  superblock.generation = 1;
-  UpdateHash(&superblock, sizeof(Header));
-  return superblock;
-}
-
 Metadata CreateSuperblock(uint64_t initial_disk_size, uint64_t maximum_disk_capacity) {
-  fvm::Header header = MakeHeader(initial_disk_size, fvm::PartitionTable::kLength,
-                                  fvm::AllocationTable::Length(maximum_disk_capacity, kSliceSize));
-  FormatInfo info = fvm::FormatInfo::FromSuperBlock(header);
+  FormatInfo info =
+      FormatInfo::FromPreallocatedSize(initial_disk_size, maximum_disk_capacity, kSliceSize);
+
   Metadata metadata;
   metadata.superblock = std::make_unique<uint8_t[]>(info.metadata_allocated_size());
   metadata.size = info.metadata_size();
   metadata.capacity = info.metadata_allocated_size();
   memset(metadata.superblock.get(), 0, metadata.capacity);
-  memcpy(metadata.superblock.get(), &header, sizeof(Header));
+  memcpy(metadata.superblock.get(), &info.header(), sizeof(Header));
   return metadata;
 }
 
@@ -192,8 +178,8 @@ TEST(IntegrityValidationTest, MetadataHasOverflowInCalculatedSizeIsBadState) {
 
 TEST(IntegrityValidationTest, FvmPartitionNotBigForBothCopiesOfMetadataIsBadState) {
   Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
-  fvm::FormatInfo info = fvm::FormatInfo::FromSuperBlock(*header);
+  Header* header = reinterpret_cast<Header*>(metadata.superblock.get());
+  FormatInfo info(*header);
 
   header->fvm_partition_size = 2 * info.metadata_allocated_size() - 1;
 
@@ -204,8 +190,8 @@ TEST(IntegrityValidationTest, FvmPartitionNotBigForBothCopiesOfMetadataIsBadStat
 
 TEST(IntegrityValidationTest, LastSliceOutOfFvmPartitionIsBadState) {
   Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
-  fvm::FormatInfo info = fvm::FormatInfo::FromSuperBlock(*header);
+  Header* header = reinterpret_cast<Header*>(metadata.superblock.get());
+  FormatInfo info(*header);
 
   // Now the last slice ends past the fvm partition and would trigger a Page Fault, probably.
   header->fvm_partition_size = info.GetSliceStart(0) + info.slice_count() * info.slice_size() - 1;
