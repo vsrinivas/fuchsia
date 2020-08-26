@@ -44,14 +44,17 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
   // "interface name", "method name" and "message content".
   // Based on the system call, this could be in either of output event or invoked event.
   const fidl_codec::InterfaceMethod* method = nullptr;
+  zx_txid_t txid;
 
   switch (syscall_kind) {
     case SyscallKind::kChannelRead:
       method = output_event->GetMessage()->method();
+      txid = output_event->GetMessage()->txid();
       break;
     case SyscallKind::kChannelWrite:
     case SyscallKind::kChannelCall:
       method = output_event->invoked_event()->GetMessage()->method();
+      txid = output_event->invoked_event()->GetMessage()->txid();
       break;
     default:
       return nullptr;
@@ -78,7 +81,7 @@ std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_even
   bool crashed = output_event->returned_value() == ZX_ERR_PEER_CLOSED;
 
   return std::make_unique<FidlCallInfo>(
-      crashed, method->enclosing_interface().name(), handle_id, syscall_kind, method->name(),
+      crashed, method->enclosing_interface().name(), handle_id, txid, syscall_kind, method->name(),
       method->request(), method->response(), decoded_input_value, decoded_output_value);
 }
 

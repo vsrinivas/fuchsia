@@ -30,16 +30,32 @@ class TestGenerator : public CodeGenerator {
       std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>::iterator iterator,
       std::string_view final_statement);
 
+  void GenerateAsyncCall(fidl_codec::PrettyPrinter& printer,
+                         std::pair<FidlCallInfo*, FidlCallInfo*> call_info_pair,
+                         std::string_view final_statement);
+
   void GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call,
                      std::string_view final_statement);
 
   void GenerateFireAndForget(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call);
+
+  std::string GenerateSynchronizingConditionalWithinGroup(
+      std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>* batch, size_t index, size_t req_index,
+      std::string_view final_statement);
+
+  void GenerateGroup(
+      fidl_codec::PrettyPrinter& printer,
+      std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>& groups,
+      size_t index);
 
   void GenerateTests();
 
   void GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info);
 
   void WriteTestToFile(std::string_view protocol_name);
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>
+  SplitChannelCallsIntoGroups(const std::vector<FidlCallInfo*>& calls);
 
  private:
   // The dispatcher that the test generator belongs to.

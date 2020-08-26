@@ -3,6 +3,7 @@
 #include <set>
 
 #include "tools/fidlcat/lib/code_generator/cpp_visitor.h"
+#include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
 
@@ -59,6 +60,67 @@ void TestGenerator::GenerateTests() {
     WriteTestToFile(protocol_name);
     std::cout << "\n";
   }
+}
+
+std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>
+TestGenerator::SplitChannelCallsIntoGroups(const std::vector<FidlCallInfo*>& calls) {
+  size_t sequence_number = 0;
+  std::set<std::string> fire_and_forgets;
+  for (const auto& call_info : calls) {
+    call_info->SetSequenceNumber(sequence_number++);
+
+    if (call_info->kind() == SyscallKind::kChannelWrite) {
+      fire_and_forgets.insert(call_info->method_name());
+    } else if (call_info->kind() == SyscallKind::kChannelRead) {
+      fire_and_forgets.erase(call_info->method_name());
+    } else if (call_info->kind() == SyscallKind::kChannelCall) {
+      call_info->SetSequenceNumber(sequence_number++);
+    }
+  }
+
+  auto trace = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  auto events = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  std::map<std::pair<zx_handle_t, zx_txid_t>, FidlCallInfo*> unfinished_writes;
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups;
+
+  for (const auto& call_info : calls) {
+    auto write_key = std::make_pair(call_info->handle_id(), call_info->txid());
+
+    if (call_info->kind() == SyscallKind::kChannelWrite) {
+      if (fire_and_forgets.count(call_info->method_name()) == 0) {
+        unfinished_writes[write_key] = call_info;
+      } else {
+        // Dealing with a fire and forget call
+        trace->push_back(std::make_pair(call_info, nullptr));
+      }
+    } else if (call_info->kind() == SyscallKind::kChannelRead) {
+      if (call_info->txid() != 0 && unfinished_writes.count(write_key) > 0) {
+        // Succeeded in renconciling the write to the read
+        trace->push_back(std::make_pair(unfinished_writes[write_key], call_info));
+        unfinished_writes.erase(write_key);
+      } else {
+        // Dealing with an event
+        trace->push_back(std::make_pair(nullptr, call_info));
+      }
+    } else if (call_info->kind() == SyscallKind::kChannelCall) {
+      trace->push_back(std::make_pair(call_info, nullptr));
+    }
+
+    if (unfinished_writes.size() == 0) {
+      // Sorts based on the order of write calls
+      std::sort(trace->begin(), trace->end(),
+                [](std::pair<FidlCallInfo*, FidlCallInfo*> c1,
+                   std::pair<FidlCallInfo*, FidlCallInfo*> c2) {
+                  return (c1.first ? c1.first : c1.second)->sequence_number() <
+                         (c2.first ? c2.first : c2.second)->sequence_number();
+                });
+      // Adds the new group
+      groups.emplace_back(std::move(trace));
+      // Prepares for the next group
+      trace = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+    }
+  }
+  return groups;
 }
 
 void TestGenerator::WriteTestToFile(std::string_view protocol_name) {
@@ -136,7 +198,7 @@ void TestGenerator::GenerateAsyncCallsFromIterator(
     separator = ", ";
   }
 
-  printer << separator << "[](";
+  printer << separator << "[this](";
   separator = "";
   for (const auto& argument : output_arguments) {
     // Pass output arguments by reference
@@ -160,6 +222,13 @@ void TestGenerator::GenerateAsyncCallsFromIterator(
   printer << "});";
 
   printer << "\n";
+}
+
+void TestGenerator::GenerateAsyncCall(fidl_codec::PrettyPrinter& printer,
+                                      std::pair<FidlCallInfo*, FidlCallInfo*> call_info_pair,
+                                      std::string_view final_statement) {
+  auto async_calls = std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>{call_info_pair};
+  GenerateAsyncCallsFromIterator(printer, async_calls, async_calls.begin(), final_statement);
 }
 
 void TestGenerator::GenerateSyncCall(fidl_codec::PrettyPrinter& printer, FidlCallInfo* call_info) {
@@ -213,7 +282,9 @@ void TestGenerator::GenerateEvent(fidl_codec::PrettyPrinter& printer, FidlCallIn
   printer << "proxy_.events()." << call->method_name() << " = ";
 
   std::string separator = "";
-  printer << "[](";
+  printer << "[this](";
+
+  separator = "";
   for (auto& argument : output_arguments) {
     printer << separator;
     argument->GenerateTypeAndName(printer);
@@ -255,6 +326,76 @@ void TestGenerator::GenerateFireAndForget(fidl_codec::PrettyPrinter& printer,
 
   printer << ");";
   printer << "\n";
+}
+
+std::string TestGenerator::GenerateSynchronizingConditionalWithinGroup(
+    std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>* batch, size_t index, size_t req_index,
+    std::string_view final_statement) {
+  std::ostringstream output;
+  // Prints boolean values that ensure all responses in the group are received before proceeding to
+  // the next group
+  if (batch->size() > 1) {
+    output << "received_" << index << "_" << req_index << "_ = "
+           << "true;\n";
+    output << "if (";
+    auto separator = "";
+    for (size_t i = 0; i < batch->size(); i++) {
+      if (i != req_index) {
+        output << separator << "received_" << index << "_" << i << "_";
+        separator = " && ";
+      }
+    }
+    output << ") {\n";
+    output << "  " << final_statement;
+    output << "}\n";
+  } else {
+    output << final_statement;
+  }
+
+  return output.str();
+}
+
+void TestGenerator::GenerateGroup(
+    fidl_codec::PrettyPrinter& printer,
+    std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>>& groups,
+    size_t index) {
+  printer << "void Proxy::group_" << index << "() {\n";
+  {
+    fidl_codec::Indent indent(printer);
+    std::string final_statement;
+
+    if (index == groups.size() - 1) {
+      final_statement = "loop_.Quit();\n";
+    } else {
+      final_statement = "group_" + std::to_string(index + 1) + "();\n";
+    }
+
+    // Prints each call within the group
+    for (size_t i = 0; i < groups[index]->size(); i++) {
+      std::pair<FidlCallInfo*, FidlCallInfo*> call_info_pair = groups[index]->at(i);
+      std::string final_statement_join = GenerateSynchronizingConditionalWithinGroup(
+          groups[index].get(), index, i, final_statement);
+
+      if (call_info_pair.first && call_info_pair.second) {
+        // Both elements of the pair are present. This is an async call.
+        GenerateAsyncCall(printer, call_info_pair, final_statement_join);
+      } else if (call_info_pair.second == nullptr) {
+        // Only the first element of the pair is present. Either a a sync call, or a "fire and
+        // forget".
+
+        if (call_info_pair.first->kind() == SyscallKind::kChannelCall) {
+          GenerateSyncCall(printer, call_info_pair.first);
+        } else {
+          GenerateFireAndForget(printer, call_info_pair.first);
+        }
+        printer << final_statement_join;
+      } else if (call_info_pair.first == nullptr) {
+        // Only the first element of the pair is present. This is an event.
+        GenerateEvent(printer, call_info_pair.second, final_statement_join);
+      }
+    }
+  }
+  printer << "}\n";
 }
 
 std::vector<std::shared_ptr<fidl_codec::CppVariable>>

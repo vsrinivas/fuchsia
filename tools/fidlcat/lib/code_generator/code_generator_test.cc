@@ -68,50 +68,56 @@ class TestGeneratorTest : public ::testing::Test {
     struct_def_output_->AddMember("result_words", std::make_unique<fidl_codec::StringType>());
 
     zx_handle_t handle_id = 1234;
+    zx_txid_t txid_1 = 1;
+    zx_txid_t txid_2 = 2;
+    zx_txid_t txid_3 = 3;
+    zx_txid_t txid_4 = 4;
 
     struct_input_1_ = std::make_shared<fidl_codec::StructValue>(*struct_def_input_.get());
     struct_input_1_->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(2)));
     struct_input_1_->AddField("exponent", std::make_unique<fidl_codec::IntegerValue>(int64_t(3)));
 
     call_write_1_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelWrite, "Exponentiation",
-        struct_def_input_.get(), struct_def_output_.get(), struct_input_1_.get(), nullptr);
+        false, "fidl.examples.calculator", handle_id, txid_1, SyscallKind::kChannelWrite,
+        "Exponentiation", struct_def_input_.get(), struct_def_output_.get(), struct_input_1_.get(),
+        nullptr);
 
     struct_input_2_ = std::make_shared<fidl_codec::StructValue>(*struct_def_input_.get());
     struct_input_2_->AddField("base", std::make_unique<fidl_codec::IntegerValue>(int64_t(3)));
     struct_input_2_->AddField("exponent", std::make_unique<fidl_codec::IntegerValue>(int64_t(2)));
 
     call_write_2_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelWrite, "Exponentiation",
-        struct_def_input_.get(), struct_def_output_.get(), struct_input_2_.get(), nullptr);
+        false, "fidl.examples.calculator", handle_id, txid_2, SyscallKind::kChannelWrite,
+        "ExponentiationSlow", struct_def_input_.get(), struct_def_output_.get(),
+        struct_input_2_.get(), nullptr);
 
     struct_output_1_ = std::make_shared<fidl_codec::StructValue>(*struct_def_output_.get());
     struct_output_1_->AddField("result", std::make_unique<fidl_codec::IntegerValue>(int64_t(8)));
     struct_output_1_->AddField("result_words", std::make_unique<fidl_codec::StringValue>("eight"));
 
     call_read_1_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "Exponentiation",
-        nullptr, nullptr, nullptr, struct_output_1_.get());
+        false, "fidl.examples.calculator", handle_id, txid_1, SyscallKind::kChannelRead,
+        "Exponentiation", nullptr, nullptr, nullptr, struct_output_1_.get());
 
     struct_output_2_ = std::make_shared<fidl_codec::StructValue>(*struct_def_output_.get());
     struct_output_2_->AddField("result", std::make_unique<fidl_codec::IntegerValue>(int64_t(9)));
     struct_output_2_->AddField("result_words", std::make_unique<fidl_codec::StringValue>("nine"));
 
     call_read_2_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "Exponentiation",
-        nullptr, nullptr, nullptr, struct_output_2_.get());
+        false, "fidl.examples.calculator", handle_id, txid_2, SyscallKind::kChannelRead,
+        "ExponentiationSlow", nullptr, nullptr, nullptr, struct_output_2_.get());
 
     call_sync_ = std::make_shared<FidlCallInfo>(false, "fidl.examples.calculator", handle_id,
-                                                SyscallKind::kChannelCall, "Exponentiation",
+                                                txid_3, SyscallKind::kChannelCall, "Exponentiation",
                                                 struct_def_input_.get(), struct_def_output_.get(),
                                                 struct_input_1_.get(), struct_output_1_.get());
 
     call_event_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelRead, "OnTimeout",
+        false, "fidl.examples.calculator", handle_id, 0, SyscallKind::kChannelRead, "OnTimeout",
         nullptr, struct_def_output_.get(), nullptr, struct_output_1_.get());
 
     call_fire_and_forget_ = std::make_shared<FidlCallInfo>(
-        false, "fidl.examples.calculator", handle_id, SyscallKind::kChannelWrite, "TurnOn",
+        false, "fidl.examples.calculator", handle_id, txid_4, SyscallKind::kChannelWrite, "TurnOn",
         struct_def_input_.get(), nullptr, struct_input_1_.get(), nullptr);
   }
 
@@ -141,9 +147,9 @@ class TestGeneratorTest : public ::testing::Test {
 
 TEST_F(TestGeneratorTest, GenerateAsyncCall) {
   // Call fidl.examples.calculator/Exponentiation twice
-  std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>> async_calls = {
-      std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_1_.get(), call_read_1_.get()),
-      std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_2_.get(), call_read_2_.get())};
+  auto pair1 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_1_.get(), call_read_1_.get());
+  auto pair2 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_2_.get(), call_read_2_.get());
+  std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>> async_calls = {pair1, pair2};
 
   test_generator_.GenerateAsyncCallsFromIterator(printer_, async_calls, async_calls.begin(),
                                                  "// end of async calls\n");
@@ -153,7 +159,7 @@ TEST_F(TestGeneratorTest, GenerateAsyncCall) {
       "int64_t in_exponent_0 = 3;\n"
       "int64_t out_result_0;\n"
       "std::string out_result_words_0;\n"
-      "proxy_->Exponentiation(in_base_0, in_exponent_0, [](int64_t out_result_0, std::string "
+      "proxy_->Exponentiation(in_base_0, in_exponent_0, [this](int64_t out_result_0, std::string "
       "out_result_words_0) {\n"
       "  int64_t out_result_0_expected = 8;\n"
       "  ASSERT_EQ(out_result_0, out_result_0_expected);\n"
@@ -165,7 +171,8 @@ TEST_F(TestGeneratorTest, GenerateAsyncCall) {
       "  int64_t in_exponent_1 = 2;\n"
       "  int64_t out_result_1;\n"
       "  std::string out_result_words_1;\n"
-      "  proxy_->Exponentiation(in_base_1, in_exponent_1, [](int64_t out_result_1, std::string "
+      "  proxy_->ExponentiationSlow(in_base_1, in_exponent_1, [this](int64_t out_result_1, "
+      "std::string "
       "out_result_words_1) {\n"
       "    int64_t out_result_1_expected = 9;\n"
       "    ASSERT_EQ(out_result_1, out_result_1_expected);\n"
@@ -240,7 +247,8 @@ TEST_F(TestGeneratorTest, GenerateEvent) {
   std::string expected =
       "int64_t out_result_0;\n"
       "std::string out_result_words_0;\n"
-      "proxy_.events().OnTimeout = [](int64_t out_result_0, std::string out_result_words_0) {\n"
+      "proxy_.events().OnTimeout = [this](int64_t out_result_0, std::string out_result_words_0) "
+      "{\n"
       "  int64_t out_result_0_expected = 8;\n"
       "  ASSERT_EQ(out_result_0, out_result_0_expected);\n"
       "\n"
@@ -262,6 +270,173 @@ TEST_F(TestGeneratorTest, GenerateFireAndForget) {
       "proxy_->TurnOn(in_base_0, in_exponent_0);\n";
 
   EXPECT_EQ(os_.str(), expected);
+}
+
+TEST_F(TestGeneratorTest, GenerateGroup) {
+  auto pair1 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_1_.get(), call_read_1_.get());
+  auto pair2 = std::pair<FidlCallInfo*, FidlCallInfo*>(call_write_2_.get(), call_read_2_.get());
+  auto group_1 = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  group_1->push_back(pair1);
+  group_1->push_back(pair2);
+
+  auto pair3 = std::pair<FidlCallInfo*, FidlCallInfo*>(nullptr, call_event_.get());
+  auto group_2 = std::make_unique<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>();
+  group_2->push_back(pair3);
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups;
+  groups.emplace_back(std::move(group_1));
+  groups.emplace_back(std::move(group_2));
+
+  test_generator_.GenerateGroup(printer_, groups, 0);
+
+  std::string expected_1 =
+      "void Proxy::group_0() {\n"
+      "  int64_t in_base_0 = 2;\n"
+      "  int64_t in_exponent_0 = 3;\n"
+      "  int64_t out_result_0;\n"
+      "  std::string out_result_words_0;\n"
+      "  proxy_->Exponentiation(in_base_0, in_exponent_0, [this](int64_t "
+      "out_result_0, std::string "
+      "out_result_words_0) {\n"
+      "    int64_t out_result_0_expected = 8;\n"
+      "    ASSERT_EQ(out_result_0, out_result_0_expected);\n"
+      "\n"
+      "    std::string out_result_words_0_expected = \"eight\";\n"
+      "    ASSERT_EQ(out_result_words_0, out_result_words_0_expected);\n"
+      "\n"
+      "    received_0_0_ = true;\n"
+      "    if (received_0_1_) {\n"
+      "      group_1();\n"
+      "    }\n"
+      "  });\n"
+      "  int64_t in_base_1 = 3;\n"
+      "  int64_t in_exponent_1 = 2;\n"
+      "  int64_t out_result_1;\n"
+      "  std::string out_result_words_1;\n"
+      "  proxy_->ExponentiationSlow(in_base_1, in_exponent_1, [this"
+      "](int64_t "
+      "out_result_1, std::string "
+      "out_result_words_1) {\n"
+      "    int64_t out_result_1_expected = 9;\n"
+      "    ASSERT_EQ(out_result_1, out_result_1_expected);\n"
+      "\n"
+      "    std::string out_result_words_1_expected = \"nine\";\n"
+      "    ASSERT_EQ(out_result_words_1, out_result_words_1_expected);\n"
+      "\n"
+      "    received_0_1_ = true;\n"
+      "    if (received_0_0_) {\n"
+      "      group_1();\n"
+      "    }\n"
+      "  });\n"
+      "}\n";
+
+  EXPECT_EQ(os_.str(), expected_1);
+
+  os_.str("");
+
+  test_generator_.GenerateGroup(printer_, groups, 1);
+
+  std::string expected_2 =
+      "void Proxy::group_1() {\n"
+      "  int64_t out_result_2;\n"
+      "  std::string out_result_words_2;\n"
+      "  proxy_.events().OnTimeout = [this](int64_t out_result_2, std::string "
+      "out_result_words_2) {\n"
+      "    int64_t out_result_2_expected = 8;\n"
+      "    ASSERT_EQ(out_result_2, out_result_2_expected);\n"
+      "\n"
+      "    std::string out_result_words_2_expected = \"eight\";\n"
+      "    ASSERT_EQ(out_result_words_2, out_result_words_2_expected);\n"
+      "\n"
+      "    loop_.Quit();\n"
+      "  };\n"
+      "}\n";
+
+  EXPECT_EQ(os_.str(), expected_2);
+}
+
+TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsOneGroup) {
+  std::vector<FidlCallInfo*> calls;
+  calls.push_back(call_write_1_.get());
+  calls.push_back(call_write_2_.get());
+  calls.push_back(call_read_1_.get());
+  calls.push_back(call_read_2_.get());
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups =
+      test_generator_.SplitChannelCallsIntoGroups(calls);
+
+  EXPECT_EQ(groups.size(), 1u);
+  EXPECT_EQ(groups[0]->size(), 2u);
+  EXPECT_EQ(groups[0]->at(0).first, call_write_1_.get());
+  EXPECT_EQ(groups[0]->at(0).second, call_read_1_.get());
+  EXPECT_EQ(groups[0]->at(1).first, call_write_2_.get());
+  EXPECT_EQ(groups[0]->at(1).second, call_read_2_.get());
+}
+
+TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsTwoGroups) {
+  std::vector<FidlCallInfo*> calls;
+  calls.push_back(call_write_1_.get());
+  calls.push_back(call_read_1_.get());
+  calls.push_back(call_write_2_.get());
+  calls.push_back(call_read_2_.get());
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups =
+      test_generator_.SplitChannelCallsIntoGroups(calls);
+
+  EXPECT_EQ(groups.size(), 2u);
+  EXPECT_EQ(groups[0]->size(), 1u);
+  EXPECT_EQ(groups[0]->at(0).first, call_write_1_.get());
+  EXPECT_EQ(groups[0]->at(0).second, call_read_1_.get());
+
+  EXPECT_EQ(groups[1]->size(), 1u);
+  EXPECT_EQ(groups[1]->at(0).first, call_write_2_.get());
+  EXPECT_EQ(groups[1]->at(0).second, call_read_2_.get());
+}
+
+TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsEvents) {
+  std::vector<FidlCallInfo*> calls;
+  calls.push_back(call_write_1_.get());
+  calls.push_back(call_read_1_.get());
+  calls.push_back(call_write_2_.get());
+  calls.push_back(call_event_.get());
+  calls.push_back(call_read_2_.get());
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups =
+      test_generator_.SplitChannelCallsIntoGroups(calls);
+
+  EXPECT_EQ(groups.size(), 2u);
+  EXPECT_EQ(groups[0]->size(), 1u);
+  EXPECT_EQ(groups[0]->at(0).first, call_write_1_.get());
+  EXPECT_EQ(groups[0]->at(0).second, call_read_1_.get());
+
+  EXPECT_EQ(groups[1]->size(), 2u);
+  EXPECT_EQ(groups[1]->at(0).first, call_write_2_.get());
+  EXPECT_EQ(groups[1]->at(0).second, call_read_2_.get());
+  EXPECT_EQ(groups[1]->at(1).first, nullptr);
+  EXPECT_EQ(groups[1]->at(1).second, call_event_.get());
+}
+
+TEST_F(TestGeneratorTest, SplitChannelCallsIntoGroupsFireAndForget) {
+  std::vector<FidlCallInfo*> calls;
+  calls.push_back(call_fire_and_forget_.get());
+  calls.push_back(call_write_1_.get());
+  calls.push_back(call_write_2_.get());
+  calls.push_back(call_read_2_.get());
+  calls.push_back(call_read_1_.get());
+
+  std::vector<std::unique_ptr<std::vector<std::pair<FidlCallInfo*, FidlCallInfo*>>>> groups =
+      test_generator_.SplitChannelCallsIntoGroups(calls);
+
+  EXPECT_EQ(groups.size(), 2u);
+  EXPECT_EQ(groups[0]->size(), 1u);
+  EXPECT_EQ(groups[0]->at(0).first, call_fire_and_forget_.get());
+  EXPECT_EQ(groups[0]->at(0).second, nullptr);
+
+  EXPECT_EQ(groups[1]->size(), 2u);
+  EXPECT_EQ(groups[1]->at(0).first, call_write_1_.get());
+  EXPECT_EQ(groups[1]->at(0).second, call_read_1_.get());
+  EXPECT_EQ(groups[1]->at(1).first, call_write_2_.get());
+  EXPECT_EQ(groups[1]->at(1).second, call_read_2_.get());
 }
 
 }  // namespace fidlcat

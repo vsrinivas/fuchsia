@@ -22,13 +22,14 @@ std::string ToSnakeCase(std::string_view str);
 class FidlCallInfo {
  public:
   FidlCallInfo(bool crashed, std::string_view enclosing_interface_name, zx_handle_t handle_id,
-               SyscallKind kind, std::string_view method_name,
+               zx_txid_t txid, SyscallKind kind, std::string_view method_name,
                const fidl_codec::Struct* struct_input, const fidl_codec::Struct* struct_output,
                const fidl_codec::StructValue* decoded_input_value,
                const fidl_codec::StructValue* decoded_output_value)
       : crashed_(crashed),
         enclosing_interface_name_(enclosing_interface_name),
         handle_id_(handle_id),
+        txid_(txid),
         kind_(kind),
         method_name_(method_name),
         struct_input_(struct_input),
@@ -39,6 +40,8 @@ class FidlCallInfo {
   bool crashed() const { return crashed_; }
 
   zx_handle_t handle_id() const { return handle_id_; }
+
+  zx_txid_t txid() const { return txid_; }
 
   SyscallKind kind() const { return kind_; }
 
@@ -54,6 +57,9 @@ class FidlCallInfo {
 
   const fidl_codec::StructValue* decoded_output_value() const { return decoded_output_value_; }
 
+  size_t sequence_number() const { return sequence_number_; }
+  void SetSequenceNumber(size_t sequence_number) { sequence_number_ = sequence_number; }
+
  private:
   // True if server crashes in response to a zx_channel_call
   const bool crashed_ = false;
@@ -63,6 +69,9 @@ class FidlCallInfo {
 
   // Handle id of the FIDL call, used to reconcile writes and reads
   const zx_handle_t handle_id_;
+
+  // Transaction id of the syscall, used to reconcile writes and reads
+  const zx_txid_t txid_;
 
   // The system call used as part of the FIDL call
   const SyscallKind kind_;
@@ -81,6 +90,9 @@ class FidlCallInfo {
 
   // Decoded output value
   const fidl_codec::StructValue* const decoded_output_value_;
+
+  // Sequence number in the channel
+  size_t sequence_number_;
 };
 
 std::unique_ptr<FidlCallInfo> OutputEventToFidlCallInfo(OutputEvent* output_event);
