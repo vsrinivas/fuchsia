@@ -29,9 +29,20 @@ struct Args {
     #[argh(option)]
     file: Option<String>,
 
-    /// gamma values to apply
+    /// path to file containing gamma values to apply to the red channel
+    /// If this option is provided the other channels must also be provided.
     #[argh(option)]
-    gamma_file: Option<String>,
+    gamma_red_file: Option<String>,
+
+    /// path to file containing gamma values to apply to the green channel
+    /// If this option is provided the other channels must also be provided.
+    #[argh(option)]
+    gamma_green_file: Option<String>,
+
+    /// path to file containing gamma values to apply to the blue channel
+    /// If this option is provided the other channels must also be provided.
+    #[argh(option)]
+    gamma_blue_file: Option<String>,
 
     /// background color (default is white)
     #[argh(option, from_str_fn(parse_color))]
@@ -67,12 +78,47 @@ struct PngSourceInfo {
     png_size: IntSize,
 }
 
+#[derive(Clone, Debug)]
+struct GammaValues {
+    red: Vec<f32>,
+    green: Vec<f32>,
+    blue: Vec<f32>,
+}
+
 #[derive(Default)]
 struct DisplayPngAppAssistant {
     png_source: Option<PngSourceInfo>,
-    gamma_values: Option<Vec<f32>>,
+    gamma_values: Option<GammaValues>,
     background: Option<Color>,
     position: Option<Point2D<f32>>,
+}
+
+impl DisplayPngAppAssistant {
+    fn read_gamma_channel_file(src: &String) -> Result<Vec<f32>, Error> {
+        let file =
+            File::open(format!("{}", src)).context(format!("failed to open file {}", src))?;
+        let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_reader(file);
+        let gamma_values: Vec<f32> = rdr
+            .records()
+            // map records, dropping any that don't parse correctly.
+            .filter_map(|record| {
+                // Get the first field, and if it is there, try to parse it as
+                // a f32 (inferred from the type of the field). Use .ok() to turn
+                // a parse failure into a None value which will get filtered out by
+                // filter_map. Finally scale the value.
+                // TODO(55351): Remove hard-coded 1023 scaling value.
+                record.ok().and_then(|record| {
+                    record
+                        .get(0)
+                        .and_then(|value_str| value_str.parse().ok())
+                        .and_then(|v: f32| Some(v / 1023.0))
+                })
+            })
+            .collect();
+
+        ensure!(gamma_values.len() == 256, "The gamma values file must have exactly 256 lines");
+        Ok(gamma_values)
+    }
 }
 
 impl AppAssistant for DisplayPngAppAssistant {
@@ -100,31 +146,23 @@ impl AppAssistant for DisplayPngAppAssistant {
             });
         }
 
-        if let Some(gamma_file) = args.gamma_file {
-            let file = File::open(format!("{}", gamma_file))
-                .context(format!("failed to open file {}", gamma_file))?;
-            let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_reader(file);
-            let gamma_values: Vec<f32> = rdr
-                .records()
-                // map records, dropping any that don't parse correctly.
-                .filter_map(|record| {
-                    // Get the first field, and if it is there, try to parse it as
-                    // a f32 (inferred from the type of the field). Use .ok() to turn
-                    // a parse failure into a None value which will get filtered out by
-                    // filter_map. Finally scale the value.
-                    // TODO(55351): Remove hard-coded 1023 scaling value.
-                    record.ok().and_then(|record| {
-                        record
-                            .get(0)
-                            .and_then(|value_str| value_str.parse().ok())
-                            .and_then(|v: f32| Some(v / 1023.0))
-                    })
-                })
-                .collect();
+        if args.gamma_red_file.is_some()
+            || args.gamma_green_file.is_some()
+            || args.gamma_blue_file.is_some()
+        {
+            ensure!(
+                args.gamma_red_file.is_some()
+                    && args.gamma_green_file.is_some()
+                    && args.gamma_blue_file.is_some(),
+                "When providing a gamma channel file one must provide all three"
+            );
 
-            ensure!(gamma_values.len() == 256, "The gamma values file must have exactly 256 lines");
-            self.gamma_values = Some(gamma_values);
+            let red = Self::read_gamma_channel_file(args.gamma_red_file.as_ref().unwrap())?;
+            let green = Self::read_gamma_channel_file(args.gamma_green_file.as_ref().unwrap())?;
+            let blue = Self::read_gamma_channel_file(args.gamma_blue_file.as_ref().unwrap())?;
+            self.gamma_values = Some(GammaValues { red, green, blue });
         }
+
         Ok(())
     }
 
@@ -147,7 +185,7 @@ const GAMMA_TABLE_ID: u64 = 100;
 
 struct DisplayPngViewAssistant {
     png_source: Option<PngSourceInfo>,
-    gamma_values: Option<Vec<f32>>,
+    gamma_values: Option<GammaValues>,
     background: Color,
     png: Option<Image>,
     composition: Composition,
@@ -157,7 +195,7 @@ struct DisplayPngViewAssistant {
 impl DisplayPngViewAssistant {
     pub fn new(
         png_source: Option<PngSourceInfo>,
-        gamma_values: Option<Vec<f32>>,
+        gamma_values: Option<GammaValues>,
         background: Color,
         position: Option<Point2D<f32>>,
     ) -> Self {
@@ -174,11 +212,11 @@ impl ViewAssistant for DisplayPngViewAssistant {
             if let Some(frame_buffer) = context.frame_buffer.as_ref() {
                 let frame_buffer = frame_buffer.borrow_mut();
                 let mut r: [f32; 256] = [0.0; 256];
-                r.copy_from_slice(&gamma_values);
+                r.copy_from_slice(&gamma_values.red);
                 let mut g: [f32; 256] = [0.0; 256];
-                g.copy_from_slice(&gamma_values);
+                g.copy_from_slice(&gamma_values.green);
                 let mut b: [f32; 256] = [0.0; 256];
-                b.copy_from_slice(&gamma_values);
+                b.copy_from_slice(&gamma_values.blue);
                 frame_buffer.controller.import_gamma_table(
                     GAMMA_TABLE_ID,
                     &mut r,
