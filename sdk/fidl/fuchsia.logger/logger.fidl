@@ -113,8 +113,9 @@ protocol Log {
     [Deprecated]
     DumpLogs(LogListener log_listener, LogFilterOptions? options);
 
-    /// Listens to new log entries by calling Log() on `log_listener`. A null `options` indicates no
-    /// filtering is requested.
+    /// Dumps all cached logs by calling LogMany() in batches followed by Log() for each new log
+    /// message.
+    /// A null `options` indicates no filtering is requested.
     [Transitional]
     ListenSafe(LogListenerSafe log_listener, LogFilterOptions? options);
 
