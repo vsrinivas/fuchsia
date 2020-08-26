@@ -63,7 +63,7 @@ func (*nullChecksumOffloadEndpoint) Capabilities() stack.LinkEndpointCapabilitie
 var _ stack.LinkEndpoint = (*nullEndpoint)(nil)
 
 func BenchmarkWritePacket(b *testing.B) {
-	b.Skip("TODO(fxbug.dev/49547): re-enable once pprof crash is fixed in third_party/go")
+	b.Skip("TODO(https://github.com/golang/go/issues/40823): re-enable")
 	const nicid = 1
 	for _, test := range []struct {
 		name string
