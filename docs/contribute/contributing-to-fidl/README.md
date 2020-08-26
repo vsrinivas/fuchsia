@@ -392,6 +392,9 @@ useful for debugging issues that prevent boot of the device.
 | llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`            |  //zircon/system/ulib/fidl/include/lib/fidl/llcpp
 | rust conformance tests   | `fx test --host fidl_rust_conformance_tests` | //src/lib/fidl/rust
 | rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`     | //src/lib/fidl/rust
+| go conformance tests     | `fx test --host fidl_go_conformance_tests` | //third_party/go/syscall/zx/fidl
+| go fidl tests (extended) | `fx test --host go_extended_fidl_test` | //third_party/go/syscall/zx/fidl
+| go unsafevalue test      | `fx test --host go_unsafevalue_test` | //third_party/go/syscall/zx/fidl/internal/unsafevalue
 
 #### Fidlgen Tests
 
