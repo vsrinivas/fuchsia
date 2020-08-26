@@ -16,10 +16,10 @@ use {
     },
     fuchsia_zircon_status as zx_status,
     futures::{
-        future::{self, AndThen, Either, Future, FutureExt, Ready, TryFutureExt},
+        future::{self, AndThen, FusedFuture, Future, FutureExt, MaybeDone, Ready, TryFutureExt},
         ready,
         stream::{FusedStream, Stream},
-        task::{Context, Poll, Waker},
+        task::{noop_waker, Context, Poll, Waker},
     },
     parking_lot::Mutex,
     slab::Slab,
@@ -47,15 +47,48 @@ pub struct Client {
     inner: Arc<ClientInner>,
 }
 
-/// A future representing the raw response to a FIDL query.
-pub type RawQueryResponseFut = Either<Ready<Result<MessageBuf, Error>>, MessageResponse>;
-
 /// A future representing the decoded response to a FIDL query.
-pub type QueryResponseFut<D> = AndThen<
-    RawQueryResponseFut,
-    Ready<Result<D, Error>>,
-    fn(MessageBuf) -> Ready<Result<D, Error>>,
->;
+pub type DecodedQueryResponseFut<D> =
+    AndThen<MessageResponse, Ready<Result<D, Error>>, fn(MessageBuf) -> Ready<Result<D, Error>>>;
+
+/// A future representing the result of a FIDL query, with early error detection available if the
+/// message couldn't be sent.
+#[derive(Debug)]
+pub struct QueryResponseFut<D>(MaybeDone<DecodedQueryResponseFut<D>>);
+
+impl<D> FusedFuture for QueryResponseFut<D> {
+    fn is_terminated(&self) -> bool {
+        match self.0 {
+            MaybeDone::Gone => true,
+            _ => false,
+        }
+    }
+}
+
+impl<D> Future for QueryResponseFut<D> {
+    type Output = Result<D, Error>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        ready!(self.0.poll_unpin(cx));
+        let maybe_done = Pin::new(&mut self.0);
+        Poll::Ready(maybe_done.take_output().unwrap_or(Err(Error::PollAfterCompletion)))
+    }
+}
+
+impl<D> QueryResponseFut<D> {
+    /// Check to see if the query has an error. If there was en error sending, this returns it and
+    /// the error is returned, otherwise it returns self, which can then be awaited on:
+    /// i.e. match echo_proxy.echo("something").check() {
+    ///      Err(e) => error!("Couldn't send: {}", e),
+    ///      Ok(fut) => fut.await
+    /// }
+    pub fn check(self) -> Result<Self, Error> {
+        match self.0 {
+            MaybeDone::Done(Err(e)) => Err(e),
+            x => Ok(QueryResponseFut(x)),
+        }
+    }
+}
 
 /// A FIDL transaction id. Will not be zero for a message that includes a response.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -153,7 +186,7 @@ impl Client {
         msg: &mut E,
         ordinal: u64,
     ) -> QueryResponseFut<D> {
-        let res_fut = self.send_raw_query(|tx_id, bytes, handles| {
+        let send_result = self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
                 header: TransactionHeader::new(tx_id.as_raw_id(), ordinal),
                 body: msg,
@@ -162,7 +195,10 @@ impl Client {
             Ok(())
         });
 
-        res_fut.and_then(decode_transaction_body_fut::<D>)
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(res_fut.and_then(decode_transaction_body_fut::<D>)),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 
     /// Send a raw message without expecting a response.
@@ -171,33 +207,30 @@ impl Client {
     }
 
     /// Send a raw query and receive a response future.
-    pub fn send_raw_query<F>(&self, msg_from_id: F) -> RawQueryResponseFut
+    pub fn send_raw_query<F>(&self, msg_from_id: F) -> Result<MessageResponse, Error>
     where
         F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<Handle>) -> Result<(), Error>,
     {
         let id = self.inner.register_msg_interest();
-        let res = crate::encoding::with_tls_coding_bufs(|bytes, handles| {
+        crate::encoding::with_tls_coding_bufs(|bytes, handles| {
             msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
             match self.inner.channel.write(bytes, handles) {
                 Ok(()) => Ok(()),
                 Err(zx_status::Status::PEER_CLOSED) => {
-                    // Whether the PEER_CLOSED happened before sending the message, or before
-                    // receiving the reply, the client can't tell the difference.
-                    // Pretend the message sent so that the receiving flow can properly report
-                    // any received epitaphs.
-                    Ok(())
+                    // Try to receive the epitaph
+                    match self.inner.recv_all()? {
+                        Some(epitaph) => Err(Error::ClientChannelClosed {
+                            status: epitaph,
+                            service_name: self.inner.service_name,
+                        }),
+                        None => Err(Error::ClientWrite(zx_status::Status::PEER_CLOSED)),
+                    }
                 }
                 Err(e) => Err(Error::ClientWrite(e.into())),
             }
-        });
+        })?;
 
-        match res {
-            Ok(()) => {
-                MessageResponse { id: Txid::from_interest_id(id), client: Some(self.inner.clone()) }
-                    .right_future()
-            }
-            Err(e) => futures::future::ready(Err(e)).left_future(),
-        }
+        Ok(MessageResponse { id: Txid::from_interest_id(id), client: Some(self.inner.clone()) })
     }
 }
 
@@ -477,7 +510,7 @@ impl ClientInner {
 
     /// Poll for the receipt of any response message or an event.
     ///
-    /// Returns whether or not the channel is closed.
+    /// Returns the epitaph (or PEER_CLOSED) if the channel was closed, and None otherwise.
     fn recv_all(&self) -> Result<Option<zx_status::Status>, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
@@ -490,10 +523,10 @@ impl ClientInner {
                 return Ok(*epitaph_lock);
             }
             let buf = {
-                let waker = match self.get_pending_waker() {
-                    Some(v) => v,
-                    None => return Ok(None),
-                };
+                // Get a real waker if anyone is waiting, otherwise a noop waker will do.
+                // Messages waiting for a response provide a waker, and if events arrive without a
+                // waker they are queued.
+                let waker = self.get_pending_waker().unwrap_or_else(noop_waker);
                 let cx = &mut Context::from_waker(&waker);
 
                 let mut buf = MessageBuf::new();
@@ -1142,12 +1175,14 @@ mod tests {
         let (response_waker, response_waker_count) = new_count_waker();
         let response_cx = &mut Context::from_waker(&response_waker);
         let mut response_txid = Txid(0);
-        let mut response_future = client.send_raw_query(|tx_id, bytes, handles| {
-            response_txid = tx_id;
-            let header = TransactionHeader::new(response_txid.as_raw_id(), 42);
-            encode_transaction(header, bytes, handles);
-            Ok(())
-        });
+        let mut response_future = client
+            .send_raw_query(|tx_id, bytes, handles| {
+                response_txid = tx_id;
+                let header = TransactionHeader::new(response_txid.as_raw_id(), 42);
+                encode_transaction(header, bytes, handles);
+                Ok(())
+            })
+            .expect("Couldn't send query");
         assert!(response_future.poll_unpin(response_cx).is_pending());
 
         // then, poll on an event
@@ -1195,11 +1230,13 @@ mod tests {
         // first poll on a response
         let (response1_waker, response1_waker_count) = new_count_waker();
         let response1_cx = &mut Context::from_waker(&response1_waker);
-        let mut response1_future = client.send_raw_query(|tx_id, bytes, handles| {
-            let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
-            encode_transaction(header, bytes, handles);
-            Ok(())
-        });
+        let mut response1_future = client
+            .send_raw_query(|tx_id, bytes, handles| {
+                let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
+                encode_transaction(header, bytes, handles);
+                Ok(())
+            })
+            .expect("Couldn't send query");
         assert!(response1_future.poll_unpin(response1_cx).is_pending());
 
         // then, poll on an event
@@ -1210,11 +1247,13 @@ mod tests {
         // poll on another response
         let (response2_waker, response2_waker_count) = new_count_waker();
         let response2_cx = &mut Context::from_waker(&response2_waker);
-        let mut response2_future = client.send_raw_query(|tx_id, bytes, handles| {
-            let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
-            encode_transaction(header, bytes, handles);
-            Ok(())
-        });
+        let mut response2_future = client
+            .send_raw_query(|tx_id, bytes, handles| {
+                let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
+                encode_transaction(header, bytes, handles);
+                Ok(())
+            })
+            .expect("Couldn't send query");
         assert!(response2_future.poll_unpin(response2_cx).is_pending());
 
         let wakers = vec![response1_waker_count, response2_waker_count, event_waker_count];
@@ -1304,5 +1343,44 @@ mod tests {
                 service_name: "test_service"
             })
         );
+    }
+
+    #[test]
+    fn client_query_result_check() {
+        let mut executor = fasync::Executor::new().unwrap();
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end, "test_service");
+
+        let server = AsyncChannel::from_channel(server_end).unwrap();
+
+        // Sending works, and checking when a message successfully sends returns itself.
+        let active_fut = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL);
+
+        let mut checked_fut = active_fut.check().expect("failed to check future");
+
+        // Should be able to complete the query even after checking.
+        let mut buffer = MessageBuf::new();
+        executor.run_singlethreaded(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+        let two_way_tx_id = 1u8;
+        assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
+
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        let header = TransactionHeader::new(two_way_tx_id as u32, 42);
+        encode_transaction(header, bytes, handles);
+        server.write(bytes, handles).expect("Server channel write failed");
+
+        executor
+            .run_singlethreaded(&mut checked_fut)
+            .map(|x| assert_eq!(x, SEND_DATA))
+            .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
+
+        // Close the server channel, meaning the next query will fail before it even starts.
+        drop(server);
+
+        let query_fut = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL);
+
+        // This should be an error, because the server end is closed.
+        query_fut.check().expect_err("Didn't make an error on check");
     }
 }
