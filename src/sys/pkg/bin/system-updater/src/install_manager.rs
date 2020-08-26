@@ -8,8 +8,9 @@ use {
     event_queue::{EventQueue, Notify},
     fidl_fuchsia_update_installer::UpdateNotStartedReason,
     fidl_fuchsia_update_installer_ext::State,
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         prelude::*,
@@ -18,11 +19,14 @@ use {
     },
 };
 
+const INSPECT_STATUS_NODE_NAME: &str = "status";
+
 /// Start a install manager task that:
 ///  * Runs an update attempt in a seperate task.
 ///  * Provides a control handle to forward FIDL requests to the update attempt task.
 pub async fn start_install_manager<N, U, E>(
     updater: U,
+    node: inspect::Node,
 ) -> (InstallManagerControlHandle<N>, impl Future<Output = ()>)
 where
     N: Notify<State> + Send + 'static,
@@ -30,12 +34,15 @@ where
     E: EnvironmentConnector,
 {
     let (send, recv) = mpsc::channel(0);
-    (InstallManagerControlHandle(send), run::<N, U, E>(recv, updater))
+    (InstallManagerControlHandle(send), run::<N, U, E>(recv, updater, node))
 }
 
 /// The install manager task.
-async fn run<N, U, E>(mut recv: mpsc::Receiver<ControlRequest<N>>, mut updater: U)
-where
+async fn run<N, U, E>(
+    mut recv: mpsc::Receiver<ControlRequest<N>>,
+    mut updater: U,
+    node: inspect::Node,
+) where
     N: Notify<State> + Send + 'static,
     U: Updater,
     E: EnvironmentConnector,
@@ -76,6 +83,13 @@ where
         let (attempt_id, attempt_stream) = updater.update(config, env, reboot_controller).await;
         futures::pin_mut!(attempt_stream);
 
+        // Set up inspect nodes.
+        let mut status_node = node.create_child(INSPECT_STATUS_NODE_NAME);
+        let _time_property = node.create_int(
+            "start_timestamp_nanos",
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+        );
+
         // Don't forget to add the first monitor to the queue and respond to StartUpdate :)
         if let Err(e) = monitor_queue.add_client(monitor).await {
             fx_log_warn!("error adding client to monitor queue: {:#}", anyhow!(e));
@@ -109,12 +123,16 @@ where
                 // The update task has given us a progress update, so let's forward
                 // that to all the monitors.
                 Op::Status(Some(state)) => {
+                    drop(status_node);
+                    status_node = node.create_child(INSPECT_STATUS_NODE_NAME);
+                    state.write_to_inspect(&status_node);
                     if let Err(e) = monitor_queue.queue_event(state).await {
                         fx_log_warn!("error sending state to monitor_queue: {:#}", anyhow!(e));
                     }
                 }
                 // The update task tells us the update is over, so let's notify all monitors.
                 Op::Status(None) => {
+                    drop(status_node);
                     if let Err(e) = monitor_queue.clear().await {
                         fx_log_warn!("error clearing clients of monitor_queue: {:#}", anyhow!(e));
                     }
@@ -306,6 +324,8 @@ mod tests {
         fidl_fuchsia_paver::{BootManagerMarker, DataSinkMarker},
         fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
         fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
+        fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo, UpdateInfoAndProgress},
+        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
         futures::future::BoxFuture,
         mpsc::{Receiver, Sender},
         parking_lot::Mutex,
@@ -385,6 +405,20 @@ mod tests {
         mpsc::Sender<(String, mpsc::Receiver<State>)>,
         mpsc::Sender<State>,
     ) {
+        let inspector = Inspector::new();
+        let node = inspector.root().create_child("test_does_not_use_inspect");
+        start_install_manager_with_update_id_and_node(id, node).await
+    }
+
+    async fn start_install_manager_with_update_id_and_node(
+        id: &str,
+        node: inspect::Node,
+    ) -> (
+        InstallManagerControlHandle<FakeStateNotifier>,
+        fasync::Task<()>,
+        mpsc::Sender<(String, mpsc::Receiver<State>)>,
+        mpsc::Sender<State>,
+    ) {
         // We use this channel to send the attempt id and state receiver to the update task, for
         // each update attempt. This allows tests to control when an update attempt ends -- all they
         // need to do is drop the state sender.
@@ -393,7 +427,7 @@ mod tests {
         let (state_sender, state_receiver) = mpsc::channel(0);
         let (install_manager_ch, fut) =
             start_install_manager::<FakeStateNotifier, FakeUpdater, StubEnvironmentConnector>(
-                updater,
+                updater, node,
             )
             .await;
         let install_manager_task = fasync::Task::local(fut);
@@ -662,5 +696,209 @@ mod tests {
 
         // Ensures the update manager task stops after it sends the buffered state events to monitors.
         install_manager_task.await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn writes_status_update_to_inspect() {
+        let inspector = Inspector::new();
+        let (mut install_manager_ch, _install_manager_task, _updater_sender, mut state_sender) =
+            start_install_manager_with_update_id_and_node(
+                "my-attempt",
+                inspector.root().create_child("current_attempt"),
+            )
+            .await;
+        let (notifier, mut state_receiver) = FakeStateNotifier::new_callback_and_receiver();
+        assert_eq!(
+            install_manager_ch
+                .start_update(ConfigBuilder::new().build().unwrap(), notifier, None)
+                .await,
+            Ok(Ok("my-attempt".to_string()))
+        );
+
+        let () = state_sender.send(State::Prepare).await.unwrap();
+
+        // Note for inspect tests: it is very important that we read the state from monitors
+        // to prevent race conditions. We can only guarantee inspect state is written once the
+        // status update is forwarded to monitors.
+        let _ = state_receiver.next().await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {
+                    start_timestamp_nanos: AnyProperty,
+                    status: {
+                        state: "prepare"
+                    }
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn writes_newest_status_update_to_inspect() {
+        let inspector = Inspector::new();
+        let (mut install_manager_ch, _install_manager_task, _updater_sender, mut state_sender) =
+            start_install_manager_with_update_id_and_node(
+                "my-attempt",
+                inspector.root().create_child("current_attempt"),
+            )
+            .await;
+        let (notifier, mut state_receiver) = FakeStateNotifier::new_callback_and_receiver();
+        assert_eq!(
+            install_manager_ch
+                .start_update(ConfigBuilder::new().build().unwrap(), notifier, None)
+                .await,
+            Ok(Ok("my-attempt".to_string()))
+        );
+
+        let () = state_sender.send(State::Prepare).await.unwrap();
+        let () = state_sender
+            .send(State::Fetch(
+                UpdateInfoAndProgress::builder()
+                    .info(UpdateInfo::builder().download_size(100).build())
+                    .progress(
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(50).build(),
+                    )
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        let _ = state_receiver.next().await;
+        let _ = state_receiver.next().await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {
+                    start_timestamp_nanos: AnyProperty,
+                    status: {
+                        state: "fetch",
+                        info: {
+                            download_size: 100u64,
+                        },
+                        progress: {
+                            fraction_completed: 0.5,
+                            bytes_downloaded: 50u64,
+                        },
+                    }
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn writes_status_update_to_inspect_on_second_attempt() {
+        let inspector = Inspector::new();
+        let (mut install_manager_ch, _install_manager_task, mut updater_sender, mut state_sender) =
+            start_install_manager_with_update_id_and_node(
+                "first-attempt-id",
+                inspector.root().create_child("current_attempt"),
+            )
+            .await;
+        let (notifier, mut state_receiver) = FakeStateNotifier::new_callback_and_receiver();
+
+        // Start first update attempt and show status node is populated.
+        assert_eq!(
+            install_manager_ch
+                .start_update(ConfigBuilder::new().build().unwrap(), notifier, None)
+                .await,
+            Ok(Ok("first-attempt-id".to_string()))
+        );
+        let () = state_sender.send(State::Prepare).await.unwrap();
+        let _ = state_receiver.next().await;
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {
+                    start_timestamp_nanos: AnyProperty,
+                    status: {
+                        state: "prepare"
+                    }
+                }
+            }
+        );
+
+        // End the first update attempt, show status node is removed.
+        drop(state_sender);
+        let _ = state_receiver.next().await;
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {}
+            }
+        );
+
+        // Start second update attempt and show status node is once again populated.
+        let (mut state_sender1, recv) = mpsc::channel(0);
+        updater_sender.try_send(("second-attempt-id".to_string(), recv)).unwrap();
+        let (notifier, mut state_receiver1) = FakeStateNotifier::new_callback_and_receiver();
+        assert_eq!(
+            install_manager_ch
+                .start_update(ConfigBuilder::new().build().unwrap(), notifier, None)
+                .await,
+            Ok(Ok("second-attempt-id".to_string()))
+        );
+        let () = state_sender1.send(State::FailPrepare).await.unwrap();
+        let _ = state_receiver1.next().await;
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {
+                    start_timestamp_nanos: AnyProperty,
+                    status: {
+                        state: "fail_prepare"
+                    }
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn writes_empty_attempt_node_if_no_attempt_running() {
+        let inspector = Inspector::new();
+        let (mut _install_manager_ch, _install_manager_task, _updater_sender, _state_sender) =
+            start_install_manager_with_update_id_and_node(
+                "my-attempt",
+                inspector.root().create_child("current_attempt"),
+            )
+            .await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {}
+            }
+        );
+    }
+
+    /// The update attempt has started (so we should have a status node), but
+    /// we haven't gotten a status update (so the said node should be empty).
+    #[fasync::run_singlethreaded(test)]
+    async fn writes_empty_status_node() {
+        let inspector = Inspector::new();
+        let (mut install_manager_ch, _install_manager_task, _updater_sender, _state_sender) =
+            start_install_manager_with_update_id_and_node(
+                "my-attempt",
+                inspector.root().create_child("current_attempt"),
+            )
+            .await;
+        let (notifier, _state_receiver) = FakeStateNotifier::new_callback_and_receiver();
+        assert_eq!(
+            install_manager_ch
+                .start_update(ConfigBuilder::new().build().unwrap(), notifier, None)
+                .await,
+            Ok(Ok("my-attempt".to_string()))
+        );
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                current_attempt: {
+                    start_timestamp_nanos: AnyProperty,
+                    status: {},
+                }
+            }
+        );
     }
 }

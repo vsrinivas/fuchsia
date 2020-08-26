@@ -101,11 +101,13 @@ async fn serve_fidl(history: Arc<Mutex<UpdateHistory>>, inspector: fuchsia_inspe
     // The install manager task will run the update attempt task,
     // listen for FIDL events, and notify monitors of update attempt progress.
     let updater = RealUpdater::new(Arc::clone(&history));
-    let (install_manager_ch, install_manager_fut) =
-        start_install_manager::<UpdateStateNotifier, RealUpdater, NamespaceEnvironmentConnector>(
-            updater,
-        )
-        .await;
+    let attempt_node = inspector.root().create_child("current_attempt");
+    let (install_manager_ch, install_manager_fut) = start_install_manager::<
+        UpdateStateNotifier,
+        RealUpdater,
+        NamespaceEnvironmentConnector,
+    >(updater, attempt_node)
+    .await;
 
     // The FIDL server will forward requests to the install manager task via the control handle.
     let server_fut = FidlServer::new(history, install_manager_ch).run(fs);
