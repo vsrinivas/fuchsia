@@ -971,6 +971,14 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
         if (new_user_id == user_id_to_skip) {
           new_user_id = parent->right_child_locked().page_attribution_user_id_;
         }
+        // Although user IDs can be unset for VMOs that do not have a dispatcher, copy-on-write
+        // VMOs always have user level dispatchers, and should have a valid user-id set, hence we
+        // should never end up re-attributing a hidden parent with an unset id.
+        DEBUG_ASSERT(new_user_id != 0);
+        // The 'if' above should mean that the new_user_id isn't the ID we are trying to remove
+        // and isn't one we just used. For this to fail we either need a corrupt VMO hierarchy, or
+        // to have labeled two leaf nodes with the same user_id, which would also be incorrect as
+        // leaf nodes have unique dispatchers and hence unique ids.
         DEBUG_ASSERT(new_user_id != page_attribution_user_id_ && new_user_id != user_id_to_skip);
         parent->page_attribution_user_id_ = new_user_id;
         user_id_to_skip = new_user_id;

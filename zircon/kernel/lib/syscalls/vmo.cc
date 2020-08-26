@@ -187,7 +187,6 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
 
   zx_status_t status;
   fbl::RefPtr<VmObject> child_vmo;
-  zx_rights_t in_rights = 0;
   bool no_write = false;
 
   // Writable is a property of the handle, not the object, so we consume this option here before
@@ -197,21 +196,25 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
     options &= ~ZX_VMO_CHILD_NO_WRITE;
   }
 
-  {
-    // lookup the dispatcher from handle, save a copy of the rights for later
-    fbl::RefPtr<VmObjectDispatcher> vmo;
-    status =
-        up->GetDispatcherWithRights(handle, ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ, &vmo, &in_rights);
-    if (status != ZX_OK)
-      return status;
+  // lookup the dispatcher from handle, save a copy of the rights for later. We must hold onto
+  // the refptr of this VMO up until we create the dispatcher. The reason for this is that
+  // VmObjectDispatcher::Create sets the user_id and page_attribution_id in the created child
+  // vmo. Should the vmo destroyed between creating the child and setting the id in the dispatcher
+  // the currently unset user_id may be used to re-attribute a parent. Holding the refptr prevents
+  // any destruction from occurring.
+  fbl::RefPtr<VmObjectDispatcher> vmo;
+  zx_rights_t in_rights;
+  status =
+      up->GetDispatcherWithRights(handle, ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ, &vmo, &in_rights);
+  if (status != ZX_OK)
+    return status;
 
-    // clone the vmo into a new one
-    status = vmo->CreateChild(options, offset, size, in_rights & ZX_RIGHT_GET_PROPERTY, &child_vmo);
-    if (status != ZX_OK)
-      return status;
+  // clone the vmo into a new one
+  status = vmo->CreateChild(options, offset, size, in_rights & ZX_RIGHT_GET_PROPERTY, &child_vmo);
+  if (status != ZX_OK)
+    return status;
 
-    DEBUG_ASSERT(child_vmo);
-  }
+  DEBUG_ASSERT(child_vmo);
 
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
