@@ -42,7 +42,7 @@ const std::shared_ptr<LoudnessTransform>& DeviceConfig::OutputDeviceProfile::lou
     return kNoOpTransform;
   }
 
-  return DeviceProfile::loudness_transform();
+  return loudness_transform_;
 }
 
 const PipelineConfig::Effect* DeviceConfig::FindEffect(const std::string& instance_name) const {

@@ -31,10 +31,9 @@ class AudioOutput : public AudioDevice {
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
-  // Replace the existing PipelineConfig and VolumeCurve with new versions, for the sake of tuning.
+  // Replace the existing DeviceProfile and restart the OutputPipeline, for tuning purposes.
   fit::promise<void, zx_status_t> UpdateDeviceProfile(
-      const DeviceConfig::OutputDeviceProfile::Parameters& params,
-      const VolumeCurve& volume_curve) override;
+      const DeviceConfig::OutputDeviceProfile::Parameters& params) override;
 
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
 
@@ -70,8 +69,7 @@ class AudioOutput : public AudioDevice {
 
   inline void ClearNextSchedTime() { next_sched_time_mono_ = std::nullopt; }
 
-  void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
-                    const VolumeCurve& volume_curve, size_t max_block_size_frames,
+  void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile, size_t max_block_size_frames,
                     TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(

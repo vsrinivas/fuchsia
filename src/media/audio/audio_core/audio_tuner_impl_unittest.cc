@@ -102,8 +102,7 @@ class TestDevice : public AudioOutput {
     return effect_update_bridges_.back().consumer.promise();
   }
   fit::promise<void, zx_status_t> UpdateDeviceProfile(
-      const DeviceConfig::OutputDeviceProfile::Parameters& params,
-      const VolumeCurve& volume_curve) override {
+      const DeviceConfig::OutputDeviceProfile::Parameters& params) override {
     pipeline_update_bridges_.emplace_back();
     return pipeline_update_bridges_.back().consumer.promise();
   }
@@ -395,7 +394,8 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
                                .loopback = true,
                                .output_rate = 96000,
                                .output_channels = 1});
-  auto new_profile = ToAudioDeviceTuningProfile(new_pipeline_config, kVolumeCurve);
+  auto new_volume_curve = VolumeCurve::DefaultForMinGain(-1.0f);
+  auto new_profile = ToAudioDeviceTuningProfile(new_pipeline_config, new_volume_curve);
   bool completed_update = false;
   under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
                                    [&completed_update](zx_status_t result) {
@@ -414,7 +414,7 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
       });
 
   std::vector<fuchsia::media::tuning::Volume> result_curve = tuning_profile.volume_curve();
-  ExpectEq(kVolumeCurve, result_curve);
+  ExpectEq(new_volume_curve, result_curve);
   ExpectEq(new_pipeline_config.root(), tuning_profile.pipeline());
 
   // Delete tuned device configuration.

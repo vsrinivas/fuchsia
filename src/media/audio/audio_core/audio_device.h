@@ -104,8 +104,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   //    restarting the new OutputPipeline with the updated configuration.
   // 2. It provides a convenient way to update the configuration outside of the mixer thread.
   virtual fit::promise<void, zx_status_t> UpdateDeviceProfile(
-      const DeviceConfig::OutputDeviceProfile::Parameters& params,
-      const VolumeCurve& volume_curve) {
+      const DeviceConfig::OutputDeviceProfile::Parameters& params) {
     FX_CHECK(false) << "UpdateDeviceProfile() not supported on AudioDevice";
     return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }

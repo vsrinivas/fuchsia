@@ -158,9 +158,9 @@ fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   FX_DCHECK(link_matrix_.SourceLinkCount(*device) == 0);
 
   device->UpdateRoutableState(false);
-  auto profile_params =
-      DeviceConfig::OutputDeviceProfile::Parameters{.pipeline_config = pipeline_config};
-  return device->UpdateDeviceProfile(profile_params, volume_curve).and_then([this, device]() {
+  auto profile_params = DeviceConfig::OutputDeviceProfile::Parameters{
+      .pipeline_config = pipeline_config, .volume_curve = volume_curve};
+  return device->UpdateDeviceProfile(profile_params).and_then([this, device]() {
     device->UpdateRoutableState(true);
     if (device->plugged()) {
       route_graph_.AddDevice(device.get());

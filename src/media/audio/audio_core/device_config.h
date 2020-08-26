@@ -49,11 +49,16 @@ class DeviceConfig {
     OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages,
                         bool independent_volume_control = false,
                         PipelineConfig pipeline_config = PipelineConfig::Default(),
-                        float driver_gain_db = 0.0)
+                        float driver_gain_db = 0.0,
+                        VolumeCurve volume_curve =
+                            VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
         : DeviceProfile(std::move(supported_usages), driver_gain_db),
           eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
-          pipeline_config_(std::move(pipeline_config)) {}
+          pipeline_config_(std::move(pipeline_config)),
+          volume_curve_(std::move(volume_curve)) {
+      loudness_transform_ = std::make_shared<MappedLoudnessTransform>(volume_curve_);
+    }
 
     struct Parameters {
       std::optional<bool> eligible_for_loopback;
@@ -61,6 +66,7 @@ class DeviceConfig {
       std::optional<bool> independent_volume_control;
       std::optional<PipelineConfig> pipeline_config;
       std::optional<float> driver_gain_db;
+      std::optional<VolumeCurve> volume_curve;
     };
 
     bool supports_usage(StreamUsage usage) const override {
@@ -90,11 +96,17 @@ class DeviceConfig {
 
     const PipelineConfig& pipeline_config() const { return pipeline_config_; }
 
+    const VolumeCurve& volume_curve() const { return volume_curve_; }
+
    private:
     const static std::shared_ptr<LoudnessTransform> kNoOpTransform;
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
+    VolumeCurve volume_curve_ =
+        VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+    std::shared_ptr<LoudnessTransform> loudness_transform_ =
+        std::make_shared<MappedLoudnessTransform>(volume_curve_);
   };
 
   class InputDeviceProfile : public DeviceProfile {

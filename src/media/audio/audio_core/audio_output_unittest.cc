@@ -71,11 +71,10 @@ class TestAudioOutput : public AudioOutput {
 
   using AudioOutput::FrameSpan;
   using AudioOutput::SetNextSchedTimeMono;
-  void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
-                    const VolumeCurve& volume_curve, uint32_t max_frames,
+  void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile, uint32_t max_frames,
                     TimelineFunction clock_mono_to_output_frame) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    AudioOutput::SetupMixTask(profile, volume_curve, max_frames, clock_mono_to_output_frame);
+    AudioOutput::SetupMixTask(profile, max_frames, clock_mono_to_output_frame);
   }
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -149,7 +148,7 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
                                                                           &context().link_matrix());
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
   static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile();
-  audio_output_->SetupMixTask(profile, volume_curve_, zx::msec(1).to_msecs(), kOneFramePerMs);
+  audio_output_->SetupMixTask(profile, zx::msec(1).to_msecs(), kOneFramePerMs);
   context().link_matrix().LinkObjects(renderer, audio_output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
@@ -206,10 +205,8 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
 
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile();
-  static VolumeCurve volume_curve =
-      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  audio_output_->SetupMixTask(profile, volume_curve, zx::msec(1).to_msecs(), kOneFramePerMs);
+  audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
 
   // Return some valid, non-silent frame range from StartMixJob.
   audio_output_->set_start_mix_delegate([](zx::time now) {
@@ -249,10 +246,8 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
 
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile();
-  static VolumeCurve volume_curve =
-      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  audio_output_->SetupMixTask(profile, volume_curve, zx::msec(1).to_msecs(), kOneFramePerMs);
+  audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
 
   const uint32_t kBufferFrames = 25;
   const uint32_t kBufferSamples = kBufferFrames * 2;
@@ -296,6 +291,38 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   EXPECT_EQ(mix_jobs, kNumBuffers);
 }
 
+// Verify AudioOutput loudness transform is updated with the |volume_curve| used in SetupMixTask.
+TEST_F(AudioOutputTest, UpdateLoudnessTransformOnSetupMixTask) {
+  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+  static const VolumeCurve volume_curve = VolumeCurve::DefaultForMinGain(-10.);
+  static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile(
+      /*eligible_for_loopback=*/true,
+      /*supported_usages=*/StreamUsageSetFromRenderUsages(kFidlRenderUsages),
+      /*independent_volume_control=*/false, /*pipeline_config=*/PipelineConfig::Default(),
+      /*driver_gain_db=*/0.0, volume_curve);
+  audio_output_->SetupMixTask(profile, zx::msec(1).to_msecs(), kOneFramePerMs);
+
+  auto output_transform = audio_output_->profile().loudness_transform();
+  auto expected_transform = std::make_shared<MappedLoudnessTransform>(volume_curve);
+  EXPECT_FLOAT_EQ(output_transform->Evaluate<1>({VolumeValue{.5}}),
+                  expected_transform->Evaluate<1>({VolumeValue{.5}}));
+}
+
+// Verify loudness_transform_ is NoOpLoudnessTransform to honor IndependentVolumeControl.
+TEST_F(AudioOutputTest, HonorIndpendentVolumeControlLoudnessTransform) {
+  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+  audio_output_->SetupMixTask(
+      DeviceConfig::OutputDeviceProfile(
+          /*eligible_for_loopback=*/true,
+          /*supported_usages=*/StreamUsageSetFromRenderUsages(kFidlRenderUsages),
+          /*independent_volume_control=*/true),
+      zx::msec(1).to_msecs(), kOneFramePerMs);
+
+  auto transform = audio_output_->profile().loudness_transform();
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), Gain::kUnityGainDb);
+}
+
 TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   // Setup test.
   auto test_effects = testing::TestEffectsModule::Open();
@@ -312,9 +339,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
 
   // Create OutputPipeline with no effects and verify output.
   static DeviceConfig::OutputDeviceProfile default_profile = DeviceConfig::OutputDeviceProfile();
-  static VolumeCurve default_volume_curve =
-      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  audio_output_->SetupMixTask(default_profile, default_volume_curve, 128, kDefaultTransform);
+  audio_output_->SetupMixTask(default_profile, 128, kDefaultTransform);
   auto pipeline = audio_output_->output_pipeline();
 
   {
@@ -326,7 +351,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
     CheckBuffer(buf->payload(), 0.0, 96);
   }
 
-  // Update OutputPipeline with effects and verify output.
+  // Update OutputPipeline and VolumeCurve, and verify output.
   PipelineConfig::MixGroup root{
       .name = "linearize",
       .input_streams =
@@ -366,12 +391,12 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
       .output_rate = 48000,
       .output_channels = 2,
   };
-  auto profile_params =
-      DeviceConfig::OutputDeviceProfile::Parameters{.pipeline_config = PipelineConfig(root)};
-  auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+  auto volume_curve = VolumeCurve::DefaultForMinGain(-10.);
+  auto profile_params = DeviceConfig::OutputDeviceProfile::Parameters{
+      .pipeline_config = PipelineConfig(root), .volume_curve = volume_curve};
 
   bool updated_device_profile = false;
-  auto promise = audio_output_->UpdateDeviceProfile(profile_params, volume_curve);
+  auto promise = audio_output_->UpdateDeviceProfile(profile_params);
   context().threading_model().FidlDomain().executor()->schedule_task(
       promise.then([&updated_device_profile](fit::result<void, zx_status_t>& result) {
         updated_device_profile = true;
@@ -387,6 +412,11 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
     EXPECT_EQ(buf->length().Floor(), 48u);
     CheckBuffer(buf->payload(), 2.0, 96);
   }
+
+  auto result_transform = audio_output_->profile().loudness_transform();
+  auto expected_transform = std::make_shared<MappedLoudnessTransform>(volume_curve);
+  EXPECT_FLOAT_EQ(result_transform->Evaluate<1>({VolumeValue{.5}}),
+                  expected_transform->Evaluate<1>({VolumeValue{.5}}));
 }
 
 }  // namespace
