@@ -36,7 +36,7 @@ class ContextImpl : public Context {
       : threading_model_(std::move(threading_model)),
         component_context_(std::move(component_context)),
         process_config_(std::move(process_config)),
-        route_graph_(process_config_.device_config(), &link_matrix_),
+        route_graph_(&link_matrix_),
         device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
                         process_config_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher()),

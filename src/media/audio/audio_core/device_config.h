@@ -31,6 +31,8 @@ class DeviceConfig {
 
     virtual const std::shared_ptr<LoudnessTransform>& loudness_transform() const;
 
+    StreamUsageSet supported_usages() const { return usage_support_set_; }
+
     float driver_gain_db() const { return driver_gain_db_; }
 
    private:
@@ -52,6 +54,14 @@ class DeviceConfig {
           eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
           pipeline_config_(std::move(pipeline_config)) {}
+
+    struct Parameters {
+      std::optional<bool> eligible_for_loopback;
+      std::optional<StreamUsageSet> supported_usages;
+      std::optional<bool> independent_volume_control;
+      std::optional<PipelineConfig> pipeline_config;
+      std::optional<float> driver_gain_db;
+    };
 
     bool supports_usage(StreamUsage usage) const override {
       // Temporary, until configs stop specifying 'eligible_for_loopback'.
@@ -127,6 +137,10 @@ class DeviceConfig {
   const OutputDeviceProfile& default_output_device_profile() const {
     return default_output_device_profile_;
   }
+  void SetOutputDeviceProfile(const audio_stream_unique_id_t& id,
+                              const OutputDeviceProfile& profile) {
+    AddDeviceProfile(id, profile, output_device_profiles_);
+  }
 
   const InputDeviceProfile& input_device_profile(const audio_stream_unique_id_t& id) const {
     return FindDeviceProfile(id, input_device_profiles_, default_input_device_profile_);
@@ -157,6 +171,26 @@ class DeviceConfig {
     });
 
     return it != profiles.end() ? it->second : default_profile;
+  }
+
+  template <typename Profile>
+  static void AddDeviceProfile(
+      const audio_stream_unique_id_t& id, const Profile& profile,
+      std::vector<std::pair<std::vector<audio_stream_unique_id_t>, Profile>>& profiles) {
+    auto it = std::find_if(profiles.begin(), profiles.end(), [id](auto set) {
+      for (const auto& other_id : set.first) {
+        if (std::memcmp(id.data, other_id.data, sizeof(id.data)) == 0) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (it != profiles.end()) {
+      it->second = std::move(profile);
+    } else {
+      profiles.emplace_back(std::vector<audio_stream_unique_id_t>{id}, profile);
+    }
   }
 
   // Profiles for explicitly configured devices.

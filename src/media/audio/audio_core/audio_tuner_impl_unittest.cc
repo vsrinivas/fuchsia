@@ -101,8 +101,9 @@ class TestDevice : public AudioOutput {
     effect_update_bridges_.emplace_back();
     return effect_update_bridges_.back().consumer.promise();
   }
-  fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
-                                                       const VolumeCurve& volume_curve) override {
+  fit::promise<void, zx_status_t> UpdateDeviceProfile(
+      const DeviceConfig::OutputDeviceProfile::Parameters& params,
+      const VolumeCurve& volume_curve) override {
     pipeline_update_bridges_.emplace_back();
     return pipeline_update_bridges_.back().consumer.promise();
   }

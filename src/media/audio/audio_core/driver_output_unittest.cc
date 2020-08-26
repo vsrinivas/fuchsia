@@ -764,12 +764,11 @@ TEST_F(DriverV2OutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   EXPECT_TRUE(driver_->is_running());
 
   // Expect the pipeline to include the 1:2 upchannel effect.
-  ASSERT_TRUE(output_->pipeline_config());
-  EXPECT_EQ(1u, output_->pipeline_config()->root().effects.size());
-  EXPECT_EQ(output_->pipeline_config()->root().output_channels, kRequestedDeviceChannels / 2);
-  EXPECT_EQ(output_->pipeline_config()->root().output_rate, kRequestedDeviceRate);
-  EXPECT_EQ(output_->pipeline_config()->channels(), kRequestedDeviceChannels);
-  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kRequestedDeviceRate);
+  EXPECT_EQ(1u, output_->pipeline_config().root().effects.size());
+  EXPECT_EQ(output_->pipeline_config().root().output_channels, kRequestedDeviceChannels / 2);
+  EXPECT_EQ(output_->pipeline_config().root().output_rate, kRequestedDeviceRate);
+  EXPECT_EQ(output_->pipeline_config().channels(), kRequestedDeviceChannels);
+  EXPECT_EQ(output_->pipeline_config().frames_per_second(), kRequestedDeviceRate);
 }
 
 TEST_F(DriverV2OutputTest, UseBestAvailableSampleRateAndChannelization) {
@@ -792,12 +791,11 @@ TEST_F(DriverV2OutputTest, UseBestAvailableSampleRateAndChannelization) {
 
   // If the device does not meet our requirements, then we don't attempt to use the rechannel effect
   // and just rely on our root mix stage to meet the channelization required.
-  ASSERT_TRUE(output_->pipeline_config());
-  EXPECT_TRUE(output_->pipeline_config()->root().effects.empty());
-  EXPECT_EQ(output_->pipeline_config()->root().output_channels, kSupportedChannels);
-  EXPECT_EQ(output_->pipeline_config()->root().output_rate, kSupportedFrameRate);
-  EXPECT_EQ(output_->pipeline_config()->channels(), kSupportedChannels);
-  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kSupportedFrameRate);
+  EXPECT_TRUE(output_->pipeline_config().root().effects.empty());
+  EXPECT_EQ(output_->pipeline_config().root().output_channels, kSupportedChannels);
+  EXPECT_EQ(output_->pipeline_config().root().output_rate, kSupportedFrameRate);
+  EXPECT_EQ(output_->pipeline_config().channels(), kSupportedChannels);
+  EXPECT_EQ(output_->pipeline_config().frames_per_second(), kSupportedFrameRate);
 }
 
 }  // namespace

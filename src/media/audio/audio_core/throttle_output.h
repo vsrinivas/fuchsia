@@ -40,8 +40,8 @@ class ThrottleOutput : public AudioOutput {
     // This must be non-0, but it doesn't actually matter much since we'll never mix with a throttle
     // output.
     static const uint32_t kMaxBatchSize = PAGE_SIZE;
-    static PipelineConfig default_config = PipelineConfig::Default();
-    SetupMixTask(default_config,
+    static DeviceConfig::OutputDeviceProfile default_profile = DeviceConfig::OutputDeviceProfile();
+    SetupMixTask(default_profile,
                  VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
                  kMaxBatchSize, TimelineFunction());
   }

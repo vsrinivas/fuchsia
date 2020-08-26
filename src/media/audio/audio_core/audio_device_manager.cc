@@ -130,7 +130,8 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager:
 }
 
 fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
-    const std::string device_id, const PipelineConfig& config, const VolumeCurve& volume_curve) {
+    const std::string device_id, const PipelineConfig& pipeline_config,
+    const VolumeCurve& volume_curve) {
   auto devices = GetDeviceInfos();
   const auto dev = std::find_if(devices.begin(), devices.end(), [&device_id](auto candidate) {
     return candidate.unique_id == device_id;
@@ -157,7 +158,9 @@ fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   FX_DCHECK(link_matrix_.SourceLinkCount(*device) == 0);
 
   device->UpdateRoutableState(false);
-  return device->UpdatePipelineConfig(config, volume_curve).and_then([this, device]() {
+  auto profile_params =
+      DeviceConfig::OutputDeviceProfile::Parameters{.pipeline_config = pipeline_config};
+  return device->UpdateDeviceProfile(profile_params, volume_curve).and_then([this, device]() {
     device->UpdateRoutableState(true);
     if (device->plugged()) {
       route_graph_.AddDevice(device.get());

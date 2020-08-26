@@ -57,6 +57,22 @@ AudioClock& AudioDevice::reference_clock() {
   return driver_->reference_clock();
 }
 
+const DeviceConfig::DeviceProfile& AudioDevice::profile() const {
+  if (is_output()) {
+    if (!driver_) {
+      return config_.default_output_device_profile();
+    }
+    const auto& device_id = driver_->persistent_unique_id();
+    return config_.output_device_profile(device_id);
+  } else {
+    if (!driver_) {
+      return config_.default_input_device_profile();
+    }
+    const auto& device_id = driver_->persistent_unique_id();
+    return config_.input_device_profile(device_id);
+  }
+}
+
 AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
                          ThreadingModel* threading_model, DeviceRegistry* registry,
                          LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)

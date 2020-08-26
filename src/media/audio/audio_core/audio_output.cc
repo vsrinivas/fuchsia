@@ -185,11 +185,15 @@ std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
   return pipeline;
 }
 
-void AudioOutput::SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                               size_t max_block_size_frames,
+void AudioOutput::SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
+                               const VolumeCurve& volume_curve, size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
+  DeviceConfig updated_config = config();
+  updated_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), profile);
+  set_config(updated_config);
+
   max_block_size_frames_ = max_block_size_frames;
-  pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames,
+  pipeline_ = CreateOutputPipeline(profile.pipeline_config(), volume_curve, max_block_size_frames,
                                    device_reference_clock_to_fractional_frame, reference_clock());
 }
 
@@ -213,18 +217,30 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::Update
   return bridge.consumer.promise();
 }
 
-fit::promise<void, zx_status_t> AudioOutput::UpdatePipelineConfig(const PipelineConfig& config,
-                                                                  const VolumeCurve& volume_curve) {
+fit::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
+    const DeviceConfig::OutputDeviceProfile::Parameters& params, const VolumeCurve& volume_curve) {
   fit::bridge<void, zx_status_t> bridge;
-  mix_domain().PostTask(
-      [this, config, volume_curve, completer = std::move(bridge.completer)]() mutable {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-        auto snapshot = pipeline_->ReferenceClockToFixed();
-        pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames_,
-                                         snapshot.timeline_function, reference_clock());
-        FX_DCHECK(pipeline_);
-        completer.complete_ok();
-      });
+  mix_domain().PostTask([this, params, volume_curve,
+                         completer = std::move(bridge.completer)]() mutable {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+    DeviceConfig device_config = config();
+    auto current_profile = config().output_device_profile(driver()->persistent_unique_id());
+    auto updated_profile = DeviceConfig::OutputDeviceProfile(
+        params.eligible_for_loopback.value_or(current_profile.eligible_for_loopback()),
+        params.supported_usages.value_or(current_profile.supported_usages()),
+        params.independent_volume_control.value_or(current_profile.independent_volume_control()),
+        params.pipeline_config.value_or(current_profile.pipeline_config()),
+        params.driver_gain_db.value_or(current_profile.driver_gain_db()));
+    device_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
+    set_config(device_config);
+
+    auto snapshot = pipeline_->ReferenceClockToFixed();
+    pipeline_ =
+        CreateOutputPipeline(updated_profile.pipeline_config(), volume_curve,
+                             max_block_size_frames_, snapshot.timeline_function, reference_clock());
+    FX_DCHECK(pipeline_);
+    completer.complete_ok();
+  });
   return bridge.consumer.promise();
 }
 

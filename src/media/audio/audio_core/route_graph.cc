@@ -28,8 +28,7 @@ bool DeviceConfigurationSupportsUsage(AudioDevice* device, StreamUsage usage) {
 
 }  // namespace
 
-RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix)
-    : link_matrix_(*link_matrix), device_config_(device_config) {
+RouteGraph::RouteGraph(LinkMatrix* link_matrix) : link_matrix_(*link_matrix) {
   FX_DCHECK(link_matrix);
 }
 
@@ -251,15 +250,14 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
           continue;
         }
 
-        const auto& profile = LookupDeviceProfile(device);
-        if (profile.supports_usage(usage) && DeviceConfigurationSupportsUsage(device, usage)) {
-          return Target(device, profile.loudness_transform());
+        if (device->profile().supports_usage(usage) &&
+            DeviceConfigurationSupportsUsage(device, usage)) {
+          return Target(device, device->profile().loudness_transform());
         }
       }
 
       if (usage.is_render_usage()) {
-        return Target(throttle_output_.get(),
-                      LookupDeviceProfile(throttle_output_.get()).loudness_transform());
+        return Target(throttle_output_.get(), throttle_output_->profile().loudness_transform());
       } else {
         return Target();
       }
@@ -292,23 +290,6 @@ RouteGraph::Target RouteGraph::TargetForUsage(const StreamUsage& usage) const {
     return Target();
   }
   return targets_[HashStreamUsage(usage)];
-}
-
-const DeviceConfig::DeviceProfile& RouteGraph::LookupDeviceProfile(AudioDevice* device) const {
-  auto driver = device->driver();
-  if (device->is_output()) {
-    if (!driver) {
-      return device_config_.default_output_device_profile();
-    }
-    const auto& device_id = driver->persistent_unique_id();
-    return device_config_.output_device_profile(device_id);
-  } else {
-    if (!driver) {
-      return device_config_.default_input_device_profile();
-    }
-    const auto& device_id = driver->persistent_unique_id();
-    return device_config_.input_device_profile(device_id);
-  }
 }
 
 }  // namespace media::audio

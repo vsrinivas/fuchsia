@@ -32,8 +32,9 @@ class AudioOutput : public AudioDevice {
       const std::string& instance_name, const std::string& config) override;
 
   // Replace the existing PipelineConfig and VolumeCurve with new versions, for the sake of tuning.
-  fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
-                                                       const VolumeCurve& volume_curve) override;
+  fit::promise<void, zx_status_t> UpdateDeviceProfile(
+      const DeviceConfig::OutputDeviceProfile::Parameters& params,
+      const VolumeCurve& volume_curve) override;
 
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
 
@@ -69,8 +70,8 @@ class AudioOutput : public AudioDevice {
 
   inline void ClearNextSchedTime() { next_sched_time_mono_ = std::nullopt; }
 
-  void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                    size_t max_block_size_frames,
+  void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
+                    const VolumeCurve& volume_curve, size_t max_block_size_frames,
                     TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(

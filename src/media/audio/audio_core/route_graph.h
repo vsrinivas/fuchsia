@@ -40,7 +40,7 @@ class RouteGraph {
  public:
   // Constructs a graph from the given config and link matrix. Each parameter must outlive the
   // RouteGraph.
-  RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix);
+  RouteGraph(LinkMatrix* link_matrix);
 
   ~RouteGraph();
 
@@ -102,8 +102,6 @@ class RouteGraph {
   using Targets = std::array<Target, kStreamUsageCount>;
   using UnlinkCommand = std::array<bool, kStreamUsageCount>;
 
-  const DeviceConfig::DeviceProfile& LookupDeviceProfile(AudioDevice* device) const;
-
   void UpdateGraphForDeviceChange();
 
   // Calculate the new targets based on our routing policy and available devices.
@@ -116,8 +114,6 @@ class RouteGraph {
   Target TargetForUsage(const StreamUsage& usage) const;
 
   LinkMatrix& link_matrix_;
-
-  DeviceConfig device_config_;
 
   Targets targets_ = {};
 

@@ -18,9 +18,11 @@
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
@@ -72,6 +74,17 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   uint64_t token() const;
   bool activated() const { return activated_; }
 
+  const DeviceConfig::DeviceProfile& profile() const;
+  const DeviceConfig& config() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
+    return config_;
+  }
+  // `set_config()` strictly updates the |config_| variable returned from `config()`; it does not
+  // rebuild the OutputPipeline. To restart the OutputPipeline with an updated configuration, see
+  // `UpdateDeviceProfile()`.
+  void set_config(const DeviceConfig& config) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
+    config_ = config;
+  }
+
   // AudioObjects with Type::Output must override this; this version should never be called.
   virtual zx::duration min_lead_time() const {
     FX_CHECK(false) << "min_lead_time() not supported on AudioDevice";
@@ -84,9 +97,16 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
     return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   }
 
-  // Sets the output pipeline to the given pipeline config.
-  virtual fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
-                                                               const VolumeCurve& volume_curve) {
+  // AudioObjects with Type::Output must override this; this version should never be called.
+  //
+  // UpdateDeviceProfile differs from `set_config()` in two ways:
+  // 1. It explicitly updates the OutputPipeline with a new OutputDeviceProfile configuration,
+  //    restarting the new OutputPipeline with the updated configuration.
+  // 2. It provides a convenient way to update the configuration outside of the mixer thread.
+  virtual fit::promise<void, zx_status_t> UpdateDeviceProfile(
+      const DeviceConfig::OutputDeviceProfile::Parameters& params,
+      const VolumeCurve& volume_curve) {
+    FX_CHECK(false) << "UpdateDeviceProfile() not supported on AudioDevice";
     return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -260,6 +280,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
   WakeupEvent mix_wakeup_;
+
+  DeviceConfig config_ = ProcessConfig::instance().device_config();
 
   // This object manages most interactions with the low-level driver for us.
   std::unique_ptr<AudioDriver> driver_;

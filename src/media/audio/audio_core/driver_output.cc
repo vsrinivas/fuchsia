@@ -43,7 +43,7 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
     : AudioOutput(name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(initial_stream_channel)),
-      volume_curve_(std::move(volume_curve)) {}
+      volume_curve_(volume_curve) {}
 
 DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
                            DeviceRegistry* registry,
@@ -52,9 +52,16 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
     : AudioOutput(name, threading_model, registry, link_matrix,
                   std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(channel.TakeChannel()),
-      volume_curve_(std::move(volume_curve)) {}
+      volume_curve_(volume_curve) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
+
+const PipelineConfig& DriverOutput::pipeline_config() const {
+  OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+  return driver()
+             ? config().output_device_profile(driver()->persistent_unique_id()).pipeline_config()
+             : config().default_output_device_profile().pipeline_config();
+}
 
 zx_status_t DriverOutput::Init() {
   TRACE_DURATION("audio", "DriverOutput::Init");
@@ -348,16 +355,17 @@ void DriverOutput::OnDriverInfoFetched() {
 
   zx_status_t res;
 
-  auto output_device_profile = ProcessConfig::instance().device_config().output_device_profile(
-      driver()->persistent_unique_id());
-  float driver_gain_db = output_device_profile.driver_gain_db();
+  DeviceConfig::OutputDeviceProfile profile =
+      config().output_device_profile(driver()->persistent_unique_id());
+
+  float driver_gain_db = profile.driver_gain_db();
   AudioDeviceSettings::GainState gain_state = {.gain_db = driver_gain_db, .muted = false};
   driver()->SetGain(gain_state, AUDIO_SGF_GAIN_VALID | AUDIO_SGF_MUTE_VALID);
 
-  pipeline_config_ = {output_device_profile.pipeline_config()};
+  PipelineConfig pipeline_config = profile.pipeline_config();
 
-  uint32_t pref_fps = pipeline_config_->frames_per_second();
-  uint32_t pref_chan = pipeline_config_->channels();
+  uint32_t pref_fps = pipeline_config.frames_per_second();
+  uint32_t pref_chan = pipeline_config.channels();
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
       kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
@@ -384,30 +392,40 @@ void DriverOutput::OnDriverInfoFetched() {
   auto& format = format_result.value();
 
   // Update our pipeline to produce audio in the compatible format.
-  if (pipeline_config_->frames_per_second() != pref_fps) {
+  if (pipeline_config.frames_per_second() != pref_fps) {
     FX_LOGS(WARNING) << "Hardware does not support the requested rate of "
-                     << pipeline_config_->root().output_rate << " fps; hardware will run at "
+                     << pipeline_config.root().output_rate << " fps; hardware will run at "
                      << pref_fps << " fps";
-    pipeline_config_->mutable_root().output_rate = pref_fps;
+    pipeline_config.mutable_root().output_rate = pref_fps;
   }
-  if (pipeline_config_->channels() != pref_chan) {
+  if (pipeline_config.channels() != pref_chan) {
     FX_LOGS(WARNING) << "Hardware does not support the requested channelization of "
-                     << pipeline_config_->channels() << " channels; hardware will run at "
+                     << pipeline_config.channels() << " channels; hardware will run at "
                      << pref_chan << " channels";
-    pipeline_config_->mutable_root().output_channels = pref_chan;
+    pipeline_config.mutable_root().output_channels = pref_chan;
     // Some effects may perform rechannelization. If the hardware does not support the
     // channelization with rechannelization effects we clear all effects on the final stage. This
     // is a compromise in being robust and gracefully handling misconfiguration.
-    for (const auto& effect : pipeline_config_->root().effects) {
+    for (const auto& effect : pipeline_config.root().effects) {
       if (effect.output_channels && effect.output_channels != pref_chan) {
         FX_LOGS(ERROR) << "Removing effects on the root stage due to unsupported channelization";
-        pipeline_config_->mutable_root().effects.clear();
+        pipeline_config.mutable_root().effects.clear();
         break;
       }
     }
   }
-  FX_DCHECK(pipeline_config_->frames_per_second() == pref_fps);
-  FX_DCHECK(pipeline_config_->channels() == pref_chan);
+  FX_DCHECK(pipeline_config.frames_per_second() == pref_fps);
+  FX_DCHECK(pipeline_config.channels() == pref_chan);
+
+  // Update the AudioDevice |config_| with the updated |pipeline_config|.
+  // Only |frames_per_second| and |channels| were potentially updated in |pipeline_config|, so it is
+  // not necessary to UpdateDeviceProfile() to consequently reconstruct the OutputPipeline.
+  auto updated_profile = DeviceConfig::OutputDeviceProfile(
+      profile.eligible_for_loopback(), profile.supported_usages(),
+      profile.independent_volume_control(), pipeline_config, profile.driver_gain_db());
+  DeviceConfig updated_config = config();
+  updated_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
+  set_config(updated_config);
 
   // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
@@ -499,8 +517,8 @@ void DriverOutput::OnDriverStartComplete() {
   // mix job.
   auto format = driver()->GetFormat();
   FX_DCHECK(format);
-  FX_DCHECK(pipeline_config_);
-  SetupMixTask(*pipeline_config_, volume_curve_, driver_writable_ring_buffer()->frames(),
+  SetupMixTask(config().output_device_profile(driver()->persistent_unique_id()), volume_curve_,
+               driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());
 
   // Tell AudioDeviceManager we are ready to be an active audio device.
