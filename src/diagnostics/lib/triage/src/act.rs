@@ -110,13 +110,15 @@ impl Gauge {
     pub fn get_formatted_value(&self, metric_value: MetricValue) -> String {
         match metric_value {
             MetricValue::Float(value) => match &self.format {
-                Some(format) => match format.as_str() {
-                    "percentage" => format!("{:.2}%", value * 100.0f64),
-                    _ => format!("{}", value),
-                },
+                Some(format) if format.as_str() == "percentage" => {
+                    format!("{:.2}%", value * 100.0f64)
+                }
                 _ => format!("{}", value),
             },
-            MetricValue::Int(value) => format!("{}", value),
+            MetricValue::Int(value) => match &self.format {
+                Some(format) if format.as_str() == "percentage" => format!("{}%", value * 100),
+                _ => format!("{}", value),
+            },
             value => format!("{:?}", value),
         }
     }
@@ -260,46 +262,55 @@ mod test {
     #[test]
     fn gauges_fire_correctly() {
         let mut eval_file = HashMap::new();
-        eval_file.insert("gauge1".to_string(), Metric::Eval("2 / 5".to_string()));
-        eval_file.insert("gauge2".to_string(), Metric::Eval("4 / 5".to_string()));
-        eval_file.insert("gauge3".to_string(), Metric::Eval("6 / 5".to_string()));
+        eval_file.insert("gauge_f1".to_string(), Metric::Eval("2 / 5".to_string()));
+        eval_file.insert("gauge_f2".to_string(), Metric::Eval("4 / 5".to_string()));
+        eval_file.insert("gauge_f3".to_string(), Metric::Eval("6 / 5".to_string()));
+        eval_file.insert("gauge_i4".to_string(), Metric::Eval("9 // 2".to_string()));
+        eval_file.insert("gauge_i5".to_string(), Metric::Eval("11 // 2".to_string()));
+        eval_file.insert("gauge_i6".to_string(), Metric::Eval("13 // 2".to_string()));
+        eval_file.insert("gauge_b7".to_string(), Metric::Eval("2 == 2".to_string()));
+        eval_file.insert("gauge_b8".to_string(), Metric::Eval("2 > 2".to_string()));
+        eval_file.insert("gauge_s9".to_string(), Metric::Eval("'foo'".to_string()));
         let mut metrics = Metrics::new();
         metrics.insert("file".to_string(), eval_file);
         let mut actions = Actions::new();
         let mut action_file = ActionsSchema::new();
-        action_file.insert(
-            "gauge1".to_string(),
-            Action::Gauge(Gauge {
-                value: Metric::Eval("gauge1".to_string()),
-                format: None,
-                tag: None,
-            }),
-        );
-        action_file.insert(
-            "gauge2".to_string(),
-            Action::Gauge(Gauge {
-                value: Metric::Eval("gauge2".to_string()),
-                format: Some("percentage".to_string()),
-                tag: None,
-            }),
-        );
-        action_file.insert(
-            "gauge3".to_string(),
-            Action::Gauge(Gauge {
-                value: Metric::Eval("gauge3".to_string()),
-                format: Some("unknown".to_string()),
-                tag: None,
-            }),
-        );
+        macro_rules! insert_gauge {
+            ($name:expr, $format:expr) => {
+                action_file.insert(
+                    $name.to_string(),
+                    Action::Gauge(Gauge {
+                        value: Metric::Eval($name.to_string()),
+                        format: $format,
+                        tag: None,
+                    }),
+                );
+            };
+        }
+        insert_gauge!("gauge_f1", None);
+        insert_gauge!("gauge_f2", Some("percentage".to_string()));
+        insert_gauge!("gauge_f3", Some("unknown".to_string()));
+        insert_gauge!("gauge_i4", None);
+        insert_gauge!("gauge_i5", Some("percentage".to_string()));
+        insert_gauge!("gauge_i6", Some("unknown".to_string()));
+        insert_gauge!("gauge_b7", None);
+        insert_gauge!("gauge_b8", None);
+        insert_gauge!("gauge_s9", None);
         actions.insert("file".to_string(), action_file);
         let no_data = Vec::new();
         let mut context = ActionContext::new(&metrics, &actions, &no_data);
 
         let results = context.process();
 
-        assert!(includes(results.get_gauges(), "gauge1: 0.4"));
-        assert!(includes(results.get_gauges(), "gauge2: 80.00%"));
-        assert!(includes(results.get_gauges(), "gauge3: 1.2"));
+        assert!(includes(results.get_gauges(), "gauge_f1: 0.4"));
+        assert!(includes(results.get_gauges(), "gauge_f2: 80.00%"));
+        assert!(includes(results.get_gauges(), "gauge_f3: 1.2"));
+        assert!(includes(results.get_gauges(), "gauge_i4: 4"));
+        assert!(includes(results.get_gauges(), "gauge_i5: 500%"));
+        assert!(includes(results.get_gauges(), "gauge_i6: 6"));
+        assert!(includes(results.get_gauges(), "gauge_b7: Bool(true)"));
+        assert!(includes(results.get_gauges(), "gauge_b8: Bool(false)"));
+        assert!(includes(results.get_gauges(), "gauge_s9: String(\"foo\")"));
     }
 
     #[test]
