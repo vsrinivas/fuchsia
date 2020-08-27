@@ -320,7 +320,7 @@ methods:
 * `async.Stream<GameState> get onOpponentMove`: Getter for a `Stream` of
   `onOpponentMove` events.
 
-### Client
+### Client {#proxy}
 
 The FIDL toolchain generates a `TicTacToeProxy` class that extends
 `fidl.AsyncProxy<TicTacToe>`, and provides an implementation for the abstract
@@ -339,10 +339,16 @@ final state = await tictactoe.makeMove(0, 0);
 Examples on how to set up and bind a proxy class to a channel are covered in the
 [Dart tutorial][dart-tutorial].
 
-### Server
+### Server {#server}
 
 Implementing a server for a FIDL protocol involves providing a concrete
 implementation of `TicTacToe` abstract class.
+
+The bindings provide a `TicTacToeBinding` class that can bind to a `TicTacToe` instance and a
+channel, and listens to incoming messages on the channel, dispatches them to the server
+implementation, and sends messages back through the channel. This class implements
+<!-- TODO(fxbug.dev/58672) add link to API docs when those are available -->
+`fidl.AsyncBinding<TicTacToe>`.
 
 Examples on how to set up and bind a server implementation are covered in the
 [Dart tutorial][dart-tutorial].
@@ -356,7 +362,7 @@ Clients obtain an `async.Stream` of `onOpponentMove` events sent from the server
 using this getter.
 
 #### Server
-<!-- TODO add link to API docs when those are available -->
+<!-- TODO(fxbug.dev/58672) add link to API docs when those are available -->
 Servers send events by implementing the `onOpponentMove` getter on the abstract
 `TicTacToe` class. A `TicTacToeBinding` (see [tutorial][dart-tutorial]) that is
 bound to an instance of `TicTacToe` that has implemented the `onOpponentMove`
@@ -456,7 +462,7 @@ attribute, the FIDL toolchain generates a default implementation on the abstract
 class so that server implementations will continue to compile without having to
 override the new method.
 
-#### Discoverable
+#### Discoverable {#discoverable}
 
 The generated class for a protocol annotated with the
 [`[Discoverable]`](/docs/reference/fidl/language/attributes.md#discoverable)
@@ -477,8 +483,7 @@ and all events are implemented by returning a Stream with a single
 `UnimplementedError` event.
 
 <!-- xrefs -->
-<!-- TODO: reenable after updated tutorial lands -->
-<!-- [dart-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-dart.md -->
+[dart-tutorial]: /docs/development/languages/fidl/tutorials/dart
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums

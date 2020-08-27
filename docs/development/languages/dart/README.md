@@ -50,7 +50,7 @@ Dart targets;
 See the definitions of each of these targets for how to use them.
 
 
-## Package layout
+## Package layout {#layout}
 
 We use a layout very similar to the [standard layout][package-layout].
 

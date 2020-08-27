@@ -34,6 +34,15 @@ toc:
     path: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
   - title: "Rust"
     path: /docs/development/languages/fidl/tutorials/tutorial-rust.md
+  - title: "Dart"
+    section:
+    - title: "Overview"
+      path: /docs/development/languages/fidl/tutorials/dart/README.md
+    - title: "Getting Started"
+      section:
+      - include: /docs/development/languages/fidl/tutorials/dart/basics/_toc.yaml
+    - title: "Request pipelining"
+      path: /docs/development/languages/fidl/tutorials/dart/topics/request-pipelining.md
   - title: "Go"
     path: /docs/development/languages/fidl/tutorials/tutorial-go.md
   - title: "C"
