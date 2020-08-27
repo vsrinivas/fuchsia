@@ -17,10 +17,13 @@
 #include <fbl/mutex.h>
 
 #include "driver-sealer.h"
+#include "superblock-verifier.h"
+#include "superblock.h"
 
 namespace block_verity {
 
 class Device;
+class VerifiedDevice;
 
 class DeviceManager;
 using DeviceManagerType =
@@ -36,7 +39,7 @@ class DeviceManager final
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),
-        child_(std::nullopt),
+        mutable_child_(std::nullopt),
         close_completer_(std::nullopt),
         state_(kBinding) {}
   // Disallow copy, assign, and move.
@@ -73,17 +76,21 @@ class DeviceManager final
       __TA_EXCLUDES(mtx_);
   void Close(CloseCompleter::Sync completer) override __TA_EXCLUDES(mtx_);
 
-  static void SealCompletedCallback(void* cookie, zx_status_t status, const uint8_t* seal_buf,
-                                    size_t seal_len);
-  void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len);
+  void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len)
+      __TA_EXCLUDES(mtx_);
+
+  void OnSuperblockVerificationCompleted(zx_status_t status, const Superblock* superblock)
+      __TA_EXCLUDES(mtx_);
 
  private:
+  void CompleteOpenForVerifiedRead(zx_status_t status) __TA_REQUIRES(mtx_);
+
   // Represents the state of this device.
   enum State {
     // Initial state upon allocation.  Transitions to `kClosed` during `Bind()`.
     kBinding,
 
-    // No child devices exist.  Can transition to `kAuthoring` or `kVerifiedRead`
+    // No child devices exist.  Can transition to `kAuthoring` or `kVerifiedReadCheck`
     // in response to FIDL request to open.
     kClosed,
 
@@ -102,6 +109,13 @@ class DeviceManager final
     // will transition to `kClosed` and return the seal to the
     // `CloseAndGenerateSeal()` caller.
     kSealing,
+
+    // We have received a request to open for verified read, and are reading the
+    // superblock from the backing storage.  Upon completion of the read, we
+    // will transition to either `kClosed` (if the seal provided by the client did
+    // not match, or specified a different config than the one in the superblock)
+    // or `kVerifiedRead` (if the seal matched).
+    kVerifiedReadCheck,
 
     // The `verified` child device is present and available for readonly,
     // verified access.  This state can transition to `kClosing` via a `Close()`
@@ -123,10 +137,10 @@ class DeviceManager final
     kRemoved,
   };
 
-  // If we are currently exposing a child device, this will be a reference to
-  // the child so we can request it be removed.  This is expected to be
-  // nonnull when `state_` is kAuthoring or kClosing.
-  std::optional<block_verity::Device*> child_;
+  // If we are currently exposing a mutable child device, this will be a
+  // reference to the child so we can request it be removed.  This is expected
+  // to be nonnull when `state_` is kAuthoring or kClosing.
+  std::optional<block_verity::Device*> mutable_child_;
 
   // A place to hold a FIDL transaction completer so we can asynchronously
   // complete the transaction when we see the child device disappear, via the
@@ -145,6 +159,24 @@ class DeviceManager final
   // integrity data, superblock, and seal.  This is expected to be valid when
   // `state_` is `kClosingForSeal` and `kSealing`, and nullopt all other times.
   std::optional<CloseAndGenerateSealCompleter::Async> seal_completer_;
+
+  // If we are currently exposing a verified child device, this will be a
+  // reference to the child so we can request it be removed when Close() is
+  // called.  This is expected to be nonnull when `state_` is kVerifiedRead or
+  // kClosing.
+  std::optional<block_verity::VerifiedDevice*> verified_child_;
+
+  // If we are currently verifying the superblock seal given by a client that
+  // called OpenForVerifiedRead, this will be a reference to that verifier while
+  // it performs I/O.  This is expected to be valid when `state_` is
+  // kVerifiedReadCheck and nullptr all other times.
+  std::unique_ptr<SuperblockVerifier> superblock_verifier_;
+
+  // A place to hold a FIDL transaction completer so we can asynchronously
+  // complete the transaction when we successfully verify the superblock matches
+  // the seal the user provided.  This is expected to be valid when `state_` is
+  // `kVerifiedReadCheck
+  std::optional<OpenForVerifiedReadCompleter::Async> open_for_verified_read_completer_;
 
   // Used to ensure FIDL calls are exclusive to each other, and protects access to `state_`.
   fbl::Mutex mtx_;

@@ -51,6 +51,52 @@ test("sealer-test") {
   ]
 }
 
+source_set("block-verifier") {
+  sources = [ "block-verifier.cc" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
+  ]
+}
+
+test("block-verifier-test") {
+  testonly = true
+
+  output_name = "block-verifier-test"
+  sources = [ "block-verifier-tests.cc" ]
+  deps = [
+    ":block-verifier",
+    ":geometry",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/digest",
+  ]
+}
+
+source_set("config") {
+  sources = [ "config.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//src/lib/ddk",
+  ]
+}
+
+test("config-test") {
+  testonly = true
+  output_name = "config-test"
+  sources = [ "config-tests.cc" ]
+  deps = [
+    ":config",
+    "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//src/lib/ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 driver_module("block-verity") {
   output_name = "block-verity"
 
@@ -63,11 +109,15 @@ driver_module("block-verity") {
     "device.cc",
     "driver-sealer.cc",
     "extra.cc",
+    "superblock-verifier.cc",
+    "verified-device.cc",
   ]
 
   configs += [ "//build/config/fuchsia:integer-paranoia" ]
 
   deps = [
+    ":block-verifier",
+    ":config",
     ":geometry",
     ":sealer",
     "//sdk/banjo/ddk.protocol.block",
@@ -107,6 +157,16 @@ fuchsia_unittest_package("block-verity-sealer-test") {
   deps = [ ":sealer-test" ]
 }
 
+fuchsia_unittest_package("block-verity-block-verifier-test") {
+  executable_path = "test/block-verifier-test"
+  deps = [ ":block-verifier-test" ]
+}
+
+fuchsia_unittest_package("block-verity-config-test") {
+  executable_path = "test/config-test"
+  deps = [ ":config-test" ]
+}
+
 isolated_devmgr_unittest_package("block-verity-integration-test-package") {
   package_name = "block-verity-test"
   executable_path = "test/block-verity-test"
@@ -123,6 +183,8 @@ isolated_devmgr_unittest_package("block-verity-integration-test-package") {
 group("tests") {
   testonly = true
   deps = [
+    ":block-verity-block-verifier-test",
+    ":block-verity-config-test",
     ":block-verity-geometry-test",
     ":block-verity-integration-test-package",
     ":block-verity-sealer-test",

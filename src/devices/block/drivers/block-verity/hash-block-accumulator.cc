@@ -4,10 +4,11 @@
 
 #include "hash-block-accumulator.h"
 
+#include <zircon/assert.h>
+
 #include <cstring>
 
 #include <digest/digest.h>
-#include <zircon/assert.h>
 
 namespace block_verity {
 

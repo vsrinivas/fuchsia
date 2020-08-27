@@ -12,6 +12,8 @@
 
 #include <ddk/protocol/block.h>
 
+#include "block-loader-interface.h"
+
 namespace block_verity {
 
 // `extra_op_t` is the extra information placed in the tail end of `block_op_t`s queued against a
@@ -22,9 +24,6 @@ struct extra_op_t {
   // Used to link deferred block requests
   list_node_t node;
 
-  // Memory region to use for cryptographic transformations.
-  uint8_t* data;
-
   // The remaining are used to save fields of the original block request which may be altered
   zx_handle_t vmo;
   uint32_t length;
@@ -32,6 +31,9 @@ struct extra_op_t {
   uint64_t offset_vmo;
   block_impl_queue_callback completion_cb;
   void* cookie;
+
+  // used to save a different type of callback function pointer
+  BlockLoaderCallback loader_cb;
 
   // Resets this structure to an initial state.
   zx_status_t Init(block_op_t* block, block_impl_queue_callback completion_cb, void* cookie,

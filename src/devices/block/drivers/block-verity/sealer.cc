@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include "hash-block-accumulator.h"
+#include "superblock.h"
 
 namespace block_verity {
 
@@ -25,31 +26,17 @@ void GenerateSuperblock(const Geometry& geometry, uint8_t root_hash[kHashOutputS
   // 32 bytes integrity root hash
   // 4032 zero bytes padding the rest of the block
 
-  // Set backdrop of zeroes.
-  memset(block_buf, 0, kBlockSize);
-  uint8_t* ptr = block_buf;
+  Superblock superblock;
+  memset(&superblock, 0, sizeof(superblock));
 
-  // magic (16 bytes)
-  memcpy(ptr, kBlockVerityMagic, sizeof(kBlockVerityMagic));
-  ptr += sizeof(kBlockVerityMagic);
+  memcpy(superblock.magic, kBlockVerityMagic, sizeof(kBlockVerityMagic));
+  superblock.block_count = htole64(geometry.total_blocks_);
+  superblock.block_size = htole32(geometry.block_size_);
+  superblock.hash_function = htole32(kSHA256HashTag);
+  memcpy(superblock.integrity_root_hash, root_hash, kHashOutputSize);
 
-  // block count
-  uint64_t block_count = htole64(geometry.total_blocks_);
-  memcpy(ptr, &block_count, sizeof(block_count));
-  ptr += sizeof(block_count);
-
-  // block size in bytes
-  uint32_t block_size = htole32(geometry.block_size_);
-  memcpy(ptr, &block_size, sizeof(block_size));
-  ptr += sizeof(block_size);
-
-  // hash function tag
-  memcpy(ptr, kSHA256HashTag, sizeof(kSHA256HashTag));
-  ptr += sizeof(kSHA256HashTag);
-
-  // hash of integrity root
-  memcpy(ptr, root_hash, kHashOutputSize);
-  ptr += kHashOutputSize;
+  // Copy prepared superblock to target block_buf.
+  memcpy(block_buf, &superblock, kBlockSize);
 }
 
 Sealer::Sealer(Geometry geometry)

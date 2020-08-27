@@ -23,9 +23,27 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 
+#include "config.h"
 #include "device.h"
+#include "superblock-verifier.h"
+#include "verified-device.h"
 
 namespace block_verity {
+namespace {
+
+void SealCompletedCallback(void* cookie, zx_status_t status, const uint8_t* seal_buf,
+                           size_t seal_len) {
+  auto device_manager = static_cast<DeviceManager*>(cookie);
+  device_manager->OnSealCompleted(status, seal_buf, seal_len);
+}
+
+void SuperblockVerificationCallback(void* cookie, zx_status_t status,
+                                    const Superblock* superblock) {
+  auto device_manager = static_cast<DeviceManager*>(cookie);
+  device_manager->OnSuperblockVerificationCompleted(status, superblock);
+}
+
+}  // namespace
 
 zx_status_t DeviceManager::Create(void* ctx, zx_device_t* parent) {
   zx_status_t rc;
@@ -53,7 +71,7 @@ zx_status_t DeviceManager::Bind() {
   fbl::AutoLock lock(&mtx_);
 
   if ((rc = DdkAdd("verity")) != ZX_OK) {
-    zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to add verity device: %s\n", zx_status_get_string(rc));
     state_ = kRemoved;
     return rc;
   }
@@ -67,16 +85,11 @@ void DeviceManager::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Mark the device as getting-removed, so we refuse all other FIDL calls.
   state_ = kRemoved;
 
-  zxlogf(INFO, "DdkUnbindNew called\n");
-
   // Signal that unbind is completed; child devices can be removed
   txn.Reply();
 }
 
-void DeviceManager::DdkRelease() {
-  zxlogf(INFO, "DdkRelease called\n");
-  delete this;
-}
+void DeviceManager::DdkRelease() { delete this; }
 
 zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
@@ -86,7 +99,6 @@ zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   fbl::AutoLock lock(&mtx_);
-  zxlogf(INFO, "got notified of child prerelease %p\n", child_ctx);
 
   switch (state_) {
     case kAuthoring:
@@ -94,19 +106,28 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
       // The underlying device disappeared unexpectedly.  Drop our reference to
       // it, and mark our state as kError so we don't wind up doing anything
       // dangerous.
-      child_ = std::nullopt;
+      mutable_child_ = std::nullopt;
+      verified_child_ = std::nullopt;
       state_ = kError;
       break;
     case kClosing:
-      ZX_ASSERT(child_ctx == *child_);
+      ZX_ASSERT(mutable_child_.has_value() || verified_child_.has_value());
+      if (mutable_child_.has_value()) {
+        ZX_ASSERT(child_ctx == *mutable_child_);
+      }
+      if (verified_child_.has_value()) {
+        ZX_ASSERT(child_ctx == *verified_child_);
+      }
       ZX_ASSERT(close_completer_.has_value());
-      child_ = std::nullopt;
+      mutable_child_ = std::nullopt;
+      verified_child_ = std::nullopt;
       close_completer_->ReplySuccess();
       close_completer_ = std::nullopt;
       state_ = kClosed;
       break;
     case kClosingForSeal: {
       state_ = kSealing;
+      mutable_child_ = std::nullopt;
       // Now that the mutable device is unbound and about to release, we can
       // start generating integrity data.
       DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
@@ -131,6 +152,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
     case kBinding:
     case kClosed:
     case kSealing:
+    case kVerifiedReadCheck:
     case kError:
     case kUnbinding:
     case kRemoved:
@@ -153,45 +175,13 @@ void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Co
   ddk::BlockProtocolClient block_protocol_client(parent());
   block_protocol_client.Query(&blk, &op_size);
 
-  // Check that the config specifies a supported hash function
-  if (!config.has_hash_function()) {
-    zxlogf(WARNING, "Config did not specify a hash function");
-    async_completer.ReplyError(ZX_ERR_INVALID_ARGS);
+  // Check args
+  zx_status_t rc = CheckConfig(config, blk);
+  if (rc != ZX_OK) {
+    zxlogf(WARNING, "Refusing OpenForWrite: invalid config");
+    async_completer.ReplyError(rc);
     return;
   }
-  switch (config.hash_function()) {
-    case ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256:
-      break;
-    default:
-      zxlogf(WARNING, "Unknown hash function enum value %hhu\n", config.hash_function());
-      async_completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-  }
-  zxlogf(INFO, "hash function was valid");
-
-  // Check that the config specifies a supported block size, and that the block
-  // size matches that of the underlying block device
-  if (!config.has_block_size()) {
-    zxlogf(WARNING, "Config did not specify a block size");
-    async_completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-  switch (config.block_size()) {
-    case ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096:
-      // Verify that the block size from the device matches the value requested.
-      if (blk.block_size != 4096) {
-        zxlogf(WARNING, "Config specified block size 4096 but underlying block size is %d\n",
-               blk.block_size);
-        async_completer.ReplyError(ZX_ERR_INVALID_ARGS);
-        return;
-      }
-      break;
-    default:
-      zxlogf(WARNING, "Unknown block size enum value %hhu\n", config.block_size());
-      async_completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-  }
-  zxlogf(INFO, "block size was valid");
 
   // If we make it to here, all arguments have been validated.
   // Go ahead and create the mutable child device.
@@ -204,28 +194,23 @@ void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Co
     return;
   }
 
-  zxlogf(INFO, "device info was valid");
-
   auto device = fbl::make_unique_checked<block_verity::Device>(&ac, zxdev(), std::move(info));
   if (!ac.check()) {
     zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(Device));
     async_completer.ReplyError(ZX_ERR_NO_MEMORY);
     return;
   }
-  zxlogf(INFO, "allocated device");
 
-  zx_status_t rc;
   if ((rc = device->DdkAdd("mutable")) != ZX_OK) {
-    zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to add mutable device: %s", zx_status_get_string(rc));
     async_completer.ReplyError(rc);
     return;
   }
-
-  zxlogf(INFO, "added device at mutable");
+  zxlogf(INFO, "added block-verity mutable child");
 
   // devmgr now owns the memory for `device`, but it'll send us a
   // ChildPreRelease hook notification before it destroys it.
-  child_ = device.release();
+  mutable_child_ = device.release();
 
   state_ = kAuthoring;
   async_completer.ReplySuccess();
@@ -240,20 +225,14 @@ void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync com
     return;
   }
 
-  // Unbind the mutable child device.  We'll wait for the prerelease hook to be
+  // Unbind the appropriate child device.  We'll wait for the prerelease hook to be
   // called to ensure that new reads and writes have quiesced before we start sealing.
   state_ = kClosingForSeal;
-  (*child_)->DdkAsyncRemove();
+  (*mutable_child_)->DdkAsyncRemove();
 
   // Stash the completer somewhere so we can signal it when we've finished
   // generating the seal.
   seal_completer_ = std::move(async_completer);
-}
-
-void DeviceManager::SealCompletedCallback(void* cookie, zx_status_t status, const uint8_t* seal_buf,
-                                          size_t seal_len) {
-  auto device_manager = static_cast<DeviceManager*>(cookie);
-  device_manager->OnSealCompleted(status, seal_buf, seal_len);
 }
 
 void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len) {
@@ -282,6 +261,74 @@ void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf,
   seal_completer_ = std::nullopt;
 }
 
+void DeviceManager::OnSuperblockVerificationCompleted(zx_status_t status,
+                                                      const Superblock* superblock) {
+  fbl::AutoLock lock(&mtx_);
+  ZX_ASSERT(state_ == kVerifiedReadCheck);
+  ZX_ASSERT(open_for_verified_read_completer_.has_value());
+
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Superblock verifier returned failure: %s", zx_status_get_string(status));
+    CompleteOpenForVerifiedRead(status);
+    return;
+  }
+
+  // Great, looks good.  Let's set up that VerifiedDevice with the superblock
+  // root hash.
+  fbl::AllocChecker ac;
+  DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
+  if (!info.IsValid()) {
+    zxlogf(ERROR, "failed to get valid device info");
+    CompleteOpenForVerifiedRead(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  // Extract integrity root hash from superblock.
+  std::array<uint8_t, kHashOutputSize> integrity_root_hash;
+  memcpy(integrity_root_hash.data(), superblock->integrity_root_hash, kHashOutputSize);
+
+  // Allocate device.
+  auto device = fbl::make_unique_checked<block_verity::VerifiedDevice>(
+      &ac, zxdev(), std::move(info), integrity_root_hash);
+  if (!ac.check()) {
+    zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(Device));
+    CompleteOpenForVerifiedRead(ZX_ERR_NO_MEMORY);
+    return;
+  }
+
+  zx_status_t rc;
+  if ((rc = device->Init()) != ZX_OK) {
+    zxlogf(ERROR, "failed to prepare verified device: %s", zx_status_get_string(rc));
+    CompleteOpenForVerifiedRead(rc);
+    return;
+  }
+
+  if ((rc = device->DdkAdd("verified")) != ZX_OK) {
+    zxlogf(ERROR, "failed to add verified device: %s", zx_status_get_string(rc));
+    CompleteOpenForVerifiedRead(rc);
+    return;
+  }
+  zxlogf(INFO, "added block-verity verified child");
+
+  // devmgr now owns the memory for `device`, but it'll send us a
+  // ChildPreRelease hook notification before it destroys it.
+  verified_child_ = device.release();
+  CompleteOpenForVerifiedRead(ZX_OK);
+}
+
+void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
+  if (status != ZX_OK) {
+    open_for_verified_read_completer_->ReplyError(status);
+    state_ = kClosed;
+  } else {
+    open_for_verified_read_completer_->ReplySuccess();
+    state_ = kVerifiedRead;
+  }
+
+  open_for_verified_read_completer_ = std::nullopt;
+  superblock_verifier_.reset();
+}
+
 void DeviceManager::OpenForVerifiedRead(::llcpp::fuchsia::hardware::block::verified::Config config,
                                         ::llcpp::fuchsia::hardware::block::verified::Seal seal,
                                         OpenForVerifiedReadCompleter::Sync completer) {
@@ -292,8 +339,30 @@ void DeviceManager::OpenForVerifiedRead(::llcpp::fuchsia::hardware::block::verif
     return;
   }
 
-  // TODO: create the verified device
-  async_completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  block_info_t blk;
+  size_t op_size;
+  ddk::BlockProtocolClient block_protocol_client(parent());
+  block_protocol_client.Query(&blk, &op_size);
+
+  // Check args.
+  zx_status_t rc = CheckConfig(config, blk);
+  if (rc != ZX_OK) {
+    zxlogf(WARNING, "Refusing OpenForVerifiedRead: invalid config");
+    async_completer.ReplyError(rc);
+    return;
+  }
+
+  // Stash the completer somewhere so we can signal it when we've finished
+  // verifying the superblock.
+  open_for_verified_read_completer_ = std::move(async_completer);
+
+  // Load superblock.  Check seal.  Check config matches seal.
+  DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
+  std::array<uint8_t, kHashOutputSize> expected_hash;
+  memcpy(expected_hash.data(), seal.sha256().superblock_hash.data(), kHashOutputSize);
+  superblock_verifier_ = std::make_unique<SuperblockVerifier>(std::move(info), expected_hash);
+  state_ = kVerifiedReadCheck;
+  superblock_verifier_->StartVerifying(this, SuperblockVerificationCallback);
 }
 
 void DeviceManager::Close(CloseCompleter::Sync completer) {
@@ -304,9 +373,14 @@ void DeviceManager::Close(CloseCompleter::Sync completer) {
     return;
   }
 
-  // Request the child be removed.
+  // Request the appropriate child be removed.
   state_ = kClosing;
-  (*child_)->DdkAsyncRemove();
+  if (mutable_child_.has_value()) {
+    (*mutable_child_)->DdkAsyncRemove();
+  }
+  if (verified_child_.has_value()) {
+    (*verified_child_)->DdkAsyncRemove();
+  }
 
   // Stash the completer somewhere so we can signal it when we get the
   // DdkChildPreRelease hook call.

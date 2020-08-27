@@ -20,7 +20,7 @@ namespace block_verity {
 
 struct IntegrityShape {
   uint64_t integrity_block_count;
-  uint32_t tree_depth;  // number of levels of indirect blocks
+  uint32_t tree_depth;  // number of tiers of integrity blocks
 };
 
 // Given a number of data blocks, a block size, and a hash output size, compute
@@ -67,7 +67,7 @@ class Geometry {
   // Given a data block index, return the location in the integrity section that
   // contains the hash of the literal data in that block.  This is used in the
   // verified read logic.
-  HashLocation IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index);
+  HashLocation IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index) const;
 
   // Given a block index into the integrity data, return the integrity data
   // block index and intra-block hash offset that covers that indirect block.
@@ -77,7 +77,7 @@ class Geometry {
   // the merkle tree to the root.  This function tells us where to find the next
   // block up in the merkle tree.
   HashLocation NextIntegrityBlockUp(uint32_t distance_from_leaf,
-                                    IntegrityBlockIndex integrity_block_index);
+                                    IntegrityBlockIndex integrity_block_index) const;
 
   // Returns the device block offset for the `index`th integrity block.
   uint64_t AbsoluteLocationForIntegrity(IntegrityBlockIndex index) const;

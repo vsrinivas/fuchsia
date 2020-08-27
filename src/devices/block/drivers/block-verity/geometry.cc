@@ -76,7 +76,7 @@ Geometry::Geometry(uint32_t block_size, uint32_t hash_size, uint64_t total_block
       hashes_per_block_(block_size / hash_size),
       allocation_(BestSplitFor(block_size, hash_size, total_blocks)) {}
 
-HashLocation Geometry::IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index) {
+HashLocation Geometry::IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index) const {
   uint64_t to_pass = data_block_index / hashes_per_block_;
 
   uint64_t block_offset = 0;
@@ -92,7 +92,7 @@ HashLocation Geometry::IntegrityDataLocationForDataBlock(DataBlockIndex data_blo
 }
 
 HashLocation Geometry::NextIntegrityBlockUp(uint32_t distance_from_leaf,
-                                            IntegrityBlockIndex integrity_block_index) {
+                                            IntegrityBlockIndex integrity_block_index) const {
   //
   // If, for example hashes_per_block_ were 128, the integrity data would look
   // like this, where reading blocks left to right (and the contents of the

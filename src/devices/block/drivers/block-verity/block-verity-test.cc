@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <utility>
 
@@ -24,6 +25,8 @@ namespace {
 
 constexpr uint64_t kBlockSize = 4096;
 constexpr uint64_t kBlockCount = 8192;
+constexpr uint64_t kIntegrityStartBlock = 1;
+constexpr uint64_t kDataStartBlock = 66;
 
 using driver_integration_test::IsolatedDevmgr;
 
@@ -59,22 +62,18 @@ class BlockVerityTest : public zxtest::Test {
   }
 
  protected:
-  void OpenForAuthoring(IsolatedDevmgr& devmgr, std::unique_ptr<fvm::RamdiskRef>& ramdisk,
-                        fbl::unique_fd& verity_fd, zx::channel& verity_chan,
-                        fbl::unique_fd& mutable_fd, fbl::unique_fd& mutable_block_fd) {
-    // bind the driver to the ramdisk
-    ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk->channel())));
-
+  void OpenVerityDeviceManager() {
     // wait for block-verity device to appear and open it
-    std::string verity_path = std::string(ramdisk->path()) + "/verity";
-    std::string mutable_path = verity_path + "/mutable";
-    std::string mutable_block_path = mutable_path + "/block";
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+    std::string verity_path = std::string(ramdisk_->path()) + "/verity";
+    fbl::unique_fd verity_fd;
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
                                                             verity_path.c_str(), &verity_fd));
 
     // claim channel from fd
-    ASSERT_OK(fdio_get_service_handle(verity_fd.release(), verity_chan.reset_and_get_address()));
+    ASSERT_OK(fdio_get_service_handle(verity_fd.release(), verity_chan_.reset_and_get_address()));
+  }
 
+  void OpenForAuthoring(fbl::unique_fd& mutable_block_fd) {
     // make FIDL call to open in authoring mode
     fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
         ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
@@ -89,39 +88,107 @@ class BlockVerityTest : public zxtest::Test {
 
     // Request the device be opened for writes
     auto open_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForWrite(
-        zx::unowned_channel(verity_chan), std::move(config));
+        zx::unowned_channel(verity_chan_), std::move(config));
     ASSERT_OK(open_resp.status());
     ASSERT_FALSE(open_resp->result.is_err());
 
-    // Wait for the `mutable` device to appear
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+    // Wait for the `mutable` child device to appear
+    fbl::unique_fd mutable_fd;
+    std::string mutable_path = std::string(ramdisk_->path()) + "/verity/mutable";
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
                                                             mutable_path.c_str(), &mutable_fd));
 
     // And then wait for the `block` driver to bind to that device too
+    std::string mutable_block_path = mutable_path + "/block";
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr.devfs_root(), mutable_block_path.c_str(), &mutable_block_fd));
+        devmgr_.devfs_root(), mutable_block_path.c_str(), &mutable_block_fd));
   }
 
   void CloseAndGenerateSeal(
-      zx::channel& verity_chan,
       ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
     // We use the caller-provided buffer FIDL call style because we need to keep
     // the response object alive so that the test code can interact with it
     // after this function returns.
     auto seal_resp =
         ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::CloseAndGenerateSeal(
-            zx::unowned_channel(verity_chan), seal_response_buffer_.view());
+            zx::unowned_channel(verity_chan_), seal_response_buffer_.view());
     ASSERT_OK(seal_resp.status());
     ASSERT_FALSE(seal_resp->result.is_err());
     *out = std::move(seal_resp->result);
   }
 
-  void Close(zx::channel& verity_chan) {
+  zx_status_t OpenForVerifiedRead(
+      const ::llcpp::fuchsia::hardware::block::verified::Seal& expected_seal,
+      fbl::unique_fd& verified_block_fd) {
+    // make FIDL call to open in authoring mode
+    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+        ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+        ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+    auto config =
+        ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
+            std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+            .set_hash_function(fidl::unowned_ptr(&hash_function))
+            .set_block_size(fidl::unowned_ptr(&block_size))
+            .build();
+
+    // Make a copy of the seal to send.
+    ::llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;
+    const ::llcpp::fuchsia::hardware::block::verified::Sha256Seal& expected_sha256 =
+        expected_seal.sha256();
+    std::copy(expected_sha256.superblock_hash.begin(), expected_sha256.superblock_hash.end(),
+              sha256_seal.superblock_hash.begin());
+    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+        std::move(sha256_seal);
+    auto seal_to_send =
+        ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned));
+
+    // Request the device be opened for verified read
+    auto open_resp =
+        ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForVerifiedRead(
+            zx::unowned_channel(verity_chan_), std::move(config), std::move(seal_to_send));
+    if (open_resp.status() != ZX_OK) {
+      return open_resp.status();
+    }
+    if (open_resp->result.is_err()) {
+      return open_resp->result.err();
+    }
+
+    // Wait for the `verified` child device to appear
+    fbl::unique_fd verified_fd;
+    std::string verified_path = std::string(ramdisk_->path()) + "/verity/verified";
+    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
+        devmgr_.devfs_root(), verified_path.c_str(), &verified_fd);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // And then wait for the `block` driver to bind to that device too
+    std::string verified_block_path = verified_path + "/block";
+    status = devmgr_integration_test::RecursiveWaitForFile(
+        devmgr_.devfs_root(), verified_block_path.c_str(), &verified_block_fd);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    return ZX_OK;
+  }
+
+  void Close() {
     // Close the device cleanly
     auto close_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::Close(
-        zx::unowned_channel(verity_chan));
+        zx::unowned_channel(verity_chan_));
     ASSERT_OK(close_resp.status());
     ASSERT_FALSE(close_resp->result.is_err());
+  }
+
+  void ZeroUnderlyingRamdisk() {
+    fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
+    memset(write_buf.get(), 0, write_buf.size());
+    ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
+    for (uint64_t block = 0; block < kBlockCount; block++) {
+      ASSERT_EQ(write(ramdisk_->fd(), write_buf.get(), write_buf.size()), kBlockSize);
+    }
   }
 
   IsolatedDevmgr devmgr_;
@@ -130,33 +197,29 @@ class BlockVerityTest : public zxtest::Test {
       llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>
       seal_response_buffer_;
 
- private:
-};
-
-class BlockVerityMutableTest : public BlockVerityTest {
- protected:
-  fbl::unique_fd verity_fd_;
   zx::channel verity_chan_;
-  fbl::unique_fd mutable_fd_;
-  fbl::unique_fd mutable_block_fd_;
 };
 
 TEST_F(BlockVerityTest, Bind) { ASSERT_OK(BindVerityDriver(ramdisk_->channel())); }
 
-TEST_F(BlockVerityMutableTest, BasicWrites) {
-  OpenForAuthoring(devmgr_, ramdisk_, verity_fd_, verity_chan_, mutable_fd_, mutable_block_fd_);
+TEST_F(BlockVerityTest, BasicWrites) {
+  // Bind the driver to the ramdisk
+  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
+
+  // Open channel to block-verity driver
+  OpenVerityDeviceManager();
+
+  // Open for authoring
+  fbl::unique_fd mutable_block_fd;
+  OpenForAuthoring(mutable_block_fd);
+
   // Zero out the underlying ramdisk.
-  fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
-  memset(write_buf.get(), 0, write_buf.size());
-  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
-  for (uint64_t block = 0; block < kBlockCount; block++) {
-    ASSERT_EQ(write(ramdisk_->fd(), write_buf.get(), write_buf.size()), kBlockSize);
-  }
+  ZeroUnderlyingRamdisk();
 
   // Examine the size of the child device.  Expect it to be 8126 blocks, because
   // we've reserved 1 superblock and 65 integrity blocks of our 8192-block device.
   struct stat st;
-  ASSERT_EQ(fstat(mutable_block_fd_.get(), &st), 0);
+  ASSERT_EQ(fstat(mutable_block_fd.get(), &st), 0);
   ASSERT_EQ(st.st_size, 8126 * kBlockSize);
   uint64_t inner_block_count = st.st_size / kBlockSize;
 
@@ -168,25 +231,26 @@ TEST_F(BlockVerityMutableTest, BasicWrites) {
   for (uint64_t block = 0; block < inner_block_count; block++) {
     // Seek to start of block
     off_t offset = block * kBlockSize;
-    ASSERT_EQ(lseek(mutable_block_fd_.get(), offset, SEEK_SET), offset);
+    ASSERT_EQ(lseek(mutable_block_fd.get(), offset, SEEK_SET), offset);
     // Verify read succeeds
-    ASSERT_EQ(read(mutable_block_fd_.get(), read_buf.get(), read_buf.size()), kBlockSize);
+    ASSERT_EQ(read(mutable_block_fd.get(), read_buf.get(), read_buf.size()), kBlockSize);
     // Expect to read all zeroes.
     ASSERT_EQ(memcmp(zero_buf.get(), read_buf.get(), zero_buf.size()), 0);
   }
 
+  fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
   // Make a pattern in the write buffer.
   for (size_t i = 0; i < kBlockSize; i++) {
     write_buf[i] = static_cast<uint8_t>(i % 256);
   }
 
   // Write the first block on the mutable device with that pattern.
-  ASSERT_EQ(lseek(mutable_block_fd_.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(write(mutable_block_fd_.get(), write_buf.get(), write_buf.size()), kBlockSize);
+  ASSERT_EQ(lseek(mutable_block_fd.get(), 0, SEEK_SET), 0);
+  ASSERT_EQ(write(mutable_block_fd.get(), write_buf.get(), write_buf.size()), kBlockSize);
 
   // Read it back.
-  ASSERT_EQ(lseek(mutable_block_fd_.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(mutable_block_fd_.get(), read_buf.get(), read_buf.size()), kBlockSize);
+  ASSERT_EQ(lseek(mutable_block_fd.get(), 0, SEEK_SET), 0);
+  ASSERT_EQ(read(mutable_block_fd.get(), read_buf.get(), read_buf.size()), kBlockSize);
   ASSERT_EQ(memcmp(write_buf.get(), read_buf.get(), read_buf.size()), 0);
 
   // Find a block that matches from the underlying device.
@@ -199,31 +263,33 @@ TEST_F(BlockVerityMutableTest, BasicWrites) {
     if (memcmp(read_buf.get(), write_buf.get(), read_buf.size()) == 0) {
       found = true;
       // Expect to find the block at block 66 (after one superblock & 65 integrity blocks)
-      ASSERT_EQ(block, 66);
+      ASSERT_EQ(block, kDataStartBlock);
       break;
     }
   }
   ASSERT_TRUE(found);
 
   // Close the device cleanly
-  Close(verity_chan_);
+  Close();
 }
 
-TEST_F(BlockVerityMutableTest, BasicSeal) {
+TEST_F(BlockVerityTest, BasicSeal) {
   // Zero out the underlying ramdisk.
-  fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
-  memset(write_buf.get(), 0, write_buf.size());
-  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
-  for (uint64_t block = 0; block < kBlockCount; block++) {
-    ASSERT_EQ(write(ramdisk_->fd(), write_buf.get(), write_buf.size()), kBlockSize);
-  }
+  ZeroUnderlyingRamdisk();
 
-  // Open the device.
-  OpenForAuthoring(devmgr_, ramdisk_, verity_fd_, verity_chan_, mutable_fd_, mutable_block_fd_);
+  // Bind the driver to the ramdisk
+  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
+
+  // Open channel to block-verity driver
+  OpenVerityDeviceManager();
+
+  // Open for authoring
+  fbl::unique_fd mutable_block_fd;
+  OpenForAuthoring(mutable_block_fd);
 
   // Close and generate a seal over the all-zeroes data section.
   ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result result;
-  CloseAndGenerateSeal(verity_chan_, &result);
+  CloseAndGenerateSeal(&result);
   ASSERT_TRUE(result.is_response());
 
   // Verify contents of the integrity section.  For our 8126 data blocks of all-zeros,
@@ -361,6 +427,130 @@ TEST_F(BlockVerityMutableTest, BasicSeal) {
   auto actual_seal_data = actual_seal.sha256().superblock_hash.data();
   ASSERT_EQ(memcmp(expected_seal, actual_seal_data, 32), 0,
             "Seal did not contain expected contents");
+}
+
+TEST_F(BlockVerityTest, SealAndVerifiedRead) {
+  // Zero out the underlying ramdisk.
+  ZeroUnderlyingRamdisk();
+
+  // Bind the driver to the ramdisk
+  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
+
+  // Open channel to block-verity driver
+  OpenVerityDeviceManager();
+
+  // Open for authoring
+  fbl::unique_fd mutable_block_fd;
+  OpenForAuthoring(mutable_block_fd);
+
+  // Close and generate a seal over the all-zeroes data section.
+  ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result result;
+  CloseAndGenerateSeal(&result);
+  ASSERT_TRUE(result.is_response());
+
+  const ::llcpp::fuchsia::hardware::block::verified::Seal& seal = result.response().seal;
+  fbl::unique_fd verified_block_fd;
+
+  // Prepare to read every block.
+  ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
+
+  // Zero block that matches what we expect to read
+  fbl::Array<uint8_t> zero_block(new uint8_t[kBlockSize], kBlockSize);
+  memset(zero_block.get(), 0, kBlockSize);
+
+  fbl::Array<uint8_t> read_buf(new uint8_t[kBlockSize], kBlockSize);
+
+  // Examine the size of the child device.  Expect it to be 8126 blocks, because
+  // we've reserved 1 superblock and 65 integrity blocks of our 8192-block device.
+  struct stat st;
+  ASSERT_EQ(fstat(verified_block_fd.get(), &st), 0);
+  ASSERT_EQ(st.st_size, 8126 * kBlockSize);
+  uint64_t inner_block_count = st.st_size / kBlockSize;
+
+  // Read all the blocks, and verify they're all zeroes.  Mark the buffer with
+  // all 0xcc before each read to show that the reads are, in fact, doing work each
+  // iteration.
+  for (uint64_t verified_block = 0; verified_block < inner_block_count; verified_block++) {
+    memset(read_buf.get(), 0xcc, kBlockSize);
+    off_t offset = verified_block * kBlockSize;
+    ASSERT_EQ(lseek(verified_block_fd.get(), offset, SEEK_SET), offset);
+    ASSERT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()),
+              "read failed on block %lu", verified_block);
+    EXPECT_EQ(0, memcmp(zero_block.get(), read_buf.get(), kBlockSize),
+              "verified data block %lu did not contain expected contents", verified_block);
+  }
+
+  // Writes should fail.  This is a readonly device.
+  ASSERT_EQ(lseek(verified_block_fd.get(), 0, SEEK_SET), 0);
+  EXPECT_EQ(-1, write(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+
+  Close();
+  verified_block_fd.release();
+
+  // Corrupt a data block (the 0th data block) on the underlying ramdisk, then attempt to read it in
+  // verified read mode.
+  fbl::Array<uint8_t> one_block(new uint8_t[kBlockSize], kBlockSize);
+  memset(one_block.get(), 0xff, kBlockSize);
+  off_t data_start = kDataStartBlock * kBlockSize;
+  ASSERT_EQ(lseek(ramdisk_->fd(), data_start, SEEK_SET), data_start);
+  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), one_block.get(), one_block.size()));
+  ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
+
+  // Verify that attempting to read that block returns failure
+  ASSERT_EQ(lseek(verified_block_fd.get(), 0, SEEK_SET), 0);
+  EXPECT_EQ(-1, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+  EXPECT_EQ(errno, EIO);
+
+  // Verify that reading a different (uncorrupted) block still works.
+  ASSERT_EQ(lseek(verified_block_fd.get(), kBlockSize, SEEK_SET), kBlockSize);
+  EXPECT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+  Close();
+  verified_block_fd.release();
+
+  // Corrupt an integrity block, and attempt to perform reads guarded by it.
+  off_t integrity_start = kIntegrityStartBlock * kBlockSize;
+  ASSERT_EQ(lseek(ramdisk_->fd(), integrity_start, SEEK_SET), integrity_start);
+  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), one_block.get(), one_block.size()));
+  ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
+
+  // Verify that read of each block under that integrity block returns failure.
+  for (uint64_t data_block = 0; data_block < kBlockSize / 32; data_block++) {
+    off_t offset = data_block * kBlockSize;
+    ASSERT_EQ(lseek(verified_block_fd.get(), offset, SEEK_SET), offset);
+    EXPECT_EQ(-1, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+    EXPECT_EQ(errno, EIO);
+  }
+
+  // Other block reads should succeed.  Try one.
+  off_t first_uncorrupted_data_block = (kBlockSize / 32) * kBlockSize;
+  ASSERT_EQ(lseek(verified_block_fd.get(), first_uncorrupted_data_block, SEEK_SET),
+            first_uncorrupted_data_block);
+  EXPECT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+
+  Close();
+  verified_block_fd.release();
+
+  // Attempt to open the superblock with a different seal.  Expect failure,
+  // because the superblock hash doesn't match.
+  ::llcpp::fuchsia::hardware::block::verified::Sha256Seal mangled_sha256_seal;
+  memset(mangled_sha256_seal.superblock_hash.begin(), 0xff, 32);
+  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> mangled_aligned =
+      std::move(mangled_sha256_seal);
+  auto mangled_seal = ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(
+      fidl::unowned_ptr(&mangled_aligned));
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, OpenForVerifiedRead(mangled_seal, verified_block_fd));
+
+  // Corrupt the superblock, then attempt to open the superblock with the last working seal.
+  // Expect OpenForVerifiedRead to fail.
+  fbl::Array<uint8_t> superblock_buf(new uint8_t[kBlockSize], kBlockSize);
+  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
+  // Load up the superblock.
+  ASSERT_EQ(kBlockSize, read(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size()));
+  // Corrupt the root integrity hash.
+  memset(superblock_buf.data() + 32, 0, 32);
+  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
+  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size()));
+  ASSERT_EQ(OpenForVerifiedRead(seal, verified_block_fd), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 }  // namespace

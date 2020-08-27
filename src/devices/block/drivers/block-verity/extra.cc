@@ -24,22 +24,21 @@ zx_status_t extra_op_t::Init(block_op_t* block, block_impl_queue_callback cb, vo
   LOG_ENTRY_ARGS("block=%p, data_start_offset_blocks=%zu", block, data_start_offset_blocks);
 
   list_initialize(&node);
-  data = nullptr;
   completion_cb = cb;
   cookie = _cookie;
 
   switch (block->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
+      vmo = block->rw.vmo;
+      length = block->rw.length;
+      offset_dev = block->rw.offset_dev;
+      offset_vmo = block->rw.offset_vmo;
       if (add_overflow(block->rw.offset_dev, data_start_offset_blocks, &block->rw.offset_dev)) {
         zxlogf(ERROR, "adjusted offset overflow: block->rw.offset_dev=%" PRIu64 "",
                block->rw.offset_dev);
         return ZX_ERR_OUT_OF_RANGE;
       }
-      vmo = block->rw.vmo;
-      length = block->rw.length;
-      offset_dev = block->rw.offset_dev;
-      offset_vmo = block->rw.offset_vmo;
       break;
 
     default:
