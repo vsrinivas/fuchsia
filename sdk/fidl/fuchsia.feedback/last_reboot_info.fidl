@@ -80,4 +80,8 @@ enum RebootReason : uint16 {
     /// The device rebooted because a core component was unable to recover from an error, e.g., the
     /// system manager crashed.
     SYSTEM_FAILURE = 13;
+
+    /// The device rebooted following a data reset to factory defaults.
+    /// See [`fuchsia.recovery.FactoryReset`].
+    FACTORY_DATA_RESET = 14;
 };
