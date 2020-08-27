@@ -5,6 +5,7 @@
 # Common entries, need to be kept in sync with x64 version.
 _bootfs_deps = [
   "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+  "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/virtio:virtio_block",
   "//src/devices/block/drivers/virtio:virtio_scsi",
   "//src/devices/misc/drivers/virtio-rng:virtio_rng",
