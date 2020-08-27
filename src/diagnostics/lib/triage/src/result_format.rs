@@ -14,19 +14,40 @@ impl<'a> ActionResultFormatter<'a> {
     }
 
     pub fn to_text(&self) -> String {
-        match self.to_gauges() {
-            Some(gauges) => format!("{}\n{}", gauges, self.to_warnings()),
-            None => self.to_warnings(),
+        match self.inner_to_text() {
+            (true, v) => v,
+            (false, v) if v.is_empty() => "No actions were triggered. All targets OK.".to_string(),
+            (false, v) => {
+                vec![v, "No actions were triggered. All targets OK.".to_string()].join("\n")
+            }
         }
     }
 
-    fn to_warnings(&self) -> String {
+    fn inner_to_text(&self) -> (bool, String) {
+        let mut sections = vec![];
+        let mut warning = false;
+        if let Some(gauges) = self.to_gauges() {
+            sections.push(gauges);
+        }
+        if let Some(warnings) = self.to_warnings() {
+            sections.push(warnings);
+            warning = true;
+        }
+        if let Some((plugin_warning, plugins)) = self.to_plugins() {
+            sections.push(plugins);
+            warning = warning || plugin_warning
+        }
+
+        (warning, sections.join("\n"))
+    }
+
+    fn to_warnings(&self) -> Option<String> {
         if self.action_results.get_warnings().is_empty() {
-            return String::from("No actions were triggered. All targets OK.");
+            return None;
         }
 
         let header = Self::make_underline("Warnings");
-        format!("{}{}\n", header, self.action_results.get_warnings().join("\n"))
+        Some(format!("{}{}\n", header, self.action_results.get_warnings().join("\n")))
     }
 
     fn to_gauges(&self) -> Option<String> {
@@ -44,6 +65,31 @@ impl<'a> ActionResultFormatter<'a> {
         }
 
         Some(output)
+    }
+
+    fn to_plugins(&self) -> Option<(bool, String)> {
+        let mut warning = false;
+        let results = self
+            .action_results
+            .get_sub_results()
+            .iter()
+            .map(|(name, v)| {
+                let fmt = ActionResultFormatter::new(&v);
+                let val = match fmt.inner_to_text() {
+                    (true, v) => {
+                        warning = true;
+                        format!("\n{}", v)
+                    }
+                    (false, _) => " - OK".to_string(),
+                };
+                format!("{} Plugin{}", name, val)
+            })
+            .collect::<Vec<String>>();
+        if results.is_empty() {
+            None
+        } else {
+            Some((warning, results.join("\n\n")))
+        }
     }
 
     fn make_underline(content: &str) -> String {

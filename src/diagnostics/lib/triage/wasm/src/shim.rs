@@ -98,6 +98,7 @@ impl TriageManager {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     macro_rules! map(
         { $($key:expr => $value:expr),+ } => {
@@ -217,6 +218,8 @@ mod test {
         }
     }"#;
 
+    const OK_PLUGINS_PREFIX: &str = "Process Crashes Plugin - OK\n";
+
     #[test]
     fn analyze() {
         let mut manager = TriageManager::new();
@@ -227,7 +230,10 @@ mod test {
         let inspect_target = manager.build_inspect_target("inspect.json", INSPECT_CONTENT).unwrap();
         let determination = manager.analyze(&[inspect_target], context).unwrap();
 
-        assert_eq!(determination, "No actions were triggered. All targets OK.");
+        assert_eq!(
+            determination,
+            OK_PLUGINS_PREFIX.to_owned() + "No actions were triggered. All targets OK."
+        );
     }
 
     fn targets_without_boot(manager: &mut TriageManager) -> Box<[i32]> {
@@ -249,6 +255,11 @@ mod test {
         Box::new([t[0], t[1], t[2], t[3], boot_target])
     }
 
+    fn targets_only_log(manager: &mut TriageManager, syslog: &str) -> Box<[i32]> {
+        let sys_target = manager.build_target("syslog", Source::Syslog as u32, syslog).unwrap();
+        Box::new([sys_target])
+    }
+
     fn context_without_boot(manager: &mut TriageManager) -> i32 {
         let configs_without_boot = map! {
             "disk" => DISK_CONFIG,
@@ -266,6 +277,10 @@ mod test {
             "annotations" => ANNOTATIONS_CONFIG
         };
         manager.build_context(configs_with_boot).unwrap()
+    }
+
+    fn empty_context(manager: &mut TriageManager) -> i32 {
+        manager.build_context(HashMap::new()).unwrap()
     }
 
     #[test]
@@ -288,7 +303,7 @@ mod test {
         }
         assert_eq!(
             manager.analyze(&targets, context).unwrap(),
-            "No actions were triggered. All targets OK."
+            OK_PLUGINS_PREFIX.to_owned() + "No actions were triggered. All targets OK."
         );
         let targets;
         let context;
@@ -298,7 +313,7 @@ mod test {
         }
         assert_eq!(
             manager.analyze(&targets, context).unwrap(),
-            "No actions were triggered. All targets OK."
+            OK_PLUGINS_PREFIX.to_owned() + "No actions were triggered. All targets OK."
         );
         let targets;
         let context;
@@ -308,7 +323,7 @@ mod test {
         }
         assert_eq!(
             manager.analyze(&targets, context).unwrap(),
-            "No actions were triggered. All targets OK."
+            OK_PLUGINS_PREFIX.to_owned() + "No actions were triggered. All targets OK."
         );
         // For this last test, bootlog is effectively empty, so the bootlog test will fail.
         let targets;
@@ -318,8 +333,31 @@ mod test {
             context = context_with_boot(&mut manager);
         }
         assert_eq!(
+            manager.analyze(&targets, context).unwrap() + "\n",
+            "Warnings\n--------\n[WARNING] devhost not inserted.\n\n".to_owned()
+                + OK_PLUGINS_PREFIX
+        );
+
+        let targets;
+        let context;
+        {
+            targets = targets_only_log(
+                &mut manager,
+                r#"
+                [3661.123] fatal : my_component.cmx[1234]
+                [3661.124] CRASH: my_component.cmx[1235]
+                "#,
+            );
+            context = empty_context(&mut manager);
+        }
+        assert_eq!(
             manager.analyze(&targets, context).unwrap(),
-            "Warnings\n--------\n[WARNING] devhost not inserted.\n"
+            r#"Process Crashes Plugin
+Warnings
+--------
+[WARNING]: my_component.cmx crashed at 1h1m1.123s [3661.123]
+[WARNING]: my_component.cmx crashed at 1h1m1.124s [3661.124]
+"#
         );
     }
 

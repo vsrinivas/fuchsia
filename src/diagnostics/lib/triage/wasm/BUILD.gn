@@ -60,7 +60,7 @@ wasm_bindings("lib_wasm") {
 
 rustc_test("triage_lib_tests") {
   edition = "2018"
-  deps = lib_deps
+  deps = lib_deps + [ "//third_party/rust_crates:pretty_assertions" ]
 
   sources = [
     "src/lib.rs",

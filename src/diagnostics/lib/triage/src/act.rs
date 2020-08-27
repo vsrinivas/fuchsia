@@ -6,6 +6,7 @@ use {
     super::{
         config::DiagnosticData,
         metrics::{Fetcher, FileDataFetcher, Metric, MetricState, MetricValue, Metrics},
+        plugins::{register_plugins, Plugin},
     },
     serde::{self, Deserialize},
     std::collections::HashMap,
@@ -16,6 +17,7 @@ pub struct ActionContext<'a> {
     actions: &'a Actions,
     metric_state: MetricState<'a>,
     action_results: ActionResults,
+    plugins: Vec<Box<dyn Plugin>>,
 }
 
 impl<'a> ActionContext<'a> {
@@ -33,6 +35,7 @@ impl<'a> ActionContext<'a> {
             actions,
             metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher)),
             action_results,
+            plugins: register_plugins(),
         }
     }
 }
@@ -44,11 +47,17 @@ pub struct ActionResults {
     results: HashMap<String, bool>,
     warnings: Vec<String>,
     gauges: Vec<String>,
+    sub_results: Vec<(String, Box<ActionResults>)>,
 }
 
 impl ActionResults {
     pub fn new() -> ActionResults {
-        ActionResults { results: HashMap::new(), warnings: Vec::new(), gauges: Vec::new() }
+        ActionResults {
+            results: HashMap::new(),
+            warnings: Vec::new(),
+            gauges: Vec::new(),
+            sub_results: Vec::new(),
+        }
     }
 
     pub fn set_result(&mut self, action: &str, value: bool) {
@@ -69,6 +78,10 @@ impl ActionResults {
 
     pub fn get_gauges(&self) -> &Vec<String> {
         &self.gauges
+    }
+
+    pub fn get_sub_results(&self) -> &Vec<(String, Box<ActionResults>)> {
+        &self.sub_results
     }
 }
 
@@ -136,6 +149,14 @@ impl Action {
 impl ActionContext<'_> {
     /// Processes all actions, acting on the ones that trigger.
     pub fn process(&mut self) -> &ActionResults {
+        if let Fetcher::FileData(file_data) = &self.metric_state.fetcher {
+            for plugin in &self.plugins {
+                self.action_results
+                    .sub_results
+                    .push((plugin.display_name().to_string(), Box::new(plugin.run(file_data))));
+            }
+        }
+
         for (namespace, actions) in self.actions.iter() {
             for (name, action) in actions.iter() {
                 match action {
@@ -144,6 +165,7 @@ impl ActionContext<'_> {
                 };
             }
         }
+
         &self.action_results
     }
 

@@ -33,6 +33,8 @@ rustc_library("triage") {
     "src/lib.rs",
     "src/metrics.rs",
     "src/metrics/fetch.rs",
+    "src/plugins.rs",
+    "src/plugins/crashes.rs",
     "src/result_format.rs",
     "src/validate.rs",
   ]
@@ -48,6 +50,8 @@ rustc_test("triage_lib_unittests") {
     "src/lib.rs",
     "src/metrics.rs",
     "src/metrics/fetch.rs",
+    "src/plugins.rs",
+    "src/plugins/crashes.rs",
     "src/result_format.rs",
     "src/validate.rs",
   ]

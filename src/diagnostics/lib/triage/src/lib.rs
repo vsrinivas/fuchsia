@@ -7,8 +7,9 @@ use {crate::act::ActionContext, anyhow::Error};
 pub(crate) mod act; // Perform appropriate actions.
 pub(crate) mod config; // Read the config file(s) for metric and action specs.
 pub(crate) mod metrics; // Retrieve and calculate the metrics.
-pub(crate) mod result_format;
-pub(crate) mod validate; // Check config - including that metrics/triggers work correctly. // Formats the triage results.
+pub(crate) mod plugins; // Plugins for additional analysis.
+pub(crate) mod result_format; // Formats the triage results.
+pub(crate) mod validate; // Check config - including that metrics/triggers work correctly.
 
 pub use act::ActionResults;
 pub use config::{ActionTagDirective, DiagnosticData, ParseResult, Source};

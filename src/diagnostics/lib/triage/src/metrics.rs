@@ -70,11 +70,11 @@ pub enum Fetcher<'a> {
 /// [FileDataFetcher] contains fetchers for data in snapshot.zip files.
 #[derive(Clone)]
 pub struct FileDataFetcher<'a> {
-    inspect: &'a InspectFetcher,
-    syslog: &'a TextFetcher,
-    klog: &'a TextFetcher,
-    bootlog: &'a TextFetcher,
-    annotations: &'a KeyValueFetcher,
+    pub inspect: &'a InspectFetcher,
+    pub syslog: &'a TextFetcher,
+    pub klog: &'a TextFetcher,
+    pub bootlog: &'a TextFetcher,
+    pub annotations: &'a KeyValueFetcher,
 }
 
 impl<'a> FileDataFetcher<'a> {
