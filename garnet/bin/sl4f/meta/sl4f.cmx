@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/aml-ram",
             "class/backlight",
             "class/camera",
             "class/cpu-ctrl",
@@ -47,6 +48,7 @@
             "fuchsia.hardware.i2c",
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.hardware.ram.metrics.Device",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
