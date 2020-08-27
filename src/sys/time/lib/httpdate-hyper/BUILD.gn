@@ -25,7 +25,6 @@ rustc_library("httpdate-hyper") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rustls",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:webpki",
