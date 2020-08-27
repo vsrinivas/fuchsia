@@ -1,0 +1,15 @@
+# When a library needs to be built both by the Zircon and Fuchsia builds,
+# its directory may contain a BUILD.gn and a BUILD.zircon.gn that are
+# symlinked together. This ensures they stay in sync easily.
+#
+# Such build files will import "$zx_build/public/gn/migrated_targets.gni"
+# to ensure that the definitions of zx_library(), zx_host_tool() and other
+# templates and global variables are properly defined.
+#
+# This file is what is imported by the Zircon build. For the Fuchsia build,
+# the corresponding file is in
+# //build/unification/zn_build/public/gn/migrated_targets.gni
+
+# The Zircon build already defines many templates and global variables
+# by default. But host_tool_action() needs an import.
+import("$zx/public/gn/host_tool_action.gni")
