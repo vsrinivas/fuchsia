@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/cts-package-manager-sample"
+        "binary": "bin/cts-package-manager-sample-bin"
     }
 }

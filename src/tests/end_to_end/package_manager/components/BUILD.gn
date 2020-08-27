@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("components") {
   testonly = true
@@ -12,45 +10,27 @@ group("components") {
   deps = [ ":cts-package-manager-sample-component" ]
 }
 
-executable("bin") {
-  output_name = "cts-package-manager-sample"
-
+executable("cts-package-manager-sample-bin") {
   sources = [ "hello_world.cc" ]
-
-  deps = [ "//zircon/public/lib/zx" ]
 }
 
-executable("bin2") {
-  output_name = "cts-package-manager-sample2"
-
+executable("cts-package-manager-sample-bin2") {
   sources = [ "hello_world2.cc" ]
-
-  deps = [ "//zircon/public/lib/zx" ]
 }
 
-package("cts-package-manager-sample-component") {
+fuchsia_component("cts-package-manager-sample") {
+  manifest = "meta/package-manager-sample.cmx"
+  deps = [ ":cts-package-manager-sample-bin" ]
+}
+
+fuchsia_component("cts-package-manager-sample2") {
+  manifest = "meta/package-manager-sample2.cmx"
+  deps = [ ":cts-package-manager-sample-bin2" ]
+}
+
+fuchsia_package("cts-package-manager-sample-component") {
   deps = [
-    ":bin",
-    ":bin2",
-  ]
-
-  binaries = [
-    {
-      name = "cts-package-manager-sample"
-    },
-    {
-      name = "cts-package-manager-sample2"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/package-manager-sample.cmx")
-      dest = "package-manager-sample.cmx"
-    },
-    {
-      path = rebase_path("meta/package-manager-sample2.cmx")
-      dest = "package-manager-sample2.cmx"
-    },
+    ":cts-package-manager-sample",
+    ":cts-package-manager-sample2",
   ]
 }
