@@ -121,6 +121,11 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     let mut test_fake_methods_to_generate = Vec::<TokenStream>::new();
     let mut cmd_arg = None;
     let method = input.sig.ident.clone();
+    let asyncness = if let Some(_) = input.sig.asyncness {
+        quote! {.await}
+    } else {
+        quote! {}
+    };
     for arg in input.sig.inputs.clone() {
         match arg.clone() {
             FnArg::Receiver(_) => {
@@ -279,7 +284,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
             #preamble
             match futures::try_join!(#futures) {
                 Ok(_) => {
-                    #method(#args).await
+                    #method(#args)#asyncness
                 },
                 Err(e) => {
                     log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
@@ -290,7 +295,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     } else {
         quote! {
             #preamble
-            #method(#args).await
+            #method(#args)#asyncness
         }
     };
 
@@ -475,6 +480,43 @@ mod test {
                 EFut: std::future::Future<Output = bool>,
             {
                 echo(_cmd).await
+            }
+        };
+        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
+        assert_eq!(original, result.original);
+        assert_eq!(plugin, result.plugin);
+        assert_eq!(0, result.fake_tests.len());
+        Ok(())
+    }
+
+    #[test]
+    fn test_non_async_ffx_plugin_with_just_a_command() -> Result<(), Error> {
+        let proxies = Default::default();
+        let original: ItemFn = parse_quote! {
+            pub fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
+        };
+        let plugin: ItemFn = parse_quote! {
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+                _daemon_factory: D,
+                _remote_factory: R,
+                _is_experiment: E,
+                _cmd: EchoCommand
+            ) -> anyhow::Result<()>
+                where
+                D: FnOnce() -> DFut,
+                DFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
+                >,
+                R: FnOnce() -> RFut,
+                RFut: std::future::Future<
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
+                    >,
+                >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
+            {
+                echo(_cmd)
             }
         };
         let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
