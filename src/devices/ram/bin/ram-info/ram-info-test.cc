@@ -21,6 +21,17 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
   void set_close() { completer_action_ = CompleterAction::kClose; }
   void set_reply_error() { completer_action_ = CompleterAction::kReplyError; }
 
+  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync completer) override {
+    if (completer_action_ == CompleterAction::kClose) {
+      completer.Close(0);
+      return;
+    }
+    if (completer_action_ == CompleterAction::kReplyError) {
+      completer.ReplyError(ZX_ERR_BAD_STATE);
+      return;
+    }
+  }
+
   void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync completer) override {
     if (completer_action_ == CompleterAction::kClose) {

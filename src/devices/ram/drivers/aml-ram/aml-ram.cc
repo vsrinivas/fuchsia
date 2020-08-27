@@ -101,12 +101,9 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
-  // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.
-  bool all_grant_broken = info.pid == PDEV_PID_AMLOGIC_S905D2;
-
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio), std::move(irq),
-                                                 std::move(port), all_grant_broken);
+                                                 std::move(port), info.pid);
   if (!ac.check()) {
     zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
@@ -126,12 +123,23 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
 }
 
 AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-               bool all_grant_broken)
+               uint32_t device_pid)
     : DeviceType(parent),
       mmio_(std::move(mmio)),
       irq_(std::move(irq)),
-      port_(std::move(port)),
-      all_grant_broken_(all_grant_broken) {}
+      port_(std::move(port)) {
+  // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.
+  all_grant_broken_ = device_pid == PDEV_PID_AMLOGIC_S905D2;
+
+  // Read windowing data:
+  // The S905D2 and the T931 both support the DMC_STICKY_1 register, which is where the
+  // DDR Windowing tool writes its results.
+  if (device_pid == PDEV_PID_AMLOGIC_S905D2 || device_pid == PDEV_PID_AMLOGIC_T931) {
+    windowing_data_supported_ = true;
+  } else {
+    windowing_data_supported_ = false;
+  }
+}
 
 AmlRam::~AmlRam() {
   // Verify we drained all requests.
@@ -188,6 +196,15 @@ void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
           .key = kPortKeyWorkPendingMsg, .type = ZX_PKT_TYPE_USER, .status = ZX_OK};
       ZX_ASSERT(port_.queue(&packet) == ZX_OK);
     }
+  }
+}
+
+void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync completer) {
+  if (windowing_data_supported_) {
+    completer.ReplySuccess(mmio_.Read32(DMC_STICKY_1));
+  } else {
+    zxlogf(ERROR, "aml-ram: windowing data is not supported\n");
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 }
 

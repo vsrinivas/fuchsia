@@ -62,4 +62,13 @@ protocol Device {
     /// ZX_ERR_SHOULD_WAIT : Too many requests pending. A future request might succeed.
     /// Other errors indicate internal failure.
     MeasureBandwidth(BandwidthMeasurementConfig config) -> (BandwidthInfo info) error zx.status;
+
+    /// Retrieve the DDR Windowing tool results
+    /// The windowing tool runs in the bootloader and stores results in a sticky register.
+    ///
+    /// The return on success is the register value
+    ///
+    /// The return on failure is ZX_ERR_NOT_SUPPORTED if the hardware does not support
+    /// reading the sticky register.
+    GetDdrWindowingResults() -> (uint32 value) error zx.status;
 };

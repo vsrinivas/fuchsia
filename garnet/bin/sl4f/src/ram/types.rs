@@ -10,6 +10,7 @@ use fuchsia_zircon as zx;
 
 pub enum RamMethod {
     MeasureBandwidth,
+    GetDdrWindowingResults,
     UndefinedFunc,
 }
 
@@ -17,6 +18,7 @@ impl From<&str> for RamMethod {
     fn from(method: &str) -> RamMethod {
         match method {
             "MeasureBandwidth" => RamMethod::MeasureBandwidth,
+            "GetDdrWindowingResults" => RamMethod::GetDdrWindowingResults,
             _ => RamMethod::UndefinedFunc,
         }
     }

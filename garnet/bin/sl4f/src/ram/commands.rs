@@ -20,6 +20,10 @@ impl Facade for RamFacade {
                 let result = self.measure_bandwidth(val).await?;
                 Ok(to_value(result)?)
             }
+            RamMethod::GetDdrWindowingResults => {
+                let result = self.get_ddr_windowing_results().await?;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid Ram Facade FIDL method: {:?}", method),
         }
     }

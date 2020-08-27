@@ -59,6 +59,11 @@ constexpr uint32_t MEMBW_SP[MEMBW_MAX_CHANNELS] = {(0x0022 << 2), (0x0024 << 2),
 // TODO(reveman): Understand why we use 0x0300 instead of 0x0000.
 constexpr uint32_t MEMBW_PLL_CNTL = (0x0300 << 2);
 
+// Sticky bit that holds the DDR windowing tool results
+// address is: 0xff638804
+// We mapped at T931_DMC_BASE (0xff638000)
+constexpr uint32_t DMC_STICKY_1 = 0x804;
+
 constexpr uint64_t kMinimumCycleCount = 1024 * 512;
 constexpr uint64_t kMaximumCycleCount = 0xffffffff;
 
@@ -72,7 +77,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   static zx_status_t Create(void* context, zx_device_t* parent);
 
   AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-         bool all_grant_broken);
+         uint32_t device_pid);
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -93,6 +98,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   // Implementation of ram_metrics::Device::Interface FIDL service.
   void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync completer) override;
+  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync completer) override;
 
   void StartReadBandwithCounters(Job* job);
   void FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time);
@@ -112,7 +118,9 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   fbl::Mutex lock_;
   std::deque<Job> requests_ TA_GUARDED(lock_);
   bool shutdown_ TA_GUARDED(lock_) = false;
-  const bool all_grant_broken_;
+  bool all_grant_broken_ = true;
+
+  bool windowing_data_supported_ = false;
 };
 
 }  // namespace amlogic_ram

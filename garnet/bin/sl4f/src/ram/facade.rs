@@ -80,6 +80,16 @@ impl RamFacade {
             }
         }
     }
+    pub async fn get_ddr_windowing_results(&self) -> Result<u32, Error> {
+        let tag = "RamFacade::get_ddr_windowing_results";
+        match self.get_proxy()?.get_ddr_windowing_results().await? {
+            Ok(r) => Ok(r),
+            Err(e) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("GetDdrWindowingResults failed {:?}", e)
+            ),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -95,6 +105,9 @@ mod tests {
     use fuchsia_zircon as zx;
     use futures::{future::Future, join, stream::StreamExt};
     use matches::assert_matches;
+
+    /// An arbitrary rigistry value, for tests.
+    const TEST_REG_VALUE: u32 = 33;
 
     struct MockDeviceBuilder {
         expected: Vec<Box<dyn FnOnce(DeviceRequest) + Send + 'static>>,
@@ -115,14 +128,27 @@ mod tests {
             val: SerializableBandwidthMeasurementConfig,
             res: Result<SerializableBandwidthInfo, zx::zx_status_t>,
         ) -> Self {
-            self.push(move |DeviceRequest::MeasureBandwidth { config, responder }| {
-                assert_eq!(BandwidthMeasurementConfig::from(val), config);
-                responder
-                    // Here we convert the result we passed in to the fidl version
-                    .send(&mut res.map(|bandwidth_info| BandwidthInfo::from(bandwidth_info)))
-                    .expect("failed to respond to MeasureBandwidth request")
+            self.push(move |req| match req {
+                DeviceRequest::MeasureBandwidth { config, responder } => {
+                    assert_eq!(BandwidthMeasurementConfig::from(val), config);
+                    responder
+                        // Here we convert the result we passed in to the fidl version
+                        .send(&mut res.map(|bandwidth_info| BandwidthInfo::from(bandwidth_info)))
+                        .expect("failed to respond to MeasureBandwidth request")
+                }
+                req => panic!("unexpected request: {:?}", req),
             })
         }
+
+        fn expect_get_ddr_windowing_results(self, res: Result<u32, zx::zx_status_t>) -> Self {
+            self.push(move |req| match req {
+                DeviceRequest::GetDdrWindowingResults { responder } => {
+                    responder.send(&mut res.clone()).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
         fn build(self) -> (RamFacade, impl Future<Output = ()>) {
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<DeviceMarker>().unwrap();
@@ -170,6 +196,17 @@ mod tests {
             assert_matches!(
                 facade.measure_bandwidth(input_config).await,
                 Ok(info) if info == output_info);
+        };
+
+        join!(device, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_ddr_windowing_results_ok() {
+        let (facade, device) =
+            MockDeviceBuilder::new().expect_get_ddr_windowing_results(Ok(TEST_REG_VALUE)).build();
+        let test = async move {
+            assert_matches!(facade.get_ddr_windowing_results().await, Ok(TEST_REG_VALUE));
         };
 
         join!(device, test);
