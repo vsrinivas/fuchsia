@@ -17,8 +17,8 @@ zedboot_deps = []
 
 # Core things needed for booting (local and netboot).
 zedboot_deps += [
+  "//bundles/drivers:bootstrap",
   "//src/bringup/bundles:zedboot",
-  "//src/devices/bundles:bootstrap",
   "//src/storage/fshost",
 ]
 
@@ -68,11 +68,9 @@ zedboot_deps += [
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
-  "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/ethertap",
   "//src/connectivity/ethernet/drivers/rndis-function",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",
-  "//src/connectivity/network/drivers/network-device",
   "//src/devices/bin/driver_manager",
   "//src/devices/block/drivers/aml-sd-emmc",
   "//src/devices/block/drivers/ftl",
@@ -119,13 +117,10 @@ zedboot_deps += [
   "//src/devices/usb/drivers/usb-test/usb-tester",
   "//src/devices/usb/drivers/usb-virtual-bus",
   "//src/diagnostics/dlog",
-  "//src/graphics/display/drivers/display",
   "//src/media/audio/drivers/alc5663",
   "//src/power/shutdown-shim",
   "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
-  "//src/ui/input/drivers/hid",
-  "//src/ui/input/drivers/hid-buttons",
   "//src/ui/input/drivers/hid-input-report",
   "//src/ui/input/drivers/hidctl",
 ]
