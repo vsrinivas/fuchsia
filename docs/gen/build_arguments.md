@@ -1118,7 +1118,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/config.gni#11)
+From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/0e758ebcb4bb28f4820d5183547e43af197b1cf4/config.gni#11)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1127,7 +1127,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"67"`
 
-From [//third_party/icu/version.gni:10](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/version.gni#10)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/0e758ebcb4bb28f4820d5183547e43af197b1cf4/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1135,7 +1135,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/0e758ebcb4bb28f4820d5183547e43af197b1cf4/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1697,7 +1697,7 @@ From //src/connectivity/management/BUILD.gn:6
 
 **Current value (from the default):** `[]`
 
-From //src/bringup/bin/netsvc/BUILD.gn:9
+From //src/bringup/bin/netsvc/BUILD.gn:11
 
 ### omaha_app_id
 Default app id will always return no update.
