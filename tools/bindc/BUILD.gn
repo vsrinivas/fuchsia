@@ -13,10 +13,7 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
 
     with_unit_tests = true
-    test_environments = [
-      linux_env,
-      mac_env,
-    ]
+    test_environments = [ host_env ]
 
     deps = [
       "//src/devices/bind/debugger:lib",
