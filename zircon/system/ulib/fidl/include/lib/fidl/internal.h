@@ -313,8 +313,11 @@ struct FidlCodedBits FIDL_INTERNAL_INHERIT_TYPE_T {
 // the purview of this library. It's easier for the compiler to stash it.
 struct FidlCodedStruct FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
-  // This way `tag` and `element_count` together takes 4 bytes.
-  const uint32_t element_count : 24;
+  // element_count should be a uint32_t, but for the sake of binary size
+  // a uint16_t is used (all existing values fit within this size).
+  // If a larger size is needed, replace FidlCodedStruct or add a second
+  // variant that supports the larger size.
+  const uint16_t element_count;
   const uint32_t size;
   const struct FidlStructElement* const elements;
   const char* name;  // may be nullptr if omitted at compile time
@@ -354,8 +357,11 @@ struct FidlCodedXUnion FIDL_INTERNAL_INHERIT_TYPE_T {
 // |element|.
 struct FidlCodedArray FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
-  // This way `tag` and `element_size` together takes 4 bytes.
-  const uint32_t element_size : 24;
+  // element_size should be a uint32_t, but for the sake of binary size
+  // a uint16_t is used (all existing values fit within this size).
+  // If a larger size is needed, replace FidlCodedArray or add a second
+  // variant that supports the larger size.
+  const uint16_t element_size;
   const uint32_t array_size;
   const fidl_type_t* const element;
 

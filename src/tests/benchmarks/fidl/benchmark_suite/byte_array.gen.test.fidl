@@ -18,8 +18,3 @@ struct ByteArray256 {
 struct ByteArray4096 {
     array<uint8>:4096 bytes;
 };
-
-[BindingsDenylist = "rust, cpp, llcpp, walker"]
-struct ByteArray65536 {
-    array<uint8>:65536 bytes;
-};

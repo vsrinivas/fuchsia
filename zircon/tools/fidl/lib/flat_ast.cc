@@ -811,6 +811,13 @@ bool ParseBound(Reporter* reporter, const SourceSpan& span, const std::string& i
   }
 }
 
+bool Library::VerifyInlineSize(const Struct* struct_decl) {
+  if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
+    return Library::Fail(ErrInlineSizeExceeds64k, *struct_decl);
+  }
+  return true;
+}
+
 bool MaxBytesConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   uint32_t bound;
   if (!ParseBound(reporter, attribute.span(), attribute.value, &bound))
@@ -3435,6 +3442,15 @@ bool Library::Compile() {
   }
   if (!verify_attributes_step.Done())
     return false;
+
+  for (Decl* decl : declaration_order_) {
+    if (decl->kind == Decl::Kind::kStruct) {
+      auto struct_decl = static_cast<const Struct*>(decl);
+      if (!VerifyInlineSize(struct_decl)) {
+        return false;
+      }
+    }
+  }
 
   if (!dependencies_.VerifyAllDependenciesWereUsed(*this, reporter_))
     return false;

@@ -13,6 +13,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "array_util.h"
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
 
@@ -21,20 +22,6 @@
 
 namespace fidl {
 namespace {
-
-// All sizes in fidl encoding tables are 32 bits. The fidl compiler
-// normally enforces this. Check manually in manual tests.
-template <typename T, size_t N>
-uint32_t ArrayCount(T const (&array)[N]) {
-  static_assert(N < UINT32_MAX, "Array is too large!");
-  return N;
-}
-
-template <typename T, size_t N>
-uint32_t ArraySize(T const (&array)[N]) {
-  static_assert(sizeof(array) < UINT32_MAX, "Array is too large!");
-  return sizeof(array);
-}
 
 void helper_expect_peer_valid(zx_handle_t channel) {
   const char* foo = "hello";

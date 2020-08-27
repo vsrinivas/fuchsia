@@ -6,19 +6,8 @@
 
 #include <lib/fidl/internal.h>
 
+#include "array_util.h"
 #include "fidl_structs.h"
-
-namespace {
-
-// All sizes in fidl encoding tables are 32 bits. The fidl compiler
-// normally enforces this. Check manually in manual tests.
-template <typename T, size_t N>
-uint32_t ArrayCount(T const (&array)[N]) {
-  static_assert(N < UINT32_MAX, "Array is too large!");
-  return N;
-}
-
-}  // namespace
 
 // Handle types.
 const FidlCodedHandle nonnullable_handle = {

@@ -40,16 +40,6 @@ func init() {
 				},
 				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Rust},
 			},
-			{
-				Name: "ByteArray/65536",
-				Comment: `
-			65536 byte array in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
-				Config: config.Config{
-					"size": 65536,
-				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Rust},
-			},
 		},
 	})
 }

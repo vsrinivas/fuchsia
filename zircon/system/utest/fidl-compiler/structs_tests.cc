@@ -207,4 +207,29 @@ struct Duplicates {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateStructMemberName);
 }
 
+TEST(StructsTests, MaxInlineSize) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct MyStruct {
+    array<uint8>:65535 arr;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+}
+
+TEST(StructsTests, InlineSizeExceeds64k) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct MyStruct {
+    array<uint8>:65536 arr;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrInlineSizeExceeds64k);
+}
+
 }  // namespace

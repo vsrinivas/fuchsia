@@ -11,6 +11,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "array_util.h"
 #include "extra_messages.h"
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -58,20 +59,6 @@ constexpr zx_handle_t dummy_handle_26 = static_cast<zx_handle_t>(49);
 constexpr zx_handle_t dummy_handle_27 = static_cast<zx_handle_t>(50);
 constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
 constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
-
-// All sizes in fidl encoding tables are 32 bits. The fidl compiler
-// normally enforces this. Check manually in manual tests.
-template <typename T, size_t N>
-uint32_t ArrayCount(T const (&array)[N]) {
-  static_assert(N < UINT32_MAX, "Array is too large!");
-  return N;
-}
-
-template <typename T, size_t N>
-uint32_t ArraySize(T const (&array)[N]) {
-  static_assert(sizeof(array) < UINT32_MAX, "Array is too large!");
-  return sizeof(array);
-}
 
 TEST(NullParameters, validate_null_validate_parameters) {
   zx_handle_t handles[] = {static_cast<zx_handle_t>(23)};

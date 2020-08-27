@@ -862,6 +862,7 @@ class Library {
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
   void VerifyDeclAttributes(Decl* decl);
+  bool VerifyInlineSize(const Struct* decl);
 
  public:
   bool CompileDecl(Decl* decl);

@@ -213,6 +213,8 @@ constexpr ErrorDef<const flat::Type *, flat::Name, std::string_view, flat::Name>
     ErrResourceTypeInValueType(
         "'{}' is a resource type (may contain handles), but '{}' is not. "
         "either remove member '{}', or declare '{}' with the `resource` modifier");
+constexpr ErrorDef ErrInlineSizeExceeds64k(
+    "inline objects greater than 64k not currently supported");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
