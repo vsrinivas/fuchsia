@@ -5,6 +5,7 @@
 #![recursion_limit = "256"]
 
 use {
+    crate::util::{into_urls, to_display_str},
     anyhow::{anyhow, Error},
     argh::FromArgs,
     async_utils::event::Event,
@@ -14,7 +15,7 @@ use {
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleState},
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{self as fasync, Time, TimeoutExt},
-    fuchsia_component::{client, fuchsia_single_component_package_url, server::ServiceFs},
+    fuchsia_component::{client, server::ServiceFs},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -24,32 +25,15 @@ use {
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
         FutureExt,
     },
-    log::{error, warn},
+    log::{error, info, warn},
 };
 
 #[cfg(test)]
 mod test_util;
+mod util;
 
 /// The maximum expected length of component termination.
 const COMPONENT_TERMINATION_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
-
-/// The URLs for components required by the A2DP Sink role.
-static SINK_COMPONENT_URLS: &'static [&'static str] =
-    &[fuchsia_single_component_package_url!("bt-a2dp-sink")];
-
-/// The URLs for components required by the A2DP Source role.
-static SOURCE_COMPONENT_URLS: &'static [&'static str] = &[
-    fuchsia_single_component_package_url!("bt-a2dp-source"),
-    fuchsia_single_component_package_url!("bt-avrcp-target"),
-];
-
-/// Returns a slice of URLs required for `role`.
-fn into_urls(role: Role) -> &'static [&'static str] {
-    match role {
-        Role::Source => SOURCE_COMPONENT_URLS,
-        Role::Sink => SINK_COMPONENT_URLS,
-    }
-}
 
 /// Holds the state needed to launch the A2DP Profile component requested by the
 /// AudioMode FIDL protocol.
@@ -172,6 +156,7 @@ async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launche
         select! {
             request = requests.next().fuse() => {
                 if let Some(AudioModeRequest::SetRole { role, responder }) = request {
+                    info!("Setting A2DP mode to {}", to_display_str(role));
                     match handler.handle(role).await {
                         Ok(()) => {
                             // Error can be ignored since there is nothing more to do in the case
@@ -266,7 +251,7 @@ async fn main() {
         return;
     }
 
-    fuchsia_syslog::init_with_tags(&["a2dp-manager"]).expect("Can't init logger");
+    fuchsia_syslog::init().expect("Can't init logger");
     let launcher = client::launcher().expect("connect to Launcher service");
     let (sender, receiver) = mpsc::channel(0);
 
@@ -293,12 +278,6 @@ mod tests {
         matches::assert_matches,
         std::task::Poll,
     };
-
-    #[test]
-    fn into_urls_returns_expected_number_of_packages() {
-        assert_eq!(into_urls(Role::Source).len(), 2);
-        assert_eq!(into_urls(Role::Sink).len(), 1);
-    }
 
     #[test]
     fn client_requests_are_forwarded() {

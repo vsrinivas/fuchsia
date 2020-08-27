@@ -38,6 +38,7 @@ rustc_binary("bin") {
   sources = [
     "src/main.rs",
     "src/test_util.rs",
+    "src/util.rs",
   ]
 }
 
