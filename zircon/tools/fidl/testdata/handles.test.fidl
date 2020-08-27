@@ -47,7 +47,7 @@ protocol SomeProtocol {
 
 using aliased_plain_handle = handle;
 using aliased_subtype_handle = handle:VMO;
-using aliased_rights_handle = handle<vmo, 1>;
+using aliased_rights_handle = handle:<VMO, 1>;
 
 struct Handles {
     handle plain_handle;
@@ -79,7 +79,7 @@ struct Handles {
     handle:VMAR vmar_handle;
     handle:VMO vmo_handle;
 
-    handle<vmo, 1> rights_handle;
+    handle:<VMO, 1> rights_handle;
 
     aliased_plain_handle aliased_plain_handle_field;
     aliased_subtype_handle aliased_subtype_handle_field;

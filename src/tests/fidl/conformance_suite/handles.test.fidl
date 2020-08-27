@@ -36,9 +36,24 @@ struct VectorOfOptionalHandles {
     vector<handle?> v;
 };
 
+// This is not a reference to library zx to avoid complexity in the test data.
+// A local handle is defined here that contains subtypes that this test cares
+// about.
+enum obj_type : uint32 {
+    NONE = 0;
+    CHANNEL = 4;
+    EVENT = 5;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 [BindingsDenylist = "cpp, llcpp"]
 struct MultipleHandleSubtypes {
     handle untyped;
-    handle<event> event;
-    handle<channel> channel;
+    handle:EVENT event;
+    handle:CHANNEL channel;
 };

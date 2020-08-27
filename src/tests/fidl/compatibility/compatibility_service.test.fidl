@@ -4,6 +4,33 @@
 
 library fidl.test.compatibility;
 
+// This is not a reference to library zx to avoid complexity in the test data.
+// A local handle is defined here that contains subtypes that this test cares
+// about.
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+    CHANNEL = 4;
+    EVENT = 5;
+    PORT = 6;
+    INTERRUPT = 9;
+    LOG = 12;
+    SOCKET = 14;
+    EVENTPAIR = 16;
+    JOB = 17;
+    VMAR = 18;
+    FIFO = 19;
+    TIMER = 22;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct this_is_a_struct {
     string s;
 };
@@ -233,32 +260,32 @@ struct vectors {
 // privileges to create.
 struct handles {
     handle handle_handle;
-    handle<process> process_handle;
-    handle<thread> thread_handle;
-    handle<vmo> vmo_handle;
-    handle<event> event_handle;
-    handle<port> port_handle;
-    handle<socket> socket_handle;
-    handle<eventpair> eventpair_handle;
-    handle<job> job_handle;
-    handle<vmar> vmar_handle;
-    handle<fifo> fifo_handle;
-    handle<timer> timer_handle;
+    handle:PROCESS process_handle;
+    handle:THREAD thread_handle;
+    handle:VMO vmo_handle;
+    handle:EVENT event_handle;
+    handle:PORT port_handle;
+    handle:SOCKET socket_handle;
+    handle:EVENTPAIR eventpair_handle;
+    handle:JOB job_handle;
+    handle:VMAR vmar_handle;
+    handle:FIFO fifo_handle;
+    handle:TIMER timer_handle;
     handle? nullable_handle_handle;
-    handle<process>? nullable_process_handle;
-    handle<thread>? nullable_thread_handle;
-    handle<vmo>? nullable_vmo_handle;
-    handle<channel>? nullable_channel_handle;
-    handle<event>? nullable_event_handle;
-    handle<port>? nullable_port_handle;
-    handle<interrupt>? nullable_interrupt_handle;
-    handle<debuglog>? nullable_log_handle;
-    handle<socket>? nullable_socket_handle;
-    handle<eventpair>? nullable_eventpair_handle;
-    handle<job>? nullable_job_handle;
-    handle<vmar>? nullable_vmar_handle;
-    handle<fifo>? nullable_fifo_handle;
-    handle<timer>? nullable_timer_handle;
+    handle:PROCESS? nullable_process_handle;
+    handle:THREAD? nullable_thread_handle;
+    handle:VMO? nullable_vmo_handle;
+    handle:CHANNEL? nullable_channel_handle;
+    handle:EVENT? nullable_event_handle;
+    handle:PORT? nullable_port_handle;
+    handle:INTERRUPT? nullable_interrupt_handle;
+    handle:LOG? nullable_log_handle;
+    handle:SOCKET? nullable_socket_handle;
+    handle:EVENTPAIR? nullable_eventpair_handle;
+    handle:JOB? nullable_job_handle;
+    handle:VMAR? nullable_vmar_handle;
+    handle:FIFO? nullable_fifo_handle;
+    handle:TIMER? nullable_timer_handle;
 };
 
 // Arbitrary.
