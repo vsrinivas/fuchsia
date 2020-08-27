@@ -774,6 +774,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
     }
 
     impl Decodable for $int_ty {
+        #[inline(always)]
         fn new_empty() -> Self { 0 as $int_ty }
 
         #[inline(always)]
@@ -810,6 +811,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
     }
 
     impl Decodable for $float_ty {
+        #[inline(always)]
         fn new_empty() -> Self { 0 as $float_ty }
 
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
@@ -933,6 +935,7 @@ impl Encodable for bool {
 }
 
 impl Decodable for bool {
+    #[inline(always)]
     fn new_empty() -> Self {
         false
     }
@@ -964,6 +967,7 @@ impl Encodable for u8 {
 }
 
 impl Decodable for u8 {
+    #[inline(always)]
     fn new_empty() -> Self {
         0
     }
@@ -994,6 +998,7 @@ impl Encodable for i8 {
 }
 
 impl Decodable for i8 {
+    #[inline(always)]
     fn new_empty() -> Self {
         0
     }
@@ -1292,6 +1297,7 @@ impl Encodable for String {
 }
 
 impl Decodable for String {
+    #[inline(always)]
     fn new_empty() -> Self {
         String::new()
     }
@@ -1342,6 +1348,7 @@ impl Encodable for Option<String> {
 }
 
 impl Decodable for Option<String> {
+    #[inline(always)]
     fn new_empty() -> Self {
         None
     }
@@ -1386,6 +1393,7 @@ impl<T: Encodable> Encodable for Vec<T> {
 }
 
 impl<T: Decodable> Decodable for Vec<T> {
+    #[inline(always)]
     fn new_empty() -> Self {
         Vec::new()
     }
@@ -1426,6 +1434,7 @@ impl<T: Encodable> Encodable for Option<Vec<T>> {
 }
 
 impl<T: Decodable> Decodable for Option<Vec<T>> {
+    #[inline(always)]
     fn new_empty() -> Self {
         None
     }
@@ -1547,6 +1556,7 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline(always)]
             fn new_empty() -> Self {
                 Self::empty()
             }
@@ -1634,6 +1644,7 @@ macro_rules! fidl_enum {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline(always)]
             fn new_empty() -> Self {
                 // Returns the first declared variant
                 #![allow(unreachable_code)]
@@ -1672,6 +1683,7 @@ impl Encodable for Handle {
 }
 
 impl Decodable for Handle {
+    #[inline(always)]
     fn new_empty() -> Self {
         Handle::invalid()
     }
@@ -1705,6 +1717,7 @@ impl Encodable for Option<Handle> {
 }
 
 impl Decodable for Option<Handle> {
+    #[inline(always)]
     fn new_empty() -> Self {
         None
     }
@@ -1748,6 +1761,7 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Decodable for $ty<$($($generic,)*)*> {
+            #[inline(always)]
             fn new_empty() -> Self {
                 <$ty<$($($generic,)*)*> as $crate::handle::HandleBased>::from_handle($crate::handle::Handle::invalid())
             }
@@ -1780,6 +1794,7 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Decodable for Option<$ty<$($($generic,)*)*>> {
+            #[inline(always)]
             fn new_empty() -> Self { None }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 let mut handle: Option<$crate::handle::Handle> = None;
@@ -1814,6 +1829,7 @@ impl Encodable for zx_status::Status {
 }
 
 impl Decodable for zx_status::Status {
+    #[inline(always)]
     fn new_empty() -> Self {
         Self::from_raw(0)
     }
@@ -1855,6 +1871,7 @@ impl Encodable for EpitaphBody {
 }
 
 impl Decodable for EpitaphBody {
+    #[inline(always)]
     fn new_empty() -> Self {
         Self { error: zx_status::Status::new_empty() }
     }
@@ -1973,6 +1990,7 @@ fn check_for_presence(
 }
 
 impl<T: Autonull> Decodable for Option<Box<T>> {
+    #[inline(always)]
     fn new_empty() -> Self {
         None
     }
@@ -2223,6 +2241,7 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Decodable for $name {
+          #[inline(always)]
           fn new_empty() -> Self { $name }
           unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
             let mut x = 0u8;
@@ -2481,6 +2500,7 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline(always)]
             fn new_empty() -> Self {
                 Self::empty()
             }
@@ -2570,6 +2590,7 @@ where
     O: Decodable,
     E: Decodable,
 {
+    #[inline(always)]
     fn new_empty() -> Self {
         Ok(<O as Decodable>::new_empty())
     }
@@ -2712,6 +2733,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Decodable for $name {
+            #[inline(always)]
             fn new_empty() -> Self {
                 #![allow(unreachable_code)]
                 $(
@@ -3281,6 +3303,7 @@ impl Encodable for () {
 }
 
 impl Decodable for () {
+    #[inline(always)]
     fn new_empty() -> Self {
         ()
     }
