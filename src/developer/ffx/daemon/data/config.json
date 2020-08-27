@@ -7,11 +7,13 @@
     "port": "$FUCHSIA_SSH_PORT",
     "priv": [
       "$FUCHSIA_SSH_KEY",
+      "$HOME/.ssh/fuchsia_ed25519",
       "$FUCHSIA_DIR/.ssh/pkey"
     ],
     "pub": [
-      "$FUCHSIA_DIR/.ssh/authorized_keys",
-      "$HOME/.ssh/id_rsa.pub"
+      "$FUCHSIA_AUTHORIZED_KEYS",
+      "$HOME/.ssh/fuchsia_authorized_keys",
+      "$FUCHSIA_DIR/.ssh/authorized_keys"
     ]
   },
   "events": {
