@@ -16,3 +16,9 @@ source_set("fake_sanitizer_cov") {
   ]
   deps = [ "//src/lib/fuzzing/fidl:proxy_lib" ]
 }
+
+source_set("fake_sanitizer_cov_proxy") {
+  testonly = true
+  sources = [ "fake-sanitizer-cov-proxy.cc" ]
+  deps = [ "//src/lib/fuzzing/fidl:core_lib" ]
+}

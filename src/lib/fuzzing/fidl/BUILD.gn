@@ -23,6 +23,21 @@ source_set("core_lib") {
   public_configs = [ ":config" ]
 }
 
+source_set("engine_lib") {
+  sources = [
+    "coverage.cc",
+    "data-provider.cc",
+  ]
+  public_deps = [
+    ":core_lib",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+  deps = [ "//zircon/system/ulib/async-loop:async-loop-default" ]
+}
+
 source_set("proxy_lib") {
   sources = [ "sanitizer-cov-proxy.cc" ]
   public_deps = [
@@ -60,6 +75,20 @@ test("fidl_fuzzer_core_unittests") {
   ]
 }
 
+# This test links a fake implementation of LLVMFuzzerTestOneInput.
+test("fidl_fuzzer_engine_unittests") {
+  sources = [
+    "coverage-unittest.cc",
+    "data-provider-unittest.cc",
+  ]
+  deps = [
+    ":engine_lib",
+    ":test_deps",
+    "test:fake_libfuzzer",
+    "test:fake_sanitizer_cov_proxy",
+  ]
+}
+
 # This test links a fake implementation of the __sanitizer_cov_* interface.
 test("fidl_fuzzer_proxy_unittests") {
   sources = [ "sanitizer-cov-proxy-unittest.cc" ]
@@ -83,11 +112,16 @@ group("test_deps") {
 test_package("fidl-fuzzer-tests") {
   deps = [
     ":fidl_fuzzer_core_unittests",
+    ":fidl_fuzzer_engine_unittests",
     ":fidl_fuzzer_proxy_unittests",
   ]
   tests = [
     {
       name = "fidl_fuzzer_core_unittests"
+      environments = [ emu_env ]
+    },
+    {
+      name = "fidl_fuzzer_engine_unittests"
       environments = [ emu_env ]
     },
     {

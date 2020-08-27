@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 
 #include <fbl/auto_call.h>
 

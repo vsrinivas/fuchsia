@@ -36,6 +36,14 @@ class SharedMemory {
   bool is_mapped() const { return addr_ != 0; }
   const zx::vmo &vmo() const { return vmo_; }
   zx_vaddr_t addr() const { return addr_; }
+  template <typename T>
+  T *begin() const {
+    return reinterpret_cast<T *>(addr_);
+  }
+  template <typename T>
+  T *end() const {
+    return reinterpret_cast<T *>(addr_ + len_);
+  }
   size_t len() const { return len_; }
 
   // Create a VMO of at least |len| bytes and map it. This method can be called at most once, and is

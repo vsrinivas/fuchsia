@@ -43,6 +43,9 @@ zx_status_t SharedMemory::Share(zx::vmo *out) {
 }
 
 zx_status_t SharedMemory::Link(const zx::vmo &vmo, size_t len) {
+  if (len == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   Reset();
   size_t size;
   zx_status_t status = vmo.get_size(&size);

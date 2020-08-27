@@ -26,6 +26,7 @@
 library fuchsia.fuzzer;
 
 using fuchsia.mem;
+using zx;
 
 /// Aggregated sanitizer coverage data proxied from other processes.
 ///
@@ -67,4 +68,43 @@ protocol Coverage {
     ///
     /// See https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
     AddTraces(handle<vmo> instruction_traces) -> ();
+};
+
+/// Test input partition label length.
+const int32 MAX_LABEL_SIZE = 256;
+
+/// Maximum number of labelled data consumers to a `DataProvider`.instance.
+const int32 MAX_LABEL_COUNT = 128;
+
+/// Partitions fuzzer test inputs for multiple consumers based on in-place labels.
+///
+/// For traditional single-process fuzzers, the fuzzing engine generates a sequence of bytes known
+/// as a test input that the fuzz target function uses to exercise the interface to the code under
+/// test. For multi-process FIDL fuzzing, it may need to provide data to fake dependencies of the
+/// code under test in addition to the fuzz target function. To achieve this, the fuzzing engine can
+/// acts as a server for this protocol with the fuzz target function and one or more of the proxies
+/// as clients.
+///
+/// Implementations should split the single test input between the different consumers in a way that
+/// is "fuzzer-stable", i.e. most mutations such as adding or removing bytes shouldn't radically
+/// alter what data the consumers receive.
+[Discoverable]
+protocol DataProvider {
+    /// Configures how test inputs will be partitioned.
+    ///
+    /// Registers the provided VMO to be used for transferring the test input of the primary fuzz
+    /// target function, which is the primary and first data consumer of this interface. In order to
+    /// correctly reserve test input for proxies which may connect mid-iteration, it also must
+    /// define labels to be used in partitioning at the outset.
+    ///
+    /// It is an error to call this method more than once. Subsequent calls are ignored.
+    Configure(handle<vmo> vmo, vector<string:MAX_LABEL_SIZE>:MAX_LABEL_COUNT? labels) -> ();
+
+    /// Associates a shared VMO with a partition label.
+    ///
+    /// Registers the provided VMO to be used for transferring the test input of an additional data
+    /// consumer, as indicated by a label previously provided to `Configure`.
+    ///
+    /// Returns ZX_ERR_INVALID_ARGS if label is unrecognized.
+    AddConsumer(string:MAX_LABEL_SIZE label, handle<vmo> vmo) -> (zx.status result);
 };
