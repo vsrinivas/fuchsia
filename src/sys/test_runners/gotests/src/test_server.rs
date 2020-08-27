@@ -16,6 +16,7 @@ use {
         future::{abortable, AbortHandle, FutureExt as _},
         lock::Mutex,
         prelude::*,
+        TryStreamExt,
     },
     log::{debug, error},
     regex::bytes::Regex,
@@ -70,10 +71,15 @@ impl SuiteServer for TestServer {
         test_component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        for invocation in invocations {
-            self.run_test(invocation, &run_options, test_component.clone(), run_listener).await?;
-        }
-        Ok(())
+        let num_parallel = Self::get_parallel_count(&run_options);
+
+        let invocations = stream::iter(invocations);
+        invocations
+            .map(Ok)
+            .try_for_each_concurrent(num_parallel, |invocation| {
+                self.run_test(invocation, test_component.clone(), run_listener)
+            })
+            .await
     }
 
     /// Run this server.
@@ -158,9 +164,8 @@ impl TestServer {
     async fn run_test<'a>(
         &'a self,
         invocation: Invocation,
-        _run_options: &ftest::RunOptions,
         component: Arc<Component>,
-        run_listener: &RunListenerProxy,
+        run_listener: &'a RunListenerProxy,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
         debug!("Running test {}", test);
@@ -379,7 +384,9 @@ mod tests {
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
         test_runners_lib::cases::TestCaseInfo,
-        test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
+        test_runners_test_lib::{
+            assert_event_ord, collect_listener_event, names_to_invocation, ListenerEvent,
+        },
     };
 
     fn create_ns_from_raw_ns(
@@ -546,7 +553,7 @@ mod tests {
                 "TestSkipped",
                 "TestPrefixExtra",
             ]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();
@@ -575,9 +582,54 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests_parallel() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let mut events = run_tests(
+            names_to_invocation(vec![
+                "TestCrashing",
+                "TestPassing",
+                "TestFailing",
+                "TestPrefix",
+                "TestSkipped",
+                "TestPrefixExtra",
+            ]),
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+        )
+        .await
+        .unwrap();
+
+        let mut expected_events = vec![
+            ListenerEvent::start_test("TestCrashing"),
+            ListenerEvent::finish_test("TestCrashing", TestResult { status: Some(Status::Failed) }),
+            ListenerEvent::start_test("TestPassing"),
+            ListenerEvent::finish_test("TestPassing", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::start_test("TestFailing"),
+            ListenerEvent::finish_test("TestFailing", TestResult { status: Some(Status::Failed) }),
+            ListenerEvent::start_test("TestPrefix"),
+            ListenerEvent::finish_test("TestPrefix", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::start_test("TestSkipped"),
+            ListenerEvent::finish_test("TestSkipped", TestResult { status: Some(Status::Skipped) }),
+            ListenerEvent::start_test("TestPrefixExtra"),
+            ListenerEvent::finish_test(
+                "TestPrefixExtra",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+        assert_event_ord(&events);
+
+        expected_events.sort();
+        events.sort();
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
         let events =
-            run_tests(vec![], RunOptions { include_disabled_tests: Some(false) }).await.unwrap();
+            run_tests(vec![], RunOptions { include_disabled_tests: Some(false), parallel: None })
+                .await
+                .unwrap();
 
         let expected_events = vec![ListenerEvent::finish_all_test()];
 
@@ -589,7 +641,7 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["TestPassing"]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();

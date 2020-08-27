@@ -42,7 +42,7 @@ tests will be marked as enabled when enumerated.
 Run:
 
 ```bash
-fx test go-test-runner-unit-tests
+fx test go-test-runner-unit-test
 fx test go_runner_integration_test
 ```
 

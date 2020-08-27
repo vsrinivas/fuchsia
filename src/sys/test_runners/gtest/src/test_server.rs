@@ -16,6 +16,7 @@ use {
     futures::{
         future::{abortable, AbortHandle, Future, FutureExt as _},
         lock::Mutex,
+        prelude::*,
         TryStreamExt,
     },
     log::{debug, error, info},
@@ -186,10 +187,15 @@ impl SuiteServer for TestServer {
         component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        for invocation in invocations {
-            self.run_test(invocation, &run_options, component.clone(), run_listener).await?;
-        }
-        Ok(())
+        let num_parallel = Self::get_parallel_count(&run_options);
+
+        let invocations = stream::iter(invocations);
+        invocations
+            .map(Ok)
+            .try_for_each_concurrent(num_parallel, |invocation| {
+                self.run_test(invocation, &run_options, component.clone(), run_listener)
+            })
+            .await
     }
 
     /// Run this server.
@@ -585,7 +591,9 @@ mod tests {
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
         std::fs,
-        test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
+        test_runners_test_lib::{
+            assert_event_ord, collect_listener_event, names_to_invocation, ListenerEvent,
+        },
         uuid::Uuid,
     };
 
@@ -800,7 +808,7 @@ mod tests {
                 "SampleTest2.SimplePass",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();
@@ -834,6 +842,64 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests_parallel() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let mut events = run_tests(
+            names_to_invocation(vec![
+                "SampleTest1.SimpleFail",
+                "SampleTest1.Crashing",
+                "SampleTest2.SimplePass",
+                "Tests/SampleParameterizedTestFixture.Test/0",
+                "Tests/SampleParameterizedTestFixture.Test/1",
+                "Tests/SampleParameterizedTestFixture.Test/2",
+            ]),
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+        )
+        .await
+        .unwrap();
+
+        let mut expected_events = vec![
+            ListenerEvent::start_test("SampleTest1.SimpleFail"),
+            ListenerEvent::finish_test(
+                "SampleTest1.SimpleFail",
+                TestResult { status: Some(Status::Failed) },
+            ),
+            ListenerEvent::start_test("SampleTest1.Crashing"),
+            ListenerEvent::finish_test(
+                "SampleTest1.Crashing",
+                TestResult { status: Some(Status::Failed) },
+            ),
+            ListenerEvent::start_test("SampleTest2.SimplePass"),
+            ListenerEvent::finish_test(
+                "SampleTest2.SimplePass",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/0"),
+            ListenerEvent::finish_test(
+                "Tests/SampleParameterizedTestFixture.Test/0",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/1"),
+            ListenerEvent::finish_test(
+                "Tests/SampleParameterizedTestFixture.Test/1",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/2"),
+            ListenerEvent::finish_test(
+                "Tests/SampleParameterizedTestFixture.Test/2",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+        assert_event_ord(&events);
+
+        expected_events.sort();
+        events.sort();
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn run_disabled_tests_exclude() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let events = run_tests(
@@ -841,7 +907,7 @@ mod tests {
                 "SampleDisabled.DISABLED_TestPass",
                 "SampleDisabled.DISABLED_TestFail",
             ]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();
@@ -867,7 +933,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
         let events =
-            run_tests(vec![], RunOptions { include_disabled_tests: Some(false) }).await.unwrap();
+            run_tests(vec![], RunOptions { include_disabled_tests: Some(false), parallel: None })
+                .await
+                .unwrap();
 
         let expected_events = vec![ListenerEvent::finish_all_test()];
 
@@ -879,7 +947,7 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();

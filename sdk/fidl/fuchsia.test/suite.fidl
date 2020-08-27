@@ -56,6 +56,10 @@ table RunOptions {
     /// If set to true, test cases that have been disabled by the test author will nonetheless be
     /// executed.
     1: bool include_disabled_tests;
+
+    /// Defines maximum number of test cases to run simultaneously.
+    /// By default tests are executed sequentially.
+    2: uint16 parallel;
 };
 
 /// Result of invoking a single test case.

@@ -12,7 +12,7 @@ use {
         lock::Mutex,
         prelude::*,
     },
-    log::{debug, error, info},
+    log::{debug, error},
     regex::Regex,
     std::{
         collections::HashSet,
@@ -71,41 +71,49 @@ impl SuiteServer for TestServer {
         test_component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        for invocation in invocations {
-            let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
-            info!("Running test {}", test);
+        let num_parallel = Self::get_parallel_count(&run_options);
 
-            let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::STREAM)
-                .map_err(KernelError::CreateSocket)
-                .unwrap();
+        let invocations = stream::iter(invocations);
+        invocations
+            .map(Ok)
+            .try_for_each_concurrent(num_parallel, |invocation| async {
+                let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
+                debug!("Running test {}", test);
 
-            let (case_listener_proxy, listener) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
-                    .map_err(FidlError::CreateProxy)
+                let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::STREAM)
+                    .map_err(KernelError::CreateSocket)
+                    .unwrap();
+                let (case_listener_proxy, listener) =
+                    fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
+                        .map_err(FidlError::CreateProxy)
+                        .unwrap();
+                let test_logger = fasync::Socket::from_socket(test_logger)
+                    .map_err(KernelError::SocketToAsync)
                     .unwrap();
 
-            run_listener
-                .on_test_case_started(invocation, log_client, listener)
-                .map_err(RunTestError::SendStart)?;
-            let test_logger = fasync::Socket::from_socket(test_logger)
-                .map_err(KernelError::SocketToAsync)
-                .unwrap();
-            let mut test_logger = LogWriter::new(test_logger);
+                run_listener
+                    .on_test_case_started(invocation, log_client, listener)
+                    .map_err(RunTestError::SendStart)?;
 
-            match self.run_test(&test, &run_options, test_component.clone(), &mut test_logger).await
-            {
-                Ok(result) => {
-                    case_listener_proxy.finished(result).map_err(RunTestError::SendFinish)?;
+                let mut test_logger = LogWriter::new(test_logger);
+
+                match self
+                    .run_test(&test, &run_options, test_component.clone(), &mut test_logger)
+                    .await
+                {
+                    Ok(result) => {
+                        case_listener_proxy.finished(result).map_err(RunTestError::SendFinish)?;
+                    }
+                    Err(error) => {
+                        error!("failed to run test '{}'. {}", test, error);
+                        case_listener_proxy
+                            .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
+                            .map_err(RunTestError::SendFinish)?;
+                    }
                 }
-                Err(error) => {
-                    error!("failed to run test '{}'. {}", test, error);
-                    case_listener_proxy
-                        .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
-                        .map_err(RunTestError::SendFinish)?;
-                }
-            }
-        }
-        Ok(())
+                return Ok::<(), RunTestError>(());
+            })
+            .await
     }
 
     /// Run this server.
@@ -455,7 +463,9 @@ mod tests {
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
         test_runners_lib::cases::TestCaseInfo,
-        test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
+        test_runners_test_lib::{
+            assert_event_ord, collect_listener_event, names_to_invocation, ListenerEvent,
+        },
     };
 
     fn create_ns_from_current_ns(
@@ -674,7 +684,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(false) },
+            RunOptions { include_disabled_tests: Some(false), parallel: None },
         )
         .await
         .unwrap();
@@ -718,6 +728,64 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests_parallel() -> Result<(), Error> {
+        let mut events = run_tests(
+            names_to_invocation(vec![
+                "my_tests::sample_test_one",
+                "my_tests::passing_test",
+                "my_tests::failing_test",
+                "my_tests::sample_test_two",
+                "my_tests::ignored_passing_test",
+                "my_tests::ignored_failing_test",
+            ]),
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+        )
+        .await
+        .unwrap();
+
+        let mut expected_events = vec![
+            ListenerEvent::start_test("my_tests::sample_test_one"),
+            ListenerEvent::finish_test(
+                "my_tests::sample_test_one",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::passing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::passing_test",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::failing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::failing_test",
+                TestResult { status: Some(Status::Failed) },
+            ),
+            ListenerEvent::start_test("my_tests::sample_test_two"),
+            ListenerEvent::finish_test(
+                "my_tests::sample_test_two",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_passing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_passing_test",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::start_test("my_tests::ignored_failing_test"),
+            ListenerEvent::finish_test(
+                "my_tests::ignored_failing_test",
+                TestResult { status: Some(Status::Skipped) },
+            ),
+            ListenerEvent::finish_all_test(),
+        ];
+
+        assert_event_ord(&events);
+        expected_events.sort();
+        events.sort();
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn run_multiple_tests_include_disabled_tests() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec![
@@ -725,7 +793,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(true) },
+            RunOptions { include_disabled_tests: Some(true), parallel: None },
         )
         .await
         .unwrap();

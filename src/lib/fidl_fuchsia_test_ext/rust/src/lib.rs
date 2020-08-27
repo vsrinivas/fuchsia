@@ -13,6 +13,6 @@ pub trait CloneExt {
 
 impl CloneExt for ftest::RunOptions {
     fn clone(&self) -> Self {
-        ftest::RunOptions { include_disabled_tests: self.include_disabled_tests }
+        ftest::RunOptions { include_disabled_tests: self.include_disabled_tests, parallel: None }
     }
 }

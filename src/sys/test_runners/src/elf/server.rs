@@ -19,7 +19,7 @@ use {
         lock::Mutex,
         prelude::*,
     },
-    log::error,
+    log::{error, warn},
     rust_measure_tape_for_case::measure,
     std::{
         pin::Pin,
@@ -73,6 +73,19 @@ pub trait SuiteServer: Sized + Sync + Send {
         test_component: Arc<Component>,
         run_listener: &ftest::RunListenerProxy,
     ) -> Result<(), RunTestError>;
+
+    fn get_parallel_count(run_options: &ftest::RunOptions) -> usize {
+        match run_options.parallel {
+            Some(i) => {
+                if i == 0 {
+                    warn!("Client passed number of concurrent tests as 0, setting it to 1.");
+                    return 1;
+                }
+                i.into()
+            }
+            None => 1,
+        }
+    }
 
     /// Implements `fuchsia.test.Suite` service and runs test.
     async fn serve_test_suite(
