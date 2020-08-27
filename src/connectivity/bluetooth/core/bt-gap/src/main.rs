@@ -155,34 +155,24 @@ async fn run() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(move |s| control_service(control_hd.clone(), s))
         .add_service_at(CentralMarker::NAME, move |chan| {
-            if let Ok(chan) = fasync::Channel::from_channel(chan) {
-                fx_log_info!("Connecting CentralService to Adapter");
-                fasync::Task::spawn(central_hd.clone().request_host_service(chan, LeCentral))
-                    .detach();
-            }
+            fx_log_info!("Connecting CentralService to Adapter");
+            fasync::Task::spawn(central_hd.clone().request_host_service(chan, LeCentral)).detach();
             None
         })
         .add_service_at(PeripheralMarker::NAME, move |chan| {
-            if let Ok(chan) = fasync::Channel::from_channel(chan) {
-                fx_log_info!("Connecting Peripheral Service to Adapter");
-                fasync::Task::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral))
-                    .detach();
-            }
+            fx_log_info!("Connecting Peripheral Service to Adapter");
+            fasync::Task::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral))
+                .detach();
             None
         })
         .add_service_at(ProfileMarker::NAME, move |chan| {
-            if let Ok(chan) = fasync::Channel::from_channel(chan) {
-                fx_log_info!("Connecting Profile Service to Adapter");
-                fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile))
-                    .detach();
-            }
+            fx_log_info!("Connecting Profile Service to Adapter");
+            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
             None
         })
         .add_service_at(Server_Marker::NAME, move |chan| {
-            if let Ok(chan) = fasync::Channel::from_channel(chan) {
-                fx_log_info!("Connecting Gatt Service to Adapter");
-                fasync::Task::spawn(gatt_hd.clone().request_host_service(chan, LeGatt)).detach();
-            }
+            fx_log_info!("Connecting Gatt Service to Adapter");
+            fasync::Task::spawn(gatt_hd.clone().request_host_service(chan, LeGatt)).detach();
             None
         })
         // TODO(1496) - according fuchsia.bluetooth.sys/bootstrap.fidl, the bootstrap service should

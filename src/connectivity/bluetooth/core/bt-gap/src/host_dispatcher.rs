@@ -669,7 +669,7 @@ impl HostDispatcher {
         hosts.host_devices.values().map(|host| host.read().get_info().clone()).collect()
     }
 
-    pub async fn request_host_service(self, chan: fasync::Channel, service: HostService) {
+    pub async fn request_host_service(self, chan: zx::Channel, service: HostService) {
         match self.get_active_adapter().await {
             Some(host) => {
                 let host = host.read();
