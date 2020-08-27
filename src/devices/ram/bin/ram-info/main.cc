@@ -17,6 +17,7 @@ static void PrintUsage(const char* cmd) {
   fprintf(stderr, "\t%s             Print default domain values\n", cmd);
   fprintf(stderr, "\t%s --help      Print this message and quit.\n", cmd);
   fprintf(stderr, "\t%s --version   Print version and quit.\n", cmd);
+  fprintf(stderr, "\t%s --windowing Print windowing tool result and quit.\n", cmd);
   fprintf(stderr, "\t%s --csv       Print RAM bandwidth in CSV format.\n", cmd);
   fprintf(stderr, "\t%s --channels|-c <channel0[,channel1,...]>\n", cmd);
   fprintf(stderr, "\t\t Use the specified port masks instead of the device defaults.\n");
@@ -38,6 +39,20 @@ int main(int argc, char* argv[]) {
     }
     if (strcmp(argv[i], "--version") == 0) {
       printf("%s\n", kVersionString);
+      return 0;
+    }
+    if (strcmp(argv[i], "--windowing") == 0) {
+      auto [channel, device_info] = ram_info::ConnectToRamDevice();
+      if (!channel.is_valid()) {
+        fprintf(stderr, "unable to connect to ram device, the target might not be supported\n");
+        return 1;
+      }
+
+      zx_status_t status = ram_info::GetDdrWindowingResults(std::move(channel));
+      if (status != ZX_OK) {
+        fprintf(stderr, "failed to read windowing tool result: %d\n", status);
+        return -1;
+      }
       return 0;
     }
 

@@ -13,6 +13,8 @@
 namespace ram_metrics = ::llcpp::fuchsia::hardware::ram::metrics;
 
 namespace ram_info {
+// fake register value used in test.
+constexpr uint32_t TEST_REGISTER_VALUE = 42;
 
 class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::Interface {
  public:
@@ -30,6 +32,7 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
       completer.ReplyError(ZX_ERR_BAD_STATE);
       return;
     }
+    completer.ReplySuccess(TEST_REGISTER_VALUE);
   }
 
   void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
@@ -226,6 +229,12 @@ TEST_F(RamInfoTest, CyclesToMeasure) {
       "channel3 (rw) \t\t 10\n"
       "total (rw) \t\t 25\n";
   EXPECT_BYTES_EQ(output_buffer, kExpectedOutput, strlen(kExpectedOutput));
+}
+
+TEST_F(RamInfoTest, GetDdrWindowingResults) {
+  // This test is pretty trivial, since we're faking the interface, and all the
+  // function does is print the resulting value.
+  EXPECT_OK(GetDdrWindowingResults(std::move(client_)));
 }
 
 }  // namespace ram_info

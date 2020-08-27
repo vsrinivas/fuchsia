@@ -67,6 +67,8 @@ zx_status_t MeasureBandwith(
     const Printer* printer, zx::channel channel,
     const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig& config);
 
+zx_status_t GetDdrWindowingResults(zx::channel channel);
+
 }  // namespace ram_info
 
 #endif  // SRC_DEVICES_RAM_BIN_RAM_INFO_RAM_INFO_H_

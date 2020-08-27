@@ -189,4 +189,18 @@ zx_status_t MeasureBandwith(const Printer* const printer, zx::channel channel,
   return ZX_OK;
 }
 
+zx_status_t GetDdrWindowingResults(zx::channel channel) {
+  ram_metrics::Device::SyncClient client{std::move(channel)};
+  auto info = client.GetDdrWindowingResults();
+  if (!info.ok()) {
+    return info.status();
+  }
+  if (info->result.is_err()) {
+    return info->result.err();
+  }
+
+  printf("register value: 0x%x\n", info->result.response().value);
+  return ZX_OK;
+}
+
 }  // namespace ram_info
