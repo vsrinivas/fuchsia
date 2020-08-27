@@ -1427,7 +1427,7 @@ Extracted items use the file names shown below:\n\
       if (header_.type == ZBI_TYPE_STORAGE_BOOTFS) {
         writer.Key(key);
         EmitJsonBootFS(writer);
-      } else if (!strcmp(TypeExtension(header_.type), ".txt")) {
+      } else if (auto ext = TypeExtension(header_.type); ext != nullptr && !strcmp(ext, ".txt")) {
         writer.Key(key);
         EmitJsonCmdline(writer);
       }
