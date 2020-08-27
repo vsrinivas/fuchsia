@@ -28,7 +28,12 @@ void RendererShimImpl::WatchEvents() {
   renderer_->EnableMinLeadTimeEvents(true);
   renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
     AUDIO_LOG(DEBUG) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
-    min_lead_time_ = zx::nsec(min_lead_time_nsec);
+    // Sometimes, this can be invoked before the Renderer is actually linked.
+    // When that happens, the reported lead time is zero as it hasn't been computed yet.
+    // Wait until the renderer is linked before updating our lead time.
+    if (min_lead_time_nsec > 0) {
+      min_lead_time_ = zx::nsec(min_lead_time_nsec);
+    }
   };
 }
 
