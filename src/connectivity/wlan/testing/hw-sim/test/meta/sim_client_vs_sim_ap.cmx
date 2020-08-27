@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher": "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx",
                 "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 "fuchsia.wlan.device.service.DeviceService": [
                     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
@@ -28,7 +27,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
