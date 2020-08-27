@@ -17,7 +17,7 @@ namespace usb_composite {
 
 class UsbComposite;
 class UsbInterface;
-using UsbCompositeType = ddk::Device<UsbComposite, ddk::UnbindableDeprecated>;
+using UsbCompositeType = ddk::Device<UsbComposite, ddk::UnbindableNew>;
 
 // This class represents a USB composite device and manages creating devmgr devices
 // for multiple USB interfaces.
@@ -28,7 +28,7 @@ class UsbComposite : public UsbCompositeType {
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t ClaimInterface(uint8_t interface_id);
