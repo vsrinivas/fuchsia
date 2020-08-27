@@ -262,9 +262,7 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Response -}}
-					{{- if ne 0 $index -}}, {{- $param.Type -}}
-					{{- else -}} {{- $param.Type -}}
-					{{- end -}}
+					{{- $param.Type -}},
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
 				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
@@ -274,11 +272,7 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 				Ok((
 					{{ $protocol.Name }}Event::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Response -}}
-						{{- if ne 1 (len $method.Response) -}}
-							{{- $param.Name -}}: out_tuple.{{- $index -}},
-						{{- else -}}
-							{{- $param.Name -}}: out_tuple,
-						{{- end -}}
+						{{- $param.Name -}}: out_tuple.{{- $index -}},
 						{{- end -}}
 					}
 				))
@@ -554,9 +548,7 @@ impl {{ $protocol.Name }}RequestMessage {
 			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Request -}}
-						{{- if ne 0 $index -}}, {{- $param.Type -}}
-						{{- else -}} {{- $param.Type -}}
-						{{- end -}}
+						{{- $param.Type -}},
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
 				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
@@ -566,11 +558,7 @@ impl {{ $protocol.Name }}RequestMessage {
 
 				Ok({{ $protocol.Name }}RequestMessage::{{ $method.CamelName }} {
 					{{- range $index, $param := $method.Request -}}
-						{{- if ne 1 (len $method.Request) -}}
 						{{ $param.Name }}: out_tuple.{{ $index }},
-						{{- else -}}
-						{{ $param.Name }}: out_tuple,
-						{{- end -}}
 					{{- end -}}
 					{{- if $method.HasResponse -}}
 						tx_id: header.tx_id().into(),

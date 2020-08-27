@@ -413,7 +413,7 @@ impl ProtocolRequestMessage {
 
         match header.ordinal() {
             0x72b1a46e5e2af282 => {
-                let mut out_tuple: (StrictFoo) = fidl::encoding::Decodable::new_empty();
+                let mut out_tuple: (StrictFoo,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
@@ -425,12 +425,12 @@ impl ProtocolRequestMessage {
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
                 Ok(ProtocolRequestMessage::RequestStrictResponseFlexible {
-                    s: out_tuple,
+                    s: out_tuple.0,
                     tx_id: header.tx_id().into(),
                 })
             }
             0x42a34ad5c4a1d952 => {
-                let mut out_tuple: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
+                let mut out_tuple: (FlexibleFoo,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
@@ -442,7 +442,7 @@ impl ProtocolRequestMessage {
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
                 Ok(ProtocolRequestMessage::RequestFlexibleResponseStrict {
-                    s: out_tuple,
+                    s: out_tuple.0,
                     tx_id: header.tx_id().into(),
                 })
             }

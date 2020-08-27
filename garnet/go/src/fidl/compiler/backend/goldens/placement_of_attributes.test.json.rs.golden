@@ -358,7 +358,7 @@ impl ExampleProtocolRequestMessage {
 
         match header.ordinal() {
             0x1b489f95492fd90e => {
-                let mut out_tuple: (fidl_exampleusing::Empty) =
+                let mut out_tuple: (fidl_exampleusing::Empty,) =
                     fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "example/ExampleProtocolMethodRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
@@ -370,7 +370,7 @@ impl ExampleProtocolRequestMessage {
                 )?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
-                Ok(ExampleProtocolRequestMessage::Method { arg: out_tuple })
+                Ok(ExampleProtocolRequestMessage::Method { arg: out_tuple.0 })
             }
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: header.ordinal(),
