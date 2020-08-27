@@ -13,7 +13,8 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification//zbi/migrated_zbi_test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
+import("//build/unification/zbi/migrated_zbi_test.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
@@ -86,6 +87,11 @@ foreach(test_name, core_tests) {
       }
     }
     deps = [ test_name ]
+  }
+
+  bootfs_test("core-$test_name-bootfs-test") {
+    name = "core-$test_name"
+    deps = [ ":$test_name" ]
   }
 }
 
