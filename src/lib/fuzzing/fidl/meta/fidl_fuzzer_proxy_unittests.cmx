@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fidl_fuzzer_core_unittests"
+        "binary": "test/fidl_fuzzer_proxy_unittests"
     },
     "sandbox": {
         "services": [

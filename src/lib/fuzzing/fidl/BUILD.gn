@@ -1,16 +1,39 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
+# Copyright 2020 The Fuchsia Authors.All rights reserved.
+# Use of this source code is governed by a BSD - style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+fidl("fuchsia.fuzzer") {
+  sources = [ "fuzzer.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+}
 
 source_set("core_lib") {
   sources = [
     "shared-memory.cc",
     "test-input.cc",
   ]
-  public_deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    ":fuchsia.fuzzer",
+    "//src/lib/fxl",
+  ]
+  public_configs = [ ":config" ]
+}
+
+source_set("proxy_lib") {
+  sources = [ "sanitizer-cov-proxy.cc" ]
+  public_deps = [
+    ":core_lib",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
   public_configs = [ ":config" ]
 }
 
@@ -37,16 +60,38 @@ test("fidl_fuzzer_core_unittests") {
   ]
 }
 
+# This test links a fake implementation of the __sanitizer_cov_* interface.
+test("fidl_fuzzer_proxy_unittests") {
+  sources = [ "sanitizer-cov-proxy-unittest.cc" ]
+  deps = [
+    ":proxy_lib",
+    ":test_deps",
+    "test:fake_libfuzzer",
+    "test:fake_sanitizer_cov",
+  ]
+}
+
 group("test_deps") {
   testonly = true
-  public_deps = [ "//src/lib/fxl/test:gtest_main" ]
+  public_deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
 }
 
 test_package("fidl-fuzzer-tests") {
-  deps = [ ":fidl_fuzzer_core_unittests" ]
+  deps = [
+    ":fidl_fuzzer_core_unittests",
+    ":fidl_fuzzer_proxy_unittests",
+  ]
   tests = [
     {
       name = "fidl_fuzzer_core_unittests"
+      environments = [ emu_env ]
+    },
+    {
+      name = "fidl_fuzzer_proxy_unittests"
       environments = [ emu_env ]
     },
   ]

@@ -1,0 +1,70 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// A library of cross-process fuzzing protocols.
+///
+/// A fuzzer can be described in three parts:
+///   1. The code under test.
+///   2. A fuzz target function that maps each test input to the interface of the code under test.
+///   3. A fuzzing engine that generates new test inputs.
+///
+/// Each execution of the code under test with a test input is a single fuzzing iteration. A fuzzer
+/// will perform iterations repeatedly until a defect is found or some other stopping condition is
+/// reached (e.g. a time limit).
+///
+/// In coverage-guided fuzzing, the code under test is instrumented to provide code coverage
+/// information back to the fuzzing engine. The engine maintains a set of coverage-increasing inputs
+/// called a corpus, and mutates these inputs to create new ones.
+///
+/// Source-based instrumentation can be added by the compiler, but this generally assumes all three
+/// parts are combined into a single process. For general-purpose FIDL fuzzing on Fuchsia, these
+/// parts need to be able to reside in different processes. The protocols in this library allow
+/// the interactions between those parts to happen over FIDL interfaces.
+///
+/// For more details, see https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/overview
+library fuchsia.fuzzer;
+
+using fuchsia.mem;
+
+/// Aggregated sanitizer coverage data proxied from other processes.
+///
+/// For cross-process fuzzing. the code under test needs to proxy its code coverage data back to
+/// fuzzing engine. The Coverage protocol describes this action, with the code under test as the
+/// client and the fuzzing engine as the server. There are two types of methods:
+///   1. Some coverage, such as inline 8-bit counters and PC tables, is written to specific memory
+///      locations. This data is forwarded to engine by setting up shared buffers. These methods
+///      correspond to the LLVM compiler_rt `__sanitizer_cov_*_init` functions supported by
+///      libFuzzer.
+///   2. Other coverage is associated with specific machine instructions being called, e.g. CMP
+///      instructions. Rather than provide each traced instruction to the engine in a separate FIDL
+///      call, a shared buffer is set up and the instructions are batched. The traced instructions
+///      correspond to the LLVM compiler_rt `__sanitizer_cov_trace_*` functions.
+[Discoverable]
+protocol Coverage {
+    /// Registers the provided VMO to be used for inline 8-bit edge counters.
+    ///
+    /// This should be called for each element in a process's DSO map, i.e. for the process itself
+    /// and any shared objects it loads. On error, the fuzzing engine will close the channel with an
+    /// epitaph.
+    ///
+    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
+    AddInline8BitCounters(fuchsia.mem.Buffer inline_8bit_counters) -> ();
+
+    /// Registers the provided VMO to be used for a table of instrumented PCs.
+    ///
+    /// This should be called for each element in a process's DSO map, i.e. for the process itself
+    /// and any shared objects it loads. On error, the fuzzing engine will close the channel with an
+    /// epitaph.
+    ///
+    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#pc-table
+    AddPcTable(fuchsia.mem.Buffer pcs) -> ();
+
+    /// Registers the provided VMO to be used as a circular buffer of traced instructions.
+    ///
+    /// This should be called once per client. Subsequent calls will replace the previous VMO.
+    /// On error, the fuzzing engine will close the channel with an epitaph.
+    ///
+    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
+    AddTraces(handle<vmo> instruction_traces) -> ();
+};
