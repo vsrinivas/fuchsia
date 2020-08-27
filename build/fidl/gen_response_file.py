@@ -55,7 +55,7 @@ def main():
     parser.add_argument(
         "--dep-libraries", help="List of dependent libraries", nargs="*")
     parser.add_argument(
-        "--experimental-flag", help="List of experimental flags", nargs="*")
+        "--experimental-flag", help="List of experimental flags", action="append")
     args = parser.parse_args()
 
     target_libraries = []

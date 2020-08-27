@@ -233,8 +233,8 @@ resource_definition SomeRes : uint32 {
     };
 };
 
-using OldHandleAlias = handle<vmo>;
-using OldHandleAlias2 = handle<thread>;
+using OldHandleAlias = zx.handle:VMO;
+using OldHandleAlias2 = zx.handle:THREAD;
 
 struct Constraints {
     handle:THING1 h1;

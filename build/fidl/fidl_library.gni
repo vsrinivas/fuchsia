@@ -48,6 +48,12 @@ template("fidl_library") {
     experimental_flags = invoker.experimental_flags
   }
 
+  # TODO(fxbug.dev/51001): This is a transitional step to prevent regression to
+  # old-style handles. Support for this style of syntax will be removed once
+  # out-of-tree .fidl has all been converted to new-style syntax, and then this
+  # setting and the associated flag can be removed.
+  experimental_flags += [ "disallow_old_handle_syntax" ]
+
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
