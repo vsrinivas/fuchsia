@@ -40,6 +40,7 @@ static constexpr zx_bind_inst_t ft_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_2),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x38),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x40),
 };
 static constexpr zx_bind_inst_t gpio_int_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
