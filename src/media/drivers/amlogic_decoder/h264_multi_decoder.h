@@ -157,6 +157,8 @@ class H264MultiDecoder : public VideoDecoder {
 
     static constexpr uint32_t kCroppingLeftRight = 0x6a;
     static constexpr uint32_t kCroppingTopBottom = 0x6b;
+    // Maybe another copy of max_reference_size at this offset, or maybe something else.
+    static constexpr uint32_t kMaxBufferFrame = 0x6e;
 
     static constexpr uint32_t kSkipPicCount = 0x74;
     static constexpr uint32_t kNewPictureStructure = 0x7c;
@@ -226,11 +228,16 @@ class H264MultiDecoder : public VideoDecoder {
     static constexpr uint32_t kAspectRatioIdc = 0xf5;
     static constexpr uint32_t kAspectRatioSarWidth = 0xf6;
     static constexpr uint32_t kAspectRatioSarHeight = 0xf7;
+    // Observed to be zero regardless of low-latency stream or stream with frame reordering.
     static constexpr uint32_t kDpbBufferInfo = 0xfd;
 
     // offset to dpb_max_buffer_frame.
     static constexpr uint32_t kDpbStructStart = 0x100 + 24 * 8;
 
+    // Observed to be zero regardless of low-latency stream or stream with frame reordering.
+    static constexpr uint32_t kDpbMaxBufferFrame = kDpbStructStart + 0;
+    // Observed to be zero regardless of low-latency stream or stream with frame reordering.
+    static constexpr uint32_t kActualDpbSize = kDpbStructStart + 1;
     static constexpr uint32_t kPictureStructureMmco = kDpbStructStart + 12;
     static constexpr uint16_t kPictureStructureMmcoTopField = 0x0;
     static constexpr uint16_t kPictureStructureMmcoBottomField = 0x1;

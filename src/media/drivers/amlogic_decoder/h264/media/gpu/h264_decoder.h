@@ -307,6 +307,8 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   // Output all pictures in DPB that have not been outputted yet.
   bool OutputAllRemainingPics();
 
+  bool IsQuickOutputHeuristicSatisfied(int pic_order_cnt);
+
   // Decoder state.
   State state_;
 
@@ -384,6 +386,9 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   int last_output_poc_;
 
   const std::unique_ptr<H264Accelerator> accelerator_;
+
+  uint64_t num_poc_seen_ = 0;
+  bool odd_poc_seen_ = false;
 
   enum class NaluInjectionMode {
     kUnknown,

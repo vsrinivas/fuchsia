@@ -198,6 +198,12 @@ class StreamInfo : public TypedRegisterBase<DosRegisterIo, StreamInfo, uint32_t>
   //
   // The amlogic code considers upper_signficant bits when determining whether to allocate buffers,
   // but this driver doesn't.
+  //
+  // Is this max_dec_frame_buffering?  It seems somewhat likely given that the amlogic driver bases
+  // on this field in addition to mb_width and mb_height to decide whether to reallocate buffers,
+  // and the value seems consistent enough so far.  Though it could also be another copy of
+  // max_reference_size, or something else.  It doesn't appear to be max_num_reorder_frames
+  // unfortunately.
   DEF_FIELD(30, 24, upper_significant);
 
   // This bit is not provided back to HW, and not considered by amlogic code or this driver for
@@ -223,6 +229,8 @@ class SequenceInfo : public TypedRegisterBase<DosRegisterIo, SequenceInfo, uint3
   DEF_BIT(15, frame_mbs_only_flag);
   DEF_FIELD(23, 16, aspect_ratio_idc);
 
+  // Bits 24 to 31 seem to be zero regardless of low-latency stream or stream with frame reordering.
+
   static auto Get() { return AddrType(0x09c2 * 4); }
 };
 
@@ -243,6 +251,8 @@ class StreamInfo2 : public TypedRegisterBase<DosRegisterIo, StreamInfo2, uint32_
  public:
   DEF_FIELD(7, 0, level_idc);
   DEF_FIELD(15, 8, max_reference_size);
+
+  // Bits 16 to 31 seem to be zero regardless of low-latency stream or stream with frame reordering.
 
   static auto Get() { return AddrType(0x09cb * 4); }
 };
@@ -1050,10 +1060,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
     // Re. VUI, we only extract sar_width and sar_height, not any other parameters under
     // vui_parameters_present_flag, for now.  In particular we ignore bitstream_restriction_flag
-    // from FW since the FW doesn't provide max_num_reorder_frames, max_dec_frame_buffering.
-    //
-    // TODO(dustingreen): Try to determine if data[kDpbBufferInfo] has max_num_reorder_frames and
-    // max_dec_frame_buffering.
+    // from FW since the FW doesn't provide max_num_reorder_frames (confirmed not made available by
+    // FW), max_dec_frame_buffering (may be in StreamInfo.upper_significant?).
     bool aspect_ratio_info_present_flag =
         !!(params_.data[HardwareRenderParams::kVuiStatus] &
            HardwareRenderParams::kVuiStatusMaskAspectRatioInfoPresentFlag);

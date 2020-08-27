@@ -80,6 +80,11 @@ struct UseVideoDecoderTestParams final {
     }
     ZX_ASSERT(skip_frame_ordinal >= -1);
 
+    if (max_num_reorder_frames_threshold != kDefaultMaxNumReorderFramesThreshold) {
+      printf("max_num_reorder_frames_threshold: %" PRId64 "\n", max_num_reorder_frames_threshold);
+    }
+    ZX_ASSERT(max_num_reorder_frames_threshold >= 0);
+
     magic_validated_ = kPrivateMagicValidated;
   }
 
@@ -139,6 +144,13 @@ struct UseVideoDecoderTestParams final {
 
   // nullopt means no override
   std::optional<std::string> mime_type;
+
+  // If frames are out of order by more than this much, fail the test (by timing out).
+  //
+  // We intentionally use uint32_t max not int64_t max.
+  static constexpr int64_t kDefaultMaxNumReorderFramesThreshold =
+      std::numeric_limits<uint32_t>::max();
+  int64_t max_num_reorder_frames_threshold = kDefaultMaxNumReorderFramesThreshold;
 
  private:
   // Client code should not exploit knowledge of this value, and should not directly initialize or

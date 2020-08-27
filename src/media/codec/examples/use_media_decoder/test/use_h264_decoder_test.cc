@@ -33,6 +33,9 @@ const char* kGoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8c
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  UseVideoDecoderTestParams test_params = {
+      .max_num_reorder_frames_threshold = 1,
+  };
   // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
   // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
   // sometimes.
@@ -40,7 +43,7 @@ int main(int argc, char* argv[]) {
   for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
     if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                    /*min_output_buffer_count=*/0, kGoldenSha256)) {
+                                    /*min_output_buffer_count=*/0, kGoldenSha256, &test_params)) {
       if (try_ordinal != 0) {
         LOGF("WARNING - fxb/13483 - internal de-flaking used - extra attempt count: %u",
              try_ordinal);
