@@ -25,27 +25,20 @@ func setUpConn(
 	t *testing.T,
 	onNewChannel func(ssh.NewChannel),
 	onRequest func(*ssh.Request),
-) (conn *Conn, server *sshServer, cleanup func()) {
+) (*Conn, *sshServer) {
 	server, err := startSSHServer(onNewChannel, onRequest)
 	if err != nil {
 		t.Fatalf("failed to start ssh server: %v", err)
 	}
-	defer func() {
-		if conn == nil {
-			server.stop()
-		}
-	}()
+	t.Cleanup(server.stop)
 
-	conn, err = connect(ctx, server.addr, server.clientConfig, retry.NoRetries())
+	conn, err := connect(ctx, server.addr, server.clientConfig, retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create conn: %v", err)
 	}
+	t.Cleanup(conn.Close)
 
-	cleanup = func() {
-		conn.Close()
-		server.stop()
-	}
-	return
+	return conn, server
 }
 
 func assertChannelClosed(t *testing.T, ch chan struct{}, errorMessage string) {
@@ -62,14 +55,13 @@ func TestKeepalive(t *testing.T) {
 	t.Run("sends pings when timer fires", func(t *testing.T) {
 		requestsReceived := make(chan *ssh.Request, 1)
 
-		conn, _, cleanup := setUpConn(ctx, t, nil, func(req *ssh.Request) {
+		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
 			if !req.WantReply {
 				t.Errorf("keepalive pings must have WantReply set")
 			}
 			requestsReceived <- req
 			req.Reply(true, []byte{})
 		})
-		defer cleanup()
 
 		// Sending on this channel triggers a keepalive ping.
 		keepaliveTicks := make(chan time.Time)
@@ -85,10 +77,9 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("disconnects conn if keepalive times out", func(t *testing.T) {
-		conn, _, cleanup := setUpConn(ctx, t, nil, func(req *ssh.Request) {
+		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
 			req.Reply(true, []byte{})
 		})
-		defer cleanup()
 
 		disconnects := make(chan struct{})
 		conn.RegisterDisconnectListener(disconnects)
@@ -109,10 +100,9 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("disconnects conn if keepalive fails", func(t *testing.T) {
-		conn, server, cleanup := setUpConn(ctx, t, nil, func(req *ssh.Request) {
+		conn, server := setUpConn(ctx, t, nil, func(req *ssh.Request) {
 			req.Reply(true, []byte{})
 		})
-		defer cleanup()
 
 		disconnects := make(chan struct{})
 		conn.RegisterDisconnectListener(disconnects)
@@ -135,10 +125,9 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("stops sending when conn is closed", func(t *testing.T) {
-		conn, _, cleanup := setUpConn(ctx, t, nil, func(req *ssh.Request) {
+		conn, _ := setUpConn(ctx, t, nil, func(req *ssh.Request) {
 			req.Reply(true, []byte{})
 		})
-		defer cleanup()
 
 		keepaliveComplete := make(chan struct{})
 		go func() {
@@ -164,7 +153,7 @@ func TestRun(t *testing.T) {
 		//
 		// "pass": with "pass stdout" as STDOUT, "pass stderr" as STDERR.
 		// "fail": with "fail stdout" as STDOUT, "failstderr" as STDERR.
-		client, _, cleanup := setUpClient(
+		client, _ := setUpClient(
 			ctx,
 			t,
 			onNewExecChannel(func(cmd string, stdout io.Writer, stderr io.Writer) int {
@@ -184,7 +173,6 @@ func TestRun(t *testing.T) {
 			}),
 			nil,
 		)
-		defer cleanup()
 
 		check := func(cmd string, expectedExitStatus int, expectedStdout string, expectedStderr string) {
 			var stdout bytes.Buffer
@@ -304,8 +292,7 @@ func TestRun(t *testing.T) {
 	t.Run("exits early if context canceled while creating session", func(t *testing.T) {
 		// By not passing an `onNewChannel` function we ensure that the command
 		// will hang until the context is canceled.
-		conn, _, cleanup := setUpConn(ctx, t, nil, nil)
-		defer cleanup()
+		conn, _ := setUpConn(ctx, t, nil, nil)
 
 		ctx, cancel := context.WithCancel(ctx)
 		errs := make(chan error)
@@ -326,8 +313,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("exits early if session creation fails", func(t *testing.T) {
-		conn, server, cleanup := setUpConn(ctx, t, nil, nil)
-		defer cleanup()
+		conn, server := setUpConn(ctx, t, nil, nil)
 
 		server.stop()
 

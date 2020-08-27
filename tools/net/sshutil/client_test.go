@@ -21,31 +21,20 @@ func setUpClient(
 	t *testing.T,
 	onNewChannel func(ssh.NewChannel),
 	onRequest func(*ssh.Request),
-) (client *Client, server *sshServer, cleanup func()) {
+) (*Client, *sshServer) {
 	server, err := startSSHServer(onNewChannel, onRequest)
 	if err != nil {
 		t.Fatalf("failed to start ssh server: %v", err)
 	}
-	defer func() {
-		if client == nil {
-			server.stop()
-		}
-	}()
+	t.Cleanup(server.stop)
 
-	client, err = NewClient(ctx, server.addr, server.clientConfig, retry.NoRetries())
+	client, err := NewClient(ctx, server.addr, server.clientConfig, retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
+	t.Cleanup(client.Close)
 
-	cleanup = func() {
-		select {
-		case <-client.conn.shuttingDown:
-		default:
-			client.Close()
-		}
-		server.stop()
-	}
-	return
+	return client, server
 }
 
 func TestReconnect(t *testing.T) {
@@ -53,7 +42,7 @@ func TestReconnect(t *testing.T) {
 
 	t.Run("can run a command before and after reconnection", func(t *testing.T) {
 		var execCount int64
-		client, _, cleanup := setUpClient(
+		client, _ := setUpClient(
 			ctx,
 			t,
 			onNewExecChannel(func(cmd string, stdout io.Writer, stderr io.Writer) int {
@@ -67,7 +56,6 @@ func TestReconnect(t *testing.T) {
 			}),
 			nil,
 		)
-		defer cleanup()
 
 		// Check we can run a command before reconnecting.
 		var stdout bytes.Buffer
