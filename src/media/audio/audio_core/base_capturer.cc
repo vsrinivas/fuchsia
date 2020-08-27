@@ -663,9 +663,10 @@ zx_status_t BaseCapturer::Process() {
 }
 
 void BaseCapturer::ReportOverflow(zx::time start_time, zx::time end_time) {
-  overflow_count_++;
-
   TRACE_INSTANT("audio", "BaseCapturer::OVERFLOW", TRACE_SCOPE_THREAD);
+  TRACE_ALERT("audio", "audiooverflow");
+
+  overflow_count_++;
   if constexpr (kLogCaptureOverflow) {
     auto duration_ms = static_cast<double>((end_time - start_time).to_nsecs()) / ZX_MSEC(1);
     if ((overflow_count_ - 1) % kCaptureOverflowErrorInterval == 0) {
@@ -679,6 +680,7 @@ void BaseCapturer::ReportOverflow(zx::time start_time, zx::time end_time) {
                      << std::setprecision(4) << duration_ms << " ms";
     }
   }
+
   reporter().Overflow(start_time, end_time);
 }
 

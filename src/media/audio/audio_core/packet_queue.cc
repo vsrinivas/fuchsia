@@ -184,6 +184,7 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFixed() const 
 void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                                   zx::duration underflow_duration) {
   TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_PROCESS);
+  TRACE_ALERT("audio", "audiounderflow");
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
   if (underflow_reporter_) {
