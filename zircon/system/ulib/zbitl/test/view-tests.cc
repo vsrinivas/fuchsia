@@ -42,20 +42,20 @@ TEST(ZbitlViewStringTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<StringIo>(false));
 }
 
-TEST(ZbitlViewStringTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<StringIo>()); }
+TEST(ZbitlViewStringTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<StringIo>());
+}
 
-TEST(ZbitlViewStringTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<StringIo>()); }
-
-TEST(ZbitlViewStringTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<StringIo>()); }
+TEST_ITERATIONS(ZbitlViewStringTests, StringIo)
 
 TEST(ZbitlViewByteViewTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<ByteViewIo>(false));
 }
 
-TEST(ZbitlViewByteViewTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<ByteViewIo>()); }
+TEST(ZbitlViewByteViewTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<ByteViewIo>());
+}
 
-TEST(ZbitlViewByteViewTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<ByteViewIo>()); }
-
-TEST(ZbitlViewByteViewTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<ByteViewIo>()); }
+TEST_ITERATIONS(ZbitlViewByteViewTests, ByteViewIo)
 
 }  // namespace

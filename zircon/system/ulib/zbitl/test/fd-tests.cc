@@ -28,16 +28,14 @@ struct FdIo {
   }
 };
 
+TEST_ITERATIONS(ZbitlViewFdTests, FdIo)
+
+TEST_MUTATIONS(ZbitlViewFdTests, FdIo)
+
 TEST(ZbitlViewFdTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FdIo>(true));
 }
 
-TEST(ZbitlViewFdTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<FdIo>()); }
-
-TEST(ZbitlViewFdTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<FdIo>()); }
-
-TEST(ZbitlViewFdTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<FdIo>()); }
-
-TEST(ZbitlViewFdTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<FdIo>()); }
+TEST(ZbitlViewFdTests, CrcCheckFailure) { ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<FdIo>()); }
 
 }  // namespace

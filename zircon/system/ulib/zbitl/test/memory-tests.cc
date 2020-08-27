@@ -28,28 +28,26 @@ struct FblArrayIo {
   }
 };
 
-TEST(ZbitlViewFblArrayTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblArrayIo<std::byte>>(false));
-  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblArrayIo<uint64_t>>(false));
+using FblByteArrayIo = FblArrayIo<std::byte>;
+using FblUint64ArrayIo = FblArrayIo<uint64_t>;
+
+TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblByteArrayIo>(false));
 }
 
-TEST(ZbitlViewFblArrayTests, EmptyZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<FblArrayIo<std::byte>>());
-  ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<FblArrayIo<uint64_t>>());
+TEST(ZbitlViewFblByteArrayTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<FblByteArrayIo>());
 }
 
-// TODO: These use data with odd-sized payloads so they can't test uint64_t.
+TEST_ITERATIONS(ZbitlViewFblByteArrayTests, FblByteArrayIo)
 
-TEST(ZbitlViewFblArrayTests, SimpleZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<FblArrayIo<std::byte>>());
+TEST_MUTATIONS(ZbitlViewFblByteArrayTests, FblByteArrayIo)
+
+TEST(ZbitlViewFblUint64ArrayTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<FblUint64ArrayIo>(false));
 }
 
-TEST(ZbitlViewFblArrayTests, BadCrcZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<FblArrayIo<std::byte>>());
-}
-
-TEST(ZbitlViewFblArrayTests, Mutation) {
-  ASSERT_NO_FATAL_FAILURES(TestMutation<FblArrayIo<std::byte>>());
-}
+// TODO(joshuaseaton): Use ZBIs with payload size divisible by eight so we can
+// further test FblUint64Array.
 
 }  // namespace

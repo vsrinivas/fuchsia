@@ -28,12 +28,12 @@ struct FileIo {
 // The type of FILE* cannot be default-constructed, so we skip the
 // TestDefaultConstructedView() test case.
 
-TEST(ZbitlViewStdioTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<FileIo>()); }
+TEST_ITERATIONS(ZbitlViewStdioTests, FileIo)
 
-TEST(ZbitlViewStdioTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<FileIo>()); }
+TEST_MUTATIONS(ZbitlViewStdioTests, FileIo)
 
-TEST(ZbitlViewStdioTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<FileIo>()); }
-
-TEST(ZbitlViewStdioTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<FileIo>()); }
+TEST(ZbitlViewStdioTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<FileIo>());
+}
 
 }  // namespace

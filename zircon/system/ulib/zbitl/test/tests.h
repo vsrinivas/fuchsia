@@ -35,6 +35,12 @@ enum class TestDataZbiType {
   kBadCrcItem,
 };
 
+size_t GetExpectedNumberOfItems(TestDataZbiType type);
+
+void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload);
+
+std::string GetExpectedJson(TestDataZbiType type);
+
 void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
                      size_t* num_bytes);
 
@@ -80,46 +86,18 @@ inline void TestDefaultConstructedView(bool expect_storage_error) {
   }
 }
 
-template <typename StorageIo>
-inline void TestEmptyZbi() {
+template <typename StorageIo, zbitl::Checking checking>
+inline void TestIteration(TestDataZbiType type) {
   StorageIo io;
   files::ScopedTempDir dir;
 
   fbl::unique_fd fd;
   size_t size = 0;
-  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kEmpty, dir.path(), &fd, &size));
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
 
   typename StorageIo::storage_type zbi;
   ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
-  zbitl::View view(std::move(zbi));  // Yay deduction guides!
-
-  ASSERT_IS_OK(view.container_header());
-
-  EXPECT_EQ(view.end(), view.begin());
-
-  for (auto [header, payload] : view) {
-    EXPECT_EQ(header->type, header->type);
-    EXPECT_TRUE(false, "should not be reached");
-  }
-
-  auto error = view.take_error();
-  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
-               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
-               error.error_value().item_offset);
-}
-
-template <typename StorageIo>
-inline void TestSimpleZbi() {
-  StorageIo io;
-  files::ScopedTempDir dir;
-
-  fbl::unique_fd fd;
-  size_t size = 0;
-  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
-
-  typename StorageIo::storage_type zbi;
-  ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
-  zbitl::View view(std::move(zbi));
+  zbitl::View<typename StorageIo::storage_type, checking> view(std::move(zbi));
 
   ASSERT_IS_OK(view.container_header());
 
@@ -127,17 +105,16 @@ inline void TestSimpleZbi() {
   for (auto [header, payload] : view) {
     EXPECT_EQ(kItemType, header->type);
 
-    std::string contents;
-    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
-    switch (num_items++) {
-      case 0:
-        EXPECT_STR_EQ("hello world", contents.c_str(), "payload: %s", contents.c_str());
-        break;
-    }
+    std::string actual;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &actual));
+    std::string expected;
+    ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, num_items++, &expected));
+    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
+
     const uint32_t flags = header->flags;
     EXPECT_TRUE(flags & ZBI_FLAG_VERSION, "flags: %#x", flags);
   }
-  EXPECT_EQ(1, num_items);
+  EXPECT_EQ(GetExpectedNumberOfItems(type), num_items);
 
   auto error = view.take_error();
   EXPECT_FALSE(error.is_error(), "%s at offset %#x",
@@ -145,8 +122,34 @@ inline void TestSimpleZbi() {
                error.error_value().item_offset);
 }
 
+#define TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, checking_name, checking, \
+                                            type_name, type)                                \
+  TEST(suite_name, type_name##checking_name##Iteration) {                                   \
+    auto test = TestIteration<StorageIo, checking>;                                         \
+    ASSERT_NO_FATAL_FAILURES(test(type));                                                   \
+  }
+
+// Note: using the CRC32-checking in tests is a cheap and easy way to verify
+// that the storage type is delivering the correct payload data.
+#define TEST_ITERATIONS_BY_TYPE(suite_name, StorageIo, type_name, type)                        \
+  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Permissive,                       \
+                                      zbitl::Checking::kPermissive, type_name, type)           \
+  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Strict, zbitl::Checking::kStrict, \
+                                      type_name, type)                                         \
+  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Crc, zbitl::Checking::kCrc,       \
+                                      type_name, type)
+
+#define TEST_ITERATIONS(suite_name, StorageIo)                                                 \
+  TEST_ITERATIONS_BY_TYPE(suite_name, StorageIo, EmptyZbi, TestDataZbiType::kEmpty)            \
+  TEST_ITERATIONS_BY_TYPE(suite_name, StorageIo, OneItemZbi, TestDataZbiType::kOneItem)        \
+  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Permissive,                       \
+                                      zbitl::Checking::kPermissive, BadCrcZbi,                 \
+                                      TestDataZbiType::kBadCrcItem)                            \
+  TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Strict, zbitl::Checking::kStrict, \
+                                      BadCrcZbi, TestDataZbiType::kBadCrcItem)
+
 template <typename StorageIo>
-void TestBadCrcZbi() {
+void TestCrcCheckFailure() {
   StorageIo io;
   files::ScopedTempDir dir;
 
@@ -184,17 +187,19 @@ void TestBadCrcZbi() {
 }
 
 template <typename StorageIo>
-void TestMutation() {
+void TestMutation(TestDataZbiType type) {
   StorageIo io;
   files::ScopedTempDir dir;
 
   fbl::unique_fd fd;
   size_t size = 0;
-  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  size_t expected_num_items = GetExpectedNumberOfItems(type);
 
   typename StorageIo::storage_type zbi;
   ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
-  zbitl::View view(std::move(zbi));
+  zbitl::View view(std::move(zbi));  // Yay deduction guides.
 
   ASSERT_IS_OK(view.container_header());
 
@@ -204,16 +209,15 @@ void TestMutation() {
 
     EXPECT_EQ(kItemType, header->type);
 
-    std::string contents;
-    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
-    switch (num_items++) {
-      case 0:
-        EXPECT_STR_EQ("hello world", contents.c_str());
-        ASSERT_TRUE(view.EditHeader(it, {.type = ZBI_TYPE_DISCARD}).is_ok());
-        break;
-    }
+    std::string actual;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &actual));
+    std::string expected;
+    ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, num_items++, &expected));
+    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
+
+    ASSERT_TRUE(view.EditHeader(it, {.type = ZBI_TYPE_DISCARD}).is_ok());
   }
-  EXPECT_EQ(1, num_items);
+  EXPECT_EQ(expected_num_items, num_items);
 
   {
     auto error = view.take_error();
@@ -226,15 +230,13 @@ void TestMutation() {
   for (auto [header, payload] : view) {
     EXPECT_EQ(ZBI_TYPE_DISCARD, header->type);
 
-    std::string contents;
-    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
-    switch (num_items++) {
-      case 0:
-        EXPECT_STR_EQ("hello world", contents.c_str());
-        break;
-    }
+    std::string actual;
+    ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &actual));
+    std::string expected;
+    ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, num_items++, &expected));
+    EXPECT_STR_EQ(expected.c_str(), actual.c_str());
   }
-  EXPECT_EQ(1, num_items);
+  EXPECT_EQ(expected_num_items, num_items);
 
   {
     auto error = view.take_error();
@@ -243,5 +245,12 @@ void TestMutation() {
                  error.error_value().item_offset);
   }
 }
+
+#define TEST_MUTATION_BY_TYPE(suite_name, StorageIo, type_name, type) \
+  TEST(suite_name, type_name##Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<StorageIo>(type)); }
+
+#define TEST_MUTATIONS(suite_name, StorageIo)                                         \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, OneItemZbi, TestDataZbiType::kOneItem) \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, BadCrcItemZbi, TestDataZbiType::kBadCrcItem)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

@@ -16,6 +16,8 @@
 
 #include "tests.h"
 
+namespace {
+
 #if defined(__Fuchsia__)
 constexpr std::string_view kTestDataDir = "/pkg/data";
 #else
@@ -30,6 +32,67 @@ std::string_view ZbiName(TestDataZbiType type) {
       return "one-item.zbi";
     case TestDataZbiType::kBadCrcItem:
       return "bad-crc-item.zbi";
+  }
+}
+
+}  // namespace
+
+size_t GetExpectedNumberOfItems(TestDataZbiType type) {
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+      return 0;
+    case TestDataZbiType::kOneItem:
+      return 1;
+    case TestDataZbiType::kBadCrcItem:
+      return 1;
+  }
+}
+
+void GetExpectedPayload(TestDataZbiType type, size_t idx, std::string* payload) {
+  size_t num_items = GetExpectedNumberOfItems(type);
+  ASSERT_LT(idx, num_items, "expected only %zu items", num_items);
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+      // Assert would have already fired above.
+      __UNREACHABLE;
+    case TestDataZbiType::kOneItem: {
+      *payload = "hello world";
+      break;
+    }
+    case TestDataZbiType::kBadCrcItem: {
+      *payload = "hello w\xaa\xaa\xaa\xaa";
+      break;
+    }
+  }
+}
+
+std::string GetExpectedJson(TestDataZbiType type) {
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+      return R"""({
+  "offset": 0,
+  "type": "CONTAINER",
+  "size": 0,
+  "items": []
+})""";
+    case TestDataZbiType::kOneItem:
+      return R"""({
+  "offset": 0,
+  "type": "CONTAINER",
+  "size": 48,
+  "items": [
+    {
+      "offset": 32,
+      "type": "IMAGE_ARGS",
+      "size": 11,
+      "crc32": 3608077223
+    }
+  ]
+})""";
+    case TestDataZbiType::kBadCrcItem:
+      // Since computation of the JSON also computes the CRC32, we do not
+      // consider this case.
+      return "";
   }
 }
 

@@ -50,28 +50,22 @@ TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<VmoIo>(true));
 }
 
-TEST(ZbitlViewVmoTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<VmoIo>()); }
+TEST(ZbitlViewVmoTests, CrcCheckFailure) { ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<VmoIo>()); }
 
-TEST(ZbitlViewVmoTests, SimpleZbi) { ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<VmoIo>()); }
+TEST_ITERATIONS(ZbitlViewVmoTests, VmoIo)
 
-TEST(ZbitlViewVmoTests, BadCrcZbi) { ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<VmoIo>()); }
-
-TEST(ZbitlViewVmoTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<VmoIo>()); }
+TEST_MUTATIONS(ZbitlViewVmoTests, VmoIo)
 
 TEST(ZbitlViewUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<UnownedVmoIo>(true));
 }
 
-TEST(ZbitlViewUnownedVmoTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestEmptyZbi<UnownedVmoIo>()); }
-
-TEST(ZbitlViewUnownedVmoTests, SimpleZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestSimpleZbi<UnownedVmoIo>());
+TEST(ZbitlViewUnownedVmoTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<UnownedVmoIo>());
 }
 
-TEST(ZbitlViewUnownedVmoTests, BadCrcZbi) {
-  ASSERT_NO_FATAL_FAILURES(TestBadCrcZbi<UnownedVmoIo>());
-}
+TEST_ITERATIONS(ZbitlViewUnownedVmoTests, UnownedVmoIo)
 
-TEST(ZbitlViewUnownedVmoTests, Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<UnownedVmoIo>()); }
+TEST_MUTATIONS(ZbitlViewUnownedVmoTests, UnownedVmoIo)
 
 }  // namespace
