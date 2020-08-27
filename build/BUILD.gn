@@ -713,8 +713,6 @@ group("deprecated_package_underscore") {
     "//third_party/boringssl:boringssl_tests",
     "//third_party/boringssl:boringssl_tool",
     "//third_party/cobalt:cobalt_core_tests",
-    "//third_party/go:go_fidl_tests",
-    "//third_party/go:go_stdlib_tests",
     "//third_party/leveldb:leveldb_benchmarks",
     "//third_party/leveldb:leveldb_tests",
     "//third_party/openssl-ecjpake:openssl-ecjpake_tests",
