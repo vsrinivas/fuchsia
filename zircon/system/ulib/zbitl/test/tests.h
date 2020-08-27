@@ -180,7 +180,7 @@ void TestBadCrcZbi() {
 
   // This matches the exact error text, so it has to be kept in sync.
   // But otherwise we're not testing that the right error is diagnosed.
-  EXPECT_STR_EQ(error.error_value().zbi_error, "payload CRC32 mismatch");
+  EXPECT_STR_EQ(error.error_value().zbi_error, "item CRC32 mismatch");
 }
 
 template <typename StorageIo>

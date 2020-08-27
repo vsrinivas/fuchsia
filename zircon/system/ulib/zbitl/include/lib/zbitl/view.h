@@ -269,20 +269,28 @@ class View {
           payload_ = std::move(payload.value());
           if constexpr (Check == Checking::kCrc) {
             if (header_->flags & ZBI_FLAG_CRC32) {
-              uint32_t payload_crc32 = 0;
-              auto compute_crc32 = [&payload_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
-                payload_crc32 = crc32(payload_crc32, reinterpret_cast<const uint8_t*>(chunk.data()),
-                                      chunk.size());
+              uint32_t item_crc32 = 0;
+              auto compute_crc32 = [&item_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
+                item_crc32 =
+                    crc32(item_crc32, reinterpret_cast<const uint8_t*>(chunk.data()), chunk.size());
                 return fitx::ok();
               };
+
+              // An item's CRC32 is computed as the hash of its header with its
+              // crc32 field set to 0, combined with the hash of its payload.
+              zbi_header_t header_without_crc32 = *header_;
+              header_without_crc32.crc32 = 0;
+              static_cast<void>(compute_crc32({reinterpret_cast<std::byte*>(&header_without_crc32),
+                                               sizeof(header_without_crc32)}));
+
               if (auto result =
                       Traits::Read(view_->storage(), payload_, header_->length, compute_crc32);
                   result.is_error()) {
-                Fail("cannot compute payload CRC32", std::move(result.error_value()));
+                Fail("cannot compute item CRC32", std::move(result.error_value()));
               } else {
                 ZX_DEBUG_ASSERT(result.value().is_ok());
-                if (payload_crc32 != header_->crc32) {
-                  Fail("payload CRC32 mismatch");
+                if (item_crc32 != header_->crc32) {
+                  Fail("item CRC32 mismatch");
                 }
               }
             }
