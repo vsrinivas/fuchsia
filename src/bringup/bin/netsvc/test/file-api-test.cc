@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "file-api.h"
+#include "src/bringup/bin/netsvc/file-api.h"
 
 #include <fcntl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>

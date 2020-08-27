@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/namespace.h>
+
 #include <string>
 #include <string_view>
 
-#include "test/paver-test-common.h"
+#include "src/bringup/bin/netsvc/test/paver-test-common.h"
 
 namespace {
 
@@ -18,7 +20,15 @@ std::string FirmwareFilename(const std::string& type = "") {
 
 TEST(PaverTest, Constructor) { netsvc::Paver paver(zx::channel); }
 
-TEST(PaverTest, GetSingleton) { ASSERT_NOT_NULL(netsvc::Paver::Get()); }
+TEST(PaverTest, GetSingleton) {
+  int fd = open("/svc", O_DIRECTORY | O_RDWR);
+  ASSERT_GE(fd, 0);
+  fdio_ns_t* ns;
+  ASSERT_OK(fdio_ns_get_installed(&ns));
+  ASSERT_OK(fdio_ns_bind_fd(ns, "/dev", fd));
+  ASSERT_NOT_NULL(netsvc::Paver::Get());
+  ASSERT_OK(fdio_ns_unbind(ns, "/dev"));
+}
 
 TEST(PaverTest, InitialInProgressFalse) {
   zx::channel chan;

@@ -10,8 +10,6 @@ group("tests") {
     "//sdk/lib/fdio/test:fdio-bootfs-test",
     "//sdk/lib/fdio/test/constructors:fdio-constructor-bootfs-test",
     "//src/bringup/bin/console:bootfs-test",
-    "//src/bringup/bin/netsvc:netsvc-stress-test-bootfs-test",
-    "//src/bringup/bin/netsvc:netsvc-test-bootfs-test",
     "//src/bringup/bin/ptysvc:ptysvc-test-bootfs-test",
     "//src/bringup/bin/svchost:crashsvc-test-bootfs-test",
     "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.

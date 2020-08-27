@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netboot.h"
-#include "netsvc.h"
-#include "test/paver-test-common.h"
+#include "src/bringup/bin/netsvc/netboot.h"
+#include "src/bringup/bin/netsvc/netsvc.h"
+#include "src/bringup/bin/netsvc/test/paver-test-common.h"
 
 extern "C" {
 void update_timeouts() {}

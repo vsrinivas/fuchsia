@@ -4,6 +4,8 @@
 
 import("//build/test.gni")
 import("//build/unification/zbi/bootfs_test.gni")
+import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 declare_args() {
   netsvc_extra_defines = []
@@ -120,16 +122,6 @@ source_set("netsvc_common") {
 }
 
 test("netsvc-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "netsvc-test"
   sources = [
     "test/args-test.cc",
     "test/file-api-test.cc",
@@ -137,7 +129,6 @@ test("netsvc-test") {
     "test/payload-streamer-test.cc",
     "test/tftp-test.cc",
   ]
-  include_dirs = [ "." ]
   deps = [
     ":args",
     ":netsvc_common",
@@ -154,25 +145,13 @@ test("netsvc-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/ramdevice-client",
   ]
-  data_deps = [ ":netsvc" ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-unused-function" ]
 }
 
 test("netsvc-stress-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "netsvc-stress-test"
   sources = [ "test/paver-stress-test.cc" ]
-  include_dirs = [ "." ]
   deps = [
     ":netsvc_common",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -187,15 +166,37 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/ramdevice-client",
   ]
-  data_deps = [ ":netsvc" ]
 }
 
-bootfs_test("netsvc-stress-test-bootfs-test") {
-  name = "netsvc-stress-test"
-  deps = [ ":netsvc-stress-test" ]
+isolated_devmgr_unittest_component("netsvc-stress-test-component") {
+  component_name = "netsvc-stress-test"
+  executable_path = "test/netsvc-stress-test"
+  deps = [
+    ":netsvc-stress-test",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+  ]
 }
 
-bootfs_test("netsvc-test-bootfs-test") {
-  name = "netsvc-test"
-  deps = [ ":netsvc-test" ]
+isolated_devmgr_unittest_component("netsvc-test-component") {
+  component_name = "netsvc-test"
+  executable_path = "test/netsvc-test"
+  deps = [
+    ":netsvc",
+    ":netsvc-test",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+  ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "netsvc-tests"
+  test_components = [
+    ":netsvc-stress-test-component",
+    ":netsvc-test-component",
+  ]
 }

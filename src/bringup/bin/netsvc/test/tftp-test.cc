@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tftp.h"
+#include "src/bringup/bin/netsvc/tftp.h"
 
 #include <inet6/netifc.h>
 #include <zxtest/zxtest.h>
 
-#include "file-api.h"
-#include "netboot.h"
+#include "src/bringup/bin/netsvc/file-api.h"
+#include "src/bringup/bin/netsvc/netboot.h"
 
 extern "C" {
 void update_timeouts() {}

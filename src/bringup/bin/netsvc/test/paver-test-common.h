@@ -16,6 +16,7 @@
 #include <lib/zx/time.h>
 #include <threads.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/errors.h>
 #include <zircon/time.h>
 
 #include <algorithm>
@@ -28,8 +29,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "paver.h"
-#include "zircon/errors.h"
+#include "src/bringup/bin/netsvc/paver.h"
 
 enum class Command {
   kUnknown,
@@ -372,6 +372,7 @@ class FakeDev {
   FakeDev() {
     driver_integration_test::IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
 
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
     fbl::unique_fd fd;

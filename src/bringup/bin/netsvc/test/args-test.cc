@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../args.h"
+#include "src/bringup/bin/netsvc/args.h"
 
 #include <lib/fdio/spawn.h>
 #include <lib/sync/completion.h>
@@ -17,11 +17,7 @@ constexpr char kNodename[] = "some-four-word-name";
 constexpr char kEthDir[] = "/dev";
 
 TEST(ArgsTest, NetsvcNodenamePrintsAndExits) {
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  const std::string path = std::string(root_dir) + "/bin/netsvc";
+  const std::string path = "/pkg/bin/netsvc";
   const char* argv[] = {path.c_str(), "--nodename", nullptr};
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
