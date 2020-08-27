@@ -124,7 +124,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/bugreport", "//src/developer/forensics/crash_reports:crash-reports", "//src/developer/forensics/exceptions", "//src/developer/forensics/last_reboot:last-reboot", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/bugreport", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -132,7 +132,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:27
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/bugreport", "//src/developer/forensics/crash_reports:crash-reports", "//src/developer/forensics/exceptions", "//src/developer/forensics/last_reboot:last-reboot", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/bugreport", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -205,17 +205,17 @@ From //build/images/fvm.gni:41
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:13
+From //boards/arm64.gni:16
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:14
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:41
+From //boards/x64.gni:44
 
 **Overridden from the default:** `[]`
 
@@ -261,7 +261,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/arm64.gni:19
+From //boards/arm64.gni:22
 
 **Overridden from the default:** `[]`
 
@@ -269,7 +269,7 @@ From //build/board.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/x64.gni:47
+From //boards/x64.gni:50
 
 **Overridden from the default:** `[]`
 
@@ -278,17 +278,17 @@ From //build/board.gni:11
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:17
+From //boards/arm64.gni:20
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:25
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:43
+From //boards/x64.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -312,17 +312,17 @@ From //build/images/args.gni:131
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:15
+From //boards/arm64.gni:18
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:22
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/bin/acpidump", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci:xhci-x86", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.nv", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/bin/ihda", "//src/media/audio/drivers/alc5514", "//src/media/audio/drivers/alc5663", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/media/audio/drivers/max98927", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/x64.gni:45
+From //boards/x64.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -446,7 +446,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:85
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -454,7 +454,7 @@ From //BUILD.gn:35
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:85
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -509,6 +509,15 @@ additionally consumed by the Go toolchain.
 **Current value (from the default):** `"../prebuilt/third_party/clang/linux-x64/bin"`
 
 From //build/config/clang/clang.gni:12
+
+### clang_tool_dir
+Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
+found.  If this is "", then the behavior depends on $clang_prefix.
+This toolchain is expected to support both Fuchsia targets and the host.
+
+**Current value (from the default):** `""`
+
+From //build/toolchain/zircon/clang.gni:11
 
 ### cobalt_environment
 Selects the Cobalt environment to send data to. Choices:
@@ -625,7 +634,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -633,14 +642,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -706,7 +715,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:23
+From //build/config/BUILD.gn:24
 
 ### enable_gfx_subsystem
 
@@ -856,7 +865,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -871,14 +880,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/32d98ed12d756fb9a952f2a5936dd249a5bc41a4/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1551,7 +1560,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:30
+From //boards/arm64.gni:33
 
 **Overridden from the default:** `"0"`
 
@@ -1559,7 +1568,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:59
+From //boards/x64.gni:62
 
 **Overridden from the default:** `"0"`
 
@@ -1586,7 +1595,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:31
+From //boards/arm64.gni:34
 
 **Overridden from the default:** `"0"`
 
@@ -1594,7 +1603,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:60
+From //boards/x64.gni:63
 
 **Overridden from the default:** `"0"`
 
@@ -1911,7 +1920,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:31
+From //build/config/BUILD.gn:32
 
 ### rustc_lib_dir
 Path to rustc lib directory.
@@ -2256,6 +2265,14 @@ Number of parallel ThinLTO jobs.
 
 From //build/config/lto/config.gni:13
 
+### time_trace
+Whether to export time traces when building with clang.
+https://releases.llvm.org/9.0.0/tools/clang/docs/ReleaseNotes.html#new-compiler-flags
+
+**Current value (from the default):** `false`
+
+From //build/config/clang/time_trace.gni:8
+
 ### toolchain_variant
 *This should never be set as a build argument.*
 It exists only to be set in `toolchain_args`.
@@ -2351,7 +2368,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:87
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2359,7 +2376,7 @@ From //BUILD.gn:49
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:87
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2575,7 +2592,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:17
+From //src/connectivity/wlan/wlancfg/BUILD.gn:18
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
@@ -2696,6 +2713,15 @@ Additional Zircon GN labels to include in the Zircon build.
 
 From //BUILD.gn:71
 
+### zircon_optimize
+Zircon optimization level. Same acceptable values as `optimize`.
+Note that this will be ignored, in favor of the global `optimize` variable
+if the latter is one of: "none", "sanitizer", "profile" or "size".
+
+**Current value (from the default):** `"default"`
+
+From //build/config/zircon/levels.gni:18
+
 ### zircon_r_partition
 
 **Current value (from the default):** `""`
@@ -2735,6 +2761,19 @@ Partition name from where image will be verified
 **Current value (from the default):** `"zircon"`
 
 From //build/images/vbmeta.gni:36
+
+### zx_assert_level
+Controls which asserts are enabled.
+
+`ZX_ASSERT` is always enabled.
+
+* 0 disables standard C `assert()` and `ZX_DEBUG_ASSERT`.
+* 1 disables `ZX_DEBUG_ASSERT`. Standard C `assert()` remains enabled.
+* 2 enables all asserts.
+
+**Current value (from the default):** `2`
+
+From //build/config/zircon/levels.gni:13
 
 ## `target_cpu = "arm64"`
 
