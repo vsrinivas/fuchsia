@@ -25,7 +25,7 @@ zedboot_deps += [
 # Migrated from //build/images/bootfs_manifest_additions.gni.
 zedboot_deps += [
   "//build/info:bootfs",
-  "//src/devices/bin/driver_host",
+  "//src/devices:bootfs",
   "//src/devices/bin/driver_manager:bootfs",
   "//src/power/shutdown-shim:bootfs",
   "//src/storage/fshost:bootfs",

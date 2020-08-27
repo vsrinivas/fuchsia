@@ -10,7 +10,6 @@ group("bootstrap") {
     "//src/graphics/display/drivers/display",
     "//src/ui/input/drivers/hid",
     "//src/ui/input/drivers/hid-buttons",
-    "//src/ui/input/drivers/hid-input-report",
   ]
 }
 
