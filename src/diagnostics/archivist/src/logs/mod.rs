@@ -95,7 +95,7 @@ impl LogManager {
                 return;
             }
         };
-        messages.sort_by_key(|m| m.time);
+        messages.sort_by_key(|m| m.0.metadata.timestamp);
         for message in messages {
             component_log_stats.lock().await.record_log(&message);
             self.ingest_message(message, LogSource::Kernel).await;
@@ -439,11 +439,9 @@ impl LogManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::{
-        message::{Severity, DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL},
-        testing::*,
-    };
+    use crate::logs::{message::LegacySeverity, testing::*};
     use diagnostic_streams::{Argument, Record, Severity as StreamSeverity, Value};
+    use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, LogSinkMarker};
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon as zx;
@@ -1021,7 +1019,7 @@ mod tests {
                 pid: zx::sys::ZX_KOID_INVALID,
                 tid: zx::sys::ZX_KOID_INVALID,
                 time: 6,
-                severity: Severity::Info.for_listener(),
+                severity: LegacySeverity::Info.for_listener(),
                 dropped_logs: 0,
                 msg: String::from("hi"),
                 tags: vec![],
@@ -1030,7 +1028,7 @@ mod tests {
                 pid: zx::sys::ZX_KOID_INVALID,
                 tid: zx::sys::ZX_KOID_INVALID,
                 time: 14,
-                severity: Severity::Error.for_listener(),
+                severity: LegacySeverity::Error.for_listener(),
                 dropped_logs: 0,
                 msg: String::from(""),
                 tags: vec![],
@@ -1039,7 +1037,7 @@ mod tests {
                 pid: 0x1d1,
                 tid: 0x1d2,
                 time: 19,
-                severity: Severity::Warn.for_listener(),
+                severity: LegacySeverity::Warn.for_listener(),
                 dropped_logs: 23,
                 msg: String::from("message"),
                 tags: vec![String::from("tag")],
@@ -1048,7 +1046,7 @@ mod tests {
                 pid: zx::sys::ZX_KOID_INVALID,
                 tid: zx::sys::ZX_KOID_INVALID,
                 time: 21,
-                severity: Severity::Warn.for_listener(),
+                severity: LegacySeverity::Warn.for_listener(),
                 dropped_logs: 0,
                 msg: String::from(""),
                 tags: vec![String::from("tag-1"), String::from("tag-2")],

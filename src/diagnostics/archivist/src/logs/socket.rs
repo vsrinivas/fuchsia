@@ -98,7 +98,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::super::message::{
-        fx_log_packet_t, Field, LogHierarchy, LogProperty, Message, Severity, METADATA_SIZE,
+        fx_log_packet_t, LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE,
+        PLACEHOLDER_MONIKER, PLACEHOLDER_URL,
     };
     use super::*;
     use diagnostic_streams::{
@@ -118,41 +119,41 @@ mod tests {
 
         let mut ls = LogMessageSocket::new(sout, Arc::new(SourceIdentity::empty())).unwrap();
         sin.write(packet.as_bytes()).unwrap();
-        let mut expected_p = Message {
-            size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
-            time: zx::Time::from_nanos(packet.metadata.time),
-            severity: Severity::Info,
-            contents: LogHierarchy::new(
+        let expected_p = Message::new(
+            zx::Time::from_nanos(packet.metadata.time),
+            Severity::Info,
+            METADATA_SIZE + 6 /* tag */+ 6, /* msg */
+            PLACEHOLDER_MONIKER,
+            PLACEHOLDER_URL,
+            LogsHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::Uint(Field::ProcessId, packet.metadata.pid),
-                    LogProperty::Uint(Field::ThreadId, packet.metadata.tid),
-                    LogProperty::Uint(Field::Dropped, packet.metadata.dropped_logs as _),
-                    LogProperty::String(Field::Tag, "AAAAA".to_string()),
-                    LogProperty::String(Field::Msg, "BBBBB".to_string()),
+                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
+                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
+                    LogsProperty::Uint(LogsField::Dropped, packet.metadata.dropped_logs as _),
+                    LogsProperty::String(LogsField::Tag, "AAAAA".to_string()),
+                    LogsProperty::String(LogsField::Msg, "BBBBB".to_string()),
                 ],
                 vec![],
             ),
-        };
-        expected_p.contents.sort();
+        );
 
-        let mut result_message = ls.next().await.unwrap();
-        result_message.contents.sort();
+        let result_message = ls.next().await.unwrap();
         assert_eq!(result_message, expected_p);
 
         // write one more time
         sin.write(packet.as_bytes()).unwrap();
 
-        let mut result_message = ls.next().await.unwrap();
-        result_message.contents.sort();
+        let result_message = ls.next().await.unwrap();
         assert_eq!(result_message, expected_p);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn structured_logger_stream_test() {
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let timestamp = 107;
         let record = Record {
-            timestamp: 107,
+            timestamp,
             severity: StreamSeverity::Fatal,
             arguments: vec![
                 Argument { name: "key".to_string(), value: Value::Text("value".to_string()) },
@@ -164,33 +165,32 @@ mod tests {
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref()[..buffer.position() as usize];
 
-        let mut expected_p = Message {
-            size: encoded.len(),
-            time: zx::Time::from_nanos(107),
-            severity: Severity::Fatal,
-            contents: LogHierarchy::new(
+        let expected_p = Message::new(
+            timestamp,
+            Severity::Fatal,
+            encoded.len(),
+            PLACEHOLDER_MONIKER,
+            PLACEHOLDER_URL,
+            LogsHierarchy::new(
                 "root",
                 vec![
-                    LogProperty::String(Field::Other("key".to_string()), "value".to_string()),
-                    LogProperty::String(Field::Tag, "tag-a".to_string()),
+                    LogsProperty::String(LogsField::Other("key".to_string()), "value".to_string()),
+                    LogsProperty::String(LogsField::Tag, "tag-a".to_string()),
                 ],
                 vec![],
             ),
-        };
-        expected_p.contents.sort();
+        );
 
         let mut stream =
             LogMessageSocket::new_structured(sout, Arc::new(SourceIdentity::empty())).unwrap();
 
         sin.write(encoded).unwrap();
-        let mut result_message = stream.next().await.unwrap();
-        result_message.contents.sort();
+        let result_message = stream.next().await.unwrap();
         assert_eq!(result_message, expected_p);
 
         // write again
         sin.write(encoded).unwrap();
-        let mut result_message = stream.next().await.unwrap();
-        result_message.contents.sort();
+        let result_message = stream.next().await.unwrap();
         assert_eq!(result_message, expected_p);
     }
 }

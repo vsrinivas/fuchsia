@@ -19,11 +19,16 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/inspect/node-hierarchy/rust",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  if (is_fuchsia) {
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
+  }
 
   sources = [ "src/lib.rs" ]
 }

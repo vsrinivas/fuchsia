@@ -72,14 +72,13 @@ pub struct ComponentLogStats {
 impl ComponentLogStats {
     pub fn record_log(&self, msg: &Message) {
         self.total_logs.add(1);
-        match msg.severity {
+        match msg.0.metadata.severity {
             Severity::Trace => self.trace_logs.add(1),
             Severity::Debug => self.debug_logs.add(1),
             Severity::Info => self.info_logs.add(1),
             Severity::Warn => self.warning_logs.add(1),
             Severity::Error => self.error_logs.add(1),
             Severity::Fatal => self.fatal_logs.add(1),
-            Severity::Verbose(_) => {} // drop records
         }
     }
 }
@@ -104,14 +103,13 @@ impl LogManagerStats {
                 self.logsink_logs.add(1);
             }
         }
-        match msg.severity {
+        match msg.0.metadata.severity {
             Severity::Trace => self.trace_logs.add(1),
             Severity::Debug => self.debug_logs.add(1),
             Severity::Info => self.info_logs.add(1),
             Severity::Warn => self.warning_logs.add(1),
             Severity::Error => self.error_logs.add(1),
             Severity::Fatal => self.fatal_logs.add(1),
-            Severity::Verbose(_) => {} // drop records
         }
     }
 

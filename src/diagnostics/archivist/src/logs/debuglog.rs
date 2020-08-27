@@ -4,7 +4,7 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::{Field, LogHierarchy, LogProperty, Message, Severity, METADATA_SIZE};
+use super::message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE};
 use anyhow::Error;
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
@@ -14,6 +14,8 @@ use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
 use log::error;
+
+const KERNEL_URL: &str = "fuchsia-boot://kernel";
 
 #[async_trait]
 pub trait DebugLog {
@@ -147,21 +149,24 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         Severity::Info
     };
 
-    Some(Message {
-        size: METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1,
+    let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
+    Some(Message::new(
         time,
         severity,
-        contents: LogHierarchy::new(
+        size,
+        "klog",
+        KERNEL_URL,
+        LogsHierarchy::new(
             "root",
             vec![
-                LogProperty::Uint(Field::ProcessId, pid),
-                LogProperty::Uint(Field::ThreadId, tid),
-                LogProperty::String(Field::Tag, "klog".to_string()),
-                LogProperty::String(Field::Msg, contents),
+                LogsProperty::Uint(LogsField::ProcessId, pid),
+                LogsProperty::Uint(LogsField::ThreadId, tid),
+                LogsProperty::String(LogsField::Tag, "klog".to_string()),
+                LogsProperty::String(LogsField::Msg, contents),
             ],
             vec![],
         ),
-    })
+    ))
 }
 
 #[cfg(test)]
@@ -177,21 +182,23 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message {
-                size: METADATA_SIZE + 6 + "test log".len(),
-                time: zx::Time::from_nanos(klog.timestamp),
-                severity: Severity::Info,
-                contents: LogHierarchy::new(
+            Message::new(
+                klog.timestamp,
+                Severity::Info,
+                METADATA_SIZE + 6 + "test log".len(),
+                "klog",
+                KERNEL_URL,
+                LogsHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(Field::ProcessId, klog.pid),
-                        LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::String(Field::Tag, "klog".to_string()),
-                        LogProperty::String(Field::Msg, "test log".to_string())
+                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
+                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
+                        LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]
-                )
-            }
+                ),
+            )
         );
 
         // maximum allowed klog size
@@ -199,25 +206,27 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message {
-                size: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
-                time: zx::Time::from_nanos(klog.timestamp),
-                severity: Severity::Info,
-                contents: LogHierarchy::new(
+            Message::new(
+                klog.timestamp,
+                Severity::Info,
+                METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
+                "klog",
+                KERNEL_URL,
+                LogsHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(Field::ProcessId, klog.pid),
-                        LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::String(Field::Tag, "klog".to_string()),
-                        LogProperty::String(
-                            Field::Msg,
+                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
+                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
+                        LogsProperty::String(
+                            LogsField::Msg,
                             String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
                                 .unwrap()
                         )
                     ],
                     vec![]
-                )
-            }
+                ),
+            ),
         );
 
         // empty message
@@ -225,21 +234,23 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message {
-                size: METADATA_SIZE + 6,
-                time: zx::Time::from_nanos(klog.timestamp),
-                severity: Severity::Info,
-                contents: LogHierarchy::new(
+            Message::new(
+                klog.timestamp,
+                Severity::Info,
+                METADATA_SIZE + 6,
+                "klog",
+                KERNEL_URL,
+                LogsHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(Field::ProcessId, klog.pid),
-                        LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::String(Field::Tag, "klog".to_string()),
-                        LogProperty::String(Field::Msg, "".to_string())
+                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
+                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
+                        LogsProperty::String(LogsField::Msg, "".to_string())
                     ],
                     vec![]
-                )
-            }
+                ),
+            ),
         );
 
         // truncated header
@@ -265,21 +276,23 @@ mod tests {
 
         assert_eq!(
             log_bridge.existing_logs().await.unwrap(),
-            vec![Message {
-                size: METADATA_SIZE + 6 + "test log".len(),
-                time: zx::Time::from_nanos(klog.timestamp),
-                severity: Severity::Info,
-                contents: LogHierarchy::new(
+            vec![Message::new(
+                klog.timestamp,
+                Severity::Info,
+                METADATA_SIZE + 6 + "test log".len(),
+                "klog",
+                KERNEL_URL,
+                LogsHierarchy::new(
                     "root",
                     vec![
-                        LogProperty::Uint(Field::ProcessId, klog.pid),
-                        LogProperty::Uint(Field::ThreadId, klog.tid),
-                        LogProperty::String(Field::Tag, "klog".to_string()),
-                        LogProperty::String(Field::Msg, "test log".to_string())
+                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
+                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
+                        LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]
-                )
-            }]
+                ),
+            )]
         );
 
         // unprocessable logs should be skipped.
@@ -333,26 +346,26 @@ mod tests {
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "ERROR: first log");
-        assert_eq!(log_message.severity, Severity::Error);
+        assert_eq!(log_message.0.metadata.severity, Severity::Error);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "first log error");
-        assert_eq!(log_message.severity, Severity::Info);
+        assert_eq!(log_message.0.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "WARNING: second log");
-        assert_eq!(log_message.severity, Severity::Warn);
+        assert_eq!(log_message.0.metadata.severity, Severity::Warn);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "INFO: third log");
-        assert_eq!(log_message.severity, Severity::Info);
+        assert_eq!(log_message.0.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "fourth log");
-        assert_eq!(log_message.severity, Severity::Info);
+        assert_eq!(log_message.0.metadata.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), &long_log);
-        assert_eq!(log_message.severity, Severity::Info);
+        assert_eq!(log_message.0.metadata.severity, Severity::Info);
     }
 }

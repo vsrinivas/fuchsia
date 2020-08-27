@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
-    serde::{self, de::Deserializer, Deserialize, Serialize, Serializer},
-    std::{
-        borrow::Borrow,
-        fmt,
-        hash::Hash,
-        ops::{Deref, DerefMut},
-        str::FromStr,
-    },
+use fidl_fuchsia_diagnostics::Severity as FidlSeverity;
+use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
+use serde::{self, de::Deserializer, Deserialize, Serialize, Serializer};
+use std::{
+    borrow::Borrow,
+    fmt,
+    hash::Hash,
+    ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
 const SCHEMA_VERSION: u64 = 1;
@@ -59,12 +58,18 @@ impl Default for Metadata {
 }
 
 /// Wraps a time for serialization and deserialization purposes.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Timestamp(u64);
 
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl From<usize> for Timestamp {
+    fn from(nanos: usize) -> Timestamp {
+        Timestamp(nanos as u64)
     }
 }
 
@@ -77,6 +82,30 @@ impl From<u64> for Timestamp {
 impl From<i64> for Timestamp {
     fn from(nanos: i64) -> Timestamp {
         Timestamp(nanos as u64)
+    }
+}
+
+impl Into<i64> for Timestamp {
+    fn into(self) -> i64 {
+        self.0 as _
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+mod zircon {
+    use super::*;
+    use fuchsia_zircon as zx;
+
+    impl From<zx::Time> for Timestamp {
+        fn from(t: zx::Time) -> Timestamp {
+            Timestamp(t.into_nanos() as u64)
+        }
+    }
+
+    impl Into<zx::Time> for Timestamp {
+        fn into(self) -> zx::Time {
+            zx::Time::from_nanos(self.0 as i64)
+        }
     }
 }
 
@@ -132,6 +161,48 @@ pub struct LogsMetadata {
 
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
+
+    /// Severity of the message.
+    pub severity: Severity,
+
+    /// Size of the original message on the wire, in bytes.
+    pub size_bytes: usize,
+}
+
+/// Severities a log message can have, often called the log's "level".
+// NOTE: this is only duplicated because we can't get Serialize/Deserialize on the FIDL type
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub enum Severity {
+    /// Trace records include detailed information about program execution.
+    Trace,
+
+    /// Debug records include development-facing information about program execution.
+    Debug,
+
+    /// Info records include general information about program execution. (default)
+    Info,
+
+    /// Warning records include information about potentially problematic operations.
+    Warn,
+
+    /// Error records include information about failed operations.
+    Error,
+
+    /// Fatal records convey information about operations which cause a program's termination.
+    Fatal,
+}
+
+impl From<FidlSeverity> for Severity {
+    fn from(severity: FidlSeverity) -> Self {
+        match severity {
+            FidlSeverity::Trace => Severity::Trace,
+            FidlSeverity::Debug => Severity::Debug,
+            FidlSeverity::Info => Severity::Info,
+            FidlSeverity::Warn => Severity::Warn,
+            FidlSeverity::Error => Severity::Error,
+            FidlSeverity::Fatal => Severity::Fatal,
+        }
+    }
 }
 
 /// An instance of diagnostics data with typed metadata and an optional nested payload.
@@ -162,6 +233,10 @@ pub struct Data<Key, Metadata> {
 
 pub type InspectData = Data<String, InspectMetadata>;
 pub type LifecycleData = Data<String, LifecycleEventMetadata>;
+pub type LogsData = Data<LogsField, LogsMetadata>;
+
+pub type LogsHierarchy = NodeHierarchy<LogsField>;
+pub type LogsProperty = Property<LogsField>;
 
 impl Data<String, LifecycleEventMetadata> {
     /// Creates a new data instance for a lifecycle event.
@@ -213,6 +288,103 @@ impl Data<String, InspectMetadata> {
                 filename: filename.into(),
                 errors: errors_opt,
             },
+        }
+    }
+}
+
+impl Data<LogsField, LogsMetadata> {
+    /// Creates a new data instance for logs.
+    pub fn for_logs(
+        moniker: impl Into<String>,
+        payload: Option<LogsHierarchy>,
+        timestamp_nanos: impl Into<Timestamp>,
+        component_url: impl Into<String>,
+        severity: impl Into<Severity>,
+        size_bytes: usize,
+        errors: Vec<Error>,
+    ) -> Self {
+        let errors = if errors.is_empty() { None } else { Some(errors) };
+
+        Data {
+            moniker: moniker.into(),
+            version: SCHEMA_VERSION,
+            data_source: DataSource::Logs,
+            payload,
+            metadata: LogsMetadata {
+                timestamp: timestamp_nanos.into(),
+                component_url: component_url.into(),
+                severity: severity.into(),
+                size_bytes,
+                errors,
+            },
+        }
+    }
+}
+
+/// An enum containing well known argument names passed through logs, as well
+/// as an `Other` variant for any other argument names.
+///
+/// This contains the fields of logs sent as a [`LogMessage`].
+///
+/// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, PartialOrd, Ord, Serialize)]
+pub enum LogsField {
+    ProcessId,
+    ThreadId,
+    Dropped,
+    Tag,
+    Verbosity,
+    Msg,
+    Other(String),
+}
+
+// TODO(50519) - ensure that strings reported here align with naming
+// decisions made for the structured log format sent by other components.
+pub const PID_LABEL: &str = "pid";
+pub const TID_LABEL: &str = "tid";
+pub const DROPPED_LABEL: &str = "num_dropped";
+pub const TAG_LABEL: &str = "tag";
+pub const MESSAGE_LABEL: &str = "message";
+pub const VERBOSITY_LABEL: &str = "verbosity";
+
+impl LogsField {
+    pub fn is_legacy(&self) -> bool {
+        matches!(
+            self,
+            LogsField::ProcessId
+                | LogsField::ThreadId
+                | LogsField::Dropped
+                | LogsField::Tag
+                | LogsField::Msg
+                | LogsField::Verbosity
+        )
+    }
+}
+
+impl AsRef<str> for LogsField {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::ProcessId => PID_LABEL,
+            Self::ThreadId => TID_LABEL,
+            Self::Dropped => DROPPED_LABEL,
+            Self::Tag => TAG_LABEL,
+            Self::Msg => MESSAGE_LABEL,
+            Self::Verbosity => VERBOSITY_LABEL,
+            Self::Other(str) => str.as_str(),
+        }
+    }
+}
+
+impl From<String> for LogsField {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            PID_LABEL => Self::ProcessId,
+            TID_LABEL => Self::ThreadId,
+            DROPPED_LABEL => Self::Dropped,
+            VERBOSITY_LABEL => Self::Verbosity,
+            TAG_LABEL => Self::Tag,
+            MESSAGE_LABEL => Self::Msg,
+            _ => Self::Other(s),
         }
     }
 }

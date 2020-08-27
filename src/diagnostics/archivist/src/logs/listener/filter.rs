@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use super::{
-    super::message::{Message, Severity},
+    super::message::{LegacySeverity, Message},
     ListenerError,
 };
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
@@ -12,7 +12,7 @@ use std::{collections::HashSet, convert::TryFrom};
 /// `fidl_fuchsia_logger::LogFilterOptions`.
 pub(super) struct MessageFilter {
     /// Only send messages of greater or equal severity to this value.
-    min_severity: Option<Severity>,
+    min_severity: Option<LegacySeverity>,
 
     /// Only send messages that purport to come from this PID.
     pid: Option<u64>,
@@ -66,9 +66,9 @@ impl MessageFilter {
                         - (options.verbosity as i32
                             * fidl_fuchsia_logger::LOG_VERBOSITY_STEP_SIZE as i32),
                 );
-                this.min_severity = Some(Severity::try_from(raw_level as i32)?);
+                this.min_severity = Some(LegacySeverity::try_from(raw_level as i32)?);
             } else if options.min_severity != LogLevelFilter::None {
-                this.min_severity = Some(Severity::try_from(options.min_severity as i32)?);
+                this.min_severity = Some(LegacySeverity::try_from(options.min_severity as i32)?);
             }
         }
 
@@ -82,7 +82,7 @@ impl MessageFilter {
         let reject_tid = self.tid.map(|t| log_message.tid() != Some(t)).unwrap_or(false);
         let reject_severity = self
             .min_severity
-            .map(|m| m.for_listener() > log_message.severity.for_listener())
+            .map(|m| m.for_listener() > log_message.legacy_severity().for_listener())
             .unwrap_or(false);
         let reject_tags =
             !self.tags.is_empty() && !log_message.tags().any(|tag| self.tags.contains(tag));
@@ -94,15 +94,19 @@ impl MessageFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::message::LogHierarchy;
+    use crate::logs::message::{
+        LegacySeverity, LogsHierarchy, Severity, PLACEHOLDER_MONIKER, PLACEHOLDER_URL,
+    };
 
     fn test_message() -> Message {
-        Message {
-            size: 1,
-            time: fuchsia_zircon::Time::from_nanos(1),
-            severity: Severity::Info,
-            contents: LogHierarchy::new("root", vec![], vec![]),
-        }
+        Message::new(
+            fuchsia_zircon::Time::from_nanos(1),
+            Severity::Info,
+            1,
+            PLACEHOLDER_MONIKER,
+            PLACEHOLDER_URL,
+            LogsHierarchy::new("root", vec![], vec![]),
+        )
     }
 
     #[test]
@@ -110,14 +114,14 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Verbose(15));
+        filter.min_severity = Some(LegacySeverity::Verbose(15));
         for verbosity in 1..15 {
-            message.severity = Severity::Verbose(verbosity);
+            message.set_legacy_verbosity(verbosity);
             assert_eq!(filter.should_send(&message), true);
         }
 
-        filter.min_severity = Some(Severity::Debug);
-        message.severity = Severity::Verbose(1);
+        filter.min_severity = Some(LegacySeverity::Debug);
+        message.set_legacy_verbosity(1);
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -126,14 +130,14 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Verbose(1));
+        filter.min_severity = Some(LegacySeverity::Verbose(1));
         for verbosity in 2..15 {
-            message.severity = Severity::Verbose(verbosity);
+            message.set_legacy_verbosity(verbosity);
             assert_eq!(filter.should_send(&message), false);
         }
 
-        filter.min_severity = Some(Severity::Info);
-        message.severity = Severity::Verbose(1);
+        filter.min_severity = Some(LegacySeverity::Info);
+        message.set_legacy_verbosity(1);
         assert_eq!(filter.should_send(&message), false);
     }
 
@@ -142,12 +146,12 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Info);
-        message.severity = Severity::Info;
+        filter.min_severity = Some(LegacySeverity::Info);
+        message.metadata.severity = Severity::Info;
         assert_eq!(filter.should_send(&message), true);
 
-        filter.min_severity = Some(Severity::Debug);
-        message.severity = Severity::Info;
+        filter.min_severity = Some(LegacySeverity::Debug);
+        message.metadata.severity = Severity::Info;
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -156,8 +160,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Warn);
-        message.severity = Severity::Info;
+        filter.min_severity = Some(LegacySeverity::Warn);
+        message.metadata.severity = Severity::Info;
         assert_eq!(filter.should_send(&message), false);
     }
 
@@ -166,12 +170,12 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Warn);
-        message.severity = Severity::Warn;
+        filter.min_severity = Some(LegacySeverity::Warn);
+        message.metadata.severity = Severity::Warn;
         assert_eq!(filter.should_send(&message), true);
 
-        filter.min_severity = Some(Severity::Info);
-        message.severity = Severity::Warn;
+        filter.min_severity = Some(LegacySeverity::Info);
+        message.metadata.severity = Severity::Warn;
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -180,8 +184,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Error);
-        message.severity = Severity::Warn;
+        filter.min_severity = Some(LegacySeverity::Error);
+        message.metadata.severity = Severity::Warn;
         assert_eq!(filter.should_send(&message), false);
     }
 
@@ -190,12 +194,12 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Error);
-        message.severity = Severity::Error;
+        filter.min_severity = Some(LegacySeverity::Error);
+        message.metadata.severity = Severity::Error;
         assert_eq!(filter.should_send(&message), true);
 
-        filter.min_severity = Some(Severity::Warn);
-        message.severity = Severity::Error;
+        filter.min_severity = Some(LegacySeverity::Warn);
+        message.metadata.severity = Severity::Error;
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -204,8 +208,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Fatal);
-        message.severity = Severity::Error;
+        filter.min_severity = Some(LegacySeverity::Fatal);
+        message.metadata.severity = Severity::Error;
         assert_eq!(filter.should_send(&message), false);
     }
 
@@ -214,12 +218,12 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Debug);
-        message.severity = Severity::Debug;
+        filter.min_severity = Some(LegacySeverity::Debug);
+        message.metadata.severity = Severity::Debug;
         assert_eq!(filter.should_send(&message), true);
 
-        filter.min_severity = Some(Severity::Trace);
-        message.severity = Severity::Debug;
+        filter.min_severity = Some(LegacySeverity::Trace);
+        message.metadata.severity = Severity::Debug;
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -228,8 +232,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Info);
-        message.severity = Severity::Debug;
+        filter.min_severity = Some(LegacySeverity::Info);
+        message.metadata.severity = Severity::Debug;
         assert_eq!(filter.should_send(&message), false);
     }
 
@@ -238,8 +242,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Trace);
-        message.severity = Severity::Trace;
+        filter.min_severity = Some(LegacySeverity::Trace);
+        message.metadata.severity = Severity::Trace;
         assert_eq!(filter.should_send(&message), true);
     }
 
@@ -248,8 +252,8 @@ mod tests {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.min_severity = Some(Severity::Debug);
-        message.severity = Severity::Trace;
+        filter.min_severity = Some(LegacySeverity::Debug);
+        message.metadata.severity = Severity::Trace;
         assert_eq!(filter.should_send(&message), false);
     }
 }
