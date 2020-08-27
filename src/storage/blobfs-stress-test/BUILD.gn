@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
@@ -115,6 +116,38 @@ test_package("blobfs-stress-test") {
       log_settings = {
         max_severity = "ERROR"
       }
+    },
+  ]
+}
+
+rustc_binary("blobfs-stressor-cli-bin") {
+  name = "blobfs_stressor_cli"
+  edition = "2018"
+  source_root = "main.rs"
+
+  deps = [
+    ":blobfs-stress-test-lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rand_core",
+    "//third_party/rust_crates:structopt",
+  ]
+
+  sources = [ "main.rs" ]
+}
+
+package("blobfs-stressor") {
+  deps = [ ":blobfs-stressor-cli-bin" ]
+
+  binaries = [
+    {
+      name = "blobfs_stressor_cli"
+      dest = "blobfs_stressor"
+      shell = true
     },
   ]
 }
