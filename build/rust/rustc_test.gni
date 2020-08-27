@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/testing/host_test.gni")
-import("//build/testing/test_spec.gni")
 
 # Defines a Rust unit test, without also compiling a separate binary or library
 # target.
