@@ -26,6 +26,7 @@ namespace fuzzing {
 namespace {
 
 using ::fuchsia::fuzzer::DataProvider;
+using ::fuchsia::fuzzer::LlvmFuzzerHandle;
 
 }  // namespace
 
@@ -77,8 +78,11 @@ class DataProviderImpl : public DataProvider {
 
   fidl::InterfaceRequestHandler<DataProvider> GetHandler() { return bindings_.GetHandler(this); }
 
+  // Takes ownership of the LlvmFuzzer handle set by Configure.
+  LlvmFuzzerHandle TakeFuzzer() FXL_LOCKS_EXCLUDED(lock_);
+
   // FIDL methods
-  void Configure(zx::vmo vmo, fidl::VectorPtr<std::string> labels,
+  void Configure(LlvmFuzzerHandle llvm_fuzzer, zx::vmo vmo, fidl::VectorPtr<std::string> labels,
                  ConfigureCallback callback) override FXL_LOCKS_EXCLUDED(lock_);
   void AddConsumer(std::string label, zx::vmo vmo, AddConsumerCallback callback) override
       FXL_LOCKS_EXCLUDED(lock_);
@@ -106,6 +110,9 @@ class DataProviderImpl : public DataProvider {
 
   // Lock to synchronize calls from engine and dispatcher threads.
   std::mutex lock_;
+
+  // Interface handle to the LlvmFuzzer. Set by |Configure| and taken by the engine.
+  LlvmFuzzerHandle llvm_fuzzer_ FXL_GUARDED_BY(lock_);
 
   // Shared memory regions into which test input data is partitioned.
   std::map<std::string, TestInput, std::less<>> inputs_ FXL_GUARDED_BY(lock_);

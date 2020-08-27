@@ -28,8 +28,7 @@ class TestInput final : public SharedMemory {
   const uint8_t *data() const { return data_; }
   size_t size() const { return size_ ? *size_ : 0; }
 
-  // Creates a new VMO, maps it, and returns a duplicate handle to it via |out|. If |len| is
-  // provided, it MUST be kVmoSize.
+  // Creates a new VMO and maps it. If |len| is provided, it MUST be kVmoSize.
   zx_status_t Create(size_t len = kVmoSize) override;
 
   // Maps |vmo| as the backing shared memory for this test input. If |len| is provided, it MUST be

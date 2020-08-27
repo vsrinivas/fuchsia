@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fidl_fuzzer_client_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

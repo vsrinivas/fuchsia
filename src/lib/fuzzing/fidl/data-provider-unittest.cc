@@ -41,12 +41,13 @@ TEST_F(DataProviderTest, Configure) {
   EXPECT_FALSE(data_provider_.HasLabel(""));
   EXPECT_FALSE(data_provider_.IsMapped(""));
 
+  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
   EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
   EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
 
   std::vector<std::string> labels{"foo", "bar", "baz"};
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
 
   EXPECT_TRUE(data_provider_.HasLabel(""));
   EXPECT_TRUE(data_provider_.IsMapped(""));
@@ -60,6 +61,7 @@ TEST_F(DataProviderTest, Configure) {
 }
 
 TEST_F(DataProviderTest, AddConsumer) {
+  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
   EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
   EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
@@ -81,7 +83,7 @@ TEST_F(DataProviderTest, AddConsumer) {
   }
 
   // Valid
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
   for (auto &[label, input] : inputs) {
     EXPECT_EQ(input.Share(&vmo), ZX_OK);
     data_provider_.AddConsumer(label, std::move(vmo), [&status](zx_status_t res) { status = res; });
@@ -94,12 +96,13 @@ TEST_F(DataProviderTest, AddConsumer) {
 }
 
 TEST_F(DataProviderTest, PartitionTestInput) {
+  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
   EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
   EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
 
   std::vector<std::string> labels;
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
 
   // No labels provided
   std::string data = "AB#[foo]CD#[bar]EF";
@@ -114,7 +117,7 @@ TEST_F(DataProviderTest, PartitionTestInput) {
 
   fuzzer_input_.Share(&vmo);
   data_provider_.Reset();
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
 
   zx_status_t status;
   for (const std::string &label : labels) {
@@ -221,6 +224,7 @@ TEST_F(DataProviderTest, PartitionTestInput) {
 }
 
 TEST_F(DataProviderTest, CompleteIteration) {
+  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
   EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
   EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
@@ -237,7 +241,7 @@ TEST_F(DataProviderTest, CompleteIteration) {
   });
 
   EXPECT_EQ(status, ZX_ERR_STOP);
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
   t1.join();
   EXPECT_EQ(status, ZX_OK);
   zx_signals_t observed = 0;
@@ -248,7 +252,7 @@ TEST_F(DataProviderTest, CompleteIteration) {
   // between iterations.
   EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
   data_provider_.Reset();
-  data_provider_.Configure(std::move(vmo), labels, []() {});
+  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
   EXPECT_EQ(fuzzer_input_.vmo().wait_one(kBetweenIterations, zx::time(0), &observed), ZX_OK);
   EXPECT_EQ(observed & kInIteration, 0u);
   EXPECT_EQ(data_provider_.PartitionTestInput(data.c_str(), data.size()), ZX_OK);

@@ -14,13 +14,20 @@ DataProviderImpl::DataProviderImpl() : max_label_length_(0) {}
 
 DataProviderImpl::~DataProviderImpl() {}
 
-void DataProviderImpl::Configure(zx::vmo vmo, fidl::VectorPtr<std::string> labels,
-                                 ConfigureCallback callback) {
+LlvmFuzzerHandle DataProviderImpl::TakeFuzzer() {
+  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
+  std::lock_guard<std::mutex> lock(lock_);
+  return std::move(llvm_fuzzer_);
+}
+
+void DataProviderImpl::Configure(LlvmFuzzerHandle llvm_fuzzer, zx::vmo vmo,
+                                 fidl::VectorPtr<std::string> labels, ConfigureCallback callback) {
   {
     std::lock_guard<std::mutex> lock(lock_);
     if (inputs_.size() != 0) {
       return;
     }
+    llvm_fuzzer_ = std::move(llvm_fuzzer);
     TestInput *input = &inputs_[""];
     input->Link(vmo);
     input->vmo().signal(kInIteration, kBetweenIterations);
