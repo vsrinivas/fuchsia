@@ -31,7 +31,7 @@ pub struct WatchHandler<T, ST> {
     /// There can only be one.
     watch_responder: Option<ST>,
     /// Represents the current state of the system.
-    current_value: T,
+    current_value: Option<T>,
     /// The last value that was sent to the client.
     last_sent_value: Option<T>,
     /// Function called on change. If function returns true, tells the handler that it should send to the hanging get.
@@ -43,15 +43,12 @@ where
     T: Clone + PartialEq + 'static,
     ST: Sender<T> + 'static,
 {
-    /// Creates a new instance of WatchHandler which will return immediately on first watch.
+    /// Creates a new instance of WatchHandler. If |initial_value| is provided, it will return
+    /// immediately on first watch. Otherwise, the first watch returns when the value is set for
+    /// the first time.
     /// Uses default change function which just checks for any change.
-    pub fn create(initial_value: T) -> Self {
-        Self {
-            watch_responder: None,
-            last_sent_value: None,
-            current_value: initial_value,
-            change_function: equality_change_function(),
-        }
+    pub fn create(initial_value: Option<T>) -> Self {
+        Self::create_with_change_fn(equality_change_function(), initial_value)
     }
 }
 
@@ -60,8 +57,13 @@ where
     T: Clone + 'static,
     ST: Sender<T> + 'static,
 {
-    /// Creates a new instance of WatchHandler which will return immediately on first watch.
-    pub fn create_with_change_fn(change_function: ChangeFunction<T>, initial_value: T) -> Self {
+    /// Creates a new instance of WatchHandler. If |initial_value| is provided, it will return
+    /// immediately on first watch. Otherwise, the first watch returns when the value is set for
+    /// the first time.
+    pub fn create_with_change_fn(
+        change_function: ChangeFunction<T>,
+        initial_value: Option<T>,
+    ) -> Self {
         Self {
             watch_responder: None,
             last_sent_value: None,
@@ -92,21 +94,23 @@ where
 
     /// Called to update the current value of the handler, sending changes using the watcher if needed.
     pub fn set_value(&mut self, new_value: T) {
-        self.current_value = new_value;
+        self.current_value = Some(new_value);
         self.send_if_needed();
     }
 
     /// Called when receiving a notification that value has changed.
     fn send_if_needed(&mut self) {
-        let should_send = match self.last_sent_value.as_ref() {
-            Some(last_value) => (self.change_function)(&last_value, &self.current_value),
-            None => true,
+        let value_to_send = match (self.last_sent_value.as_ref(), self.current_value.as_ref()) {
+            (Some(last), Some(current)) if (self.change_function)(last, current) => Some(current),
+            (Some(_), Some(_)) => None,
+            (None, Some(current)) => Some(current),
+            (_, None) => None,
         };
 
-        if should_send {
+        if let Some(value) = value_to_send {
             if let Some(responder) = self.watch_responder.take() {
-                responder.send_response(self.current_value.clone());
-                self.last_sent_value = Some(self.current_value.clone());
+                responder.send_response(value.clone());
+                self.last_sent_value = Some(value.clone());
             }
         }
     }
@@ -141,7 +145,8 @@ mod tests {
 
     #[test]
     fn test_watch() {
-        let mut handler = WatchHandler::<TestStruct, TestSender>::create(TestStruct { id: ID1 });
+        let mut handler =
+            WatchHandler::<TestStruct, TestSender>::create(Some(TestStruct { id: ID1 }));
 
         let sent_value = Rc::new(RefCell::new(ID_INVALID));
         handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
@@ -170,8 +175,32 @@ mod tests {
     }
 
     #[test]
+    fn test_watch_no_initial() {
+        let mut handler = WatchHandler::<TestStruct, TestSender>::create(None);
+
+        let sent_value = Rc::new(RefCell::new(ID_INVALID));
+        handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
+
+        // First call does not return until value is set
+        assert_eq!((*sent_value.borrow()), ID_INVALID);
+
+        handler.set_value(TestStruct { id: ID1 });
+        assert_eq!((*sent_value.borrow()), ID1);
+
+        let mut handler = WatchHandler::<TestStruct, TestSender>::create(None);
+        handler.set_value(TestStruct { id: ID2 });
+
+        let sent_value = Rc::new(RefCell::new(ID_INVALID));
+        handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
+
+        // First call returns immediately if value is already set.
+        assert_eq!((*sent_value.borrow()), ID2);
+    }
+
+    #[test]
     fn test_watch_fails() {
-        let mut handler = WatchHandler::<TestStruct, TestSender>::create(TestStruct { id: ID1 });
+        let mut handler =
+            WatchHandler::<TestStruct, TestSender>::create(Some(TestStruct { id: ID1 }));
 
         let sent_value = Rc::new(RefCell::new(ID_INVALID));
         // first watch returns immediately
@@ -192,7 +221,7 @@ mod tests {
     fn test_watch_with_change_function() {
         let mut handler = WatchHandler::<TestStruct, TestSender>::create_with_change_fn(
             equality_change_function(),
-            TestStruct { id: ID1 },
+            Some(TestStruct { id: ID1 }),
         );
         let sent_value = Rc::new(RefCell::new(ID_INVALID));
 
@@ -225,5 +254,35 @@ mod tests {
 
         handler.set_change_function(Box::new(|_old, _new| true));
         assert_eq!((*sent_value.borrow()), ID4);
+    }
+
+    #[test]
+    fn test_watch_with_change_fn_no_initial() {
+        let mut handler = WatchHandler::<TestStruct, TestSender>::create_with_change_fn(
+            Box::new(|_old, _new| false),
+            None,
+        );
+
+        let sent_value = Rc::new(RefCell::new(ID_INVALID));
+        handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
+
+        // First call does not return until value is set
+        assert_eq!((*sent_value.borrow()), ID_INVALID);
+
+        // First value returns after set regardless of change fn
+        handler.set_value(TestStruct { id: ID1 });
+        assert_eq!((*sent_value.borrow()), ID1);
+
+        let mut handler = WatchHandler::<TestStruct, TestSender>::create_with_change_fn(
+            Box::new(|_old, _new| false),
+            None,
+        );
+        handler.set_value(TestStruct { id: ID2 });
+
+        let sent_value = Rc::new(RefCell::new(ID_INVALID));
+        handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
+
+        // First call returns immediately if value is already set regardless of change fn
+        assert_eq!((*sent_value.borrow()), ID2);
     }
 }

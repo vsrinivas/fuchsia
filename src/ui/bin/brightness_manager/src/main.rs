@@ -39,12 +39,12 @@ async fn run_brightness_server(
     let (initial_current, initial_auto) = get_initial_value(control.clone()).await?;
 
     let watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>> =
-        Arc::new(Mutex::new(WatchHandler::create(initial_auto)));
+        Arc::new(Mutex::new(WatchHandler::create(Some(initial_auto))));
 
     let (auto_channel_sender, auto_channel_receiver) = futures::channel::mpsc::unbounded::<bool>();
 
     let watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>> =
-        Arc::new(Mutex::new(WatchHandler::create(initial_current)));
+        Arc::new(Mutex::new(WatchHandler::create(Some(initial_current))));
     let (current_channel_sender, current_channel_receiver) =
         futures::channel::mpsc::unbounded::<f32>();
 
@@ -53,7 +53,7 @@ async fn run_brightness_server(
             Box::new(move |old_data: &f32, new_data: &f32| {
                 (*new_data - *old_data).abs() >= ADJUSTMENT_DELTA
             }),
-            0.0,
+            Some(0.0),
         )));
     let (adjustment_channel_sender, adjustment_channel_receiver) =
         futures::channel::mpsc::unbounded::<f32>();
