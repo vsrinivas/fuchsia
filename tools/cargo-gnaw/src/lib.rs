@@ -208,12 +208,13 @@ pub fn generate_from_manifest<W: io::Write>(
                         rules.cfgs.join(", ")
                     ));
                 }
-                Err(_) => {
+                Err(err) => {
                     return Err(anyhow!(
                         "{} {} uses a build script but no section defined in the GN section \
-                    nor can we automatically generate the appropriate rules",
+                    nor can we automatically generate the appropriate rules:\n{}",
                         target.gn_name(),
-                        target.version()
+                        target.version(),
+                        err,
                     ))
                 }
             }

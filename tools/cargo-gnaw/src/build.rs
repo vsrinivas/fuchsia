@@ -82,7 +82,11 @@ impl<'a> BuildScript<'a> {
             .output()
             .expect("failed to execute process");
         if !output.status.success() {
-            return Err(anyhow!("Failed to compile {}", target.gn_target_name()));
+            return Err(anyhow!(
+                "Failed to compile {}:\n{}",
+                target.gn_target_name(),
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
 
         let out_dir = tempdir()?;
