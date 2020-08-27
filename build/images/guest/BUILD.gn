@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/images/assemble_system.gni")
-import("//build/unification/images/common_image_contents.gni")
 
 assemble_system("guest") {
   base_packages = [
@@ -21,42 +20,75 @@ assemble_system("guest") {
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
   ]
-  bootfs_labels = common_image_contents
-  bootfs_labels += [
-    "//src/sys/component_manager:component_manager_config_bootfs_resource",
+
+  bootfs_labels = [
+    "//build/info:bootfs",
+    "//src/bringup/bin/bootsvc:bin",
+    "//src/bringup/bin/console",
+    "//src/bringup/bin/console:bootfs",
+    "//src/bringup/bin/debuglog",
+    "//src/bringup/bin/miscsvc",
+    "//src/bringup/bin/netsvc",
+    "//src/bringup/bin/netsvc:device-name-provider",
+    "//src/bringup/bin/ptysvc",
+    "//src/bringup/bin/ptysvc:bootfs",
+    "//src/bringup/bin/pwrbtn-monitor",
+    "//src/bringup/bin/pwrbtn-monitor:bootfs",
+    "//src/bringup/bin/run-vc",
+    "//src/bringup/bin/svchost",
+    "//src/bringup/bin/sysinfo",
+    "//src/bringup/bin/sysinfo:bootfs",
+    "//src/bringup/bin/trace-benchmark",
+    "//src/bringup/bin/waitfor",
+    "//src/bringup/bin/watch",
+    "//src/bringup/bundles:bootstrap",
     "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+    "//src/connectivity/network/bin/ping",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/network/drivers/network-device",
+    "//src/devices:bootfs",
+    "//src/devices/bin/driver_manager:bootfs",
+    "//src/devices/bin/driverctl",
+    "//src/devices/bin/lsdev",
+    "//src/devices/bin/unbind",
+    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/virtio:virtio_block",
     "//src/devices/block/drivers/virtio:virtio_scsi",
+    "//src/devices/board/drivers/machina",
+    "//src/devices/bundles:bootstrap",
+    "//src/devices/bus/drivers/pci:bus-pci",
+    "//src/devices/bus/drivers/pci:bus-pci.proxy",
     "//src/devices/misc/drivers/virtio-rng:virtio_rng",
     "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
+    "//src/devices/sysmem/drivers/sysmem",
+    "//src/graphics/display/drivers/display",
     "//src/graphics/drivers/virtio:virtio_gpu",
+    "//src/storage/fshost",
+    "//src/storage/fshost:bootfs",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/dd",
+    "//src/storage/bin/df",
+    "//src/storage/bin/mount",
+    "//src/storage/bin/umount",
+    "//src/sys/bin/psutils",
+    "//src/sys/bootstrap:root_manifests",
+    "//src/sys/component_manager:bootfs",
+    "//src/sys/component_manager:component_manager_config_bootfs_resource",
     "//src/ui/input/drivers/virtio:virtio_input",
+    "//zircon/third_party/uapp/dash",
   ]
+
   if (current_cpu == "x64") {
     bootfs_labels += [
-      "//src/connectivity/ethernet/drivers/realtek-8111",
       "//src/devices/block/drivers/ahci",
       "//src/devices/block/drivers/mbr",
-      "//src/devices/block/drivers/nvme",
-      "//src/devices/block/drivers/pci-sdhci",
-      "//src/devices/block/drivers/sdhci",
       "//src/devices/board/drivers/x86:platform-bus-x86",
       "//src/devices/i2c/drivers/intel-i2c",
-      "//src/devices/rtc/drivers/intel-rtc",
       "//src/devices/serial/drivers/intel-serialio",
       "//src/devices/serial/drivers/uart16550",
-      "//src/devices/usb/drivers/xhci:xhci-x86",
-      "//src/graphics/display/drivers/intel-i915",
-      "//src/media/audio/drivers/alc5514",
-      "//src/media/audio/drivers/alc5663",
-      "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
-      "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
-      "//src/media/audio/drivers/intel-hda/controller:intel-hda",
-      "//src/media/audio/drivers/max98927",
-      "//src/ui/input/drivers/i2c-hid",
-      "//src/ui/input/drivers/pc-ps2",
     ]
   }
+
   sysmgr_golden = "sysmgr-golden.json"
 }
