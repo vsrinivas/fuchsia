@@ -330,6 +330,13 @@ template("shared_library") {
 #     Type: string
 #     Default: target_name
 #
+#   sdk_migrated
+#     Optional: Indicates that this library is built directly by the Fuchsia
+#     build, and no longer needs to be exported as a legacy target. This is
+#     used to ease build unification, and will disappear once it is completed.
+#     Type: bool
+#     Default: false
+#
 #   See source_set() for other parameters.
 #
 # Subtargets
@@ -393,6 +400,7 @@ template("library") {
           static,
           "library(\"$_library_name\") cannot set static=false sdk=\"source\"")
     }
+    sdk_migrated = defined(invoker.sdk_migrated) && invoker.sdk_migrated
   } else {
     sdk = false
     sdk_headers = []
@@ -423,9 +431,10 @@ template("library") {
   shared = shared && defined(toolchain.shlib)
 
   # TODO(BLD-353): temporary hacks
-  if (sdk != false && ((toolchain.environment == "user" &&
-                        current_toolchain == toolchain.shlib) ||
-                       toolchain.environment == "host")) {
+  if (sdk != false && !sdk_migrated &&
+      ((toolchain.environment == "user" &&
+        current_toolchain == toolchain.shlib) ||
+       toolchain.environment == "host")) {
     if (toolchain.environment == "host") {
       # Host libraries are always exported as sources.
       sdk = "source"
@@ -1620,14 +1629,18 @@ template("test") {
 # built for other systems like Linux and Mac will always be available.  It's
 # otherwise just like executable().
 #
-# Parameters are the same as for executable().
+# Parameters are the same as for executable(), with the addtion of
+# `sdk_migrated` used for build unification (see `library` documentation).
+#
 template("host_tool") {
   assert(!is_kernel, "host_tool() targets don't work in kernel toolchains")
+  not_needed(invoker, [ "sdk_migrated" ])
   _basic_executable(target_name) {
     target_type = "host_tool"
     forward_variables_from(invoker,
                            "*",
                            [
+                             "sdk_migrated",
                              "target_type",
                              "testonly",
                              "visibility",
@@ -1654,6 +1667,8 @@ template("host_tool") {
         tool_extension = ".$output_extension"
       }
 
+      sdk_migrated = defined(invoker.sdk_migrated) && invoker.sdk_migrated
+
       # The stripped file is what goes into `tool_executables` to drive
       # the installation copies.
       install_file = rebase_path(
@@ -1670,15 +1685,17 @@ template("host_tool") {
         tool_executables = [ install_file ]
 
         # For the //:tool_paths build_api_module().
-        tool_paths = [
-          {
-            cpu = current_cpu
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = output_name
-            os = current_os
-            path = run_file
-          },
-        ]
+        if (!sdk_migrated) {
+          tool_paths = [
+            {
+              cpu = current_cpu
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              name = output_name
+              os = current_os
+              path = run_file
+            },
+          ]
+        }
 
         # See host_tool_action().
         host_tool_barrier = []
@@ -1693,18 +1710,20 @@ template("host_tool") {
 
         # TODO(BLD-353): Temporary hacks for integrating with the legacy
         # Fuchsia GN build.
-        legacy_barrier = []
-        legacy_dirs = [ "tool/$target_name" ]
-        legacy_targets = [
-          {
-            _label = get_label_info(":$target_name", "label_with_toolchain")
-            _zircon_public = "tool"
-            import = "//build/zircon/zircon_host_tool.gni"
-            target_type = "zircon_host_tool"
-            target_name = target_name
-            path = install_file
-          },
-        ]
+        if (!sdk_migrated) {
+          legacy_barrier = []
+          legacy_dirs = [ "tool/$target_name" ]
+          legacy_targets = [
+            {
+              _label = get_label_info(":$target_name", "label_with_toolchain")
+              _zircon_public = "tool"
+              import = "//build/zircon/zircon_host_tool.gni"
+              target_type = "zircon_host_tool"
+              target_name = target_name
+              path = install_file
+            },
+          ]
+        }
       }
       variant_suffix_outputs = [ tool_executable + tool_extension ]
       variant_suffix_metadata = {

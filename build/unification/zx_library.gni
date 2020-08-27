@@ -5,102 +5,353 @@
 import("//build/cpp/sdk_shared_library.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/cpp/sdk_static_library.gni")
+import("//build/unification/global_variables.gni")
 
+# Build a zircon-specific library, possibly in several ways.
+#
+# This template should be used by Zircon build rules exclusively, and follows
+# most of the conventions of the Zircon build `library()` template, which
+# differ significantly from those of `library()` in the Fuchsia build.
+#
+# IMPORTANT NOTE: Due to historical reasons, its behaviour is very different,
+# depending on the value of the `is_kernel` global variable.
+#
+# * If `is_kernel` is true, which means when building part of the kernel:
+#   The template will assert if the `kernel` argument is not set to true.
+#   It will create a source_set() if building part of the kernel, or
+#   a static_library() for any other Zircon artefact. The values of `sdk`,
+#   `sdk_publishable` and `sdk_headers` will be ignored entirely.
+#
+#   This will also create a :headers sub-target, a group used to give access
+#   to the library's include directory from any dependent. Note that this
+#   does *not* make the library's headers, listed in `sdk_headers` public.
+#
+#   This behaviour is needed to replicate the Zircon build's behaviour when
+#   compiling Zircon artefacts.
+#
+# * If `is`_kernel` is false, which means that the library is built either as a
+#   Fuchsia user binary or a host binary, then the `kernel` parameter is
+#   ignored, and `sdk` must be set to determine the shape of the library,
+#   as well as `sdk_headers to list the library's public headers, relative to
+#   its `include` sub-directory.
+#
+#   If `sdk_publishable` is true, the library will be part of the Fuchsia SDK.
+#
+#   Any :headers sub-targets that appear in public_deps will be rewritten into
+#   a dependency to the library itself, e.g.:
+#
+#     public_deps = [ "//zircon/system/ulib/foo:headers" ]
+#
+#   will be replaced by:
+#
+#     public_deps = [ "//zircon/system/ulib/foo" ]
+#
+#   Because the Fuchsia build doesn't support :headers sub-targets in
+#   non-kernel libraries for several technical reasons.
+#
+#   Similarly, any deps or public_deps entry to
+#   //zircon/system/ulib/zircon will be replaced by the proper dependency
+#   required to access Zircon headers and, for Fuchsia user binaries, the
+#   link-time VDSO. This feature will be removed once the VDSO is built
+#   with the Fuchsia build.
+#
+# Parameters
+#
+#   kernel
+#     Optional: True if this library can be used in the kernel.
+#     Type: bool
+#     Default: false
+#
+#   sdk
+#     Optional: A value that indicates whether to build this library as a
+#     source set, static library or shared library with the Fuchsia build.
+#     This is required, except if the global `is_kernel` is true. Note that
+#     this name is confusing for historical reasons, because using
+#     this parameter does not make this library exported to the Fuchsia SDK
+#     (see `sdk_publishable` below for this).
+#     Type: "static" or "shared" or "source"
+#
+#   sdk_publishable
+#     Optional: Indicates that this library can be added to the Fuchsia SDK.
+#     Type: bool
+#     Default: false
+#
+#   sdk_headers
+#     Optional: Required, except if the global `is_kernel` is true.
+#     This must list all the public header files in the library's `include/`
+#     directory; names should be relative to `include/`.
+#     Type: list(string)
+#
+#   sdk_name
+#     Optional: Name under which the library is published. This can be used
+#     when $target_name is already used by another target in the Fuchsia build.
+#     Type: string
+#     Default: target_name
+#
+#   See source_set() for other parameters.
+#
+# The following parameters are ignored by this implementation. They are here
+# to support zx_library() calls that are shared by BUILD.zircon.gn and BUILD.gn
+# file. Support for these may be removed after build unification completes.
+#
+#   host
+#     Optional: Was set to true if this library can be used in
+#     host-side code, e.g. to be a dependency of a host_tool().
+#     Type: bool
+#     Default: false
+#
+#   static
+#     Optional: True if this library can be statically linked in user code.
+#     Type: bool
+#     Default: !$kernel
+#
+#   shared
+#     Optional: True if this library can be made a shared library for user code.
+#     Type: bool
+#     Default: false
+#
+#   sdk_migrated
+#     Optional: Indicates that this library is built directly by the Fuchsia
+#     build, and no longer needs to be exported as a legacy target. This is
+#     used to ease build unification, and will disappear once it is completed.
+#     Type: bool
+#     Default: false
+#
 template("zx_library") {
   template_params = [
-    "static",
-    "shared",
     "host",
     "kernel",
     "sdk",
     "sdk_headers",
     "sdk_publishable",
+    "shared",
+    "static",
   ]
 
-  # The following parameters are just ignored, as in the GN build the shape of
-  # a library is driven by the value of the "sdk" parameter.
-  not_needed(invoker,
-             [
-               "static",
-               "shared",
-               "host",
-             ])
+  # `sdk_migrated` is only used by the Zircon build system.
+  not_needed(invoker, [ "sdk_migrated" ])
 
-  assert(!defined(invoker.kernel) || !invoker.kernel,
-         "Kernel libraries not supported")
+  if (is_kernel) {
+    _library_name = target_name
 
-  assert(defined(invoker.sdk),
-         "Can only migrate libraries exposed to the GN build")
-  shape = invoker.sdk
+    assert(
+        defined(invoker.kernel) && invoker.kernel,
+        "This zx_library() cannot be built with a Zircon-specific toolchain! " +
+        "Consider adding `kernel = true` to its declaration.")
 
-  sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
-
-  extra_target_args = {
-  }
-  if (shape == "source") {
-    if (sdkable) {
-      target_type = "sdk_source_set"
-      extra_target_args = {
-        category = "partner"
-        api = "//sdk/lib/$target_name/$target_name.api"
-        sdk_name = target_name
-        build_as_static = true
-      }
+    if (toolchain.environment == "kernel") {
+      # In the kernel proper, zx_library() is always a source_set().
+      # Everything goes into the kernel and anything unused gets linker GC.
+      kernel_library_target_type = "source_set"
     } else {
-      target_type = "static_library"
+      kernel_library_target_type = "static_library"
     }
-  } else if (shape == "static") {
-    if (sdkable) {
-      target_type = "sdk_static_library"
-      extra_target_args = {
-        category = "partner"
-        api = "//sdk/lib/$target_name/$target_name.api"
-        sdk_name = target_name
-        libcxx_linkage = "static"
+
+    target(kernel_library_target_type, _library_name) {
+      if (kernel_library_target_type == "static_library") {
+        complete_static_lib = true
       }
-    } else {
-      target_type = "static_library"
+      forward_variables_from(invoker, "*", template_params)
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += [ ":headers" ]
     }
-  } else if (shape == "shared") {
-    if (sdkable) {
-      target_type = "sdk_shared_library"
-      extra_target_args = {
-        category = "partner"
-        api = "//sdk/lib/$target_name/$target_name.api"
-        symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
-        sdk_name = target_name
-        libcxx_linkage = "static"
+
+    # Simplifying assumption that prevents us from reproducing the extra logic
+    # in the original Zircon build library() template definition.
+    assert(
+        get_label_info(":$_library_name", "name") ==
+            get_path_info(get_label_info(":$_library_name", "dir"), "file"),
+        "A zx_library() with 'kernel = true' should have the same name as its directory.")
+
+    group("headers") {
+      # Used to represent header dependencies.
+      # Direct us of public_configs should be rare but is sometimes needed.
+      forward_variables_from(invoker,
+                             [
+                               "public_configs",
+                               "public_deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      if (!defined(public_configs)) {
+        public_configs = []
       }
-    } else {
-      target_type = "shared_library"
+      public_configs += [ ":headers.config" ]
+    }
+
+    config("headers.config") {
+      include_dirs = [ "include" ]
     }
   } else {
-    assert(false, "Unknown library type: $shape")
-  }
+    # The following parameters are just ignored, as in the GN build the shape of
+    # a library is driven by the value of the "sdk" parameter.
+    not_needed(invoker,
+               [
+                 "kernel",
+                 "host",
+                 "static",
+                 "shared",
+               ])
 
-  main_target_name = target_name
-  config_target_name = "$target_name.config"
+    assert(defined(invoker.sdk),
+           "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain")
+    shape = invoker.sdk
 
-  config(config_target_name) {
-    include_dirs = [ "include" ]
-  }
+    sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
 
-  target(target_type, main_target_name) {
-    forward_variables_from(invoker, "*", template_params)
+    extra_target_args = {
+    }
+    if (shape == "source") {
+      if (sdkable) {
+        target_type = "sdk_source_set"
+        extra_target_args = {
+          category = "partner"
+          api = "//sdk/lib/$target_name/$target_name.api"
+          sdk_name = target_name
+          build_as_static = true
+        }
+      } else {
+        target_type = "static_library"
+      }
+    } else if (shape == "static") {
+      if (sdkable) {
+        target_type = "sdk_static_library"
+        extra_target_args = {
+          category = "partner"
+          api = "//sdk/lib/$target_name/$target_name.api"
+          sdk_name = target_name
+          libcxx_linkage = "static"
+        }
+      } else {
+        target_type = "static_library"
+      }
+    } else if (shape == "shared") {
+      if (sdkable) {
+        target_type = "sdk_shared_library"
+        extra_target_args = {
+          category = "partner"
+          api = "//sdk/lib/$target_name/$target_name.api"
+          symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
+          sdk_name = target_name
+          libcxx_linkage = "static"
+        }
+      } else {
+        target_type = "shared_library"
+      }
+    } else {
+      assert(false, "Unknown library type: $shape")
+    }
 
-    forward_variables_from(extra_target_args, "*")
+    main_target_name = target_name
+    if (defined(invoker.sdk_name)) {
+      main_target_name = invoker.sdk_name
+    }
+    config_target_name = "$target_name.config"
 
-    if (defined(invoker.sdk_headers)) {
-      public = []
-      foreach(header, invoker.sdk_headers) {
-        public += [ "include/$header" ]
+    config(config_target_name) {
+      include_dirs = [ "include" ]
+    }
+
+    # IMPORTANT: Rewrite header dependencies in public_deps
+    #
+    # For each zx_library(), the Zircon build used to produce a 'headers'
+    # group that adds a 'headers.config' public config. This is done to allow
+    # other targets to depend on the library's headers, but not the library
+    # itself.
+    #
+    # In practice, this means it is common for targets to list these headers
+    # groups in their public_deps, as in:
+    #
+    #    public_deps = [ "$zx/system/ulib/fit:headers" ]
+    #
+    # However, these groups do not mix well with the Fuchsia build, and
+    # especially with sdk_source_set() or sdk_static_library().
+    #
+    # To work around this, rewrite the headers public dependencies into
+    # regular dependencies into the libraries themselves.
+    #
+    lib_deps = []
+    if (defined(invoker.deps)) {
+      lib_deps = invoker.deps
+    }
+    lib_public_deps = []
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        if (get_label_info(dep, "name") == "headers") {
+          # Format //zircon/.../foo:headers  -> //zircon/.../foo
+          dep = get_label_info(dep, "dir")
+        } else if (get_path_info(get_label_info(dep, "name"), "extension") ==
+                   "headers") {
+          # Format //zircon/.../foo:bar.headers -> //zircon/.../foo:bar
+          dep = get_label_info(dep, "dir") + ":" +
+                get_path_info(get_label_info(dep, "name"), "name")
+        }
+        lib_public_deps += [ dep ]
       }
     }
 
-    if (!defined(public_configs)) {
-      public_configs = []
+    # Remove references to a libzircon dependency, as it is provided by the
+    # sysroot in the present build.
+
+    lib_libs = []
+    if (defined(invoker.libs)) {
+      lib_dirs = invoker.libs
     }
-    public_configs += [ ":$config_target_name" ]
+
+    if (lib_deps + [ "//zircon/system/ulib/zircon" ] -
+        [ "//zircon/system/ulib/zircon" ] != lib_deps) {
+      lib_deps -= [ "//zircon/system/ulib/zircon" ]
+      if (is_fuchsia) {
+        lib_libs += [ "zircon" ]
+      } else {
+        lib_public_deps += [
+          "//zircon/public/lib/zircon-headers",
+          "//zircon/system/public",
+        ]
+      }
+    }
+    if (lib_public_deps + [ "//zircon/system/ulib/zircon" ] -
+        [ "//zircon/system/ulib/zircon" ] != lib_public_deps) {
+      lib_public_deps -= [ "//zircon/system/ulib/zircon" ]
+      if (is_fuchsia) {
+        lib_libs += [ "zircon" ]
+      } else {
+        lib_public_deps += [
+          "//zircon/public/lib/zircon-headers",
+          "//zircon/system/public",
+        ]
+      }
+    }
+
+    target(target_type, main_target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             template_params + [
+                                   "deps",
+                                   "libs",
+                                   "public_deps",
+                                 ])
+
+      deps = lib_deps
+      libs = lib_libs
+      public_deps = lib_public_deps
+
+      forward_variables_from(extra_target_args, "*")
+
+      if (defined(invoker.sdk_headers)) {
+        public = []
+        foreach(header, invoker.sdk_headers) {
+          public += [ "include/$header" ]
+        }
+      }
+
+      if (!defined(public_configs)) {
+        public_configs = []
+      }
+      public_configs += [ ":$config_target_name" ]
+    }
   }
 }
 

@@ -5,8 +5,9 @@
 import("//build/compiled_action.gni")
 
 template("zx_host_tool") {
+  not_needed(invoker, [ "sdk_migrated" ])
   executable(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "sdk_migrated" ])
   }
 }
 
@@ -14,15 +15,18 @@ set_defaults("zx_host_tool") {
   configs = default_executable_configs
 }
 
+template("zx_host_tool_action") {
+  assert(defined(invoker.tool), "tool must be defined for $target_name")
+  compiled_action(target_name) {
+    tool = invoker.tool
+    forward_variables_from(invoker, "*", [ "tool" ])
+  }
+}
+
 template("zx_host_tool_action_foreach") {
   assert(defined(invoker.tool), "tool must be defined for $target_name")
   compiled_action_foreach(target_name) {
     tool = invoker.tool
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "target_name",
-                             "tool",
-                           ])
+    forward_variables_from(invoker, "*", [ "tool" ])
   }
 }
