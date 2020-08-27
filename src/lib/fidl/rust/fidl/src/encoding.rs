@@ -637,6 +637,7 @@ pub trait Encodable: LayoutObject {
     /// # Safety:
     ///   The caller must check that a write to the buffer of this object's
     ///   size will not exceed the buffer length.
+    #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -684,6 +685,7 @@ pub trait Decodable: Layout + Sized {
     /// # Safety:
     ///   The caller must check that a read from the buffer of this object's
     ///   size will not exceed the buffer length.
+    #[inline(always)]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         self.decode(decoder, offset)
     }
