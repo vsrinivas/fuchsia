@@ -90,7 +90,10 @@ golib("github.com/golang/glog") {
 # Actually aggregates the dependencies of other google.golang.org/protobuf/*
 # packages as well. Use this as a convenience target for any such package.
 golib("github.com/golang/protobuf") {
-  deps = [ ":golang.org/x/net" ]
+  deps = [
+    ":golang.org/x/net",
+    ":google.golang.org/protobuf",
+  ]
 }
 golib("github.com/googleapis/gax-go/v2") {
   deps = [ ":google.golang.org/grpc" ]
@@ -270,6 +273,10 @@ go_library("google.golang.org/api/transport/http") {
     ":google.golang.org/api/internal",
     ":google.golang.org/api/option",
   ]
+}
+go_library("google.golang.org/protobuf") {
+  name = "google.golang.org/protobuf/..."
+  source_dir = "//third_party/golibs/github.com/protocolbuffers/protobuf-go"
 }
 
 ### gopkg.in/*
