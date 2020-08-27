@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::blob::{Blob, BlobFactory, Compressibility, CreationError},
+    crate::blob::{Blob, BlobDataFactory, Compressibility, CreationError},
     crate::io::Directory,
     crate::utils::BLOCK_SIZE,
     log::{debug, error},
@@ -46,8 +46,8 @@ pub struct BlobfsState {
     // Random number generator used for selecting operations and blobs
     rng: SmallRng,
 
-    // Factory for writing blobs to disk that meet certain specifications
-    factory: BlobFactory,
+    // Factory for creating blob data that meets certain specifications
+    factory: BlobDataFactory,
 }
 
 impl BlobfsState {
@@ -56,7 +56,7 @@ impl BlobfsState {
         let factory_rng = SmallRng::from_seed(initial_rng.gen());
         let state_rng = SmallRng::from_seed(initial_rng.gen());
 
-        let factory = BlobFactory::new(root_dir.clone(), factory_rng);
+        let factory = BlobDataFactory::new(factory_rng);
 
         BlobfsState { root_dir, blobs: vec![], rng: state_rng, factory }
     }
@@ -68,53 +68,36 @@ impl BlobfsState {
         blob
     }
 
+    fn hashes(&self) -> Vec<String> {
+        self.blobs.iter().map(|b| b.merkle_root_hash().to_string()).collect()
+    }
+
     // Reads in all blobs stored on the filesystem and compares them to our in-memory
     // model to ensure that everything is as expected.
     async fn verify_blobs(&self) {
-        let entries = self.root_dir.entries().await;
+        let on_disk_hashes = self.root_dir.entries().await.sort_unstable();
+        let in_memory_hashes = self.hashes().sort_unstable();
 
-        // Ensure that the number of blobs on disk is correct
-        assert_eq!(self.blobs.len(), entries.len());
+        assert_eq!(on_disk_hashes, in_memory_hashes);
 
-        // All blobs on disk must correspond to a blob in memory
-        for hash in entries {
-            let blob = Blob::from_disk(&self.root_dir, &hash).await;
-            if !self.blobs.contains(&blob) {
-                panic!(
-                    "Blob does not exist in memory -> {}, {}, {}",
-                    blob.merkle_root_hash(),
-                    blob.size_on_disk(),
-                    blob.uncompressed_size()
-                );
-            }
-        }
-
-        // All blobs in memory must match a blob on disk
         for blob in &self.blobs {
-            let on_disk_blob = Blob::from_disk(&self.root_dir, blob.merkle_root_hash()).await;
-            if blob != &on_disk_blob {
-                panic!(
-                    "Blob is not same as on disk -> {}, {}, {}",
-                    blob.merkle_root_hash(),
-                    blob.size_on_disk(),
-                    blob.uncompressed_size()
-                );
-            }
+            blob.verify_from_disk(&self.root_dir).await;
         }
     }
 
     // Creates reasonable-sized blobs to fill a percentage of the free space
     // available on disk.
     async fn create_reasonable_blobs(&mut self) {
-        let num_blobs_to_create = self.rng.gen_range(1, 200);
+        let num_blobs_to_create: u64 = self.rng.gen_range(1, 200);
         debug!("Creating {} blobs...", num_blobs_to_create);
 
         // Start filling the space with blobs
         for _ in 0..num_blobs_to_create {
             // Create a blob whose uncompressed size is reasonable, or exactly the requested size
             // if the requested size is too small.
-            let result =
-                self.factory.create_with_reasonable_size(Compressibility::Compressible).await;
+            let data = self.factory.create_with_reasonable_size(Compressibility::Compressible);
+
+            let result = Blob::create(data, &self.root_dir).await;
 
             match result {
                 Ok(blob) => {
@@ -182,10 +165,11 @@ impl BlobfsState {
 
         loop {
             // Keep making |BLOCK_SIZE| uncompressible blobs
-            let result = self
+            let data = self
                 .factory
-                .create_with_exact_uncompressed_size(BLOCK_SIZE, Compressibility::Uncompressible)
-                .await;
+                .create_with_exact_uncompressed_size(BLOCK_SIZE, Compressibility::Uncompressible);
+
+            let result = Blob::create(data, &self.root_dir).await;
 
             match result {
                 Ok(blob) => {

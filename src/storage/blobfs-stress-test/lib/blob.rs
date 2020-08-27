@@ -7,51 +7,87 @@ use {
     crate::utils::{BLOCK_SIZE, FOUR_MB},
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
-    rand::{rngs::SmallRng, seq::SliceRandom, Rng},
-    std::{
-        cmp::{min, Eq},
-        hash::{Hash, Hasher},
-    },
+    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    std::cmp::min,
 };
 
-// In-memory representation of a single blob.
-#[derive(Debug)]
-pub struct Blob {
-    // The root merkle hash for this blob
-    merkle_root_hash: String,
-
-    // The uncompressed bytes that constitute the data of this blob
-    // TODO(xbhatnag): Rather than storing the data, store a seed for a RNG
-    // which can be used to reproduce this data.
-    data: Vec<u8>,
-
-    // The size of this blob as measured on disk.
-    size_on_disk_bytes: u64,
-
-    // Open handles to this file
-    handles: Vec<File>,
-}
-
-impl Hash for Blob {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.merkle_root_hash.hash(state);
-        self.data.hash(state);
-        self.size_on_disk_bytes.hash(state);
-    }
-}
-
-impl Eq for Blob {}
-
-impl PartialEq for Blob {
-    fn eq(&self, other: &Self) -> bool {
-        self.merkle_root_hash == other.merkle_root_hash
-            && self.size_on_disk_bytes == other.size_on_disk_bytes
-    }
-}
 // Controls the compressibility of data generated for a blob
 pub enum Compressibility {
     Compressible,
     Uncompressible,
+}
+
+// Run lengths and bytes are sampled from a uniform distribution.
+// Data created by this function achieves roughly 50% size reduction after compression.
+fn generate_compressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u8> {
+    let mut bytes: Vec<u8> = vec![];
+
+    // The blob is filled with compressible runs of one of the following bytes.
+    let byte_choices: [u8; 6] = [0xde, 0xad, 0xbe, 0xef, 0x42, 0x0];
+    let mut ptr = 0;
+    while ptr < size_bytes {
+        // A run is 10..1024 bytes long
+        let mut run_length = rng.gen_range(10, 1024);
+
+        // In case the run goes past the blob size
+        run_length = min(run_length, size_bytes - ptr);
+
+        // Decide whether this run should be compressible or not.
+        // This results in blobs that compress reasonably well (target 50% size reduction).
+        if rng.gen_bool(0.5) {
+            // Choose a byte for this run.
+            let choice = byte_choices.choose(&mut rng).unwrap();
+
+            // Generate a run of compressible data.
+            for _ in 0..run_length {
+                bytes.push(*choice);
+            }
+        } else {
+            // Generate a run of random data.
+            for _ in 0..run_length {
+                bytes.push(rng.gen());
+            }
+        }
+
+        ptr += run_length;
+    }
+
+    // The blob must be of the expected size
+    assert!(bytes.len() == size_bytes as usize);
+
+    bytes
+}
+
+// Bytes are sampled from a uniform distribution.
+// Data created by this function compresses badly.
+fn generate_uncompressible_data_bytes(mut rng: SmallRng, size_bytes: u64) -> Vec<u8> {
+    let mut bytes: Vec<u8> = vec![];
+    for _ in 0..size_bytes {
+        bytes.push(rng.gen());
+    }
+    bytes
+}
+
+pub struct BlobData {
+    pub seed: u128,
+    pub size_bytes: u64,
+    pub compressibility: Compressibility,
+}
+
+impl BlobData {
+    fn new(seed: u128, size_bytes: u64, compressibility: Compressibility) -> Self {
+        Self { seed, size_bytes, compressibility }
+    }
+
+    pub fn generate_bytes(&self) -> Vec<u8> {
+        let rng = SmallRng::from_seed(self.seed.to_le_bytes());
+        match self.compressibility {
+            Compressibility::Compressible => generate_compressible_data_bytes(rng, self.size_bytes),
+            Compressibility::Uncompressible => {
+                generate_uncompressible_data_bytes(rng, self.size_bytes)
+            }
+        }
+    }
 }
 
 // Reasons why creating a blob can fail
@@ -60,19 +96,26 @@ pub enum CreationError {
     OutOfSpace,
 }
 
+pub struct Blob {
+    merkle_root_hash: String,
+    data: BlobData,
+    handles: Vec<File>,
+}
+
 impl Blob {
     // Attempts to write the blob to disk. This operation is allowed to fail
     // if we run out of storage space. Other failures cause a panic.
-    async fn create(root_dir: &Directory, data: Vec<u8>) -> Result<Blob, CreationError> {
+    pub async fn create(data: BlobData, root_dir: &Directory) -> Result<Self, CreationError> {
         // Create the root hash for the blob
-        let tree = MerkleTree::from_reader(&data[..]).unwrap();
+        let data_bytes = data.generate_bytes();
+        let tree = MerkleTree::from_reader(&data_bytes[..]).unwrap();
         let merkle_root_hash = tree.root().to_string();
 
         // Write the file to disk
         let file = root_dir.create(&merkle_root_hash).await;
-        file.truncate(data.len() as u64).await;
+        file.truncate(data.size_bytes).await;
 
-        let result = file.write(&data).await;
+        let result = file.write(&data_bytes).await;
 
         match result {
             Err(Status::NO_SPACE) => {
@@ -85,70 +128,26 @@ impl Blob {
         }
 
         file.flush().await;
-
-        // Get the size as reported by the filesystem
-        let size_on_disk_bytes = file.size_on_disk().await;
-
         file.close().await;
 
-        let blob = Blob { merkle_root_hash, data, size_on_disk_bytes, handles: vec![] };
-
-        blob.check_well_formed();
-
-        Ok(blob)
+        Ok(Self { merkle_root_hash, data, handles: vec![] })
     }
 
-    // Reads the blob that matches this hash from disk.
-    // This operation is not expected to fail.
-    pub async fn from_disk(root_dir: &Directory, merkle_root_hash: &str) -> Blob {
-        let file = root_dir.open(merkle_root_hash).await;
-        let data = file.read_until_eof().await;
-        let size_on_disk_bytes = file.size_on_disk().await;
+    // Reads the blob in from disk and verifies its contents
+    pub async fn verify_from_disk(&self, root_dir: &Directory) {
+        let file = root_dir.open(&self.merkle_root_hash).await;
+        let on_disk_data_bytes = file.read_until_eof().await;
+        file.close().await;
 
-        let blob = Blob {
-            merkle_root_hash: merkle_root_hash.to_string(),
-            data,
-            size_on_disk_bytes,
-            handles: vec![],
-        };
+        let in_memory_data_bytes = self.data.generate_bytes();
 
-        blob.check_well_formed();
-
-        blob
-    }
-
-    // Do some basic checks on the blob
-    fn check_well_formed(&self) {
-        // Verify the root hash of this blob
-        let tree = MerkleTree::from_reader(&self.data[..]).unwrap();
-        let merkle_root_hash = tree.root().to_string();
-
-        // TODO(58749): Bubble this error up to the top loop.
-        // Use panics for unrecoverable error states from SUT.
-        // Use asserts to prevent programmer error.
-        assert!(self.merkle_root_hash == merkle_root_hash);
-    }
-
-    // Returns the size of the blob data as uncompressed in memory
-    pub fn uncompressed_size(&self) -> u64 {
-        self.data.len() as u64
-    }
-
-    // Returns the size of the blob on disk (including the size of the merkle tree)
-    pub fn size_on_disk(&self) -> u64 {
-        self.size_on_disk_bytes
+        assert!(on_disk_data_bytes == in_memory_data_bytes);
     }
 
     pub fn merkle_root_hash(&self) -> &str {
         &self.merkle_root_hash
     }
 
-    pub fn data(&self) -> &Vec<u8> {
-        &self.data
-    }
-
-    // Returns the list of open handles to this blob.
-    // Placing a file in this list ensures that it remains open.
     pub fn handles(&mut self) -> &mut Vec<File> {
         &mut self.handles
     }
@@ -158,104 +157,42 @@ impl Blob {
     }
 }
 
-pub struct BlobFactory {
-    root_dir: Directory,
+pub struct BlobDataFactory {
     rng: SmallRng,
 }
 
-impl BlobFactory {
-    pub fn new(root_dir: Directory, rng: SmallRng) -> Self {
-        BlobFactory { root_dir, rng }
-    }
-
-    // Run lengths and bytes are sampled from a uniform distribution.
-    // Data created by this function achieves roughly 50% size reduction after compression.
-    fn create_compressible_data(&mut self, size_bytes: u64) -> Vec<u8> {
-        let mut data: Vec<u8> = vec![];
-
-        // The blob is filled with compressible runs of one of the following bytes.
-        let byte_choices: [u8; 6] = [0xde, 0xad, 0xbe, 0xef, 0x42, 0x0];
-        let mut ptr = 0;
-        while ptr < size_bytes {
-            // A run is 10..1024 bytes long
-            let mut run_length = self.rng.gen_range(10, 1024);
-
-            // In case the run goes past the blob size
-            run_length = min(run_length, size_bytes - ptr);
-
-            // Decide whether this run should be compressible or not.
-            // This results in blobs that compress reasonably well (target 50% size reduction).
-            if self.rng.gen_bool(0.5) {
-                // Choose a byte for this run.
-                let choice = byte_choices.choose(&mut self.rng).unwrap();
-
-                // Generate a run of compressible data.
-                for _ in 0..run_length {
-                    data.push(*choice);
-                }
-            } else {
-                // Generate a run of random data.
-                for _ in 0..run_length {
-                    data.push(self.rng.gen());
-                }
-            }
-
-            ptr += run_length;
-        }
-
-        // The blob must be of the expected size
-        assert!(data.len() == size_bytes as usize);
-
-        data
-    }
-
-    // Bytes are sampled from a uniform distribution.
-    // Data created by this function compresses badly.
-    fn create_uncompressible_data(&mut self, size_bytes: u64) -> Vec<u8> {
-        let mut data: Vec<u8> = vec![];
-        for _ in 0..size_bytes {
-            data.push(self.rng.gen());
-        }
-        data
+impl BlobDataFactory {
+    pub fn new(rng: SmallRng) -> Self {
+        Self { rng }
     }
 
     // Create a blob whose uncompressed size is reasonable (between BLOCK_SIZE and 4MB)
     #[must_use]
-    pub async fn create_with_reasonable_size(
-        &mut self,
-        compressibility: Compressibility,
-    ) -> Result<Blob, CreationError> {
-        self.create_with_uncompressed_size_in_range(BLOCK_SIZE, FOUR_MB, compressibility).await
+    pub fn create_with_reasonable_size(&mut self, compressibility: Compressibility) -> BlobData {
+        self.create_with_uncompressed_size_in_range(BLOCK_SIZE, FOUR_MB, compressibility)
     }
 
     // Create a blob whose uncompressed size is in the range requested.
     // The exact size of the blob is chosen from a uniform distribution.
     #[must_use]
-    pub async fn create_with_uncompressed_size_in_range(
+    pub fn create_with_uncompressed_size_in_range(
         &mut self,
         min_uncompressed_size_bytes: u64,
         max_uncompressed_size_bytes: u64,
         compressibility: Compressibility,
-    ) -> Result<Blob, CreationError> {
+    ) -> BlobData {
         let uncompressed_size =
             self.rng.gen_range(min_uncompressed_size_bytes, max_uncompressed_size_bytes);
-        self.create_with_exact_uncompressed_size(uncompressed_size, compressibility).await
+        self.create_with_exact_uncompressed_size(uncompressed_size, compressibility)
     }
 
     // Create a blob whose uncompressed size is exactly as requested
     #[must_use]
-    pub async fn create_with_exact_uncompressed_size(
+    pub fn create_with_exact_uncompressed_size(
         &mut self,
         uncompressed_size_bytes: u64,
         compressibility: Compressibility,
-    ) -> Result<Blob, CreationError> {
-        let data = match compressibility {
-            Compressibility::Compressible => self.create_compressible_data(uncompressed_size_bytes),
-            Compressibility::Uncompressible => {
-                self.create_uncompressible_data(uncompressed_size_bytes)
-            }
-        };
-
-        Blob::create(&self.root_dir, data).await
+    ) -> BlobData {
+        BlobData::new(self.rng.gen(), uncompressed_size_bytes, compressibility)
     }
 }
