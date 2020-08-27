@@ -7,9 +7,11 @@ require (
 	github.com/creack/pty v1.1.11
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.5.1
 	github.com/google/subcommands v1.2.0
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/pkg/sftp v1.11.0
 	go.chromium.org/luci v0.0.0-20200821095028-79bd0b964db3
@@ -19,7 +21,11 @@ require (
 	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200821140526-fda516888d29
+	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/tools v0.0.0-20200821151209-74543c403428 // indirect
+	google.golang.org/api v0.30.0 // indirect
+	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
+	google.golang.org/grpc v1.31.1 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
@@ -39,4 +45,5 @@ replace (
 	golang.org/x/net => ../third_party/golibs/golang.org/x/net
 	golang.org/x/sync => ../third_party/golibs/golang.org/x/sync
 	golang.org/x/sys => ../third_party/golibs/golang.org/x/sys
+	google.golang.org/protobuf => ../third_party/golibs/github.com/protocolbuffers/protobuf-go
 )
