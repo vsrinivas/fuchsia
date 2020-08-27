@@ -10,6 +10,7 @@ use crate::{
 };
 use futures::future::BoxFuture;
 use futures::prelude::*;
+use std::{cell::RefCell, rc::Rc};
 
 /// A mock PolicyEngine that returns mocked data.
 #[derive(Debug)]
@@ -18,7 +19,7 @@ pub struct MockPolicyEngine {
     pub check_decision: CheckDecision,
     pub update_decision: UpdateDecision,
     pub time_source: MockTimeSource,
-    pub reboot_allowed: bool,
+    pub reboot_allowed: Rc<RefCell<bool>>,
 }
 
 impl Default for MockPolicyEngine {
@@ -28,7 +29,7 @@ impl Default for MockPolicyEngine {
             check_decision: Default::default(),
             update_decision: Default::default(),
             time_source: MockTimeSource::new_from_now(),
-            reboot_allowed: true,
+            reboot_allowed: Rc::new(RefCell::new(true)),
         }
     }
 }
@@ -67,6 +68,6 @@ impl PolicyEngine for MockPolicyEngine {
     }
 
     fn reboot_allowed(&mut self, _check_options: &CheckOptions) -> BoxFuture<'_, bool> {
-        future::ready(self.reboot_allowed).boxed()
+        future::ready(*self.reboot_allowed.borrow()).boxed()
     }
 }

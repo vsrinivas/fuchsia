@@ -11,7 +11,7 @@ use crate::{
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
-        request::{Event, EventErrorCode, EventResult, EventType, GUID},
+        request::{Event, EventErrorCode, EventResult, EventType, InstallSource, GUID},
         response::{parse_json_response, OmahaStatus, Response},
     },
     request_builder::{self, RequestBuilder, RequestParams},
@@ -22,9 +22,10 @@ use crate::{
 #[cfg(test)]
 use crate::common::{ProtocolState, UpdateCheckSchedule};
 
+use anyhow::anyhow;
 use futures::{
     channel::{mpsc, oneshot},
-    future,
+    future::{self, BoxFuture, Fuse},
     lock::Mutex,
     prelude::*,
     select,
@@ -51,6 +52,8 @@ const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
 const UPDATE_FINISH_TIME: &str = "update_finish_time";
 const TARGET_VERSION: &str = "target_version";
 const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
+// How long do we wait after not allowed to reboot to check again.
+const CHECK_REBOOT_ALLOWED_INTERVAL: Duration = Duration::from_secs(30 * 60);
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
@@ -238,9 +241,7 @@ where
     MR: MetricsReporter,
     ST: Storage,
 {
-    /// Need to do this in a mutable method because the borrow checker isn't smart enough to know
-    /// that different fields of the same struct (even if it's not self) are separate variables and
-    /// can be borrowed at the same time.
+    /// Ask policy engine for the next update check time and update the context and yield event.
     async fn update_next_update_time(
         &mut self,
         co: &mut async_generator::Yield<StateMachineEvent>,
@@ -253,7 +254,31 @@ where
         self.context.schedule.next_update_time = Some(timing);
 
         co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
+        info!("Calculated check timing: {}", timing);
         timing
+    }
+
+    /// Return a future that will wait until the given check timing.
+    async fn make_wait_to_next_check(
+        &mut self,
+        check_timing: CheckTiming,
+    ) -> Fuse<BoxFuture<'static, ()>> {
+        if let Some(minimum_wait) = check_timing.minimum_wait {
+            // If there's a minimum wait, also wait at least that long, by joining the two
+            // timers so that both need to be true (in case `next_update_time` turns out to be
+            // very close to now)
+            future::join(
+                self.timer.wait_for(minimum_wait),
+                self.timer.wait_until(check_timing.time),
+            )
+            .map(|_| ())
+            .boxed()
+            .fuse()
+        } else {
+            // Otherwise just setup the timer for the waiting until the next time.  This is a
+            // wait until either the monotonic or wall times have passed.
+            self.timer.wait_until(check_timing.time).fuse()
+        }
     }
 
     async fn run(
@@ -314,53 +339,90 @@ where
                 }
             }
 
-            // Get the timing parameters for the next update check
-            let check_timing: CheckTiming = self.update_next_update_time(&mut co).await;
+            let options = {
+                let check_timing = self.update_next_update_time(&mut co).await;
+                let mut wait_to_next_check = self.make_wait_to_next_check(check_timing).await;
 
-            info!("Calculated check timing: {}", check_timing);
-
-            let mut wait_to_next_check = if let Some(minimum_wait) = check_timing.minimum_wait {
-                // If there's a minimum wait, also wait at least that long, by joining the two
-                // timers so that both need to be true (in case `next_update_time` turns out to be
-                // very close to now)
-                future::join(
-                    self.timer.wait_for(minimum_wait),
-                    self.timer.wait_until(check_timing.time),
-                )
-                .map(|_| ())
-                .boxed()
-                .fuse()
-            } else {
-                // Otherwise just setup the timer for the waiting until the next time.  This is a
-                // wait until either the monotonic or wall times have passed.
-                self.timer.wait_until(check_timing.time).fuse()
-            };
-
-            // Wait for either the next check time or a request to start an update check.  Use the
-            // default check options with the timed check, or those sent with a request.
-            let options = select! {
-                () = wait_to_next_check => CheckOptions::default(),
-                ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
-                    let _ = responder.send(StartUpdateCheckResponse::Started);
-                    options
+                // Wait for either the next check time or a request to start an update check.  Use
+                // the default check options with the timed check, or those sent with a request.
+                select! {
+                    () = wait_to_next_check => CheckOptions::default(),
+                    ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
+                        let _ = responder.send(StartUpdateCheckResponse::Started);
+                        options
+                    }
                 }
             };
 
-            // "start" the update check itself (well, create the future that is the update check)
-            let update_check = self.start_update_check(options, &mut co).fuse();
-            futures::pin_mut!(update_check);
+            {
+                // "start" the update check itself (well, create the future that is the update check)
+                let update_check = self.start_update_check(&options, &mut co).fuse();
+                futures::pin_mut!(update_check);
 
-            // Wait for the update check to complete, handling any control requests that come in
-            // during the check.
+                // Wait for the update check to complete, handling any control requests that come in
+                // during the check.
+                loop {
+                    select! {
+                        () = update_check => break,
+                        ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
+                            let _ = responder.send(StartUpdateCheckResponse::AlreadyRunning);
+                        }
+                    }
+                }
+            }
+
+            // TODO: This is the last place we read self.state, we should see if we can find another
+            // way to achieve this so that we can remove self.state entirely.
+            if self.state == State::WaitingForReboot {
+                self.wait_for_reboot(&options, &mut control, &mut co).await;
+            }
+
+            self.set_state(State::Idle, &mut co).await;
+        }
+    }
+
+    async fn wait_for_reboot(
+        &mut self,
+        options: &CheckOptions,
+        control: &mut mpsc::Receiver<ControlRequest>,
+        co: &mut async_generator::Yield<StateMachineEvent>,
+    ) {
+        if !self.policy_engine.reboot_allowed(&options).await {
+            let wait_to_see_if_reboot_allowed =
+                self.timer.wait_for(CHECK_REBOOT_ALLOWED_INTERVAL).fuse();
+            futures::pin_mut!(wait_to_see_if_reboot_allowed);
+
+            let check_timing = self.update_next_update_time(co).await;
+            let wait_to_next_ping = self.make_wait_to_next_check(check_timing).await;
+            futures::pin_mut!(wait_to_next_ping);
+
             loop {
+                // Wait for either the next time to check if reboot allowed or the next
+                // ping time or a request to start an update check.
                 select! {
-                    () = update_check => break,
+                    () = wait_to_see_if_reboot_allowed => {
+                        if self.policy_engine.reboot_allowed(&options).await {
+                            break;
+                        }
+                        info!("Reboot not allowed at the moment, will try again in 30 minutes...");
+                        wait_to_see_if_reboot_allowed.set(
+                            self.timer.wait_for(CHECK_REBOOT_ALLOWED_INTERVAL).fuse()
+                        );
+                    },
+                    () = wait_to_next_ping => {
+                        self.ping_omaha(co).await;
+                        let check_timing = self.update_next_update_time(co).await;
+                        wait_to_next_ping.set(self.make_wait_to_next_check(check_timing).await);
+                    },
                     ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
                         let _ = responder.send(StartUpdateCheckResponse::AlreadyRunning);
                     }
-
                 }
             }
+        }
+        info!("Rebooting the system at the end of a successful update");
+        if let Err(e) = self.installer.perform_reboot().await {
+            error!("Unable to reboot the system: {}", e);
         }
     }
 
@@ -388,11 +450,11 @@ where
     /// and cohort.
     pub async fn start_update_check(
         &mut self,
-        options: CheckOptions,
+        options: &CheckOptions,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let apps = self.app_set.to_vec().await;
-        let result = self.perform_update_check(&options, self.context.clone(), apps, co).await;
+        let result = self.perform_update_check(options, self.context.clone(), apps, co).await;
         match &result {
             Ok(result) => {
                 info!("Update check result: {:?}", result);
@@ -459,20 +521,6 @@ where
         co.yield_(StateMachineEvent::UpdateCheckResult(result)).await;
 
         self.persist_data().await;
-
-        // TODO: This is the last place we read self.state, we should see if we can find another
-        // way to achieve this so that we can remove self.state entirely.
-        if self.state == State::WaitingForReboot {
-            while !self.policy_engine.reboot_allowed(&options).await {
-                info!("Reboot not allowed at the moment, will try again in 30 minutes...");
-                self.timer.wait_for(Duration::from_secs(30 * 60)).await;
-            }
-            info!("Rebooting the system at the end of a successful update");
-            if let Err(e) = self.installer.perform_reboot().await {
-                error!("Unable to reboot the system: {}", e);
-            }
-        }
-        self.set_state(State::Idle, co).await;
     }
 
     /// Update `CONSECUTIVE_FAILED_UPDATE_CHECKS` in storage and report the metrics if `success`.
@@ -850,6 +898,50 @@ where
         }
     }
 
+    /// Sends a ping to Omaha and updates context and app_set.
+    async fn ping_omaha(&mut self, co: &mut async_generator::Yield<StateMachineEvent>) {
+        let apps = self.app_set.to_vec().await;
+        let request_params =
+            RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: true };
+        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
+        for app in &apps {
+            request_builder = request_builder.add_ping(app);
+        }
+        request_builder = request_builder.session_id(GUID::new()).request_id(GUID::new());
+
+        let (_parts, data) = match Self::do_omaha_request(&mut self.http, &request_builder).await {
+            Ok(res) => res,
+            Err(e) => {
+                error!("Ping Omaha failed: {:#}", anyhow!(e));
+                return;
+            }
+        };
+
+        let response = match Self::parse_omaha_response(&data) {
+            Ok(res) => res,
+            Err(e) => {
+                error!("Unable to parse Omaha response: {:#}", anyhow!(e));
+                return;
+            }
+        };
+
+        // Even though this is a ping, we should still update the last_update_time for
+        // policy to compute the next ping time.
+        self.context.schedule.last_update_time = Some(self.time_source.now().into());
+        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
+
+        let result = Self::make_response(response, update_check::Action::NoUpdate);
+        if result.server_dictated_poll_interval != self.context.state.server_dictated_poll_interval
+        {
+            self.context.state.server_dictated_poll_interval = result.server_dictated_poll_interval;
+            co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
+        }
+
+        self.app_set.update_from_omaha(&result.app_responses).await;
+
+        self.persist_data().await;
+    }
+
     /// Make an http request to Omaha, and collect the response into an error or a blob of bytes
     /// that can be parsed.
     ///
@@ -1029,7 +1121,7 @@ where
         let options = CheckOptions::default();
 
         async_generator::generate(move |mut co| async move {
-            self.start_update_check(options, &mut co).await;
+            self.start_update_check(&options, &mut co).await;
         })
         .map(|_| ())
         .collect::<()>()
@@ -1466,8 +1558,7 @@ mod tests {
                 .collect::<Vec<State>>()
                 .await;
 
-            let expected_states =
-                vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle];
+            let expected_states = vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate];
             assert_eq!(actual_states, expected_states);
         });
     }
@@ -1828,7 +1919,7 @@ mod tests {
 
     #[derive(Debug)]
     pub struct TestInstaller {
-        reboot_called: bool,
+        reboot_called: Rc<RefCell<bool>>,
         should_fail: bool,
         mock_time: MockTimeSource,
     }
@@ -1848,7 +1939,7 @@ mod tests {
         }
         fn build(self) -> TestInstaller {
             TestInstaller {
-                reboot_called: false,
+                reboot_called: Rc::new(RefCell::new(false)),
                 should_fail: self.should_fail.unwrap_or(false),
                 mock_time: self.mock_time,
             }
@@ -1882,7 +1973,7 @@ mod tests {
         }
 
         fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
-            self.reboot_called = true;
+            self.reboot_called.replace(true);
             if self.should_fail {
                 future::ready(Err(anyhow!("reboot failed"))).boxed()
             } else {
@@ -2084,67 +2175,8 @@ mod tests {
 
     #[test]
     fn test_successful_update_triggers_reboot() {
-        block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new_stub()
-                .http(http)
-                .installer(TestInstaller::builder(mock_time.clone()).build())
-                .policy_engine(StubPolicyEngine::new(mock_time))
-                .build()
-                .await;
-
-            state_machine.run_once().await;
-
-            assert!(state_machine.installer.reboot_called);
-        });
-    }
-
-    #[test]
-    fn test_failed_update_does_not_trigger_reboot() {
-        block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new_stub()
-                .http(http)
-                .installer(TestInstaller::builder(mock_time.clone()).should_fail(true).build())
-                .policy_engine(StubPolicyEngine::new(mock_time))
-                .build()
-                .await;
-
-            state_machine.run_once().await;
-
-            assert!(!state_machine.installer.reboot_called);
-        });
-    }
-
-    #[test]
-    fn test_reboot_not_allowed() {
         let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
 
         let response = json!({"response":{
           "server": "prod",
@@ -2160,38 +2192,231 @@ mod tests {
         let response = serde_json::to_vec(&response).unwrap();
         let http = MockHttpRequest::new(hyper::Response::new(response.into()));
         let mock_time = MockTimeSource::new_from_now();
+        let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
-        let policy_engine = MockPolicyEngine {
-            time_source: mock_time.clone(),
-            reboot_allowed: false,
-            ..MockPolicyEngine::default()
-        };
 
-        let mut state_machine = pool.run_until(
+        let installer = TestInstaller::builder(mock_time.clone()).build();
+        let reboot_called = Rc::clone(&installer.reboot_called);
+        let (_ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()
                 .http(http)
-                .installer(TestInstaller::builder(mock_time).build())
+                .installer(installer)
+                .policy_engine(StubPolicyEngine::new(mock_time))
+                .timer(timer)
+                .start(),
+        );
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        blocked_timer.unblock();
+        pool.run_until_stalled();
+
+        assert!(*reboot_called.borrow());
+    }
+
+    #[test]
+    fn test_failed_update_does_not_trigger_reboot() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let mock_time = MockTimeSource::new_from_now();
+        let next_update_time = mock_time.now();
+        let (timer, mut timers) = BlockingTimer::new();
+
+        let installer = TestInstaller::builder(mock_time.clone()).should_fail(true).build();
+        let reboot_called = Rc::clone(&installer.reboot_called);
+        let (_ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(installer)
+                .policy_engine(StubPolicyEngine::new(mock_time))
+                .timer(timer)
+                .start(),
+        );
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        blocked_timer.unblock();
+        pool.run_until_stalled();
+
+        assert!(!*reboot_called.borrow());
+    }
+
+    // Verifies that if reboot is not allowed, state machine will send pings to Omaha while waiting
+    // for reboot, and it will reply AlreadyRunning to any StartUpdateCheck requests, and when it's
+    // finally time to reboot, it will trigger reboot.
+    #[test]
+    fn test_wait_for_reboot() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
+        // Responses to events.
+        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(hyper::Response::new(response.clone().into()));
+        // Response to the ping.
+        http.add_response(hyper::Response::new(response.into()));
+        let ping_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
+        let second_ping_request_viewer =
+            MockHttpRequest::from_request_cell(http.get_request_cell());
+        let mut mock_time = MockTimeSource::new_from_now();
+        mock_time.truncate_submicrosecond_walltime();
+        let next_update_time = mock_time.now() + Duration::from_secs(1000);
+        let (timer, mut timers) = BlockingTimer::new();
+        let reboot_allowed = Rc::new(RefCell::new(false));
+        let policy_engine = MockPolicyEngine {
+            time_source: mock_time.clone(),
+            reboot_allowed: Rc::clone(&reboot_allowed),
+            check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            ..MockPolicyEngine::default()
+        };
+        let installer = TestInstaller::builder(mock_time.clone()).build();
+        let reboot_called = Rc::clone(&installer.reboot_called);
+        let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
+        let apps = make_test_app_set();
+
+        let (mut ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .app_set(apps.clone())
+                .http(http)
+                .installer(installer)
                 .policy_engine(policy_engine)
                 .timer(timer)
-                .build(),
+                .storage(Rc::clone(&storage_ref))
+                .start(),
         );
-        {
-            let run_once = state_machine.run_once();
-            futures::pin_mut!(run_once);
 
-            match pool.run_until(future::select(run_once, timers.next())) {
-                future::Either::Left(((), _)) => {
-                    panic!("state_machine finished without waiting on timer")
-                }
-                future::Either::Right((blocked_timer, _)) => {
-                    assert_eq!(
-                        blocked_timer.unwrap().requested_wait(),
-                        RequestedWait::For(Duration::from_secs(30 * 60))
-                    );
-                }
-            }
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        // The first wait before update check.
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        blocked_timer.unblock();
+        pool.run_until_stalled();
+
+        // The timers for reboot and ping, even though the order should be deterministic, but that
+        // is an implementation detail, the test should still pass if that order changes.
+        let blocked_timer1 = pool.run_until(timers.next()).unwrap();
+        let blocked_timer2 = pool.run_until(timers.next()).unwrap();
+        let (wait_for_reboot_timer, wait_for_next_ping_timer) =
+            match blocked_timer1.requested_wait() {
+                RequestedWait::For(_) => (blocked_timer1, blocked_timer2),
+                RequestedWait::Until(_) => (blocked_timer2, blocked_timer1),
+            };
+        // This is the timer waiting for next reboot_allowed check.
+        assert_eq!(
+            wait_for_reboot_timer.requested_wait(),
+            RequestedWait::For(CHECK_REBOOT_ALLOWED_INTERVAL)
+        );
+        // This is the timer waiting for the next ping.
+        assert_eq!(
+            wait_for_next_ping_timer.requested_wait(),
+            RequestedWait::Until(next_update_time.into())
+        );
+        // Unblock the ping.
+        mock_time.advance(Duration::from_secs(1000));
+        wait_for_next_ping_timer.unblock();
+        pool.run_until_stalled();
+
+        // Verify that it sends a ping.
+        let config = crate::configuration::test_support::config_generator();
+        let request_params = RequestParams::default();
+        let apps = pool.run_until(apps.to_vec());
+        let mut expected_request_builder = RequestBuilder::new(&config, &request_params)
+            // 0: session id for update check
+            // 1: request id for update check
+            // 2-4: request id for events
+            .session_id(GUID::from_u128(5))
+            .request_id(GUID::from_u128(6));
+        for app in &apps {
+            expected_request_builder = expected_request_builder.add_ping(&app);
         }
-        assert!(!state_machine.installer.reboot_called);
+        pool.run_until(assert_request(ping_request_viewer, expected_request_builder));
+
+        pool.run_until(async {
+            assert_eq!(
+                ctl.start_update_check(CheckOptions::default()).await,
+                Ok(StartUpdateCheckResponse::AlreadyRunning)
+            );
+        });
+
+        // Last update time is updated in storage.
+        pool.run_until(async {
+            let storage = storage_ref.lock().await;
+            let context = update_check::Context::load(&*storage).await;
+            assert_eq!(context.schedule.last_update_time, Some(mock_time.now_in_walltime().into()));
+        });
+
+        // State machine should be waiting for the next ping.
+        let wait_for_next_ping_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(
+            wait_for_next_ping_timer.requested_wait(),
+            RequestedWait::Until(next_update_time.into())
+        );
+
+        // Let state machine check reboot_allowed again, but still don't allow it.
+        wait_for_reboot_timer.unblock();
+        pool.run_until_stalled();
+        assert!(!*reboot_called.borrow());
+
+        // State machine should be waiting for the next reboot.
+        let wait_for_reboot_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(
+            wait_for_reboot_timer.requested_wait(),
+            RequestedWait::For(CHECK_REBOOT_ALLOWED_INTERVAL)
+        );
+
+        // Time for a second ping.
+        wait_for_next_ping_timer.unblock();
+        pool.run_until_stalled();
+
+        // Verify that it sends another ping.
+        let mut expected_request_builder = RequestBuilder::new(&config, &request_params)
+            .session_id(GUID::from_u128(7))
+            .request_id(GUID::from_u128(8));
+        for app in &apps {
+            expected_request_builder = expected_request_builder.add_ping(&app);
+        }
+        pool.run_until(assert_request(second_ping_request_viewer, expected_request_builder));
+
+        assert!(!*reboot_called.borrow());
+
+        // Now allow reboot.
+        *reboot_called.borrow_mut() = true;
+        wait_for_reboot_timer.unblock();
+        pool.run_until_stalled();
+        assert!(*reboot_called.borrow());
     }
 
     #[derive(Debug)]

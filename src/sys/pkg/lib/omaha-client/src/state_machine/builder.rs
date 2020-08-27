@@ -242,7 +242,7 @@ where
         let mut state_machine = self.build().await;
 
         async_generator::generate(move |mut co| async move {
-            state_machine.start_update_check(options, &mut co).await
+            state_machine.start_update_check(&options, &mut co).await
         })
         .into_yielded()
     }
