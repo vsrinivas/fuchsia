@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -28,15 +29,18 @@ implement field, name, or type resolution and analysis.
 
 // ReadJSONIr reads a JSON IR file.
 func ReadJSONIr(filename string) (Root, error) {
-	var root Root
-
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return root, fmt.Errorf("Error reading from %s: %w", filename, err)
+		return Root{}, fmt.Errorf("Error reading from %s: %w", filename, err)
 	}
+	return ReadJSONIrContent(bytes)
+}
 
-	err = json.Unmarshal(bytes, &root)
-	if err != nil {
+// ReadJSONIrContent reads JSON IR content.
+func ReadJSONIrContent(bytes []byte) (Root, error) {
+	var root Root
+
+	if err := json.Unmarshal(bytes, &root); err != nil {
 		return root, fmt.Errorf("Error parsing JSON IR: %v", err)
 	}
 
@@ -138,6 +142,26 @@ const (
 	Float32                  = "float32"
 	Float64                  = "float64"
 )
+
+var unsignedSubtypes = map[PrimitiveSubtype]struct{}{
+	Uint8:  {},
+	Uint16: {},
+	Uint32: {},
+	Uint64: {},
+}
+
+// IsSigned indicates whether this subtype represents a signed number such as
+// `int16`, or `float32`.
+func (typ PrimitiveSubtype) IsSigned() bool {
+	return !typ.IsUnsigned()
+}
+
+// IsUnsigned indicates whether this subtype represents an unsigned number such
+// as `uint16`.
+func (typ PrimitiveSubtype) IsUnsigned() bool {
+	_, ok := unsignedSubtypes[typ]
+	return ok
+}
 
 type HandleSubtype string
 
@@ -695,9 +719,53 @@ type Parameter struct {
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
 	Attributes
-	Type    PrimitiveSubtype          `json:"type"`
-	Name    EncodedCompoundIdentifier `json:"name"`
-	Members []EnumMember              `json:"members"`
+	Type            PrimitiveSubtype          `json:"type"`
+	Name            EncodedCompoundIdentifier `json:"name"`
+	Members         []EnumMember              `json:"members"`
+	Strictness      `json:"strict"`
+	RawUnknownValue int64OrUint64 `json:"maybe_unknown_value"`
+}
+
+// UnknownValueAsInt64 retrieves the unknown value. Succeeds only for signed
+// flexible enums.
+func (enum *Enum) UnknownValueAsInt64() (int64, error) {
+	if enum.IsStrict() {
+		return 0, fmt.Errorf("cannot retrieve unknown value of strict enum")
+	}
+	if enum.Type.IsUnsigned() {
+		return 0, fmt.Errorf("cannot retrieve signed unknown value of unsigned flexible enum")
+	}
+	return enum.RawUnknownValue.readInt64(), nil
+}
+
+// UnknownValueAsUint64 retrieves the unknown value. Succeeds only for unsigned
+// flexible enums.
+func (enum *Enum) UnknownValueAsUint64() (uint64, error) {
+	if enum.IsStrict() {
+		return 0, fmt.Errorf("cannot retrieve unknown value of strict enum")
+	}
+	if enum.Type.IsSigned() {
+		return 0, fmt.Errorf("cannot retrieve unsigned unknown value of signed flexible enum")
+	}
+	return enum.RawUnknownValue.readUint64(), nil
+}
+
+// UnknownValueForTmpl retrieves the signed or unsigned unknown value. Panics
+// if called on a strict enum.
+func (enum *Enum) UnknownValueForTmpl() interface{} {
+	if enum.Type.IsSigned() {
+		unknownValue, err := enum.UnknownValueAsInt64()
+		if err != nil {
+			panic(err.Error())
+		}
+		return unknownValue
+	}
+
+	unknownValue, err := enum.UnknownValueAsUint64()
+	if err != nil {
+		panic(err.Error())
+	}
+	return unknownValue
 }
 
 // EnumMember represents a single variant in a FIDL enum.
@@ -705,6 +773,12 @@ type EnumMember struct {
 	Attributes
 	Name  Identifier `json:"name"`
 	Value Constant   `json:"value"`
+}
+
+// IsUnknown indicates whether this member represents a custom unknown flexible
+// enum member.
+func (member *EnumMember) IsUnknown() bool {
+	return member.HasAttribute("Unknown")
 }
 
 // Bits represents a FIDL declaration of an bits.
@@ -741,10 +815,12 @@ const (
 	IsStrict   Strictness = true
 )
 
+// IsStrict indicates whether this type is strict.
 func (s Strictness) IsStrict() bool {
 	return s == IsStrict
 }
 
+// IsFlexible indicates whether this type is flexible.
 func (s Strictness) IsFlexible() bool {
 	return s == IsFlexible
 }
@@ -885,4 +961,37 @@ func (r *Root) ForBindings(language string) Root {
 	}
 
 	return res
+}
+
+type int64OrUint64 struct {
+	i int64
+	u uint64
+}
+
+func (n *int64OrUint64) readInt64() int64 {
+	if n.i != 0 {
+		return n.i
+	}
+	return int64(n.u)
+}
+
+func (n *int64OrUint64) readUint64() uint64 {
+	if n.i != 0 {
+		return uint64(n.i)
+	}
+	return n.u
+}
+
+var _ json.Unmarshaler = (*int64OrUint64)(nil)
+
+func (n *int64OrUint64) UnmarshalJSON(data []byte) error {
+	if u, err := strconv.ParseUint(string(data), 10, 64); err == nil {
+		n.u = u
+		return nil
+	}
+	if i, err := strconv.ParseInt(string(data), 10, 64); err == nil {
+		n.i = i
+		return nil
+	}
+	return fmt.Errorf("%s not representable as int64 or uint64", string(data))
 }
