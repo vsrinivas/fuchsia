@@ -75,7 +75,8 @@ directly. The new `test` target should look like:
 
 1. Rebuild using `fx build`.
 2. Change to the generated files directory:
-   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia/examples`.
+   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia/examples`, where
+   the generated files are located.
    You may need to change `out/default` if you have set a different build output
    directory. You can check your build output directory with `cat .fx-build-dir`.
 

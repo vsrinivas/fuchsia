@@ -43,7 +43,5 @@ toc:
       - include: /docs/development/languages/fidl/tutorials/dart/basics/_toc.yaml
     - title: "Request pipelining"
       path: /docs/development/languages/fidl/tutorials/dart/topics/request-pipelining.md
-  - title: "Go"
-    path: /docs/development/languages/fidl/tutorials/tutorial-go.md
   - title: "C"
     path: /docs/development/languages/fidl/tutorials/tutorial-c.md

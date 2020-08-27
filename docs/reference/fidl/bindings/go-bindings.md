@@ -332,15 +332,12 @@ interface described in [Protocols](#protocols) as well as methods for handling
 [events](#events). Note that in this implementation, two way method calls are
 synchronous and block until the response is received.
 
-An example of how to set up a client can be found in the [Go tutorial][go-tutorial].
+An example of a Go FIDL client can be found in [//examples/fidl/go/client][example-client].
 
 ### Server {#server}
 
 Implementing a server for this FIDL protocol involves providing a concrete
 implementation of the `TicTacToeWithCtx` interface.
-
-Examples on how to set up and bind a server implementing `TicTacToeWithCtx` are
-covered in the [Go tutorial][go-tutorial].
 
 The bindings generate a `TicTacToeWithCtxInterfaceRequest` type, used to
 represent the server end of the channel communicating over the `TicTacToe`
@@ -349,7 +346,7 @@ protocol. It provides the following methods:
 * `func (c EchoWithCtxInterfaceRequest) ToChannel() zx.Channel`: Convert the
   interface request back to an untyped channel.
 
-An example of how to serve a protocol can be found in the [Go tutorial][go-tutorial].
+An example of a Go FIDL server can be found in [//examples/fidl/go/server][example-server].
 
 ### Events {#events}
 
@@ -377,7 +374,7 @@ methods for each event in the protocol:
   an `OnOpponentMove` event.
 
 Creating a `TicTacToeEventProxy` requires access to a channel to the client.
-The [Go tutorial][go-tutorial] contains an example of how to obtain an
+The [Go server example][example-server] shows how to obtain an
 `EventProxy` on the server side.
 
 ### Results {#protocols-results}
@@ -459,7 +456,8 @@ In addition, FIDL generates a `TicTacToeName` constant that contains the
 protocol name.
 
 <!-- xrefs -->
-[go-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-go.md
+[example-client]: /examples/fidl/go/client
+[example-server]: /examples/fidl/go/server
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums

@@ -8,7 +8,12 @@ full set of FIDL tutorials, refer to the [overview][overview].
 ## Overview
 
 This tutorial shows you how to implement a FIDL protocol
-(`fuchsia.examples.Echo`) and run it on Fuchsia.
+(`fuchsia.examples.Echo`) and run it on Fuchsia. This protocol has one method
+of each kind: a fire and forget method, a two-way method, and an event:
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
+```
 
 This document covers how to complete the following tasks:
 
@@ -57,26 +62,27 @@ To create a component:
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="rest" %}
    ```
 
-To get the server component up and running, there are three targets that are
-defined:
+  To get the server component up and running, there are three targets that are
+  defined:
 
-* The raw executable file for the server that is built to run on Fuchsia.
-* A component that is set up to simply run the server executable,
-  which is described using the component's manifest file:
+  * The raw executable file for the server that is built to run on Fuchsia.
+  * A component that is set up to simply run the server executable,
+    which is described using the component's manifest file.
+  * The component is then put into a package, which is the unit of software
+    distribution on Fuchsia. In this case, the package just contains a
+    single component.
 
-  Note: The binary name in the manifest must match the output name of the
-  `executable`.
+  For more details on packages, components, and how to build them, refer to
+  the [Building components](/docs/development/components/build.md) page.
 
-  ```cmx
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/server.cmx" %}
-  ```
+1. Add a component manifest in `examples/fidl/hlcpp/server/server.cmx`:
 
-The component is then put into a package, which is the unit of software
-distribution on Fuchsia. In this case, the package just contains a
-single component.
+   Note: The binary name in the manifest must match the output name of the `executable`
+   defined in the previous step.
 
-For more details on packages, components, and how to build them, refer to
-the [Building components][building-components] page.
+   ```cmx
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/server.cmx" %}
+   ```
 
 ### Run the component
 
@@ -142,7 +148,7 @@ The implementation contains the following elements:
 * The class contains a pointer to an `Echo_EventSender`. This will be set
   later in the `main()` function.
 
-You can verify that the implemation is correct by running:
+You can verify that the implementation is correct by running:
 
 ```
 fx build
@@ -284,8 +290,7 @@ keeps waiting for incoming requests. The next step will be to write a client for
 the server.
 
 <!-- xrefs -->
-[fidl-intro]: /docs/development/languages/fidl/tutorials/fidl.md
-[building-components]: /docs/development/components/build.md
+[fidl-intro]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [products]: /docs/concepts/build_system/boards_and_products.md
 [getting-started]: /docs/getting_started.md
 [glossary-url]: /docs/glossary.md#component-url

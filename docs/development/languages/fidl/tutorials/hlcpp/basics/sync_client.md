@@ -24,14 +24,30 @@ Note: If necessary, refer back to the [previous tutorial][server-tut-component].
 
 1. Set up a hello world component in `examples/fidl/hlcpp/client`.
    You can name the component `echo-client`, and give the package a name of
-   `echo-hlcpp-client`.
+   `echo-hlcpp-client-sync`.
 
-1. Once you have created your component, ensure the following works:
+1. Once you have created your component, ensure that the following works:
 
    ```
-   fx set core.x64 --with //examples/fidl/hlcpp/client_sync && fx build
-   &&
-   fx serve && fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-client-sync#meta/echo-client.cmx
+   fx set core.x64 --with //examples/fidl/rust/client
+   ```
+
+1. Build the Fuchsia image:
+
+   ```
+   fx build
+   ```
+
+1. In a separate terminal, run:
+
+   ```
+   fx serve
+   ```
+
+1. In a separate terminal, run:
+
+   ```
+   fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-client-sync#meta/echo-client.cmx
    ```
 
 ## Edit GN dependencies
@@ -97,8 +113,9 @@ because of the sandboxing provided by the component framework.
 ### Send requests to the server
 
 The code makes two requests to the server:
-* One `SendString` request
-* One `EchoString` request
+
+* An `EchoString` request
+* A `SendString` request
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="6,7,8" %}
@@ -115,20 +132,14 @@ Though the [server implementation][server-tut-impl] sends an `OnString` event
 in response to the `SendString` request, the sync bindings do not provide a
 way to handle this event.
 
-Verify that your code can build by running:
-
-```
-fx build
-```
-
 ## Run the client
 
 If you try running the client directly, you'll notice that the error handler
 gets called because the client does not automatically get the `Echo` protocol
 provided in its sandbox (in `/svc`). In order to get this to work, a launcher
-tool is provided that will launch the server, create a new
+tool is provided that launches the server, creates a new
 [`Environment`][environment] for the client that provides the server's protocol,
-then launch the client in it.
+then launches the client in it.
 
 1. Configure your GN build:
 
@@ -147,7 +158,7 @@ then launch the client in it.
    the protocol that the server provides to the client:
 
    ```
-   fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-client#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo-server.cmx fuchsia.examples.Echo
+   fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-client-sync#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo-server.cmx fuchsia.examples.Echo
    ```
 
 You should see the client print output in the QEMU console (or using `fx log`).

@@ -40,14 +40,14 @@ and using `fuchsia.io` with the LLCPP bindings creates the following files:
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fidl.cc
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fidl.h
 
-#### Rust
+#### Rust {#rust}
 
 The Rust bindings output is contained in a single file in the root directory.
 For example, `fuchsia.io` is generated to the following file:
 
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fidl_fuchsia_io.rs
 
-#### Go
+#### Go {#go}
 
 Go bindings are generated into an `impl.go` file located in a subdirectory in
 the root directory. For example, building `fuchsia.io` generates the following file:
@@ -60,7 +60,7 @@ The JSON IR is generated to the root directory:
 
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json
 
-### Dart
+### Dart {#dart}
 
 The FIDL package for a library named `fuchsia.examples`, defined in the directory
 `sdk/fuchsia.examples` is:

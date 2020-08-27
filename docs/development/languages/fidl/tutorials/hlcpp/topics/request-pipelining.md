@@ -55,8 +55,8 @@ approaches.
 
 ### Implement the Echo protocol
 
-The implementation of `Echo` that allows specifying a prefix in order to
-distinguish between the different instances of `Echo` servers.
+This implementation of `Echo` allows specifying a prefix in order to
+distinguish between the different instances of `Echo` servers:
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="echo-impl" %}
@@ -93,7 +93,7 @@ implementation.
 
 ### Serve the EchoLauncher protocol
 
-The main loop should is the same as in the
+The main loop is the same as in the
 [server tutorial][server-tut-main] but serves an `EchoLauncher` instead of `Echo`.
 
 ```cpp
@@ -102,7 +102,7 @@ The main loop should is the same as in the
 
 ## Build the server
 
-To check that things are correct, try building the server:
+Optionally, o check that things are correct, try building the server:
 
 1. Configure your GN build to include the server:
 
@@ -150,14 +150,13 @@ much simpler:
 
 ## Build the client
 
-To check that things are correct, try building the server:
+Optionally, to check that things are correct, try building the client:
 
-1. Configure your GN build to include the server:
+1. Configure your GN build to include the client:
 
    ```
-   fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/client`
+   fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/client
    ```
-
 2. Build the Fuchsia image:
 
    ```
@@ -174,7 +173,13 @@ To run the example code:
    fx set core.x64 --with //examples/fidl/hlcpp/request_pipelining/client --with //examples/fidl/hlcpp/request_pipelining/server --with //examples/fidl/test:echo-launcher
    ```
 
-2. Run the example:
+1. Build the Fuchsia image:
+
+   ```
+   fx build
+   ```
+
+1. Run the example:
 
    ```
    fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-launcher-hlcpp-client#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-launcher-hlcpp-server#meta/echo-server.cmx fuchsia.examples.EchoLauncher

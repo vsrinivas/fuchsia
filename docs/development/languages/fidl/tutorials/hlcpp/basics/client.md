@@ -37,12 +37,14 @@ Note: If necessary, refer back to the [previous tutorial][server-tut-component].
    ```
    fx build
    ```
-1. In a seperate terminal, run:
+
+1. In a separate terminal, run:
 
    ```
    fx serve
    ```
-1. In a seperate terminal, run:
+
+1. In a separate terminal, run:
 
    ```
    fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-client#meta/echo-client.cmx
@@ -76,9 +78,8 @@ Note: If necessary, refer back to the [previous tutorial][server-tut-component].
 
 ## Connect to the server {#main}
 
-The steps in this section explain how to add code to the `main()` function in
-the `main.cc` file that connects the client to the server and makes requests to
-that server.
+The steps in this section explain how to add code to the `main()` function
+that connects the client to the server and makes requests to it.
 
 ### Initialize the event loop
 
@@ -135,8 +136,8 @@ Finally, the code sets an error handler for the proxy:
 
 The code makes two requests to the server:
 
-* One `SendString` request
-* One `EchoString` request:
+* An `EchoString` request
+* A `SendString` request
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="14,15,16,17,18,19,20" %}
@@ -165,19 +166,13 @@ code only if it receives both a response and an event:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="13,17,18,23,24,29" %}
 ```
 
-Verify that your code does not have issues by running:
-
-```
-fx build
-```
-
 ## Run the client
 
 If you run the client directly, the error handler gets called because the
 client does not automatically get the `Echo` protocol provided in its
 sandbox (in `/svc`). To get this to work, a launcher tool is provided
-that launches the server, create a new [`Environment`][environment] for
-the client that provides the server's protocol, then launch the client in it.
+that launches the server, creates a new [`Environment`][environment] for
+the client that provides the server's protocol, then launches the client in it.
 
 1. Configure your GN build as follows:
 
