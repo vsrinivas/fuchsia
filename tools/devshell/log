@@ -23,6 +23,10 @@
 ## Creates an SSH connection with a device and starts listening for logs.
 ## It will listen to the device specified with `fx -d DEVICE log` or
 ## `fx set-device`, otherwise it will try to find a connected device.
+##
+## For more information on flags supported by on-device log_listener, look at
+## the source code in https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/log_listener/src/main.rs#314
+##
 
 set -o pipefail
 
