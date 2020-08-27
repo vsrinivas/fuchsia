@@ -38,6 +38,14 @@ group("usb-host-stack") {
   ]
 }
 
+group("usb-peripheral-stack") {
+  deps = [
+    "//src/devices/block/drivers/ums-function",
+    "//src/devices/usb/bin/usbctl",
+    "//src/devices/usb/drivers/usb-peripheral",
+  ]
+}
+
 group("utils") {
   deps = [
     "//src/devices/clock/bin/clock",

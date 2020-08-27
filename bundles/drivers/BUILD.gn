@@ -26,6 +26,14 @@ group("usb-host-stack") {
   ]
 }
 
+group("usb-peripheral-stack") {
+  deps = [
+    "//src/connectivity/ethernet/drivers/rndis-function",
+    "//src/connectivity/ethernet/drivers/usb-cdc-function",
+    "//src/devices/bundles:usb-peripheral-stack",
+  ]
+}
+
 group("utils") {
   deps = [
     "//src/devices/bundles:utils",
