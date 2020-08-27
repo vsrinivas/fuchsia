@@ -139,6 +139,27 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetManufacturerDeviceCertificate(u
                                                buf_size, out_len);
 }
 
+bool ConfigurationManagerDelegateImpl::IsFullyProvisioned() {
+  return ConnectivityMgr().IsWiFiStationProvisioned() &&
+         // TODO(fxbug.dev/58252) Due to incomplete implementation of ThreadStackManager, this
+         // predicate does not yet include the line `ConnectivityMgr().IsThreadProvisioned() &&`,
+         // but should once complete.
+         ConfigurationMgr().IsPairedToAccount() &&
+         ConfigurationMgr().IsMemberOfFabric();
+}
+
+bool ConfigurationManagerDelegateImpl::IsPairedToAccount() {
+  // By default, just use the generic implementation in Weave Device Layer.
+  return static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+      ->_IsPairedToAccount();
+}
+
+bool ConfigurationManagerDelegateImpl::IsMemberOfFabric() {
+  // By default, just use the generic implementation in Weave Device Layer.
+  return static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+      ->_IsMemberOfFabric();
+}
+
 GroupKeyStoreBase* ConfigurationManagerDelegateImpl::GetGroupKeyStore() {
   return &group_key_store_;
 }

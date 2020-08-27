@@ -174,6 +174,46 @@ class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegate
   }
 };
 
+// Configuration manager delegate used to test IsFullyProvisioned
+class CfgMgrProvisionStatusDelegate : public ConfigurationManagerTestDelegateImpl {
+ public:
+  bool IsPairedToAccount() override {
+    return is_paired_to_account_;
+  }
+
+  bool IsMemberOfFabric() override {
+    return is_member_of_fabric_;
+  }
+
+  CfgMgrProvisionStatusDelegate& SetPairedToAccount(bool value) {
+    is_paired_to_account_ = value;
+    return *this;
+  }
+
+  CfgMgrProvisionStatusDelegate& SetMemberOfFabric(bool value) {
+    is_member_of_fabric_ = value;
+    return *this;
+  }
+ private:
+  bool is_paired_to_account_;
+  bool is_member_of_fabric_;
+};
+
+// Thread stack delegate used to test IsFullyProvisioned
+class ThreadStackMgrProvisionStatusDelegate : public ThreadStackManagerDelegateImpl {
+ public:
+  bool IsThreadProvisioned() {
+    return is_thread_provisioned_;
+  }
+
+  ThreadStackMgrProvisionStatusDelegate& SetThreadProvisioned(bool value) {
+    is_thread_provisioned_ = value;
+    return *this;
+  }
+ private:
+  bool is_thread_provisioned_;
+};
+
 class ConfigurationManagerTest : public WeaveTestFixture {
  public:
   ConfigurationManagerTest() {
@@ -397,6 +437,68 @@ TEST_F(ConfigurationManagerTest, CacheFlagsOnInit) {
   EXPECT_TRUE(ConfigurationMgr().IsServiceProvisioned());
   EXPECT_TRUE(ConfigurationMgr().IsMemberOfFabric());
   EXPECT_TRUE(ConfigurationMgr().IsPairedToAccount());
+}
+
+TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
+  auto cfg_mgr = new CfgMgrProvisionStatusDelegate();
+  ConfigurationMgrImpl().SetDelegate(std::unique_ptr<ConfigurationManagerImpl::Delegate>(cfg_mgr));
+  ASSERT_EQ(cfg_mgr->Init(), WEAVE_NO_ERROR);
+
+  auto thread_mgr = new ThreadStackMgrProvisionStatusDelegate();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerImpl::Delegate>(thread_mgr));
+
+  // All false
+  cfg_mgr->SetPairedToAccount(false);
+  cfg_mgr->SetMemberOfFabric(false);
+  thread_mgr->SetThreadProvisioned(false);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  // Two false
+  cfg_mgr->SetPairedToAccount(true);
+  cfg_mgr->SetMemberOfFabric(false);
+  thread_mgr->SetThreadProvisioned(false);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  cfg_mgr->SetPairedToAccount(false);
+  cfg_mgr->SetMemberOfFabric(true);
+  thread_mgr->SetThreadProvisioned(false);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  cfg_mgr->SetPairedToAccount(false);
+  cfg_mgr->SetMemberOfFabric(false);
+  thread_mgr->SetThreadProvisioned(true);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  // One false
+  cfg_mgr->SetPairedToAccount(false);
+  cfg_mgr->SetMemberOfFabric(true);
+  thread_mgr->SetThreadProvisioned(true);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  cfg_mgr->SetPairedToAccount(true);
+  cfg_mgr->SetMemberOfFabric(false);
+  thread_mgr->SetThreadProvisioned(true);
+
+  EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
+
+  cfg_mgr->SetPairedToAccount(true);
+  cfg_mgr->SetMemberOfFabric(true);
+  thread_mgr->SetThreadProvisioned(false);
+
+  // TODO(fxbug.dev/58252) Change to EXPECT_FALSE once ThreadStackManager is ready
+  EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
+
+  // No false
+  cfg_mgr->SetPairedToAccount(true);
+  cfg_mgr->SetMemberOfFabric(true);
+  thread_mgr->SetThreadProvisioned(true);
+
+  EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
 }
 
 }  // namespace testing

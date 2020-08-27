@@ -50,6 +50,18 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
   return delegate_->GetVendorId(vendor_id);
 }
 
+bool ConfigurationManagerImpl::_IsFullyProvisioned() {
+  return delegate_->IsFullyProvisioned();
+}
+
+bool ConfigurationManagerImpl::_IsPairedToAccount() {
+  return delegate_->IsPairedToAccount();
+}
+
+bool ConfigurationManagerImpl::_IsMemberOfFabric() {
+  return delegate_->IsMemberOfFabric();
+}
+
 GroupKeyStoreBase* ConfigurationManagerImpl::_GetGroupKeyStore(void) {
   return delegate_->GetGroupKeyStore();
 }

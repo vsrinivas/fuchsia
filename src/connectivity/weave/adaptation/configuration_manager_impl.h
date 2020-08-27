@@ -109,6 +109,15 @@ class ConfigurationManagerImpl final
     virtual WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix,
                                                size_t device_name_prefix_size, size_t* out_len) = 0;
 
+    // Returns whether Weave is fully provisioned as configured.
+    virtual bool IsFullyProvisioned() = 0;
+
+    // Returns whether Weave is paired to an account.
+    virtual bool IsPairedToAccount() = 0;
+
+    // Returns whether this device is a member of a fabric.
+    virtual bool IsMemberOfFabric() = 0;
+
     // Returns whether WoBLE is enabled.
     //
     // When enabled, weavestack will publish GATT service for WoBLE.
@@ -165,6 +174,9 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
+  bool _IsFullyProvisioned();
+  bool _IsPairedToAccount();
+  bool _IsMemberOfFabric();
 
   GroupKeyStoreBase* _GetGroupKeyStore(void);
   bool _CanFactoryReset(void);

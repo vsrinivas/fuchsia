@@ -35,6 +35,9 @@ class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delega
                                                size_t& out_len) override;
   WEAVE_ERROR GetProductId(uint16_t& product_id) override;
   WEAVE_ERROR GetVendorId(uint16_t& vendor_id) override;
+  bool IsFullyProvisioned() override;
+  bool IsPairedToAccount() override;
+  bool IsMemberOfFabric() override;
   GroupKeyStoreBase* GetGroupKeyStore(void) override;
   bool CanFactoryReset(void) override;
   void InitiateFactoryReset(void) override;
