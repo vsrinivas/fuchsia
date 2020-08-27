@@ -47,6 +47,7 @@ class Parser {
   size_t MappingSize() const { return dirsize_ + sizeof(zbi_bootfs_header_t); }
 
   uint32_t dirsize_ = 0;
+  uint64_t vmo_size_ = 0;
   void* dir_ = nullptr;
 };
 
