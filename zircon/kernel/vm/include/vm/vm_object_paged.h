@@ -254,6 +254,17 @@ class VmObjectPaged final : public VmObject {
   // internal check if any pages in a range are pinned
   bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
 
+  // Get the current generation count of the VMO hierarchy this VMO is a part of. Walks up the VMO
+  // tree to the root.
+  uint32_t GetHierarchyGenerationCountLocked() const TA_REQ(lock_);
+
+  // Increment the generation count of the VMO hierarchy this VMO is a part of. Walks up the VMO
+  // tree to the root.
+  //
+  // This should be called whenever a change is made to the VMO tree or the VMO's page list, that
+  // could result in page attribution counts to change for any VMO in this tree.
+  void IncrementHierarchyGenerationCountLocked() TA_REQ(lock_);
+
   // see AttributedPagesInRange
   size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
   // Helper function for ::AllocatedPagesInRangeLocked. Counts the number of pages in ancestor's
@@ -487,6 +498,22 @@ class VmObjectPaged final : public VmObject {
   // is the page_attribution_user_id_ of one of their children (i.e. the user_id_ of one
   // of their non-hidden descendants).
   uint64_t page_attribution_user_id_ TA_GUARDED(lock_) = 0;
+
+  static constexpr uint32_t kGenerationCountUnset = 0;
+  static constexpr uint32_t kGenerationCountInitial = 1;
+
+  // Each VMO hierarchy has a generation count, which is incremented on any change to the hierarchy
+  // - either in the VMO tree, or the page lists of VMO's. The root of the VMO tree owns the
+  // generation count for the hierarchy, every other VMO in the tree has its generation count set to
+  // |kGenerationCountInitial|. We move the generation count up and down the tree (to the current
+  // root) as required, as clones and hidden parents come and go.
+  //
+  // The generation count is used to implement caching for page attribution counts, which get
+  // queried frequently to periodically track memory usage on the system. Attributing pages to a
+  // VMO is an expensive operation and involves walking the VMO tree, quite often multiple times.
+  // If the generation count does not change between two successive queries, we can avoid
+  // re-counting attributed pages, and simply return the previously cached value.
+  uint32_t hierarchy_generation_count_ TA_GUARDED(lock_) = kGenerationCountInitial;
 
   // Counts the total number of pages pinned by ::Pin. If one page is pinned n times, it
   // contributes n to this count. However, this does not include pages pinned when creating

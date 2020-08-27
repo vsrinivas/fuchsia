@@ -282,6 +282,7 @@ void VmObjectPaged::HarvestAccessedBits() {
     }
   }
 }
+
 bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   Guard<Mutex> guard{&lock_};
 
@@ -324,6 +325,7 @@ bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     pmm_free_page(page);
     *page_or_marker = VmPageOrMarker::Marker();
     eviction_event_count_++;
+    IncrementHierarchyGenerationCountLocked();
     return true;
   }
   return false;
@@ -386,6 +388,11 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
         return ZX_ERR_NEXT;
       },
       0, UINT64_MAX);
+
+  if (reclaim && count > 0) {
+    IncrementHierarchyGenerationCountLocked();
+  }
+
   // Release the guard so we can free any pages.
   guard.Release();
   pmm_free(&free_list);
@@ -585,6 +592,11 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     AssertHeld(parent_->lock_ref());
     hidden_parent->InitializeOriginalParentLocked(parent_, 0);
     parent_->ReplaceChildLocked(this, hidden_parent.get());
+  } else {
+    // The |hidden_parent| is the now the root of this vmo hierarchy. Move the
+    // |hierarchy_generation_count_| into the |hidden_parent|.
+    hidden_parent->hierarchy_generation_count_ = hierarchy_generation_count_;
+    hierarchy_generation_count_ = kGenerationCountInitial;
   }
   hidden_parent->AddChildLocked(this);
   parent_ = hidden_parent;
@@ -721,6 +733,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     if (copy_name) {
       vmo->name_ = name_;
     }
+    IncrementHierarchyGenerationCountLocked();
   }
 
   if (notify_one_child) {
@@ -862,6 +875,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     if (copy_name) {
       vmo->name_ = name_;
     }
+    IncrementHierarchyGenerationCountLocked();
   }
 
   if (notify_one_child) {
@@ -910,6 +924,8 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
   fbl::RefPtr<VmObject> child_ref;
 
   Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+  IncrementHierarchyGenerationCountLocked();
 
   if (!is_hidden()) {
     VmObject::RemoveChild(removed, guard.take());
@@ -1045,6 +1061,12 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
   // page source would make the way we move pages between objects incorrect, as we would break any
   // potential back links.
   DEBUG_ASSERT(!page_source_);
+
+  // If the hidden parent was the root of this vmo hierarchy, move the |hierarchy_generation_count_|
+  // into the remaining |child|.
+  if (!parent_) {
+    child.hierarchy_generation_count_ = hierarchy_generation_count_;
+  }
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), 0, visibility_start_offset);
   page_list_.RemovePages(page_remover.RemovePagesCallback(), merge_end_offset, MAX_SIZE);
@@ -1259,6 +1281,36 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
     };
     page_list_.ForEveryPage(f);
   }
+}
+
+void VmObjectPaged::IncrementHierarchyGenerationCountLocked() {
+  auto vmo = this;
+  AssertHeld(vmo->lock_);
+  while (vmo->parent_) {
+    DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
+    vmo = VmObjectPaged::AsVmObjectPaged(vmo->parent_);
+    DEBUG_ASSERT(vmo);
+  }
+
+  if (vmo->hierarchy_generation_count_ == UINT32_MAX) {
+    // Wrap around to the initial value in case of overflow.
+    vmo->hierarchy_generation_count_ = kGenerationCountInitial;
+  } else {
+    ++vmo->hierarchy_generation_count_;
+  }
+  DEBUG_ASSERT(vmo->hierarchy_generation_count_ != kGenerationCountUnset);
+}
+
+uint32_t VmObjectPaged::GetHierarchyGenerationCountLocked() const {
+  auto vmo = this;
+  AssertHeld(vmo->lock_);
+  while (vmo->parent_) {
+    DEBUG_ASSERT(vmo->hierarchy_generation_count_ == kGenerationCountInitial);
+    vmo = VmObjectPaged::AsVmObjectPaged(vmo->parent_);
+    DEBUG_ASSERT(vmo);
+  }
+  DEBUG_ASSERT(vmo->hierarchy_generation_count_ != kGenerationCountUnset);
+  return vmo->hierarchy_generation_count_;
 }
 
 size_t VmObjectPaged::AttributedPagesInRange(uint64_t offset, uint64_t len) const {
@@ -1979,6 +2031,9 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     *pa_out = res_page->paddr();
   }
 
+  // If we made it here, we committed a new page in this VMO.
+  IncrementHierarchyGenerationCountLocked();
+
   return ZX_OK;
 }
 
@@ -2285,6 +2340,8 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + new_len);
   page_remover.Flush();
 
+  IncrementHierarchyGenerationCountLocked();
+
   return ZX_OK;
 }
 
@@ -2577,6 +2634,8 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     }
     *slot = VmPageOrMarker::Marker();
   }
+
+  IncrementHierarchyGenerationCountLocked();
 
   return ZX_OK;
 }
@@ -2969,6 +3028,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
   // save bytewise size
   size_ = s;
 
+  IncrementHierarchyGenerationCountLocked();
+
   page_remover.Flush();
   guard.Release();
   pmm_free(&free_list);
@@ -3202,7 +3263,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3234,7 +3295,7 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3285,6 +3346,8 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
       offset, offset + len);
 
   *pages = page_list_.TakePages(offset, len);
+
+  IncrementHierarchyGenerationCountLocked();
 
   return ZX_OK;
 }
@@ -3350,6 +3413,8 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   if (new_pages_len) {
     page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
   }
+
+  IncrementHierarchyGenerationCountLocked();
 
   if (!list_is_empty(&free_list)) {
     pmm_free(&free_list);
@@ -3564,6 +3629,7 @@ bool VmObjectPaged::EvictPage(vm_page_t* page, uint64_t offset) {
   DEBUG_ASSERT(p == page);
   pmm_page_queues()->Remove(page);
   eviction_event_count_++;
+  IncrementHierarchyGenerationCountLocked();
 
   // |page| is now owned by the caller.
   return true;
