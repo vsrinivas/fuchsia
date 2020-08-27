@@ -40,34 +40,11 @@ constexpr char kDivisionSign[] = "\xc3\xb7";
 // U+00BF
 constexpr char kInvertedQuestionMark[] = "\xc2\xbf";
 
-void TestUnicodeDirectoryHasCorrectName(UnicodeTest* test, const char* name) {
-  ASSERT_EQ(mkdir(test->GetPath(name).c_str(), 0755), 0) << strerror(errno);
-
-  DIR* dir = opendir(test->GetPath("").c_str());
-  ASSERT_NE(dir, nullptr) << strerror(errno);
-
-  struct dirent* de;
-  bool seen = false;
-  while ((de = readdir(dir)) != nullptr) {
-    if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
-      // Ignore these entries
-      continue;
-    }
-    ASSERT_EQ(strcmp(name, de->d_name), 0);
-    seen = true;
-  }
-  closedir(dir);
-
-  ASSERT_TRUE(seen) << "Did not find expected file " << name;
-
-  ASSERT_EQ(rmdir(test->GetPath(name).c_str()), 0) << name << ": " << strerror(errno);
-}
-
 TEST_P(UnicodeTest, TestUnicodeDirectoryNames) {
-  ASSERT_NO_FATAL_FAILURE(TestUnicodeDirectoryHasCorrectName(this, kSunglasses));
-  ASSERT_NO_FATAL_FAILURE(TestUnicodeDirectoryHasCorrectName(this, kInterrobang));
-  ASSERT_NO_FATAL_FAILURE(TestUnicodeDirectoryHasCorrectName(this, kDivisionSign));
-  ASSERT_NO_FATAL_FAILURE(TestUnicodeDirectoryHasCorrectName(this, kInvertedQuestionMark));
+  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, kSunglasses, true));
+  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, kInterrobang, true));
+  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, kDivisionSign, true));
+  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, kInvertedQuestionMark, true));
 }
 
 TEST_P(UnicodeTest, TestRenameUnicodeSucceeds) {

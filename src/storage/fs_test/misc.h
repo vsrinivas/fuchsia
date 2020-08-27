@@ -13,6 +13,8 @@
 
 #include <fbl/span.h>
 
+#include "src/storage/fs_test/fs_test_fixture.h"
+
 namespace fs_test {
 
 struct ExpectedDirectoryEntry {
@@ -25,6 +27,9 @@ void CheckDirectoryContents(const char* dirname, fbl::Span<const ExpectedDirecto
 
 // Checks the contents of a file are what we expect.
 void CheckFileContents(int fd, fbl::Span<const uint8_t> expected);
+
+// Checks that it's possible to create a directory with the given name.
+void CheckCanCreateDirectory(FilesystemTest* test, const char* name, bool do_delete);
 
 }  // namespace fs_test
 

@@ -4,11 +4,15 @@
 
 #include "src/storage/fs_test/misc.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#include "src/storage/fs_test/fs_test_fixture.h"
 
 namespace fs_test {
 
@@ -51,6 +55,39 @@ void CheckFileContents(int fd, fbl::Span<const uint8_t> expected) {
   std::vector<uint8_t> buffer(expected.size());
   ASSERT_EQ(read(fd, buffer.data(), buffer.size()), static_cast<ssize_t>(buffer.size()));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), expected.size()), 0);
+}
+
+void CheckCanCreateDirectory(FilesystemTest* test, const char* name, bool do_delete) {
+  std::string dir_path = test->GetPath(name);
+  ASSERT_EQ(mkdir(dir_path.c_str(), 0755), 0) << strerror(errno);
+
+  struct stat statbuf;
+  ASSERT_EQ(stat(dir_path.c_str(), &statbuf), 0) << strerror(errno);
+
+  ASSERT_NE(statbuf.st_mode & S_IFDIR, 0u) << "mkdir() did not create a directory!";
+
+  DIR* dir = opendir(test->GetPath("").c_str());
+  ASSERT_NE(dir, nullptr) << strerror(errno);
+
+  struct dirent* de;
+  bool seen = false;
+  while ((de = readdir(dir)) != nullptr) {
+    if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+      // Ignore these entries
+      continue;
+    }
+
+    if (!strcmp(name, de->d_name)) {
+      seen = true;
+      break;
+    }
+  }
+  closedir(dir);
+
+  ASSERT_TRUE(seen) << "Did not find expected file " << name;
+
+  if (do_delete)
+    ASSERT_EQ(rmdir(dir_path.c_str()), 0) << name << ": " << strerror(errno);
 }
 
 }  // namespace fs_test

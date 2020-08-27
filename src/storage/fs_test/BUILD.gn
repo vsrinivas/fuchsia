@@ -212,6 +212,24 @@ fuchsia_component("fcntl-tests") {
   ]
 }
 
+test("filename_tests") {
+  sources = [ "filename.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("filename-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/filename-tests.cml"
+  deps = [
+    ":filename_tests",
+    ":manifests",
+  ]
+}
+
 test("link_tests") {
   sources = [ "link.cc" ]
   deps = [
@@ -582,6 +600,7 @@ fuchsia_test_package("fs-tests") {
     ":directory-tests",
     ":dot-dot-tests",
     ":fcntl-tests",
+    ":filename-tests",
     ":link-tests",
     ":lseek-tests",
     ":minfs-tests",
@@ -712,6 +731,7 @@ action("manifests") {
     "$target_gen_dir/directory-tests.cml",
     "$target_gen_dir/dot-dot-tests.cml",
     "$target_gen_dir/fcntl-tests.cml",
+    "$target_gen_dir/filename-tests.cml",
     "$target_gen_dir/link-tests.cml",
     "$target_gen_dir/lseek-tests.cml",
     "$target_gen_dir/max-file-tests.cml",
