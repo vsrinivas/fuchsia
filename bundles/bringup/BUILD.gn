@@ -6,7 +6,11 @@ import("//build/unification/images/common_test_contents.gni")
 
 group("tests") {
   testonly = true
-  deps = [
+
+  # Add the testrunner.
+  deps = [ "//src/testing/runtests" ]
+
+  deps += [
     "//sdk/lib/fdio/test:fdio-bootfs-test",
     "//sdk/lib/fdio/test/constructors:fdio-constructor-bootfs-test",
     "//src/bringup/bin/console:bootfs-test",
@@ -247,12 +251,16 @@ group("tests") {
           common_test_contents
 
   # Add various drivers and binaries used in manual testing.
-  deps += [
-    "//src/devices/gpio/drivers/gpio-test",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/serial/bin/serial-test",
-    "//src/devices/tests/sysdev",
-    "//src/devices/usb/bin/xdc-test",
-    "//src/devices/usb/drivers/usb-test/flash-programmer",
+  deps += [ ":manual_testing" ]
+}
+
+group("manual_testing") {
+  testonly = true
+
+  deps = [
+    "//src/devices/bundles:manual_testing",
+    "//src/graphics/display/bin/display-test",
+    "//src/security/bin/syscall-check",
+    "//src/zircon/testing/mutex_pi_exerciser",
   ]
 }

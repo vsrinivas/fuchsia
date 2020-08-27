@@ -59,3 +59,22 @@ group("utils") {
     "//src/devices/thermal/bin/thermal-cli",
   ]
 }
+
+group("manual_testing") {
+  testonly = true
+
+  deps = [
+    "//src/devices/bin/tee-test",
+    "//src/devices/block/bin/biotime",
+    "//src/devices/block/bin/blktest",
+    "//src/devices/block/bin/iochk",
+    "//src/devices/block/bin/iotime",
+    "//src/devices/gpio/drivers/gpio-test",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/serial/bin/serial-test",
+    "//src/devices/tests/sysdev",
+    "//src/devices/usb/bin/usb-fwloader",
+    "//src/devices/usb/bin/xdc-test",
+    "//src/devices/usb/drivers/usb-test/flash-programmer",
+  ]
+}
