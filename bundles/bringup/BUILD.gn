@@ -134,7 +134,6 @@ group("tests") {
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-bootfs-test",
     "//zircon/system/ulib/storage/buffer/test:storage_buffer-bootfs-test",
     "//zircon/system/ulib/storage/operation/test:storage_operation-bootfs-test",
-    "//zircon/system/ulib/sysconfig-client/test:sysconfig-sync-client-test-bootfs-test",
     "//zircon/system/ulib/syslog/test:syslog-package",
     "//zircon/system/ulib/syslog/test:syslog-static-package",
     "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-test-package",
