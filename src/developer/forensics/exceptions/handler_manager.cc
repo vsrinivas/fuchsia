@@ -13,7 +13,6 @@
 #include <array>
 #include <optional>
 
-#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -82,38 +81,6 @@ std::optional<zx::process> SpawnHandler(zx::exception exception,
 
 }  // namespace
 
-HandlerManager::Exception::Exception(async_dispatcher_t* dispatcher, zx::duration ttl,
-                                     zx::exception exception,
-                                     fuchsia::exception::Handler::OnExceptionCallback cb)
-    : exception_(std::move(exception)), cb_(std::move(cb)) {
-  zx::process process;
-  if (const zx_status_t status = exception_.get_process(&process); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to get process; releasing the exception";
-    exception_.reset();
-  }
-
-  crashed_process_name_ =
-      (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
-  crashed_process_koid_ = std::to_string(fsl::GetKoid(process.get()));
-
-  if (const zx_status_t status = reset_.PostDelayed(dispatcher, ttl); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to post reset task for exception; releasing the exception";
-    exception_.reset();
-  }
-}
-
-zx::exception&& HandlerManager::Exception::TakeException() { return std::move(exception_); }
-
-fuchsia::exception::Handler::OnExceptionCallback&& HandlerManager::Exception::TakeCallback() {
-  return std::move(cb_);
-}
-
-std::string HandlerManager::Exception::CrashedProcessName() const { return crashed_process_name_; }
-
-std::string HandlerManager::Exception::CrashedProcessKoid() const { return crashed_process_koid_; }
-
-void HandlerManager::Exception::Reset() { exception_.reset(); }
-
 HandlerManager::HandlerManager(async_dispatcher_t* dispatcher, size_t max_num_handlers,
                                zx::duration exception_ttl)
     : dispatcher_(dispatcher),
@@ -127,10 +94,8 @@ HandlerManager::Handler::Handler(async_dispatcher_t* dispatcher, zx::process sub
   on_subprocess_exit_.Begin(dispatcher, std::move(on_subprocess_exit));
 }
 
-void HandlerManager::Handle(zx::exception exception,
-                            fuchsia::exception::Handler::OnExceptionCallback cb) {
-  pending_exceptions_.emplace_back(dispatcher_, exception_ttl_, std::move(exception),
-                                   std::move(cb));
+void HandlerManager::Handle(zx::exception exception) {
+  pending_exceptions_.emplace_back(dispatcher_, exception_ttl_, std::move(exception));
   HandleNextPendingException();
 }
 
@@ -139,7 +104,7 @@ void HandlerManager::HandleNextPendingException() {
     return;
   }
 
-  Exception& pending_exception = pending_exceptions_.front();
+  PendingException& pending_exception = pending_exceptions_.front();
   zx::exception exception = pending_exception.TakeException();
 
   std::optional<zx::process> process{};
@@ -153,24 +118,20 @@ void HandlerManager::HandleNextPendingException() {
   // If we failed to spawn a sub-process to handle the exception, call the callback and move on to
   // the next exception in the queue.
   if (!process.has_value()) {
-    (pending_exception.TakeCallback())();
     pending_exceptions_.pop_front();
     HandleNextPendingException();
     return;
   }
 
   handlers_.emplace(next_handler_id_,
-                    std::make_unique<Handler>(
-                        dispatcher_, std::move(process.value()),
-                        [this, id = next_handler_id_, cb = pending_exception.TakeCallback()](...) {
-                          cb();
+                    std::make_unique<Handler>(dispatcher_, std::move(process.value()),
+                                              [this, id = next_handler_id_](...) {
+                                                --num_active_subprocesses_;
+                                                HandleNextPendingException();
 
-                          --num_active_subprocesses_;
-                          HandleNextPendingException();
-
-                          // We do this last as it will tear down the lambda.
-                          handlers_.erase(id);
-                        }));
+                                                // We do this last as it will tear down the lambda.
+                                                handlers_.erase(id);
+                                              }));
 
   pending_exceptions_.pop_front();
   ++num_active_subprocesses_;

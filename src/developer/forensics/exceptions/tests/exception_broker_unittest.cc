@@ -28,80 +28,26 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   return MarkExceptionAsHandled(pe);
 }
 
-size_t NumSubprocesses() {
-  size_t actual{0};
-  size_t avail{0};
-  std::array<zx_koid_t, 8> children;
-  children.fill(ZX_KOID_INVALID);
-  zx_object_get_info(zx_job_default(), ZX_INFO_JOB_PROCESSES, children.data(), children.size(),
-                     &actual, &avail);
+using PendingExceptionTest = UnitTestFixture;
 
-  FX_CHECK(actual == avail);
-
-  // Account for the process the test is runnning in.
-  return actual - 1;
-}
-
-using ExceptionBrokerTest = UnitTestFixture;
-
-TEST_F(ExceptionBrokerTest, ExecutesCallback) {
-  auto broker =
-      ExceptionBroker::Create(dispatcher(), /*max_num_handlers=*/1u, /*exception_ttl=*/zx::hour(1));
+TEST_F(PendingExceptionTest, ExceptionExpires) {
+  const zx::duration ttl{zx::sec(1)};
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
-  bool called{false};
-  broker->OnException(std::move(exception.exception), {}, [&called] { called = true; });
+  ASSERT_TRUE(exception.exception.is_valid());
+  PendingException pending_exception(dispatcher(), ttl, std::move(exception.exception));
 
-  while (!called) {
-    RunLoopUntilIdle();
-  }
+  RunLoopFor(ttl);
 
-  EXPECT_EQ(NumSubprocesses(), 0u);
+  ASSERT_FALSE(pending_exception.TakeException().is_valid());
 
   // We kill the job. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
   exception.job.kill();
-}
-
-TEST_F(ExceptionBrokerTest, LimitsNumSubprocesses) {
-  auto broker =
-      ExceptionBroker::Create(dispatcher(), /*max_num_handlers=*/1u, /*exception_ttl=*/zx::hour(1));
-
-  ExceptionContext exceptions[2];
-  ASSERT_TRUE(RetrieveExceptionContext(exceptions + 0));
-  ASSERT_TRUE(RetrieveExceptionContext(exceptions + 1));
-
-  bool called1{false};
-  broker->OnException(std::move(exceptions[0].exception), {}, [&called1] { called1 = true; });
-
-  bool called2{false};
-  broker->OnException(std::move(exceptions[1].exception), {}, [&called2] { called2 = true; });
-
-  while (!called1) {
-    RunLoopUntilIdle();
-  }
-
-  // This should only ever fail if spawing the handler processes fails because the callback for the
-  // second call to OnException would be immediately posted on the loop when broker fails to create
-  // the first handler. This results in |called2| being set to true during the call to
-  // RunLoopUntilIdle() above.
-  ASSERT_FALSE(called2);
-
-  while (!called2) {
-    RunLoopUntilIdle();
-  }
-
-  EXPECT_EQ(NumSubprocesses(), 0u);
-
-  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
-  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
-  // environment and create noise on the overall system.
-  exceptions[0].job.kill();
-  exceptions[1].job.kill();
 }
 
 }  // namespace

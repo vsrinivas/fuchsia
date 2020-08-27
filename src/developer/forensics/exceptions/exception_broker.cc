@@ -60,11 +60,11 @@ ExceptionBroker::ExceptionBroker(async_dispatcher_t* dispatcher, size_t max_num_
 void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
                                   OnExceptionCallback cb) {
   if (!limbo_manager_.active()) {
-    handler_manager_.Handle(std::move(exception), std::move(cb));
+    handler_manager_.Handle(std::move(exception));
   } else {
     AddToLimbo(std::move(exception), std::move(info));
-    cb();
   }
+  cb();
 }
 
 void ExceptionBroker::AddToLimbo(zx::exception exception, ExceptionInfo info) {

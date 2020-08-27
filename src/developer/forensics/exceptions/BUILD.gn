@@ -17,6 +17,8 @@ source_set("lib") {
     "handler_manager.h",
     "json_utils.cc",
     "json_utils.h",
+    "pending_exception.cc",
+    "pending_exception.h",
     "process_limbo_manager.cc",
     "process_limbo_manager.h",
   ]
