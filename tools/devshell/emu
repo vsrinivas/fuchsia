@@ -264,7 +264,9 @@ if [[ "$ACCEL" == "kvm" ]]; then
   if [[ ! -w "/dev/kvm" ]]; then
     echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
     echo
-    echo "sudo chmod 666 /dev/kvm"
+    echo "sudo usermod -a -G kvm $USER"
+    echo
+    echo "Log out and back in for the change to take effect."
     exit 1
   fi
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
