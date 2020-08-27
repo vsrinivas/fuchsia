@@ -7,7 +7,7 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "corpus.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "tests.h"
 
 namespace {
@@ -28,16 +28,23 @@ constexpr char kSimpleZbiJson[] = R"""({
   "items": [
     {
       "offset": 32,
-      "type": "CMDLINE",
-      "size": 12,
-      "crc32": 2172167543
+      "type": "IMAGE_ARGS",
+      "size": 11,
+      "crc32": 3608077223
     }
   ]
 })""";
 
 TEST(ZbitlViewJsonTests, EmptyZbi) {
-  std::string_view zbi{zbitl::test::kEmptyZbi, sizeof(zbitl::test::kEmptyZbi)};
-  zbitl::View view(zbi);
+  files::ScopedTempDir dir;
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kEmpty, dir.path(), &fd, &size));
+
+  char buff[kMaxZbiSize];
+  ASSERT_EQ(size, read(fd.get(), buff, size));
+
+  zbitl::View view(std::string_view{buff, size});
 
   JsonBuffer buffer;
   rapidjson::PrettyWriter<JsonBuffer> json_writer(buffer);
@@ -52,8 +59,15 @@ TEST(ZbitlViewJsonTests, EmptyZbi) {
 }
 
 TEST(ZbitlViewJsonTests, SimpleZbi) {
-  std::string_view zbi{zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)};
-  zbitl::View view(zbi);
+  files::ScopedTempDir dir;
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+
+  char buff[kMaxZbiSize];
+  ASSERT_EQ(size, read(fd.get(), buff, size));
+
+  zbitl::View view(std::string_view{buff, size});
 
   JsonBuffer buffer;
   rapidjson::PrettyWriter<JsonBuffer> json_writer(buffer);

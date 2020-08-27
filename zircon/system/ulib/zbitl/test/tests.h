@@ -8,12 +8,14 @@
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
+#include <filesystem>
 #include <string>
 #include <type_traits>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "corpus.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 #define ASSERT_IS_OK(result)                                              \
   do {                                                                    \
@@ -23,16 +25,30 @@
                 result_.error_value().zbi_error.data());                  \
   } while (0)
 
+constexpr size_t kMaxZbiSize = 1024;
+
+constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
+
+enum class TestDataZbiType {
+  kEmpty,
+  kOneItem,
+  kBadCrcItem,
+};
+
+void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
+                     size_t* num_bytes);
+
 // Usage of StorageIo below is a default-constructible class that should look
 // like
 // * a namespace member of `storage_type`, giving the underlying storage type.
-// * a means of creating a 'ZBI' of that type from a string representation:
+// * a means of creating a 'ZBI' of that type from file contents:
 //   ```
-//  void Create(std::string_view, storage_type* zbi)
+//  void Create(fbl::unique_fd fd;, size_t size, storage_type* zbi)
 //   ```
 //   The StorageIo object can store state if storage_type is a non-owning
 //   type referring to some different underlying type holding the contents.
-//   Only one Create call will be made per StorageIo object.
+//   Only one Create call will be made per StorageIo object, and the call takes
+//   ownership of the descriptor.
 // * a means of reading the payload of an item:
 //   ```
 //  void ReadPayload(const storage_type& zbi, const zbi_header_t& header, payload_type payload)
@@ -67,10 +83,14 @@ inline void TestDefaultConstructedView(bool expect_storage_error) {
 template <typename StorageIo>
 inline void TestEmptyZbi() {
   StorageIo io;
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kEmpty, dir.path(), &fd, &size));
 
   typename StorageIo::storage_type zbi;
-  ASSERT_NO_FATAL_FAILURES(
-      io.Create({zbitl::test::kEmptyZbi, sizeof(zbitl::test::kEmptyZbi)}, &zbi));
+  ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
   zbitl::View view(std::move(zbi));  // Yay deduction guides!
 
   ASSERT_IS_OK(view.container_header());
@@ -91,17 +111,21 @@ inline void TestEmptyZbi() {
 template <typename StorageIo>
 inline void TestSimpleZbi() {
   StorageIo io;
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
 
   typename StorageIo::storage_type zbi;
-  ASSERT_NO_FATAL_FAILURES(
-      io.Create({zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)}, &zbi));
+  ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
   zbitl::View view(std::move(zbi));
 
   ASSERT_IS_OK(view.container_header());
 
   size_t num_items = 0;
   for (auto [header, payload] : view) {
-    EXPECT_EQ(ZBI_TYPE_CMDLINE, header->type);
+    EXPECT_EQ(kItemType, header->type);
 
     std::string contents;
     ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));
@@ -124,10 +148,14 @@ inline void TestSimpleZbi() {
 template <typename StorageIo>
 void TestBadCrcZbi() {
   StorageIo io;
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kBadCrcItem, dir.path(), &fd, &size));
 
   typename StorageIo::storage_type zbi;
-  ASSERT_NO_FATAL_FAILURES(
-      io.Create({zbitl::test::kBadCrcZbi, sizeof(zbitl::test::kBadCrcZbi)}, &zbi));
+  ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
   zbitl::View<typename StorageIo::storage_type, zbitl::Checking::kCrc> view(std::move(zbi));
 
   ASSERT_IS_OK(view.container_header());
@@ -158,10 +186,14 @@ void TestBadCrcZbi() {
 template <typename StorageIo>
 void TestMutation() {
   StorageIo io;
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
 
   typename StorageIo::storage_type zbi;
-  ASSERT_NO_FATAL_FAILURES(
-      io.Create({zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)}, &zbi));
+  ASSERT_NO_FATAL_FAILURES(io.Create(std::move(fd), size, &zbi));
   zbitl::View view(std::move(zbi));
 
   ASSERT_IS_OK(view.container_header());
@@ -170,7 +202,7 @@ void TestMutation() {
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
 
-    EXPECT_EQ(ZBI_TYPE_CMDLINE, header->type);
+    EXPECT_EQ(kItemType, header->type);
 
     std::string contents;
     ASSERT_NO_FATAL_FAILURES(io.ReadPayload(view.storage(), *header, payload, &contents));

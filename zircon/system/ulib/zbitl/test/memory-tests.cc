@@ -12,11 +12,11 @@ template <typename T>
 struct FblArrayIo {
   using storage_type = fbl::Array<T>;
 
-  void Create(std::string_view contents, storage_type* storage) {
-    const size_t n = (contents.size() + sizeof(T) - 1) / sizeof(T);
+  void Create(fbl::unique_fd fd, size_t size, storage_type* storage) {
+    ASSERT_TRUE(fd);
+    const size_t n = (size + sizeof(T) - 1) / sizeof(T);
     *storage = storage_type{new T[n], n};
-    ASSERT_GE(storage->size() * sizeof(T), contents.size());
-    memcpy(storage->data(), contents.data(), contents.size());
+    ASSERT_EQ(size, read(fd.get(), storage->data(), size));
   }
 
   void ReadPayload(const storage_type& zbi, const zbi_header_t& header, fbl::Span<T> payload,

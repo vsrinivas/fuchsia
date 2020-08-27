@@ -11,6 +11,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/host_test_data.gni")
 
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
@@ -23,6 +24,20 @@ group("test") {
   ]
 }
 
+# Test data ZBIs created by data/gen.py.
+test_data_zbis = [
+  "data/empty.zbi",
+  "data/one-item.zbi",
+  "data/bad-crc-item.zbi",
+]
+
+if (is_host) {
+  host_test_data("host-test-data") {
+    sources = test_data_zbis
+    outputs = [ "$root_out_dir/test_data/zbitl/{{source_file_part}}" ]
+  }
+}
+
 test("zbitl-unittests") {
   sources = [
     "checking-tests.cc",
@@ -30,6 +45,7 @@ test("zbitl-unittests") {
     "json-tests.cc",
     "memory-tests.cc",
     "stdio-tests.cc",
+    "tests.cc",
     "view-tests.cc",
   ]
   deps = [
@@ -44,6 +60,8 @@ test("zbitl-unittests") {
   if (is_fuchsia) {
     sources += [ "vmo-tests.cc" ]
     configs += [ "//build/unification/config:zircon-migrated" ]
+  } else if (is_host) {
+    deps += [ ":host-test-data" ]
   }
 }
 
@@ -56,4 +74,14 @@ test_package("zbitl-test-package") {
       name = "zbitl-unittests"
     },
   ]
+
+  resources = []
+  foreach(zbi, test_data_zbis) {
+    resources += [
+      {
+        path = zbi
+        dest = get_path_info(zbi, "file")
+      },
+    ]
+  }
 }

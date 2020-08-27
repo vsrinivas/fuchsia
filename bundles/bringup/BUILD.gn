@@ -147,7 +147,6 @@ group("tests") {
     "//zircon/system/ulib/utf_conversion/test:utf_conversion-test-bootfs-test",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-bootfs-test",
     "//zircon/system/ulib/zbi/test:zbi-bootfs-test",
-    "//zircon/system/ulib/zbitl/test",
     "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-bootfs-test",
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-bootfs-test",
     "//zircon/system/ulib/zx/test:zx-bootfs-test",

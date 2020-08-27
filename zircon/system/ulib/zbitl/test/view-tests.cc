@@ -14,11 +14,12 @@ template <typename T>
 struct BasicStringIo {
   using storage_type = std::basic_string_view<T>;
 
-  void Create(std::string_view contents, std::basic_string_view<T>* zbi) {
-    ASSERT_EQ(0, contents.size() % sizeof(T), "size (%zu) is not a multiple of %lu",
-              contents.size(), sizeof(T));
-    *zbi = std::basic_string_view<T>(reinterpret_cast<const T*>(contents.data()),
-                                     contents.size() / sizeof(T));
+  void Create(fbl::unique_fd fd, size_t size, std::basic_string_view<T>* zbi) {
+    ASSERT_TRUE(fd);
+    const size_t n = (size + sizeof(T) - 1) / sizeof(T);
+    ASSERT_LE(n, sizeof(buff_));
+    ASSERT_EQ(size, read(fd.get(), buff_, size), "%s", strerror(errno));
+    *zbi = std::basic_string_view<T>(reinterpret_cast<const T*>(buff_), n / sizeof(T));
   }
 
   void ReadPayload(std::basic_string_view<T> zbi, const zbi_header_t& header,
@@ -26,6 +27,8 @@ struct BasicStringIo {
     *string =
         std::string(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(T));
   }
+
+  char buff_[kMaxZbiSize];
 };
 
 using StringIo = BasicStringIo<char>;

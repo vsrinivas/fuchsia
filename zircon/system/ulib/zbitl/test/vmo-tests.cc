@@ -11,10 +11,14 @@ namespace {
 struct VmoIo {
   using storage_type = zx::vmo;
 
-  void Create(std::string_view contents, zx::vmo* zbi) {
+  void Create(fbl::unique_fd fd, size_t size, zx::vmo* zbi) {
+    ASSERT_TRUE(fd);
+    char buff[kMaxZbiSize];
+    ASSERT_EQ(size, read(fd.get(), buff, size), "%s", strerror(errno));
+
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(contents.size(), 0u, &vmo));
-    ASSERT_OK(vmo.write(contents.data(), 0u, contents.size()));
+    ASSERT_OK(zx::vmo::create(size, 0u, &vmo));
+    ASSERT_OK(vmo.write(buff, 0u, size));
     *zbi = std::move(vmo);
   }
 
@@ -28,9 +32,9 @@ struct VmoIo {
 struct UnownedVmoIo : private VmoIo {
   using storage_type = zx::unowned_vmo;
 
-  void Create(std::string_view contents, zx::unowned_vmo* zbi) {
+  void Create(fbl::unique_fd fd, size_t size, zx::unowned_vmo* zbi) {
     ASSERT_FALSE(vmo_, "StorageIo reused for multiple tests");
-    VmoIo::Create(contents, &vmo_);
+    VmoIo::Create(std::move(fd), size, &vmo_);
     *zbi = zx::unowned_vmo{vmo_};
   }
 

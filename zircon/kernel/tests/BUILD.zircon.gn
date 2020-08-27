@@ -45,9 +45,6 @@ source_set("zbitl") {
 
   sources = [ "zbitl_tests.cc" ]
 
-  # For corpus.h.
-  include_dirs = [ "$zx/system/ulib/zbitl/test" ]
-
   deps = [
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/libc",

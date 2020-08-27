@@ -9,7 +9,6 @@
 
 #include <ktl/span.h>
 
-#include "corpus.h"
 #include "tests.h"
 
 // zbitl is primarily tested by its host/userland unit tests.
@@ -20,12 +19,34 @@
 
 namespace {
 
+// `zbi --output=$OUTPUT_ZBI; hexdump -v -e '1/1 "\\x%02x"' $OUTPUT_ZBI`.
+alignas(ZBI_ALIGNMENT) constexpr char kEmptyZbi[] =
+    "\x42\x4f\x4f\x54\x00\x00\x00\x00\xe6\xf7\x8c\x86\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x00\x29\x17\x78\xb5\xd6\xe8\x87\x4a";
+
+// ```
+// zbi --output=$OUTPUT_ZBI --type CMDLINE --entry "hello world"
+// hexdump -v -e '1/1 "\\x%02x"' $OUTPUT_ZBI
+// ```
+alignas(ZBI_ALIGNMENT) constexpr char kSimpleZbi[] =
+    "\x42\x4f\x4f\x54\x30\x00\x00\x00\xe6\xf7\x8c\x86\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x00\x29\x17\x78\xb5\xd6\xe8\x87\x4a\x43\x4d\x44\x4c\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x29\x17\x78\xb5\x77\xa5\x78\x81\x68\x65\x6c\x6c\x6f"
+    "\x20\x77\x6f\x72\x6c\x64\x00\x00\x00\x00\x00";
+
+// The above, but with a payload byte changed.
+alignas(ZBI_ALIGNMENT) constexpr char kBadCrcZbi[] =
+    "\x42\x4f\x4f\x54\x30\x00\x00\x00\xe6\xf7\x8c\x86\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x00\x29\x17\x78\xb5\xd6\xe8\x87\x4a\x43\x4d\x44\x4c\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x29\x17\x78\xb5\x77\xa5\x78\x81\x00\x65\x6c\x6c\x6f"
+    "\x20\x77\x6f\x72\x6c\x64\x00\x00\x00\x00\x00";
+
 constexpr char kHelloWorld[] = "hello world";
 
 bool EmptyZbiTest() {
   BEGIN_TEST;
 
-  zbitl::View zbi(ktl::span<const char>{zbitl::test::kEmptyZbi, sizeof(zbitl::test::kEmptyZbi)});
+  zbitl::View zbi(ktl::span<const char>{kEmptyZbi, sizeof(kEmptyZbi)});
 
   ASSERT_IS_OK(zbi.container_header());
 
@@ -42,7 +63,7 @@ bool EmptyZbiTest() {
 bool SimpleZbiTest() {
   BEGIN_TEST;
 
-  zbitl::View zbi(ktl::span<const char>{zbitl::test::kSimpleZbi, sizeof(zbitl::test::kSimpleZbi)});
+  zbitl::View zbi(ktl::span<const char>{kSimpleZbi, sizeof(kSimpleZbi)});
 
   ASSERT_IS_OK(zbi.container_header());
 
@@ -67,8 +88,7 @@ bool SimpleZbiTest() {
 bool BadCrcZbiTest() {
   BEGIN_TEST;
 
-  zbitl::View<ktl::span<const char>, zbitl::Checking::kCrc> zbi(
-      {zbitl::test::kBadCrcZbi, sizeof(zbitl::test::kBadCrcZbi)});
+  zbitl::View<ktl::span<const char>, zbitl::Checking::kCrc> zbi({kBadCrcZbi, sizeof(kBadCrcZbi)});
 
   ASSERT_IS_OK(zbi.container_header());
 
@@ -88,8 +108,8 @@ bool BadCrcZbiTest() {
 bool MutationTest() {
   BEGIN_TEST;
 
-  alignas(ZBI_ALIGNMENT) char contents[sizeof(zbitl::test::kSimpleZbi)];
-  memcpy(contents, zbitl::test::kSimpleZbi, sizeof(contents));
+  alignas(ZBI_ALIGNMENT) char contents[sizeof(kSimpleZbi)];
+  memcpy(contents, kSimpleZbi, sizeof(contents));
 
   // Storage type is mutable.
   zbitl::View zbi(ktl::span<char>{contents, sizeof(contents)});

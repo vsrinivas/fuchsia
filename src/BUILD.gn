@@ -78,6 +78,7 @@ group("tests") {
     # //src.
     "//zircon/kernel/lib/devicetree/tests",
     "//zircon/system/ulib:tests",
+    "//zircon/system/ulib/zbitl/test",
     "//zircon/system/utest:tests",
   ]
 }
@@ -88,6 +89,5 @@ group("zircon_host_tests") {
     "//build/unification/tests:host",
     "//zircon/kernel/dev/coresight/tests($host_toolchain)",
     "//zircon/kernel/lib/heap/cmpctmalloc/tests($host_toolchain)",
-    "//zircon/system/ulib/zbitl/test($host_toolchain)",
   ]
 }

@@ -5,7 +5,8 @@
 #include <fcntl.h>
 #include <lib/zbitl/fd.h>
 
-#include "src/lib/files/scoped_temp_dir.h"
+#include <fbl/unique_fd.h>
+
 #include "tests.h"
 
 namespace {
@@ -13,11 +14,8 @@ namespace {
 struct FdIo {
   using storage_type = fbl::unique_fd;
 
-  void Create(std::string_view contents, fbl::unique_fd* zbi) {
-    std::string filename;
-    ASSERT_TRUE(temp_dir_.NewTempFileWithData(std::string(contents), &filename));
-    fbl::unique_fd fd{open(filename.c_str(), O_RDWR)};
-    ASSERT_TRUE(fd, "cannot open '%s': %s", filename.c_str(), strerror(errno));
+  void Create(fbl::unique_fd fd, size_t size, fbl::unique_fd* zbi) {
+    ASSERT_TRUE(fd);
     *zbi = std::move(fd);
   }
 
@@ -28,8 +26,6 @@ struct FdIo {
     ASSERT_GT(n, 0, "error encountered: %s", strerror(errno));
     ASSERT_EQ(header.length, static_cast<uint32_t>(n), "did not fully read payload");
   }
-
-  files::ScopedTempDir temp_dir_;
 };
 
 TEST(ZbitlViewFdTests, DefaultConstructed) {
