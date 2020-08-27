@@ -2087,6 +2087,7 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Autonull for $name {
+            #[inline(always)]
             fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
                 false
             }
@@ -2189,6 +2190,7 @@ macro_rules! fidl_struct_copy {
         }
 
         impl $crate::encoding::Autonull for $name {
+            #[inline(always)]
             fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
                 false
             }
@@ -2232,6 +2234,7 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Autonull for $name {
+            #[inline(always)]
             fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
                 false
             }
@@ -2778,6 +2781,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Autonull for $name {
+            #[inline(always)]
             fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
                 true
             }
