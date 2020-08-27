@@ -68,27 +68,32 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     fn print_ncp_debug_line(&self, line: &[u8]) {
         match std::str::from_utf8(line) {
-            Ok(line) => fx_log_info!("NCP-DEBUG: {:?}", line),
-            Err(_) => fx_log_info!("NCP-DEBUG: Non-UTF8: {:x?}", line),
+            Ok(line) => fx_log_warn!("NCP-DEBUG: {:?}", line),
+            Err(_) => fx_log_warn!("NCP-DEBUG: Non-UTF8: {:x?}", line),
         }
     }
 
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
-    pub(super) fn on_prop_value_is(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
+    pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
         fx_log_info!("on_prop_value_is: {:?} {:x?}", prop, value);
         match prop {
             Prop::Stream(PropStream::Debug) => {
                 let mut ncp_debug_buffer = self.ncp_debug_buffer.lock();
+
+                if value.ends_with(&[0]) {
+                    value = &value[..value.len() - 1];
+                }
 
                 // Append the data to the end of the existing debug buffer.
                 std::io::Write::write_all(&mut *ncp_debug_buffer, value)
                     .expect("Unable to write to NCP debug buffer");
 
                 // Look for newlines and print out all of the complete lines.
-                while let Some(line) = ncp_debug_buffer.split(|c| *c == b'\n').next() {
+                while ncp_debug_buffer.contains(&b'\n') {
+                    let line = ncp_debug_buffer.split(|c| *c == b'\n').next().unwrap();
                     self.print_ncp_debug_line(line);
-                    let len = line.len();
+                    let len = line.len() + 1; // +1 to remove the `\n`
                     ncp_debug_buffer.drain(..len);
                 }
 

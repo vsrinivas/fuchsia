@@ -17,6 +17,8 @@ use std::sync::Arc;
 
 const INBOUND_WINDOW_SIZE: u32 = 2;
 
+pub const PROP_DEBUG_LOGGING_TEST: Prop = Prop::Unknown(2097151);
+
 #[derive(Debug)]
 struct FakeSpinelDevice {
     properties: Arc<Mutex<HashMap<Prop, Vec<u8>>>>,
@@ -123,6 +125,60 @@ impl FakeSpinelDevice {
     ) -> Option<Vec<Vec<u8>>> {
         let mut response: Vec<u8> = vec![];
         match prop {
+            PROP_DEBUG_LOGGING_TEST => {
+                let mut full_response: Vec<Vec<u8>> = vec![];
+                full_response.push({
+                    let mut response: Vec<u8> = vec![];
+                    spinel_write!(
+                        &mut response,
+                        "CiiU",
+                        0x80,
+                        Cmd::PropValueIs,
+                        Prop::Stream(PropStream::Debug),
+                        "Testing ",
+                    )
+                    .unwrap();
+                    response
+                });
+
+                full_response.push({
+                    let mut response: Vec<u8> = vec![];
+                    spinel_write!(
+                        &mut response,
+                        "CiiU",
+                        0x80,
+                        Cmd::PropValueIs,
+                        Prop::Stream(PropStream::Debug),
+                        "Debug ",
+                    )
+                    .unwrap();
+                    response
+                });
+
+                full_response.push({
+                    let mut response: Vec<u8> = vec![];
+                    spinel_write!(
+                        &mut response,
+                        "CiiU",
+                        0x80,
+                        Cmd::PropValueIs,
+                        Prop::Stream(PropStream::Debug),
+                        "Output\nAmong other things\n",
+                    )
+                    .unwrap();
+                    response
+                });
+
+                full_response.push({
+                    let mut response: Vec<u8> = vec![];
+                    spinel_write!(&mut response, "Cii", frame.header, Cmd::PropValueIs, prop)
+                        .unwrap();
+                    response
+                });
+
+                return Some(full_response);
+            }
+
             Prop::Mac(PropMac::ScanState) => {
                 match ScanState::try_unpack_from_slice(new_value).ok()? {
                     ScanState::Energy => {

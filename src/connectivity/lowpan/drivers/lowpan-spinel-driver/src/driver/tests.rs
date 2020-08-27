@@ -8,6 +8,7 @@ use crate::spinel::*;
 use futures::prelude::*;
 use mock::*;
 
+use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
 use fidl_fuchsia_lowpan::{Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use lowpan_driver_common::Driver as _;
 
@@ -157,6 +158,13 @@ async fn test_spinel_lowpan_driver() {
             let network_scan_stream = driver
                 .start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::empty());
             assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
+
+            traceln!("app_task: Testing debug logging...");
+            driver
+                .frame_handler
+                .send_request(CmdPropValueSet(PROP_DEBUG_LOGGING_TEST, ()))
+                .await
+                .unwrap();
 
             traceln!("app_task: Setting disabled...");
             assert_eq!(driver.set_active(false).await, Ok(()));
