@@ -11,6 +11,7 @@ use {
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
     async_trait::async_trait,
+    fatfs::validate_filename,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
@@ -276,12 +277,9 @@ impl FatDirectory {
 
             match cur_entry {
                 FatNode::Dir(entry) => {
-                    cur_entry = entry.clone().open_child(
-                        &path.next().unwrap().to_owned(),
-                        child_flags,
-                        child_mode,
-                        closer,
-                    )?;
+                    let name = path.next().unwrap();
+                    validate_filename(name)?;
+                    cur_entry = entry.clone().open_child(name, child_flags, child_mode, closer)?;
                 }
                 FatNode::File(_) => {
                     return Err(Status::NOT_DIR);

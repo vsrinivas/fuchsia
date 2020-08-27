@@ -10,7 +10,9 @@ use {
         util::fatfs_error_to_status,
     },
     anyhow::Error,
-    fatfs::{self, DefaultTimeProvider, FsOptions, LossyOemCpConverter, ReadWriteSeek},
+    fatfs::{
+        self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter, ReadWriteSeek,
+    },
     fuchsia_zircon::Status,
     std::{
         any::Any,
@@ -268,7 +270,9 @@ impl FilesystemRename for FatFilesystem {
         }
 
         let src_name = src_path.peek().unwrap();
+        validate_filename(src_name).map_err(fatfs_error_to_status)?;
         let dst_name = dst_path.peek().unwrap();
+        validate_filename(dst_name).map_err(fatfs_error_to_status)?;
 
         let mut closer = Closer::new(&self);
         let filesystem = self.inner.lock().unwrap();

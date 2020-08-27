@@ -107,12 +107,30 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for DirRawStream<'_, IO, TP, OCC> {
     }
 }
 
-fn split_path<'a>(path: &'a str) -> (&'a str, Option<&'a str>) {
+/// Ensures the filename has no trailing spaces or dots.
+pub fn validate_filename<'a>(name: &'a str) -> io::Result<()> {
+    if name == "." || name == ".." {
+        return Ok(());
+    }
+
+    // Disallow trailing dots or spaces.
+    // Trailing dots are ignored by Windows and Linux, and trailing spaces are ignored by Windows.
+    // We error so that opening a file with a given name will always mean that a file with that
+    // name exists.
+    // We also disallow empty filenames.
+    if name.ends_with(&['.', ' '][..]) || name.is_empty() {
+        return Err(io::Error::new(ErrorKind::InvalidInput, "Illegal filename"));
+    }
+    Ok(())
+}
+
+fn split_path<'a>(path: &'a str) -> io::Result<(&'a str, Option<&'a str>)> {
     // remove trailing slash and split into 2 components - top-most parent and rest
     let mut path_split = path.trim_matches('/').splitn(2, '/');
     let comp = path_split.next().unwrap(); // SAFE: splitn always returns at least one element
+    validate_filename(comp)?;
     let rest_opt = path_split.next();
-    (comp, rest_opt)
+    Ok((comp, rest_opt))
 }
 
 enum DirEntryOrShortName<'fs, IO: ReadWriteSeek, TP, OCC> {
@@ -257,7 +275,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     /// `path` is a '/' separated directory path relative to self directory.
     pub fn open_dir(&self, path: &str) -> io::Result<Self> {
         trace!("open_dir {}", path);
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = split_path(path)?;
         let e = self.find_entry(name, Some(true), None)?;
         match rest_opt {
             Some(rest) => e.to_dir().open_dir(rest),
@@ -271,7 +289,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn open_file(&self, path: &str) -> io::Result<File<'fs, IO, TP, OCC>> {
         trace!("open_file {}", path);
         // traverse path
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = split_path(path)?;
         if let Some(rest) = rest_opt {
             let e = self.find_entry(name, Some(true), None)?;
             return e.to_dir().open_file(rest);
@@ -288,7 +306,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn create_file(&self, path: &str) -> io::Result<File<'fs, IO, TP, OCC>> {
         trace!("create_file {}", path);
         // traverse path
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = split_path(path)?;
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_file(rest);
         }
@@ -315,7 +333,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn create_dir(&self, path: &str) -> io::Result<Self> {
         trace!("create_dir {}", path);
         // traverse path
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = split_path(path)?;
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_dir(rest);
         }
@@ -380,7 +398,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn remove(&self, path: &str) -> io::Result<()> {
         trace!("remove {}", path);
         // traverse path
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = split_path(path)?;
         if let Some(rest) = rest_opt {
             let e = self.find_entry(name, Some(true), None)?;
             return e.to_dir().remove(rest);
@@ -476,13 +494,13 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     ) -> io::Result<()> {
         trace!("rename {} {}", src_path, dst_path);
         // traverse source path
-        let (name, rest_opt) = split_path(src_path);
+        let (name, rest_opt) = split_path(src_path)?;
         if let Some(rest) = rest_opt {
             let e = self.find_entry(name, Some(true), None)?;
             return e.to_dir().rename(rest, dst_dir, dst_path);
         }
         // traverse destination path
-        let (name, rest_opt) = split_path(dst_path);
+        let (name, rest_opt) = split_path(dst_path)?;
         if let Some(rest) = rest_opt {
             let e = dst_dir.find_entry(name, Some(true), None)?;
             return self.rename(src_path, &e.to_dir(), rest);
@@ -1431,9 +1449,9 @@ mod tests {
 
     #[test]
     fn test_split_path() {
-        assert_eq!(split_path("aaa/bbb/ccc"), ("aaa", Some("bbb/ccc")));
-        assert_eq!(split_path("aaa/bbb"), ("aaa", Some("bbb")));
-        assert_eq!(split_path("aaa"), ("aaa", None));
+        assert_eq!(split_path("aaa/bbb/ccc"), Ok(("aaa", Some("bbb/ccc"))));
+        assert_eq!(split_path("aaa/bbb"), Ok(("aaa", Some("bbb"))));
+        assert_eq!(split_path("aaa"), Ok(("aaa", None)));
     }
 
     #[test]
