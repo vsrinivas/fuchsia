@@ -22,6 +22,7 @@ const DEFAULT_BOARD_CONFIG_JSON_FILE: &str = "/config/data/default_board_config.
 const SERIAL_TXT: &str = "serial.txt";
 const LOCALE_LIST_FILE: &str = "locale_list.txt";
 const HW_TXT: &str = "hw.txt";
+const RETAIL_DEMO_FILE: &str = "demo_device";
 // CONFIG KEYS
 const SKU_KEY: &str = "config";
 const LANGUAGE_KEY: &str = "lang";
@@ -50,11 +51,14 @@ async fn read_factory_file(
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceInfo {
     pub serial_number: Option<String>,
+    pub is_retail_demo: bool,
+    pub retail_sku: Option<String>,
 }
 
 impl DeviceInfo {
     pub async fn load(proxy_handle: &MiscFactoryStoreProviderProxy) -> Self {
-        let mut device_info = DeviceInfo { serial_number: None };
+        let mut device_info =
+            DeviceInfo { serial_number: None, is_retail_demo: false, retail_sku: None };
         device_info.serial_number = match read_factory_file(SERIAL_TXT, proxy_handle).await {
             Ok(content) => Some(content),
             Err(err) => {
@@ -62,13 +66,21 @@ impl DeviceInfo {
                 None
             }
         };
+        if let Ok(content) = read_factory_file(RETAIL_DEMO_FILE, proxy_handle).await {
+            device_info.is_retail_demo = true;
+            device_info.retail_sku = Some(content)
+        };
         device_info
     }
 }
 
 impl Into<fidl_fuchsia_hwinfo::DeviceInfo> for DeviceInfo {
     fn into(self) -> fidl_fuchsia_hwinfo::DeviceInfo {
-        fidl_fuchsia_hwinfo::DeviceInfo { serial_number: self.serial_number }
+        fidl_fuchsia_hwinfo::DeviceInfo {
+            serial_number: self.serial_number,
+            is_retail_demo: Some(self.is_retail_demo),
+            retail_sku: self.retail_sku,
+        }
     }
 }
 

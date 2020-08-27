@@ -5,11 +5,13 @@
 library fuchsia.hwinfo;
 using fuchsia.intl;
 
-const uint8 MAX_VALUE_LENGTH = 255;
+const uint8 MAX_VALUE_SIZE = 255;
 
 /// Collection of properties that is unique per device.
 table DeviceInfo {
-    1: string serial_number;
+    1: string:MAX_VALUE_SIZE serial_number;
+    2: bool is_retail_demo;
+    3: string:MAX_VALUE_SIZE retail_sku;
 };
 
 /// Collection of properties that is shared with other devices within the same
@@ -23,14 +25,14 @@ table ProductInfo {
     6: string model;
     7: string manufacturer;
     8: string build_date;
-    9: string:MAX_VALUE_LENGTH build_name;
-    10: string:MAX_VALUE_LENGTH colorway;
-    11: string:MAX_VALUE_LENGTH display;
-    12: string:MAX_VALUE_LENGTH memory;
-    13: string:MAX_VALUE_LENGTH nand_storage;
-    14: string:MAX_VALUE_LENGTH emmc_storage;
-    15: string:MAX_VALUE_LENGTH microphone;
-    16: string:MAX_VALUE_LENGTH audio_amplifier;
+    9: string:MAX_VALUE_SIZE build_name;
+    10: string:MAX_VALUE_SIZE colorway;
+    11: string:MAX_VALUE_SIZE display;
+    12: string:MAX_VALUE_SIZE memory;
+    13: string:MAX_VALUE_SIZE nand_storage;
+    14: string:MAX_VALUE_SIZE emmc_storage;
+    15: string:MAX_VALUE_SIZE microphone;
+    16: string:MAX_VALUE_SIZE audio_amplifier;
 };
 
 /// Collection of properties that are common among a set of devices based on

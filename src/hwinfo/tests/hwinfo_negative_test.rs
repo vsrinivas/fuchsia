@@ -17,6 +17,7 @@ async fn request_device_info() -> Result<(), Error> {
         connect_to_service::<DeviceMarker>().expect("Failed to connect to device info service");
     let response = device_info_provider.get_info().await?;
     assert!(response.serial_number.is_none());
+    assert_eq!(response.is_retail_demo.unwrap(), false);
     Ok(())
 }
 
