@@ -10,6 +10,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
+#include <lib/counters.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -113,6 +114,11 @@ inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
   DEBUG_ASSERT(!overflow);
   return result;
 }
+
+KCOUNTER(vmo_attribution_queries_all, "vm.object.attribution.queries_all")
+KCOUNTER(vmo_attribution_queries_entire_object, "vm.object.attribution.queries_entire_object")
+KCOUNTER(vmo_attribution_cache_hits, "vm.object.attribution.cache_hits")
+KCOUNTER(vmo_attribution_cache_misses, "vm.object.attribution.cache_misses")
 
 }  // namespace
 
@@ -1295,6 +1301,11 @@ void VmObjectPaged::IncrementHierarchyGenerationCountLocked() {
   if (vmo->hierarchy_generation_count_ == UINT32_MAX) {
     // Wrap around to the initial value in case of overflow.
     vmo->hierarchy_generation_count_ = kGenerationCountInitial;
+    // Invalidate the cached page attribution value (resetting its generation count to
+    // |kGenerationCountUnset|), thereby forcing a recompute on the next
+    // |AttributedPagesInRangeLocked()| call. This handles the corner case where the cached
+    // |generation_count| was |kGenerationCountInitial|, resulting in a false cache hit.
+    cached_page_attribution_ = {};
   } else {
     ++vmo->hierarchy_generation_count_;
   }
@@ -1328,16 +1339,36 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   if (!TrimRange(offset, len, size_, &new_len)) {
     return 0;
   }
-  size_t count = 0;
+
+  vmo_attribution_queries_all.Add(1);
+
+  uint32_t gen_count;
+  bool update_cached_attribution = false;
+  // Use cached value if generation count has not changed since the last time we attributed pages.
+  // Only applicable for attribution over the entire VMO, not a partial range.
+  if (offset == 0 && new_len == size_) {
+    vmo_attribution_queries_entire_object.Add(1);
+    gen_count = GetHierarchyGenerationCountLocked();
+
+    if (cached_page_attribution_.generation_count == gen_count) {
+      vmo_attribution_cache_hits.Add(1);
+      return cached_page_attribution_.page_count;
+    } else {
+      vmo_attribution_cache_misses.Add(1);
+      update_cached_attribution = true;
+    }
+  }
+
+  size_t page_count = 0;
   // TODO: Decide who pages should actually be attribtued to.
   page_list_.ForEveryPageAndGapInRange(
-      [&count](const auto* p, uint64_t off) {
+      [&page_count](const auto* p, uint64_t off) {
         if (p->IsPage()) {
-          count++;
+          page_count++;
         }
         return ZX_ERR_NEXT;
       },
-      [this, &count](uint64_t gap_start, uint64_t gap_end) {
+      [this, &page_count](uint64_t gap_start, uint64_t gap_end) {
         AssertHeld(lock_);
 
         // If there's no parent, there's no pages to care about. If there is a non-hidden
@@ -1359,14 +1390,21 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
           // |CountAttributedAncestorPagesLocked| guarantees that it will make progress.
           DEBUG_ASSERT(attributed > 0);
           off += attributed;
-          count += local_count;
+          page_count += local_count;
         }
 
         return ZX_ERR_NEXT;
       },
       offset, offset + new_len);
 
-  return count;
+  if (update_cached_attribution) {
+    // Cache attributed page count along with current generation count.
+    DEBUG_ASSERT(cached_page_attribution_.generation_count != gen_count);
+    cached_page_attribution_.generation_count = gen_count;
+    cached_page_attribution_.page_count = page_count;
+  }
+
+  return page_count;
 }
 
 uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size,

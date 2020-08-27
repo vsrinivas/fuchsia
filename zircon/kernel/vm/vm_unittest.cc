@@ -2086,6 +2086,336 @@ static bool vmo_validate_page_splits_test() {
   END_TEST;
 }
 
+// Helper function used by the vmo_attribution_* tests.
+// Verifies that the current generation count is |gen| and the current page attribution count is
+// |pages|. Also verifies that the cached page attribution has the expected generation and page
+// counts after the call to AttributedPages().
+static bool verify_page_attribution(VmObject* vmo, uint32_t gen, size_t pages) {
+  BEGIN_TEST;
+
+  auto vmo_paged = static_cast<VmObjectPaged*>(vmo);
+  EXPECT_EQ(gen, vmo_paged->GetHierarchyGenerationCount());
+
+  EXPECT_EQ(pages, vmo->AttributedPages());
+
+  VmObjectPaged::CachedPageAttribution attr = vmo_paged->GetCachedPageAttribution();
+  EXPECT_EQ(gen, attr.generation_count);
+  EXPECT_EQ(pages, attr.page_count);
+
+  END_TEST;
+}
+
+// Tests that page attribution caching behaves as expected under various cloning behaviors -
+// creation of snapshot clones and slices, removal of clones, committing pages in the original vmo
+// and in the clones.
+static bool vmo_attribution_clones_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 4 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  // Dummy user id to keep the cloning code happy.
+  vmo->set_user_id(0xff);
+
+  uint32_t expected_gen_count = 1;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Commit the first two pages. This should increment the generation count by 2 (one per
+  // GetPageLocked() call that results in a page getting committed).
+  status = vmo->CommitRange(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  // Create a clone that sees the second and third pages.
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, PAGE_SIZE,
+                            2 * PAGE_SIZE, true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+  clone->set_user_id(0xfc);
+
+  // Creation of the clone should increment the generation count.
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 0u));
+
+  // Commit both pages in the clone. This should increment the generation count by the no. of pages
+  // committed in the clone.
+  status = clone->CommitRange(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 2u));
+
+  // Commit the last page in the original vmo, which should increment the generation count by 1.
+  status = vmo->CommitRange(3 * PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 3u));
+
+  // Create a slice that sees all four pages of the original vmo.
+  fbl::RefPtr<VmObject> slice;
+  status = vmo->CreateChildSlice(0, 4 * PAGE_SIZE, true, &slice);
+  ASSERT_EQ(ZX_OK, status);
+  slice->set_user_id(0xf5);
+
+  // Creation of the slice should increment the generation count.
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 3u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 2u));
+  EXPECT_EQ(true, verify_page_attribution(slice.get(), expected_gen_count, 0u));
+
+  // Committing the slice's last page is a no-op (as the page is already committed) and should *not*
+  // increment the generation count.
+  status = slice->CommitRange(3 * PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 3u));
+
+  // Committing the remaining 3 pages in the slice will commit pages in the original vmo, and should
+  // increment the generation count by 3 (1 per page committed).
+  status = slice->CommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 3;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 4u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 2u));
+  EXPECT_EQ(true, verify_page_attribution(slice.get(), expected_gen_count, 0u));
+
+  // Removing the clone should increment the generation count.
+  clone.reset();
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 4u));
+  EXPECT_EQ(true, verify_page_attribution(slice.get(), expected_gen_count, 0u));
+
+  // Removing the slice should increment the generation count.
+  slice.reset();
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 4u));
+
+  END_TEST;
+}
+
+// Tests that page attribution caching behaves as expected under various operations performed on the
+// vmo that can change its page list - committing / decommitting pages, reading / writing, zero
+// range, resizing.
+static bool vmo_attribution_ops_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint32_t expected_gen_count = 1;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Committing pages should increment the generation count.
+  status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 4;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 4u));
+
+  // Committing the same range again will be a no-op, and should *not* increment the generation
+  // count.
+  status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 4u));
+
+  // Decommitting pages should increment the generation count.
+  status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  fbl::AllocChecker ac;
+  fbl::Vector<uint8_t> buf;
+  buf.reserve(2 * PAGE_SIZE, &ac);
+  ASSERT_TRUE(ac.check());
+
+  // Read the first two pages. Since these are zero pages being read, this won't commit any pages in
+  // the vmo and should not increment the generation count.
+  status = vmo->Read(buf.data(), 0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Write the first two pages. This will commit 2 pages and should increment the generation count.
+  status = vmo->Write(buf.data(), 0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  // Resizing the vmo should increment the generation count.
+  status = vmo->Resize(2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  // Zero'ing the range will decommit pages, and should increment the generation count.
+  status = vmo->ZeroRange(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  END_TEST;
+}
+
+// Tests that page attribution caching behaves as expected for operations specific to pager-backed
+// vmo's - supplying pages, creating COW clones.
+static bool vmo_attribution_pager_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::AllocChecker ac;
+  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  static const size_t alloc_size = 2 * PAGE_SIZE;
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, alloc_size, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  // Dummy user id to keep the cloning code happy.
+  vmo->set_user_id(0xff);
+
+  uint32_t expected_gen_count = 1;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Create an aux VMO to transfer pages into the pager-backed vmo.
+  fbl::RefPtr<VmObject> aux_vmo;
+  status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &aux_vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint32_t aux_expected_gen_count = 1;
+  EXPECT_EQ(true, verify_page_attribution(aux_vmo.get(), aux_expected_gen_count, 0u));
+
+  // Committing pages in the aux vmo should increment its generation count.
+  status = aux_vmo->CommitRange(0, alloc_size);
+  ASSERT_EQ(ZX_OK, status);
+  aux_expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(aux_vmo.get(), aux_expected_gen_count, 2u));
+
+  // Taking pages from the aux vmo should increment its generation count.
+  VmPageSpliceList page_list;
+  status = aux_vmo->TakePages(0, PAGE_SIZE, &page_list);
+  ASSERT_EQ(ZX_OK, status);
+  ++aux_expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(aux_vmo.get(), aux_expected_gen_count, 1u));
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Supplying pages to the pager-backed vmo should increment the generation count.
+  status = vmo->SupplyPages(0, PAGE_SIZE, &page_list);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+  EXPECT_EQ(true, verify_page_attribution(aux_vmo.get(), aux_expected_gen_count, 1u));
+
+  aux_vmo.reset();
+
+  // Create a COW clone that sees the first page.
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0, PAGE_SIZE,
+                            true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+  clone->set_user_id(0xfc);
+
+  // Creation of the clone should increment the generation count.
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 0u));
+
+  // Committing the clone should increment the generation count.
+  status = clone->CommitRange(0, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+  EXPECT_EQ(true, verify_page_attribution(clone.get(), expected_gen_count, 1u));
+
+  // Removal of the clone should increment the generation count.
+  clone.reset();
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+
+  END_TEST;
+}
+
+// Tests that page attribution caching behaves as expected when a pager-backed vmo's page is
+// evicted.
+static bool vmo_attribution_evict_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObject> vmo;
+  vm_page_t* page;
+  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint32_t expected_gen_count = 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+
+  // Evicting the page should increment the generation count.
+  vmo->EvictPage(page, 0);
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  END_TEST;
+}
+
+// Tests that page attribution caching behaves as expected when zero pages are deduped, changing the
+// no. of committed pages in the vmo.
+static bool vmo_attribution_dedup_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, 2 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint32_t expected_gen_count = 1;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Committing pages should increment the generation count.
+  status = vmo->CommitRange(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  vm_page_t* page;
+  status = vmo->GetPage(0, 0, nullptr, nullptr, &page, nullptr);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Dedupe the first page. This should increment the generation count.
+  auto vmop = static_cast<VmObjectPaged*>(vmo.get());
+  ASSERT_TRUE(vmop->DedupZeroPage(page, 0));
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 1u));
+
+  // Dedupe the second page. This should increment the generation count.
+  status = vmo->GetPage(PAGE_SIZE, 0, nullptr, nullptr, &page, nullptr);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_TRUE(vmop->DedupZeroPage(page, PAGE_SIZE));
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  // Commit the range again.
+  status = vmo->CommitRange(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_gen_count += 2;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  // Scan for zero pages, returning only the count (without triggering any reclamation). This should
+  // *not* change the generation count.
+  ASSERT_EQ(2u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 2u));
+
+  // Scan for zero pages and reclaim them. This should change the generation count.
+  ASSERT_EQ(2u, vmo->ScanForZeroPages(true));
+  ++expected_gen_count;
+  EXPECT_EQ(true, verify_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  END_TEST;
+}
+
 // TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -3345,6 +3675,11 @@ VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(vmo_validate_page_splits_test)
+VM_UNITTEST(vmo_attribution_clones_test)
+VM_UNITTEST(vmo_attribution_ops_test)
+VM_UNITTEST(vmo_attribution_pager_test)
+VM_UNITTEST(vmo_attribution_evict_test)
+VM_UNITTEST(vmo_attribution_dedup_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)

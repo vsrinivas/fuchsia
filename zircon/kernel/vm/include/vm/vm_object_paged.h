@@ -203,6 +203,25 @@ class VmObjectPaged final : public VmObject {
     return DebugValidatePageSplitsLocked();
   }
 
+  // Used to cache the page attribution count for this VMO. Also tracks the hierarchy generation
+  // count at the time of caching the attributed page count.
+  struct CachedPageAttribution {
+    uint32_t generation_count = kGenerationCountUnset;
+    size_t page_count = 0;
+  };
+
+  // Exposed for testing.
+  CachedPageAttribution GetCachedPageAttribution() const {
+    Guard<Mutex> guard{&lock_};
+    return cached_page_attribution_;
+  }
+
+  // Exposed for testing.
+  uint32_t GetHierarchyGenerationCount() const {
+    Guard<Mutex> guard{&lock_};
+    return GetHierarchyGenerationCountLocked();
+  }
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
@@ -514,6 +533,9 @@ class VmObjectPaged final : public VmObject {
   // If the generation count does not change between two successive queries, we can avoid
   // re-counting attributed pages, and simply return the previously cached value.
   uint32_t hierarchy_generation_count_ TA_GUARDED(lock_) = kGenerationCountInitial;
+
+  // Tracks the last cached page attribution count.
+  mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(lock_) = {};
 
   // Counts the total number of pages pinned by ::Pin. If one page is pinned n times, it
   // contributes n to this count. However, this does not include pages pinned when creating
