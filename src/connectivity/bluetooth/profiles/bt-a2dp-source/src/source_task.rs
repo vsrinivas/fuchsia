@@ -101,9 +101,6 @@ pub(crate) struct ConfiguredSourceTask {
     data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
 }
 
-// TODO(55473): Get this max_sdu from the MediaStream instead.
-const MAX_PACKET_LEN: usize = 672;
-
 impl ConfiguredSourceTask {
     /// The main streaming task. Reads encoded audio from the encoded_stream and packages into RTP
     /// packets, sending the resulting RTP packets using `media_stream`.
@@ -114,7 +111,8 @@ impl ConfiguredSourceTask {
         data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
     ) -> Result<(), Error> {
         let frames_per_encoded = codec_config.pcm_frames_per_encoded_frame() as u32;
-        let mut packet_builder = codec_config.make_packet_builder(MAX_PACKET_LEN)?;
+        let max_tx_size = media_stream.max_tx_size()?;
+        let mut packet_builder = codec_config.make_packet_builder(max_tx_size)?;
         loop {
             let encoded = match encoded_stream.try_next().await? {
                 None => continue,

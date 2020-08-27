@@ -69,11 +69,9 @@ pub struct Channel {
     audio_direction_ext: Option<bredr::AudioDirectionExtProxy>,
 }
 
-// The default max tx size is the default MTU size for L2CAP minus the channel header content.
-// See the Bluetooth Core Specification, Vol 3, Part A, Sec 5.1
-const DEFAULT_MAX_TX: usize = 672;
-
 impl Channel {
+    /// Attempt to make a Channel from a zircon socket and a Maximum TX size received out of band.
+    /// Returns Err(status) if there is an error.
     pub fn from_socket(socket: zx::Socket, max_tx_size: usize) -> Result<Self, zx::Status> {
         Ok(Channel {
             socket: fasync::Socket::from_socket(socket)?,
@@ -83,10 +81,14 @@ impl Channel {
         })
     }
 
+    /// The default max tx size is the default MTU size for L2CAP minus the channel header content.
+    /// See the Bluetooth Core Specification, Vol 3, Part A, Sec 5.1
+    pub const DEFAULT_MAX_TX: usize = 672;
+
     /// Makes a pair of channels which are connected to each other, used commonly for testing.
-    /// The max_tx_size is set to the default TX size.
+    /// The max_tx_size is set to `Channel::DEFAULT_MAX_TX`.
     pub fn create() -> (Self, Self) {
-        Self::create_with_max_tx(DEFAULT_MAX_TX)
+        Self::create_with_max_tx(Self::DEFAULT_MAX_TX)
     }
 
     /// Make a pair of channels which are connected to each other, used commonly for testing.

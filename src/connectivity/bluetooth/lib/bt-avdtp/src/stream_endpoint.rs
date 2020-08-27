@@ -412,6 +412,13 @@ impl MediaStream {
             .upgrade()
             .ok_or(io::Error::new(io::ErrorKind::ConnectionAborted, "lost connection"))
     }
+
+    pub fn max_tx_size(&self) -> Result<usize, io::Error> {
+        match self.try_upgrade()?.try_read() {
+            Err(_e) => return Err(io::Error::new(io::ErrorKind::WouldBlock, "couldn't lock")),
+            Ok(lock) => Ok(lock.max_tx_size()),
+        }
+    }
 }
 
 impl Drop for MediaStream {
@@ -796,6 +803,9 @@ mod tests {
         assert!(media_stream.is_some());
         let mut media_stream = media_stream.unwrap();
 
+        // Max TX size is taken from the underlying channel.
+        assert_matches!(media_stream.max_tx_size(), Ok(Channel::DEFAULT_MAX_TX));
+
         // Writing to the media stream should send it through the transport channel.
         let hearts = &[0xF0, 0x9F, 0x92, 0x96, 0xF0, 0x9F, 0x92, 0x96];
         let mut write_fut = media_stream.write(hearts);
@@ -826,6 +836,9 @@ mod tests {
         // After the stream is gone, the stream should be fused done.
         let mut next_fut = media_stream.next();
         assert_matches!(exec.run_until_stalled(&mut next_fut), Poll::Ready(None));
+
+        // And the Max TX should be an error.
+        assert_matches!(media_stream.max_tx_size(), Err(_));
     }
 
     #[test]
