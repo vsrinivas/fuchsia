@@ -35,6 +35,7 @@ _common_bootfs_deps = [
   "//src/media/audio/drivers/max98927",
   "//src/ui/input/drivers/i2c-hid",
   "//src/ui/input/drivers/pc-ps2",
+  "//zircon/third_party/dev/ethernet/e1000",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
