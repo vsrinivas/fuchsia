@@ -69,7 +69,7 @@ impl Format for LossyText {
             }
             if buf[0] != b'*' {
                 // Not a start marker: remove and continue
-                //log::info!("skip non-start marker {:?}", buf[0]);
+                log::trace!("skip non-start marker {:?}", buf[0]);
                 start += 1;
                 continue;
             }
@@ -81,7 +81,7 @@ impl Format for LossyText {
                 b'H' => FrameType::OvernetHello,
                 _ => {
                     // Not a start marker: remove and continue
-                    log::info!("skip non-frame marker {:?}", buf[1]);
+                    log::trace!("skip non-frame marker {:?}", buf[1]);
                     start += 2;
                     continue;
                 }
@@ -92,7 +92,7 @@ impl Format for LossyText {
             }
             if buf[2] < 32 || buf[2] >= 127 {
                 // Not a start marker: remove and continue
-                log::info!("skip non-length byte {:?}", buf[2]);
+                log::trace!("skip non-length byte {:?}", buf[2]);
                 start += 3;
                 continue;
             }
@@ -101,7 +101,7 @@ impl Format for LossyText {
             }
             if buf[3] < 32 || buf[3] >= 127 {
                 // Not a start marker: remove and continue
-                log::info!("skip non-length2 byte {:?}", buf[3]);
+                log::trace!("skip non-length2 byte {:?}", buf[3]);
                 start += 4;
                 continue;
             }
@@ -127,7 +127,7 @@ impl Format for LossyText {
                     }
                     if buf[4 + len + 1] != b'\n' {
                         // Does not end with an end marker: remove start bytes and continue
-                        log::info!(
+                        log::trace!(
                             "skip no end marker after \\r {:?}; len={}",
                             buf[4 + len + 1],
                             len
@@ -140,7 +140,12 @@ impl Format for LossyText {
                 b'\n' => 1,
                 _ => {
                     // Does not end with an end marker: remove start bytes and continue
-                    log::info!("skip no end marker {:?}; len={}; buf={:?}", buf[4 + len], len, buf);
+                    log::trace!(
+                        "skip no end marker {:?}; len={}; buf={:?}",
+                        buf[4 + len],
+                        len,
+                        buf
+                    );
                     start += 2;
                     continue;
                 }
@@ -161,7 +166,7 @@ impl Format for LossyText {
             let crc_actual = crc32::checksum_ieee(&frame);
             log::trace!("crc: expect:{:?} got:{:?}", crc, crc_actual);
             if crc != crc_actual {
-                log::info!("skip crc mismatch {} vs {}", crc, crc_actual);
+                log::trace!("skip crc mismatch {} vs {}", crc, crc_actual);
                 // CRC mismatch: skip start marker and continue
                 start += 2;
                 continue;

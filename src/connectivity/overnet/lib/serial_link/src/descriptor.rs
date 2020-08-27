@@ -25,6 +25,42 @@ pub enum Descriptor {
     },
 }
 
+impl std::fmt::Display for Descriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            #[cfg(target_os = "fuchsia")]
+            Descriptor::Debug => f.write_str("debug"),
+            #[cfg(not(target_os = "fuchsia"))]
+            Descriptor::StdioPipe => f.write_str("-"),
+            Descriptor::Device { path, config } => write!(
+                f,
+                "{}:b={}:s={}:c={}:p={}:f={}",
+                path.to_string_lossy(),
+                config.baud_rate,
+                match config.stop_width {
+                    StopWidth::Bits1 => 1,
+                    StopWidth::Bits2 => 2,
+                },
+                match config.character_width {
+                    CharacterWidth::Bits5 => 5,
+                    CharacterWidth::Bits6 => 6,
+                    CharacterWidth::Bits7 => 7,
+                    CharacterWidth::Bits8 => 8,
+                },
+                match config.parity {
+                    Parity::None => "none",
+                    Parity::Even => "even",
+                    Parity::Odd => "odd",
+                },
+                match config.control_flow {
+                    FlowControl::None => "none",
+                    FlowControl::CtsRts => "cts_rts",
+                }
+            ),
+        }
+    }
+}
+
 const DEFAULT_CONFIG: Config = Config {
     baud_rate: 9600,
     character_width: CharacterWidth::Bits8,

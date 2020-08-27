@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
+    fidl_fuchsia_overnet_protocol::LinkConfig,
     futures::prelude::*,
     std::{fmt::Write, time::Duration},
 };
@@ -94,6 +95,56 @@ async fn list_links(args: ListLinks) -> Result<(), Error> {
                     fmtq(link.source_local_id),
                     fmtq(link.destination.map(|n| n.id))
                 );
+                match link.config {
+                    None => (),
+                    Some(LinkConfig::Socket(opt)) => {
+                        print!("  external");
+                        if let Some(label) = opt.connection_label {
+                            print!(" label={:?}", label);
+                        }
+                        if let Some(bytes_per_second) = opt.bytes_per_second {
+                            print!(" unreliable with bytes per second={}", bytes_per_second);
+                        } else {
+                            print!(" reliable_transport");
+                        }
+                        println!("");
+                    }
+                    Some(LinkConfig::Udp(addr)) => {
+                        let addr = std::net::SocketAddrV6::new(
+                            addr.address.addr.into(),
+                            addr.port,
+                            0,
+                            addr.zone_index as u32,
+                        );
+                        println!("  udp {}", addr);
+                    }
+                    Some(LinkConfig::SerialServer(desc)) => {
+                        println!("  serial server descriptor={}", desc);
+                    }
+                    Some(LinkConfig::SerialClient(desc)) => {
+                        println!("  serial client descriptor={}", desc);
+                    }
+                    Some(LinkConfig::AscenddClient(config)) => {
+                        print!("  ascendd client");
+                        if let Some(connection_label) = config.connection_label {
+                            print!(" label={:?}", connection_label);
+                        }
+                        if let Some(path) = config.path {
+                            print!(" @ {}", path);
+                        }
+                        println!("");
+                    }
+                    Some(LinkConfig::AscenddServer(config)) => {
+                        print!("  ascendd server");
+                        if let Some(connection_label) = config.connection_label {
+                            print!(" label={:?}", connection_label);
+                        }
+                        if let Some(path) = config.path {
+                            print!(" @ {}", path);
+                        }
+                        println!("");
+                    }
+                }
                 println!(
                     "  packets/bytes recv: {}/{} sent: {}/{}",
                     fmtq(link.received_packets),

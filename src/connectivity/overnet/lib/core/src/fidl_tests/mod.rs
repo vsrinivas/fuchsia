@@ -66,8 +66,8 @@ async fn forward(sender: LinkSender, receiver: LinkReceiver) -> Result<(), Error
 }
 
 async fn link(a: Arc<Router>, b: Arc<Router>) {
-    let (ab_tx, ab_rx) = a.new_link(b.node_id()).await.unwrap();
-    let (ba_tx, ba_rx) = b.new_link(a.node_id()).await.unwrap();
+    let (ab_tx, ab_rx) = a.new_link(b.node_id(), Box::new(|| None)).await.unwrap();
+    let (ba_tx, ba_rx) = b.new_link(a.node_id(), Box::new(|| None)).await.unwrap();
     futures::future::try_join(forward(ab_tx, ba_rx), forward(ba_tx, ab_rx)).await.map(drop).unwrap()
 }
 

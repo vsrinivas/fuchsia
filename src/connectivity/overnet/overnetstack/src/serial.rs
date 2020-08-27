@@ -40,7 +40,7 @@ pub async fn run_serial_link_handlers(
                                 NewDeviceProxy_Marker::NAME
                             ))?;
                     }
-                    Descriptor::Device { path, mut config } => {
+                    Descriptor::Device { ref path, mut config } => {
                         fdio::service_connect(
                             path.to_str()
                                 .ok_or_else(|| format_err!("path not utf8 encoded: {:?}", path))?,
@@ -51,9 +51,16 @@ pub async fn run_serial_link_handlers(
                     }
                 }
                 let (rx, tx) = Dev::new(cli).split();
-                run(Role::Server, rx, tx, router, ReportSkipped::new("skipped serial bytes"))
-                    .await
-                    .context(format!("during run on descriptor: {}", text_desc))
+                run(
+                    Role::Server,
+                    rx,
+                    tx,
+                    router,
+                    ReportSkipped::new("skipped serial bytes"),
+                    Some(&desc),
+                )
+                .await
+                .context(format!("during run on descriptor: {}", text_desc))
             }
         })
         .await

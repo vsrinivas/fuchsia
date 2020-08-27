@@ -60,6 +60,7 @@ async fn process_incoming(
     node: Arc<Router>,
     mut rx_frames: DeframerReader<LosslessBinary>,
     mut tx_frames: FramerWriter<LosslessBinary>,
+    sockpath: &str,
 ) -> Result<(), Error> {
     let node_id = node.node_id();
 
@@ -111,7 +112,20 @@ async fn process_incoming(
     };
 
     // Register our new link!
-    let (link_sender, link_receiver) = node.new_link(node_id.into()).await?;
+    let sockpath = sockpath.to_string();
+    let (link_sender, link_receiver) = node
+        .new_link(
+            node_id.into(),
+            Box::new(move || {
+                Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
+                    fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                        path: Some(sockpath.clone()),
+                        connection_label: None,
+                    },
+                ))
+            }),
+        )
+        .await?;
     let _: ((), ()) = futures::future::try_join(
         async move {
             let mut buf = [0u8; 4096];
@@ -137,6 +151,7 @@ async fn process_incoming(
 async fn run_stream(
     node: Arc<Router>,
     stream: Result<async_std::os::unix::net::UnixStream, std::io::Error>,
+    sockpath: &str,
 ) -> Result<(), Error> {
     let stream = stream?;
     let (framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
@@ -145,7 +160,7 @@ async fn run_stream(
     futures::future::try_join3(
         read_incoming(&stream, incoming_writer),
         write_outgoing(outgoing_reader, &stream),
-        process_incoming(node, deframer, framer),
+        process_incoming(node, deframer, framer, sockpath),
     )
     .await
     .map(drop)
@@ -154,13 +169,13 @@ async fn run_stream(
 pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
     let Opt { sockpath, serial } = opt;
 
-    let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
+    let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
     log::info!("[log] starting ascendd");
-    let _ = std::fs::remove_file(&sockpath);
+    let _ = std::fs::remove_file(sockpath);
 
-    let incoming = async_std::os::unix::net::UnixListener::bind(&sockpath).await?;
+    let incoming = async_std::os::unix::net::UnixListener::bind(sockpath).await?;
     log::info!("ascendd listening to socket {}", sockpath);
 
     let node = Router::new(
@@ -177,7 +192,7 @@ pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Re
                 .for_each_concurrent(None, |stream| {
                     let node = node.clone();
                     async move {
-                        if let Err(e) = run_stream(node, stream).await {
+                        if let Err(e) = run_stream(node, stream, sockpath).await {
                             log::warn!("Failed processing socket: {:?}", e);
                         }
                     }

@@ -43,7 +43,7 @@ enum OvernetCommand {
     ListPeers(futures::channel::oneshot::Sender<Vec<Peer>>),
     RegisterService(String, ClientEnd<ServiceProviderMarker>),
     ConnectToService(NodeId, String, fidl::Channel),
-    AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet::SocketLinkOptions),
+    AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet_protocol::SocketLinkOptions),
     NewLink(NodeId, Box<dyn NewLinkRunner>),
 }
 
@@ -143,7 +143,7 @@ async fn run_overnet_command(
             node.run_socket_link(socket, options).await
         }
         OvernetCommand::NewLink(peer_node_id, runner) => {
-            let (tx, rx) = node.new_link(peer_node_id).await?;
+            let (tx, rx) = node.new_link(peer_node_id, Box::new(|| None)).await?;
             runner.run(tx, rx).await
         }
     }
@@ -193,7 +193,7 @@ impl MeshControllerProxyInterface for MeshController {
     fn attach_socket_link(
         &self,
         socket: fidl::Socket,
-        options: fidl_fuchsia_overnet::SocketLinkOptions,
+        options: fidl_fuchsia_overnet_protocol::SocketLinkOptions,
     ) -> Result<(), fidl::Error> {
         self.0.send(OvernetCommand::AttachSocketLink(socket, options))
     }
@@ -279,7 +279,7 @@ pub async fn connect_with_mutator(
     b: Arc<Overnet>,
     mutator_ab: Box<dyn Send + FnMut(Vec<u8>) -> Vec<u8>>,
     mutator_ba: Box<dyn Send + FnMut(Vec<u8>) -> Vec<u8>>,
-    opt: Box<dyn Send + Fn() -> fidl_fuchsia_overnet::SocketLinkOptions>,
+    opt: Box<dyn Send + Fn() -> fidl_fuchsia_overnet_protocol::SocketLinkOptions>,
 ) -> Result<(), Error> {
     let a = a.clone().connect_as_mesh_controller()?;
     let b = b.clone().connect_as_mesh_controller()?;
@@ -303,8 +303,8 @@ pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
     let a = a.clone().connect_as_mesh_controller()?;
     let b = b.clone().connect_as_mesh_controller()?;
     let (sa, sb) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-    a.attach_socket_link(sa, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
-    b.attach_socket_link(sb, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
+    a.attach_socket_link(sa, fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty())?;
+    b.attach_socket_link(sb, fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty())?;
     Ok(())
 }
 
@@ -412,9 +412,9 @@ pub async fn connect_with_interspersed_log_messages(
         b.clone(),
         Box::new(|v| v),
         Box::new(mutator),
-        Box::new(|| fidl_fuchsia_overnet::SocketLinkOptions {
+        Box::new(|| fidl_fuchsia_overnet_protocol::SocketLinkOptions {
             bytes_per_second: Some(1000),
-            ..fidl_fuchsia_overnet::SocketLinkOptions::empty()
+            ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty()
         }),
     )
     .await

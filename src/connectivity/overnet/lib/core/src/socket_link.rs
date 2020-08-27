@@ -18,10 +18,22 @@ use {
 
 pub(crate) async fn run_socket_link(
     node: Arc<Router>,
-    connection_label: Option<String>,
     socket: fidl::Socket,
-    duration_per_byte: Option<Duration>,
+    options: fidl_fuchsia_overnet_protocol::SocketLinkOptions,
 ) -> Result<(), Error> {
+    let duration_per_byte = if let Some(n) = options.bytes_per_second {
+        Some(std::cmp::max(
+            Duration::from_micros(10),
+            Duration::from_secs(1)
+                .checked_div(n)
+                .ok_or_else(|| anyhow::format_err!("Division failed: 1 second / {}", n))?,
+        ))
+    } else {
+        None
+    };
+
+    let connection_label = options.connection_label.clone();
+
     log::trace!("Begin handshake: connection_label:{:?} socket:{:?}", connection_label, socket);
     let dbgid = (node.node_id(), crate::router::generate_node_id().0);
 
@@ -105,8 +117,20 @@ pub(crate) async fn run_socket_link(
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
             log::trace!("{:?} Handshake complete, creating link", dbgid);
-            let (link_sender, link_receiver) =
-                node.new_link(node_id.into()).await.context("creating link")?;
+            let (link_sender, link_receiver) = node
+                .new_link(
+                    node_id.into(),
+                    Box::new(move || {
+                        Some(fidl_fuchsia_overnet_protocol::LinkConfig::Socket(
+                            fidl_fuchsia_overnet_protocol::SocketLinkOptions {
+                                connection_label: options.connection_label.clone(),
+                                ..options
+                            },
+                        ))
+                    }),
+                )
+                .await
+                .context("creating link")?;
             log::trace!("{:?} Running link", dbgid);
             let _: ((), ()) = futures::future::try_join(
                 async move {

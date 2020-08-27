@@ -37,7 +37,7 @@ mod test {
 
     use super::*;
     use anyhow::Error;
-    use fidl_fuchsia_overnet::SocketLinkOptions;
+    use fidl_fuchsia_overnet_protocol::SocketLinkOptions;
     use fuchsia_async::{Task, TimeoutExt};
     use futures::channel::oneshot;
     use futures::future::{select, try_join, Either};

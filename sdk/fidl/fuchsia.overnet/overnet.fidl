@@ -37,7 +37,7 @@ protocol ServicePublisher {
 [Discoverable]
 protocol MeshController {
     /// Attach a socket as a new link. Bad socket options will result in the channel being closed.
-    AttachSocketLink(zx.handle:SOCKET socket, SocketLinkOptions options);
+    AttachSocketLink(zx.handle:SOCKET socket, fuchsia.overnet.protocol.SocketLinkOptions options);
 };
 
 /// A ServiceProvider is a factory for one service.
@@ -62,17 +62,6 @@ struct Peer {
     bool is_self;
     /// A description of the peer (includes, for example, a service list).
     fuchsia.overnet.protocol.PeerDescription description;
-};
-
-/// Extra arguments for attaching a socket link to an Overnet mesh.
-table SocketLinkOptions {
-    /// A label that might be used for debugging purposes.
-    1: string:32 connection_label;
-    /// How many bytes per second are transferable on this link (used to tune error recovery).
-    /// If unset, error recovery will be disabled.
-    /// If set, must not be 0, or else the receiving MeshController service will close the channel
-    /// (as discussed in that protocol's documentation).
-    2: uint32 bytes_per_second;
 };
 
 /// Information provided to a ServiceProvider about an incoming connection.

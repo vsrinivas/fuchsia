@@ -4,6 +4,8 @@
 
 library fuchsia.overnet.protocol;
 
+using fuchsia.net;
+
 /// Diagnostic data on a single peer connection.
 table PeerConnectionDiagnosticInfo {
     /// Source address.
@@ -68,6 +70,36 @@ table LinkDiagnosticInfo {
     9: uint64 pings_sent;
     /// Number of packets forwarded.
     10: uint64 packets_forwarded;
+    /// Type of link & configuration data.
+    11: LinkConfig config;
+};
+
+/// A description of the configuration of a given link.
+union LinkConfig {
+    /// A link configured via fuchsia.overnet.MeshController/AttachSocket - these are links
+    /// that are implemented externally to Overnet.
+    1: SocketLinkOptions socket;
+    /// A link using overnetstack's UDP protocol.
+    /// The content of this config is the address of the peer.
+    2: fuchsia.net.Ipv6SocketAddress udp;
+    /// A link using Overnet's serial protocol acting as a server.
+    /// The text is the canonicalized unparsed serial descriptor for this serial port.
+    3: string:256 serial_server;
+    /// A link using Overnet's serial protocol acting as a client.
+    /// The text is the canonicalized unparsed serial descriptor for this serial port.
+    4: string:256 serial_client;
+    /// Ascendd server link. The text is the path to the ascendd socket.
+    5: AscenddLinkConfig ascendd_server;
+    /// A host binary connecting to ascendd. Text is the path to the ascendd socket.
+    6: AscenddLinkConfig ascendd_client;
+};
+
+/// An ascendd link configuration.
+table AscenddLinkConfig {
+    /// Path to the ascendd socket.
+    1: string:1024 path;
+    /// Connection label for this link.
+    2: string:32 connection_label;
 };
 
 /// The operating system running a node.

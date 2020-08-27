@@ -29,13 +29,22 @@ pub async fn run(
     write: impl AsyncWrite + Unpin + Send,
     router: Weak<Router>,
     skipped: impl AsyncWrite + Unpin + Send,
+    descriptor: Option<&crate::descriptor::Descriptor>,
 ) -> Result<(), Error> {
     let router = WeakRouter(router);
     let mut file_handler = FileHandler { read, write, skipped };
     loop {
         file_handler
             .run(|fragment_reader, fragment_writer| async {
-                if let Err(e) = main(role, fragment_reader, fragment_writer, &router).await {
+                if let Err(e) = main(
+                    role,
+                    fragment_reader,
+                    fragment_writer,
+                    &router,
+                    descriptor.map(|d| format!("{}", d)),
+                )
+                .await
+                {
                     log::warn!("serial handler failed: {:?}", e);
                 }
             })
@@ -307,6 +316,7 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut fragment_writer: FragmentWriter,
     router: &WeakRouter,
+    descriptor: Option<String>,
 ) -> Result<(), Error> {
     let my_node_id = router.get()?.node_id();
     let peer_node_id = match role {
@@ -316,6 +326,7 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
             let (peer_node_id, read_key) = read_greeting(&mut fragment_reader)
                 .on_timeout(Duration::from_secs(10), || Err(ReadGreetingError::Timeout))
                 .await?;
+
             ensure!(key == read_key, "connection key mismatch");
             peer_node_id
         }
@@ -328,7 +339,18 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
 
     log::info!("Established {:?} Overnet serial connection to peer {:?}", role, peer_node_id);
 
-    let (link_sender, link_receiver) = router.get()?.new_link(peer_node_id).await?;
+    let (link_sender, link_receiver) = router
+        .get()?
+        .new_link(
+            peer_node_id,
+            Box::new(move || {
+                descriptor.clone().map(|d| match role {
+                    Role::Server => fidl_fuchsia_overnet_protocol::LinkConfig::SerialServer(d),
+                    Role::Client => fidl_fuchsia_overnet_protocol::LinkConfig::SerialClient(d),
+                })
+            }),
+        )
+        .await?;
     futures::future::try_join(
         link_to_framer(link_sender, fragment_writer),
         deframer_to_link(fragment_reader, link_receiver),
@@ -377,6 +399,7 @@ mod test {
                     c2s_tx,
                     Arc::downgrade(&rtr_client),
                     ReportSkipped::new("client"),
+                    None,
                 );
                 let run_server = super::run(
                     Role::Server,
@@ -384,6 +407,7 @@ mod test {
                     s2c_tx,
                     Arc::downgrade(&rtr_server),
                     ReportSkipped::new("server"),
+                    None,
                 );
                 let _fwd = Task::spawn(
                     futures::future::try_join(run_client, run_server)

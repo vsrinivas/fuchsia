@@ -104,7 +104,7 @@ async fn run_ascendd_connection(
             let mut greeting = StreamSocketGreeting {
                 magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
                 node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
-                connection_label,
+                connection_label: connection_label.clone(),
                 key: None,
             };
             let mut bytes = Vec::new();
@@ -148,7 +148,19 @@ async fn run_ascendd_connection(
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
 
-            let (link_sender, link_receiver) = node.new_link(ascendd_node_id.into()).await?;
+            let (link_sender, link_receiver) = node
+                .new_link(
+                    ascendd_node_id.into(),
+                    Box::new(move || {
+                        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
+                            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                                path: Some(ascendd_path.clone()),
+                                connection_label: connection_label.clone(),
+                            },
+                        ))
+                    }),
+                )
+                .await?;
 
             if let Some(tx_ready) = tx_ready.lock().await.take() {
                 let _ = tx_ready.send(());

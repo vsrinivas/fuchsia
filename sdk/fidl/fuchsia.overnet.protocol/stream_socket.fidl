@@ -15,3 +15,14 @@ table StreamSocketGreeting {
     /// Optional key (used on lossy connections to uniquely identify a handshake pair)
     4: uint64 key;
 };
+
+/// Extra arguments for attaching a socket link to an Overnet mesh.
+table SocketLinkOptions {
+    /// A label that might be used for debugging purposes.
+    1: string:32 connection_label;
+    /// How many bytes per second are transferable on this link (used to tune error recovery).
+    /// If unset, error recovery will be disabled.
+    /// If set, must not be 0, or else the receiving MeshController service will close the channel
+    /// (as discussed in that protocol's documentation).
+    2: uint32 bytes_per_second;
+};

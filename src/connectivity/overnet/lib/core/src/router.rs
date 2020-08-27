@@ -718,9 +718,11 @@ impl Router {
     pub async fn new_link(
         self: &Arc<Self>,
         peer_node_id: NodeId,
+        config: crate::link::ConfigProducer,
     ) -> Result<(LinkSender, LinkReceiver), Error> {
         let node_link_id = self.next_node_link_id.fetch_add(1, Ordering::Relaxed).into();
-        let (sender, receiver, routing, observer) = new_link(peer_node_id, node_link_id, &self);
+        let (sender, receiver, routing, observer) =
+            new_link(peer_node_id, node_link_id, &self, config);
         log::trace!("[{:?} link {:?}] new link to {:?}", self.node_id, node_link_id, peer_node_id);
         self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
         log::trace!("[{:?} link {:?}] declare peer {:?}", self.node_id, node_link_id, peer_node_id);
@@ -796,19 +798,9 @@ impl Router {
     pub async fn run_socket_link(
         self: &Arc<Self>,
         socket: fidl::Socket,
-        options: fidl_fuchsia_overnet::SocketLinkOptions,
+        options: fidl_fuchsia_overnet_protocol::SocketLinkOptions,
     ) -> Result<(), Error> {
-        let duration_per_byte = if let Some(n) = options.bytes_per_second {
-            Some(std::cmp::max(
-                Duration::from_micros(10),
-                Duration::from_secs(1)
-                    .checked_div(n)
-                    .ok_or_else(|| anyhow::format_err!("Division failed: 1 second / {}", n))?,
-            ))
-        } else {
-            None
-        };
-        run_socket_link(self.clone(), options.connection_label, socket, duration_per_byte).await
+        run_socket_link(self.clone(), socket, options).await
     }
 
     /// Diagnostic information for links
@@ -1368,8 +1360,10 @@ mod tests {
         let mut node_id_gen = NodeIdGenerator::new(name, run);
         let router1 = node_id_gen.new_router()?;
         let router2 = node_id_gen.new_router()?;
-        let (link1_sender, link1_receiver) = router1.new_link(router2.node_id).await?;
-        let (link2_sender, link2_receiver) = router2.new_link(router1.node_id).await?;
+        let (link1_sender, link1_receiver) =
+            router1.new_link(router2.node_id, Box::new(|| None)).await?;
+        let (link2_sender, link2_receiver) =
+            router2.new_link(router1.node_id, Box::new(|| None)).await?;
         let _fwd = Task::spawn(async move {
             if let Err(e) = futures::future::try_join(
                 forward(link1_sender, link2_receiver),
@@ -1515,7 +1509,7 @@ mod tests {
         let _s = Task::spawn(async move {
             n.run_socket_link(
                 s,
-                fidl_fuchsia_overnet::SocketLinkOptions {
+                fidl_fuchsia_overnet_protocol::SocketLinkOptions {
                     connection_label: Some("test".to_string()),
                     bytes_per_second: None,
                 },
@@ -1551,7 +1545,7 @@ mod tests {
         let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
         n.run_socket_link(
             s,
-            fidl_fuchsia_overnet::SocketLinkOptions {
+            fidl_fuchsia_overnet_protocol::SocketLinkOptions {
                 connection_label: Some("test".to_string()),
                 bytes_per_second: Some(0),
             },

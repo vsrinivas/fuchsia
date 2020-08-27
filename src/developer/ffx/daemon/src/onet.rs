@@ -188,8 +188,10 @@ pub async fn run_ascendd() -> Result<()> {
 fn overnet_pipe() -> Result<fidl::AsyncSocket> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
-    hoist::connect_as_mesh_controller()?
-        .attach_socket_link(remote_socket, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
+    hoist::connect_as_mesh_controller()?.attach_socket_link(
+        remote_socket,
+        fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty(),
+    )?;
 
     Ok(local_socket)
 }

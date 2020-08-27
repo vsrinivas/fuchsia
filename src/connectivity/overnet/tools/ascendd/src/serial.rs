@@ -43,17 +43,22 @@ pub async fn run_serial_link_handlers(
             let router = router.clone();
             async move {
                 match desc {
-                    Descriptor::StdioPipe => {
-                        run(Role::Client, stdin(), stdout(), router, OutputSink::new(output_sink))
-                            .await
-                            .context("serial-over-stdio")
-                    }
-                    Descriptor::Device { path, config } => {
+                    Descriptor::StdioPipe => run(
+                        Role::Client,
+                        stdin(),
+                        stdout(),
+                        router,
+                        OutputSink::new(output_sink),
+                        Some(&desc),
+                    )
+                    .await
+                    .context("serial-over-stdio"),
+                    Descriptor::Device { ref path, config } => {
                         let f = OpenOptions::new()
                             .read(true)
                             .write(true)
                             .create(false)
-                            .open(&path)
+                            .open(path)
                             .await?;
                         apply_config(&f, config)?;
                         // async-std only allows reads or writes at a given time on an FD,
@@ -62,9 +67,16 @@ pub async fn run_serial_link_handlers(
                         let f_dup = nix::unistd::dup(f.as_raw_fd())?;
                         let f_read = unsafe { File::from_raw_fd(f_dup) };
                         let f_write = f;
-                        run(Role::Client, f_read, f_write, router, OutputSink::new(output_sink))
-                            .await
-                            .with_context(move || format_err!("serial over {:?}", path))
+                        run(
+                            Role::Client,
+                            f_read,
+                            f_write,
+                            router,
+                            OutputSink::new(output_sink),
+                            Some(&desc),
+                        )
+                        .await
+                        .with_context(move || format_err!("serial over {:?}", path))
                     }
                 }
             }

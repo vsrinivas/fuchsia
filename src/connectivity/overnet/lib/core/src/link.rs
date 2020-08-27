@@ -87,7 +87,12 @@ pub(crate) struct LinkRouting {
     gatherer: Mutex<PacketGatherer>,
     stats: LinkStats,
     rtt_observer: Mutex<Observer<Option<Duration>>>,
+    config: ConfigProducer,
 }
+
+/// Creates a link configuration description for diagnostics services.
+pub type ConfigProducer =
+    Box<dyn Send + Sync + Fn() -> Option<fidl_fuchsia_overnet_protocol::LinkConfig>>;
 
 /// Sender for a link
 pub struct LinkSender {
@@ -111,6 +116,7 @@ pub(crate) fn new_link(
     peer_node_id: NodeId,
     node_link_id: NodeLinkId,
     router: &Arc<Router>,
+    config: ConfigProducer,
 ) -> (LinkSender, LinkReceiver, Arc<LinkRouting>, Observer<Option<Duration>>) {
     let (ping_tracker, observer1, observer2) = PingTracker::new();
     let pt_run = log_errors(ping_tracker.run(), "ping tracker failed");
@@ -132,6 +138,7 @@ pub(crate) fn new_link(
             received_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         },
+        config,
     });
     let runner =
         Arc::new(LinkRunner { ping_tracker, router: router.clone(), _task: Task::spawn(pt_run) });
@@ -176,6 +183,7 @@ impl LinkRouting {
                 .await
                 .flatten()
                 .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
+            config: (self.config)(),
         }
     }
 
