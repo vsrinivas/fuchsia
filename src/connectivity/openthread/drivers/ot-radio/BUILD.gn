@@ -12,19 +12,23 @@ import("config.gni")
 ot_radio_driver("sherlock") {
   board = "sherlock"
   firmware_type = "release"
+  firmware_config = "rcp"
 }
 
 ot_radio_driver("sherlock-mfg") {
   board = "sherlock"
   firmware_type = "development"
+  firmware_config = "ncp"
 }
 
 ot_radio_driver("luis") {
   board = "luis"
   firmware_type = "release"
+  firmware_config = "rcp"
 }
 
 ot_radio_driver("luis-mfg") {
   board = "luis"
   firmware_type = "development"
+  firmware_config = "rcp"
 }

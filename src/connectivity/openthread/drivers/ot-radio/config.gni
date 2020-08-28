@@ -11,8 +11,10 @@ template("ot_radio_driver") {
                          [
                            "board",
                            "firmware_type",
+                           "firmware_config",
                          ])
-  firmware_name = "ot-rcp-app-" + firmware_type + "-" + board + ".bin"
+  firmware_name =
+      "ot-" + firmware_config + "-app-" + firmware_type + "-" + board + ".bin"
   if (!internal_access) {
     # Unused variable
     not_needed([ "firmware_name" ])
