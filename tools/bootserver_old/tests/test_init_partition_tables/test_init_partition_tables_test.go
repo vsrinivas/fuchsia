@@ -7,14 +7,13 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
+	bootservertest "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 )
 
 func TestInitPartitionTables(t *testing.T) {
-	_, cleanup := bootserver.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
-	defer cleanup()
+	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 
-	logPattern := []bootserver.LogMatch{
+	logPattern := []bootservertest.LogMatch{
 		{"Received request from ", true},
 		{"Proceeding with nodename ", true},
 		{"Transfer starts", true},
@@ -22,8 +21,8 @@ func TestInitPartitionTables(t *testing.T) {
 		{"Issued reboot command to", false},
 	}
 
-	bootserver.CmdSearchLog(
+	bootservertest.CmdSearchLog(
 		t, logPattern,
-		bootserver.ToolPath(t, "bootserver"), "-n", bootserver.DefaultNodename,
+		bootservertest.ToolPath("bootserver"), "-n", bootservertest.DefaultNodename,
 		"--init-partition-tables", "/dev/class/block/000", "-1", "--fail-fast")
 }

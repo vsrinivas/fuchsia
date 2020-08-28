@@ -32,7 +32,6 @@ if (host_os == "linux") {
 
 group("tests") {
   testonly = true
-
   deps = []
   foreach(test_dir, test_dirs) {
     deps += [ ":bootserver_${test_dir}($host_toolchain)" ]
@@ -42,15 +41,12 @@ group("tests") {
 if (is_linux) {
   go_library("lib") {
     testonly = true
-
     name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/..."
-
     deps = [
       "//src/testing/qemu",
       "//tools/net/netutil",
       "//tools/net/tftp",
     ]
-
     non_go_deps = [
       ":bootserver_user_tools",
       ":main_zbi",
@@ -65,27 +61,20 @@ if (is_linux) {
 
   host_test_data("copy_bootserver") {
     visibility = [ ":*" ]
-
     sources = [ "$host_out_dir/bootserver" ]
-
     outputs = [ "$root_out_dir/test_data/bootserver_tools/bootserver" ]
-
     deps = [ "//tools/bootserver_old:bootserver($host_toolchain)" ]
   }
 
   host_test_data("copy_netls") {
     visibility = [ ":*" ]
-
     sources = [ "$host_out_dir/netls" ]
-
     outputs = [ "$root_out_dir/test_data/bootserver_tools/netls" ]
-
     deps = [ "//tools/netprotocol:netls($host_toolchain)" ]
   }
 
   host_test_data("copy_fake_firmware") {
     visibility = [ ":*" ]
-
     sources = [ "testdata/fake_firmware" ]
     outputs = [ "$root_out_dir/test_data/bootserver_tools/fake_firmware" ]
   }
@@ -103,6 +92,10 @@ if (is_linux) {
     go_test("bootserver_${test_dir}") {
       gopackages =
           [ "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/${test_dir}" ]
+      args = [
+        "--test_data_dir",
+        rebase_path("$root_out_dir/test_data", root_build_dir),
+      ]
       deps = [ ":lib" ]
     }
   }

@@ -11,20 +11,19 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
+	bootservertest "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 )
 
 func TestAdvertFrequency(t *testing.T) {
-	_, cleanup := bootserver.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
-	defer cleanup()
+	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 
 	// Get the node ipv6 address
-	out := bootserver.CmdWithOutput(t, bootserver.ToolPath(t, "netls"))
+	out := bootservertest.CmdWithOutput(t, bootservertest.ToolPath("netls"))
 	// Extract the ipv6 from the netls output
-	regexString := bootserver.DefaultNodename + ` \((.*)/(.*)\)`
+	regexString := bootservertest.DefaultNodename + ` \((.*)/(.*)\)`
 	match := regexp.MustCompile(regexString).FindSubmatch(out)
 	if len(match) != 3 {
-		t.Fatalf("node %s not found in netls output - %s", bootserver.DefaultNodename, out)
+		t.Fatalf("node %s not found in netls output - %s", bootservertest.DefaultNodename, out)
 	}
 	index, err := strconv.Atoi(string(match[2]))
 	if err != nil {

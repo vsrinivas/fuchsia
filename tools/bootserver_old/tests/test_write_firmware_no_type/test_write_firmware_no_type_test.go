@@ -7,14 +7,13 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
+	bootservertest "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 )
 
 func TestWriteFirmwareNoType(t *testing.T) {
-	instance, cleanup := bootserver.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
-	defer cleanup()
+	instance := bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 
-	logPattern := []bootserver.LogMatch{
+	logPattern := []bootservertest.LogMatch{
 		{"Received request from ", true},
 		{"Proceeding with nodename ", true},
 		{"Transfer starts", true},
@@ -22,10 +21,10 @@ func TestWriteFirmwareNoType(t *testing.T) {
 		{"Issued reboot command to", true},
 	}
 
-	bootserver.CmdSearchLog(
+	bootservertest.CmdSearchLog(
 		t, logPattern,
-		bootserver.ToolPath(t, "bootserver"), "-n", bootserver.DefaultNodename,
-		"--firmware", bootserver.FirmwarePath(t), "-1", "--fail-fast")
+		bootservertest.ToolPath("bootserver"), "-n", bootservertest.DefaultNodename,
+		"--firmware", bootservertest.FirmwarePath(), "-1", "--fail-fast")
 
 	instance.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type '')")
 }

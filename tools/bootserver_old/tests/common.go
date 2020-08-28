@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package bootserver
+// Package bootservertest includes common code to write smoke tests for
+// bootserver_old.
+package bootservertest
 
 import (
 	"bufio"
 	"context"
+	"flag"
 	"io"
-	"os"
+	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -19,54 +23,44 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 )
 
-// The default nodename given to an target with the default QEMU MAC address.
-const DefaultNodename = "swarm-donut-petri-acre"
+var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
 
-type LogMatch struct {
-	Pattern     string
-	ShouldMatch bool
-}
-
-func zbiPath() (string, error) {
-	ex, err := os.Executable()
+func testDataDir() string {
+	base := filepath.Join("..", "..", "..", "..")
+	c, err := ioutil.ReadFile(filepath.Join(base, ".fx-build-dir"))
 	if err != nil {
-		return "", err
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi"), nil
-}
-
-func ToolPath(t *testing.T, name string) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
 		return ""
 	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "test_data", "bootserver_tools", name)
+	return filepath.Join(base, strings.TrimSpace(string(c)), hostDir, "test_data")
 }
 
-func FirmwarePath(t *testing.T) string {
-	// QEMU doesn't know how to write firmware so the contents don't matter,
-	// it just has to be a real file. It does get sent over the network though
-	// so use a small file to avoid long transfers.
-	return ToolPath(t, "fake_firmware")
-}
+// TestDataDir is the location to test data files.
+var TestDataDir = flag.String("test_data_dir", testDataDir(), "Path to test_data/; only used in GN build")
 
-func matchPattern(t *testing.T, pattern string, reader *bufio.Reader) bool {
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && err == io.EOF {
-			break
-		}
-		t.Logf("matchPattern: %s", line)
-		if strings.Contains(line, pattern) {
-			return true
-		}
+// DefaultNodename is the default nodename given to an target with the default
+// QEMU MAC address.
+const DefaultNodename = "swarm-donut-petri-acre"
+
+// ToolPath returns the full path to a tool.
+func ToolPath(name string) string {
+	p, err := filepath.Abs(filepath.Join(*TestDataDir, "bootserver_tools", name))
+	if err != nil {
+		// Can't happen.
+		panic(err)
 	}
-	return false
+	return p
 }
 
+// FirmwarePath returns the full path to a valid firmware.
+//
+// QEMU doesn't know how to write firmware so the contents don't matter, it
+// just has to be a real file. It does get sent over the network though so use
+// a small file to avoid long transfers.
+func FirmwarePath() string {
+	return ToolPath("fake_firmware")
+}
+
+// CmdWithOutput returns a command and returns stdout.
 func CmdWithOutput(t *testing.T, name string, arg ...string) []byte {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -80,26 +74,46 @@ func CmdWithOutput(t *testing.T, name string, arg ...string) []byte {
 	return out
 }
 
-func CmdSearchLog(t *testing.T, logPatterns []LogMatch,
-	name string, arg ...string) {
+// LogMatch is one pattern to search for.
+type LogMatch struct {
+	Pattern     string
+	ShouldMatch bool
+}
 
-	found := false
+func matchPattern(t *testing.T, pattern string, reader *bufio.Reader) bool {
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				t.Logf("matchPattern(%q): EOF", pattern)
+				return false
+			}
+			t.Fatal(err)
+		}
+		if strings.Contains(line, pattern) {
+			t.Logf("matchPattern(%q): true", pattern)
+			return true
+		}
+		t.Logf("matchPattern(%q): ignored %q", pattern, line)
+	}
+}
 
+// CmdSearchLog searches for a patterns in stderr.
+func CmdSearchLog(t *testing.T, logPatterns []LogMatch, name string, arg ...string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, arg...)
-
 	cmderr, err := cmd.StderrPipe()
 	if err != nil {
-		t.Errorf("Failed to stdout %s", err)
+		t.Errorf("Failed to stderr %s", err)
 	}
 	readerErr := bufio.NewReader(cmderr)
-
 	if err := cmd.Start(); err != nil {
 		t.Errorf("Failed to start %s", err)
 	}
 
+	found := false
 	for _, logPattern := range logPatterns {
 		match := matchPattern(t, logPattern.Pattern, readerErr)
 		if match != logPattern.ShouldMatch {
@@ -124,9 +138,10 @@ func CmdSearchLog(t *testing.T, logPatterns []LogMatch,
 	}
 }
 
+// AttemptPaveNoBind attempts to initiate a pave.
 func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
-	// Get the node ipv6 address
-	out := CmdWithOutput(t, ToolPath(t, "netls"))
+	// Get the node ipv6 address.
+	out := CmdWithOutput(t, ToolPath("netls"))
 	// Extract the ipv6 from the netls output
 	regexString := DefaultNodename + ` \((?P<ipv6>.*)\)`
 	match := regexp.MustCompile(regexString).FindStringSubmatch(string(out))
@@ -156,47 +171,48 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 
 	CmdSearchLog(
 		t, logPattern,
-		ToolPath(t, "bootserver"), "--fvm", "\"dummy.blk\"",
+		ToolPath("bootserver"), "--fvm", "\"dummy.blk\"",
 		"--no-bind", "-a", match[1], "-1", "--fail-fast")
-
 }
 
-// Starts a QEMU instance with the given kernel commandline args.
-// Returns the qemu.Instance and a cleanup function to call when finished.
-func StartQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Instance, func()) {
-	distro, err := qemu.Unpack()
+// StartQemu starts a QEMU instance with the given kernel commandline args.
+func StartQemu(t *testing.T, appendCmdline, modeString string) *qemu.Instance {
+	distro, err := qemu.UnpackFrom(*TestDataDir)
 	if err != nil {
 		t.Fatalf("Failed to unpack QEMU: %s", err)
 	}
+	t.Cleanup(func() {
+		if err := distro.Delete(); err != nil {
+			t.Errorf("failed to cleanup qemu image: %v", err)
+		}
+	})
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatalf("Failed to get distro CPU: %s", err)
 	}
-	zbi, err := zbiPath()
+	zbi, err := filepath.Abs(filepath.Join(*TestDataDir, "..", "..", "fuchsia.zbi"))
 	if err != nil {
-		t.Fatalf("Failed to get ZBI path: %s", err)
+		t.Fatal(err)
 	}
-
 	instance := distro.Create(qemu.Params{
 		Arch:          arch,
 		ZBI:           zbi,
 		AppendCmdline: appendCmdline,
 		Networking:    true,
 	})
-
-	instance.Start()
-	if err != nil {
+	if err := instance.Start(); err != nil {
 		t.Fatalf("Failed to start QEMU instance: %s", err)
 	}
+	t.Cleanup(func() {
+		if err := instance.Kill(); err != nil {
+			t.Errorf("failed to kill qemu: %v", err)
+		}
+	})
 
 	// Make sure netsvc in expected mode.
 	instance.WaitForLogMessage("netsvc: running in " + modeString + " mode")
 
 	// Make sure netsvc is booted.
 	instance.WaitForLogMessage("netsvc: start")
-
-	return instance, func() {
-		instance.Kill()
-		distro.Delete()
-	}
+	return instance
 }
