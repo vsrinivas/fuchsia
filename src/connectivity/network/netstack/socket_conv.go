@@ -395,6 +395,12 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		if err := ep.GetSockOpt(&v); err != nil {
 			return nil, err
 		}
+		// Match Linux by clamping to -1.
+		//
+		// https://github.com/torvalds/linux/blob/15bc20c/net/ipv4/tcp.c#L3216-L3218
+		if v < 0 {
+			return int32(-1), nil
+		}
 		// Linux uses this socket option to override `tcp_fin_timeout`, which is in
 		// seconds.
 		//
