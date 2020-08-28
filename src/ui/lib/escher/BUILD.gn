@@ -464,12 +464,24 @@ template("escher_library") {
   }
 }
 
+set_defaults("escher_library") {
+  configs = default_common_binary_configs
+}
+
 escher_library("escher_with_glslang") {
   use_runtime_glsl = true
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 escher_library("escher_no_glslang") {
   use_runtime_glsl = false
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("escher") {
