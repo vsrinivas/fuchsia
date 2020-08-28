@@ -8,10 +8,7 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":network-time-tests",
-    "test",
-  ]
+  deps = [ ":network-time-tests" ]
 }
 
 test_package("network-time-tests") {

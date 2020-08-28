@@ -5,14 +5,6 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("test") {
-  testonly = true
-  deps = [
-    ":system-time-updater-test",
-    ":system_time_updater_test_bin",
-  ]
-}
-
 source_set("roughtime_test_lib") {
   testonly = true
   sources = [
@@ -42,46 +34,5 @@ source_set("roughtime_test_lib") {
     "//third_party/googletest:gmock",
     "//third_party/roughtime:client_lib",
     "//third_party/roughtime:simple_server_lib",
-  ]
-}
-
-executable("system_time_updater_test_bin") {
-  testonly = true
-  output_name = "system_time_updater_test"
-
-  sources = [ "system_time_updater_test.cc" ]
-
-  deps = [
-    ":roughtime_test_lib",
-    "//sdk/fidl/fuchsia.hardware.rtc",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//sdk/lib/vfs/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/time/lib/network_time:lib",
-    "//src/sys/time/lib/network_time:time_util_lib",
-    "//third_party/boringssl",
-    "//third_party/googletest:gmock",
-    "//third_party/roughtime:client_lib",
-    "//third_party/roughtime:simple_server_lib",
-  ]
-
-  # TODO(46758): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-test_package("system-time-updater-test") {
-  deps = [ ":system_time_updater_test_bin" ]
-
-  tests = [
-    {
-      name = "system_time_updater_test"
-      environments = basic_envs
-    },
   ]
 }
