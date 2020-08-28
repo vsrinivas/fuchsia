@@ -6,6 +6,9 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+########################################
+# Common elements
+
 fidl("fuchsia.fuzzer") {
   sources = [ "fuzzer.fidl" ]
   public_deps = [ "//sdk/fidl/fuchsia.mem" ]
@@ -23,20 +26,41 @@ source_set("core_lib") {
   public_configs = [ ":config" ]
 }
 
-source_set("client_lib") {
-  sources = [ "llvm-fuzzer.cc" ]
-  public_deps = [
+test("fidl_fuzzer_core_unittests") {
+  sources = [
+    "shared-memory-unittest.cc",
+    "test-input-unittest.cc",
+  ]
+  deps = [
     ":core_lib",
-    "//sdk/lib/fidl/cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
+
+group("test_deps") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+config("config") {
+  include_dirs = [
+    ".",
+    "//src",
+  ]
+}
+
+########################################
+# Fuzzing engine
 
 source_set("engine_lib") {
   sources = [
     "coverage.cc",
     "data-provider.cc",
+    "engine.cc",
   ]
   public_deps = [
     ":core_lib",
@@ -48,40 +72,32 @@ source_set("engine_lib") {
   deps = [ "//zircon/system/ulib/async-loop:async-loop-default" ]
 }
 
-source_set("proxy_lib") {
-  sources = [ "sanitizer-cov-proxy.cc" ]
+# This test links a fake implementation of LLVMFuzzerTestOneInput.
+test("fidl_fuzzer_engine_unittests") {
+  sources = [
+    # "coverage-unittest.cc",
+    # "data-provider-unittest.cc",
+    "engine-unittest.cc",
+  ]
+  deps = [
+    ":client_lib",
+    ":engine_lib",
+    ":proxy_lib",
+    ":test_deps",
+    "test:fake_sanitizer_cov_proxy",
+  ]
+}
+
+########################################
+# Fuzz target function/client for code under test
+
+source_set("client_lib") {
+  sources = [ "llvm-fuzzer.cc" ]
   public_deps = [
     ":core_lib",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-  public_configs = [ ":config" ]
-}
-
-config("config") {
-  include_dirs = [
-    ".",
-    "//src",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":fidl-fuzzer-tests" ]
-}
-
-test("fidl_fuzzer_core_unittests") {
-  sources = [
-    "shared-memory-unittest.cc",
-    "test-input-unittest.cc",
-  ]
-  deps = [
-    ":core_lib",
-    ":test_deps",
   ]
 }
 
@@ -97,17 +113,24 @@ test("fidl_fuzzer_client_unittests") {
   ]
 }
 
-# This test links a fake implementation of LLVMFuzzerTestOneInput.
-test("fidl_fuzzer_engine_unittests") {
-  sources = [
-    "coverage-unittest.cc",
-    "data-provider-unittest.cc",
-  ]
+########################################
+# Instrumentation proxy for code under test
+
+source_set("proxy_lib") {
+  sources = [ "sanitizer-cov-proxy.cc" ]
+  public_deps = [ ":proxy_lib_public_deps" ]
   deps = [
-    ":engine_lib",
-    ":test_deps",
-    "test:fake_libfuzzer",
-    "test:fake_sanitizer_cov_proxy",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  public_configs = [ ":config" ]
+}
+
+group("proxy_lib_public_deps") {
+  public_deps = [
+    ":core_lib",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
@@ -117,18 +140,16 @@ test("fidl_fuzzer_proxy_unittests") {
   deps = [
     ":proxy_lib",
     ":test_deps",
-    "test:fake_libfuzzer",
     "test:fake_sanitizer_cov",
   ]
 }
 
-group("test_deps") {
+########################################
+# Test package
+
+group("tests") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-  ]
+  deps = [ ":fidl-fuzzer-tests" ]
 }
 
 test_package("fidl-fuzzer-tests") {

@@ -2,23 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("fake_libfuzzer") {
-  testonly = true
-  sources = [ "fake-libfuzzer.cc" ]
-  deps = [ "//src/lib/fuzzing/fidl:core_lib" ]
-}
-
 source_set("fake_sanitizer_cov") {
   testonly = true
   sources = [
     "fake-coverage.cc",
+    "fake-libfuzzer.cc",
     "fake-sanitizer-cov.cc",
   ]
-  deps = [ "//src/lib/fuzzing/fidl:proxy_lib" ]
+  deps = [
+    "//src/lib/fuzzing/fidl:core_lib",
+    "//src/lib/fuzzing/fidl:proxy_lib",
+  ]
 }
 
 source_set("fake_sanitizer_cov_proxy") {
   testonly = true
-  sources = [ "fake-sanitizer-cov-proxy.cc" ]
-  deps = [ "//src/lib/fuzzing/fidl:core_lib" ]
+  sources = [
+    "fake-inline-8bit-counters.cc",
+    "fake-libfuzzer.cc",
+    "fake-sanitizer-cov-proxy.cc",
+  ]
+  deps = [ "//src/lib/fuzzing/fidl:proxy_lib_public_deps" ]
 }
