@@ -49,17 +49,21 @@ enum Command {
 
         /// Specify a path for the compiler to generate a depfile. A depfile contain, in Makefile
         /// format, the files that this invocation of the compiler depends on including all bind
-        /// libraries and the bind program input itself. An output file must be provided to generate a
-        /// depfile.
+        /// libraries and the bind program input itself. An output file must be provided to generate
+        /// a depfile.
         #[structopt(short = "d", long = "depfile", parse(from_os_str))]
         depfile: Option<PathBuf>,
 
-        // TODO(43400): Eventually this option should be removed when we can define this configuration
-        // in the driver's component manifest.
+        // TODO(43400): Eventually this option should be removed when we can define this
+        // configuration in the driver's component manifest.
         /// Disable automatically binding the driver so that the driver must be bound on a user's
         /// request.
         #[structopt(short = "a", long = "disable-autobind")]
         disable_autobind: bool,
+
+        /// Output a bytecode file, instead of a C header file.
+        #[structopt(short = "b", long = "output-bytecode")]
+        output_bytecode: bool,
     },
     #[structopt(name = "debug")]
     Debug {
@@ -106,20 +110,19 @@ fn write_depfile(output: &PathBuf, input: &PathBuf, includes: &[PathBuf]) -> Res
     Ok(out)
 }
 
-fn write_bind_template(
-    mut instructions: Vec<InstructionDebug>,
-    disable_autobind: bool,
-) -> Result<String, Error> {
-    if disable_autobind {
-        instructions.insert(
-            0,
-            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
-        );
-    }
+fn write_bind_bytecode(instructions: Vec<InstructionDebug>) -> Vec<u8> {
+    instructions
+        .into_iter()
+        .map(|inst| inst.encode())
+        .flat_map(|(a, b, c)| [a.to_le_bytes(), b.to_le_bytes(), c.to_le_bytes()].concat())
+        .collect::<Vec<_>>()
+}
+
+fn write_bind_template(instructions: Vec<InstructionDebug>) -> Result<String, Error> {
     let bind_count = instructions.len();
     let binding = instructions
         .into_iter()
-        .map(|instr| instr.encode())
+        .map(|inst| inst.encode())
         .map(|(word0, word1, word2)| format!("{{{:#x},{:#x},{:#x}}},", word0, word1, word2))
         .collect::<String>();
     let mut output = String::new();
@@ -167,9 +170,16 @@ fn handle_command(command: Command) -> Result<(), Error> {
             }
             Ok(())
         }
-        Command::Compile { options, output, depfile, disable_autobind } => {
+        Command::Compile { options, output, depfile, disable_autobind, output_bytecode } => {
             let includes = handle_includes(options.include, options.include_file)?;
-            handle_compile(options.input, includes, disable_autobind, output, depfile)
+            handle_compile(
+                options.input,
+                includes,
+                disable_autobind,
+                output_bytecode,
+                output,
+                depfile,
+            )
         }
     }
 }
@@ -195,6 +205,7 @@ fn handle_compile(
     input: PathBuf,
     includes: Vec<PathBuf>,
     disable_autobind: bool,
+    output_bytecode: bool,
     output: Option<PathBuf>,
     depfile: Option<PathBuf>,
 ) -> Result<(), Error> {
@@ -213,10 +224,22 @@ fn handle_compile(
 
     let program = read_file(&input)?;
     let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-    let instructions = compiler::compile(&program, &includes)?;
-    let output_string = write_bind_template(instructions, disable_autobind)?;
+    let mut instructions = compiler::compile(&program, &includes)?;
+    if disable_autobind {
+        instructions.insert(
+            0,
+            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+        );
+    }
 
-    output_writer.write(output_string.as_bytes()).context("Failed to write to output")?;
+    if output_bytecode {
+        let bytecode = write_bind_bytecode(instructions);
+        output_writer.write_all(bytecode.as_slice()).context("Failed to write to output file")?;
+    } else {
+        let template = write_bind_template(instructions)?;
+        output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
+    };
+
     Ok(())
 }
 
@@ -226,24 +249,41 @@ mod tests {
 
     #[test]
     fn zero_instructions() {
-        let out_string = write_bind_template(vec![], false).unwrap();
-        assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 0)"));
+        let bytecode = write_bind_bytecode(vec![]);
+        assert!(bytecode.is_empty());
+
+        let template = write_bind_template(vec![]).unwrap();
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 0)"));
     }
 
     #[test]
     fn one_instruction() {
         let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
-        let out_string = write_bind_template(instructions, false).unwrap();
-        assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
-        assert!(out_string.contains("{0x1000000,0x0,0x0}"));
+        let bytecode = write_bind_bytecode(instructions);
+        assert_eq!(bytecode, vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
+        let template = write_bind_template(instructions).unwrap();
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
+        assert!(template.contains("{0x1000000,0x0,0x0}"));
     }
 
     #[test]
     fn disable_autobind() {
-        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
-        let out_string = write_bind_template(instructions, true).unwrap();
-        assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
-        assert!(out_string.contains("{0x20000002,0x0,0x0}"));
+        let instructions = vec![
+            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+            InstructionDebug::new(Instruction::Match(Condition::Always)),
+        ];
+        let bytecode = write_bind_bytecode(instructions);
+        assert_eq!(bytecode[..12], [2, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        let instructions = vec![
+            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+            InstructionDebug::new(Instruction::Match(Condition::Always)),
+        ];
+        let template = write_bind_template(instructions).unwrap();
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
+        assert!(template.contains("{0x20000002,0x0,0x0}"));
     }
 
     #[test]

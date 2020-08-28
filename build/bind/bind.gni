@@ -194,6 +194,9 @@ template("bind_test") {
 #     TODO(43400): Eventually this option should be removed when we can define this configuration
 #     in the driver's component manifest.
 #
+#   output_bytecode (optional)
+#     [bool]: Output a bytecode file, instead of a C header file.
+#
 #   testonly, visibility
 #     Forwarded from invoker.
 #
@@ -243,9 +246,11 @@ template("bind_rules") {
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
-
     if (defined(invoker.disable_autobind) && invoker.disable_autobind) {
       args += [ "--disable-autobind" ]
+    }
+    if (defined(invoker.output_bytecode) && invoker.output_bytecode) {
+      args += [ "--output-bytecode" ]
     }
 
     inputs = [ response_file ]
