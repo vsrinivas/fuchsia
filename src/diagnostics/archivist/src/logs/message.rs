@@ -1105,7 +1105,7 @@ mod tests {
         ));
     }
 
-    macro_rules! severity_rountrip_test {
+    macro_rules! severity_roundtrip_test {
         ($raw:expr, $expected:expr) => {
             let legacy = LegacySeverity::try_from($raw).unwrap();
             let (severity, verbosity) = legacy.for_structured();
@@ -1126,71 +1126,71 @@ mod tests {
 
     #[test]
     fn verbosity_roundtrip_legacy_v10() {
-        severity_rountrip_test!(-10, INFO - 10);
+        severity_roundtrip_test!(-10, INFO - 10);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_v5() {
-        severity_rountrip_test!(-5, INFO - 5);
+        severity_roundtrip_test!(-5, INFO - 5);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_v4() {
-        severity_rountrip_test!(-4, INFO - 4);
+        severity_roundtrip_test!(-4, INFO - 4);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_v3() {
-        severity_rountrip_test!(-3, INFO - 3);
+        severity_roundtrip_test!(-3, INFO - 3);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_v2() {
-        severity_rountrip_test!(-2, TRACE);
+        severity_roundtrip_test!(-2, TRACE);
     }
 
     #[test]
     fn severity_roundtrip_legacy_v1() {
-        severity_rountrip_test!(-1, DEBUG);
+        severity_roundtrip_test!(-1, DEBUG);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_v0() {
-        severity_rountrip_test!(0, INFO);
+        severity_roundtrip_test!(0, INFO);
     }
 
     #[test]
     fn severity_roundtrip_legacy_warn() {
-        severity_rountrip_test!(1, WARN);
+        severity_roundtrip_test!(1, WARN);
     }
 
     #[test]
     fn verbosity_roundtrip_legacy_error() {
-        severity_rountrip_test!(2, ERROR);
+        severity_roundtrip_test!(2, ERROR);
     }
 
     #[test]
     fn severity_roundtrip_trace() {
-        severity_rountrip_test!(TRACE, TRACE);
+        severity_roundtrip_test!(TRACE, TRACE);
     }
 
     #[test]
     fn severity_roundtrip_debug() {
-        severity_rountrip_test!(DEBUG, DEBUG);
+        severity_roundtrip_test!(DEBUG, DEBUG);
     }
 
     #[test]
     fn severity_roundtrip_info() {
-        severity_rountrip_test!(INFO, INFO);
+        severity_roundtrip_test!(INFO, INFO);
     }
 
     #[test]
     fn severity_roundtrip_warn() {
-        severity_rountrip_test!(WARN, WARN);
+        severity_roundtrip_test!(WARN, WARN);
     }
 
     #[test]
     fn severity_roundtrip_error() {
-        severity_rountrip_test!(ERROR, ERROR);
+        severity_roundtrip_test!(ERROR, ERROR);
     }
 }
