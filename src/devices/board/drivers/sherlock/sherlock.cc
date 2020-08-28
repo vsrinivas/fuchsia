@@ -200,6 +200,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "RamCtlInit failed");
   }
 
+  if (ThermistorInit() != ZX_OK) {
+    zxlogf(ERROR, "ThermistorInit failed");
+  }
+
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d", __func__, status);

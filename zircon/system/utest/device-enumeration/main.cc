@@ -476,6 +476,12 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "luis-i2s-audio-out",
       "sherlock-buttons/hid-buttons",
       "ft5726-touch",
+      "class/adc/000",
+      "class/adc/001",
+      "class/adc/002",
+      "class/temperature/000",
+      "class/temperature/001",
+      "class/temperature/002",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
