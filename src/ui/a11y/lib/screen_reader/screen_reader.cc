@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "fuchsia/accessibility/gesture/cpp/fidl.h"
+#include "src/ui/a11y/lib/screen_reader/change_range_value_action.h"
 #include "src/ui/a11y/lib/screen_reader/change_semantic_level_action.h"
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
@@ -29,6 +30,36 @@ constexpr char kThreeFingerLeftSwipeActionLabel[] = "Three finger Left Swipe Act
 constexpr char kThreeFingerRightSwipeActionLabel[] = "Three finger Right Swipe Action";
 constexpr char kPreviousSemanticLevelActionLabel[] = "Previous Semantic Level Action";
 constexpr char kNextSemanticLevelActionLabel[] = "Next Semantic Level Action";
+constexpr char kIncrementRangeValueActionLabel[] = "Increment Range Value Action";
+constexpr char kDecrementRangeValueActionLabel[] = "Decrement Range Value Action";
+
+// Returns the appropriate next action based on the semantic level.
+std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
+  switch (semantic_level) {
+    case ScreenReaderContext::SemanticLevel::kNormalNavigation:
+      return std::string(kNextActionLabel);
+    case ScreenReaderContext::SemanticLevel::kAdjustValue:
+      return std::string(kIncrementRangeValueActionLabel);
+    default:
+      // Other semantic levels are not implemented yet, so return an empty action name.
+      return std::string("");
+  }
+  return std::string("");
+}
+
+// Returns the appropriate previous action based on the semantic level.
+std::string PreviousActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
+  switch (semantic_level) {
+    case ScreenReaderContext::SemanticLevel::kNormalNavigation:
+      return std::string(kPreviousActionLabel);
+    case ScreenReaderContext::SemanticLevel::kAdjustValue:
+      return std::string(kDecrementRangeValueActionLabel);
+    default:
+      // Other semantic levels are not implemented yet, so return an empty action name.
+      return std::string("");
+  }
+  return std::string("");
+}
 
 }  // namespace
 
@@ -133,7 +164,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         ScreenReaderAction::ActionData action_data;
         action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
-        ExecuteAction(kPreviousActionLabel, action_data);
+        auto action_name = PreviousActionFromSemanticLevel(context_->semantic_level());
+        ExecuteAction(action_name, action_data);
       },
       GestureHandler::kOneFingerDownSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -144,7 +176,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         ScreenReaderAction::ActionData action_data;
         action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
-        ExecuteAction(kNextActionLabel, action_data);
+        auto action_name = NextActionFromSemanticLevel(context_->semantic_level());
+        ExecuteAction(action_name, action_data);
       },
       GestureHandler::kOneFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -242,6 +275,16 @@ void ScreenReader::InitializeActions() {
       kPreviousSemanticLevelActionLabel,
       std::make_unique<ChangeSemanticLevelAction>(ChangeSemanticLevelAction::Direction::kBackward,
                                                   action_context_.get(), context_.get()));
+  action_registry_->AddAction(
+      kIncrementRangeValueActionLabel,
+      std::make_unique<ChangeRangeValueAction>(
+          action_context_.get(), context_.get(),
+          ChangeRangeValueAction::ChangeRangeValueActionType::kIncrementAction));
+  action_registry_->AddAction(
+      kDecrementRangeValueActionLabel,
+      std::make_unique<ChangeRangeValueAction>(
+          action_context_.get(), context_.get(),
+          ChangeRangeValueAction::ChangeRangeValueActionType::kDecrementAction));
 
   action_registry_->AddAction(kThreeFingerUpSwipeActionLabel,
                               std::make_unique<a11y::ThreeFingerSwipeAction>(

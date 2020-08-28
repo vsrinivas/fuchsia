@@ -191,5 +191,25 @@ TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
   EXPECT_TRUE(callback_ran);
 }
 
+TEST_F(ScreenReaderTest, NextOrPreviousActionInvokesActionsBasedOnTheSemanticLevel) {
+  // This test makes sure that when the next / previous action is invoked, bound to right / left one
+  // finger swipes, it corresponds to the appropriate action to the current semantic level.
+  EXPECT_EQ(context_ptr_->semantic_level(),
+            a11y::ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
+  context_ptr_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kAdjustValue);
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
+  mock_gesture_handler_.TriggerGesture(
+      GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
+  EXPECT_THAT(
+      mock_action_registry_ptr_->invoked_actions(),
+      ElementsAre(StrEq("Next Action"), StrEq("Previous Action"),
+                  StrEq("Increment Range Value Action"), StrEq("Decrement Range Value Action")));
+}
+
 }  // namespace
 }  // namespace accessibility_test
