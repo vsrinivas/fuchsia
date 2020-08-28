@@ -307,8 +307,11 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		// Try to send the boot command a few times, as there's no ack, so it's
 		// not possible to tell if it's successfully booted or not.
 		for i := 0; i < 5; i++ {
-			n.Boot(t.RemoteAddr())
+			if err := n.Boot(t.RemoteAddr()); err != nil {
+				return err
+			}
 		}
+		return nil
 	}
 	return n.Reboot(t.RemoteAddr())
 }
