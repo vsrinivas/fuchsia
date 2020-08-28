@@ -4,7 +4,6 @@
 
 library fuchsia.net.neighbor;
 
-using fuchsia.hardware.ethernet;
 using fuchsia.net;
 using zx;
 
@@ -20,7 +19,7 @@ using zx;
 ///      always [`EntryState.static`].
 table Entry {
     /// Identifier for the interface used for communicating with the neighbor.
-    1: InterfaceID interface;
+    1: fuchsia.net.interface_id interface;
 
     /// IP address of the neighbor.
     2: fuchsia.net.IpAddress neighbor;
@@ -31,7 +30,7 @@ table Entry {
 
     /// MAC address of the neighboring device's network interface controller.
     /// Absent for dynamic entries in [`EntryState.incomplete`].
-    4: fuchsia.hardware.ethernet.MacAddress mac;
+    4: fuchsia.net.MacAddress mac;
 
     /// Timestamp when this entry has changed `state`.
     5: zx.time updated_at;

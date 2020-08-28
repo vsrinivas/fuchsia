@@ -14,7 +14,7 @@ fidl("fuchsia.net.neighbor") {
     "unreachability-config.fidl",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.net",
+    "//zircon/vdso/zx",
   ]
 }

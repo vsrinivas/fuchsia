@@ -17,7 +17,7 @@ using zx;
 /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
 /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
 /// `---------------------------+-------------+------------------------'
-flexible union EntryState {
+union EntryState {
     /// Reachability is in the process of being confirmed for a newly created,
     /// non-static entry.
     1: IncompleteState incomplete;

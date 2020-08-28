@@ -144,20 +144,3 @@ const uint32 DEFAULT_MAX_UNICAST_PROBES = 3;
 /// Default value for [`UnreachabilityConfig.max_reachability_confirmations`] as
 /// recommended by RFC 4861 section 10.
 const uint32 DEFAULT_MAX_REACHABILITY_CONFIRMATIONS = 3;
-
-/// The maximum number of [`InterfaceUnreachabilityConfig`] returned in a
-/// [`View.GetUnreachabilityConfigs`] response.
-//
-// This has been calculated with the following function:
-//   MAX_INTERFACE_CONFIG_BATCH_SIZE = floor(
-//     (ZX_CHANNEL_MAX_MSG_BYTES - RESPONSE_BYTES) / MAX_INTERFACE_CONFIG_BYTES
-//   )
-// where,
-//   ZX_CHANNEL_MAX_MSG_BYTES = 65536 bytes
-//   RESPONSE_BYTES = size of [`View.GetUnreachabilityConfigs`] response
-//                  = 32 bytes
-//   MAX_INTERFACE_ITEM_BYTES = max size of [`InterfaceUnreachabilityConfig`]
-//                            = 252 bytes
-//
-// This value will need to be recomputed if any of the above numbers change.
-const uint64 MAX_INTERFACE_CONFIG_BATCH_SIZE = 259;

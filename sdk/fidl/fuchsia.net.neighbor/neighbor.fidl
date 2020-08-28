@@ -17,9 +17,6 @@
 ///
 /// # Important Concepts
 ///
-/// [`InterfaceID`] is an identifier for a network interface. Identifiers are
-/// assigned and managed by the networking stack. They are the same interface
-/// identifiers used by [`fuchsia.net.stack`].
 ///
 /// [`Entry`] represents a neighboring device and is stored in the neighbor
 /// table, which is also managed by the networking stack.
@@ -50,18 +47,8 @@
 /// processed by the networking stack where the DoS would first manifest.
 library fuchsia.net.neighbor;
 
-using fuchsia.hardware.ethernet;
 using fuchsia.net;
 using zx;
-
-/// An opaque identifier for an interface, assigned by the networking stack.
-/// This identifier will never be 0, and will not be reused even if the device
-/// is removed and subsequently re-added. It is not stable across netstack
-/// instances.
-///
-/// These identifiers can be retrieved using
-/// [`fuchsia.net.stack/Stack.ListInterfaces`].
-using InterfaceID = uint64;
 
 /// Inspect the neighbor table and related interface configuration.
 [Discoverable]
@@ -69,14 +56,20 @@ protocol View {
     /// Open a connection to an [`EntryIterator`] for listing existing entries
     /// and optionally watching for state changes.
     ///
-    /// - request `it` request the server to bind an implementation of
+    /// + request `it` request the server to bind an implementation of
     ///     `EntryIterator` to this channel.
-    /// - request `options` modifies the behavior of the [`EntryIterator`].
+    /// + request `options` modifies the behavior of the [`EntryIterator`].
     OpenEntryIterator(request<EntryIterator> it, EntryIteratorOptions options);
 
-    /// View the current configurations of all interfaces.
-    GetUnreachabilityConfigs()
-        -> (vector<InterfaceUnreachabilityConfig>:MAX_INTERFACE_CONFIG_BATCH_SIZE configs);
+    /// View the current configurations of an interface.
+    ///
+    /// + request `interface` interface to read configurations from.
+    /// - response `config` a snapshot of the interface's configuration.
+    /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
+    // TODO(fxbug.dev/59058): Reading configuration should be moved to
+    // interface-scoped protocols in fuchsia.net.interfaces.
+    GetUnreachabilityConfig(fuchsia.net.interface_id interface)
+        -> (UnreachabilityConfig config) error zx.status;
 };
 
 /// Modify the neighbor table and related interface configuration.
@@ -93,7 +86,7 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    AddEntry(InterfaceID interface, fuchsia.net.IpAddress neighbor, fuchsia.hardware.ethernet.MacAddress mac)
+    AddEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor, fuchsia.net.MacAddress mac)
         -> () error zx.status;
 
     /// Delete a dynamic or static entry.
@@ -105,7 +98,7 @@ protocol Controller {
     ///   `neighbor`.
     /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    RemoveEntry(InterfaceID interface, fuchsia.net.IpAddress neighbor)
+    RemoveEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor)
         -> () error zx.status;
 
     /// Delete all dynamic and static entries belonging to an interface.
@@ -115,31 +108,24 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    ClearEntries(InterfaceID interface) -> () error zx.status;
+    ClearEntries(fuchsia.net.interface_id interface) -> () error zx.status;
 
     /// Change the configuration of the neighbor discovery algorithm for an
     /// interface.
     ///
+    /// + request `interface` the interface to be configured.
     /// + request `config` used for updating the configuration for an interface.
     ///     Only the specified fields will be changed. All other fields will
     ///     remain the same as the original configuration.
-    /// * error `ZX_ERR_NOT_FOUND` if `config` references an interface that
+    /// * error `ZX_ERR_NOT_FOUND` if `interface` references an interface that
     ///     does not exist.
-    /// * error `ZX_ERR_IO_REFUSED` if `config` references an interface that
-    ///     does not keep a neighbor table (e.g. point-to-point links).
+    /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` references an interface
+    ///     that does not keep a neighbor table (e.g. point-to-point links).
     /// * error `ZX_ERR_INVALID_ARGS` if `config` contains an invalid value,
     ///     see [`fuchsia.net.neighbor/UnreachabilityConfig`] for the list of
     ///     constraints.
-    UpdateUnreachabilityConfig(InterfaceUnreachabilityConfig config)
+    // TODO(fxbug.dev/59058): Updating configuration should be moved to
+    // interface-scoped protocols in fuchsia.net.interfaces.
+    UpdateUnreachabilityConfig(fuchsia.net.interface_id interface, UnreachabilityConfig config)
         -> () error zx.status;
-};
-
-/// Configuration stored on a per-interface basis for the operation of Neighbor
-/// Unreachability Detection (NUD), as defined by RFC 4861 section 7.3.
-struct InterfaceUnreachabilityConfig {
-    /// Identifier for the interface affected by this configuration.
-    InterfaceID interface;
-
-    /// Configuration for the operation of Neighbor Unreachability Detection.
-    UnreachabilityConfig config;
 };

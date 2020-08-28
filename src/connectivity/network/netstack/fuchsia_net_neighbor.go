@@ -8,8 +8,7 @@ import (
 	"errors"
 	"syscall/zx/fidl"
 
-	eth "fidl/fuchsia/hardware/ethernet"
-	net "fidl/fuchsia/net"
+	"fidl/fuchsia/net"
 	neigh "fidl/fuchsia/net/neighbor"
 )
 
@@ -26,14 +25,14 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neigh.EntryIterato
 	return ErrNotImplemented
 }
 
-func (n *neighborImpl) GetUnreachabilityConfigs(ctx fidl.Context) ([]neigh.InterfaceUnreachabilityConfig, error) {
+func (n *neighborImpl) GetUnreachabilityConfig(ctx fidl.Context, interfaceID uint64) (neigh.ViewGetUnreachabilityConfigResult, error) {
 	// TODO(fxb/51776): Implement fuchsia.net.neighbor/View.GetUnreachabilityConfigs
-	return nil, ErrNotImplemented
+	return neigh.ViewGetUnreachabilityConfigResult{}, ErrNotImplemented
 }
 
 var _ neigh.ControllerWithCtx = (*neighborImpl)(nil)
 
-func (n *neighborImpl) AddEntry(ctx fidl.Context, interfaceID uint64, neighbor net.IpAddress, mac eth.MacAddress) (neigh.ControllerAddEntryResult, error) {
+func (n *neighborImpl) AddEntry(ctx fidl.Context, interfaceID uint64, neighbor net.IpAddress, mac net.MacAddress) (neigh.ControllerAddEntryResult, error) {
 	// TODO(fxb/51777): Implement fuchsia.net.neighbor/Controller.AddEntry
 	resp := neigh.ControllerAddEntryResponse{}
 	result := neigh.ControllerAddEntryResultWithResponse(resp)
@@ -54,7 +53,7 @@ func (n *neighborImpl) ClearEntries(ctx fidl.Context, interfaceID uint64) (neigh
 	return result, ErrNotImplemented
 }
 
-func (n *neighborImpl) UpdateUnreachabilityConfig(ctx fidl.Context, config neigh.InterfaceUnreachabilityConfig) (neigh.ControllerUpdateUnreachabilityConfigResult, error) {
+func (n *neighborImpl) UpdateUnreachabilityConfig(ctx fidl.Context, interfaceID uint64, config neigh.UnreachabilityConfig) (neigh.ControllerUpdateUnreachabilityConfigResult, error) {
 	// TODO(fxb/51780): Implement fuchsia.net.neighbor/Controller.UpdateUnreachabilityConfig
 	resp := neigh.ControllerUpdateUnreachabilityConfigResponse{}
 	result := neigh.ControllerUpdateUnreachabilityConfigResultWithResponse(resp)

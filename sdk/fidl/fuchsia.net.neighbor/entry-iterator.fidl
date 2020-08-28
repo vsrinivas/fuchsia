@@ -6,12 +6,7 @@ library fuchsia.net.neighbor;
 
 /// Options for modifying the behavior of an [`EntryIterator`].
 table EntryIteratorOptions {
-    /// Changes the behavior of the [`EntryIterator`] to watch for state changes
-    /// in the neighbor table after opening the iterator. State change events
-    /// will only be queued after the [`IdleEvent`].
-    ///
-    /// Defaults to false.
-    1: bool watch_for_changes;
+    // Reserved for future expansions, like filtering per-interface.
 };
 
 /// Returns entries and events from the neighbor table. Clients can open an
@@ -21,10 +16,6 @@ table EntryIteratorOptions {
 /// an EntryIterator. This snapshot consists of `existing` entries followed by
 /// an [`IdleEvent`]. No other types of events will be sent before an
 /// [`IdleEvent`].
-///
-/// If [`EntryIteratorOptions.watch_for_changes`] was set to true, state change
-/// events will be queued after the [`IdleEvent`]; otherwise, the channel is
-/// closed after returning the [`IdleEvent`].
 protocol EntryIterator {
     /// Take items from the iterator. If no items are available, block until one
     /// is; otherwise, return immediately with items queued since the last
@@ -42,16 +33,13 @@ protocol EntryIterator {
     /// If there is more than one in-flight `GetNext` call, callers are put into
     /// a queue and will receive responses in FIFO order.
     ///
-    /// When the networking stack is terminated, this connection will be closed
-    /// with a `ZX_ERR_PEER_CLOSED` epitaph.
-    ///
     /// - response `events` a list of events that occurred since the last
     ///     invocation of this method.
     GetNext() -> (vector<EntryIteratorItem>:MAX_ITEM_BATCH_SIZE events);
 };
 
 /// Items returned from [`EntryIterator.GetNext`].
-flexible union EntryIteratorItem {
+union EntryIteratorItem {
     /// An existing entry in the neighbor table. Does not indicate that an event
     /// occurred.
     1: Entry existing;
@@ -62,7 +50,7 @@ flexible union EntryIteratorItem {
     /// Event indicating an entry has been added into the neighbor table.
     3: Entry added;
 
-    /// Event indicating an entry has been changed [`EntryState`].
+    /// Event indicating an entry has changed.
     4: Entry changed;
 
     /// Event indicating an entry has been removed from the neighbor table.
@@ -78,7 +66,7 @@ struct IdleEvent {
 /// [`EntryIterator.GetNext`] response.
 //
 // This has been calculated with the following function:
-//   MAX_EVENT_BATCH_SIZE = floor(
+//   MAX_EVENT_BATCH_SIZE = floor_pow2(
 //     (ZX_CHANNEL_MAX_MSG_BYTES - RESPONSE_BYTES) / MAX_EVENT_BYTES
 //   )
 // where,
@@ -86,5 +74,7 @@ struct IdleEvent {
 //   RESPONSE_BYTES = size of [`EntryIterator.GetNext`] response = 32 bytes
 //   MAX_ITEM_BYTES = max size of [`EntryIteratorItem`] = 208 bytes
 //
+// It's rounded down to the next power of two for aesthetics and decreased
+// sensitivity to changes to the underlying data structures.
 // This value will need to be recomputed if any of the above numbers change.
-const uint64 MAX_ITEM_BATCH_SIZE = 314;
+const uint64 MAX_ITEM_BATCH_SIZE = 256;
