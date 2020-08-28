@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("audio-capture-timestamp-validator") {
+  deps = [ ":audio-capture-timestamp-validator-bin" ]
+
+  binaries = [
+    {
+      name = "audio-capture-timestamp-validator"
+      shell = true
+    },
+  ]
+}
+
+executable("audio-capture-timestamp-validator-bin") {
+  output_name = "audio-capture-timestamp-validator"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock:utils",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/logging:cli",
+    "//src/media/audio/lib/wav",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
+  ]
+}

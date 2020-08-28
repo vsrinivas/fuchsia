@@ -4,6 +4,7 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "audio-capture-timestamp-validator",
     "audio-driver-ctl",
     "audio-effects-ctl",
     "signal_generator",
