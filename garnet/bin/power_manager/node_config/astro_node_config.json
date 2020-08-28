@@ -52,7 +52,7 @@
     "type": "TemperatureHandler",
     "name": "temperature",
     "config": {
-      "driver_path": "/dev/class/thermal/000"
+      "driver_path": "/dev/sys/platform/05:03:a/thermal"
     }
   },
   {
