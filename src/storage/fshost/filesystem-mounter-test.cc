@@ -135,6 +135,16 @@ class TestMounter : public FilesystemMounter {
   zx::channel factoryfs_server_;
 };
 
+TEST_F(MounterTest, DurableMount) {
+  BlockWatcherOptions block_options = {};
+  TestMounter mounter(TakeManager(), block_options);
+
+  mount_options_t options = default_mount_options;
+  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  ASSERT_OK(mounter.MountDurable(zx::channel(), options));
+  ASSERT_TRUE(mounter.DurableMounted());
+}
+
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   BlockWatcherOptions block_options = {};
   block_options.wait_for_data = true;

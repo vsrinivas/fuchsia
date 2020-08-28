@@ -75,6 +75,7 @@ class FilesystemMounter {
   bool DataMounted() const { return data_mounted_; }
   bool PkgfsMounted() const { return pkgfs_mounted_; }
   bool FactoryMounted() const { return factory_mounted_; }
+  bool DurableMounted() const { return durable_mounted_; }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without
