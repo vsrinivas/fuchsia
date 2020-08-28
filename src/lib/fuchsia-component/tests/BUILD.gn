@@ -70,6 +70,10 @@ fidl("fuchsia.component.test") {
   sources = [ "test.test.fidl" ]
 }
 
+fidl("fuchsia.component.client.test") {
+  sources = [ "client.test.fidl" ]
+}
+
 test_package("fuchsia-component-tests") {
   deps = [
     ":fuchsia-component-v1-test",

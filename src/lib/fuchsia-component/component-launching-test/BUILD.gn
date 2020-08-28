@@ -43,6 +43,22 @@ rustc_binary("echo_service_checker_bin") {
   sources = [ "src/echo_service_checker.rs" ]
 }
 
+rustc_binary("echo_service_checker_with_probe_bin") {
+  name = "echo_service_checker_with_probe"
+  edition = "2018"
+  source_root = "src/echo_service_checker_with_probe.rs"
+  testonly = true
+
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/echo_service_checker_with_probe.rs" ]
+}
+
 rustc_binary("injected_directory_checker_bin") {
   name = "injected_directory_checker"
   edition = "2018"
@@ -65,6 +81,7 @@ test_package("component-launching-tests") {
   deps = [
     ":driver",
     ":echo_service_checker_bin",
+    ":echo_service_checker_with_probe_bin",
     ":injected_directory_checker_bin",
     ":stdio_writer_bin",
   ]
@@ -73,6 +90,10 @@ test_package("component-launching-tests") {
     {
       name = "echo_service_checker"
       dest = "echo-service-checker"
+    },
+    {
+      name = "echo_service_checker_with_probe"
+      dest = "echo-service-checker-with-probe"
     },
     {
       name = "injected_directory_checker"
@@ -88,6 +109,10 @@ test_package("component-launching-tests") {
     {
       path = rebase_path("meta/echo-service-checker.cmx")
       dest = "echo-service-checker.cmx"
+    },
+    {
+      path = rebase_path("meta/echo-service-checker-with-probe.cmx")
+      dest = "echo-service-checker-with-probe.cmx"
     },
     {
       path = rebase_path("meta/injected-directory-checker.cmx")

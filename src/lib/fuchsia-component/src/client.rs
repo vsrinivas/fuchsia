@@ -29,23 +29,114 @@ use {
     },
     log::*,
     rand::Rng,
-    std::{fmt, fs::File, path::PathBuf, pin::Pin, sync::Arc},
+    std::{borrow::Borrow, fmt, fs::File, marker::PhantomData, path::PathBuf, pin::Pin, sync::Arc},
     thiserror::Error,
 };
+
+/// Path to the service directory in an application's root namespace.
+const SVC_DIR: &'static str = "/svc";
+
+/// A service connection request that allows checking if the service exists.
+pub struct ServiceConnector<D: Borrow<DirectoryProxy>, S: DiscoverableService> {
+    svc_dir: D,
+    _svc_marker: PhantomData<S>,
+}
+
+impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ServiceConnector<D, S> {
+    /// Returns a new `ServiceConnector` to `S` in the specified service directory.
+    fn new(svc_dir: D) -> ServiceConnector<D, S> {
+        ServiceConnector { svc_dir, _svc_marker: PhantomData }
+    }
+
+    /// Returns `true` if the service exists in the service directory.
+    ///
+    /// This method requires a round trip to the service directory to check for
+    /// existence.
+    pub async fn exists(&self) -> Result<bool, Error> {
+        match files_async::dir_contains(self.svc_dir.borrow(), S::NAME).await {
+            Ok(v) => Ok(v),
+            // If the service directory is unavailable, then mask the error as if
+            // the service does not exist.
+            Err(files_async::Error::Fidl(
+                _,
+                fidl::Error::ClientChannelClosed { status, service_name: _ },
+            )) if status == zx::Status::PEER_CLOSED => Ok(false),
+            Err(e) => Err(Error::new(e).context("error checking for service entry in directory")),
+        }
+    }
+
+    /// Connect to the FIDL service using the provided server-end.
+    ///
+    /// Note, this method does not check if the service exists. It is up to the
+    /// caller to call `exists` to check for existence.
+    pub fn connect_with(self, server_end: zx::Channel) -> Result<(), Error> {
+        self.svc_dir
+            .borrow()
+            .open(
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                0, /* mode */
+                S::NAME,
+                fidl::endpoints::ServerEnd::new(server_end),
+            )
+            .context("error connecting to service")
+    }
+
+    /// Connect to the FIDL service.
+    ///
+    /// Note, this method does not check if the service exists. It is up to the
+    /// caller to call `exists` to check for existence.
+    pub fn connect(self) -> Result<S::Proxy, Error> {
+        let (proxy, server) = zx::Channel::create().context("error creating zx channels")?;
+        let () = self.connect_with(server).context("error connecting with server channel")?;
+        let proxy =
+            fasync::Channel::from_channel(proxy).context("error creating proxy from channel")?;
+        Ok(S::Proxy::from_channel(proxy))
+    }
+}
+
+/// Return a FIDL service connector at the default service directory in the
+/// application's root namespace.
+pub fn new_service_connector<S: DiscoverableService>(
+) -> Result<ServiceConnector<DirectoryProxy, S>, Error> {
+    new_service_connector_at::<S>(SVC_DIR)
+}
+
+/// Return a FIDL service connector at the specified service directory in the
+/// application's root namespace.
+///
+/// The service directory path must be an absolute path.
+pub fn new_service_connector_at<S: DiscoverableService>(
+    service_directory_path: &str,
+) -> Result<ServiceConnector<DirectoryProxy, S>, Error> {
+    let dir = io_util::directory::open_in_namespace(
+        service_directory_path,
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+    )
+    .context("error opening service directory")?;
+
+    Ok(ServiceConnector::new(dir))
+}
+
+/// Return a FIDL service connector at the specified service directory.
+pub fn new_service_connector_in_dir<S: DiscoverableService>(
+    dir: &DirectoryProxy,
+) -> ServiceConnector<&DirectoryProxy, S> {
+    ServiceConnector::new(dir)
+}
 
 /// Connect to a FIDL service using the provided channel.
 pub fn connect_channel_to_service<S: DiscoverableService>(
     server_end: zx::Channel,
 ) -> Result<(), Error> {
-    connect_channel_to_service_at::<S>(server_end, "/svc")
+    connect_channel_to_service_at::<S>(server_end, SVC_DIR)
 }
 
 /// Connect to a FIDL service using the provided channel and namespace prefix.
 pub fn connect_channel_to_service_at<S: DiscoverableService>(
     server_end: zx::Channel,
-    service_prefix: &str,
+    service_directory_path: &str,
 ) -> Result<(), Error> {
-    let service_path = format!("{}/{}", service_prefix, S::SERVICE_NAME);
+    let service_path = format!("{}/{}", service_directory_path, S::SERVICE_NAME);
     connect_channel_to_service_at_path(server_end, &service_path)
 }
 
@@ -60,7 +151,7 @@ pub fn connect_channel_to_service_at_path(
 
 /// Connect to a FIDL service using the application root namespace.
 pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
-    connect_to_service_at::<S>("/svc")
+    connect_to_service_at::<S>(SVC_DIR)
 }
 
 /// Connect to a FIDL service using the provided namespace prefix.
@@ -112,14 +203,16 @@ pub fn connect_to_unified_service_instance_at<US: UnifiedServiceMarker>(
     Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
-/// Connect to an instance of a FIDL Unified Service using the default namespace prefix "/svc".
+/// Connect to an instance of a FIDL Unified Service in the service directory of
+/// the application's root namespace.
 pub fn connect_to_unified_service_instance<US: UnifiedServiceMarker>(
     instance: &str,
 ) -> Result<US::Proxy, Error> {
-    connect_to_unified_service_instance_at::<US>("/svc", instance)
+    connect_to_unified_service_instance_at::<US>(SVC_DIR, instance)
 }
 
-/// Connect to the "default" instance of a FIDL Unified Service using the default namespace prefix "/svc".
+/// Connect to the "default" instance of a FIDL Unified Service in the service
+/// directory of the application's root namespace.
 pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Proxy, Error> {
     connect_to_unified_service_instance::<US>(DEFAULT_SERVICE_INSTANCE)
 }
@@ -852,5 +945,67 @@ impl fmt::Debug for OutputError {
             .field("stdout", &RawMultilineString(&self.stdout))
             .field("stderr", &RawMultilineString(&self.stderr))
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fidl::endpoints::DiscoverableService as _;
+    use fidl_fuchsia_component_client_test::{
+        ServiceAMarker, ServiceAProxy, ServiceBMarker, ServiceBProxy,
+    };
+
+    use vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::pcb::read_only_static, pseudo_directory,
+    };
+
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_svc_connector_svc_does_not_exist() -> Result<(), Error> {
+        let req = new_service_connector::<ServiceAMarker>().context("error probing service")?;
+        matches::assert_matches!(req.exists().await.context("error checking service"), Ok(false));
+        let _: ServiceAProxy = req.connect().context("error connecting to service")?;
+
+        let req = new_service_connector_at::<ServiceAMarker>(SVC_DIR)
+            .context("error probing service at svc dir")?;
+        matches::assert_matches!(
+            req.exists().await.context("error checking service at svc dir"),
+            Ok(false)
+        );
+        let _: ServiceAProxy = req.connect().context("error connecting to service at svc dir")?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_svc_connector_connect_with_dir() -> Result<(), Error> {
+        let dir = pseudo_directory! {
+            ServiceBMarker::SERVICE_NAME => read_only_static("read_only"),
+        };
+        let (dir_proxy, dir_server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        dir.open(
+            scope,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::empty(),
+            ServerEnd::new(dir_server.into_channel()),
+        );
+
+        let req = new_service_connector_in_dir::<ServiceAMarker>(&dir_proxy);
+        matches::assert_matches!(
+            req.exists().await.context("error probing invalid service"),
+            Ok(false)
+        );
+        let _: ServiceAProxy = req.connect().context("error connecting to invalid service")?;
+
+        let req = new_service_connector_in_dir::<ServiceBMarker>(&dir_proxy);
+        matches::assert_matches!(req.exists().await.context("error probing service"), Ok(true));
+        let _: ServiceBProxy = req.connect().context("error connecting to service")?;
+
+        Ok(())
     }
 }

@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-component") {
   version = "0.1.0"
   edition = "2018"
+  with_unit_tests = true
 
   deps = [
     "//garnet/lib/rust/files_async",
@@ -29,6 +31,14 @@ rustc_library("fuchsia-component") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [
+    "tests:fuchsia.component.client.test-rustc",
+    "//garnet/lib/rust/never",
+    "//src/lib/fuchsia-async",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:matches",
+  ]
+
   sources = [
     "src/client.rs",
     "src/lib.rs",
@@ -38,7 +48,15 @@ rustc_library("fuchsia-component") {
   ]
 }
 
+fuchsia_unittest_package("fuchsia-component-unittests") {
+  executable_path = "bin/fuchsia_component_lib_test"
+  deps = [ ":fuchsia-component_test" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":fuchsia-component-unittests",
+    "tests",
+  ]
 }

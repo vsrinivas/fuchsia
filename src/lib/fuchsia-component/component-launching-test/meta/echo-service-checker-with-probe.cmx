@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/echo-service-checker-with-probe"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.echo.Echo"
+        ]
+    }
+}
