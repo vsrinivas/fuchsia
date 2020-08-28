@@ -18,6 +18,12 @@ import 'package:test/test.dart';
 // TODO(fxb/53292): update to use test size.
 const _timeout = Timeout(Duration(minutes: 5));
 
+void printErrorHelp() {
+  print('If this test fails, see '
+      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/package_manager/README.md'
+      ' for details!');
+}
+
 Future<String> formattedHostAddress(sl4f.Sl4f sl4fDriver) async {
   final output = await sl4fDriver.ssh.run('echo \$SSH_CONNECTION');
   final hostAddress =
@@ -49,6 +55,8 @@ void main() {
   tearDownAll(() async {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
+
+    printErrorHelp();
   });
   group('Package Manager', () {
     Optional<String> originalRewriteRule;
