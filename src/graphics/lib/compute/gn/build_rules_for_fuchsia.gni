@@ -163,12 +163,17 @@ template("graphics_compute_single_component_package") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             # Avoid clobbering default configs
+                             "configs",
                              "needs_vulkan",
                              "target_name",
                              "testonly",
                              "test_environments",
                              "test_package",
                            ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     if (_needs_vulkan) {
       if (!defined(deps)) {
         deps = []

@@ -76,7 +76,13 @@ template("graphics_compute_test_package") {
 #
 template("graphics_compute_unittests") {
   source_set(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           "*",
+                           # Avoid clobbering default configs
+                           [ "configs" ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     testonly = true
     if (!defined(deps)) {
       deps = []

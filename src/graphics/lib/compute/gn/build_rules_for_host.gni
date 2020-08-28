@@ -25,7 +25,16 @@ graphics_compute_vulkan_loader_target = "${graphics_compute_dir}/gn/host:vulkan"
 #   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
 template("graphics_compute_executable_rule") {
   executable(target_name) {
-    forward_variables_from(invoker, "*", [ "needs_vulkan" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             # Avoid clobbering default configs
+                             "configs",
+                             "needs_vulkan",
+                           ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
     if (defined(invoker.needs_vulkan) && invoker.needs_vulkan) {
       if (!defined(deps)) {
         deps = []
