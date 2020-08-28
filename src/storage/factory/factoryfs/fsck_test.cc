@@ -49,5 +49,33 @@ TEST(FsckTest, TestCorrupted) {
   ASSERT_STATUS(Fsck(std::move(device), &options), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
+TEST(FsckTest, TestSuperblockCorruptedFlags) {
+  auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
+  ASSERT_TRUE(device);
+  ASSERT_OK(FormatFilesystem(device.get()));
+
+  Superblock info;
+  DeviceBlockRead(device.get(), &info, sizeof(info), kSuperblockStart);
+  info.flags = 0x7;
+  DeviceBlockWrite(device.get(), &info, sizeof(info), kSuperblockStart);
+
+  MountOptions options;
+  ASSERT_STATUS(Fsck(std::move(device), &options), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
+TEST(FsckTest, TestSuperblockCorruptedReservedBits) {
+  auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
+  ASSERT_TRUE(device);
+  ASSERT_OK(FormatFilesystem(device.get()));
+
+  Superblock info;
+  DeviceBlockRead(device.get(), &info, sizeof(info), kSuperblockStart);
+  info.reserved[1] = 0x1;
+  DeviceBlockWrite(device.get(), &info, sizeof(info), kSuperblockStart);
+
+  MountOptions options;
+  ASSERT_STATUS(Fsck(std::move(device), &options), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
 }  // namespace
 }  // namespace factoryfs

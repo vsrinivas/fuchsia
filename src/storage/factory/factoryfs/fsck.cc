@@ -38,7 +38,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
     FS_TRACE_ERROR("factoryfs: Check Superblock failure\n");
     return status;
   }
-  // TODO(manalib) Check if superblock flags and reserved bits are zeroed out correctly.
+
   FS_TRACE_INFO("factoryfs: Filesystem checksum success!!\n");
   return ZX_OK;
 }

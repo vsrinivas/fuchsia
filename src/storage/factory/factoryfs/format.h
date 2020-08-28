@@ -32,20 +32,23 @@ constexpr uint32_t kDirenStartBlock = 1;
 
 constexpr uint32_t kFactoryfsBlockSize = 4096;
 
+// Reserved padding to align Superblock to block size.
+constexpr uint32_t kFactoryfsReserved = 1011;
+
 struct __PACKED Superblock {
   uint64_t magic;  // Must be kFactoryFSMagic.
   uint32_t major_version;
   uint32_t minor_version;
-  uint32_t flags;                      // Reserve for future use.
-  uint32_t data_blocks;                // Total number of data blocks (in filesystem blocks)
-  uint32_t directory_size;             // Size in bytes of all the directory entries
-  uint32_t directory_entries;          // Number of directory entries.
-  uint64_t create_time;                // Time of creation of all files.
-  uint32_t block_size;                 // Filesystem block size.
-  uint32_t directory_ent_blocks;       // Number of blocks for directory entries
-  uint32_t directory_ent_start_block;  // start block for directory entries.
-  uint32_t reserved[1011];             // Reserved for future use. Required to be zero
-                                       // currently. Padded to align to block size.
+  uint32_t flags;                         // Reserve for future use.
+  uint32_t data_blocks;                   // Total number of data blocks (in filesystem blocks)
+  uint32_t directory_size;                // Size in bytes of all the directory entries
+  uint32_t directory_entries;             // Number of directory entries.
+  uint64_t create_time;                   // Time of creation of all files.
+  uint32_t block_size;                    // Filesystem block size.
+  uint32_t directory_ent_blocks;          // Number of blocks for directory entries
+  uint32_t directory_ent_start_block;     // start block for directory entries.
+  uint32_t reserved[kFactoryfsReserved];  // Reserved for future use. Required to be zero
+                                          // currently. Padded to align to block size.
 };
 
 static_assert(sizeof(Superblock) == kFactoryfsBlockSize, "factory info size is wrong");

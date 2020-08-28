@@ -70,6 +70,22 @@ zx_status_t CheckSuperblock(const Superblock* info) {
     DumpSuperblock(*info);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
+
+  // Check if flags (currently unused) are zeroed out correctly.
+  if (info->flags != 0) {
+    FS_TRACE_ERROR("factoryfs: flags set to incorrect value: %08x\n", info->flags);
+    DumpSuperblock(*info);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  for (uint32_t i = 0; i < kFactoryfsReserved; i++) {
+    if (info->reserved[i]) {
+      FS_TRACE_ERROR("factoryfs: reserved bits are not zeroed out correctly\n");
+      DumpSuperblock(*info);
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+  }
+
   DumpSuperblock(*info);
   FS_TRACE_DEBUG("Checksuperblock success\n");
   return ZX_OK;
