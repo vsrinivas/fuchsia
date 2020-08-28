@@ -26,11 +26,14 @@
 
 namespace factoryfs {
 
-static zx_status_t IsValidDirectoryEntry(const DirectoryEntry& entry) {
+static zx_status_t IsValidDirectoryEntry(const DirectoryEntry& entry, const Superblock& info) {
   if (entry.name_len == 0 || entry.name_len > kFactoryfsMaxNameSize) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
-  // TODO(manalib) add more directory entry checks.
+  uint32_t max_data_off = info.data_blocks + info.directory_ent_blocks + kFactoryfsSuperblockBlocks;
+  if (entry.data_off >= max_data_off) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
   return ZX_OK;
 }
 
@@ -135,12 +138,12 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
   zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetDirectorySize(), kFactoryfsBlockSize);
   if ((status = zx::vmo::create(vmo_size, 0, &directory_vmo_)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialize vmo; error: %s\n", zx_status_get_string(status));
+    FS_TRACE_ERROR("Failed to initialize directory vmo; error: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  zx_object_set_property(directory_vmo_.get(), ZX_PROP_NAME, "factoryfs-root",
-                         strlen("factoryfs-root"));
+  zx_object_set_property(directory_vmo_.get(), ZX_PROP_NAME, "factoryfs-directory",
+                         strlen("factoryfs-directory"));
   storage::OwnedVmoid vmoid;
   if ((status = Device().BlockAttachVmo(directory_vmo_,
                                         &vmoid.GetReference(block_device_.get()))) != ZX_OK) {
@@ -185,14 +188,15 @@ zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
     if (entry->name_len == 0) {
       break;
     }
-    DumpDirectoryEntry(entry);
     size_t size = DirentSize(entry->name_len);
     if (size > avail) {
       FS_TRACE_ERROR("factoryfs: invalid directory entry: size > avail!\n");
+      DumpDirectoryEntry(entry);
       return ZX_ERR_IO;
     }
-    if ((status = IsValidDirectoryEntry(*entry)) != ZX_OK) {
+    if ((status = IsValidDirectoryEntry(*entry, Info())) != ZX_OK) {
       FS_TRACE_ERROR("factoryfs: invalid directory entry!\n");
+      DumpDirectoryEntry(entry);
       return status;
     }
     if ((status = callback(entry)) == ZX_OK) {

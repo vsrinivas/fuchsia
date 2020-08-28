@@ -42,7 +42,6 @@ zx_status_t File::InitFileVmo() {
   uint32_t dev_block_size = factoryfs_.GetDeviceBlockInfo().block_size;
   uint32_t dev_blocks =
       fbl::round_up(directory_entry_->GetDataSize(), dev_block_size) / dev_block_size;
-  // TODO manalib check if directory_entry_->GetDataSize() is within file size
   block_fifo_request_t request = {
       .opcode = BLOCKIO_READ,
       .vmoid = vmoid_.get(),

@@ -35,7 +35,7 @@ TEST(FsckTest, TestUnmountable) {
   ASSERT_STATUS(Fsck(std::move(device), &options), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-TEST(FsckTest, TestCorrupted) {
+TEST(FsckTest, TestSuperBlockCorrupted) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
   ASSERT_TRUE(device);
   ASSERT_OK(FormatFilesystem(device.get()));
