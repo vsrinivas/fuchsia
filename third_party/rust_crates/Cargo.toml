@@ -41,6 +41,8 @@ crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
 crossbeam = "0.7.3"
 csv = "1.0.7"
+cxx = "0.3.5"
+cxxbridge-cmd = "0.3.5"
 difference = "2.0.0"
 fatfs = "0.4.0"
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
@@ -230,6 +232,8 @@ regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
+# termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
+termcolor = { path = "tiny_mirrors/termcolor" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
 ttf-parser = { path = "tiny_mirrors/ttf-parser" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
@@ -291,11 +295,21 @@ rustflags = ["--cfg=crc32fast_stdarchx86"]
 [[gn.crate.crypto."0.2.36"]]
 deps = [ "//third_party/rust_crates/compat/rust-crypto" ]
 
+# cxx's build.rs is only used to build it's src/cxx.cc file, for crates that use cxx and build with
+# cargo. It is replaced with //third_party/rust_crates/vendor/cxx:cxx_lib.
+[[gn.crate.cxx."0.3.5"]]
+rustflags = []
+
 [[gn.crate.httparse."1.3.3"]]
 rustflags = ["--cfg=httparse_simd"]
 
 [[gn.crate.libc."0.2.74"]]
 rustflags = ["--cfg=freebsd11", "--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN"]
+
+# cxx uses this to link against libc++ or libstdc++, for crates that use cxx and build with cargo.
+# It does nothing else.
+[[gn.crate.link-cplusplus."1.0.2"]]
+rustflags = []
 
 [[gn.crate.log."0.4.8"]]
 rustflags = ["--cfg=atomic_cas"]
@@ -336,8 +350,9 @@ rustflags = ["--cfg=has_i128"]
 [[gn.crate.proc-macro2."0.4.27"]]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
-[[gn.crate.proc-macro2."1.0.9"]]
-rustflags = ["--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
+# cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
+[[gn.crate.proc-macro2."1.0.19"]]
+rustflags = ["--cfg=span_locations", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 [[gn.crate.rand."0.6.5"]]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]

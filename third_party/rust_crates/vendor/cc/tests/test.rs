@@ -2,8 +2,18 @@ use crate::support::Test;
 
 mod support;
 
+// Some tests check that a flag is *not* present.  These tests might fail if the flag is set in the
+// CFLAGS or CXXFLAGS environment variables.  This function clears the CFLAGS and CXXFLAGS
+// variables to make sure that the tests can run correctly.
+fn reset_env() {
+    std::env::set_var("CFLAGS", "");
+    std::env::set_var("CXXFLAGS", "");
+}
+
 #[test]
 fn gnu_smoke() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc().file("foo.c").compile("foo");
 
@@ -19,6 +29,8 @@ fn gnu_smoke() {
 
 #[test]
 fn gnu_opt_level_1() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc().opt_level(1).file("foo.c").compile("foo");
 
@@ -27,6 +39,8 @@ fn gnu_opt_level_1() {
 
 #[test]
 fn gnu_opt_level_s() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc().opt_level_str("s").file("foo.c").compile("foo");
 
@@ -39,10 +53,42 @@ fn gnu_opt_level_s() {
 }
 
 #[test]
-fn gnu_debug() {
+fn gnu_debug_fp_auto() {
     let test = Test::gnu();
     test.gcc().debug(true).file("foo.c").compile("foo");
     test.cmd(0).must_have("-g");
+    test.cmd(0).must_have("-fno-omit-frame-pointer");
+}
+
+#[test]
+fn gnu_debug_fp() {
+    let test = Test::gnu();
+    test.gcc().debug(true).file("foo.c").compile("foo");
+    test.cmd(0).must_have("-g");
+    test.cmd(0).must_have("-fno-omit-frame-pointer");
+}
+
+#[test]
+fn gnu_debug_nofp() {
+    reset_env();
+
+    let test = Test::gnu();
+    test.gcc()
+        .debug(true)
+        .force_frame_pointer(false)
+        .file("foo.c")
+        .compile("foo");
+    test.cmd(0).must_have("-g");
+    test.cmd(0).must_not_have("-fno-omit-frame-pointer");
+
+    let test = Test::gnu();
+    test.gcc()
+        .force_frame_pointer(false)
+        .debug(true)
+        .file("foo.c")
+        .compile("foo");
+    test.cmd(0).must_have("-g");
+    test.cmd(0).must_not_have("-fno-omit-frame-pointer");
 }
 
 #[test]
@@ -70,6 +116,8 @@ fn gnu_warnings() {
 
 #[test]
 fn gnu_extra_warnings0() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .warnings(true)
@@ -83,6 +131,8 @@ fn gnu_extra_warnings0() {
 
 #[test]
 fn gnu_extra_warnings1() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .warnings(false)
@@ -96,6 +146,8 @@ fn gnu_extra_warnings1() {
 
 #[test]
 fn gnu_warnings_overridable() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .warnings(true)
@@ -124,6 +176,8 @@ fn gnu_x86_64() {
 
 #[test]
 fn gnu_x86_64_no_pic() {
+    reset_env();
+
     for vendor in &["unknown-linux-gnu", "apple-darwin"] {
         let target = format!("x86_64-{}", vendor);
         let test = Test::gnu();
@@ -185,6 +239,8 @@ fn gnu_x86_64_no_plt() {
 
 #[test]
 fn gnu_set_stdlib() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .cpp_set_stdlib(Some("foo"))
@@ -223,6 +279,8 @@ fn gnu_compile_assembly() {
 
 #[test]
 fn gnu_shared() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .file("foo.c")
@@ -235,6 +293,8 @@ fn gnu_shared() {
 
 #[test]
 fn gnu_flag_if_supported() {
+    reset_env();
+
     if cfg!(windows) {
         return;
     }
@@ -271,6 +331,8 @@ fn gnu_flag_if_supported_cpp() {
 
 #[test]
 fn gnu_static() {
+    reset_env();
+
     let test = Test::gnu();
     test.gcc()
         .file("foo.c")
@@ -283,6 +345,8 @@ fn gnu_static() {
 
 #[test]
 fn msvc_smoke() {
+    reset_env();
+
     let test = Test::msvc();
     test.gcc().file("foo.c").compile("foo");
 
@@ -297,6 +361,8 @@ fn msvc_smoke() {
 
 #[test]
 fn msvc_opt_level_0() {
+    reset_env();
+
     let test = Test::msvc();
     test.gcc().opt_level(0).file("foo.c").compile("foo");
 

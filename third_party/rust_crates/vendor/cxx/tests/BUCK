@@ -1,0 +1,53 @@
+rust_test(
+    name = "test",
+    srcs = ["test.rs"],
+    deps = [":ffi"],
+)
+
+rust_library(
+    name = "ffi",
+    srcs = [
+        "ffi/lib.rs",
+        "ffi/module.rs",
+    ],
+    crate = "cxx_test_suite",
+    deps = [
+        ":impl",
+        "//:cxx",
+    ],
+)
+
+cxx_library(
+    name = "impl",
+    srcs = [
+        "ffi/tests.cc",
+        ":gen-lib-source",
+        ":gen-module-source",
+    ],
+    headers = {
+        "ffi/lib.rs.h": ":gen-lib-header",
+        "ffi/tests.h": "ffi/tests.h",
+    },
+    deps = ["//:core"],
+)
+
+genrule(
+    name = "gen-lib-header",
+    srcs = ["ffi/lib.rs"],
+    cmd = "$(exe //:codegen) --header ${SRCS} > ${OUT}",
+    out = "lib.rs.h",
+)
+
+genrule(
+    name = "gen-lib-source",
+    srcs = ["ffi/lib.rs"],
+    cmd = "$(exe //:codegen) ${SRCS} > ${OUT}",
+    out = "lib.rs.cc",
+)
+
+genrule(
+    name = "gen-module-source",
+    srcs = ["ffi/module.rs"],
+    cmd = "$(exe //:codegen) ${SRCS} > ${OUT}",
+    out = "module.rs.cc",
+)

@@ -96,6 +96,14 @@ if (current_os == "fuchsia") {
     deps = [ ":ct-logs-v0_6_0" ]
   }
 }
+group("cxx") {
+  deps = [ ":cxx-v0_3_5" ]
+}
+
+group("cxxbridge-cmd") {
+  deps = [ ":cxxbridge-cmd-v0_3_5" ]
+}
+
 if (current_os == "fuchsia") {
   group("data-encoding") {
     deps = [ ":data-encoding-v2_1_2" ]
@@ -375,7 +383,7 @@ if (current_os == "fuchsia") {
 }
 if (!(current_os == "fuchsia")) {
   group("proc-macro2") {
-    deps = [ ":proc-macro2-v1_0_9" ]
+    deps = [ ":proc-macro2-v1_0_19" ]
   }
 }
 group("proptest") {
@@ -393,7 +401,7 @@ if (!(current_os == "fuchsia")) {
 }
 if (!(current_os == "fuchsia")) {
   group("quote") {
-    deps = [ ":quote-v1_0_2" ]
+    deps = [ ":quote-v1_0_7" ]
   }
 }
 group("rand") {
@@ -951,8 +959,8 @@ rust_proc_macro("argh_derive-v0_1_1") {
   deps = []
   deps += [ ":argh_shared-v0_1_1" ]
   deps += [ ":heck-v0_3_1" ]
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -1041,7 +1049,7 @@ rust_proc_macro("async-attributes-v1_1_1") {
   ]
 
   deps = []
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -1150,8 +1158,8 @@ rust_proc_macro("async-trait-v0_1_36") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -1848,6 +1856,29 @@ rust_library("cloudabi-v0_0_3") {
   ]
 }
 
+rust_library("codespan-reporting-v0_9_5") {
+  crate_name = "codespan_reporting"
+  crate_root = "//third_party/rust_crates/vendor/codespan-reporting/src/lib.rs"
+  output_name = "codespan_reporting-32ae5083927f74fe"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":termcolor-v1_1_0" ]
+  deps += [ ":unicode-width-v0_1_5" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=32ae5083927f74fe",
+    "-Cextra-filename=-32ae5083927f74fe",
+  ]
+}
+
 rust_library("crc-v1_8_1") {
   crate_name = "crc"
   crate_root = "//third_party/rust_crates/vendor/crc/src/lib.rs"
@@ -2221,6 +2252,81 @@ rust_library("ct-logs-v0_6_0") {
   ]
 }
 
+rust_library("cxx-v0_3_5") {
+  crate_name = "cxx"
+  crate_root = "//third_party/rust_crates/vendor/cxx/src/lib.rs"
+  output_name = "cxx-a0e30dc94fbcc11c"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cxxbridge-macro-v0_3_5($host_toolchain)" ]
+  deps += [ ":link-cplusplus-v1_0_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a0e30dc94fbcc11c",
+    "-Cextra-filename=-a0e30dc94fbcc11c",
+    "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("cxxbridge-cmd-v0_3_5") {
+  crate_name = "cxxbridge_cmd"
+  crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/lib.rs"
+  output_name = "cxxbridge_cmd-39c6ea6fb5b67294"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":anyhow-v1_0_25" ]
+  deps += [ ":clap-v2_33_0" ]
+  deps += [ ":codespan-reporting-v0_9_5" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_21" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=39c6ea6fb5b67294",
+    "-Cextra-filename=-39c6ea6fb5b67294",
+  ]
+}
+
+rust_proc_macro("cxxbridge-macro-v0_3_5") {
+  crate_name = "cxxbridge_macro"
+  crate_root = "//third_party/rust_crates/vendor/cxxbridge-macro/src/lib.rs"
+  output_name = "cxxbridge_macro-89f33f149f6ab750"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_21" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=89f33f149f6ab750",
+    "-Cextra-filename=-89f33f149f6ab750",
+  ]
+}
+
 rust_library("data-encoding-v2_1_2") {
   crate_name = "data_encoding"
   crate_root = "//third_party/rust_crates/vendor/data-encoding/src/lib.rs"
@@ -2278,8 +2384,8 @@ rust_proc_macro("derivative-v2_1_1") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -2302,7 +2408,7 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":syn-v1_0_21" ]
   deps += [ ":synstructure-v0_12_1" ]
 
@@ -2415,8 +2521,8 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
 
   deps = []
   deps += [ ":heck-v0_3_1" ]
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -2835,8 +2941,8 @@ rust_proc_macro("futures-macro-v0_3_5") {
 
   deps = []
   deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -3783,6 +3889,28 @@ rust_library("libm-v0_2_1") {
     "--edition=2015",
     "-Cmetadata=9acc3111b7a9209b",
     "-Cextra-filename=-9acc3111b7a9209b",
+  ]
+}
+
+rust_library("link-cplusplus-v1_0_2") {
+  crate_name = "link_cplusplus"
+  crate_root = "//third_party/rust_crates/vendor/link-cplusplus/src/lib.rs"
+  output_name = "link_cplusplus-ca3941f03f39e09b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ca3941f03f39e09b",
+    "-Cextra-filename=-ca3941f03f39e09b",
+    "--cfg=feature=\"default\"",
   ]
 }
 
@@ -4967,8 +5095,8 @@ rust_library("pest_generator-v2_1_3") {
   deps = []
   deps += [ ":pest-v2_1_0" ]
   deps += [ ":pest_meta-v2_1_0" ]
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -5111,8 +5239,8 @@ rust_proc_macro("pin-project-internal-v0_4_17") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -5408,10 +5536,10 @@ rust_library("proc-macro2-v0_4_27") {
   ]
 }
 
-rust_library("proc-macro2-v1_0_9") {
+rust_library("proc-macro2-v1_0_19") {
   crate_name = "proc_macro2"
   crate_root = "//third_party/rust_crates/vendor/proc-macro2/src/lib.rs"
-  output_name = "proc_macro2-265cd8154d351836"
+  output_name = "proc_macro2-eaa01d93029c3897"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -5425,10 +5553,13 @@ rust_library("proc-macro2-v1_0_9") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=265cd8154d351836",
-    "-Cextra-filename=-265cd8154d351836",
+    "-Cmetadata=eaa01d93029c3897",
+    "-Cextra-filename=-eaa01d93029c3897",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
+    "--cfg=feature=\"span-locations\"",
+    "--cfg=span_locations",
+    "--cfg=hygiene",
     "--cfg=use_proc_macro",
     "--cfg=wrap_proc_macro",
   ]
@@ -5624,25 +5755,25 @@ rust_library("quote-v0_6_11") {
   ]
 }
 
-rust_library("quote-v1_0_2") {
+rust_library("quote-v1_0_7") {
   crate_name = "quote"
   crate_root = "//third_party/rust_crates/vendor/quote/src/lib.rs"
-  output_name = "quote-bdfeff46186783c8"
+  output_name = "quote-9f1f949289306afa"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=bdfeff46186783c8",
-    "-Cextra-filename=-bdfeff46186783c8",
+    "-Cmetadata=9f1f949289306afa",
+    "-Cextra-filename=-9f1f949289306afa",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
   ]
@@ -7060,7 +7191,7 @@ rust_library("same-file-v1_0_4") {
 
   deps = []
   if (false) {
-    deps += [ ":winapi-util-v0_1_2" ]
+    deps += [ ":winapi-util-v0_1_5" ]
   }
 
   rustenv = []
@@ -7281,8 +7412,8 @@ rust_proc_macro("serde_derive-v1_0_104") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -7924,8 +8055,8 @@ rust_library("syn-v1_0_21") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":unicode-xid-v0_2_0" ]
 
   rustenv = []
@@ -7959,8 +8090,8 @@ rust_library("synstructure-v0_12_1") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
   deps += [ ":unicode-xid-v0_2_0" ]
 
@@ -8095,6 +8226,30 @@ rust_library("term-v0_5_1") {
   ]
 }
 
+rust_library("termcolor-v1_1_0") {
+  crate_name = "termcolor"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/termcolor/src/lib.rs"
+  output_name = "termcolor-aa3f8d5c992f6147"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  if (false) {
+    deps += [ ":winapi-util-v0_1_5" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=aa3f8d5c992f6147",
+    "-Cextra-filename=-aa3f8d5c992f6147",
+  ]
+}
+
 rust_library("termion-v1_5_3") {
   crate_name = "termion"
   crate_root = "//third_party/rust_crates/vendor/termion/src/lib.rs"
@@ -8160,8 +8315,8 @@ rust_proc_macro("test-case-v1_0_0") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -8228,8 +8383,8 @@ rust_proc_macro("thiserror-impl-v1_0_9") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -8539,8 +8694,8 @@ rust_proc_macro("tracing-attributes-v0_1_9") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
@@ -9469,7 +9624,7 @@ rust_library("walkdir-v2_3_1") {
   deps += [ ":same-file-v1_0_4" ]
   if (false) {
     deps += [ ":winapi-v0_3_9" ]
-    deps += [ ":winapi-util-v0_1_2" ]
+    deps += [ ":winapi-util-v0_1_5" ]
   }
 
   rustenv = []
@@ -9568,8 +9723,8 @@ rust_library("wasm-bindgen-backend-v0_2_60") {
   deps += [ ":bumpalo-v3_2_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_8" ]
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
   deps += [ ":wasm-bindgen-shared-v0_2_60" ]
 
@@ -9616,7 +9771,7 @@ rust_proc_macro("wasm-bindgen-macro-v0_2_60") {
   ]
 
   deps = []
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":wasm-bindgen-macro-support-v0_2_60" ]
 
   rustenv = []
@@ -9641,8 +9796,8 @@ rust_library("wasm-bindgen-macro-support-v0_2_60") {
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_21" ]
   deps += [ ":wasm-bindgen-backend-v0_2_60" ]
   deps += [ ":wasm-bindgen-shared-v0_2_60" ]
@@ -9803,10 +9958,10 @@ rust_library("winapi-v0_3_9") {
   ]
 }
 
-rust_library("winapi-util-v0_1_2") {
+rust_library("winapi-util-v0_1_5") {
   crate_name = "winapi_util"
   crate_root = "//third_party/rust_crates/tiny_mirrors/winapi-util/src/lib.rs"
-  output_name = "winapi_util-b3a9f54dd0078b71"
+  output_name = "winapi_util-d22658bf7990adbd"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9819,8 +9974,8 @@ rust_library("winapi-util-v0_1_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=b3a9f54dd0078b71",
-    "-Cextra-filename=-b3a9f54dd0078b71",
+    "-Cmetadata=d22658bf7990adbd",
+    "-Cextra-filename=-d22658bf7990adbd",
   ]
 }
 

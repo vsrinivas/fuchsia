@@ -1,6 +1,6 @@
 [package]
 name = "winapi-util"
-version = "0.1.2"
+version = "0.1.5"
 authors = ["Erick Tryzelaar <etryzelaar@google.com>"]
 
 [dependencies]

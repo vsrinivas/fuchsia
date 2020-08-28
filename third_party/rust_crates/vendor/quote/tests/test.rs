@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::collections::BTreeSet;
 
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
 
 struct X;
 
@@ -17,6 +17,28 @@ impl quote::ToTokens for X {
 #[test]
 fn test_quote_impl() {
     let tokens = quote! {
+        impl<'a, T: ToTokens> ToTokens for &'a T {
+            fn to_tokens(&self, tokens: &mut TokenStream) {
+                (**self).to_tokens(tokens)
+            }
+        }
+    };
+
+    let expected = concat!(
+        "impl < 'a , T : ToTokens > ToTokens for & 'a T { ",
+        "fn to_tokens ( & self , tokens : & mut TokenStream ) { ",
+        "( * * self ) . to_tokens ( tokens ) ",
+        "} ",
+        "}"
+    );
+
+    assert_eq!(expected, tokens.to_string());
+}
+
+#[test]
+fn test_quote_spanned_impl() {
+    let span = Span::call_site();
+    let tokens = quote_spanned! {span=>
         impl<'a, T: ToTokens> ToTokens for &'a T {
             fn to_tokens(&self, tokens: &mut TokenStream) {
                 (**self).to_tokens(tokens)
@@ -130,7 +152,7 @@ fn test_integer() {
         #ii8 #ii16 #ii32 #ii64 #ii128 #iisize
         #uu8 #uu16 #uu32 #uu64 #uu128 #uusize
     };
-    let expected = "-1i8 -1i16 -1i32 -1i64 -1i128 -1isize 1u8 1u16 1u32 1u64 1u128 1usize";
+    let expected = "- 1i8 - 1i16 - 1i32 - 1i64 - 1i128 - 1isize 1u8 1u16 1u32 1u64 1u128 1usize";
     assert_eq!(expected, tokens.to_string());
 }
 
@@ -160,7 +182,7 @@ fn test_char() {
     let tokens = quote! {
         #zero #pound #quote #apost #newline #heart
     };
-    let expected = "'\\u{0}' '#' '\"' '\\'' '\\n' '\\u{2764}'";
+    let expected = "'\\u{0}' '#' '\"' '\\'' '\\n' '\u{2764}'";
     assert_eq!(expected, tokens.to_string());
 }
 
@@ -341,12 +363,14 @@ fn test_format_ident() {
     let id2 = format_ident!("Hello{x}", x = 5usize);
     let id3 = format_ident!("Hello{}_{x}", id0, x = 10usize);
     let id4 = format_ident!("Aa", span = Span::call_site());
+    let id5 = format_ident!("Hello{}", Cow::Borrowed("World"));
 
     assert_eq!(id0, "Aa");
     assert_eq!(id1, "HelloAa");
     assert_eq!(id2, "Hello5");
     assert_eq!(id3, "HelloAa_10");
     assert_eq!(id4, "Aa");
+    assert_eq!(id5, "HelloWorld");
 }
 
 #[test]
@@ -426,4 +450,10 @@ fn test_star_after_repetition() {
     };
     let expected = "f ( '0' ) ; f ( '1' ) ; * out = None ;";
     assert_eq!(expected, tokens.to_string());
+}
+
+#[test]
+fn test_quote_raw_id() {
+    let id = quote!(r#raw_id);
+    assert_eq!(id.to_string(), "r#raw_id");
 }
