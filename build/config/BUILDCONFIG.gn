@@ -678,9 +678,6 @@ _asan_fuzzer_toolchain_args = {
             "print_suppressions=0",
             "strict_memcmp=0",
             "symbolize=0",
-
-            # Avoid leaking memory (fxb/34570)
-            "clear_shadow_mmap_threshold=0",
           ])
 }
 

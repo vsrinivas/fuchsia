@@ -51,23 +51,20 @@ standard_environments(".fuzzer") {
   # Set sanitizer options that we only want to apply for fuzzers.
   toolchain_args = {
     # Unless otherwise noted, these options are the defaults from ClusterFuzz.
-    asan_default_options =
-        string_join(":",
-                    [
-                      "alloc_dealloc_mismatch=0",
-                      "allocator_may_return_null=1",
-                      "check_malloc_usable_size=0",
-                      "detect_leaks=0",
-                      "detect_odr_violation=0",
-                      "malloc_context_size=128",
-                      "max_uar_stack_size_log=16",
-                      "print_scariness=1",
-                      "print_summary=1",
-                      "print_suppressions=0",
-                      "strict_memcmp=0",
-                      "symbolize=0",
-                      "clear_shadow_mmap_threshold=0",  # avoid leaking memory
-                                                        # (fxb/34570)
-                    ])
+    asan_default_options = string_join(":",
+                                       [
+                                         "alloc_dealloc_mismatch=0",
+                                         "allocator_may_return_null=1",
+                                         "check_malloc_usable_size=0",
+                                         "detect_leaks=0",
+                                         "detect_odr_violation=0",
+                                         "malloc_context_size=128",
+                                         "max_uar_stack_size_log=16",
+                                         "print_scariness=1",
+                                         "print_summary=1",
+                                         "print_suppressions=0",
+                                         "strict_memcmp=0",
+                                         "symbolize=0",
+                                       ])
   }
 }

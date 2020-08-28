@@ -13,10 +13,6 @@ declare_args() {
   # with programs that define their own `__asan_default_options` C
   # function.
   asan_default_options = ""
-  if (is_fuchsia) {
-    # TODO(52369): Temporary until asan runtime decommits large allocations.
-    asan_default_options = "clear_shadow_mmap_threshold=16384"
-  }
 
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
