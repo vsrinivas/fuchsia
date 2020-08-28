@@ -14,7 +14,7 @@ use crate::{
 };
 use anyhow::Error;
 use euclid::{
-    default::{Box2D, Size2D, Vector2D},
+    default::{Box2D, Size2D, Transform2D, Vector2D},
     vec2, Angle,
 };
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
@@ -31,31 +31,24 @@ pub enum DisplayRotation {
     Deg270,
 }
 
-pub struct DisplayAligned;
-
-pub type DisplayAlignedRect = euclid::Rect<Coord, DisplayAligned>;
-
-pub type DisplayTransform2D = euclid::Transform2D<Coord, euclid::UnknownUnit, DisplayAligned>;
-
 impl DisplayRotation {
-    pub fn transform(&self, target_size: &Size2D<Coord>) -> Option<DisplayTransform2D> {
+    pub fn transform(&self, target_size: &Size2D<Coord>) -> Option<Transform2D<Coord>> {
         let post_translation = match self {
             DisplayRotation::Deg90 => Vector2D::new(0.0, target_size.width),
             DisplayRotation::Deg180 => Vector2D::new(target_size.width, target_size.height),
             DisplayRotation::Deg270 => Vector2D::new(target_size.height, 0.0),
             DisplayRotation::Deg0 => Vector2D::zero(),
-        }
-        .cast_unit::<DisplayAligned>();
+        };
         self.rotation().and_then(|transform| Some(transform.post_translate(post_translation)))
     }
 
-    pub fn rotation(&self) -> Option<DisplayTransform2D> {
+    pub fn rotation(&self) -> Option<Transform2D<Coord>> {
         match self {
             DisplayRotation::Deg0 => None,
             _ => {
                 let display_rotation = *self;
                 let angle: Angle<Coord> = display_rotation.into();
-                Some(DisplayTransform2D::create_rotation(angle))
+                Some(Transform2D::create_rotation(angle))
             }
         }
     }
@@ -295,7 +288,7 @@ impl<'a> FontFace<'a> {
 pub struct Glyph {
     pub raster: Raster,
     pub bounding_box: Rect,
-    pub display_bounding_box: DisplayAlignedRect,
+    pub display_bounding_box: Rect,
 }
 
 impl Glyph {
@@ -358,7 +351,7 @@ impl Glyph {
         let display_bounding_box = if let Some(transform) = transform {
             transform.transform_rect(&bounding_box)
         } else {
-            bounding_box.cast_unit::<DisplayAligned>()
+            bounding_box
         };
         let path = path_builder.build();
         let mut raster_builder = context.raster_builder().expect("raster_builder");
@@ -389,7 +382,7 @@ impl GlyphMap {
 pub struct Text {
     pub raster: Raster,
     pub bounding_box: Rect,
-    pub display_bounding_box: DisplayAlignedRect,
+    pub display_bounding_box: Rect,
 }
 
 impl Text {
@@ -403,7 +396,7 @@ impl Text {
     ) -> Self {
         let glyphs = &mut glyph_map.glyphs;
         let display_rotation = glyph_map.rotation;
-        let mut display_bounding_box = DisplayAlignedRect::zero();
+        let mut display_bounding_box = Rect::zero();
         let scale = Scale::uniform(size);
         let v_metrics = face.font.v_metrics(scale);
         let mut ascent = v_metrics.ascent;
@@ -411,7 +404,7 @@ impl Text {
         let transform = glyph_map
             .rotation
             .transform(&Size2D::new(0.0, ascent))
-            .unwrap_or(DisplayTransform2D::identity());
+            .unwrap_or(Transform2D::identity());
 
         for line in wrap_iter(text, wrap) {
             // TODO: adjust vertical alignment of glyphs to match first glyph.

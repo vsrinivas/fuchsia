@@ -6,10 +6,7 @@ use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{
-        path_for_circle, DisplayAligned, DisplayRotation, DisplayTransform2D, FontFace, GlyphMap,
-        Text,
-    },
+    drawing::{path_for_circle, DisplayRotation, FontFace, GlyphMap, Text},
     geometry::IntVector,
     input, make_message,
     render::{
@@ -140,8 +137,8 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 }
 
-fn to_raster_translation_vector(pt: euclid::Point2D<Coord, DisplayAligned>) -> IntVector {
-    pt.cast_unit::<euclid::UnknownUnit>().to_vector().to_i32()
+fn to_raster_translation_vector(pt: Point) -> IntVector {
+    pt.to_vector().to_i32()
 }
 
 struct SizedText {
@@ -352,7 +349,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
 
         // Create a presentation to display tranformation
         let transform =
-            self.display_rotation.transform(&target_size).unwrap_or(DisplayTransform2D::identity());
+            self.display_rotation.transform(&target_size).unwrap_or(Transform2D::identity());
 
         let clear_background_ext =
             RenderExt { pre_clear: Some(PreClear { color: BG_COLOR }), ..Default::default() };

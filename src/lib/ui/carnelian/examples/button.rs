@@ -11,8 +11,8 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{
-        path_for_corner_knockouts, path_for_rectangle, DisplayAligned, DisplayRotation, FontFace,
-        GlyphMap, Paint, Text,
+        path_for_corner_knockouts, path_for_rectangle, DisplayRotation, FontFace, GlyphMap, Paint,
+        Text,
     },
     input::{self},
     make_app_assistant, make_message,
@@ -23,7 +23,7 @@ use carnelian::{
     App, AppAssistant, Coord, IntPoint, Message, Point, Rect, Size, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::Transform2D;
+use euclid::default::Transform2D;
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
 use lazy_static::lazy_static;
 
@@ -312,11 +312,10 @@ impl ButtonViewAssistant {
     fn transform_pointer_location(
         location: IntPoint,
         button_center: Point,
-        transform: &Transform2D<Coord, DisplayAligned, euclid::UnknownUnit>,
+        transform: &Transform2D<Coord>,
     ) -> IntPoint {
-        let transformed_location = transform
-            .transform_point(location.to_f32().cast_unit::<DisplayAligned>())
-            .cast_unit::<euclid::UnknownUnit>();
+        let transformed_location =
+            transform.transform_point(location.to_f32()).cast_unit::<euclid::UnknownUnit>();
         (transformed_location - button_center.to_vector()).to_i32()
     }
 }
@@ -370,7 +369,7 @@ impl ViewAssistant for ButtonViewAssistant {
         let display_indicator_pos = if let Some(transform) = transform {
             transform.transform_point(indicator_pos)
         } else {
-            indicator_pos.cast_unit::<DisplayAligned>()
+            indicator_pos
         };
 
         // create a raster for the indicator. raster_for_rectangle will transform it
@@ -414,7 +413,7 @@ impl ViewAssistant for ButtonViewAssistant {
         let button_location = if let Some(transform) = transform {
             transform.transform_point(button_location)
         } else {
-            button_location.cast_unit::<DisplayAligned>()
+            button_location
         };
 
         // Calculate the label location in presentation space
@@ -424,7 +423,7 @@ impl ViewAssistant for ButtonViewAssistant {
         let label_location = if let Some(transform) = transform {
             transform.transform_point(label_location)
         } else {
-            label_location.cast_unit::<DisplayAligned>()
+            label_location
         };
 
         // Create layers from the rasters, styles and transformed locations.
