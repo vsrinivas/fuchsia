@@ -33,6 +33,7 @@ template("sherlock_driver") {
     }
 
     sources = [
+      "luis-thermal.cc",
       "sherlock-audio.cc",
       "sherlock-backlight.cc",
       "sherlock-bluetooth.cc",

@@ -269,7 +269,7 @@ const device_fragment_t fragments[] = {
 
 }  // namespace
 
-zx_status_t Sherlock::ThermalInit() {
+zx_status_t Sherlock::SherlockThermalInit() {
   // Configure the GPIO to be Output & set it to alternate
   // function 3 which puts in PWM_D mode. A53 cluster (Small)
   gpio_impl_.SetAltFunction(T931_GPIOE(1), kPwmDFn);
@@ -296,6 +296,22 @@ zx_status_t Sherlock::ThermalInit() {
     return status;
   }
   return status;
+}
+
+zx_status_t Sherlock::ThermalInit() {
+  switch (pid_) {
+    case PDEV_PID_LUIS:
+      // TODO(pshickel): while we migrate Luis from the legacy thermal driver to the new one, we
+      // need to call both LuisThermalInit and SherlockThermalInit so that both drivers have the
+      // opportunity to bind. The driver that ultimately binds will be determined by the build
+      // configuration (only one of the drivers should be built into the image). Remove the call to
+      // SherlockThermalInit after Luis has been migrated to the new thermal driver.
+      return LuisThermalInit() || SherlockThermalInit();
+    case PDEV_PID_SHERLOCK:
+      return SherlockThermalInit();
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 }  // namespace sherlock
