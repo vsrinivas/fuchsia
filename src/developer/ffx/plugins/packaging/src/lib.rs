@@ -6,8 +6,9 @@ mod archive;
 mod constants;
 mod repository;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
+use ffx_error::printable_error;
 use ffx_packaging_args::{BuildCommand, PackageCommand, SubCommand};
 use repository::Repository;
 use std::collections::BTreeMap;
@@ -31,7 +32,7 @@ struct ManifestEntry {
 }
 
 fn parse_entry(entry: String) -> Result<ManifestEntry> {
-    let equals_index = entry.find('=').ok_or(anyhow!("manifest entry must contain ="))?;
+    let equals_index = entry.find('=').ok_or(printable_error!("manifest entry must contain ="))?;
     let (path, source) = entry.split_at(equals_index);
     let source = &source[1..];
     Ok(ManifestEntry { path: path.into(), source: source.into() })

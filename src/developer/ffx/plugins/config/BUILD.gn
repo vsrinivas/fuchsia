@@ -9,6 +9,7 @@ ffx_plugin("ffx_config_plugin") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//src/developer/ffx/common/error",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]

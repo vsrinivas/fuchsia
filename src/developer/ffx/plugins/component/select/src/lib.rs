@@ -4,16 +4,13 @@
 
 use {
     anyhow::{Context, Result},
+    ffx_component::SELECTOR_FORMAT_HELP,
     ffx_core::ffx_plugin,
+    ffx_error::printable_error,
     ffx_select_args::SelectCommand,
     fidl_fuchsia_developer_remotecontrol as rc, selectors,
     std::io::{stdout, Write},
 };
-
-pub const SELECTOR_FORMAT_HELP: &str = "Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:out:*' would return all services in 'out' for the component remote-control.
-
-Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 #[ffx_plugin()]
 pub async fn select_cmd(remote_proxy: rc::RemoteControlProxy, cmd: SelectCommand) -> Result<()> {
@@ -27,14 +24,12 @@ async fn select<W: Write>(
     selector: &str,
 ) -> Result<()> {
     let writer = &mut write;
-    let selector = match selectors::parse_selector(selector) {
-        Ok(s) => s,
-        Err(e) => {
-            writeln!(writer, "Failed to parse the provided selector: {:?}", e)?;
-            writeln!(writer, "{}", SELECTOR_FORMAT_HELP)?;
-            return Ok(());
-        }
-    };
+    let selector = selectors::parse_selector(selector).map_err(|e| {
+        printable_error!(format!(
+            "Invalid selector '{}': {}\n{}",
+            selector, e, SELECTOR_FORMAT_HELP
+        ))
+    })?;
 
     match remote_proxy.select(selector).await.context("awaiting select call")? {
         Ok(paths) => {
@@ -127,8 +122,9 @@ core/test
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server();
-        let _response = select(remote_proxy, writer, "a:b:").await.expect("select should not fail");
-        assert!(output.contains(SELECTOR_FORMAT_HELP));
+        let response = select(remote_proxy, writer, "a:b:").await;
+        let e = response.unwrap_err();
+        assert!(e.to_string().contains(SELECTOR_FORMAT_HELP));
         Ok(())
     }
 

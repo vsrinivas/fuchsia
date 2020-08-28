@@ -5,6 +5,7 @@
 use {
     anyhow::{Context, Result},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
+    ffx_error::FfxError,
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
@@ -66,7 +67,11 @@ async fn main() {
     match run().await {
         Ok(_) => std::process::exit(0),
         Err(err) => {
-            eprintln!("BUG: An internal command error occurred.\n{:?}", err);
+            if let Some(ffx_err) = err.downcast_ref::<FfxError>() {
+                eprintln!("{}", ffx_err);
+            } else {
+                eprintln!("BUG: An internal command error occurred.\n{:?}", err);
+            }
             std::process::exit(1);
         }
     }

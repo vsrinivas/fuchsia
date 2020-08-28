@@ -12,6 +12,7 @@ use {
         SetCommand, SubCommand,
     },
     ffx_core::ffx_plugin,
+    ffx_error::printable_error,
     serde_json::Value,
     std::collections::HashMap,
     std::io::Write,
@@ -78,13 +79,13 @@ fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Resul
                     env.build = Some(build);
                 }
             },
-            None => bail!("Missing --build-dir flag"),
+            None => bail!(printable_error!("Missing --build-dir flag")),
         },
         ConfigLevel::Global => match env.global.as_mut() {
             Some(v) => *v = file_str,
             None => env.global = Some(file_str),
         },
-        _ => bail!("This configuration is not stored in the enivronment."),
+        _ => bail!(printable_error!("This configuration is not stored in the enivronment.")),
     }
     env.save(&file)
 }
