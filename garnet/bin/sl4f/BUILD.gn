@@ -34,6 +34,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
+    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc-rustc",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera-rustc",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
@@ -142,6 +143,10 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/adc/commands.rs",
+    "src/adc/facade.rs",
+    "src/adc/mod.rs",
+    "src/adc/types.rs",
     "src/audio/commands.rs",
     "src/audio/facade.rs",
     "src/audio/mod.rs",

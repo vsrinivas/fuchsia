@@ -34,6 +34,7 @@ pub mod kernel;
 pub mod light;
 pub mod location;
 pub mod logging;
+pub mod adc;
 pub mod netstack;
 pub mod paver;
 pub mod proxy;

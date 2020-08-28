@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/adc",
             "class/aml-ram",
             "class/backlight",
             "class/camera",
