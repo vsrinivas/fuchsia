@@ -141,6 +141,7 @@ class App {
   // The user's i18n profile.
   std::optional<fuchsia::intl::Profile> i18n_profile_;
   // End of list of data fields that must be set to consider this object initialized.
+  bool is_initialized_ = false;
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   a11y::ViewManager* view_manager_;

@@ -72,8 +72,17 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   // Connects to property provider to retrieve the current locale. Also adds a handler for the event
   // to process when the locale changes.
   property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
-  property_provider_.set_error_handler([](zx_status_t status) {
+  property_provider_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
+    if (status == ZX_ERR_PEER_CLOSED) {
+      FX_LOGS(ERROR) << "Using the default locale: en-US";
+      fuchsia::intl::Profile default_profile;
+      this->i18n_profile_ = std::move(default_profile);
+      this->i18n_profile_->mutable_locales()->push_back({.id = "en-US"});
+      if (!is_initialized_) {
+        FinishSetUp();
+      }
+    }
   });
   property_provider_.events().OnChange =
       fit::bind_member(this, &App::PropertyProviderOnChangeHandler);
@@ -97,6 +106,7 @@ void App::FinishSetUp() {
   FX_DCHECK(i18n_profile_) << "App is being initialized without i18n profile from user.";
   // Start watching setui for current settings
   WatchSetui();
+  is_initialized_ = true;
 }
 
 void App::SetState(A11yManagerState state) {
