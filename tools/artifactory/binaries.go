@@ -20,11 +20,11 @@ const (
 // DebugBinaryUploads parses the binary manifest associated to a build and
 // returns a list of Uploads of debug binaries and a list of associated fuchsia
 // build IDs.
-func DebugBinaryUploads(mods *build.Modules, namespace string) ([]Upload, []string, error) {
-	return debugBinaryUploads(mods, namespace)
+func DebugBinaryUploads(mods *build.Modules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
+	return debugBinaryUploads(mods, debugNamespace, buildidNamespace)
 }
 
-func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, error) {
+func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
 	bins := mods.Binaries()
 	for _, pb := range mods.PrebuiltBinaries() {
 		if pb.Manifest == "" {
@@ -74,10 +74,26 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 		}
 		uploads = append(uploads, Upload{
 			Source:      debugSrc,
-			Destination: fmt.Sprintf("%s/%s.debug", namespace, id),
+			Destination: fmt.Sprintf("%s/%s.debug", debugNamespace, id),
 			Deduplicate: true,
 			Compress:    true,
 		})
+
+		// Upload in debuginfod API format.
+		uploads = append(uploads, Upload{
+			Source:      debugSrc,
+			Destination: fmt.Sprintf("%s/%s/debuginfo", buildidNamespace, id),
+			Deduplicate: true,
+			Compress:    true,
+		})
+		if bin.Dist != "" {
+			uploads = append(uploads, Upload{
+				Source:      filepath.Join(mods.BuildDir(), bin.Dist),
+				Destination: fmt.Sprintf("%s/%s/executable", buildidNamespace, id),
+				Deduplicate: true,
+				Compress:    true,
+			})
+		}
 
 		// If we configured the build to output breakpad symbols, then
 		// assert that the associated breakpad file here was present, as the
@@ -100,7 +116,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			}
 			uploads = append(uploads, Upload{
 				Source:      breakpadSrc,
-				Destination: fmt.Sprintf("%s/%s.sym", namespace, id),
+				Destination: fmt.Sprintf("%s/%s.sym", debugNamespace, id),
 				Deduplicate: true,
 				Compress:    true,
 			})

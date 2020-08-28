@@ -45,6 +45,7 @@ const (
 	// Names of directories to be uploaded to in GCS.
 	buildsDirName   = "builds"
 	buildAPIDirName = "build_api"
+	buildidDirName  = "buildid"
 	debugDirName    = "debug"
 	imageDirName    = "images"
 	packageDirName  = "packages"
@@ -93,7 +94,9 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   ├── blobs
 │   │   │   └── <blob names>
 │   │   ├── debug
-│   │   │   └── <debug binaries>
+│   │   │   └── <debug binaries in zxdb format>
+│   │   ├── buildid
+│   │   │   └── <debug binaries in debuginfod format>
 │   │   ├── builds
 │   │   │   ├── $UUID
 │   │   │   │   ├── build-ids.txt
@@ -233,7 +236,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	tools := artifactory.ToolUploads(m, path.Join(buildsUUIDDir, toolDirName))
 	files = append(files, tools...)
 
-	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName)
+	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName, buildidDirName)
 	if err != nil {
 		return err
 	}
