@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,10 +33,7 @@ func untar(dst string, src string) error {
 		return err
 	}
 	defer gz.Close()
-
-	tr := tar.NewReader(gz)
-
-	for {
+	for tr := tar.NewReader(gz); ; {
 		header, err := tr.Next()
 		if err == io.EOF {
 			return nil
@@ -58,23 +56,24 @@ func untar(dst string, src string) error {
 			if err != nil {
 				return err
 			}
-
-			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
+			_, err = io.Copy(f, tr)
+			f.Close()
+			if err != nil {
 				return err
 			}
-
-			f.Close()
 		}
 	}
 }
 
 // Distribution is a collection of QEMU-related artifacts.
+//
+// Delete must be called once done with it.
 type Distribution struct {
-	exPath       string
+	testDataDir  string
 	unpackedPath string
 }
 
+// Arch is the architecture to emulate.
 type Arch int
 
 const (
@@ -92,6 +91,7 @@ type Params struct {
 	DisableDebugExit bool
 }
 
+// Instance is a live QEMU instance.
 type Instance struct {
 	cmd    *exec.Cmd
 	piped  *exec.Cmd
@@ -101,39 +101,49 @@ type Instance struct {
 }
 
 // Unpack unpacks the QEMU distribution.
+//
+// TODO(fxb/58804): Replace all call sites to UnpackFrom.
 func Unpack() (*Distribution, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-	exPath := filepath.Dir(ex)
-	archivePath := filepath.Join(exPath, "test_data/qemu/qemu.tar.gz")
+	return UnpackFrom(filepath.Join(filepath.Dir(ex), "test_data"))
+}
 
+// UnpackFrom unpacks the QEMU distribution.
+//
+// path is the path to host_x64/test_data containing qemu/qemu.tar.gz.
+func UnpackFrom(path string) (*Distribution, error) {
+	// Since QEMU will be started from a different directory, make the base path
+	// absolute.
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	archivePath := filepath.Join(path, "qemu", "qemu.tar.gz")
 	unpackedPath, err := ioutil.TempDir("", "qemu-distro")
 	if err != nil {
 		return nil, err
 	}
-
-	err = untar(unpackedPath, archivePath)
-	if err != nil {
+	if err = untar(unpackedPath, archivePath); err != nil {
 		os.RemoveAll(unpackedPath)
 		return nil, err
 	}
-
-	return &Distribution{exPath: exPath, unpackedPath: unpackedPath}, nil
+	return &Distribution{testDataDir: path, unpackedPath: unpackedPath}, nil
 }
 
 // Delete removes the QEMU-related artifacts.
-func (d *Distribution) Delete() {
-	os.RemoveAll(d.unpackedPath)
+func (d *Distribution) Delete() error {
+	return os.RemoveAll(d.unpackedPath)
 }
 
 func (d *Distribution) systemPath(arch Arch) string {
 	switch arch {
 	case X64:
-		return filepath.Join(d.unpackedPath, "bin/qemu-system-x86_64")
+		return filepath.Join(d.unpackedPath, "bin", "qemu-system-x86_64")
 	case Arm64:
-		return filepath.Join(d.unpackedPath, "bin/qemu-system-aarch64")
+		return filepath.Join(d.unpackedPath, "bin", "qemu-system-aarch64")
 	}
 	return ""
 }
@@ -141,9 +151,9 @@ func (d *Distribution) systemPath(arch Arch) string {
 func (d *Distribution) kernelPath(arch Arch) string {
 	switch arch {
 	case X64:
-		return filepath.Join(d.exPath, "test_data/qemu/multiboot.bin")
+		return filepath.Join(d.testDataDir, "qemu", "multiboot.bin")
 	case Arm64:
-		return filepath.Join(d.exPath, "test_data/qemu/qemu-boot-shim.bin")
+		return filepath.Join(d.testDataDir, "qemu", "qemu-boot-shim.bin")
 	}
 	return ""
 }
@@ -166,7 +176,7 @@ func hostSupportsKVM(arch Arch) bool {
 
 // TargetCPU returs the target CPU used by the build that produced this library.
 func (d *Distribution) TargetCPU() (Arch, error) {
-	path := filepath.Join(d.exPath, "test_data/qemu/target_cpu.txt")
+	path := filepath.Join(d.testDataDir, "qemu", "target_cpu.txt")
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return X64, err
@@ -228,107 +238,74 @@ func getCommonKernelCmdline(params Params) string {
 
 // Create creates an instance of QEMU with the given parameters.
 func (d *Distribution) Create(params Params) *Instance {
-	path := d.systemPath(params.Arch)
-	args := []string{}
 	if params.ZBI == "" {
 		panic("ZBI must be specified")
 	}
-	args = append(args, "-initrd", params.ZBI)
+	args := []string{"-initrd", params.ZBI}
 	args = d.appendCommonQemuArgs(params, args)
 	args = append(args, "-append", getCommonKernelCmdline(params))
+	path := d.systemPath(params.Arch)
 	fmt.Printf("Running %s %s\n", path, args)
-	i := &Instance{
+	return &Instance{
 		cmd: exec.Command(path, args...),
 	}
-
-	// QEMU looks in the cwd for some specially named files, in particular
-	// multiboot.bin, so avoid picking those up accidentally. See
-	// https://fxbug.dev/53751.
-	i.cmd.Dir = "/"
-
-	return i
 }
 
-// Creates and runs an instance of QEMU that runs a single command and results
-// the log that results from doing so.
-// and `minfs` to be included in the BUILD.gn file (see disable_syscall_test's
-// BUILD file.)
-func (d *Distribution) RunNonInteractive(
-	toRun string,
-	hostPathMinfsBinary string,
-	hostPathZbiBinary string,
-	params Params) (string, string, error) {
-	// This mode is non-interactive and is intended specifically to test the case
-	// where the serial port has been disabled. The following modifications are
-	// made to the QEMU invocation compared with Create()/Start():
-	// - amalgamate the given ZBI into a larger one that includes an additional
-	//   entry of a script which includes commands to run.
-	// - that script mounts a disk created on the host in /tmp, and runs the
-	//   given command with output redirected to a file also on the /tmp disk
-	// - the script triggers shutdown of the machine
-	// - after qemu shutdown, the log file is extracted and returned.
-	//
-	// In order to achive this, here we need to create the host minfs
-	// filesystem, write the commands to run, build the augmented .zbi to
-	// be used to boot. We then use Start() and wait for shutdown.
-	// Finally, extract and return the log from the minfs disk.
-
-	// Make the temp files we need.
-	tmpFsFile, err := ioutil.TempFile(os.TempDir(), "*.fs")
+// RunNonInteractive runs an instance of QEMU that runs a single command and
+// returns the log that results from doing so.
+//
+// This mode is non-interactive and is intended specifically to test the case
+// where the serial port has been disabled. The following modifications are
+// made to the QEMU invocation compared with Create()/Start():
+//
+//  - amalgamate the given ZBI into a larger one that includes an additional
+//    entry of a script which includes commands to run.
+//  - that script mounts a disk created on the host in /tmp, and runs the
+//    given command with output redirected to a file also on the /tmp disk
+//  - the script triggers shutdown of the machine
+//  - after qemu shutdown, the log file is extracted and returned.
+//
+// In order to achieve this, here we need to create the host minfs
+// file system, write the commands to run, build the augmented .zbi to
+// be used to boot. We then use Start() and wait for shutdown.
+// Finally, extract and return the log from the minfs disk.
+func (d *Distribution) RunNonInteractive(toRun, hostPathMinfsBinary, hostPathZbiBinary string, params Params) (string, string, error) {
+	root, err := ioutil.TempDir("", "qemu")
 	if err != nil {
 		return "", "", err
 	}
-	defer os.Remove(tmpFsFile.Name())
-
-	tmpRuncmds, err := ioutil.TempFile(os.TempDir(), "runcmds_*")
-	if err != nil {
-		return "", "", err
+	log, logerr, err := d.runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary, params)
+	if err2 := os.RemoveAll(root); err == nil {
+		err = err2
 	}
-	defer os.Remove(tmpRuncmds.Name())
+	return log, logerr, err
+}
 
-	tmpZbi, err := ioutil.TempFile(os.TempDir(), "*.zbi")
-	if err != nil {
-		return "", "", err
-	}
-	defer os.Remove(tmpZbi.Name())
-
-	tmpLog, err := ioutil.TempFile(os.TempDir(), "log.*.txt")
-	if err != nil {
-		return "", "", err
-	}
-	defer os.Remove(tmpLog.Name())
-
-	tmpErr, err := ioutil.TempFile(os.TempDir(), "err.*.txt")
-	if err != nil {
-		return "", "", err
-	}
-	defer os.Remove(tmpErr.Name())
-
+func (d *Distribution) runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary string, params Params) (string, string, error) {
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
-	tmpRuncmds.WriteString(`mkdir /tmp/testdata-fs
+	b := `mkdir /tmp/testdata-fs
 waitfor class=block topo=/dev/sys/pci/00:06.0/virtio-block/block timeout=60000
 mount /dev/sys/pci/00:06.0/virtio-block/block /tmp/testdata-fs
-`)
-	tmpRuncmds.WriteString(toRun + " 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt\n")
-	tmpRuncmds.WriteString(`umount /tmp/testdata-fs
+` + toRun + ` 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt
+umount /tmp/testdata-fs
 dm poweroff
-`)
-
+`
+	runcmds := filepath.Join(root, "runcmds.txt")
+	if err := ioutil.WriteFile(runcmds, []byte(b), 0666); err != nil {
+		return "", "", err
+	}
 	// Make a minfs filesystem to mount in the target.
-	cmd := exec.Command(hostPathMinfsBinary, tmpFsFile.Name()+"@100M", "mkfs")
-	err = cmd.Run()
-	if err != nil {
+	fs := filepath.Join(root, "a.fs")
+	cmd := exec.Command(hostPathMinfsBinary, fs+"@100M", "mkfs")
+	if err := cmd.Run(); err != nil {
 		return "", "", err
 	}
 
 	// Create the new initrd that references the runcmds file.
-	cmd = exec.Command(
-		hostPathZbiBinary, "-o", tmpZbi.Name(),
-		params.ZBI,
-		"-e", "runcmds="+tmpRuncmds.Name())
-	err = cmd.Run()
-	if err != nil {
+	zbi := filepath.Join(root, "a.zbi")
+	cmd = exec.Command(hostPathZbiBinary, "-o", zbi, params.ZBI, "-e", "runcmds="+runcmds)
+	if err := cmd.Run(); err != nil {
 		return "", "", err
 	}
 
@@ -336,14 +313,11 @@ dm poweroff
 	// add the temporary disk at 00:06.0. This follows how infra runs qemu with an
 	// extra disk via botanist.
 	path := d.systemPath(params.Arch)
-	args := []string{}
-	args = append(args, "-initrd", tmpZbi.Name())
+	args := []string{"-initrd", zbi}
 	args = d.appendCommonQemuArgs(params, args)
 	args = append(args, "-object", "iothread,id=resultiothread")
-	args = append(args, "-drive",
-		"id=resultdisk,file="+tmpFsFile.Name()+",format=raw,if=none,cache=unsafe,aio=threads")
+	args = append(args, "-drive", "id=resultdisk,file="+fs+",format=raw,if=none,cache=unsafe,aio=threads")
 	args = append(args, "-device", "virtio-blk-pci,drive=resultdisk,iothread=resultiothread,addr=6.0")
-
 	cmdline := getCommonKernelCmdline(params)
 	cmdline += " zircon.autorun.boot=/boot/bin/sh+/boot/runcmds"
 	args = append(args, "-append", cmdline)
@@ -355,46 +329,38 @@ dm poweroff
 	// QEMU looks in the cwd for some specially named files, in particular
 	// multiboot.bin, so avoid picking those up accidentally. See
 	// https://fxbug.dev/53751.
+	// TODO(fxb/58804): Remove this.
 	cmd.Dir = "/"
-	if err = cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return "", "", err
 	}
 	defer cmd.Process.Kill()
-
-	err = cmd.Wait()
-	if err != nil {
+	if err := cmd.Wait(); err != nil {
 		return "", "", err
 	}
 
-	os.Remove(tmpLog.Name()) // `minfs` will refuse to overwrite a local file, so delete first.
-	cmd = exec.Command(hostPathMinfsBinary, tmpFsFile.Name(), "cp", "::/log.txt", tmpLog.Name())
-	err = cmd.Run()
-	if err != nil {
+	log := filepath.Join(root, "log.txt")
+	logerr := filepath.Join(root, "err.txt")
+	cmd = exec.Command(hostPathMinfsBinary, fs, "cp", "::/log.txt", log)
+	if err := cmd.Run(); err != nil {
+		return "", "", err
+	}
+	cmd = exec.Command(hostPathMinfsBinary, fs, "cp", "::/err.txt", logerr)
+	if err := cmd.Run(); err != nil {
 		return "", "", err
 	}
 
-	os.Remove(tmpErr.Name()) // `minfs` will refuse to overwrite a local file, so delete first.
-	cmd = exec.Command(hostPathMinfsBinary, tmpFsFile.Name(), "cp", "::/err.txt", tmpErr.Name())
-	err = cmd.Run()
+	retLog, err := ioutil.ReadFile(log)
 	if err != nil {
 		return "", "", err
 	}
-
-	retLog, err := ioutil.ReadFile(tmpLog.Name())
+	retErr, err := ioutil.ReadFile(logerr)
 	if err != nil {
 		return "", "", err
 	}
-	retErr, err := ioutil.ReadFile(tmpErr.Name())
-	if err != nil {
-		return "", "", err
-	}
-
-	fmt.Printf("===== %s non-interactive run stdout =====\n", toRun)
-	fmt.Print(string(retLog))
-	fmt.Printf("===== %s non-interactive run stderr =====\n", toRun)
-	fmt.Print(string(retErr))
+	fmt.Printf("===== %s non-interactive run stdout =====\n%s\n", toRun, retLog)
+	fmt.Printf("===== %s non-interactive run stderr =====\n%s\n", toRun, retErr)
 	fmt.Printf("===== %s end =====\n", toRun)
-
 	return string(retLog), string(retErr), nil
 }
 
@@ -403,8 +369,11 @@ func (i *Instance) Start() error {
 	return i.StartPiped(nil)
 }
 
-// Start the QEMU instance with stdin/stdout piped through a different process.
-// Assumes that the stderr from the piped process should replace the stdout from the emulator.
+// StartPiped starts the QEMU instance with stdin/stdout piped through a
+// different process.
+//
+// Assumes that the stderr from the piped process should replace the stdout
+// from the emulator.
 func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	stdin, err := i.cmd.StdinPipe()
 	if err != nil {
@@ -420,25 +389,15 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	}
 
 	if piped != nil {
-		pipedStdin, err := piped.StdinPipe()
-		if err != nil {
-			return err
-		}
-		pipedStdout, err := piped.StdoutPipe()
-		if err != nil {
-			return err
-		}
+		piped.Stdin = stdout
+		piped.Stdout = stdin
 		pipedStderr, err := piped.StderrPipe()
 		if err != nil {
 			return err
 		}
-		go io.Copy(pipedStdin, stdout)
-		go io.Copy(stdin, pipedStdout)
 		i.stdout = bufio.NewReader(pipedStderr)
 		i.stderr = bufio.NewReader(stderr)
-
-		err = piped.Start()
-		if err != nil {
+		if err = piped.Start(); err != nil {
 			return err
 		}
 		i.piped = piped
@@ -468,20 +427,20 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 
 // Kill terminates the QEMU instance.
 func (i *Instance) Kill() error {
+	var err error
 	if i.piped != nil {
-		err := i.piped.Process.Kill()
-		if err != nil {
-			return err
-		}
+		err = i.piped.Process.Kill()
 	}
-	return i.cmd.Process.Kill()
+	if err2 := i.cmd.Process.Kill(); err2 != nil {
+		return err2
+	}
+	return err
 }
 
 // Wait for the QEMU instance to terminate
 func (i *Instance) Wait() (*os.ProcessState, error) {
 	if i.piped != nil {
-		ps, err := i.piped.Process.Wait()
-		if err != nil {
+		if ps, err := i.piped.Process.Wait(); err != nil {
 			return ps, err
 		}
 	}
@@ -489,42 +448,54 @@ func (i *Instance) Wait() (*os.ProcessState, error) {
 	return ps, err
 }
 
-// RunCommand runs the given command in the serial console for the QEMU instance.
-func (i *Instance) RunCommand(cmd string) {
-	_, err := i.stdin.WriteString(fmt.Sprintf("%s\n", cmd))
+// RunCommand runs the given command in the serial console for the QEMU
+// instance.
+func (i *Instance) RunCommand(cmd string) error {
+	_, err := fmt.Fprintf(i.stdin, "%s\n", cmd)
 	if err != nil {
+		// TODO(maruel): remove once call sites are updated.
 		panic(err)
+		return err
 	}
 	err = i.stdin.Flush()
 	if err != nil {
+		// TODO(maruel): remove once call sites are updated.
 		panic(err)
 	}
+	return err
 }
 
 // WaitForLogMessage reads log messages from the QEMU instance until it reads a
-// message that contains the given string. panic()s on error (and in particular
-// if the string is not seen until EOF).
-func (i *Instance) WaitForLogMessage(msg string) {
+// message that contains the given string.
+//
+// panic()s on error (and in particular if the string is not seen until EOF).
+func (i *Instance) WaitForLogMessage(msg string) error {
 	err := i.checkForLogMessage(i.stdout, msg)
 	if err != nil {
+		// TODO(maruel): remove once call sites are updated.
 		panic(err)
 	}
+	return err
 }
 
 // WaitForLogMessageAssertNotSeen is the same as WaitForLogMessage() but with
 // the addition that it will panic if |notSeen| is contained in a retrieved
 // message.
-func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) {
+func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) error {
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
+			// TODO(maruel): remove once call sites are updated.
 			panic(err)
+			return err
 		}
 		if strings.Contains(line, msg) {
-			return
+			return nil
 		}
 		if strings.Contains(line, notSeen) {
+			// TODO(maruel): remove once call sites are updated.
 			panic(notSeen + " was in output")
+			return errors.New(notSeen + " was in output")
 		}
 	}
 }
@@ -532,19 +503,21 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) {
 // AssertLogMessageNotSeenWithinTimeout will fail if |notSeen| is seen within the
 // |timeout| period. This function will timeout as success if more than |timeout| has
 // passed without seeing |notSeen|.
-func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout time.Duration) {
+func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout time.Duration) error {
 	// ReadString is blocking, we need to make sure it respects the global timeout.
-	seen := make(chan bool)
+	seen := make(chan struct{})
+	stop := make(chan struct{})
+	defer close(stop)
 	go func() {
+		defer close(seen)
 		for {
 			select {
-			case <-seen:
+			case <-stop:
 				return
 			default:
-				line, err := i.stdout.ReadString('\n')
-				if err == nil {
+				if line, err := i.stdout.ReadString('\n'); err == nil {
 					if strings.Contains(line, notSeen) {
-						seen <- true
+						seen <- struct{}{}
 						return
 					}
 				}
@@ -553,11 +526,10 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 	}()
 	select {
 	case <-seen:
-		close(seen)
 		panic(notSeen + " was in output")
+		return errors.New(notSeen + " was in output")
 	case <-time.After(timeout):
-		close(seen)
-		return
+		return nil
 	}
 }
 
@@ -579,7 +551,7 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 				}
 				fmt.Print(stderr)
 			}
-			panic(err)
+			return err
 		}
 
 		// Drop the QEMU clearing preamble as it makes it difficult to see output
@@ -589,7 +561,6 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 			toPrint = toPrint[len(qemuClearPrefix):]
 		}
 		fmt.Print(toPrint)
-
 		if strings.Contains(line, msg) {
 			return nil
 		}

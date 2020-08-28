@@ -6,7 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/testing/host_test_data.gni")
 
-# Currently, we ony support working with the QEMU simulator on Linux.
+# Currently, we only support working with the QEMU simulator on Linux.
 if (is_linux) {
   # The infrastructure does not provide a way for host tests to access
   # qemu, so we need to archive our own copy of qemu from the source
