@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/pprof"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph"
@@ -30,6 +31,8 @@ var (
 	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
 	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
 	criticalPath = flag.Bool("critical-path", false, "whether only include critical path in the trace, --ninjagraph must be set for this to work")
+	buildDir     = flag.String("build-dir", "", "path of the directory where ninja is run; when non-empty, ninjatrace will look for subtraces in this directory to interleave in the main trace")
+	granularity  = flag.Duration("granularity", 100*time.Millisecond, "time granularity used to filter short events in interleaved sub traces, for example traces from clang and rustc; this flag does NOT affect the main trace")
 
 	traceJSON  = flag.String("trace-json", "trace.json", "output path of trace.json")
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
@@ -127,6 +130,13 @@ func main() {
 	traces, err := convert(*ninjalogPath)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *buildDir != "" {
+		interleaved, err := ninjalog.ClangTracesToInterleave(traces, *buildDir, *granularity)
+		if err != nil {
+			log.Fatalf("Failed to interleave clang trace: %v", err)
+		}
+		traces = append(traces, interleaved...)
 	}
 	if *traceJSON != "" {
 		if err := output(*traceJSON, traces); err != nil {
