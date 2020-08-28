@@ -56,6 +56,10 @@ template("trace_library") {
   }
 }
 
+set_defaults("trace_library") {
+  configs = default_common_binary_configs
+}
+
 # The default version for the normal case, and for the SDK.
 # For the SDK this needs to be published as "source": We're implemented in
 # C++ and C++ SDK libraries can't be published as "static".
@@ -65,6 +69,10 @@ trace_library("trace") {
   sdk = "source"
   public_deps = [ "//zircon/system/ulib/trace-engine" ]
   deps = [ "//zircon/system/ulib/trace-engine" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # A special version for programs and shared libraries that can't use
