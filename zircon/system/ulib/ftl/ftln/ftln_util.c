@@ -687,8 +687,10 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
 #if FTLN_DEBUG
   // Read page spare area and assert VPNs match.
   ++ftl->stats.read_spare;
-  PfAssert(ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0);
-  PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
+  // Ignore errors here.
+  if (ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0) {
+    PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
+  }
 #endif
 }  // lint !e818
 
