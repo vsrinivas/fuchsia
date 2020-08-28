@@ -1,0 +1,40 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = ./work/index.txt
+default_md = default
+policy = policy_any
+rand_serial = yes
+email_in_dn = no
+default_days = 1
+
+[ policy_any ]
+countryName = optional
+stateOrProvinceName = optional
+organizationName = optional
+organizationalUnitName = optional
+commonName = supplied
+emailAddress = optional
+
+[ ca_ext ]
+basicConstraints = critical,CA:true,pathlen:1
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = cRLSign,keyCertSign
+
+[ intermediate ]
+basicConstraints = critical,CA:true,pathlen:0
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = cRLSign,keyCertSign
+
+[ server ]
+basicConstraints = critical,CA:false
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+keyUsage = nonRepudiation,digitalSignature,keyEncipherment
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost

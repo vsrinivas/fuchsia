@@ -25,12 +25,29 @@ rustc_library("httpdate-hyper") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rustls",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:webpki",
   ]
 
   sources = [ "src/lib.rs" ]
+
+  test_deps = [
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tokio",
+    "//third_party/rust_crates:tokio-rustls",
+  ]
+
+  inputs = [
+    "certs/ca.cert",
+    "certs/notafter",
+    "certs/notbefore",
+    "certs/server.rsa",
+    "certs/server.certchain",
+  ]
 }
 
 test_package("httpdate-hyper-tests") {

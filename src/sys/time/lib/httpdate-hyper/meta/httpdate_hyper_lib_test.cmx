@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
             }
         }
@@ -14,6 +15,8 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"
         ]
     }
