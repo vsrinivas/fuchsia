@@ -115,7 +115,6 @@ template("ffx_plugin") {
                                  "deps",
                                  "args_deps",
                                  "config_data",
-                                 "extra_deps",
                                  "args_source_root",
                                  "source_root",
                                  "sources",
@@ -131,13 +130,6 @@ template("ffx_plugin") {
     args_source_root = "src/args.rs"
     if (defined(invoker.args_source_root)) {
       args_source_root = invoker.args_source_root
-    }
-
-    extra_deps = []
-    if (defined(invoker.extra_deps)) {
-      foreach(d, invoker.extra_deps) {
-        extra_deps += [ d ]
-      }
     }
 
     if (defined(invoker.config_data)) {
@@ -159,8 +151,9 @@ template("ffx_plugin") {
 
     rustc_library(args) {
       source_root = args_source_root
-      deps = args_deps + extra_deps + [
+      deps = args_deps + [
                "//src/developer/ffx/core:lib",
+               "//src/developer/ffx/config:lib",
                "//third_party/rust_crates:argh",
              ]
       non_rust_deps = [ "//third_party/boringssl" ]

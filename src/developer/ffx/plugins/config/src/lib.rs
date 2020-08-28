@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Result},
-    ffx_config::{environment::Environment, find_env_file, get, print, remove, set},
+    anyhow::{anyhow, bail, Result},
+    ffx_config::{env_file, environment::Environment, get, print, remove, set, ConfigLevel},
     ffx_config_plugin_args::{
-        ConfigCommand, ConfigLevel, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
-        RemoveCommand, SetCommand, SubCommand,
+        ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
+        SetCommand, SubCommand,
     },
     ffx_core::ffx_plugin,
     serde_json::Value,
@@ -89,7 +89,7 @@ fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Resul
 }
 
 fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
-    let file = find_env_file()?;
+    let file = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut env = Environment::load(&file)?;
     match &env_command.access {
         Some(a) => match a {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_config::ConfigLevel, ffx_core::ffx_command};
 
 #[ffx_command]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -25,15 +25,6 @@ pub enum SubCommand {
     Remove(RemoveCommand),
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum ConfigLevel {
-    Default,
-    Build,
-    Global,
-    User,
-    Runtime,
-}
-
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "set", description = "set config settings")]
 pub struct SetCommand {
@@ -47,7 +38,7 @@ pub struct SetCommand {
 
     #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
-    pub level: ConfigLevel,
+    pub level: ffx_config::ConfigLevel,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.

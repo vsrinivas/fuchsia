@@ -6,8 +6,8 @@ use {
     crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::environment::Environment,
     crate::persistent_config::Persistent,
+    crate::ConfigLevel,
     anyhow::{Context, Result},
-    ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::{
         fmt,

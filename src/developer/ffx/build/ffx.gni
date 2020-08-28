@@ -30,13 +30,6 @@ template("ffx") {
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
     config_data = [ "data/config.json" ]
-
-    # These are needed only for the default FFX
-    extra_deps = [
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
-      "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
-    ]
   }
 
   rustc_binary(ffx_name + "_bin") {

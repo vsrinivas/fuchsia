@@ -88,25 +88,25 @@ pub async fn spawn_daemon() -> Result<()> {
     }
 
     let ffx: Ffx = argh::from_env();
-    let config_string = ffx.config.unwrap_or("".to_owned());
-    daemonize(
-        Command::new(ffx_path)
-            .stdin(Stdio::null())
-            .stdout(stdout)
-            .stderr(stderr)
-            .env("RUST_BACKTRACE", "full")
-            .arg("--env")
-            .arg(ffx_config::find_env_file()?)
-            .arg("--config")
-            .arg(config_string)
-            .arg(DAEMON)
-            .arg("start"),
-    )
-    .spawn()
-    .context("spawning daemon start")?
-    .wait()
-    .map(|_| ())
-    .context("waiting for daemon start")
+    let mut cmd = Command::new(ffx_path);
+    cmd.stdin(Stdio::null())
+        .stdout(stdout)
+        .stderr(stderr)
+        .env("RUST_BACKTRACE", "full")
+        .arg(DAEMON)
+        .arg("start");
+    if let Some(c) = ffx.config.as_ref() {
+        cmd.arg("--config").arg(c);
+    }
+    if let Some(e) = ffx.env.as_ref() {
+        cmd.arg("--env").arg(e);
+    }
+    daemonize(&mut cmd)
+        .spawn()
+        .context("spawning daemon start")?
+        .wait()
+        .map(|_| ())
+        .context("waiting for daemon start")
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +117,6 @@ async fn next_request(
 ) -> Result<Option<ServiceProviderRequest>> {
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
-
 async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;

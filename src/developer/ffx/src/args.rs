@@ -23,18 +23,3 @@ pub struct Ffx {
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }
-
-impl Default for Ffx {
-    fn default() -> Self {
-        Self {
-            target: None,
-            config: None,
-            env: None,
-            subcommand: Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
-                subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(
-                    ffx_daemon_start_args::StartCommand {},
-                ),
-            })),
-        }
-    }
-}

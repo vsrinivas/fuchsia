@@ -5,9 +5,9 @@
 use {
     crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::runtime::populate_runtime_config,
+    crate::ConfigLevel,
     anyhow::{anyhow, bail, Result},
     config_macros::include_default,
-    ffx_config_plugin_args::ConfigLevel,
     serde_json::{Map, Value},
     std::fmt,
 };

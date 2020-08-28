@@ -3,15 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::CONFIG_CACHE_TIMEOUT,
+    crate::constants::{self, CONFIG_CACHE_TIMEOUT},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     async_std::sync::{Arc, RwLock},
-    ffx_lib_args::Ffx,
-    std::collections::HashMap,
-    std::time::Instant,
+    std::{
+        collections::HashMap,
+        fs::{create_dir_all, File},
+        io::Write,
+        path::PathBuf,
+        sync::Mutex,
+        time::Instant,
+    },
 };
+
+#[cfg(test)]
+use tempfile::NamedTempFile;
 
 struct CacheItem {
     created: Instant,
@@ -21,7 +29,58 @@ struct CacheItem {
 type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
 
 lazy_static::lazy_static! {
+    static ref ENV_FILE: Mutex<Option<String>> = Mutex::new(None);
+    static ref RUNTIME: Mutex<Option<String>> = Mutex::new(None);
     static ref CACHE: Cache = RwLock::new(HashMap::new());
+}
+
+pub fn get_config_base_path() -> PathBuf {
+    let mut path = ffx_core::get_base_path();
+    path.push("config");
+    create_dir_all(&path).expect("unable to create ffx config directory");
+    path
+}
+
+#[cfg(not(test))]
+pub fn env_file() -> Option<String> {
+    ENV_FILE.lock().unwrap().as_ref().map(|v| format!("{}", v))
+}
+
+#[cfg(test)]
+pub fn env_file() -> Option<String> {
+    lazy_static::lazy_static! {
+        static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+    }
+    init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
+    FILE.path().to_str().map(|s| s.to_string())
+}
+
+pub fn init_config(runtime: &Option<String>, env_override: &Option<String>) -> Result<()> {
+    let _ = runtime.as_ref().and_then(|v| RUNTIME.lock().unwrap().replace(v.to_string()));
+
+    let env_path = if let Some(f) = env_override {
+        PathBuf::from(f)
+    } else {
+        let mut path = get_config_base_path();
+        path.push(constants::ENV_FILE);
+        path
+    };
+
+    if !env_path.is_file() {
+        log::debug!("initializing environment {}", env_path.display());
+        init_env_file(&env_path)?;
+    }
+    env_path.to_str().map(String::from).context("getting environment file").and_then(|e| {
+        let _ = ENV_FILE.lock().unwrap().replace(e);
+        Ok(())
+    })
+}
+
+fn init_env_file(path: &PathBuf) -> Result<()> {
+    let mut f = File::create(path)?;
+    f.write_all(b"{}")?;
+    f.sync_all()?;
+    Ok(())
 }
 
 fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
@@ -40,20 +99,14 @@ async fn read_cache(
         .map(|item| item.config.clone())
 }
 
-pub(crate) async fn load_config(
-    build_dir: &Option<String>,
-    ffx: Ffx,
-    env: &Result<String>,
-) -> Result<Arc<RwLock<Config>>> {
-    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env).await
+pub(crate) async fn load_config(build_dir: &Option<String>) -> Result<Arc<RwLock<Config>>> {
+    load_config_with_instant(build_dir, Instant::now(), &CACHE).await
 }
 
 async fn load_config_with_instant(
     build_dir: &Option<String>,
     now: Instant,
     cache: &Cache,
-    ffx: Ffx,
-    env: &Result<String>,
 ) -> Result<Arc<RwLock<Config>>> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
@@ -71,9 +124,9 @@ async fn load_config_with_instant(
                         CacheItem {
                             created: now,
                             config: Arc::new(RwLock::new(Config::new(
-                                &Environment::try_load(env.as_ref().ok()),
+                                &Environment::try_load(ENV_FILE.lock().unwrap().as_ref()),
                                 build_dir,
-                                &ffx.config,
+                                &RUNTIME.lock().unwrap(),
                             )?)),
                         },
                     );
@@ -90,24 +143,13 @@ async fn load_config_with_instant(
 // tests
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        anyhow::bail,
-        futures::future::join_all,
-        std::{default::Default, time::Duration},
-    };
-
-    fn env() -> Result<String> {
-        // Prevent any File I/O in unit tests.
-        bail!("No environment when running tests")
-    }
+    use {super::*, futures::future::join_all, std::time::Duration};
 
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
         let tests = 25;
-        let env = env();
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache, Default::default(), &env));
+            futures.push(load_config_with_instant(key, now, cache));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -188,7 +230,7 @@ mod test {
         let item = CacheItem {
             created: later,
             config: Arc::new(RwLock::new(Config::new(
-                &Environment::try_load(env().as_ref().ok()),
+                &Environment::try_load(None),
                 &build_dirs[0],
                 &None,
             )?)),

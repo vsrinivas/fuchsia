@@ -47,6 +47,9 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
 
 async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
+    // Configuration initialization must happen before ANY calls to the config (or the cache won't
+    // properly have the runtime parameters.
+    ffx_config::init_config(&app.config, &app.env)?;
     let is_daemon = is_daemon(&app.subcommand);
     ffx_config::logging::init(is_daemon).await?;
     ffx_lib_suite::ffx_plugin_impl(
@@ -66,23 +69,5 @@ async fn main() {
             eprintln!("BUG: An internal command error occurred.\n{:?}", err);
             std::process::exit(1);
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use {
-        super::*,
-        ffx_config::{ffx_cmd, ffx_env},
-        std::default::Default,
-    };
-
-    #[test]
-    fn test_config_macros() {
-        // Testing these macros outside of the config library.
-        let ffx: Ffx = Default::default();
-        assert_eq!(ffx, ffx_cmd!());
-        let env: Result<()> = ffx_env!();
-        assert!(env.is_err());
     }
 }

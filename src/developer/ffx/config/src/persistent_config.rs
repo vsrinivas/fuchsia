@@ -5,8 +5,8 @@
 use {
     crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::priority_config::Priority,
+    crate::ConfigLevel,
     anyhow::{bail, Result},
-    ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::{
         fmt,
