@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::act::ActionResults;
+use {crate::act::ActionResults, itertools::Itertools};
 
 pub struct ActionResultFormatter<'a> {
     action_results: &'a ActionResults,
@@ -47,7 +47,11 @@ impl<'a> ActionResultFormatter<'a> {
         }
 
         let header = Self::make_underline("Warnings");
-        Some(format!("{}{}\n", header, self.action_results.get_warnings().join("\n")))
+        Some(format!(
+            "{}{}\n",
+            header,
+            self.action_results.get_warnings().into_iter().sorted().join("\n")
+        ))
     }
 
     fn to_gauges(&self) -> Option<String> {
@@ -55,16 +59,11 @@ impl<'a> ActionResultFormatter<'a> {
             return None;
         }
 
-        let mut output = String::new();
-
         let header = Self::make_underline("Gauges");
-        output.push_str(&format!("{}", header));
+        let lines =
+            &mut self.action_results.get_gauges().iter().cloned().sorted().collect::<Vec<String>>();
 
-        for gauge in self.action_results.get_gauges().iter() {
-            output.push_str(&format!("{}\n", gauge));
-        }
-
-        Some(output)
+        Some(format!("{}{}\n", header, lines.join("\n")))
     }
 
     fn to_plugins(&self) -> Option<(bool, String)> {
@@ -73,6 +72,7 @@ impl<'a> ActionResultFormatter<'a> {
             .action_results
             .get_sub_results()
             .iter()
+            .sorted_by(|a, b| a.0.cmp(&b.0)) // sort by name
             .map(|(name, v)| {
                 let fmt = ActionResultFormatter::new(&v);
                 let val = match fmt.inner_to_text() {

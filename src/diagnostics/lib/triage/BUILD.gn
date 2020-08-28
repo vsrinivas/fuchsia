@@ -9,6 +9,7 @@ lib_deps = [
   "//src/diagnostics/lib/selectors",
   "//src/lib/diagnostics/inspect/node-hierarchy/rust",
   "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:itertools",
   "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:nom",
   "//third_party/rust_crates:num-derive",
