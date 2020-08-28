@@ -244,6 +244,9 @@ The set of currently known features are as follows:
 - `factory-data`, which requests access to the read-only factory partition for
   the device and places it at `/factory` in the component's namespace.
 
+- `durable-data`, which requests access to the read-write durable partition for
+  the device and places it at `/durable` in the component's namespace.
+
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl

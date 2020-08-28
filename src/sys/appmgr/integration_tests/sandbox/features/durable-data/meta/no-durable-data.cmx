@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/no-durable-data"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

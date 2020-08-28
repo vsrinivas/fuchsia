@@ -342,6 +342,10 @@
             from: "#fshost",
         },
         {
+            directory: "/durable",
+            from: "#fshost",
+        },
+        {
             directory: "/minfs",
             from: "#fshost",
         },

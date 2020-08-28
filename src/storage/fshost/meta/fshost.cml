@@ -67,6 +67,12 @@
             rights: [ "r*" ],
         },
         {
+            directory: "/fs/durable",
+            from: "self",
+            as: "/durable",
+            rights: [ "rw*" ],
+        },
+        {
             directory: "/fs/data",
             from: "self",
             as: "/minfs",

@@ -22,6 +22,10 @@
             rights: [ "rw*" ],
         },
         {
+            directory: "/durable",
+            rights: [ "rw*" ],
+        },
+        {
             directory: "/factory",
             rights: [ "r*" ],
         },

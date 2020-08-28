@@ -66,6 +66,11 @@
             to: [ "#core" ],
         },
         {
+            directory: "/durable",
+            from: "#bootstrap",
+            to: [ "#core" ],
+        },
+        {
             directory: "/factory",
             from: "#bootstrap",
             to: [ "#core" ],

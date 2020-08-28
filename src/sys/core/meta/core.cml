@@ -205,6 +205,11 @@
             to: [ "#appmgr" ],
         },
         {
+            directory: "/durable",
+            from: "parent",
+            to: [ "#appmgr" ],
+        },
+        {
             directory: "/factory",
             from: "parent",
             to: [ "#appmgr" ],
