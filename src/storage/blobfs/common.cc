@@ -3,19 +3,21 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <limits>
-#include <safemath/checked_math.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits>
+
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/trace.h>
+#include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+
 #include <fvm/client.h>
 #endif
 
@@ -127,7 +129,19 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
 #endif
 
   // Determine the number of blocks necessary for the block map and node map.
-  if (info->inode_count * sizeof(Inode) != NodeMapBlocks(*info) * kBlobfsBlockSize) {
+  uint64_t total_inode_size;
+  if (mul_overflow(info->inode_count, sizeof(Inode), &total_inode_size)) {
+    FS_TRACE_ERROR("Multiplication overflow");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  uint64_t node_map_size;
+  if (mul_overflow(NodeMapBlocks(*info), kBlobfsBlockSize, &node_map_size)) {
+    FS_TRACE_ERROR("Multiplication overflow");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (total_inode_size != node_map_size) {
     FS_TRACE_ERROR("blobfs: Inode table block must be entirely filled\n");
     return ZX_ERR_BAD_STATE;
   }

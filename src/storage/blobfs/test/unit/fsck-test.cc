@@ -51,5 +51,20 @@ TEST(FsckTest, TestCorrupted) {
   ASSERT_EQ(Fsck(std::move(device), &options), ZX_ERR_IO_OVERRUN);
 }
 
+TEST(FsckTest, TestOverflow) {
+  auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(FormatFilesystem(device.get()), ZX_OK);
+
+  char block[kBlobfsBlockSize];
+  DeviceBlockRead(device.get(), block, sizeof(block), kSuperblockOffset);
+  Superblock* info = reinterpret_cast<Superblock*>(block);
+  info->inode_count = std::numeric_limits<uint64_t>::max();
+  DeviceBlockWrite(device.get(), block, sizeof(block), kSuperblockOffset);
+
+  MountOptions options;
+  ASSERT_EQ(Fsck(std::move(device), &options), ZX_ERR_OUT_OF_RANGE);
+}
+
 }  // namespace
 }  // namespace blobfs
