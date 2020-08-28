@@ -77,6 +77,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "SYSTEM FAILURE",
                              },
                              {
+                                 "FactoryDataReset",
+                                 RebootReason::FACTORY_DATA_RESET,
+                                 "FACTORY DATA RESET",
+                             },
+                             {
                                  "NotSupported",
                                  static_cast<RebootReason>(100u),
                                  "NOT SUPPORTED",

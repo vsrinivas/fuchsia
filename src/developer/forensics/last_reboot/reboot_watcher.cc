@@ -26,6 +26,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "SESSION FAILURE";
     case RebootReason::SYSTEM_FAILURE:
       return "SYSTEM FAILURE";
+    case RebootReason::FACTORY_DATA_RESET:
+      return "FACTORY DATA RESET";
     default:
       return "NOT SUPPORTED";
   }
