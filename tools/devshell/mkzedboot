@@ -12,6 +12,9 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/prebuilt.sh || exit $?
+
+CGPT="${PREBUILT_CGPT_DIR}/cgpt"
 
 force=false
 if [[ "$1" == "-f" ]]; then
@@ -69,8 +72,8 @@ open_device
 
 # Destroy any existing GPT/MBR on the device and re-create
 echo "Create new GPT partition table... "
-"${FUCHSIA_BUILD_DIR}/host-tools/cgpt" create "${USB_DEVICE}"
-"${FUCHSIA_BUILD_DIR}/host-tools/cgpt" boot -p "${USB_DEVICE}"
+"${CGPT}" create "${USB_DEVICE}"
+"${CGPT}" boot -p "${USB_DEVICE}"
 echo "done"
 
 echo "Create new partitions... "
@@ -78,18 +81,18 @@ echo "Create new partitions... "
 if [[ ! -z "${IMAGE_ZEDBOOT_ESP}" ]]; then
   esp_size=$(((63*1024*1024)/512))
   esp_offset=2048
-  "${FUCHSIA_BUILD_DIR}/host-tools/cgpt" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
+  "${CGPT}" add -s "${esp_size}" -t efi -b "${esp_offset}" -l esp "${USB_DEVICE}"
 else
   reserved_size=2048
   reserved_offset=2048
   vboot_size=$(((64*1024*1024)/512))
   vboot_offset=$(($reserved_offset + $reserved_size))
-  "${FUCHSIA_BUILD_DIR}/host-tools/cgpt" add -s "${reserved_size}" -t reserved -b "${reserved_offset}" -l reserved "${USB_DEVICE}"
-  "${FUCHSIA_BUILD_DIR}/host-tools/cgpt" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
+  "${CGPT}" add -s "${reserved_size}" -t reserved -b "${reserved_offset}" -l reserved "${USB_DEVICE}"
+  "${CGPT}" add -s "${vboot_size}" -t kernel -b "${vboot_offset}" -l zedboot "${USB_DEVICE}"
 fi
 
 if [[ ! -z "${IMAGE_ZIRCONR_SIGNEDZBI}" ]]; then
-  "${FUCHSIA_BUILD_DIR}/host-tools/cgpt" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
+  "${CGPT}" add -i 2 -T 1 -S 1 -P 2 "${USB_DEVICE}"
 fi
 echo "done"
 

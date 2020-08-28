@@ -524,10 +524,10 @@ group("usb_video") {
   public_deps = [ "//src/camera/drivers/usb_video" ]
 }
 
+# Note: known to infrastructure for the purposes of building the vboot prebuilts.
 group("vboot_reference") {
   public_deps = [
-    "//tools/vboot_reference:cgpt_host",
-    "//tools/vboot_reference:futility_host",
+    "//tools/vboot_reference",
   ]
 }
 

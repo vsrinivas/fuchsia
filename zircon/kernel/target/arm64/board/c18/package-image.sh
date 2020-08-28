@@ -53,8 +53,24 @@ if [[ -z "${BOOT_IMG}" ]]; then
     BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
 fi
 
+case "$(uname -s)-$(uname -m)" in
+  Darwin-x86_64)
+    readonly HOST_PLATFORM="mac-x64"
+    ;;
+  Linux-x86_64)
+    readonly HOST_PLATFORM="linux-x64"
+    ;;
+  Linux-aarch64)
+    readonly HOST_PLATFORM="linux-arm64"
+    ;;
+  *)
+    echo >&2 "Unknown operating system."
+    exit 1
+    ;;
+esac
+
 # internal use
-FUTILITY="host-tools/futility"
+FUTILITY="${PROJECT_ROOT}/prebuilt/tools/futility/${HOST_PLATFORM}/futility"
 KEYBLOCK="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel.keyblock"
 PRIVATEKEY="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
 ITSSCRIPT_TEMPLATE="${DIR}/its_script"

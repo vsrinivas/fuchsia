@@ -238,3 +238,10 @@ install_host_tools("futility_host") {
   deps = [ ":futility" ]
   outputs = [ "futility" ]
 }
+
+group("vboot_reference") {
+  deps = [
+    ":cgpt_host",
+    ":futility_host",
+  ]
+}

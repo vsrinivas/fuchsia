@@ -12,15 +12,15 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
 )
 
 BT_MOCKED_TOOLS=(
    # FX tools.
   "tools/devshell/list-usb-disks"
-  "tools/devshell/lib/prebuilt.sh"
 
   # Host tools.
-  "out/default/host-tools/cgpt"
+  "prebuilt/tools/cgpt/linux-x64/cgpt"
 
   # System utilites
   "bin/dd"
@@ -45,6 +45,11 @@ BT_SET_UP() {
   # Set up a dummy "image_paths.sh" file used by x64 EFI builds.
   cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
     IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
+EOF
+
+  # Set up a dummy "prebuilt.sh"
+  cat > "${BT_TEMP_DIR}/tools/devshell/lib/prebuilt.sh" <<EOF
+  PREBUILT_CGPT_DIR="${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64"
 EOF
 
   # Set up a fake USB device; just a plain 128MiB file.
@@ -92,15 +97,15 @@ EOF
   BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
 
   # Ensure we created the GPT.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.1"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt create ${USB_DRIVE}"
 
   # Ensure we marked the device as bootable.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.2"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.2"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt boot -p ${USB_DRIVE}"
 
   # Ensure we added an ESP partition.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.3"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.3"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t efi "
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l esp "
@@ -121,27 +126,27 @@ EOF
   BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
 
   # Ensure we created the GPT.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.1"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt create ${USB_DRIVE}"
 
   # Ensure we marked the device as bootable.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.2"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.2"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt boot -p ${USB_DRIVE}"
 
   # Ensure we set up VBOOT partitions:
   #   1. reserved
   #   2. vboot image
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.3"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.3"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t reserved "
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l reserved "
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.4"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.4"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t kernel "
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l zedboot "
 
   # Ensure we set the kernel partition to bootable.
-  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.5"
+  source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.5"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add -i 2"  # Modify partition
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -P 2 "  # Priority 2
 

@@ -32,7 +32,7 @@ template("vboot") {
   }
   output_file = "$root_out_dir/$output_file"
 
-  compiled_action(target_name) {
+  action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -41,7 +41,7 @@ template("vboot") {
                              "visibility",
                            ])
 
-    tool = "//tools/vboot_reference:futility"
+    script = "//prebuilt/tools/futility/${host_platform}/futility"
     outputs = [ output_file ]
 
     vboot_dir = "//third_party/vboot_reference"

@@ -6,7 +6,4 @@ base_package_labels = []
 
 cache_package_labels = []
 
-universe_package_labels = [
-  "//tools/vboot_reference:cgpt_host",
-  "//tools/vboot_reference:futility_host",
-]
+universe_package_labels = []
