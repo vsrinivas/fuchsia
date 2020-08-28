@@ -8,19 +8,19 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("lib") {
+go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/..."
+  deps = [
+    "//garnet/go/src/fidl/compiler/backend/cpp",
+    "//garnet/go/src/fidl/compiler/backend/types",
+  ]
 }
 
 go_binary("fidlgen_libfuzzer") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer"
 
   sdk_category = "partner"
-
-  deps = [
-    ":lib",
-    "//garnet/go/src/fidl:compiler",
-  ]
+  deps = [ ":gopkg" ]
 }
 
 install_host_tools("host") {
@@ -39,8 +39,8 @@ if (is_host) {
       rebase_path("$root_out_dir/test_data/fidlgen_libfuzzer", root_build_dir),
     ]
     deps = [
-      ":lib",
-      "//garnet/go/src/fidl:fidlgen_test_lib",
+      ":gopkg",
+      "//garnet/go/src/fidl/compiler/backend/typestest",
     ]
     non_go_deps = [ ":clang_format" ]
   }

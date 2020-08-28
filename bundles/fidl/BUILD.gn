@@ -5,13 +5,12 @@
 group("tests") {
   testonly = true
   deps = [
+    ":fidlgen_tests",
     ":tools",
     "//build/fidl:tests",
     "//examples/fidl:tests",
     "//garnet/examples/fidl/echo_server_cpp",
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
-    "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
-    "//garnet/go/src/fidl:fidlgen_types_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl-hlcpp-tests",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_conformance_test($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
@@ -30,6 +29,14 @@ group("tests") {
     "//topaz/bundles/fidl:tests",
     "//zircon/system/ulib/fidl-async-2/test",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
+  ]
+}
+
+group("fidlgen_tests") {
+  testonly = true
+  deps = [
+    "//garnet/go/src/fidl/compiler/backend/common:fidlgen_common_test($host_toolchain)",
+    "//garnet/go/src/fidl/compiler/backend/types:fidlgen_types_test($host_toolchain)",
   ]
 }
 

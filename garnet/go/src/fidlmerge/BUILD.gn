@@ -4,18 +4,19 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
 
-go_library("fidlmerge_lib") {
-  name = "fidlmerge"
-
-  deps = [ "//garnet/go/src/fidl:compiler" ]
+go_library("gopkg") {
+  deps = [
+    "//garnet/go/src/fidl/compiler/backend/common",
+    "//garnet/go/src/fidl/compiler/backend/types",
+  ]
 }
 
 go_binary("fidlmerge") {
-  gopackage = "fidlmerge"
+  gopackage = "go.fuchsia.dev/fuchsia/garnet/go/src/fidlmerge"
 
-  deps = [ ":fidlmerge_lib" ]
+  deps = [ ":gopkg" ]
 }
 
 install_host_tools("host") {

@@ -9,16 +9,17 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("lib") {
+go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
-
-  deps = [ "//garnet/go/src/fidl:compiler" ]
+  deps = [
+    "//garnet/go/src/fidl/compiler/backend/common",
+    "//garnet/go/src/fidl/compiler/backend/types",
+  ]
 }
 
 go_binary("gidl") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl"
-
-  deps = [ ":lib" ]
+  deps = [ ":gopkg" ]
 }
 
 install_host_tools("host") {
@@ -42,19 +43,21 @@ group("tests") {
   ]
 }
 
+go_test("gidl_parser_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser" ]
+  deps = [
+    ":gopkg",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+}
+
+go_test("gidl_golang_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang" ]
+
+  deps = [ ":gopkg" ]
+}
+
 if (is_host) {
-  go_test("gidl_parser_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser" ]
-
-    deps = [ ":lib" ]
-  }
-
-  go_test("gidl_golang_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang" ]
-
-    deps = [ ":lib" ]
-  }
-
   host_test_data("gidl_mixer_test_json") {
     deps = [ ":gidl_mixer_test_fidl($fidl_toolchain)" ]
     sources = [ "$root_build_dir/fidling/gen/tools/fidl/gidl/gidl_mixer_test_fidl.fidl.json" ]
@@ -67,7 +70,7 @@ if (is_host) {
       "--test_data_dir",
       rebase_path("$root_out_dir/test_data/gidl", root_build_dir),
     ]
-    deps = [ ":lib" ]
+    deps = [ ":gopkg" ]
     non_go_deps = [ ":gidl_mixer_test_json" ]
   }
 }

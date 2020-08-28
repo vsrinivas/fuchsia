@@ -8,19 +8,19 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("lib") {
+go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
+  deps = [
+    "//garnet/go/src/fidl/compiler/backend/common",
+    "//garnet/go/src/fidl/compiler/backend/types",
+  ]
 }
 
 go_binary("fidlgen_rust") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
 
   sdk_category = "partner"
-
-  deps = [
-    ":lib",
-    "//garnet/go/src/fidl:compiler",
-  ]
+  deps = [ ":gopkg" ]
 }
 
 install_host_tools("host") {
@@ -41,8 +41,8 @@ if (is_host) {
                   root_build_dir),
     ]
     deps = [
-      ":lib",
-      "//garnet/go/src/fidl:fidlgen_test_lib",
+      ":gopkg",
+      "//garnet/go/src/fidl/compiler/backend/typestest",
     ]
     non_go_deps = [ ":rustfmt" ]
   }
@@ -50,8 +50,8 @@ if (is_host) {
   go_test("fidlgen_rust_ir_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir" ]
     deps = [
-      ":lib",
-      "//garnet/go/src/fidl:fidlgen_test_lib",
+      ":gopkg",
+      "//garnet/go/src/fidl/compiler/backend/typestest",
     ]
     non_go_deps = [ ":rustfmt" ]
   }

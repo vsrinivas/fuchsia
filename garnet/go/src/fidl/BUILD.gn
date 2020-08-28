@@ -2,36 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
-import("//build/host.gni")
-import("//build/testing/host_test_data.gni")
 
+# TODO(fxb/58759): Remove once fidlgen_dart is updated to depend on individual
+# targets.
 go_library("compiler") {
   name = "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/..."
   source_dir = "compiler"
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
-}
-
-if (is_host) {
-  go_library("fidlgen_test_lib") {
-    testonly = true
-    deps = [ ":compiler" ]
-    non_go_deps = [ "compiler/backend/goldens" ]
-  }
-
-  go_test("fidlgen_common_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common" ]
-
-    deps = [ ":fidlgen_test_lib" ]
-  }
-
-  go_test("fidlgen_types_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types" ]
-
-    deps = [ ":fidlgen_test_lib" ]
-  }
 }
