@@ -8,14 +8,14 @@
 #include "launch.h"
 
 TEST(FtlTest, BlockTest) {
-  const char* argv[] = {"/pkg/bin/blktest", "-d", kTestDevice, nullptr};
+  const char* argv[] = {"/boot/bin/blktest", "-d", kTestDevice, nullptr};
 
   ASSERT_EQ(0, Execute(argv));
 }
 
 TEST(FtlTest, IoCheck) {
-  const char* argv[] = {"/pkg/bin/iochk", "-bs",  "32k", "--live-dangerously", "-t", "2",
-                        kTestDevice,      nullptr};
+  const char* argv[] = {"/boot/bin/iochk", "-bs",  "32k", "--live-dangerously", "-t", "2",
+                        kTestDevice,       nullptr};
 
   ASSERT_EQ(0, Execute(argv));
 }
