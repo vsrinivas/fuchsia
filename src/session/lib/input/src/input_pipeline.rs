@@ -315,12 +315,11 @@ mod tests {
         let mut rng = rand::thread_rng();
         let offset = Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 };
         let input_event = input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
-                location: mouse::MouseLocation::Relative(offset),
-                phase: fidl_ui_input::PointerEventPhase::Move,
-                buttons: HashSet::new(),
-                movement: offset,
-            }),
+            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
+                mouse::MouseLocation::Relative(offset),
+                fidl_ui_input::PointerEventPhase::Move,
+                HashSet::new(),
+            )),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 mouse::MouseDeviceDescriptor {
                     device_id: 1,

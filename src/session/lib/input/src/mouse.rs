@@ -51,10 +51,6 @@ pub struct MouseEvent {
 
     /// The buttons relevant to this event.
     pub buttons: HashSet<MouseButton>,
-
-    /// The relative mouse movement.
-    // TODO(fxbug.dev/58870): Remove in favor of `location`
-    pub movement: Position,
 }
 
 impl MouseEvent {
@@ -69,15 +65,7 @@ impl MouseEvent {
         phase: fidl_fuchsia_ui_input::PointerEventPhase,
         buttons: HashSet<MouseButton>,
     ) -> MouseEvent {
-        MouseEvent {
-            location,
-            phase,
-            buttons,
-            movement: match location {
-                MouseLocation::Relative(offset) => offset,
-                MouseLocation::Absolute(_) => Position::zero(),
-            },
-        }
+        MouseEvent { location, phase, buttons }
     }
 }
 
@@ -297,15 +285,9 @@ fn send_mouse_event(
     }
 
     match sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent {
-            location,
-            phase,
-            buttons,
-            movement: match location {
-                MouseLocation::Relative(offset) => offset,
-                MouseLocation::Absolute(_) => Position::zero(),
-            },
-        }),
+        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent::new(
+            location, phase, buttons,
+        )),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }) {

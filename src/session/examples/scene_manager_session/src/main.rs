@@ -9,7 +9,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as fsyslog,
-    input::{input_device, input_handler::InputHandler, input_pipeline::InputPipeline, Position},
+    input::{
+        input_device, input_handler::InputHandler, input_pipeline::InputPipeline, mouse, Position,
+    },
     scene_management::{self, SceneManager, ScreenCoordinates},
 };
 
@@ -32,8 +34,18 @@ impl InputHandler for SimpleCursor {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
                 event_time: _,
             } => {
-                self.position += mouse_event.movement;
+                self.position = match mouse_event.location {
+                    mouse::MouseLocation::Relative(offset) if offset != Position::zero() => {
+                        self.position + offset
+                    }
+                    mouse::MouseLocation::Absolute(position) if position != self.position => {
+                        position
+                    }
+                    _ => return vec![],
+                };
+
                 Position::clamp(&mut self.position, Position { x: 0.0, y: 0.0 }, self.max_position);
+
                 self.scene_manager.set_cursor_location(ScreenCoordinates::from_position(
                     &self.position,
                     self.scene_manager.display_metrics,
