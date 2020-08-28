@@ -23,7 +23,6 @@ group("tools") {
     "//src/developer/debug/zxdb:zxdb_host",
     "//src/developer/ffx:ffx_tool",
     "//src/developer/ffx:runtime",
-    "//src/developer/forensics/bugreport",
     "//src/developer/forensics/exceptions/limbo_client:limbo-client",
     "//src/developer/kcounter_inspect",
     "//src/developer/memory/mem",

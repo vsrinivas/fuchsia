@@ -1,8 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# TODO(50926): delete once all dependencies have been migrated.
-group("bugreport") {
-  deps = [ "//src/developer/forensics/snapshot:pkg" ]
-}
