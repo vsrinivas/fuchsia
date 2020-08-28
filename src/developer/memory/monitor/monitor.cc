@@ -44,18 +44,27 @@ const zx::duration kHighWaterPollFrequency = zx::sec(10);
 const uint64_t kHighWaterThreshold = 10 * 1024 * 1024;
 const zx::duration kMetricsPollFrequency = zx::min(5);
 const char kTraceNameHighPrecisionBandwidth[] = "memory_monitor:high_precision_bandwidth";
+const char kTraceNameHighPrecisionBandwidthCamera[] =
+    "memory_monitor:high_precision_bandwidth_camera";
 constexpr uint64_t kMaxPendingBandwidthMeasurements = 4;
 constexpr uint64_t kMemCyclesToMeasure = 792000000 / 20;                 // 50 ms on sherlock
 constexpr uint64_t kMemCyclesToMeasureHighPrecision = 792000000 / 1000;  // 1 ms
 // TODO(fxbug.dev/48254): Get default channel information through the FIDL API.
-const struct {
+struct RamChannel {
   const char* name;
   uint64_t mask;
-} kRamDefaultChannels[] = {
+};
+constexpr RamChannel kRamDefaultChannels[] = {
     {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
     {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
     {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
     {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+};
+constexpr RamChannel kRamCameraChannels[] = {
+    {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+    {.name = "isp", .mask = aml_ram::kPortIdMipiIsp},
+    {.name = "gdc", .mask = aml_ram::kPortIdGDC},
+    {.name = "ge2d", .mask = aml_ram::kPortIdGe2D},
 };
 uint64_t CounterToBandwidth(uint64_t counter, uint64_t frequency, uint64_t cycles) {
   return counter * frequency / cycles;
@@ -64,11 +73,18 @@ zx_ticks_t TimestampToTicks(zx_time_t timestamp) {
   __uint128_t temp = static_cast<__uint128_t>(timestamp) * zx_ticks_per_second() / ZX_SEC(1);
   return static_cast<zx_ticks_t>(temp);
 }
-fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig BuildConfig(uint64_t cycles_to_measure){
+fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig BuildConfig(
+    uint64_t cycles_to_measure, bool use_camera_channels = false) {
   fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
   config.cycles_to_measure = cycles_to_measure;
-  for (size_t i = 0; i < std::size(kRamDefaultChannels); i++) {
-    config.channels[i] = kRamDefaultChannels[i].mask;
+  size_t num_channels = std::size(kRamDefaultChannels);
+  const auto* channels = kRamDefaultChannels;
+  if (use_camera_channels) {
+    num_channels = std::size(kRamCameraChannels);
+    channels = kRamCameraChannels;
+  }
+  for (size_t i = 0; i < num_channels; i++) {
+    config.channels[i] = channels[i].mask;
   }
   return config;
 }
@@ -320,13 +336,22 @@ void Monitor::MeasureBandwidthAndPost() {
   // granularity and relatively good coverage.
   while (tracing_ && pending_bandwidth_measurements_ < kMaxPendingBandwidthMeasurements) {
     uint64_t cycles_to_measure = kMemCyclesToMeasure;
-    if (trace_is_category_enabled(kTraceNameHighPrecisionBandwidth)) {
+    bool trace_high_precision = trace_is_category_enabled(kTraceNameHighPrecisionBandwidth);
+    bool trace_high_precision_camera =
+        trace_is_category_enabled(kTraceNameHighPrecisionBandwidthCamera);
+    if (trace_high_precision && trace_high_precision_camera) {
+      FX_LOGS(ERROR) << kTraceNameHighPrecisionBandwidth << " and "
+                     << kTraceNameHighPrecisionBandwidthCamera
+                     << " are mutually exclusive categories.";
+    }
+    if (trace_high_precision || trace_high_precision_camera) {
       cycles_to_measure = kMemCyclesToMeasureHighPrecision;
     }
     ++pending_bandwidth_measurements_;
     ram_device_->MeasureBandwidth(
-        BuildConfig(cycles_to_measure), [this, cycles_to_measure](
-                    fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
+        BuildConfig(cycles_to_measure, trace_high_precision_camera),
+        [this, cycles_to_measure, trace_high_precision_camera](
+            fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
           --pending_bandwidth_measurements_;
           if (result.is_err()) {
             FX_LOGS(ERROR) << "Bad bandwidth measurement result: " << result.err();
@@ -337,21 +362,24 @@ void Monitor::MeasureBandwidthAndPost() {
                 (info.total.readwrite_cycles > total_readwrite_cycles)
                     ? info.total.readwrite_cycles - total_readwrite_cycles
                     : 0;
+            static_assert(std::size(kRamDefaultChannels) == std::size(kRamCameraChannels));
+            const auto* channels =
+                trace_high_precision_camera ? kRamCameraChannels : kRamDefaultChannels;
             TRACE_VTHREAD_COUNTER(
                 kTraceName, "bandwidth_usage", "membw" /*vthread_literal*/, 1 /*vthread_id*/,
-                0 /*counter_id*/, TimestampToTicks(info.timestamp), kRamDefaultChannels[0].name,
+                0 /*counter_id*/, TimestampToTicks(info.timestamp), channels[0].name,
                 CounterToBandwidth(info.channels[0].readwrite_cycles, info.frequency,
                                    cycles_to_measure) *
                     info.bytes_per_cycle,
-                kRamDefaultChannels[1].name,
+                channels[1].name,
                 CounterToBandwidth(info.channels[1].readwrite_cycles, info.frequency,
                                    cycles_to_measure) *
                     info.bytes_per_cycle,
-                kRamDefaultChannels[2].name,
+                channels[2].name,
                 CounterToBandwidth(info.channels[2].readwrite_cycles, info.frequency,
                                    cycles_to_measure) *
                     info.bytes_per_cycle,
-                kRamDefaultChannels[3].name,
+                channels[3].name,
                 CounterToBandwidth(info.channels[3].readwrite_cycles, info.frequency,
                                    cycles_to_measure) *
                     info.bytes_per_cycle,
