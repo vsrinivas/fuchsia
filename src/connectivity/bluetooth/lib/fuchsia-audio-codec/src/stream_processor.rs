@@ -146,8 +146,6 @@ struct StreamProcessorInner {
     client_owned: HashSet<InputBufferIndex>,
     /// A cursor on the next input buffer location to be written to when new input data arrives.
     input_cursor: Option<(InputBufferIndex, u64)>,
-    /// A set of wakers waiting for the client to be writable.
-    input_wakers: Vec<Waker>,
     /// The encoded/decoded data - a set of output buffers that will be written by the server.
     output_buffers: Vec<zx::Vmo>,
     /// The size of each output packet
@@ -259,22 +257,11 @@ impl StreamProcessorInner {
         self.process_events(&mut Context::from_waker(&waker))
     }
 
-    /// If there is any input waker, process all the events in the queue with the output
-    /// waker to be woken up
-    fn process_events_input(&mut self) -> Result<usize, Error> {
-        let waker = match self.input_wakers.first() {
-            None => return Ok(0),
-            Some(waker) => waker.clone(),
-        };
-        self.process_events(&mut Context::from_waker(&waker))
-    }
-
     /// Attempts to set up a new input cursor, out of the current set of client owned input buffers.
     /// If the cursor is already set, this does nothing.
     fn setup_input_cursor(&mut self) {
         if self.input_cursor.is_some() {
             // Nothing to be done
-            self.input_wakers.drain(..).for_each(|w| w.wake());
             return;
         }
         let next_idx = match self.client_owned.iter().cloned().next() {
@@ -283,7 +270,6 @@ impl StreamProcessorInner {
         };
         self.client_owned.take(&next_idx).unwrap();
         self.input_cursor = Some((next_idx, 0));
-        self.input_wakers.drain(..).for_each(|w| w.wake());
     }
 
     /// Reads an output packet from the output buffers, and marks the packets as recycled so the
@@ -352,7 +338,6 @@ impl StreamProcessor {
                 input_packet_size: 0,
                 client_owned: HashSet::new(),
                 input_cursor: None,
-                input_wakers: Vec::new(),
                 output_buffers: Vec::new(),
                 output_packet_size: 0,
                 output_queue: Default::default(),
@@ -585,9 +570,6 @@ impl Stream for StreamProcessorOutputStream {
             }
         };
         if let Some(packet) = packet {
-            // If we're returning Ready, but an input waiter is listening, process events until
-            // there are none with the input waker so it will wake up on any new event.
-            let _ = write.process_events_input();
             return Poll::Ready(Some(write.read_output_packet(packet)));
         }
         // Process the events with the stored output waker having priority, since will be returning
