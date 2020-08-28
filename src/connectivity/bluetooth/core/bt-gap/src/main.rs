@@ -15,7 +15,11 @@ use {
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{
+        client::{self, connect_to_service, App},
+        fuchsia_single_component_package_url,
+        server::{NestedEnvironment, ServiceFs},
+    },
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
     futures::{channel::mpsc, future::try_join5, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     pin_utils::pin_mut,
@@ -63,6 +67,32 @@ async fn get_host_name() -> Result<String, Error> {
         .get_device_name()
         .await?
         .map_err(|e| format_err!("failed to obtain host name: {:?}", e))
+}
+
+/// Creates a NestedEnvironment and launches the RFCOMM component.
+/// Returns the controller for the launched component and the NestedEnvironment - dropping
+/// either will result in component termination.
+fn launch_rfcomm_component(profile_hd: HostDispatcher) -> Result<(App, NestedEnvironment), Error> {
+    let mut rfcomm_fs = ServiceFs::new();
+    rfcomm_fs
+        .add_service_at(ProfileMarker::NAME, move |chan| {
+            fx_log_info!("Connecting Profile Service to Adapter");
+            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
+            None
+        })
+        .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+        .add_proxy_service::<fidl_fuchsia_cobalt::LoggerFactoryMarker, _>();
+
+    let env = rfcomm_fs.create_nested_environment("bt-rfcomm")?;
+    fasync::Task::spawn(rfcomm_fs.collect()).detach();
+
+    let bt_rfcomm = client::launch(
+        &env.launcher(),
+        fuchsia_single_component_package_url!("bt-rfcomm").to_string(),
+        None,
+    )?;
+
+    Ok((bt_rfcomm, env))
 }
 
 async fn run() -> Result<(), Error> {
@@ -147,6 +177,10 @@ async fn run() -> Result<(), Error> {
     let generic_access_service_task =
         GenericAccessService { hd: hd.clone(), generic_access_req_stream }.run().map(|()| Ok(()));
 
+    // Launch the RFCOMM component that will serve requests over `Profile`. It will then forward
+    // connection requests to the Host Server.
+    let (bt_rfcomm, _env) = launch_rfcomm_component(profile_hd.clone())?;
+
     let mut fs = ServiceFs::new();
 
     // serve bt-gap inspect VMO
@@ -166,8 +200,8 @@ async fn run() -> Result<(), Error> {
             None
         })
         .add_service_at(ProfileMarker::NAME, move |chan| {
-            fx_log_info!("Connecting Profile Service to Adapter");
-            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
+            fx_log_info!("Passing Profile to RFCOMM Service");
+            let _ = bt_rfcomm.pass_to_service::<ProfileMarker>(chan);
             None
         })
         .add_service_at(Server_Marker::NAME, move |chan| {

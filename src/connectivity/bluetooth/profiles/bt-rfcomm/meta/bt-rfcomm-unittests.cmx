@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/bt-rfcomm-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

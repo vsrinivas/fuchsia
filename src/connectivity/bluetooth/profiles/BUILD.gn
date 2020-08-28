@@ -16,6 +16,8 @@ group("profiles") {
     "bt-avrcp-target",
     "bt-avrcp-target:tests",
     "bt-hog",
+    "bt-rfcomm",
+    "bt-rfcomm:tests",
     "tests",
   ]
 }

@@ -9,6 +9,7 @@ use {
         self as fidl_bredr, ProfileDescriptor, ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
     },
     std::{
+        cmp::min,
         collections::HashSet,
         convert::{TryFrom, TryInto},
     },
@@ -103,6 +104,59 @@ pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<u16> {
         }
     }
     None
+}
+
+/// Given two SecurityRequirements, combines both into requirements as strict as either.
+/// A stricter SecurityRequirements is defined as:
+///   1) Authentication required is stricter than not.
+///   2) Secure Connections required is stricter than not.
+pub fn combine_security_requirements(
+    reqs: &SecurityRequirements,
+    other: &SecurityRequirements,
+) -> SecurityRequirements {
+    let authentication_required =
+        match (reqs.authentication_required, other.authentication_required) {
+            (Some(true), _) | (_, Some(true)) => Some(true),
+            (Some(x), None) | (None, Some(x)) => Some(x),
+            _ => None,
+        };
+    let secure_connections_required =
+        match (reqs.secure_connections_required, other.secure_connections_required) {
+            (Some(true), _) | (_, Some(true)) => Some(true),
+            (Some(x), None) | (None, Some(x)) => Some(x),
+            _ => None,
+        };
+    SecurityRequirements { authentication_required, secure_connections_required }
+}
+
+/// Given two ChannelParameters, combines both into a set of ChannelParameters
+/// with the least requesting of resources.
+/// This is defined as:
+///   1) Basic requires fewer resources than ERTM.
+///   2) A smaller SDU size is more restrictive.
+pub fn combine_channel_parameters(
+    params: &ChannelParameters,
+    other: &ChannelParameters,
+) -> ChannelParameters {
+    let channel_mode = match (params.channel_mode, other.channel_mode) {
+        (Some(fidl_bredr::ChannelMode::Basic), _) | (_, Some(fidl_bredr::ChannelMode::Basic)) => {
+            Some(fidl_bredr::ChannelMode::Basic)
+        }
+        (Some(x), None) | (None, Some(x)) => Some(x),
+        _ => None,
+    };
+    let max_rx_sdu_size = match (params.max_rx_sdu_size, other.max_rx_sdu_size) {
+        (Some(rx1), Some(rx2)) => Some(min(rx1, rx2)),
+        (Some(x), None) | (None, Some(x)) => Some(x),
+        _ => None,
+    };
+    let security_requirements = match (&params.security_requirements, &other.security_requirements)
+    {
+        (Some(reqs1), Some(reqs2)) => Some(combine_security_requirements(reqs1, reqs2)),
+        (Some(reqs), _) | (_, Some(reqs)) => Some(reqs.clone()),
+        _ => None,
+    };
+    ChannelParameters { channel_mode, max_rx_sdu_size, security_requirements }
 }
 
 /// The basic building block for elements in a SDP record.
@@ -292,7 +346,7 @@ impl TryFrom<&Information> for fidl_bredr::Information {
 /// Corresponds directly to the FIDL `ServiceDefinition` definition - with the extra
 /// properties of Clone and PartialEq.
 /// See [fuchsia.bluetooth.bredr.ServiceDefinition] for more documentation.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ServiceDefinition {
     pub service_class_uuids: Vec<Uuid>,
     pub protocol_descriptor_list: Vec<ProtocolDescriptor>,
@@ -451,6 +505,7 @@ const MIN_RX_SDU_SIZE: u16 = 48;
 pub struct ChannelParameters {
     pub channel_mode: Option<fidl_bredr::ChannelMode>,
     pub max_rx_sdu_size: Option<u16>,
+    pub security_requirements: Option<SecurityRequirements>,
 }
 
 impl TryFrom<&fidl_bredr::ChannelParameters> for ChannelParameters {
@@ -466,6 +521,10 @@ impl TryFrom<&fidl_bredr::ChannelParameters> for ChannelParameters {
         Ok(ChannelParameters {
             channel_mode: src.channel_mode,
             max_rx_sdu_size: src.max_rx_sdu_size,
+            security_requirements: src
+                .security_requirements
+                .as_ref()
+                .map(SecurityRequirements::from),
         })
     }
 }
@@ -483,7 +542,10 @@ impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
         Ok(fidl_bredr::ChannelParameters {
             channel_mode: src.channel_mode,
             max_rx_sdu_size: src.max_rx_sdu_size,
-            security_requirements: None,
+            security_requirements: src
+                .security_requirements
+                .as_ref()
+                .map(fidl_bredr::SecurityRequirements::from),
         })
     }
 }
@@ -804,7 +866,8 @@ mod tests {
         let channel_mode = Some(fidl_bredr::ChannelMode::EnhancedRetransmission);
         let max_rx_sdu_size = Some(MIN_RX_SDU_SIZE);
 
-        let local = ChannelParameters { channel_mode, max_rx_sdu_size };
+        let local =
+            ChannelParameters { channel_mode, max_rx_sdu_size, security_requirements: None };
         let fidl = fidl_bredr::ChannelParameters {
             channel_mode,
             max_rx_sdu_size,
@@ -820,7 +883,11 @@ mod tests {
 
         // Empty FIDL parameters is OK.
         let fidl = fidl_bredr::ChannelParameters::new_empty();
-        let expected = ChannelParameters { channel_mode: None, max_rx_sdu_size: None };
+        let expected = ChannelParameters {
+            channel_mode: None,
+            max_rx_sdu_size: None,
+            security_requirements: None,
+        };
 
         let fidl_to_local = ChannelParameters::try_from(&fidl).expect("conversion should work");
         assert_eq!(fidl_to_local, expected);
@@ -829,7 +896,11 @@ mod tests {
     #[test]
     fn test_invalid_channel_parameters_fails_gracefully() {
         let too_small_sdu = Some(MIN_RX_SDU_SIZE - 1);
-        let local = ChannelParameters { channel_mode: None, max_rx_sdu_size: too_small_sdu };
+        let local = ChannelParameters {
+            channel_mode: None,
+            max_rx_sdu_size: too_small_sdu,
+            security_requirements: None,
+        };
         let fidl = fidl_bredr::ChannelParameters {
             channel_mode: None,
             max_rx_sdu_size: too_small_sdu,
@@ -859,5 +930,133 @@ mod tests {
 
         let fidl_to_local = SecurityRequirements::from(&fidl);
         assert_eq!(fidl_to_local, local);
+    }
+
+    #[test]
+    fn test_combine_security_requirements() {
+        let req1 = SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: None,
+        };
+        let req2 = SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: None,
+        };
+        let expected = SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: None,
+        };
+        assert_eq!(combine_security_requirements(&req1, &req2), expected);
+
+        let req1 = SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: None,
+        };
+        let req2 = SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: Some(true),
+        };
+        let expected = SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: Some(true),
+        };
+        assert_eq!(combine_security_requirements(&req1, &req2), expected);
+
+        let req1 = SecurityRequirements {
+            authentication_required: Some(false),
+            secure_connections_required: Some(true),
+        };
+        let req2 = SecurityRequirements {
+            authentication_required: None,
+            secure_connections_required: Some(true),
+        };
+        let expected = SecurityRequirements {
+            authentication_required: Some(false),
+            secure_connections_required: Some(true),
+        };
+        assert_eq!(combine_security_requirements(&req1, &req2), expected);
+
+        let req1 = SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: Some(false),
+        };
+        let req2 = SecurityRequirements {
+            authentication_required: Some(false),
+            secure_connections_required: Some(true),
+        };
+        let expected = SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: Some(true),
+        };
+        assert_eq!(combine_security_requirements(&req1, &req2), expected);
+    }
+
+    #[test]
+    fn test_combine_channel_parameters() {
+        let p1 = ChannelParameters::default();
+        let p2 = ChannelParameters::default();
+        let expected = ChannelParameters::default();
+        assert_eq!(combine_channel_parameters(&p1, &p2), expected);
+
+        let p1 = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::EnhancedRetransmission),
+            max_rx_sdu_size: None,
+            security_requirements: None,
+        };
+        let p2 = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::Basic),
+            max_rx_sdu_size: Some(70),
+            security_requirements: None,
+        };
+        let expected = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::Basic),
+            max_rx_sdu_size: Some(70),
+            security_requirements: None,
+        };
+        assert_eq!(combine_channel_parameters(&p1, &p2), expected);
+
+        let empty_seq_reqs = SecurityRequirements::default();
+        let p1 = ChannelParameters {
+            channel_mode: None,
+            max_rx_sdu_size: Some(75),
+            security_requirements: Some(empty_seq_reqs.clone()),
+        };
+        let p2 = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::EnhancedRetransmission),
+            max_rx_sdu_size: None,
+            security_requirements: None,
+        };
+        let expected = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::EnhancedRetransmission),
+            max_rx_sdu_size: Some(75),
+            security_requirements: Some(empty_seq_reqs),
+        };
+        assert_eq!(combine_channel_parameters(&p1, &p2), expected);
+
+        let reqs1 = SecurityRequirements {
+            authentication_required: Some(true),
+            secure_connections_required: None,
+        };
+        let reqs2 = SecurityRequirements {
+            authentication_required: Some(false),
+            secure_connections_required: Some(false),
+        };
+        let combined_reqs = combine_security_requirements(&reqs1, &reqs2);
+        let p1 = ChannelParameters {
+            channel_mode: None,
+            max_rx_sdu_size: Some(90),
+            security_requirements: Some(reqs1),
+        };
+        let p2 = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::Basic),
+            max_rx_sdu_size: Some(70),
+            security_requirements: Some(reqs2),
+        };
+        let expected = ChannelParameters {
+            channel_mode: Some(fidl_bredr::ChannelMode::Basic),
+            max_rx_sdu_size: Some(70),
+            security_requirements: Some(combined_reqs),
+        };
+        assert_eq!(combine_channel_parameters(&p1, &p2), expected);
     }
 }
