@@ -102,16 +102,14 @@ template("fuzzer") {
   }
 
   # Generate seed corpus. See https://llvm.org/docs/LibFuzzer.html#corpus
+  # TODO(fxb/58940): Move away from invoking add_corpus.py and towards using
+  # in-tree corpus manifests.
   corpus_target = "${target_name}_corpus"
   corpus_output = "${target_gen_dir}/${base_output_name}/corpus.manifest"
-  corpus_gensrc = "${target_gen_dir}/${base_output_name}/corpus.cc"
   action(corpus_target) {
     script = "//build/fuzzing/add_corpus.py"
     depfile = "$corpus_output.d"
-    outputs = [
-      corpus_output,
-      corpus_gensrc,
-    ]
+    outputs = [ corpus_output ]
     args = [
       "--fuzzer",
       base_output_name,
@@ -119,8 +117,6 @@ template("fuzzer") {
       rebase_path(depfile, root_build_dir),
       "--manifest",
       rebase_path(corpus_output, root_build_dir),
-      "--unittest",
-      rebase_path(corpus_gensrc, root_build_dir),
     ]
     if (defined(invoker.corpus)) {
       args += [
@@ -174,14 +170,12 @@ template("fuzzer") {
                              "target_name",
                              "visibility",
                            ])
-    sources += [ corpus_gensrc ]
 
     # Explicitly forward visibility for nested scopes.
     forward_variables_from(invoker, [ "visibility" ])
     deps += [
       ":$corpus_target",
       "//src/lib/fuzzing/cpp:fuzzer_test",
-      "//src/lib/fxl/test:gtest_main",
     ]
   }
 
@@ -192,6 +186,19 @@ template("fuzzer") {
     contents = {
       program = {
         binary = "test/$test_output"
+        args = [
+          # Suppress warnings about missing directories
+          "-q",
+
+          # Seed corpus
+          "pkg/data/${base_output_name}/corpus",
+
+          # Live corpus
+          "data/${base_output_name}/corpus",
+        ]
+      }
+      sandbox = {
+        services = [ "fuchsia.logger.LogSink" ]
       }
     }
     outputs = [ test_cmx_output ]
@@ -526,6 +533,11 @@ template("fuzzers_package") {
         tests += [
           {
             name = "${fuzzer.output_name}_test"
+
+            # Fuzzers may produce errors so long as they do not crash.
+            log_settings = {
+              max_severity = "ERROR"
+            }
           },
         ]
         extra += [ "${fuzzer_path}/${fuzzer.output_name}/corpus.manifest" ]

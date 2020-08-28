@@ -2,28 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fuzzer_test.h"
-
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 
 namespace fuzzing {
 
-TEST(FuzzerTest, EmptyInput) { EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0)); }
+static std::vector<std::string> gTestInputs;
 
-TEST(FuzzerTest, WithCorpus) {
-  auto elements = GetCorpus();
-  std::vector<uint8_t> data;
-  for (auto element : elements) {
-    ASSERT_TRUE(files::ReadFileToVector(element, &data));
+TEST(LlvmFuzzerTest, OneInput) {
+  // Should work with null
+  EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0));
+
+  //  Should work with non-null but zero size
+  uint8_t ignored;
+  EXPECT_EQ(0, LLVMFuzzerTestOneInput(&ignored, 0));
+
+  // Should work with any files in directories specified on the command line.
+  for (const auto &pathname : gTestInputs) {
+    SCOPED_TRACE(pathname);
+    std::vector<uint8_t> data;
+    ASSERT_TRUE(files::ReadFileToVector(pathname, &data));
     EXPECT_EQ(0, LLVMFuzzerTestOneInput(&data[0], data.size()));
   }
 }
 
+bool ExtractFlag(const std::string &flag, int *argc, char **argv) {
+  int len = *argc;
+  char **end = argv + len;
+  char **src = std::find(argv, end, flag);
+  if (src == end) {
+    return false;
+  }
+  char **dst = src++;
+  while (src != end) {
+    *dst++ = *src++;
+  }
+  *argc = len - 1;
+  return true;
+}
+
 }  // namespace fuzzing
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  if (::fuzzing::ExtractFlag("-h", &argc, argv)) {
+    std::cout << std::endl << "usage: " << argv[0] << " [-q] <corpus-dir> [...]" << std::endl;
+    return 0;
+  }
+  bool quiet = ::fuzzing::ExtractFlag("-q", &argc, argv);
+  for (int i = 1; i < argc; ++i) {
+    std::string arg(argv[i]);
+    std::vector<std::string> corpus;
+    if (!files::ReadDirContents(arg, &corpus)) {
+      if (!quiet) {
+        FX_LOGS(WARNING) << "No such directory: " << arg << std::endl;
+      }
+      continue;
+    }
+    for (const auto &filename : corpus) {
+      std::string pathname = arg + "/" + filename;
+      if (files::IsFile(pathname)) {
+        ::fuzzing::gTestInputs.push_back(pathname);
+      }
+    }
+  }
+  if (::fuzzing::gTestInputs.size() == 0 && !quiet) {
+    FX_LOGS(WARNING) << "No inputs provided." << std::endl;
+  } else {
+    FX_LOGS(INFO) << "Testing with " << ::fuzzing::gTestInputs.size() << " inputs." << std::endl;
+  }
+  return RUN_ALL_TESTS();
+}
