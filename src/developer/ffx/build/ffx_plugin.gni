@@ -102,6 +102,7 @@ template("ffx_plugin") {
       sub_cmd = output_name + "_sub_command"
       rustc_library(sub_cmd) {
         source_root = "$target_gen_dir/cmd_args.rs"
+        with_unit_tests = false
 
         sources = [ "$target_gen_dir/cmd_args.rs" ]
         deps = args_deps + [
@@ -120,6 +121,7 @@ template("ffx_plugin") {
                                  "sources",
                                  "enforce_source_listing",
                                  "target_name",
+                                 "with_unit_tests",
                                ])
       }
 
@@ -256,6 +258,7 @@ template("ffx_plugin") {
     rustc_library(suite_name) {
       source_root = "$target_gen_dir/plugins.rs"
 
+      with_unit_tests = false
       sources = [ "$target_gen_dir/plugins.rs" ]
       deps = suite_deps
       non_rust_deps = [ "//third_party/boringssl" ]
@@ -269,6 +272,7 @@ template("ffx_plugin") {
                                "target_name",
                                "sources",
                                "enforce_source_listing",
+                               "with_unit_tests",
                              ])
     }
   }
@@ -283,9 +287,6 @@ template("ffx_plugin") {
 
   group(output_name + "_tests") {
     testonly = true
-    deps = tests_deps + [
-             ":" + args + "_test($host_toolchain)",
-             ":" + suite_name + "_test($host_toolchain)",
-           ]
+    deps = tests_deps + [ ":" + args + "_test($host_toolchain)" ]
   }
 }
