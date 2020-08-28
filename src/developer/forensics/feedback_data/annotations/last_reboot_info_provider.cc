@@ -101,6 +101,8 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "fatal session failure";
       case RebootReason::SYSTEM_FAILURE:
         return "fatal system failure";
+      case RebootReason::FACTORY_DATA_RESET:
+        return "factory data reset";
       default:
         if (!last_reboot.has_graceful()) {
           return "unknown";
