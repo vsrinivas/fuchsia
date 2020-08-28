@@ -93,6 +93,11 @@ int Sherlock::Thread() {
     return -1;
   }
 
+  if (PowerInit() != ZX_OK) {
+    zxlogf(ERROR, "PowerInit() failed");
+    return -1;
+  }
+
   if (I2cInit() != ZX_OK) {
     zxlogf(ERROR, "I2cInit() failed");
   }
@@ -213,6 +218,16 @@ int Sherlock::Thread() {
   return 0;
 }
 
+zx_status_t Sherlock::PowerInit() {
+  if (pid_ == PDEV_PID_LUIS) {
+    return LuisPowerInit();
+  } else if (pid_ == PDEV_PID_SHERLOCK) {
+    // Sherlock does not implement a power driver yet.
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Sherlock::Start() {
   int rc = thrd_create_with_name(
       &thread_, [](void* arg) -> int { return reinterpret_cast<Sherlock*>(arg)->Thread(); }, this,
@@ -234,6 +249,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace sherlock
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(sherlock, sherlock::driver_ops, "zircon", "0.1", 4)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),

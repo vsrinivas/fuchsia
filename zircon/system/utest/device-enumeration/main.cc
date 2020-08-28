@@ -482,6 +482,9 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "class/temperature/000",
       "class/temperature/001",
       "class/temperature/002",
+      // Power Device.
+      "0p8_ee_buck",
+      "cpu_a_buck",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

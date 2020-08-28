@@ -8,12 +8,22 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
 #include <hwreg/i2c.h>
 
 #include "sy-buck-regs.h"
 
 namespace silergy {
+
+namespace {
+
+constexpr uint32_t kFragmentI2c = 0;
+constexpr uint32_t kFragmentCount = 1;
+
+}  // namespace
 
 zx_status_t SyBuck::VregSetVoltageStep(uint32_t step) {
   if (step >= kNumSteps) {
@@ -86,7 +96,46 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
   zx_status_t st;
   zxlogf(DEBUG, "%s: Binding SyBuck", __func__);
 
-  ddk::I2cProtocolClient i2c(parent);
+  // Determine which i2c Bus/Address this device is attached to.
+  size_t metadata_size = 0;
+  st = device_get_metadata_size(parent, DEVICE_METADATA_I2C_CHANNELS, &metadata_size);
+  if (metadata_size != sizeof(i2c_channel_t)) {
+    zxlogf(ERROR,
+           "%s: sybuck expects exactly one i2c channel passed as metadata. "
+           "expected = %lu, got = %lu",
+           __func__, sizeof(i2c_channel_t), metadata_size);
+    return ZX_ERR_INTERNAL;
+  }
+
+  i2c_channel_t channel;
+  st = device_get_metadata(parent, DEVICE_METADATA_I2C_CHANNELS, &channel, sizeof(channel),
+                           &metadata_size);
+  if (st != ZX_OK || metadata_size != sizeof(i2c_channel_t)) {
+    zxlogf(ERROR, "%s: Error while getting i2c channel address. st = %d", __func__, st);
+    return st;
+  }
+
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "%s: Failed to get composite protocol.", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  const uint32_t fragment_count = composite.GetFragmentCount();
+  if (fragment_count != kFragmentCount) {
+    zxlogf(ERROR, "%s: Expected %u fragments, got %u", __func__, kFragmentCount, fragment_count);
+    return ZX_ERR_INTERNAL;
+  }
+
+  size_t actual_fragment_count = 0;
+  zx_device_t* fragments[kFragmentCount];
+  composite.GetFragments(fragments, kFragmentCount, &actual_fragment_count);
+  if (actual_fragment_count != kFragmentCount) {
+    zxlogf(ERROR, "%s: Expected to fetch %u fragments, actually fetched %lu", __func__,
+           kFragmentCount, actual_fragment_count);
+  }
+
+  ddk::I2cProtocolClient i2c(fragments[kFragmentI2c]);
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s: SyBuck failed to get i2c channel", __func__);
     return ZX_ERR_INTERNAL;
@@ -100,7 +149,12 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
     return st;
   }
 
-  st = device->DdkAdd(ddk::DeviceAddArgs("silergy-sy-buck"));
+  zx_device_prop_t props[] = {
+      {BIND_I2C_BUS_ID, 0, channel.bus_id},
+      {BIND_I2C_ADDRESS, 0, channel.address},
+  };
+
+  st = device->DdkAdd(ddk::DeviceAddArgs("silergy-sy-buck").set_props(props));
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed, st = %d", __func__, st);
     return st;
@@ -122,7 +176,7 @@ static constexpr zx_driver_ops_t sy_buck_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(sybuck, sy_buck_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
 BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SILERGY),
 BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SILERGY_SYBUCK),
 ZIRCON_DRIVER_END(sybuck)

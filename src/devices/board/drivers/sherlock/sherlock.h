@@ -119,9 +119,12 @@ class Sherlock : public SherlockType {
   zx_status_t RamCtlInit();
   zx_status_t CpuInit();
   zx_status_t ThermistorInit();
+  zx_status_t PowerInit();
+  zx_status_t LuisPowerInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);
+  zx_status_t LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address);
 
   ddk::PBusProtocolClient pbus_;
   ddk::IommuProtocolClient iommu_;
