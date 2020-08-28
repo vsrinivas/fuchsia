@@ -314,6 +314,12 @@ void platform_early_init(void) {
       }
       pmm_add_arena(&mem_arena[i]);
     }
+
+    if (strcmp(mem_arena[i].name, "ram") == 0) {
+      // reserve the first 128K of ram, marked protected by the PMP in firmware
+      struct list_node list = LIST_INITIAL_VALUE(list);
+      pmm_alloc_range(mem_arena[i].base, 0x20000 / PAGE_SIZE, &list);
+    }
   }
 
   // add any pending memory arenas the memory limit library has pending
