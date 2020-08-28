@@ -482,23 +482,6 @@ TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
   EXPECT_EQ(app_.screen_reader()->context()->locale_id(), "en-US");
 }
 
-TEST_F(AppUnitTest, ScreenReaderUsesDefaultLocaleIfPropertyProviderDisconnectsOrIsNotAvailable) {
-  EXPECT_FALSE(app_.state().screen_reader_enabled());
-  mock_property_provider_.CloseChannels();
-  RunLoopUntilIdle();
-  // Only one call to GetProfile happened, because the channel was closed.
-  ASSERT_EQ(1, mock_property_provider_.get_profile_count());
-  // Turns on the Screen Reader and checks that it picks up the default locale.
-  fuchsia::settings::AccessibilitySettings accessibilitySettings;
-  accessibilitySettings.set_screen_reader(true);
-  accessibilitySettings.set_color_inversion(false);
-  accessibilitySettings.set_enable_magnification(false);
-  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
-  mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
-  RunLoopUntilIdle();
-  EXPECT_EQ(app_.screen_reader()->context()->locale_id(), "en-US");
-}
-
 // TODO(fxbug.dev/49924): Improve tests to cover what happens if services aren't available at
 // startup.
 

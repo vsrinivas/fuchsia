@@ -38,9 +38,6 @@ class MockPropertyProvider : public fuchsia::intl::PropertyProvider {
   bool delay_response() const { return delay_response_; }
   void set_delay_response(bool delay_response) { delay_response_ = delay_response; }
 
-  // Close all FIDL clients, by closing their channels.
-  void CloseChannels() { property_provider_bindings_.CloseAll(); }
-
  private:
   // |fuchsia.intl.PropertyProvider|
   void GetProfile(GetProfileCallback callback) override;
