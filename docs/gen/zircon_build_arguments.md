@@ -3,11 +3,17 @@
 ## All builds
 
 ### asan_default_options
-TODO(52369): Temporary until asan runtime decommits large allocations.
+Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
+options (before the `ASAN_OPTIONS` environment variable is read at
+runtime).  This can be set as a build argument to affect most "asan"
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  Note that setting this nonempty may conflict
+with programs that define their own `__asan_default_options` C
+function.
 
-**Current value (from the default):** `"clear_shadow_mmap_threshold=16384"`
+**Current value (from the default):** `""`
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:18
+From //public/gn/config/instrumentation/BUILD.zircon.gn:15
 
 ### assert_level
 Controls which asserts are enabled.
@@ -462,7 +468,7 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:28
+From //public/gn/config/instrumentation/BUILD.zircon.gn:24
 
 ### use_ccache
 Set to true to enable compiling with ccache.

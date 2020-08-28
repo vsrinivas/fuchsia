@@ -40,7 +40,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1083
+From //build/config/BUILDCONFIG.gn:1080
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -822,7 +822,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:841
+From //build/config/BUILDCONFIG.gn:838
 
 ### fastboot_product
 
@@ -1081,7 +1081,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:35
+From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -1089,7 +1089,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:35
+From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -1390,7 +1390,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   tags = ["asan", "instrumented", "instrumentation-runtime", "fuzzer"]
   toolchain_args = {
-  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
+  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
   use_scudo = false
 }
 }, {
@@ -1402,7 +1402,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:755
+From //build/config/BUILDCONFIG.gn:752
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2054,7 +2054,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1073
+From //build/config/BUILDCONFIG.gn:1070
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2063,7 +2063,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1078
+From //build/config/BUILDCONFIG.gn:1075
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2099,7 +2099,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:887
+From //build/config/BUILDCONFIG.gn:884
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2341,7 +2341,7 @@ nonempty may conflict with programs that define their own
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //build/config/sanitizers/BUILD.gn:33
+From //build/config/sanitizers/BUILD.gn:29
 
 ### universal_variants
 
@@ -2356,7 +2356,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:861
+From //build/config/BUILDCONFIG.gn:858
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2366,7 +2366,7 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
 From //products/core.gni:84
 
@@ -2374,7 +2374,7 @@ From //products/core.gni:84
 
 From //BUILD.gn:49
 
-**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
 From //products/core.gni:84
 
