@@ -158,6 +158,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             }
         }
 
+        // Bring up the PHY.
+        if let Err(err) = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropPhy::Enabled.into(), true).verify())
+            .await
+        {
+            fx_log_info!("init_task: Unable enable phy: {:?}", err);
+        }
+
         fx_log_info!("init_task: Finally updating driver state to initialized");
 
         // Update the driver state.
