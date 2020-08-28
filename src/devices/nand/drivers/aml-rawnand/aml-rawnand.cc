@@ -373,7 +373,6 @@ zx_status_t AmlRawNand::AmlQueueRB() {
   uint32_t cmd;
   zx_status_t status;
 
-  sync_completion_reset(&req_completion_);
   mmio_nandreg_.SetBits32((1 << 21), P_NAND_CFG);
   AmlCmdIdle(NAND_TWB_TIME_CYCLE);
   cmd = chip_select_ | AML_CMD_CLE | (NAND_CMD_STATUS & 0xff);
@@ -382,10 +381,14 @@ zx_status_t AmlRawNand::AmlQueueRB() {
   cmd = AML_CMD_RB | AML_CMD_IO6 | (1 << 16) | (0x18 & 0x1f);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
   AmlCmdIdle(2);
-  status = sync_completion_wait(&req_completion_, ZX_SEC(20));
-  if (status == ZX_ERR_TIMED_OUT) {
-    zxlogf(ERROR, "%s: Request timed out, not woken up from irq", __func__);
+
+  zx::time timestamp;
+  status = irq_.wait(&timestamp);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: IRQ wait failed", __func__);
+    return status;
   }
+
   return status;
 }
 
@@ -733,24 +736,6 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   return ZX_OK;
 }
 
-int AmlRawNand::IrqThread() {
-  zxlogf(INFO, "aml_raw_nand_irq_thread start");
-
-  while (1) {
-    zx::time timestamp;
-    if (irq_.wait(&timestamp) != ZX_OK) {
-      zxlogf(ERROR, "%s: IRQ wait failed", __FILE__);
-      return thrd_error;
-    }
-
-    // Wakeup blocked requester on
-    // sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);
-    sync_completion_signal(&req_completion_);
-  }
-
-  return 0;
-}
-
 zx_status_t AmlRawNand::RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info) {
   uint64_t capacity;
   zx_status_t status = ZX_OK;
@@ -888,10 +873,7 @@ void AmlRawNand::DdkRelease() {
   delete this;
 }
 
-void AmlRawNand::CleanUpIrq() {
-  irq_.destroy();
-  thrd_join(irq_thread_, nullptr);
-}
+void AmlRawNand::CleanUpIrq() { irq_.destroy(); }
 
 void AmlRawNand::DdkUnbindNew(ddk::UnbindTxn txn) {
   CleanUpIrq();
@@ -901,14 +883,7 @@ void AmlRawNand::DdkUnbindNew(ddk::UnbindTxn txn) {
 zx_status_t AmlRawNand::Init() {
   onfi_->Init([this](int32_t cmd, uint32_t ctrl) -> void { AmlCmdCtrl(cmd, ctrl); },
               [this]() -> uint8_t { return AmlReadByte(); });
-  auto cb = [](void* arg) -> int { return reinterpret_cast<AmlRawNand*>(arg)->IrqThread(); };
-  if (thrd_create_with_name(&irq_thread_, cb, this, "aml_raw_nand_irq_thread") != thrd_success) {
-    zxlogf(ERROR, "%s: Failed to create IRQ thread", __FILE__);
-    return ZX_ERR_INTERNAL;
-  }
 
-  // Do the rest of the init here, instead of up top in the irq
-  // thread, because the init needs for irq's to work.
   AmlClockInit();
   zx_status_t status = AmlNandInit();
   if (status != ZX_OK) {

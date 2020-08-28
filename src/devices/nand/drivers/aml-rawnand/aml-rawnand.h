@@ -8,7 +8,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <string.h>
 #include <unistd.h>
@@ -141,10 +140,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   zx::bti bti_;
   zx::interrupt irq_;
 
-  thrd_t irq_thread_;
   ddk::IoBuffer data_buffer_;
   ddk::IoBuffer info_buffer_;
-  sync_completion_t req_completion_;
 
   AmlController controller_params_;
   uint32_t chip_select_ = 0;  // Default to 0.
@@ -188,7 +185,6 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void AmlClockInit();
   void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);
   zx_status_t AmlGetFlashType();
-  int IrqThread();
   void AmlSetEncryption();
   zx_status_t AmlReadPage0(void* data, size_t data_size, void* oob, size_t oob_size,
                            uint32_t nand_page, uint32_t* ecc_correct, int retries);
