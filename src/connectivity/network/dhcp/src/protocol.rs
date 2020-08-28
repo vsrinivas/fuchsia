@@ -38,6 +38,7 @@ const MAGIC_COOKIE: [u8; 4] = [99, 130, 83, 99];
 
 const UNUSED_CHADDR_BYTES: usize = 10;
 
+const CHADDR_LEN: usize = 6;
 const SNAME_LEN: usize = 64;
 const FILE_LEN: usize = 128;
 
@@ -100,14 +101,17 @@ impl Message {
     /// Instantiates a new `Message` from a byte buffer conforming to the DHCP
     /// protocol as defined RFC 2131. Returns `None` if the buffer is malformed.
     /// Any malformed configuration options will be skipped over, leaving only
-    /// well formed `ConfigOption`s in the final `Message`.
+    /// well formed `DhcpOption`s in the final `Message`.
     pub fn from_buffer(buf: &[u8]) -> Result<Self, ProtocolError> {
-        if buf.len() < OPTIONS_START_IDX {
-            return Err(ProtocolError::InvalidBufferLength(buf.len()));
-        }
-        let (buf, options) = buf.split_at(OPTIONS_START_IDX);
-        let options = if options.len() >= MAGIC_COOKIE.len() {
-            let (magic_cookie, options) = options.split_at(MAGIC_COOKIE.len());
+        let options =
+            buf.get(OPTIONS_START_IDX..).ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
+        let options = {
+            let magic_cookie = options
+                .get(..MAGIC_COOKIE.len())
+                .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
+            let options = options
+                .get(MAGIC_COOKIE.len()..)
+                .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
             if magic_cookie == MAGIC_COOKIE {
                 OptionBuffer::new(options)
                     .into_iter()
@@ -122,15 +126,63 @@ impl Message {
             } else {
                 Vec::new()
             }
-        } else {
-            Vec::new()
         };
 
-        let op = buf.get(OP_IDX).ok_or(ProtocolError::MissingOpCode)?;
-        let mut chaddr = MacAddr { octets: [0; 6] };
-        copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut chaddr);
+        // Ordinarily, DHCP Options are stored in the variable length option field.
+        // However, a client can, at its discretion, store Options in the typically unused
+        // sname and file fields. If it wants to do this, it puts an OptionOverload option
+        // in the options field to indicate that additional options are either in the sname
+        // field, or the file field, or both. Consequently, we must:
+        //
+        // 1. Parse the options field.
+        // 2. Check if the parsed options include an OptionOverload.
+        // 3. If it does, grab the bytes from the field(s) indicated by the OptionOverload
+        //    option.
+        // 4. Parse those bytes into options.
+        // 5. Combine those parsed options with whatever was in the variable length
+        //    option field.
+        //
+        // From RFC 2131 pp23-24:
+        //
+        //     If the options in a DHCP message extend into the 'sname' and 'file'
+        //     fields, the 'option overload' option MUST appear in the 'options' field,
+        //     with value 1, 2 or 3, as specified in RFC 1533.
+        //
+        //     The options in the 'options' field MUST be interpreted first, so
+        //     that any 'option overload' options may be interpreted.
+        let overload = options.iter().find_map(|v| match v {
+            &DhcpOption::OptionOverload(overload) => Some(overload),
+            _ => None,
+        });
+        let sname =
+            buf.get(SNAME_IDX..FILE_IDX).ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
+        let file = buf
+            .get(FILE_IDX..OPTIONS_START_IDX)
+            .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
+        let options = match overload {
+            Some(overload) => {
+                let extra_opts = match overload {
+                    Overload::SName => sname,
+                    Overload::File => file,
+                    Overload::Both => buf
+                        .get(SNAME_IDX..OPTIONS_START_IDX)
+                        .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
+                };
+                options
+                    .into_iter()
+                    .chain(OptionBuffer::new(extra_opts).into_iter().filter_map(|v| match v {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            log::warn!("failed to parse option buffer: {}", e);
+                            None
+                        }
+                    }))
+                    .collect()
+            }
+            None => options,
+        };
         Ok(Self {
-            op: OpCode::try_from(*op)?,
+            op: OpCode::try_from(*buf.get(OP_IDX).ok_or(ProtocolError::MissingOpCode)?)?,
             xid: u32::from_be_bytes(
                 <[u8; 4]>::try_from(
                     buf.get(XID_IDX..SECS_IDX)
@@ -149,14 +201,31 @@ impl Message {
                     ProtocolError::InvalidBufferLength(buf.len())
                 })?,
             ),
-            bdcast_flag: buf[FLAGS_IDX] > 0,
+            bdcast_flag: *buf
+                .get(FLAGS_IDX)
+                .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?
+                != 0,
             ciaddr: ip_addr_from_buf_at(buf, CIADDR_IDX)?,
             yiaddr: ip_addr_from_buf_at(buf, YIADDR_IDX)?,
             siaddr: ip_addr_from_buf_at(buf, SIADDR_IDX)?,
             giaddr: ip_addr_from_buf_at(buf, GIADDR_IDX)?,
-            chaddr,
-            sname: buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?,
-            file: buf_to_msg_string(&buf[FILE_IDX..])?,
+            chaddr: MacAddr {
+                octets: buf
+                    .get(CHADDR_IDX..CHADDR_IDX + CHADDR_LEN)
+                    .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?
+                    .try_into()
+                    .map_err(|std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(buf.len())
+                    })?,
+            },
+            sname: match overload {
+                Some(Overload::SName) | Some(Overload::Both) => String::from(""),
+                Some(Overload::File) | None => buf_to_msg_string(sname)?,
+            },
+            file: match overload {
+                Some(Overload::File) | Some(Overload::Both) => String::from(""),
+                Some(Overload::SName) | None => buf_to_msg_string(file)?,
+            },
             options,
         })
     }
@@ -1816,10 +1885,6 @@ pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Result<Ipv4Addr, Protoco
     Ok(buf.into())
 }
 
-fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
-    addr.octets.as_mut().copy_from_slice(buf)
-}
-
 fn buf_to_msg_string(buf: &[u8]) -> Result<String, ProtocolError> {
     Ok(std::str::from_utf8(buf)
         .map_err(|e| ProtocolError::Utf8(e.valid_up_to()))?
@@ -2114,5 +2179,72 @@ mod tests {
                 OptionCode::NetBiosOverTcpipScope,
             ]))
         );
+    }
+
+    fn test_option_overload(overload: Overload) {
+        let mut msg = Message {
+            op: OpCode::BOOTREQUEST,
+            xid: 0,
+            secs: 0,
+            bdcast_flag: false,
+            ciaddr: Ipv4Addr::UNSPECIFIED,
+            yiaddr: Ipv4Addr::UNSPECIFIED,
+            siaddr: Ipv4Addr::UNSPECIFIED,
+            giaddr: Ipv4Addr::UNSPECIFIED,
+            chaddr: MacAddr { octets: [0; 6] },
+            sname: String::from(""),
+            file: String::from(""),
+            options: vec![DhcpOption::OptionOverload(overload)],
+        }
+        .serialize();
+        let ip = crate::server::tests::random_ipv4_generator();
+        let first_extra_opt = {
+            let mut acc = Vec::new();
+            let () = DhcpOption::RequestedIpAddress(ip).serialize_to(&mut acc);
+            acc
+        };
+        let last_extra_opt = {
+            let mut acc = Vec::new();
+            let () = DhcpOption::End().serialize_to(&mut acc);
+            acc
+        };
+        let (extra_opts, start_idx) = match overload {
+            Overload::SName => ([&first_extra_opt[..], &last_extra_opt[..]].concat(), SNAME_IDX),
+            Overload::File => ([&first_extra_opt[..], &last_extra_opt[..]].concat(), FILE_IDX),
+            Overload::Both => {
+                // Insert enough padding bytes such that extra_opts will straddle both file and
+                // sname fields.
+                ([&first_extra_opt[..], &[0u8; SNAME_LEN], &last_extra_opt[..]].concat(), SNAME_IDX)
+            }
+        };
+        let _: std::vec::Splice<'_, _> =
+            msg.splice(start_idx..start_idx + extra_opts.len(), extra_opts);
+        assert_eq!(
+            Message::from_buffer(&msg),
+            Ok(Message {
+                op: OpCode::BOOTREQUEST,
+                xid: 0,
+                secs: 0,
+                bdcast_flag: false,
+                ciaddr: Ipv4Addr::UNSPECIFIED,
+                yiaddr: Ipv4Addr::UNSPECIFIED,
+                siaddr: Ipv4Addr::UNSPECIFIED,
+                giaddr: Ipv4Addr::UNSPECIFIED,
+                chaddr: MacAddr { octets: [0; 6] },
+                sname: String::from(""),
+                file: String::from(""),
+                options: vec![
+                    DhcpOption::OptionOverload(overload),
+                    DhcpOption::RequestedIpAddress(ip)
+                ],
+            })
+        );
+    }
+
+    #[test]
+    fn test_message_with_option_overload_parses_extra_options() {
+        test_option_overload(Overload::SName);
+        test_option_overload(Overload::File);
+        test_option_overload(Overload::Both);
     }
 }
