@@ -6,4 +6,5 @@
 include <test/name/c/fidl.h>
 test_name_MyStrictEnum = test_name_MyStrictEnum_FOO, test_name_MyStrictEnum_BAR
 test_name_MyFlexibleEnum = test_name_MyFlexibleEnum_FOO, test_name_MyFlexibleEnum_BAR
+test_name_MyFlexibleEnumWithCustomUnknown = test_name_MyFlexibleEnumWithCustomUnknown_FOO, test_name_MyFlexibleEnumWithCustomUnknown_BAR, test_name_MyFlexibleEnumWithCustomUnknown_CUSTOM_UNKNOWN
 

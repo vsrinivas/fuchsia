@@ -47,3 +47,30 @@ func (x MyFlexibleEnum) String() string {
 	}
 	return "Unknown"
 }
+
+type MyFlexibleEnumWithCustomUnknown uint32
+
+const (
+	MyFlexibleEnumWithCustomUnknownFoo           MyFlexibleEnumWithCustomUnknown = 1
+	MyFlexibleEnumWithCustomUnknownBar           MyFlexibleEnumWithCustomUnknown = 2
+	MyFlexibleEnumWithCustomUnknownCustomUnknown MyFlexibleEnumWithCustomUnknown = 3
+)
+
+func (_ MyFlexibleEnumWithCustomUnknown) I_EnumValues() []MyFlexibleEnumWithCustomUnknown {
+	return []MyFlexibleEnumWithCustomUnknown{
+		MyFlexibleEnumWithCustomUnknownFoo,
+		MyFlexibleEnumWithCustomUnknownBar,
+		MyFlexibleEnumWithCustomUnknownCustomUnknown,
+	}
+}
+func (x MyFlexibleEnumWithCustomUnknown) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
+	case 3:
+		return "CustomUnknown"
+	}
+	return "Unknown"
+}

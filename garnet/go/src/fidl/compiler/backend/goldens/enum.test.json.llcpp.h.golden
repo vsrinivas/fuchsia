@@ -41,6 +41,12 @@ enum class MyStrictEnum : uint32_t {
   BAR = 2u,
 };
 
+enum class MyFlexibleEnumWithCustomUnknown : uint32_t {
+  FOO = 1u,
+  BAR = 2u,
+  CUSTOM_UNKNOWN = 3u,
+};
+
 enum class MyFlexibleEnum : uint32_t {
   FOO = 1u,
   BAR = 2u,
@@ -54,6 +60,10 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::test::name::MyStrictEnum> : public std::true_type {};
+
+template <>
+struct IsFidlType<::llcpp::test::name::MyFlexibleEnumWithCustomUnknown>
+    : public std::true_type {};
 
 template <>
 struct IsFidlType<::llcpp::test::name::MyFlexibleEnum> : public std::true_type {

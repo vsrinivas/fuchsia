@@ -9,3 +9,9 @@ flexible enum MyFlexibleEnum : uint32 {
     FOO = 1;
     BAR = 2;
 };
+
+flexible enum MyFlexibleEnumWithCustomUnknown : uint32 {
+    FOO = 1;
+    BAR = 2;
+    [Unknown] CUSTOM_UNKNOWN = 3;
+};

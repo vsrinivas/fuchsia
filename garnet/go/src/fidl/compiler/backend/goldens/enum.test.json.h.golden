@@ -20,6 +20,22 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
   return ZX_OK;
 }
 
+enum class MyFlexibleEnumWithCustomUnknown : uint32_t {
+
+  FOO = 1u,
+
+  BAR = 2u,
+
+  CUSTOM_UNKNOWN = 3u,
+};
+
+inline zx_status_t Clone(
+    ::test::name::MyFlexibleEnumWithCustomUnknown value,
+    ::test::name::MyFlexibleEnumWithCustomUnknown* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 enum class MyFlexibleEnum : uint32_t {
 
   FOO = 1u,
@@ -63,6 +79,42 @@ template <>
 struct Equality<::test::name::MyStrictEnum> {
   bool operator()(const ::test::name::MyStrictEnum& _lhs,
                   const ::test::name::MyStrictEnum& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
+template <>
+struct CodingTraits<::test::name::MyFlexibleEnumWithCustomUnknown> {
+  static constexpr size_t inline_size_old =
+      sizeof(::test::name::MyFlexibleEnumWithCustomUnknown);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyFlexibleEnumWithCustomUnknown);
+  static void Encode(Encoder* encoder,
+                     ::test::name::MyFlexibleEnumWithCustomUnknown* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder,
+                     ::test::name::MyFlexibleEnumWithCustomUnknown* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value =
+        static_cast<::test::name::MyFlexibleEnumWithCustomUnknown>(underlying);
+  }
+};
+
+inline zx_status_t Clone(
+    ::test::name::MyFlexibleEnumWithCustomUnknown value,
+    ::test::name::MyFlexibleEnumWithCustomUnknown* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct Equality<::test::name::MyFlexibleEnumWithCustomUnknown> {
+  bool operator()(
+      const ::test::name::MyFlexibleEnumWithCustomUnknown& _lhs,
+      const ::test::name::MyFlexibleEnumWithCustomUnknown& _rhs) const {
     return _lhs == _rhs;
   }
 };

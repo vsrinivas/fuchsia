@@ -107,6 +107,83 @@
       ],
       "strict": false,
       "maybe_unknown_value": 4294967295
+    },
+    {
+      "name": "test.name/MyFlexibleEnumWithCustomUnknown",
+      "location": {
+        "filename": "enum.test.fidl",
+        "line": 13,
+        "column": 15,
+        "length": 31
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 14,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 15,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        },
+        {
+          "name": "CUSTOM_UNKNOWN",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 16,
+            "column": 15,
+            "length": 14
+          },
+          "value": {
+            "kind": "literal",
+            "value": "3",
+            "expression": "3",
+            "literal": {
+              "kind": "numeric",
+              "value": "3",
+              "expression": "3"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Unknown",
+              "value": ""
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 3
     }
   ],
   "experimental_resource_declarations": [],
@@ -118,10 +195,12 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "test.name/MyStrictEnum",
+    "test.name/MyFlexibleEnumWithCustomUnknown",
     "test.name/MyFlexibleEnum"
   ],
   "declarations": {
     "test.name/MyStrictEnum": "enum",
-    "test.name/MyFlexibleEnum": "enum"
+    "test.name/MyFlexibleEnum": "enum",
+    "test.name/MyFlexibleEnumWithCustomUnknown": "enum"
   }
 }

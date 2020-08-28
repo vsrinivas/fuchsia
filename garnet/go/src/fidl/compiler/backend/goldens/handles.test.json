@@ -1168,7 +1168,7 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 82,
-            "column": 20,
+            "column": 21,
             "length": 13
           },
           "field_shape_v1": {
@@ -1341,7 +1341,6 @@
         "name": "handle",
         "args": [],
         "nullable": false,
-        "maybe_handle_subtype": "vmo",
         "handle_rights": {
           "kind": "literal",
           "value": "1",

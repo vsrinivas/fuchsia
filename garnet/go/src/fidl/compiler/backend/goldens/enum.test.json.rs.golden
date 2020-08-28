@@ -30,3 +30,11 @@ fidl_enum! {
     Bar = 2,
   }
 }
+
+fidl_enum! {
+  MyFlexibleEnumWithCustomUnknown(u32) {
+    Foo = 1,
+    Bar = 2,
+    CustomUnknown = 3,
+  }
+}
