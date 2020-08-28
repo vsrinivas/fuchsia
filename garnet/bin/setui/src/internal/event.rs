@@ -5,6 +5,7 @@
 use crate::agent;
 use crate::message::base::{Audience, MessengerType};
 use crate::message_hub_definition;
+use crate::switchboard::base::SettingType;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -20,11 +21,13 @@ pub enum Event {
     Earcon(earcon::Event),
     Restore(restore::Event),
     Closed(&'static str),
+    Handler(handler::Event),
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Agent(agent::base::Descriptor),
+    SettingProxy(SettingType),
 }
 
 pub mod earcon {
@@ -38,6 +41,16 @@ pub mod earcon {
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum EarconType {
         Volume,
+    }
+}
+
+pub mod handler {
+    use crate::switchboard::base::{SettingRequest, SettingType};
+
+    #[derive(PartialEq, Clone, Debug)]
+    pub enum Event {
+        Retry(SettingType, SettingRequest),
+        AttemptsExceeded(SettingType, SettingRequest),
     }
 }
 

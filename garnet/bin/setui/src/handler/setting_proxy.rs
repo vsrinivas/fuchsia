@@ -15,6 +15,7 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
 use crate::internal::core;
+use crate::internal::event::{self, Event};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::switchboard::base::{
@@ -26,14 +27,28 @@ struct ActiveRequest {
     id: u64,
     request: SettingRequest,
     client: core::message::Client,
+    attempts: u64,
 }
 
 #[derive(Clone, Debug)]
 enum ActiveControllerRequest {
     /// Request to add an active request from a ControllerState.
     AddActive(ActiveRequest),
+    /// Executes the next active request, recreating the handler if the
+    /// argument is set to true.
+    Execute(bool),
     /// Request to remove an active request from a ControllerState.
-    RemoveActive(u64, SettingEvent),
+    ///
+    /// In addition to the request id, a `Result` is provided to specify a
+    /// `SettingEvent` to return in the success case or an empty Error to
+    /// represent the that request has irrocoverably failed, resulting in
+    /// `ControllerError::IrrecoverableError` being returned.
+    RemoveActive(u64, Result<SettingEvent, ()>),
+    /// Requests resources be torn down. Called when there are no more requests
+    /// to process.
+    Teardown,
+    /// Request to retry the current request.
+    Retry(u64),
 }
 
 pub struct SettingProxy {
@@ -51,8 +66,12 @@ pub struct SettingProxy {
     controller_messenger_factory: handler::message::Factory,
     /// Client for communicating with handlers.
     controller_messenger_client: handler::message::Messenger,
+    /// Client for communicating events.
+    event_publisher: event::Publisher,
+
     /// Sender for passing messages about the active requests and controllers.
     active_controller_sender: UnboundedSender<ActiveControllerRequest>,
+    max_attempts: u64,
 }
 
 impl SettingProxy {
@@ -63,6 +82,8 @@ impl SettingProxy {
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: core::message::Factory,
         controller_messenger_factory: handler::message::Factory,
+        event_messenger_factory: event::message::Factory,
+        max_attempts: u64,
     ) -> Result<(core::message::Signature, handler::message::Signature), Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
         if let Err(error) = messenger_result {
@@ -80,6 +101,12 @@ impl SettingProxy {
         let (controller_messenger_client, mut controller_receptor) =
             controller_messenger_result.unwrap();
 
+        let event_publisher = event::Publisher::create(
+            &event_messenger_factory,
+            MessengerType::Addressable(event::Address::SettingProxy(setting_type)),
+        )
+        .await;
+
         let handler_signature = controller_messenger_client.get_signature();
 
         let (active_controller_sender, mut active_controller_receiver) =
@@ -96,7 +123,9 @@ impl SettingProxy {
             messenger_client: core_client,
             controller_messenger_client,
             controller_messenger_factory,
+            event_publisher: event_publisher,
             active_controller_sender,
+            max_attempts,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -130,10 +159,19 @@ impl SettingProxy {
                         if let Some(request) = request {
                             match request {
                                 ActiveControllerRequest::AddActive(active_request) => {
-                                    proxy.add_active_request(active_request).await;
+                                    proxy.add_active_request(active_request);
                                 }
-                                ActiveControllerRequest::RemoveActive(id, event) => {
-                                    proxy.remove_active_request(id, event).await;
+                                ActiveControllerRequest::Execute(recreate_handler) => {
+                                    proxy.execute_next_request(recreate_handler).await;
+                                }
+                                ActiveControllerRequest::RemoveActive(id, result) => {
+                                    proxy.remove_active_request(id, result);
+                                }
+                                ActiveControllerRequest::Teardown => {
+                                    proxy.teardown_if_needed().await
+                                }
+                                ActiveControllerRequest::Retry(id) => {
+                                    proxy.retry(id);
                                 }
                             }
                         }
@@ -174,8 +212,11 @@ impl SettingProxy {
         }
     }
 
-    async fn get_handler_signature(&mut self) -> Option<handler::message::Signature> {
-        if self.client_signature.is_none() {
+    async fn get_handler_signature(
+        &mut self,
+        force_create: bool,
+    ) -> Option<handler::message::Signature> {
+        if force_create || self.client_signature.is_none() {
             self.client_signature = self
                 .handler_factory
                 .lock()
@@ -203,7 +244,7 @@ impl SettingProxy {
 
         self.has_active_listener = size > 0;
 
-        let optional_handler_signature = self.get_handler_signature().await;
+        let optional_handler_signature = self.get_handler_signature(false).await;
         if optional_handler_signature.is_none() {
             return;
         }
@@ -223,7 +264,7 @@ impl SettingProxy {
             .send()
             .ack();
 
-        self.teardown_if_needed().await;
+        self.request(ActiveControllerRequest::Teardown);
     }
 
     /// Called by the receiver task when a sink has reported a change to its
@@ -252,7 +293,7 @@ impl SettingProxy {
         request: SettingRequest,
         client: core::message::Client,
     ) {
-        match self.get_handler_signature().await {
+        match self.get_handler_signature(false).await {
             None => {
                 client
                     .reply(core::Payload::Event(SettingEvent::Response(
@@ -263,11 +304,13 @@ impl SettingProxy {
             }
             Some(_) => {
                 // Add the request to the queue of requests to process.
-                let active_request =
-                    ActiveRequest { id, request: request.clone(), client: client.clone() };
-                self.active_controller_sender
-                    .unbounded_send(ActiveControllerRequest::AddActive(active_request))
-                    .ok();
+                let active_request = ActiveRequest {
+                    id,
+                    request: request.clone(),
+                    client: client.clone(),
+                    attempts: 0,
+                };
+                self.request(ActiveControllerRequest::AddActive(active_request));
             }
         }
     }
@@ -277,12 +320,15 @@ impl SettingProxy {
     /// If this is the first request in the queue, processing will begin immediately.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    async fn add_active_request(&mut self, active_request: ActiveRequest) {
+    fn add_active_request(&mut self, active_request: ActiveRequest) {
         self.active_requests.push_back(active_request);
         if self.active_requests.len() == 1 {
-            // Queue was empty before this request, start processing.
-            self.process_active_requests().await;
+            self.request(ActiveControllerRequest::Execute(false));
         }
+    }
+
+    fn request(&mut self, request: ActiveControllerRequest) {
+        self.active_controller_sender.unbounded_send(request).ok();
     }
 
     /// Removes an active request from the request queue for this setting.
@@ -290,19 +336,33 @@ impl SettingProxy {
     /// Should only be called once a request is finished processing.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    async fn remove_active_request(&mut self, id: u64, event: SettingEvent) {
+    fn remove_active_request(&mut self, id: u64, result: Result<SettingEvent, ()>) {
         let request_index = self.active_requests.iter().position(|r| r.id == id);
         let removed_request = self
             .active_requests
             .remove(request_index.expect("request ID not found"))
             .expect("request should be present");
 
-        removed_request.client.reply(core::Payload::Event(event)).send();
+        // Send result back to original caller. If the result was an Error, then
+        // send back `IrrecoverableError` to indicate an external failure. Other
+        // errors outside this condition should be handed back as a
+        // SettingEvent.
+        removed_request
+            .client
+            .reply(core::Payload::Event(result.unwrap_or_else(|_| {
+                self.event_publisher.send_event(Event::Handler(
+                    event::handler::Event::AttemptsExceeded(
+                        self.setting_type,
+                        removed_request.request.clone(),
+                    ),
+                ));
+                SettingEvent::Response(id, Err(ControllerError::IrrecoverableError))
+            })))
+            .send();
 
-        // Since the previous request finished, resume processing.
-        self.process_active_requests().await;
-
-        self.teardown_if_needed().await;
+        // If there are still requests to process, then request for the next to
+        // be processed. Otherwise request teardown.
+        self.request(ActiveControllerRequest::Execute(false));
     }
 
     /// Processes the next request in the queue of active requests.
@@ -310,19 +370,35 @@ impl SettingProxy {
     /// If the queue is empty, nothing happens.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    async fn process_active_requests(&mut self) {
-        let active_request = match self.active_requests.front() {
+    async fn execute_next_request(&mut self, recreate_handler: bool) {
+        // Recreating signature is always honored, even if the request is not.
+        let signature = self
+            .get_handler_signature(recreate_handler)
+            .await
+            .expect("failed to generate handler signature");
+
+        let mut active_request = match self.active_requests.front_mut() {
             Some(request) => request,
-            None => return,
+            None => {
+                self.request(ActiveControllerRequest::Teardown);
+                return;
+            }
+        };
+
+        active_request.attempts += 1;
+
+        // Note that we must copy these values as we are borrowing self for
+        // active_requests and self is needed to remove active below.
+        let id = active_request.id;
+        let current_attempts = active_request.attempts;
+        let request = active_request.request.clone();
+
+        // If we have exceeded the maximum number of attempts, remove this
+        // request from the queue.
+        if current_attempts > self.max_attempts {
+            self.request(ActiveControllerRequest::RemoveActive(id, Err(())));
+            return;
         }
-        .clone();
-
-        let request = active_request.request;
-
-        // It's okay to expect here since the handler signature should have been generated when the
-        // request first came in. If at that time the generation failed, the client would have been
-        // notified and the request would not have been queued.
-        let signature = self.client_signature.expect("failed to generate handler signature");
 
         let mut receptor = self
             .controller_messenger_client
@@ -332,40 +408,57 @@ impl SettingProxy {
             )
             .send();
 
-        let id = active_request.id;
         let active_controller_sender_clone = self.active_controller_sender.clone();
-        let setting_type = self.setting_type;
 
-        // TODO(fxb/57168): add timeout for receptor.next() to remove the active request
+        // TODO(fxb/59016): add timeout for receptor.next() to remove the active request
         // entry and prevent leaks. Context: Faulty handlers can cause `receptor` to never run. When
         // rewriting this to handle retries, ensure that `RemoveActive` is called at some point, or
         // the client will be leaked within active_requests. This must be done especially if the
         // loop below never receives a result.
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
-                if let Some(event) = match message_event {
+                let handler_result = match message_event {
                     MessageEvent::Message(handler::Payload::Result(result), _) => {
-                        // TODO(fxb/57171): add retry logic. If unable to succeed with
-                        // retries, reply with error. Consider breaking out a separate
-                        // function to reduce rightward drift.
-                        Some(SettingEvent::Response(id, result))
+                        if let Err(ControllerError::ExternalFailure(..)) = result {
+                            active_controller_sender_clone
+                                .unbounded_send(ActiveControllerRequest::Retry(id))
+                                .ok();
+                            return;
+                        }
+
+                        Some(Ok(SettingEvent::Response(id, result)))
                     }
-                    MessageEvent::Status(Status::Undeliverable) => Some(SettingEvent::Response(
-                        id,
-                        Err(ControllerError::UndeliverableError(setting_type, request.clone())),
-                    )),
+                    MessageEvent::Status(Status::Undeliverable) => Some(Err(())),
                     _ => None,
-                } {
+                };
+
+                if let Some(result) = handler_result {
                     // Mark the request as having been handled after retries have been
                     // attempted and the client has been notified.
                     active_controller_sender_clone
-                        .unbounded_send(ActiveControllerRequest::RemoveActive(id, event))
+                        .unbounded_send(ActiveControllerRequest::RemoveActive(id, result))
                         .ok();
                     return;
                 }
             }
         })
         .detach();
+    }
+
+    /// Requests the first request in the queue be tried again, forcefully
+    /// recreating the handler.
+    fn retry(&mut self, id: u64) {
+        // The supplied id should always match the first request in the queue.
+        debug_assert!(
+            id == self.active_requests.front().expect("active request should be present").id
+        );
+
+        self.event_publisher.send_event(Event::Handler(event::handler::Event::Retry(
+            self.setting_type,
+            self.active_requests.front().expect("active request should be present").request.clone(),
+        )));
+
+        self.request(ActiveControllerRequest::Execute(true));
     }
 
     /// Transitions the controller for the [setting_type] to the Teardown phase
