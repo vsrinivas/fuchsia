@@ -1,21 +1,20 @@
 # `log_listener`
 
-Reviewed on: 2019-07-22
+Reviewed on: 2020-08-27
 
 `log_listener` is a command line tool for retrieving log messages from
 [`fuchsia.logger.Log`][logger] and either writing them to disk or printing them.
 
 ## Building
 
-To add this project to your build, append `--with
-//garnet/bin/log_listener` to the `fx set` invocation.
+This tool is included in the `core` build product.
 
 ## Running
 
-`log_listener` is typically invoked via the `fx syslog` command:
+`log_listener` is typically invoked via the `fx log` command:
 
 ```
-$ fx syslog --help
+$ fx log --help
 ```
 
 It can also be run directly on a Fuchsia shell:
