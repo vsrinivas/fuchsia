@@ -425,6 +425,11 @@ bool ZirconPlatformBuffer::Write(const void* buffer, uint64_t offset, uint64_t l
   return DRETF(status == ZX_OK, "Write failed with status: %d", status);
 }
 
+bool ZirconPlatformBuffer::SetName(const char* name) {
+  zx_status_t status = vmo_.set_property(ZX_PROP_NAME, name, strlen(name));
+  return DRETF(status == ZX_OK, "Setting name failed with status %d", status);
+}
+
 bool ZirconPlatformBuffer::CreateChild(uint32_t* handle_out) {
   zx::vmo child;
   zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SLICE, 0, /*offset*/

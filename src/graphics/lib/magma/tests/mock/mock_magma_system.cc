@@ -432,3 +432,8 @@ magma_status_t magma_connection_read_performance_counter_completion(
     uint32_t* result_flags_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_buffer_set_name(magma_connection_t connection, magma_buffer_t buffer,
+                                     const char* name) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

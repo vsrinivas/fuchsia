@@ -112,6 +112,8 @@ class PlatformBuffer {
   // Write from a buffer into an offset in the VMO.
   virtual bool Write(const void* buffer, uint64_t offset, uint64_t length) = 0;
 
+  virtual bool SetName(const char* name) = 0;
+
   static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
   // Deprecated

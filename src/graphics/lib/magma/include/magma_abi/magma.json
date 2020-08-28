@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 64,
+    "next-free-ordinal": 65,
     "exports": [
       {
         "ordinal": 4,
@@ -1202,6 +1202,29 @@
             "name": "result_flags_out",
             "type": "uint32_t*",
             "description": "A set of flags giving more information about this event."
+          }
+        ]
+      },
+      {
+        "ordinal": 64,
+        "name": "magma_buffer_set_name",
+        "type": "magma_status_t",
+        "description": "Sets a name for the buffer for use in debugging tools.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "name",
+            "type": "const char*",
+            "description": "The 0-terminated name of the buffer. May be truncated."
           }
         ]
       }

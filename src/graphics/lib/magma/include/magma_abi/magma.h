@@ -654,6 +654,17 @@ magma_status_t magma_connection_read_performance_counter_completion(
     uint64_t* time_out,
     uint32_t* result_flags_out);
 
+///
+/// \brief Sets a name for the buffer for use in debugging tools.
+/// \param connection An open connection.
+/// \param buffer A valid buffer.
+/// \param name The 0-terminated name of the buffer. May be truncated.
+///
+magma_status_t magma_buffer_set_name(
+    magma_connection_t connection,
+    magma_buffer_t buffer,
+    const char* name);
+
 #if defined(__cplusplus)
 }
 #endif

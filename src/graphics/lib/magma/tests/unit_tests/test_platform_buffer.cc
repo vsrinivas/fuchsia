@@ -571,6 +571,28 @@ class TestPlatformBuffer {
     child2.reset();
     EXPECT_FALSE(buffer->HasChildren());
   }
+
+  static void Name() {
+    std::unique_ptr<magma::PlatformBuffer> buffer =
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
+    ASSERT_TRUE(buffer);
+
+    uint32_t duplicate_handle;
+    ASSERT_TRUE(buffer->duplicate_handle(&duplicate_handle));
+
+    auto handle = magma::PlatformHandle::Create(duplicate_handle);
+    EXPECT_EQ("test", handle->GetName());
+
+    buffer->SetName("NewName");
+    EXPECT_EQ("NewName", handle->GetName());
+
+    const char* kLongName = "NewNameThatShouldBeOverThirtyTwoBytesInLength";
+    ASSERT_LE(32u, strlen(kLongName));
+
+    buffer->SetName(kLongName);
+    // Check that the buffer name is a prefix of kLongName.
+    EXPECT_EQ(0u, std::string(kLongName).find(handle->GetName()));
+  }
 };
 
 TEST(PlatformBuffer, Basic) {
@@ -646,5 +668,7 @@ TEST(PlatformBuffer, MapConstrained) { TestPlatformBuffer::MapConstrained(); }
 
 TEST(PlatformBuffer, Padding) { TestPlatformBuffer::Padding(); }
 #endif
+
+TEST(PlatformBuffer, Name) { TestPlatformBuffer::Name(); }
 
 #endif

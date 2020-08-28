@@ -651,3 +651,10 @@ magma_status_t magma_connection_read_performance_counter_completion(
                                          result_flags_out)
       .get();
 }
+
+magma_status_t magma_buffer_set_name(magma_connection_t connection, magma_buffer_t buffer,
+                                     const char* name) {
+  if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->SetName(name))
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  return MAGMA_STATUS_OK;
+}
