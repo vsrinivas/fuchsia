@@ -1182,6 +1182,57 @@ TEST(LocalhostTest, Accept) {
   ASSERT_GT(connaddrlen, sizeof(connaddr));
 }
 
+TEST(LocalhostTest, AcceptAfterReset) {
+  fbl::unique_fd server;
+  ASSERT_TRUE(server = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in6 addr = {
+      .sin6_family = AF_INET6,
+      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+  };
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(bind(server.get(), (const sockaddr*)&addr, addrlen), 0) << strerror(errno);
+  ASSERT_EQ(getsockname(server.get(), (sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+  ASSERT_EQ(listen(server.get(), 1), 0) << strerror(errno);
+
+  {
+    fbl::unique_fd client;
+    ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
+    ASSERT_EQ(connect(client.get(), (const sockaddr*)&addr, addrlen), 0) << strerror(errno);
+    struct linger opt = {
+        .l_onoff = 1,
+        .l_linger = 0,
+    };
+    ASSERT_EQ(setsockopt(client.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+        << strerror(errno);
+    ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+  }
+
+  memset(&addr, 0, sizeof(addr));
+
+  fbl::unique_fd conn;
+  // TODO(https://github.com/google/gvisor/issues/3780): Remove this.
+#if defined(__Fuchsia__)
+  ASSERT_TRUE(conn = fbl::unique_fd(accept(server.get(), nullptr, 0))) << strerror(errno);
+  return;
+#endif
+  ASSERT_TRUE(conn = fbl::unique_fd(accept(server.get(), (sockaddr*)&addr, &addrlen)))
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+  ASSERT_EQ(addr.sin6_family, AF_INET6);
+  char buf[INET6_ADDRSTRLEN];
+  ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&addr.sin6_addr))
+      << inet_ntop(addr.sin6_family, &addr.sin6_addr, buf, sizeof(buf));
+  ASSERT_NE(addr.sin6_port, 0);
+
+  int err;
+  socklen_t optlen = sizeof(err);
+  ASSERT_EQ(getsockopt(conn.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+  ASSERT_EQ(err, ECONNRESET);
+  ASSERT_EQ(optlen, sizeof(err));
+}
+
 TEST(LocalhostTest, ConnectAFMismatchINET) {
   int s;
   ASSERT_GE(s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
@@ -1732,10 +1783,11 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
-    int val;
-    socklen_t vallen = sizeof(val);
-    ASSERT_EQ(0, getsockopt(connfd, SOL_SOCKET, SO_ERROR, &val, &vallen));
-    ASSERT_EQ(0, val);
+    int err;
+    socklen_t optlen = sizeof(err);
+    ASSERT_EQ(getsockopt(connfd, SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(err, 0);
+    ASSERT_EQ(optlen, sizeof(err));
   }
 
   int clientfd;
@@ -1792,10 +1844,11 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
-    int val;
-    socklen_t vallen = sizeof(val);
-    ASSERT_EQ(0, getsockopt(connfd, SOL_SOCKET, SO_ERROR, &val, &vallen));
-    ASSERT_EQ(0, val);
+    int err;
+    socklen_t optlen = sizeof(err);
+    ASSERT_EQ(getsockopt(connfd, SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(err, 0);
+    ASSERT_EQ(optlen, sizeof(err));
 
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(connfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
@@ -1969,10 +2022,11 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
-    int val;
-    socklen_t vallen = sizeof(val);
-    ASSERT_EQ(0, getsockopt(connfd, SOL_SOCKET, SO_ERROR, &val, &vallen));
-    ASSERT_EQ(ECONNREFUSED, val);
+    int err;
+    socklen_t optlen = sizeof(err);
+    ASSERT_EQ(getsockopt(connfd, SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(err, ECONNREFUSED);
+    ASSERT_EQ(optlen, sizeof(err));
   }
 
   EXPECT_EQ(close(connfd), 0) << strerror(errno);
@@ -2100,13 +2154,11 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
 
   // Setting SO_LINGER to 0 and `close`ing the server socket should
   // immediately send a TCP Reset.
-  struct linger so_linger;
-  so_linger.l_onoff = 1;
-  so_linger.l_linger = 0;
-  socklen_t optlen = sizeof(so_linger);
-
-  // Set SO_LINGER is supported in Linux so we do not expect to receive an error.
-  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &so_linger, optlen), 0)
+  struct linger opt = {
+      .l_onoff = 1,
+      .l_linger = 0,
+  };
+  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
       << strerror(errno);
 
   // Close the server to trigger a TCP Reset now that linger is 0.

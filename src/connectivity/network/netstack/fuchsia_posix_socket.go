@@ -581,10 +581,6 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
 		panic(err)
 	}
 
-	if err := eps.peer.Close(); err != nil {
-		panic(err)
-	}
-
 	eps.wq.EventUnregister(&eps.entry)
 
 	eps.endpoint.ns.onRemoveEndpoint(key)
@@ -1168,6 +1164,10 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 		s.wg.Wait()
 
 		s.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
+
+		if err := eps.peer.Close(); err != nil {
+			panic(err)
+		}
 	}()
 	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
