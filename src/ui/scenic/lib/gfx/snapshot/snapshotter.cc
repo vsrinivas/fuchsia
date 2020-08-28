@@ -45,6 +45,10 @@ namespace scenic_impl {
 namespace gfx {
 
 namespace {
+
+// Color used to replace protected content.
+constexpr uint8_t kReplacementImageColor[4] = {0, 0, 0, 255};
+
 // Helper function to create a |SizedVmo| from bytes of certain size.
 bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_t version,
                   fsl::SizedVmo* sized_vmo_ptr) {
@@ -89,13 +93,10 @@ escher::ImagePtr Snapshotter::CreateReplacementImage(uint32_t width, uint32_t he
     gpu_uploader_for_replacements_ = escher::BatchGpuUploader::New(escher_);
   }
 
-  // Fuchsia colors
   // TODO(fxbug.dev/41024): data for a single pixel is provided, but there should be data for width
   // * height pixels.
-  uint8_t channels[4];
-  channels[1] = 119;
-  channels[0] = channels[2] = channels[3] = 255;
-  return escher_->NewRgbaImage(gpu_uploader_for_replacements_.get(), width, height, channels);
+  return escher_->NewRgbaImage(gpu_uploader_for_replacements_.get(), width, height,
+                               const_cast<uint8_t*>(kReplacementImageColor));
 }
 
 Snapshotter::Snapshotter(escher::EscherWeakPtr escher)

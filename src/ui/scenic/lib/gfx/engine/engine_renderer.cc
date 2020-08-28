@@ -37,6 +37,8 @@ static_assert(std::is_same<zx_time_t, int64_t>::value,
 namespace {
 // Format used for intermediate layers when we're rendering more than one layer.
 constexpr vk::Format kIntermediateLayerFormat = vk::Format::eB8G8R8A8Srgb;
+// Color used to replace protected content.
+static const escher::vec4 kReplacementMaterialColor = escher::vec4(0, 0, 0, 255);
 }  // namespace
 
 namespace scenic_impl {
@@ -341,16 +343,7 @@ escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32
 escher::MaterialPtr EngineRenderer::GetReplacementMaterial(escher::BatchGpuUploader* gpu_uploader) {
   if (!replacement_material_) {
     FX_DCHECK(escher_);
-    // Fuchsia color.
-    uint8_t channels[4];
-    channels[0] = channels[2] = channels[3] = 255;
-    channels[1] = 0;
-    glm::vec4 color;
-    color.x = color.z = color.a = 255;
-    color.y = 0;
-    auto image = escher_->NewRgbaImage(gpu_uploader, 1, 1, channels);
-    replacement_material_ =
-        escher::Material::New(color, escher_->NewTexture(std::move(image), vk::Filter::eNearest));
+    replacement_material_ = escher::Material::New(kReplacementMaterialColor);
   }
   return replacement_material_;
 }

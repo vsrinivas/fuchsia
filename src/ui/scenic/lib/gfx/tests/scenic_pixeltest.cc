@@ -1369,7 +1369,7 @@ INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedYuvPixelTest,
                          ::testing::Values(fuchsia::sysmem::PixelFormatType::NV12,
                                            fuchsia::sysmem::PixelFormatType::I420));
 
-// We cannot capture protected content, so we expect a fuchsia screenshot instead.
+// We cannot capture protected content, so we expect a black screenshot instead.
 TEST_F(ScenicPixelTest, ProtectedImage) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
@@ -1455,7 +1455,7 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
 
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
-  EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
+  EXPECT_EQ(scenic::Color({0, 0, 0, 255}), screenshot.ColorAt(.25f, .25f));
 }
 
 // Flaking on bots. TODO(fxbug.dev/42892): Re-enable. Add all supported pixel formats as test cases.

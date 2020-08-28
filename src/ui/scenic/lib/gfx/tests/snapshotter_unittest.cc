@@ -205,15 +205,15 @@ VK_TEST_F(SnapshotterTest, ProtectedImage) {
                              auto snapshot = (const SnapshotData*)data.data();
                              auto node = flatbuffers::GetRoot<snapshot::Node>(snapshot->data);
 
-                             // Expect Image to be replaced by some other content.
+                             // Expect Image to be replaced by black content.
                              auto child = node->children()->Get(0);
                              EXPECT_EQ(snapshot::Material_Image, child->material_type());
                              auto image = static_cast<const snapshot::Image*>(child->material());
                              EXPECT_TRUE(image->data()->Length() > 0);
-                             EXPECT_NE(dummy_image->kRedValue, image->data()->Data()[0]);
-                             EXPECT_NE(dummy_image->kGreenValue, image->data()->Data()[1]);
-                             EXPECT_NE(dummy_image->kBlueValue, image->data()->Data()[2]);
-                             EXPECT_NE(dummy_image->kAlphaValue, image->data()->Data()[3]);
+                             EXPECT_EQ(0, image->data()->Data()[0]);
+                             EXPECT_EQ(0, image->data()->Data()[1]);
+                             EXPECT_EQ(0, image->data()->Data()[2]);
+                             EXPECT_EQ(255, image->data()->Data()[3]);
                            });
 
   escher->vk_device().waitIdle();
