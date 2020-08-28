@@ -4,16 +4,18 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_target") {
+ffx_plugin("ffx_flash") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  plugin_deps = [
-    "flash:ffx_flash",
-    "list:ffx_list",
-    "off:ffx_off",
-    "reboot:ffx_reboot",
+  deps = [
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+    "src/manifest.rs",
+  ]
 }
