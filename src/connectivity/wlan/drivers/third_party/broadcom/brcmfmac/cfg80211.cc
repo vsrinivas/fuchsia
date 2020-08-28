@@ -559,9 +559,9 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
           }
           err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
           if (err != ZX_OK) {
-            BRCMF_ERR("setting AP mode failed %s, fw err %s", zx_status_get_string(err),
-                      brcmf_fil_get_errstr(fw_err));
-            return err;
+            BRCMF_INFO(
+                "Cannot shut down AP: %s, fw err %s. AP may not have been started. Moving on",
+                zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
           }
 
           err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);

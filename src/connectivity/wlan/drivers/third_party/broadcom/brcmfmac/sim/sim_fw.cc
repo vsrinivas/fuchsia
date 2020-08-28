@@ -349,6 +349,13 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_SET_AP:
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
         value = *(reinterpret_cast<uint32_t*>(data));
+#ifdef USE_MFG_FW
+        // Manufacturer firmware does not allow turning off AP if it is already off
+        if (!value && !iface_tbl_[ifidx].ap_mode) {
+          status = ZX_ERR_IO_REFUSED;
+          break;
+        }
+#endif
         if (value) {
           ZX_ASSERT_MSG(iface_tbl_[ifidx].ap_config.infra_mode, "Only Infra mode AP is supported");
           iface_tbl_[ifidx].ap_mode = true;
