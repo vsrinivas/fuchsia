@@ -135,6 +135,10 @@ If `inspect_node` is absent, fields will be attached directly to the parent node
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_node_absent_decl" adjust_indentation="auto" %}
 ```
 
+If your type needs to add or remove nodes or properties dynamically,
+it should own an inspect node. The inspect node is needed when
+nodes or properties are added or removed after the initial attachment.
+
 `derive(Inspect)` supports the following field attributes:
 
 - `inspect(skip)`: The field is ignored by inspect.
@@ -148,6 +152,16 @@ If `inspect_node` is absent, fields will be attached directly to the parent node
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_forward_decl" adjust_indentation="auto" %}
 ```
 
+### Manually Managed Inspect Types
+
+If you are integrating with a code base that uses `fuchsia_inspect` directly,
+its types are not be aware of `fuchsia_inspect_derive`. Do not add such
+manually managed types as fields to an `Inspect` type directly. Instead,
+[implement `Inspect` manually](#implement-inspect-manually) for the type.
+Avoid attaching manually outside of the `Inspect` trait,
+since attachment in `fuchsia_inspect_derive` occurs after construction.
+Attaching in a constructor can silently cause its inspect state to be
+absent.
 
 ### Attaching to the Inspect Tree {#inspect-attaching}
 
@@ -228,18 +242,10 @@ trait Inspect {
 }
 ```
 
-You should keep a few things in mind:
-
-- Preferably, don't add manually managed fields to a `derive(Inspect)` type
-  (since you can't currently intercept an attachment call, imposing an
-  error-prone implicit ordering requirement between attachment and the
-  population of your custom data). Instead, [implement `Inspect`
-  manually](#implement-inspect-manually) as a separate type and nest it inside
-  the `derive(Inspect)` type.
-- If your type will add or remove nodes or properties after the initial
-  attachment, it should own its own node. You'll need it for when you
-  add properties or nodes to it later during its lifetime.
-
+Do not return an `AttachError` for structural errors in the data.
+Instead, report the error using logs or an inspect node.
+`AttachError` is reserved for irrecoverable invariant errors that
+fail the entire attachment.
 
 ## `IOwned` Smart Pointers {#iowned}
 
