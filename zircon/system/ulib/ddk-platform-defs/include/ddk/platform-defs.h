@@ -325,6 +325,11 @@ __BEGIN_CDECLS
 // Infineon
 #define PDEV_VID_INFINEON            0x18
 #define PDEV_PID_INFINEON_BGT60TR13C  0x01
+
+// Silergy
+#define PDEV_VID_SILERGY            0x19
+#define PDEV_PID_SILERGY_SYBUCK     0X01
+
 // clang-format on
 
 __END_CDECLS

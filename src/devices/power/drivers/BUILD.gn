@@ -6,11 +6,12 @@ group("tests") {
   testonly = true
 
   deps = [
+    "aml-meson-power:tests",
     "as370-power:tests",
     "msm8x53-power:tests",
     "mtk-power:tests",
     "power:tests",
+    "silergy:tests",
     "vs680-power:tests",
-    "aml-meson-power:tests",
   ]
 }

@@ -1,0 +1,81 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+driver_module("sy-buck") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "sy-buck.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.vreg",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/hwreg-i2c",
+  ]
+}
+
+test("sy-buck-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "sy-buck-test"
+  sources = [
+    "sy-buck-test.cc",
+    "sy-buck.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.vreg",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/lib/driver",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hwreg-i2c",
+  ]
+}
+
+unittest_package("sy-buck-test-package") {
+  package_name = "sy-buck-test"
+  deps = [ ":sy-buck-test" ]
+
+  tests = [
+    {
+      name = "sy-buck-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sy-buck-test-package" ]
+}
