@@ -90,7 +90,7 @@ void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event event
     }
     return ZX_ERR_BAD_STATE;
   };
-  ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(channel), std::move(event_handlers)));
+  ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(channel), event_handlers).status());
 }
 
 void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,

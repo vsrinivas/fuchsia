@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/echo/c/fidl.h>
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vmo_file.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,8 +10,14 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
-#include <runtests-utils/service-proxy-dir.h>
 #include <zircon/status.h>
+
+#include <fidl/test/echo/c/fidl.h>
+#include <fs/pseudo_dir.h>
+#include <fs/service.h>
+#include <fs/synchronous_vfs.h>
+#include <fs/vmo_file.h>
+#include <runtests-utils/service-proxy-dir.h>
 #include <zxtest/zxtest.h>
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -96,12 +97,14 @@ TEST(ServiceProxyDirTest, Simple) {
                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
                   0755, fidl::StringView(kProxyEchoString), std::move(h1))
                   .status());
-    ASSERT_OK(fio::Directory::Call::HandleEvents(
-        zx::unowned_channel(h2),
-        fio::Directory::EventHandlers{
-            .on_open = [&](int32_t s, fio::NodeInfo) -> zx_status_t { return s; },
-            .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
-        }));
+
+    fio::Directory::EventHandlers handlers{
+        .on_open = [&](fio::Directory::OnOpenResponse* message) -> zx_status_t {
+          return message->s;
+        },
+        .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+    };
+    ASSERT_OK(fio::Directory::Call::HandleEvents(zx::unowned_channel(h2), handlers));
 
     char response_buffer[sizeof(kProxyEchoString)] = {};
     size_t response_size;
@@ -122,12 +125,13 @@ TEST(ServiceProxyDirTest, Simple) {
                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
                   0755, fidl::StringView(kEchoString), std::move(h1))
                   .status());
-    ASSERT_OK(fio::Directory::Call::HandleEvents(
-        zx::unowned_channel(h2),
-        fio::Directory::EventHandlers{
-            .on_open = [&](int32_t s, fio::NodeInfo) -> zx_status_t { return s; },
-            .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
-        }));
+    fio::Directory::EventHandlers handlers{
+        .on_open = [&](fio::Directory::OnOpenResponse* message) -> zx_status_t {
+          return message->s;
+        },
+        .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+    };
+    ASSERT_OK(fio::Directory::Call::HandleEvents(zx::unowned_channel(h2), handlers));
 
     char response_buffer[sizeof(kEchoString)] = {};
     size_t response_size;

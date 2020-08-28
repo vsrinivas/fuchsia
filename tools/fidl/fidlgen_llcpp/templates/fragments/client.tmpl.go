@@ -21,7 +21,7 @@ struct {{ .Name }}::AsyncEventHandlers {
   //{{ . }}
     {{- end }}
     {{- if .Response }}
-  std::variant<::fit::function<void {{- template "SyncEventHandlerIndividualMethodSignature" . }}>,
+  std::variant<::fit::function<void {{- template "AsyncEventHandlerIndividualMethodSignature" . }}>,
                ::fit::function<void {{- template "AsyncEventHandlerInPlaceMethodSignature" . }}>> {{ .NameInLowerSnakeCase }};
     {{- else }}
   ::fit::function<void()> {{ .NameInLowerSnakeCase }};
@@ -105,7 +105,7 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_ms
         if (!(*managed))
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
         auto message = result.message.message();
-        (*managed)({{ template "SyncEventHandlerMoveParams" .Response }});
+        (*managed)({{ template "AsyncEventHandlerMoveParams" .Response }});
       } else {
         std::get<1>(handlers_.{{ .NameInLowerSnakeCase }})(std::move(result.message));
       }

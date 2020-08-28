@@ -145,14 +145,14 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
   fuchsia_io::Node::EventHandlers event_handlers;
   bool call_was_successful = false;
-  event_handlers.on_open = [&](int32_t s, fuchsia_io::NodeInfo info) {
+  event_handlers.on_open = [&](fuchsia_io::Node::OnOpenResponse* message) {
     call_was_successful = true;
-    return s;
+    return message->s;
   };
   event_handlers.unknown = [] { return ZX_ERR_PROTOCOL_NOT_SUPPORTED; };
   // TODO(godtamit): check for an epitaph here once `fuchsia.io` (and LLCPP) supports it.
   auto status =
-      fuchsia_io::Node::Call::HandleEvents(zx::unowned_channel(channel), std::move(event_handlers));
+      fuchsia_io::Node::Call::HandleEvents(zx::unowned_channel(channel), event_handlers).status();
   if (!call_was_successful) {
     LOG(ERROR, "failed to wait for OnOpen event (status: %d)", status);
   }

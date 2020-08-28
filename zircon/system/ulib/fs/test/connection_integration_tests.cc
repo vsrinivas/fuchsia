@@ -214,18 +214,17 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
 
   // Helper method to monitor the OnOpen event, used by the tests below
   auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo)> cb) {
-    zx_status_t event_status = fio::Node::Call::HandleEvents(
-        std::move(channel),
-        fio::Node::EventHandlers{.on_open =
-                                     [&](zx_status_t status, fio::NodeInfo info) {
-                                       EXPECT_OK(status);
-                                       EXPECT_FALSE(info.has_invalid_tag());
-                                       cb(std::move(info));
-                                       return ZX_OK;
-                                     },
-                                 .unknown = []() { return ZX_ERR_INVALID_ARGS; }});
+    fio::Node::EventHandlers handlers{.on_open =
+                                          [&](fio::Node::OnOpenResponse* message) {
+                                            EXPECT_OK(message->s);
+                                            EXPECT_FALSE(message->info.has_invalid_tag());
+                                            cb(std::move(message->info));
+                                            return ZX_OK;
+                                          },
+                                      .unknown = []() { return ZX_ERR_INVALID_ARGS; }};
+    fidl::Result event_result = fio::Node::Call::HandleEvents(std::move(channel), handlers);
     // Expect that |on_open| was received
-    EXPECT_EQ(ZX_OK, event_status);
+    EXPECT_TRUE(event_result.ok());
   };
 
   constexpr uint32_t kOpenMode = 0755;

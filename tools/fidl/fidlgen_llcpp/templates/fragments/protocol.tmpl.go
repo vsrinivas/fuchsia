@@ -247,12 +247,16 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    fit::callback<zx_status_t {{- template "SyncEventHandlerIndividualMethodSignature" . }}> {{ .NameInLowerSnakeCase }};
+    fit::function<zx_status_t (
+      {{- if .Response -}}
+        {{ .Name }}Response* message
+      {{- end -}}
+    )> {{ .NameInLowerSnakeCase }};
 {{ "" }}
     {{- end }}
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::callback<zx_status_t()> unknown;
+    fit::function<zx_status_t()> unknown;
   };
   {{- end }}
 
@@ -565,7 +569,7 @@ class {{ .Name }} final {
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
+    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end, EventHandlers& handlers);
     {{- end }}
   };
 
@@ -603,7 +607,9 @@ class {{ .Name }} final {
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    zx_status_t HandleEvents(EventHandlers handlers);
+    ::fidl::Result HandleEvents(EventHandlers& handlers) {
+      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    }
     {{- end }}
    private:
     ::zx::channel channel_;
@@ -800,8 +806,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
 
 {{- if .HasEvents }}
-  {{- template "SyncEventHandlerMethodDefinition" . }}
-{{ "" }}
   {{- template "StaticCallSyncEventHandlerMethodDefinition" . }}
 {{- end }}
 

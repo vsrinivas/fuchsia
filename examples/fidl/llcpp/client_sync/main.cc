@@ -50,15 +50,15 @@ int main(int argc, const char** argv) {
 
     llcpp::fuchsia::examples::Echo::EventHandlers handlers{
         .on_string =
-            [](fidl::StringView event) {
-              std::string reply_string(event.data(), event.size());
+            [](llcpp::fuchsia::examples::Echo::OnStringResponse* message) {
+              std::string reply_string(message->response.data(), message->response.size());
               std::cout << "Got event: " << reply_string << std::endl;
               return ZX_OK;
             },
         .unknown = []() { return ZX_ERR_INVALID_ARGS; }};
     // Block to receive exactly one event from the server, which is handled using
     // the event handlers defined above.
-    ZX_ASSERT(client.HandleEvents(std::move(handlers)) == ZX_OK);
+    ZX_ASSERT(client.HandleEvents(handlers).ok());
   }
 
   return 0;

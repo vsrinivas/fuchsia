@@ -50,10 +50,10 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
   bool event_tag_ok = false;
   bool status_ok = false;
   bool node_info_ok = false;
-  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo info) -> zx_status_t {
+  event_handlers.on_open = [&](fio::Node::OnOpenResponse* message) -> zx_status_t {
     event_tag_ok = true;
-    status_ok = s == ZX_OK;
-    node_info_ok = info.which() == expected_tag;
+    status_ok = message->s == ZX_OK;
+    node_info_ok = message->info.which() == expected_tag;
     return ZX_OK;
   };
   event_handlers.unknown = []() -> zx_status_t {
@@ -61,7 +61,7 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
     return ZX_OK;
   };
 
-  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), std::move(event_handlers)));
+  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), event_handlers));
   ASSERT_TRUE(event_tag_ok);
   ASSERT_TRUE(status_ok);
   ASSERT_TRUE(node_info_ok);
@@ -77,10 +77,10 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
   bool event_tag_ok = false;
   bool status_ok = false;
   bool node_info_ok = false;
-  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo info) -> zx_status_t {
+  event_handlers.on_open = [&](fio::Node::OnOpenResponse* message) -> zx_status_t {
     event_tag_ok = true;
-    status_ok = static_cast<int>(s) == ZX_ERR_NOT_FOUND;
-    node_info_ok = info.has_invalid_tag();
+    status_ok = static_cast<int>(message->s) == ZX_ERR_NOT_FOUND;
+    node_info_ok = message->info.has_invalid_tag();
     return ZX_OK;
   };
   event_handlers.unknown = []() -> zx_status_t {
@@ -88,7 +88,7 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
     return ZX_OK;
   };
 
-  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), std::move(event_handlers)));
+  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), event_handlers));
   ASSERT_TRUE(event_tag_ok);
   ASSERT_TRUE(status_ok);
   ASSERT_TRUE(node_info_ok);

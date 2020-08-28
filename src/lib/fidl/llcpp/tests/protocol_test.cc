@@ -211,16 +211,16 @@ TEST(MagicNumberTest, EventRead) {
   ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(encode_result.message)), ZX_OK);
 
   test::Frobinator::EventHandlers handlers;
-  handlers.hrob = [&](fidl::StringView value) -> zx_status_t {
+  handlers.hrob = [&](test::Frobinator::HrobResponse* message) {
     EXPECT_TRUE(false);
     return ZX_OK;
   };
-  handlers.unknown = [&]() -> zx_status_t {
+  handlers.unknown = [&]() {
     EXPECT_TRUE(false);
     return ZX_OK;
   };
 
-  ASSERT_EQ(test::Frobinator::Call::HandleEvents(zx::unowned_channel(h2), std::move(handlers)),
+  ASSERT_EQ(test::Frobinator::Call::HandleEvents(zx::unowned_channel(h2), handlers).status(),
             ZX_ERR_PROTOCOL_NOT_SUPPORTED);
 }
 

@@ -373,18 +373,18 @@ zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
   // channel used by HandleEvents, since the handle may be moved out of |channel|
   // before the first parameter to HandleEvents is evaluated.
   zx_handle_t event_channel_handle = channel.get();
-  return fio::Directory::Call::HandleEvents(
-      zx::unowned_channel(event_channel_handle),
-      fio::Directory::EventHandlers{.on_open =
-                                        [channel = std::move(channel), out_io](
-                                            zx_status_t status, fio::NodeInfo&& info) mutable {
-                                          if (status != ZX_OK) {
-                                            return status;
-                                          }
-                                          return fdio_from_node_info(std::move(channel),
-                                                                     std::move(info), out_io);
-                                        },
-                                    .unknown = [] { return ZX_ERR_IO; }});
+  fio::Directory::EventHandlers event_handlers{
+      .on_open =
+          [channel = std::move(channel), out_io](fio::Directory::OnOpenResponse* message) mutable {
+            if (message->s != ZX_OK) {
+              return message->s;
+            }
+            return fdio_from_node_info(std::move(channel), std::move(message->info), out_io);
+          },
+      .unknown = [] { return ZX_ERR_IO; }};
+  return fio::Directory::Call::HandleEvents(zx::unowned_channel(event_channel_handle),
+                                            event_handlers)
+      .status();
 }
 
 zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {

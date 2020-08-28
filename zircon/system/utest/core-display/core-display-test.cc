@@ -108,22 +108,22 @@ void CoreDisplayTest::SetUp() {
   bool has_display = false;
   fbl::Vector<fhd::Info> displays_tmp;
 
+  fhd::Controller::EventHandlers handlers{
+      .on_displays_changed =
+          [&displays_tmp, &has_display](fhd::Controller::OnDisplaysChangedResponse* message) {
+            for (unsigned i = 0; i < message->added.count(); i++) {
+              displays_tmp.push_back(std::move(message->added[i]));
+            }
+            has_display = true;
+            return ZX_OK;
+          },
+      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_NEXT; },
+      .on_client_ownership_change =
+          [](fhd::Controller::OnClientOwnershipChangeResponse* message) { return ZX_ERR_NEXT; },
+      .unknown = []() { return ZX_ERR_STOP; }};
   do {
-    status = dc_client_->HandleEvents(fhd::Controller::EventHandlers{
-        .on_displays_changed =
-            [&displays_tmp, &has_display](fidl::VectorView<fhd::Info> added,
-                                          fidl::VectorView<uint64_t> removed) {
-              for (unsigned i = 0; i < added.count(); i++) {
-                displays_tmp.push_back(std::move(added[i]));
-              }
-              has_display = true;
-              return ZX_OK;
-            },
-        .on_vsync = [](uint64_t display_id, uint64_t timestamp, fidl::VectorView<uint64_t> images,
-                       uint64_t cookie) { return ZX_ERR_NEXT; },
-        .on_client_ownership_change = [](bool has_ownership) { return ZX_ERR_NEXT; },
-        .unknown = []() { return ZX_ERR_STOP; }});
-    ASSERT_FALSE(status != ZX_OK && status != ZX_ERR_NEXT);
+    fidl::Result result = dc_client_->HandleEvents(handlers);
+    ASSERT_TRUE(result.ok() || result.status() == ZX_ERR_NEXT);
   } while (!has_display);
 
   // get sysmem

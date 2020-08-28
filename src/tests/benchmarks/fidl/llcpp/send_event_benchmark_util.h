@@ -34,7 +34,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   std::mutex mu;
   std::condition_variable cond;
   std::thread receiver_thread([channel = std::move(receiver), state, &ready, &mu, &cond]() {
-    auto send = [state, &ready, &mu, &cond](FidlType) {
+    auto send = [state, &ready, &mu, &cond](typename ProtocolType::SendResponse* message) {
       state->NextStep();  // End: SendEvent. Begin: Teardown.
       {
         std::lock_guard<std::mutex> guard(mu);
@@ -43,14 +43,12 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       cond.notify_one();
       return ZX_OK;
     };
+    typename ProtocolType::EventHandlers event_handlers{
+        .send = send,
+    };
 
-    zx_status_t status = ZX_OK;
-    while (status == ZX_OK) {
-      typename ProtocolType::EventHandlers event_handlers{
-          .send = send,
-      };
-      status = ProtocolType::Call::HandleEvents(channel.borrow(), std::move(event_handlers));
-    }
+    while (ProtocolType::Call::HandleEvents(channel.borrow(), event_handlers).ok())
+      ;
   });
 
   while (state->KeepRunning()) {

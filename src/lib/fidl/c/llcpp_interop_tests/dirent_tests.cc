@@ -582,21 +582,20 @@ void CallerAllocateOneWayDirents() {
 
 template <typename DirentArray>
 void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dirents) {
-  gen::DirEntTestInterface::SyncClient client(std::move(chan));
-  zx_status_t status = client.HandleEvents(gen::DirEntTestInterface::EventHandlers{
+  gen::DirEntTestInterface::EventHandlers event_handlers{
       .on_dirents =
-          [&](::fidl::VectorView<gen::DirEnt> dirents) {
-            EXPECT_EQ(dirents.count(), expected_dirents.size());
-            if (dirents.count() != expected_dirents.size()) {
+          [&](gen::DirEntTestInterface::OnDirentsResponse* message) {
+            EXPECT_EQ(message->dirents.count(), expected_dirents.size());
+            if (message->dirents.count() != expected_dirents.size()) {
               return ZX_ERR_INVALID_ARGS;
             }
-            for (uint64_t i = 0; i < dirents.count(); i++) {
-              EXPECT_EQ(dirents[i].is_dir, expected_dirents[i].is_dir);
-              EXPECT_EQ(dirents[i].some_flags, expected_dirents[i].some_flags);
-              EXPECT_EQ(dirents[i].name.size(), expected_dirents[i].name.size());
-              EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(dirents[i].name.data()),
+            for (uint64_t i = 0; i < message->dirents.count(); i++) {
+              EXPECT_EQ(message->dirents[i].is_dir, expected_dirents[i].is_dir);
+              EXPECT_EQ(message->dirents[i].some_flags, expected_dirents[i].some_flags);
+              EXPECT_EQ(message->dirents[i].name.size(), expected_dirents[i].name.size());
+              EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(message->dirents[i].name.data()),
                               reinterpret_cast<const uint8_t*>(expected_dirents[i].name.data()),
-                              dirents[i].name.size(), "dirent name mismatch");
+                              message->dirents[i].name.size(), "dirent name mismatch");
             }
             return ZX_OK;
           },
@@ -604,8 +603,10 @@ void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dire
           [&]() {
             ADD_FAILURE("unknown event received; expected OnDirents");
             return ZX_ERR_INVALID_ARGS;
-          }});
-  ASSERT_OK(status);
+          }};
+  gen::DirEntTestInterface::SyncClient client(std::move(chan));
+  ::fidl::Result result = client.HandleEvents(event_handlers);
+  ASSERT_OK(result.status());
 }
 
 }  // namespace

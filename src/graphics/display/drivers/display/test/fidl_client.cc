@@ -77,24 +77,24 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
   while (displays_.is_empty() || !has_ownership_) {
     fbl::AutoLock lock(mtx());
-    auto result = dc_->HandleEvents({
+    fhd::Controller::EventHandlers event_handlers{
         .on_displays_changed =
-            [this](::fidl::VectorView<fhd::Info> added, ::fidl::VectorView<uint64_t> removed) {
-              for (size_t i = 0; i < added.count(); i++) {
-                displays_.push_back(Display(added[i]));
+            [this](fhd::Controller::OnDisplaysChangedResponse* message) {
+              for (size_t i = 0; i < message->added.count(); i++) {
+                displays_.push_back(Display(message->added[i]));
               }
               return ZX_OK;
             },
-        .on_vsync = [](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images,
-                       uint64_t cookie) { return ZX_ERR_INVALID_ARGS; },
+        .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_INVALID_ARGS; },
         .on_client_ownership_change =
-            [this](bool owns) {
-              has_ownership_ = owns;
+            [this](fhd::Controller::OnClientOwnershipChangeResponse* message) {
+              has_ownership_ = message->has_ownership;
               return ZX_OK;
             },
         .unknown = []() { return ZX_ERR_STOP; },
-    });
-    if (result != ZX_OK) {
+    };
+    auto result = dc_->HandleEvents(event_handlers);
+    if (!result.ok()) {
       zxlogf(ERROR, "Got unexpected message");
       return false;
     }
@@ -134,25 +134,26 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
   }
 
   fbl::AutoLock lock(mtx());
-  auto result = dc_->HandleEvents({
-      .on_displays_changed = [](::fidl::VectorView<fhd::Info>,
-                                ::fidl::VectorView<uint64_t>) { return ZX_OK; },
+  fhd::Controller::EventHandlers event_handlers{
+      .on_displays_changed =
+          [](fhd::Controller::OnDisplaysChangedResponse* message) { return ZX_OK; },
       // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
       .on_vsync =
-          [this](uint64_t, uint64_t, ::fidl::VectorView<uint64_t>, uint64_t cookie)
-              TA_NO_THREAD_SAFETY_ANALYSIS {
-                vsync_count_++;
-                if (cookie) {
-                  cookie_ = cookie;
-                }
-                return ZX_OK;
-              },
-      .on_client_ownership_change = [](bool) { return ZX_OK; },
+          [this](fhd::Controller::OnVsyncResponse* message) TA_NO_THREAD_SAFETY_ANALYSIS {
+            vsync_count_++;
+            if (message->cookie) {
+              cookie_ = message->cookie;
+            }
+            return ZX_OK;
+          },
+      .on_client_ownership_change =
+          [](fhd::Controller::OnClientOwnershipChangeResponse* meesage) { return ZX_OK; },
       .unknown = []() { return ZX_ERR_STOP; },
-  });
+  };
+  auto result = dc_->HandleEvents(event_handlers);
 
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "Failed to handle events: %d", result);
+  if (!result.ok()) {
+    zxlogf(ERROR, "Failed to handle events: %d", result.status());
     return;
   }
 

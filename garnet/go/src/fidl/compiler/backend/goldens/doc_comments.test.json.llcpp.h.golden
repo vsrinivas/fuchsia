@@ -443,11 +443,11 @@ class Interface final {
     // event comment #1
     //
     // event comment #3
-    fit::callback<zx_status_t()> on_event;
+    fit::function<zx_status_t()> on_event;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::callback<zx_status_t()> unknown;
+    fit::function<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -607,8 +607,8 @@ class Interface final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
-                                    EventHandlers handlers);
+    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end,
+                                       EventHandlers& handlers);
   };
 
   class SyncClient final {
@@ -635,7 +635,9 @@ class Interface final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    zx_status_t HandleEvents(EventHandlers handlers);
+    ::fidl::Result HandleEvents(EventHandlers& handlers) {
+      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    }
 
    private:
     ::zx::channel channel_;

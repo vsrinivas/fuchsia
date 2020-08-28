@@ -319,6 +319,25 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
 }
 
 void OtStackApp::EventThread() {
+  fidl_spinel::Device::EventHandlers event_handlers{
+      .on_ready_for_send_frames =
+          [this](fidl_spinel::Device::OnReadyForSendFramesResponse* message) {
+            return (*binding_)->OnReadyForSendFrames(message->number_of_frames);
+          },
+      .on_receive_frame =
+          [this](fidl_spinel::Device::OnReceiveFrameResponse* message) {
+            return (*binding_)->OnReceiveFrame(std::move(message->data));
+          },
+      .on_error =
+          [this](fidl_spinel::Device::OnErrorResponse* message) {
+            return (*binding_)->OnError(message->error, message->did_close);
+          },
+      .unknown =
+          [this]() {
+            (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
+            DisconnectDevice();
+            return ZX_ERR_IO;
+          }};
   while (true) {
     zx_port_packet_t packet = {};
     port_.wait(zx::time::infinite(), &packet);
@@ -328,35 +347,20 @@ void OtStackApp::EventThread() {
           FX_LOGS(ERROR) << "ot-radio channel closed, terminating event thread";
           return;
         }
-        zx_status_t result = device_client_ptr_->HandleEvents(fidl_spinel::Device::EventHandlers{
-            .on_ready_for_send_frames =
-                [this](uint32_t number_of_frames) {
-                  return (*binding_)->OnReadyForSendFrames(number_of_frames);
-                },
-            .on_receive_frame =
-                [this](::fidl::VectorView<uint8_t> data) {
-                  return (*binding_)->OnReceiveFrame(std::move(data));
-                },
-            .on_error = [this](fidl_spinel::Error error,
-                               bool did_close) { return (*binding_)->OnError(error, did_close); },
-            .unknown =
-                [this]() {
-                  (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
-                  DisconnectDevice();
-                  return ZX_ERR_IO;
-                }});
-        if (result != ZX_OK) {
-          FX_PLOGS(ERROR, result)
+        ::fidl::Result result = device_client_ptr_->HandleEvents(event_handlers);
+        if (!result.ok()) {
+          FX_PLOGS(ERROR, result.status())
               << "error calling fidl_spinel::Device::SyncClient::HandleEvents(), terminating event "
                  "thread";
           DisconnectDevice();
           loop_.Shutdown();
           return;
         }
-        result = zx_object_wait_async(device_channel_->get(), port_.get(), kPortPktChannelRead,
-                                      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
-        if (result != ZX_OK) {
-          FX_PLOGS(ERROR, result) << "failed to wait for events, terminating event thread";
+        zx_status_t status =
+            zx_object_wait_async(device_channel_->get(), port_.get(), kPortPktChannelRead,
+                                 ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "failed to wait for events, terminating event thread";
           return;
         }
       } break;

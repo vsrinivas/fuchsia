@@ -269,26 +269,27 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   bool has_display = false;
   fhd::Mode mode;
 
+  fhd::Controller::EventHandlers event_handlers{
+      .on_displays_changed =
+          [&has_display, &pixel_format,
+           &mode](fhd::Controller::OnDisplaysChangedResponse* message) {
+            has_display = true;
+            display_id = message->added[0].id;
+            mode = message->added[0].modes[0];
+            pixel_format = message->added[0].pixel_format[0];
+            // We're guaranteed that added contains at least one display, since we haven't
+            // been notified of any displays to remove.
+            return ZX_OK;
+          },
+      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_NEXT; },
+      .on_client_ownership_change =
+          [](fhd::Controller::OnClientOwnershipChangeResponse* message) { return ZX_ERR_NEXT; },
+      .unknown = []() { return ZX_ERR_STOP; }};
   do {
-    zx_status_t status = dc_client->HandleEvents(fhd::Controller::EventHandlers{
-        .on_displays_changed =
-            [&has_display, &pixel_format, &mode](fidl::VectorView<fhd::Info> added,
-                                                 fidl::VectorView<uint64_t> removed) {
-              has_display = true;
-              display_id = added[0].id;
-              mode = added[0].modes[0];
-              pixel_format = added[0].pixel_format[0];
-              // We're guaranteed that added contains at least one display, since we haven't
-              // been notified of any displays to remove.
-              return ZX_OK;
-            },
-        .on_vsync = [](uint64_t display_id, uint64_t timestamp, fidl::VectorView<uint64_t> images,
-                       uint64_t cookie) { return ZX_ERR_NEXT; },
-        .on_client_ownership_change = [](bool has_ownership) { return ZX_ERR_NEXT; },
-        .unknown = []() { return ZX_ERR_STOP; }});
+    ::fidl::Result result = dc_client->HandleEvents(event_handlers);
 
-    if (status != ZX_OK && status != ZX_ERR_NEXT) {
-      return status;
+    if (!result.ok() && result.status() != ZX_ERR_NEXT) {
+      return result.status();
     }
   } while (!has_display);
 

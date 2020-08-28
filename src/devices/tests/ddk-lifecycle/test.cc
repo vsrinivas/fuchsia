@@ -72,13 +72,13 @@ void LifecycleTest::WaitPreRelease(uint64_t child_id) {
   uint64_t device_id = 0;
   while (!removed) {
     Lifecycle::EventHandlers event_handlers;
-    event_handlers.on_child_pre_release = [&](uint64_t id) -> zx_status_t {
-      device_id = id;
+    event_handlers.on_child_pre_release = [&](Lifecycle::OnChildPreReleaseResponse* message) {
+      device_id = message->child_id;
       removed = true;
       return ZX_OK;
     };
-    ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(lifecycle_chan_),
-                                            std::move(event_handlers)));
+    ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(lifecycle_chan_), event_handlers)
+                  .status());
   }
   ASSERT_EQ(device_id, child_id);
 }

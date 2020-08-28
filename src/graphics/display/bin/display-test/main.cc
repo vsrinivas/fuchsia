@@ -126,29 +126,25 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   dc = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
   device_handle = device_client.release();
 
-  uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
+  fhd::Controller::EventHandlers event_handlers{
+      .on_displays_changed =
+          [&displays](fhd::Controller::OnDisplaysChangedResponse* message) {
+            for (size_t i = 0; i < message->added.count(); i++) {
+              displays->push_back(Display(message->added[i]));
+            }
+            return ZX_OK;
+          },
+      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_INVALID_ARGS; },
+      .on_client_ownership_change =
+          [](bool owns) {
+            has_ownership = owns;
+            return ZX_OK;
+          },
+      .unknown = []() { return ZX_ERR_STOP; },
+  };
   while (displays->is_empty()) {
     printf("Waiting for display\n");
-    if (ZX_OK != dc->HandleEvents({
-                     .on_displays_changed =
-                         [&displays](::fidl::VectorView<fhd::Info> added,
-                                     ::fidl::VectorView<uint64_t> removed) {
-                           for (size_t i = 0; i < added.count(); i++) {
-                             displays->push_back(Display(added[i]));
-                           }
-                           return ZX_OK;
-                         },
-                     .on_vsync = [](uint64_t display_id, uint64_t timestamp,
-                                    ::fidl::VectorView<uint64_t> images,
-                                    uint64_t cookie) { return ZX_ERR_INVALID_ARGS; },
-                     .on_client_ownership_change =
-                         [](bool owns) {
-                           has_ownership = owns;
-                           return ZX_OK;
-                         },
-                     .unknown = []() { return ZX_ERR_STOP; },
-                 })) {
+    if (!dc->HandleEvents(event_handlers).ok()) {
       printf("Got unexpected message\n");
       return false;
     }
@@ -243,26 +239,25 @@ bool apply_config() {
 zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
   fhd::Controller::EventHandlers handlers = {
       .on_displays_changed =
-          [](::fidl::VectorView<fhd::Info>, ::fidl::VectorView<uint64_t>) {
+          [](fhd::Controller::OnDisplaysChangedResponse* message) {
             printf("Display disconnected\n");
             return ZX_ERR_STOP;
           },
       .on_vsync =
-          [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images,
-                    uint64_t cookie) {
+          [&layers](fhd::Controller::OnVsyncResponse* message) {
             // Acknowledge cookie if non-zero
-            if (cookie) {
-              dc->AcknowledgeVsync(cookie);
+            if (message->cookie) {
+              dc->AcknowledgeVsync(message->cookie);
             }
 
             for (auto& layer : layers) {
-              uint64_t id = layer->image_id(display_id);
+              uint64_t id = layer->image_id(message->display_id);
               if (id == 0) {
                 continue;
               }
-              for (auto image_id : images) {
+              for (auto image_id : message->images) {
                 if (image_id == id) {
-                  layer->set_frame_done(display_id);
+                  layer->set_frame_done(message->display_id);
                 }
               }
             }
@@ -275,13 +270,13 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
             return ZX_OK;
           },
       .on_client_ownership_change =
-          [](bool owned) {
-            has_ownership = owned;
+          [](fhd::Controller::OnClientOwnershipChangeResponse* message) {
+            has_ownership = message->has_ownership;
             return ZX_ERR_NEXT;
           },
       .unknown = []() { return ZX_ERR_STOP; },
   };
-  return dc->HandleEvents(std::move(handlers));
+  return dc->HandleEvents(handlers).status();
 }
 
 zx_status_t set_minimum_rgb(uint8_t min_rgb) {

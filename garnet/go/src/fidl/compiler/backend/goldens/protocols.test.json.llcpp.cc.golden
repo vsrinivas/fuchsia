@@ -242,19 +242,13 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
   return {};
 }
 
-zx_status_t Transitional::SyncClient::HandleEvents(
-    Transitional::EventHandlers handlers) {
-  return Transitional::Call::HandleEvents(::zx::unowned_channel(channel_),
-                                          std::move(handlers));
-}
-
-zx_status_t Transitional::Call::HandleEvents(
-    ::zx::unowned_channel client_end, Transitional::EventHandlers handlers) {
+::fidl::Result Transitional::Call::HandleEvents(
+    ::zx::unowned_channel client_end, Transitional::EventHandlers& handlers) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                            ::zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -288,37 +282,39 @@ zx_status_t Transitional::Call::HandleEvents(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return handlers.unknown();
+    return ::fidl::Result(handlers.unknown(), nullptr);
   }
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
   }
   if (actual_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(read_handles, actual_handles);
-    return ZX_ERR_INVALID_ARGS;
+    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
   }
-  auto msg = fidl_msg_t{.bytes = read_bytes,
-                        .handles = read_handles,
-                        .num_bytes = actual_bytes,
-                        .num_handles = actual_handles};
   fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+      reinterpret_cast<fidl_message_header_t*>(read_bytes);
   status = fidl_validate_txn_header(hdr);
   if (status != ZX_OK) {
-    return status;
+    zx_handle_close_many(read_handles, actual_handles);
+    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
     case kTransitional_Event_Ordinal: {
-      auto result = ::fidl::DecodeAs<EventResponse>(&msg);
-      if (result.status != ZX_OK) {
-        return result.status;
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(EventResponse::Type, read_bytes, actual_bytes,
+                      read_handles, actual_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
       }
-      auto message = result.message.message();
-      return handlers.event(std::move(message->x));
+      return ::fidl::Result(
+          handlers.event(reinterpret_cast<EventResponse*>(read_bytes)),
+          nullptr);
     }
-    default:
+    default: {
       zx_handle_close_many(read_handles, actual_handles);
-      return handlers.unknown();
+      return ::fidl::Result(handlers.unknown(), nullptr);
+    }
   }
 }
 
@@ -774,19 +770,14 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
-zx_status_t ChannelProtocol::SyncClient::HandleEvents(
-    ChannelProtocol::EventHandlers handlers) {
-  return ChannelProtocol::Call::HandleEvents(::zx::unowned_channel(channel_),
-                                             std::move(handlers));
-}
-
-zx_status_t ChannelProtocol::Call::HandleEvents(
-    ::zx::unowned_channel client_end, ChannelProtocol::EventHandlers handlers) {
+::fidl::Result ChannelProtocol::Call::HandleEvents(
+    ::zx::unowned_channel client_end,
+    ChannelProtocol::EventHandlers& handlers) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                            ::zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -820,37 +811,39 @@ zx_status_t ChannelProtocol::Call::HandleEvents(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return handlers.unknown();
+    return ::fidl::Result(handlers.unknown(), nullptr);
   }
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
   }
   if (actual_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(read_handles, actual_handles);
-    return ZX_ERR_INVALID_ARGS;
+    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
   }
-  auto msg = fidl_msg_t{.bytes = read_bytes,
-                        .handles = read_handles,
-                        .num_bytes = actual_bytes,
-                        .num_handles = actual_handles};
   fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+      reinterpret_cast<fidl_message_header_t*>(read_bytes);
   status = fidl_validate_txn_header(hdr);
   if (status != ZX_OK) {
-    return status;
+    zx_handle_close_many(read_handles, actual_handles);
+    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
     case kChannelProtocol_EventA_Ordinal: {
-      auto result = ::fidl::DecodeAs<EventAResponse>(&msg);
-      if (result.status != ZX_OK) {
-        return result.status;
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(EventAResponse::Type, read_bytes, actual_bytes,
+                      read_handles, actual_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
       }
-      auto message = result.message.message();
-      return handlers.event_a(std::move(message->a), std::move(message->b));
+      return ::fidl::Result(
+          handlers.event_a(reinterpret_cast<EventAResponse*>(read_bytes)),
+          nullptr);
     }
-    default:
+    default: {
       zx_handle_close_many(read_handles, actual_handles);
-      return handlers.unknown();
+      return ::fidl::Result(handlers.unknown(), nullptr);
+    }
   }
 }
 
@@ -1642,20 +1635,14 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
   return {};
 }
 
-zx_status_t WithAndWithoutRequestResponse::SyncClient::HandleEvents(
-    WithAndWithoutRequestResponse::EventHandlers handlers) {
-  return WithAndWithoutRequestResponse::Call::HandleEvents(
-      ::zx::unowned_channel(channel_), std::move(handlers));
-}
-
-zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(
+::fidl::Result WithAndWithoutRequestResponse::Call::HandleEvents(
     ::zx::unowned_channel client_end,
-    WithAndWithoutRequestResponse::EventHandlers handlers) {
+    WithAndWithoutRequestResponse::EventHandlers& handlers) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                            ::zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -1699,44 +1686,50 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return handlers.unknown();
+    return ::fidl::Result(handlers.unknown(), nullptr);
   }
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
   }
   if (actual_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(read_handles, actual_handles);
-    return ZX_ERR_INVALID_ARGS;
+    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
   }
-  auto msg = fidl_msg_t{.bytes = read_bytes,
-                        .handles = read_handles,
-                        .num_bytes = actual_bytes,
-                        .num_handles = actual_handles};
   fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+      reinterpret_cast<fidl_message_header_t*>(read_bytes);
   status = fidl_validate_txn_header(hdr);
   if (status != ZX_OK) {
-    return status;
+    zx_handle_close_many(read_handles, actual_handles);
+    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
     case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(&msg);
-      if (result.status != ZX_OK) {
-        return result.status;
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(OnEmptyResponseResponse::Type, read_bytes, actual_bytes,
+                      read_handles, actual_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
       }
-      return handlers.on_empty_response();
+      return ::fidl::Result(handlers.on_empty_response(), nullptr);
     }
     case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      auto result = ::fidl::DecodeAs<OnWithResponseResponse>(&msg);
-      if (result.status != ZX_OK) {
-        return result.status;
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(OnWithResponseResponse::Type, read_bytes, actual_bytes,
+                      read_handles, actual_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
       }
-      auto message = result.message.message();
-      return handlers.on_with_response(std::move(message->ret));
+      return ::fidl::Result(
+          handlers.on_with_response(
+              reinterpret_cast<OnWithResponseResponse*>(read_bytes)),
+          nullptr);
     }
-    default:
+    default: {
       zx_handle_close_many(read_handles, actual_handles);
-      return handlers.unknown();
+      return ::fidl::Result(handlers.unknown(), nullptr);
+    }
   }
 }
 

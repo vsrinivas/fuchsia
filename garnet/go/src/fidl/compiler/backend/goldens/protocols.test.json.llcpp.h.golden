@@ -593,11 +593,11 @@ class Transitional final {
   };
 
   struct EventHandlers {
-    fit::callback<zx_status_t(int64_t x)> event;
+    fit::function<zx_status_t(EventResponse* message)> event;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::callback<zx_status_t()> unknown;
+    fit::function<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -946,8 +946,8 @@ class Transitional final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
-                                    EventHandlers handlers);
+    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end,
+                                       EventHandlers& handlers);
   };
 
   class SyncClient final {
@@ -985,7 +985,9 @@ class Transitional final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    zx_status_t HandleEvents(EventHandlers handlers);
+    ::fidl::Result HandleEvents(EventHandlers& handlers) {
+      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    }
 
    private:
     ::zx::channel channel_;
@@ -1239,11 +1241,11 @@ class ChannelProtocol final {
   };
 
   struct EventHandlers {
-    fit::callback<zx_status_t(int64_t a, int64_t b)> event_a;
+    fit::function<zx_status_t(EventAResponse* message)> event_a;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::callback<zx_status_t()> unknown;
+    fit::function<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -1797,8 +1799,8 @@ class ChannelProtocol final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
-                                    EventHandlers handlers);
+    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end,
+                                       EventHandlers& handlers);
   };
 
   class SyncClient final {
@@ -1847,7 +1849,9 @@ class ChannelProtocol final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    zx_status_t HandleEvents(EventHandlers handlers);
+    ::fidl::Result HandleEvents(EventHandlers& handlers) {
+      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    }
 
    private:
     ::zx::channel channel_;
@@ -2289,13 +2293,14 @@ class WithAndWithoutRequestResponse final {
   };
 
   struct EventHandlers {
-    fit::callback<zx_status_t()> on_empty_response;
+    fit::function<zx_status_t()> on_empty_response;
 
-    fit::callback<zx_status_t(::fidl::StringView ret)> on_with_response;
+    fit::function<zx_status_t(OnWithResponseResponse* message)>
+        on_with_response;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::callback<zx_status_t()> unknown;
+    fit::function<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -3416,8 +3421,8 @@ class WithAndWithoutRequestResponse final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
-                                    EventHandlers handlers);
+    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end,
+                                       EventHandlers& handlers);
   };
 
   class SyncClient final {
@@ -3484,7 +3489,9 @@ class WithAndWithoutRequestResponse final {
     // corresponding handler defined in |EventHandlers|. The return status of
     // the handler function is folded with any transport-level errors and
     // returned.
-    zx_status_t HandleEvents(EventHandlers handlers);
+    ::fidl::Result HandleEvents(EventHandlers& handlers) {
+      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    }
 
    private:
     ::zx::channel channel_;

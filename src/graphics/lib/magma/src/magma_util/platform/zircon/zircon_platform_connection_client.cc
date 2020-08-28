@@ -74,18 +74,18 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
 
     llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventHandlers handlers;
     handlers.on_performance_counter_read_completed =
-        [&](uint32_t trigger_id, uint64_t buffer_id, uint32_t buffer_offset, uint64_t timestamp,
-            llcpp::fuchsia::gpu::magma::ResultFlags result_flags) {
-          *trigger_id_out = trigger_id;
-          *buffer_id_out = buffer_id;
-          *buffer_offset_out = buffer_offset;
-          *time_out = timestamp;
-          *result_flags_out = static_cast<uint32_t>(result_flags);
+        [&](llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
+                OnPerformanceCounterReadCompletedResponse* message) {
+          *trigger_id_out = message->trigger_id;
+          *buffer_id_out = message->buffer_id;
+          *buffer_offset_out = message->buffer_offset;
+          *time_out = message->timestamp;
+          *result_flags_out = static_cast<uint32_t>(message->flags);
           return ZX_OK;
         };
     handlers.unknown = []() { return ZX_ERR_INTERNAL; };
     magma_status_t magma_status =
-        MagmaChannelStatus(perf_counter_events_.HandleEvents(std::move(handlers)));
+        MagmaChannelStatus(perf_counter_events_.HandleEvents(handlers).status());
     return DRET(magma_status);
   }
 
@@ -377,20 +377,23 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
       return;
 
     llcpp::fuchsia::gpu::magma::Primary::EventHandlers event_handlers = {
-        .on_notify_messages_consumed = [this](uint64_t delta) -> zx_status_t {
-          inflight_count_ -= delta;
-          return ZX_OK;
-        },
-        .on_notify_memory_imported = [this](uint64_t delta) -> zx_status_t {
-          inflight_bytes_ -= delta;
-          return ZX_OK;
-        },
-        .unknown = []() -> zx_status_t {
-          MAGMA_LOG(ERROR, "Flow control: bad event handler ordinal");
-          return ZX_OK;
-        }};
+        .on_notify_messages_consumed =
+            [this](llcpp::fuchsia::gpu::magma::Primary::OnNotifyMessagesConsumedResponse* message) {
+              inflight_count_ -= message->count;
+              return ZX_OK;
+            },
+        .on_notify_memory_imported =
+            [this](llcpp::fuchsia::gpu::magma::Primary::OnNotifyMemoryImportedResponse* message) {
+              inflight_bytes_ -= message->bytes;
+              return ZX_OK;
+            },
+        .unknown =
+            []() {
+              MAGMA_LOG(ERROR, "Flow control: bad event handler ordinal");
+              return ZX_ERR_INVALID_ARGS;
+            }};
 
-    status = client_.HandleEvents(std::move(event_handlers));
+    status = client_.HandleEvents(event_handlers).status();
     if (status != ZX_OK) {
       DMESSAGE("Flow control: HandleEvents failed: %d", status);
       return;

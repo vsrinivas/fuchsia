@@ -12,8 +12,22 @@ const ClientAsyncMethods = `
 {{- end }}
 {{- end }}
 
+{{- define "AsyncEventHandlerIndividualMethodSignature" -}}
+  {{- if .Response -}}
+({{ template "Params" .Response }})
+  {{- else -}}
+()
+  {{- end -}}
+{{- end }}
+
+{{- define "AsyncEventHandlerMoveParams" }}
+  {{- range $index, $param := . }}
+    {{- if $index }}, {{ end -}} std::move(message->{{ $param.Name }})
+  {{- end }}
+{{- end }}
+
 {{- define "ClientAsyncRequestManagedCallbackSignature" -}}
-::fit::callback<void {{- template "SyncEventHandlerIndividualMethodSignature" . }}>
+::fit::callback<void {{- template "AsyncEventHandlerIndividualMethodSignature" . }}>
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
@@ -46,7 +60,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
     ResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb) : cb_(std::move(cb)) {}
 
     void OnReply({{ .Name }}Response* message) override {
-      cb_({{ template "SyncEventHandlerMoveParams" .Response }});
+      cb_({{ template "AsyncEventHandlerMoveParams" .Response }});
       {{ if and .HasResponse .ResponseIsResource }}
       fidl_close_handles(type(), message, nullptr);
       {{ end }}

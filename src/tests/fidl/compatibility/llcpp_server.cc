@@ -46,12 +46,12 @@ class EchoClientApp {
   }
 
   zx_status_t EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
-                                 Echo::EventHandlers event_handlers) {
+                                 Echo::EventHandlers& event_handlers) {
     auto result = client_.EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    return client_.HandleEvents(std::move(event_handlers));
+    return client_.HandleEvents(event_handlers).status();
   }
 
   Echo::UnownedResultOf::EchoArrays EchoArrays(::fidl::BytePart request_buffer, ArraysStruct value,
@@ -178,18 +178,18 @@ class EchoConnection final : public Echo::Interface {
                     zx_status_get_string(status));
     } else {
       EchoClientApp app(std::move(forward_to_server));
-      zx_status_t status = app.EchoStructNoRetVal(
-          std::move(value), "",
-          Echo::EventHandlers{.echo_event =
-                                  [&](Struct value) {
-                                    return Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
-                                                                    std::move(value));
-                                  },
-                              .unknown =
-                                  [] {
-                                    ZX_PANIC("Received unexpected event");
-                                    return ZX_ERR_INVALID_ARGS;
-                                  }});
+      Echo::EventHandlers event_handlers{.echo_event =
+                                             [&](Echo::EchoEventResponse* message) {
+                                               return Echo::SendEchoEventEvent(
+                                                   zx::unowned_channel(channel_),
+                                                   std::move(message->value));
+                                             },
+                                         .unknown =
+                                             [] {
+                                               ZX_PANIC("Received unexpected event");
+                                               return ZX_ERR_INVALID_ARGS;
+                                             }};
+      zx_status_t status = app.EchoStructNoRetVal(std::move(value), "", event_handlers);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
     }

@@ -437,7 +437,7 @@ the context object by address to avoid implicit allocation.
   two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the
   response buffer, and returns an `UnownedResultOf`.
-* `zx_status_t HandleEvents(EventHandlers handlers)`: Blocks to consume exactly
+* `fidl::Result HandleEvents(EventHandlers& handlers)`: Blocks to consume exactly
   one event from the channel. See [Events](#events)
 
 Note that each method has both an owned and caller-allocated variant. In brief,
@@ -462,7 +462,7 @@ the only difference being that they are all `static` and take an
 * `static UnownedResultOf::MakeMove MakeMove(zx::unowned_channel _client_end,
   fidl::BytePart _request_buffer, uint8_t row, uint8_t col, fidl::BytePart
   _response_buffer);`:
-* `static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers
+* `static fidl::Result HandleEvents(zx::unowned_channel client_end, EventHandlers&
   handlers)`:
 
 #### Result, ResultOf and UnownedResultOf
@@ -592,15 +592,19 @@ a `HandleEvents` function and passing it a `TicTacToe::EventHandlers`.
 `EventHandlers` is a struct that contains handlers for each type of event. In
 this example, it consists of the following members:
 
-* `fit::callback<zx_status_t(GameState new_state)> on_opponent_move`:
-* `fit::callback<zx_status_t()> unknown`:
+* `fit::function<zx_status_t(TicTacToe::OnOpponentMoveResponse* message)> on_opponent_move`:
+* `fit::function<zx_status_t()> unknown`:
 
 There are two variants of the `HandleEvents` function available:
 
-* `TicTacToe::SyncClient::HandleEvents(EventHandlers handlers)`: A bound version
+* `TicTacToe::SyncClient::HandleEvents(EventHandlers& handlers)`: A bound version
   for sync clients.
-* `TicTacToe::Call::HandleEvents(zx::unowned_channel client_end, EventHandlers handlers)`:
+* `TicTacToe::Call::HandleEvents(zx::unowned_channel client_end, EventHandlers& handlers)`:
   An unbound version that also takes in an `unowned_channel`.
+
+If the handlers are always the same (from one call to `HandleEvents` to the other), the
+`EventHandlers` object should be constructed once and used each time you need to call
+`HandleEvents`.
 
 #### Server
 

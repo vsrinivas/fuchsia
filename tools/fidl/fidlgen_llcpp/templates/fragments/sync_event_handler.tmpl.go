@@ -5,33 +5,13 @@
 package fragments
 
 const SyncEventHandler = `
-{{- define "SyncEventHandlerIndividualMethodSignature" -}}
-  {{- if .Response -}}
-({{ template "Params" .Response }})
-  {{- else -}}
-()
-  {{- end -}}
-{{- end }}
-
-{{- define "SyncEventHandlerMoveParams" }}
-  {{- range $index, $param := . }}
-    {{- if $index }}, {{ end -}} std::move(message->{{ $param.Name }})
-  {{- end }}
-{{- end }}
-
-{{- define "SyncEventHandlerMethodDefinition" }}
-zx_status_t {{ .Name }}::SyncClient::HandleEvents({{ .Name }}::EventHandlers handlers) {
-  return {{ .Name }}::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
-}
-{{- end }}
-
 {{- define "StaticCallSyncEventHandlerMethodDefinition" }}
-zx_status_t {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{ .Name }}::EventHandlers handlers) {
+::fidl::Result {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{ .Name }}::EventHandlers& handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -67,45 +47,43 @@ zx_status_t {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,
     // whose size exceeds the maximum of known events in the current protocol.
-    return handlers.unknown();
+    return ::fidl::Result(handlers.unknown(), nullptr);
   }
   if (status != ZX_OK) {
-    return status;
+    return ::fidl::Result(status, ::fidl::kErrorReadFailed);
   }
   if (actual_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(read_handles, actual_handles);
-    return ZX_ERR_INVALID_ARGS;
+    return ::fidl::Result(ZX_ERR_INVALID_ARGS, ::fidl::kErrorInvalidHeader);
   }
-  auto msg = fidl_msg_t {
-      .bytes = read_bytes,
-      .handles = read_handles,
-      .num_bytes = actual_bytes,
-      .num_handles = actual_handles
-  };
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(read_bytes);
   status = fidl_validate_txn_header(hdr);
   if (status != ZX_OK) {
-    return status;
+    zx_handle_close_many(read_handles, actual_handles);
+    return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if not .HasRequest }}
-    case {{ .OrdinalName }}:
-    {
-      auto result = ::fidl::DecodeAs<{{ .Name }}Response>(&msg);
-      if (result.status != ZX_OK) {
-        return result.status;
+    case {{ .OrdinalName }}: {
+      const char* error_message;
+      zx_status_t status = fidl_decode({{ .Name }}Response::Type, read_bytes, actual_bytes,
+                                       read_handles, actual_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::Result(status, error_message);
       }
-      {{- if .Response }}
-      auto message = result.message.message();
-      {{- end }}
-      return handlers.{{ .NameInLowerSnakeCase }}({{ template "SyncEventHandlerMoveParams" .Response }});
+      return ::fidl::Result(handlers.{{ .NameInLowerSnakeCase }}(
+        {{- if .Response -}}
+        reinterpret_cast<{{ .Name }}Response*>(read_bytes)
+        {{- end -}}
+      ), nullptr);
     }
     {{- end }}
   {{- end }}
-    default:
+    default: {
       zx_handle_close_many(read_handles, actual_handles);
-      return handlers.unknown();
+      return ::fidl::Result(handlers.unknown(), nullptr);
+    }
   }
 }
 {{- end }}

@@ -500,8 +500,8 @@ zx_status_t rebind_display(bool use_all) {
   }
 }
 
-static zx_status_t handle_displays_changed(fidl::VectorView<fhd::Info> added,
-                                           fidl::VectorView<uint64_t> removed) {
+static zx_status_t handle_displays_changed(fidl::VectorView<fhd::Info>& added,
+                                           fidl::VectorView<uint64_t>& removed) {
   for (auto& display : added) {
     zx_status_t status = handle_display_added(&display);
     if (status != ZX_OK) {
@@ -533,25 +533,24 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
   }
 
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
-
-  return dc_client->HandleEvents(fhd::Controller::EventHandlers{
+  fhd::Controller::EventHandlers event_handlers{
       .on_displays_changed =
-          [](fidl::VectorView<fhd::Info> added, fidl::VectorView<uint64_t> removed) {
-            handle_displays_changed(std::move(added), std::move(removed));
+          [](fhd::Controller::OnDisplaysChangedResponse* message) {
+            handle_displays_changed(message->added, message->removed);
             return ZX_OK;
           },
-      .on_vsync = [](uint64_t display_id, uint64_t timestamp, fidl::VectorView<uint64_t> images,
-                     uint64_t cookie) { return ZX_OK; },
+      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_OK; },
       .on_client_ownership_change =
-          [](bool has_ownership) {
-            handle_ownership_change(has_ownership);
+          [](fhd::Controller::OnClientOwnershipChangeResponse* message) {
+            handle_ownership_change(message->has_ownership);
             return ZX_OK;
           },
       .unknown =
           []() {
             printf("vc: Unknown display callback message\n");
             return ZX_OK;
-          }});
+          }};
+  return dc_client->HandleEvents(event_handlers).status();
 }
 
 #if BUILD_FOR_DISPLAY_TEST

@@ -626,42 +626,51 @@ TEST(HidButtonsTest, Notify1) {
     // Interrupts
     device.FakeInterrupt(ButtonType::MUTE);
     device.DebounceWait();
-    EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::MUTE && pressed == true) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
+    {
+      Buttons::EventHandlers event_handlers{
+          .on_notify =
+              [](Buttons::OnNotifyResponse* message) {
+                if (message->type == ButtonType::MUTE && message->pressed == true) {
+                  return ZX_OK;
+                }
+                return ZX_ERR_INTERNAL;
+              },
+          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+      };
+      EXPECT_TRUE(client.HandleEvents(event_handlers).ok());
+    }
     device.FakeInterrupt(ButtonType::MUTE);
     device.DebounceWait();
-    EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::MUTE && pressed == false) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
+    {
+      Buttons::EventHandlers event_handlers{
+          .on_notify =
+              [](Buttons::OnNotifyResponse* message) {
+                if (message->type == ButtonType::MUTE && message->pressed == false) {
+                  return ZX_OK;
+                }
+                return ZX_ERR_INTERNAL;
+              },
+          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+      };
+      EXPECT_TRUE(client.HandleEvents(event_handlers).ok());
+    }
     auto result2 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::VOLUME_UP));
     EXPECT_OK(result2.status());
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     device.DebounceWait();
-    EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::VOLUME_UP && pressed == true) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
+    {
+      Buttons::EventHandlers event_handlers{
+          .on_notify =
+              [](Buttons::OnNotifyResponse* message) {
+                if (message->type == ButtonType::VOLUME_UP && message->pressed == true) {
+                  return ZX_OK;
+                }
+                return ZX_ERR_INTERNAL;
+              },
+          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+      };
+      EXPECT_TRUE(client.HandleEvents(event_handlers).ok());
+    }
   }  // Close Client
 
   device.Wait();
@@ -749,48 +758,60 @@ TEST(HidButtonsTest, Notify2) {
       // Interrupts
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
-      EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::MUTE && pressed == true) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
-      EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::MUTE && pressed == true) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::MUTE && message->pressed == true) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client1.HandleEvents(event_handlers).ok());
+      }
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::MUTE && message->pressed == true) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client2.HandleEvents(event_handlers).ok());
+      }
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
-      EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::MUTE && pressed == false) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
-      EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::MUTE && pressed == false) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::MUTE && message->pressed == false) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client1.HandleEvents(event_handlers).ok());
+      }
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::MUTE && message->pressed == false) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client2.HandleEvents(event_handlers).ok());
+      }
       auto result1_2 = client1.RegisterNotify((1 << static_cast<uint8_t>(ButtonType::VOLUME_UP)) |
                                               (1 << static_cast<uint8_t>(ButtonType::MUTE)));
       EXPECT_OK(result1_2.status());
@@ -798,53 +819,65 @@ TEST(HidButtonsTest, Notify2) {
       EXPECT_OK(result2_2.status());
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
-      EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::MUTE && pressed == true) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::MUTE && message->pressed == true) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client1.HandleEvents(event_handlers).ok());
+      }
       device.FakeInterrupt(ButtonType::VOLUME_UP);
       device.DebounceWait();
-      EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::VOLUME_UP && pressed == false) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
-      EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .on_notify =
-              [](ButtonType type, bool pressed) {
-                if (type == ButtonType::VOLUME_UP && pressed == false) {
-                  return ZX_OK;
-                }
-                return ZX_ERR_INTERNAL;
-              },
-          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-      }));
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::VOLUME_UP && message->pressed == false) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client1.HandleEvents(event_handlers).ok());
+      }
+      {
+        Buttons::EventHandlers event_handlers{
+            .on_notify =
+                [](Buttons::OnNotifyResponse* message) {
+                  if (message->type == ButtonType::VOLUME_UP && message->pressed == false) {
+                    return ZX_OK;
+                  }
+                  return ZX_ERR_INTERNAL;
+                },
+            .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+        };
+        EXPECT_TRUE(client2.HandleEvents(event_handlers).ok());
+      }
     }  // Close Client 1
 
     device.Wait();
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     device.DebounceWait();
-    EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::VOLUME_UP && pressed == true) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
+    {
+      Buttons::EventHandlers event_handlers{
+          .on_notify =
+              [](Buttons::OnNotifyResponse* message) {
+                if (message->type == ButtonType::VOLUME_UP && message->pressed == true) {
+                  return ZX_OK;
+                }
+                return ZX_ERR_INTERNAL;
+              },
+          .unknown = [] { return ZX_ERR_INVALID_ARGS; },
+      };
+      EXPECT_TRUE(client2.HandleEvents(event_handlers).ok());
+    }
   }  // Close Client 2
 
   device.Wait();
