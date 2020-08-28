@@ -1,0 +1,37 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.vreg;
+
+using zx;
+
+// The output for this voltage regulator is defined by the
+// following formula:
+//
+//  v_out = min_voltage + step_size * step
+//
+// Where the `step` is programmable by software.
+
+struct VregParams {
+    // Minimum voltage supported by this voltage regulator.
+    uint32 min_uv;
+
+    // Voltage increment at each step.
+    uint32 step_size_uv;
+
+    // Max number of steps.
+    uint32 num_steps;
+};
+
+[Layout = "ddk-protocol"]
+protocol Vreg {
+    // Set the step which yields a voltage of min_uv + step_size_uv * step.
+    SetVoltageStep(uint32 step) -> (zx.status st);
+
+    // Get the current step.
+    GetVoltageStep() -> (uint32 result);
+
+    // Obtain the parameters for this voltage regulator.
+    GetRegulatorParams() -> (VregParams params);
+};
