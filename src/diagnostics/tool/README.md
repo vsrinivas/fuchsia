@@ -58,7 +58,7 @@ hierarchy within the provided inspect.json file. This large list acts as the
 starting point for your integration.
 
 ```
-./out/default/host-tools/diag_tool -b <path/to/snapshot/dump/contents>/inspect.json generate -c <component_name>.cmx <selectors.cfg>
+./out/default/host-tools/diag_tool -s <path/to/snapshot/dump/contents>/inspect.json generate -c <component_name>.cmx <selectors.cfg>
 ```
 
 The output file is `<selectors.cfg>`, which will be used in the next section.
@@ -71,7 +71,7 @@ one terminal pane, open the selector file in your prefered editor. In a second
 pane, run the following command:
 
 ```
-./out/default/host-tools/diag_tool -b <path/to/snapshot/dump/contents>/inspect.json apply -c <component_name>.cmx <selectors.cfg>
+./out/default/host-tools/diag_tool -s <path/to/snapshot/dump/contents>/inspect.json apply -c <component_name>.cmx <selectors.cfg>
 ```
 
 In the pane where the above command was run, an interactive session will open
