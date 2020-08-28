@@ -225,6 +225,19 @@ void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
   }
 }
 
+void brcmf_netdev_set_allmulti(struct net_device* ndev) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  uint32_t cmd_value = ndev->multicast_promisc;
+  zx_status_t err = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
+
+  err = brcmf_fil_iovar_int_set(ifp, "allmulti", cmd_value, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Setting allmulti failed: %s, fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
+}
+
 void brcmf_netdev_start_xmit(struct net_device* ndev,
                              std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
   zx_status_t ret;

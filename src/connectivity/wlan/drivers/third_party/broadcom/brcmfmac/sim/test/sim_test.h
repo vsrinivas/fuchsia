@@ -135,6 +135,8 @@ class SimInterface {
                    uint32_t dtim_period = kDefaultSoftApDtimPeriod);
   void StopSoftAp();
 
+  zx_status_t SetMulticastPromisc(bool enable);
+
   std::shared_ptr<simulation::Environment> env_;
 
   static wlanif_impl_ifc_protocol_ops_t default_sme_dispatch_tbl_;

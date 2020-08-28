@@ -1622,6 +1622,15 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     ZX_ASSERT(bss_info->value == 0);
     return StopInterface(bss_info->bsscfgidx);
   }
+
+  if (!std::strncmp(name, "allmulti", cmd_len)) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    auto allmulti = reinterpret_cast<const uint32_t*>(value);
+    iface_tbl_[ifidx].allmulti = *allmulti;
+    return ZX_OK;
+  }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
   return ZX_OK;
@@ -1853,6 +1862,15 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     // TODO: Provide means to simulate hardware without rrm.
     uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
     *result_ptr = 1;
+  } else if (!std::strcmp(name, "allmulti")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = iface_tbl_[ifidx].allmulti;
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);

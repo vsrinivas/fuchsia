@@ -302,6 +302,19 @@ executable("set_keys_test") {
   ]
 }
 
+executable("set_multicast_test") {
+  output_name = "set_multicast_test"
+  testonly = true
+  sources = [ "set_multicast_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 executable("bad_entropy_test") {
   output_name = "bad_entropy_test"
   testonly = true
@@ -426,6 +439,7 @@ unittest_package("brcmfmac_sim_test") {
     ":phy_query_test",
     ":scan_dwell_time_test",
     ":set_keys_test",
+    ":set_multicast_test",
     ":timeout_test",
   ]
   tests = [
@@ -499,6 +513,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "set_keys_test"
+      environments = basic_envs
+    },
+    {
+      name = "set_multicast_test"
       environments = basic_envs
     },
     {

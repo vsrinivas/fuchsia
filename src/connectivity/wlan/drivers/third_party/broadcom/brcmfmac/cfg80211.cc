@@ -4237,7 +4237,7 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable) {
   BRCMF_DBG(WLANIF, "%s promiscuous mode", enable ? "Enabling" : "Disabling");
   ndev->multicast_promisc = enable;
-  brcmf_netdev_set_multicast_list(ndev);
+  brcmf_netdev_set_allmulti(ndev);
   return ZX_OK;
 }
 

@@ -224,6 +224,7 @@ const char* brcmf_ifname(struct brcmf_if* ifp);
 struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx);
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable);
 void brcmf_netdev_set_multicast_list(struct net_device* ndev);
+void brcmf_netdev_set_allmulti(struct net_device* ndev);
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);
 zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, const char* name,
                          uint8_t* mac_addr, struct brcmf_if** if_out);
