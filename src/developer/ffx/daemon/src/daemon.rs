@@ -259,7 +259,7 @@ impl Daemon {
                     }
                 };
                 let event_timeout = Duration::from_secs(
-                    get!(number, EVENTS_TIMEOUT_SECONDS, DEFAULT_EVENT_TIMEOUT_SEC).await,
+                    get(EVENTS_TIMEOUT_SECONDS).await.unwrap_or(DEFAULT_EVENT_TIMEOUT_SEC),
                 );
                 match target
                     .events

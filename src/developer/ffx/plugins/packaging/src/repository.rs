@@ -50,7 +50,8 @@ impl Repository {
     }
 
     pub async fn default_repo() -> Repository {
-        let repo_dir: path::PathBuf = get!(str, PACKAGE_REPO, "").await.into();
+        let default_dir: path::PathBuf = path::PathBuf::from("");
+        let repo_dir: path::PathBuf = get(PACKAGE_REPO).await.unwrap_or(default_dir);
         Repository::new(repo_dir.clone(), repo_dir.join("blobs"))
     }
 

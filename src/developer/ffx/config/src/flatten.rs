@@ -1,11 +1,15 @@
-use {crate::env_var::environment_variables_mapper, serde_json::Value};
+use serde_json::Value;
 
-pub(crate) fn flatten_env_var(value: Value) -> Option<Value> {
-    if let Value::Array(values) = value {
-        values.iter().find_map(|inner_v| environment_variables_mapper(inner_v.clone()))
-    } else {
-        environment_variables_mapper(value)
-    }
+pub(crate) fn flatten<'a, T: Fn(Value) -> Option<Value> + Sync>(
+    next: &'a T,
+) -> Box<dyn Fn(Value) -> Option<Value> + 'a + Send + Sync> {
+    Box::new(move |value| -> Option<Value> {
+        if let Value::Array(values) = value {
+            values.iter().find_map(|inner_v| next(inner_v.clone()))
+        } else {
+            next(value)
+        }
+    })
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -13,6 +17,7 @@ pub(crate) fn flatten_env_var(value: Value) -> Option<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::identity::identity;
 
     #[test]
     fn test_returns_first() {
@@ -20,14 +25,14 @@ mod test {
             Value::String("test1".to_string()),
             Value::String("test2".to_string()),
         ]);
-        let result = flatten_env_var(test);
+        let result = flatten(&identity)(test);
         assert_eq!(result, Some(Value::String("test1".to_string())));
     }
 
     #[test]
     fn test_returns_value_if_not_string() {
         let test = Value::Bool(false);
-        let result = flatten_env_var(test);
+        let result = flatten(&identity)(test);
         assert_eq!(result, Some(Value::Bool(false)));
     }
 }

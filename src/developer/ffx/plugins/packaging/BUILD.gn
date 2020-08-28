@@ -26,4 +26,6 @@ ffx_plugin("ffx_packaging") {
     "src/lib.rs",
     "src/repository.rs",
   ]
+
+  inputs = [ "data/config.json" ]
 }

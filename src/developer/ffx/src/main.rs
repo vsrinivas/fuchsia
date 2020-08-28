@@ -32,7 +32,7 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
 }
 
 async fn is_experiment_subcommand_on(key: &'static str) -> bool {
-    ffx_config::get!(bool, key, false).await
+    ffx_config::get(key).await.unwrap_or(false)
 }
 
 fn is_daemon(subcommand: &Option<Subcommand>) -> bool {

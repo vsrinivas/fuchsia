@@ -35,14 +35,13 @@ if (is_host) {
     non_rust_deps = [ "//third_party/boringssl" ]
 
     sources = [
-      "src/api.rs",
       "src/cache.rs",
       "src/constants.rs",
       "src/env_var.rs",
       "src/environment.rs",
       "src/file_backed_config.rs",
-      "src/file_flatten_env_var.rs",
-      "src/flatten_env_var.rs",
+      "src/file_check.rs",
+      "src/flatten.rs",
       "src/identity.rs",
       "src/lib.rs",
       "src/persistent_config.rs",

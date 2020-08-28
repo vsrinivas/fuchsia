@@ -61,6 +61,7 @@ if (is_host) {
       "src/task.rs",
       "src/util.rs",
     ]
+    inputs = [ "data/config.json" ]
   }
 }
 

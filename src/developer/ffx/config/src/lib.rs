@@ -3,36 +3,40 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::cache::load_config,
+    crate::env_var::env_var,
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
-    crate::file_flatten_env_var::file_flatten_env_var,
-    crate::flatten_env_var::flatten_env_var,
+    crate::file_check::file_check,
+    crate::flatten::flatten,
     crate::identity::identity,
     anyhow::{anyhow, bail, Context, Result},
     serde_json::Value,
-    std::{fs::File, io::Write, path::PathBuf},
+    std::{
+        convert::{From, TryFrom, TryInto},
+        default::Default,
+        fs::File,
+        io::Write,
+        path::PathBuf,
+    },
 };
 
 #[cfg(test)]
 use tempfile::NamedTempFile;
 
-mod api;
 mod cache;
 pub mod constants;
 mod env_var;
 pub mod environment;
 mod file_backed_config;
-mod file_flatten_env_var;
-mod flatten_env_var;
+mod file_check;
+mod flatten;
 mod identity;
 mod persistent_config;
 mod priority_config;
 mod runtime;
 
 pub use cache::{env_file, init_config};
-pub use config_macros::{get, print, remove, set};
 
 #[cfg(not(test))]
 pub use cache::get_config_base_path;
@@ -46,92 +50,255 @@ pub enum ConfigLevel {
     Runtime,
 }
 
-pub async fn get_config(name: &str) -> Result<Option<Value>> {
-    get_config_with_build_dir(name, &None, identity).await
+pub type ConfigResult = Result<ConfigValue>;
+pub struct ConfigValue(Option<Value>);
+pub struct ConfigError(anyhow::Error);
+
+pub struct ConfigQuery<'a> {
+    name: Option<&'a str>,
+    level: Option<ConfigLevel>,
+    build_dir: Option<&'a str>,
 }
 
-pub async fn get_config_sub(name: &str) -> Result<Option<Value>> {
-    get_config_with_build_dir(name, &None, flatten_env_var).await
+impl<'a> Default for ConfigQuery<'a> {
+    fn default() -> Self {
+        Self { name: None, level: None, build_dir: None }
+    }
 }
 
-pub async fn get_config_with_build_dir(
-    name: &str,
-    build_dir: &Option<String>,
-    mapper: ConfigMapper,
-) -> Result<Option<Value>> {
-    let config = load_config(build_dir).await?;
+pub async fn raw<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
+where
+    T: TryFrom<ConfigValue>,
+    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
+    U: Into<ConfigQuery<'a>>,
+{
+    get_config(query.into(), &validate_type::<T>).await.map_err(|e| e.into())?.try_into()
+}
+
+pub async fn get<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
+where
+    T: TryFrom<ConfigValue>,
+    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
+    U: Into<ConfigQuery<'a>>,
+{
+    let env_var_mapper = env_var(&validate_type::<T>);
+    let flatten_env_var_mapper = flatten(&env_var_mapper);
+    get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
+}
+
+pub async fn file<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
+where
+    T: TryFrom<ConfigValue>,
+    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
+    U: Into<ConfigQuery<'a>>,
+{
+    let file_check_mapper = file_check(&identity);
+    let env_var_mapper = env_var(&file_check_mapper);
+    let flatten_env_var_mapper = flatten(&env_var_mapper);
+    get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
+}
+
+async fn get_config<'a, T: Fn(Value) -> Option<Value>>(
+    query: ConfigQuery<'a>,
+    mapper: &T,
+) -> ConfigResult {
+    let config = load_config(&query.build_dir.map(String::from)).await?;
     let read_guard = config.read().await;
-    Ok((*read_guard).get(name, mapper))
+    Ok((*read_guard).get(&query, mapper).into())
 }
 
-pub async fn get_config_str(name: &str, default: &str) -> String {
-    get_config_with_build_dir(name, &None, flatten_env_var)
-        .await
-        .unwrap_or(Some(Value::String(default.to_string())))
-        .map_or(default.to_string(), |v| v.as_str().unwrap_or(default).to_string())
+pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
+where
+    T: TryFrom<ConfigValue>,
+    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
+{
+    let result: std::result::Result<T, T::Error> = ConfigValue(Some(value.clone())).try_into();
+    match result {
+        Ok(_) => Some(value),
+        Err(_) => None,
+    }
 }
 
-pub async fn try_get_config_str(name: &str) -> Result<Option<String>> {
-    Ok(get_config_with_build_dir(name, &None, flatten_env_var)
-        .await?
-        .and_then(|v| v.as_str().map(|s| s.to_string())))
+impl<'a> From<&'a str> for ConfigQuery<'a> {
+    fn from(value: &'a str) -> Self {
+        ConfigQuery { name: Some(value), ..Default::default() }
+    }
 }
 
-pub async fn try_get_config_file(name: &str) -> Result<Option<PathBuf>> {
-    Ok(get_config_with_build_dir(name, &None, file_flatten_env_var)
-        .await?
-        .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string()))))
+impl<'a> From<&'a String> for ConfigQuery<'a> {
+    fn from(value: &'a String) -> Self {
+        ConfigQuery { name: Some(&value), ..Default::default() }
+    }
 }
 
-pub async fn try_get_config_file_str(name: &str) -> Result<Option<String>> {
-    Ok(get_config_with_build_dir(name, &None, file_flatten_env_var)
-        .await?
-        .and_then(|v| v.as_str().map(|s| s.to_string())))
+impl<'a> From<ConfigLevel> for ConfigQuery<'a> {
+    fn from(value: ConfigLevel) -> Self {
+        ConfigQuery { level: Some(value), ..Default::default() }
+    }
 }
 
-pub async fn get_config_bool(name: &str, default: bool) -> bool {
-    get_config_with_build_dir(name, &None, flatten_env_var)
-        .await
-        .unwrap_or(Some(Value::Bool(default)))
-        .map_or(default, |v| {
-            v.as_bool().unwrap_or(match v {
-                Value::String(s) => s.parse().unwrap_or(default),
-                _ => default,
+impl<'a> From<(&'a str, ConfigLevel)> for ConfigQuery<'a> {
+    fn from(value: (&'a str, ConfigLevel)) -> Self {
+        ConfigQuery { name: Some(value.0), level: Some(value.1), ..Default::default() }
+    }
+}
+
+impl<'a> From<(&'a str, &ConfigLevel)> for ConfigQuery<'a> {
+    fn from(value: (&'a str, &ConfigLevel)) -> Self {
+        ConfigQuery { name: Some(value.0), level: Some(*value.1), ..Default::default() }
+    }
+}
+
+impl<'a> From<(&'a str, &'a str)> for ConfigQuery<'a> {
+    fn from(value: (&'a str, &'a str)) -> Self {
+        ConfigQuery { name: Some(value.0), build_dir: Some(value.1), ..Default::default() }
+    }
+}
+
+impl<'a> From<(&'a str, &ConfigLevel, &'a str)> for ConfigQuery<'a> {
+    fn from(value: (&'a str, &ConfigLevel, &'a str)) -> Self {
+        ConfigQuery { name: Some(value.0), level: Some(*value.1), build_dir: Some(value.2) }
+    }
+}
+
+impl<'a> From<(&'a str, &'a ConfigLevel, &'a Option<String>)> for ConfigQuery<'a> {
+    fn from(value: (&'a str, &'a ConfigLevel, &'a Option<String>)) -> Self {
+        ConfigQuery {
+            name: Some(value.0),
+            level: Some(*value.1),
+            build_dir: value.2.as_ref().map(|s| s.as_str()),
+        }
+    }
+}
+
+impl<'a> From<(&'a String, &'a ConfigLevel, &'a Option<String>)> for ConfigQuery<'a> {
+    fn from(value: (&'a String, &'a ConfigLevel, &'a Option<String>)) -> Self {
+        ConfigQuery {
+            name: Some(value.0.as_str()),
+            level: Some(*value.1),
+            build_dir: value.2.as_ref().map(|s| s.as_str()),
+        }
+    }
+}
+
+impl From<anyhow::Error> for ConfigError {
+    fn from(value: anyhow::Error) -> Self {
+        ConfigError(value)
+    }
+}
+
+impl From<ConfigError> for anyhow::Error {
+    fn from(value: ConfigError) -> Self {
+        value.0
+    }
+}
+
+impl From<ConfigError> for std::convert::Infallible {
+    fn from(_value: ConfigError) -> Self {
+        panic!("never going to happen")
+    }
+}
+
+impl From<ConfigValue> for Option<Value> {
+    fn from(value: ConfigValue) -> Self {
+        value.0
+    }
+}
+
+impl From<Option<Value>> for ConfigValue {
+    fn from(value: Option<Value>) -> Self {
+        ConfigValue(value)
+    }
+}
+
+impl TryFrom<ConfigValue> for String {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .ok_or(anyhow!("no configuration String value found").into())
+    }
+}
+
+impl TryFrom<ConfigValue> for Option<String> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        Ok(value.0.and_then(|v| v.as_str().map(|s| s.to_string())))
+    }
+}
+
+impl TryFrom<ConfigValue> for u64 {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| {
+                v.as_u64().or_else(|| {
+                    if let Value::String(s) = v {
+                        let parsed: Result<u64, _> = s.parse();
+                        match parsed {
+                            Ok(b) => Some(b),
+                            Err(_) => None,
+                        }
+                    } else {
+                        None
+                    }
+                })
             })
-        })
+            .ok_or(anyhow!("no configuration Number value found").into())
+    }
 }
 
-pub async fn get_config_number(name: &str, default: u64) -> u64 {
-    get_config_with_build_dir(name, &None, flatten_env_var)
-        .await
-        .unwrap_or(Some(Value::Number(serde_json::Number::from(default))))
-        .map_or(default, |v| {
-            v.as_u64().unwrap_or(match v {
-                Value::String(s) => s.parse().unwrap_or(default),
-                _ => default,
+impl TryFrom<ConfigValue> for bool {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| {
+                v.as_bool().or_else(|| {
+                    if let Value::String(s) = v {
+                        let parsed: Result<bool, _> = s.parse();
+                        match parsed {
+                            Ok(b) => Some(b),
+                            Err(_) => None,
+                        }
+                    } else {
+                        None
+                    }
+                })
             })
-        })
+            .ok_or(anyhow!("no configuration Boolean value found").into())
+    }
 }
 
-pub async fn try_get_config_number(name: &str) -> Result<Option<u64>> {
-    Ok(get_config_with_build_dir(name, &None, flatten_env_var).await?.and_then(|v| v.as_u64()))
+impl TryFrom<ConfigValue> for PathBuf {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string())))
+            .ok_or(anyhow!("no configuration value found").into())
+    }
 }
 
-pub async fn set_config(level: &ConfigLevel, name: &str, value: Value) -> Result<()> {
-    set_config_with_build_dir(level, name, value, &None).await
-}
-
-pub async fn set_config_with_build_dir(
-    level: &ConfigLevel,
-    name: &str,
-    value: Value,
-    build_dir: &Option<String>,
-) -> Result<()> {
-    check_config_files(level, build_dir)?;
-    let config = load_config(&build_dir).await?;
+pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
+    let config_query: ConfigQuery<'a> = query.into();
+    let level = if let Some(l) = config_query.level {
+        l
+    } else {
+        bail!("level of configuration is required to set a value");
+    };
+    check_config_files(&level, &config_query.build_dir.map(String::from))?;
+    let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
-    (*write_guard).set(&level, &name, value)?;
-    save_config(&mut *write_guard, build_dir)
+    (*write_guard).set(&config_query, value)?;
+    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
 }
 
 fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result<()> {
@@ -187,19 +354,12 @@ fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result
     Ok(())
 }
 
-pub async fn remove_config(level: &ConfigLevel, name: &str) -> Result<()> {
-    remove_config_with_build_dir(level, name, &None).await
-}
-
-pub async fn remove_config_with_build_dir(
-    level: &ConfigLevel,
-    name: &str,
-    build_dir: &Option<String>,
-) -> Result<()> {
-    let config = load_config(&build_dir).await?;
+pub async fn remove<'a, U: Into<ConfigQuery<'a>>>(query: U) -> Result<()> {
+    let config_query: ConfigQuery<'a> = query.into();
+    let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
-    (*write_guard).remove(&level, &name)?;
-    save_config(&mut *write_guard, build_dir)
+    (*write_guard).remove(&config_query)?;
+    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
 }
 
 pub mod logging {
@@ -226,9 +386,9 @@ pub mod logging {
         let default_log_dir = {
             let mut path = ffx_core::get_base_path();
             path.push("logs");
-            path.to_string_lossy().into_owned()
+            path
         };
-        PathBuf::from(super::get_config_str(LOG_DIR, &default_log_dir).await)
+        super::get(LOG_DIR).await.unwrap_or(default_log_dir)
     }
 
     pub async fn log_file(name: &str) -> Result<std::fs::File> {
@@ -244,7 +404,7 @@ pub mod logging {
     }
 
     pub async fn is_enabled() -> bool {
-        super::get_config_bool(LOG_ENABLED, false).await
+        super::get(LOG_ENABLED).await.unwrap_or(false)
     }
 
     pub async fn init(stdio: bool) -> Result<()> {
@@ -301,6 +461,7 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_check_config_files_fails() {
@@ -315,5 +476,36 @@ mod test {
             let result = check_config_files(&level, &build_dir);
             assert!(result.is_err());
         });
+    }
+
+    #[test]
+    fn test_validating_types() {
+        assert!(validate_type::<String>(json!("test")).is_some());
+        assert!(validate_type::<String>(json!(1)).is_none());
+        assert!(validate_type::<String>(json!(false)).is_none());
+        assert!(validate_type::<String>(json!(true)).is_none());
+        assert!(validate_type::<String>(json!({"test": "whatever"})).is_none());
+        assert!(validate_type::<String>(json!(["test", "test2"])).is_none());
+        assert!(validate_type::<bool>(json!(true)).is_some());
+        assert!(validate_type::<bool>(json!(false)).is_some());
+        assert!(validate_type::<bool>(json!("true")).is_some());
+        assert!(validate_type::<bool>(json!("false")).is_some());
+        assert!(validate_type::<bool>(json!(1)).is_none());
+        assert!(validate_type::<bool>(json!("test")).is_none());
+        assert!(validate_type::<bool>(json!({"test": "whatever"})).is_none());
+        assert!(validate_type::<bool>(json!(["test", "test2"])).is_none());
+        assert!(validate_type::<u64>(json!(2)).is_some());
+        assert!(validate_type::<u64>(json!(100)).is_some());
+        assert!(validate_type::<u64>(json!("100")).is_some());
+        assert!(validate_type::<u64>(json!("0")).is_some());
+        assert!(validate_type::<u64>(json!(true)).is_none());
+        assert!(validate_type::<u64>(json!("test")).is_none());
+        assert!(validate_type::<u64>(json!({"test": "whatever"})).is_none());
+        assert!(validate_type::<u64>(json!(["test", "test2"])).is_none());
+        assert!(validate_type::<PathBuf>(json!("/")).is_some());
+        assert!(validate_type::<PathBuf>(json!("test")).is_some());
+        assert!(validate_type::<PathBuf>(json!(true)).is_none());
+        assert!(validate_type::<PathBuf>(json!({"test": "whatever"})).is_none());
+        assert!(validate_type::<PathBuf>(json!(["test", "test2"])).is_none());
     }
 }

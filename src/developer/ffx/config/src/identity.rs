@@ -1,6 +1,8 @@
-use serde_json::Value;
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-pub(crate) fn identity(value: Value) -> Option<Value> {
+pub(crate) fn identity(value: serde_json::Value) -> Option<serde_json::Value> {
     Some(value)
 }
 
@@ -9,6 +11,7 @@ pub(crate) fn identity(value: Value) -> Option<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::Value;
 
     #[test]
     fn test_returns_first() {

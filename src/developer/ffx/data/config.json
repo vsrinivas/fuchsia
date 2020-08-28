@@ -2,7 +2,8 @@
   "log": {
     "dir": [
       "$FFX_LOG_DIR",
-      "$XDG_CONFIG_HOME/Fuchsia/ffx/logs"
+      "$XDG_CONFIG_HOME/Fuchsia/ffx/logs",
+      "$HOME/.local/share/Fuchsia/ffx/logs"
     ],
     "enabled": "$FFX_LOG_ENABLED"
   }

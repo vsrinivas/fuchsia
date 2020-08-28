@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::priority_config::Priority,
-    crate::ConfigLevel,
+    crate::{ConfigLevel, ConfigQuery},
     anyhow::{bail, Result},
     serde_json::Value,
     std::{
@@ -52,7 +51,7 @@ impl Persistent {
         global: Option<R>,
         build: Option<R>,
         user: Option<R>,
-        runtime: &Option<String>,
+        runtime: Option<Value>,
     ) -> Result<Self> {
         Ok(Self {
             data: Priority::new(
@@ -75,33 +74,43 @@ impl Persistent {
         Persistent::save_config(global, &self.data.global)?;
         Ok(())
     }
-}
 
-impl ReadConfig for Persistent {
-    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
-        self.data.get(key, mapper)
+    pub fn get<T: Fn(Value) -> Option<Value>>(
+        &self,
+        query: &ConfigQuery<'_>,
+        mapper: &T,
+    ) -> Option<Value> {
+        self.data.get(query, mapper)
+    }
+
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<()> {
+        let level = if let Some(l) = query.level {
+            l
+        } else {
+            bail!("level of configuration is required to set a value");
+        };
+        match level {
+            ConfigLevel::Default => bail!("cannot override defaults"),
+            _ => self.data.set(query, value),
+        }
+    }
+
+    pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
+        let level = if let Some(l) = query.level {
+            l
+        } else {
+            bail!("level of configuration is required to remove a value");
+        };
+        match level {
+            ConfigLevel::Default => bail!("cannot override defaults"),
+            _ => self.data.remove(query),
+        }
     }
 }
 
 impl fmt::Display for Persistent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.data)
-    }
-}
-
-impl WriteConfig for Persistent {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
-        match level {
-            ConfigLevel::Default => bail!("cannot override defaults"),
-            _ => self.data.set(&level, key, value),
-        }
-    }
-
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
-        match level {
-            ConfigLevel::Default => bail!("cannot override defaults"),
-            _ => self.data.remove(&level, key),
-        }
     }
 }
 
@@ -139,10 +148,10 @@ mod test {
             Some(BufReader::new(global_file.as_bytes())),
             Some(BufReader::new(build_file.as_bytes())),
             Some(BufReader::new(user_file.as_bytes())),
-            &None,
+            None,
         )?;
 
-        let value = persistent_config.get("name", identity);
+        let value = persistent_config.get(&"name".into(), &identity);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("User")));
 

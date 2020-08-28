@@ -49,7 +49,8 @@ pub async fn find_and_connect() -> Result<DaemonProxy> {
     let svc = hoist::connect_as_service_consumer()?;
     // Sometimes list_peers doesn't properly report the published services - retry a few times
     // but don't loop indefinitely.
-    let max_retry_count = get!(number, OVERNET_MAX_RETRY_COUNT, DEFAULT_MAX_RETRY_COUNT).await;
+    let max_retry_count: u64 =
+        get(OVERNET_MAX_RETRY_COUNT).await.unwrap_or(DEFAULT_MAX_RETRY_COUNT);
     for _ in 0..max_retry_count {
         let peers = svc.list_peers().await?;
         for mut peer in peers {

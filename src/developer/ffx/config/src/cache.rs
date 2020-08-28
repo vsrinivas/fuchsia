@@ -6,14 +6,19 @@ use {
     crate::constants::{self, CONFIG_CACHE_TIMEOUT},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
+    crate::runtime::populate_runtime_config,
     anyhow::{anyhow, Context, Result},
     async_std::sync::{Arc, RwLock},
+    serde_json::Value,
     std::{
         collections::HashMap,
         fs::{create_dir_all, File},
         io::Write,
         path::PathBuf,
-        sync::Mutex,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Mutex,
+        },
         time::Instant,
     },
 };
@@ -29,8 +34,9 @@ struct CacheItem {
 type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
 
 lazy_static::lazy_static! {
+    static ref INIT: AtomicBool = AtomicBool::new(false);
     static ref ENV_FILE: Mutex<Option<String>> = Mutex::new(None);
-    static ref RUNTIME: Mutex<Option<String>> = Mutex::new(None);
+    static ref RUNTIME: Mutex<Option<Value>> = Mutex::new(None);
     static ref CACHE: Cache = RwLock::new(HashMap::new());
 }
 
@@ -56,7 +62,18 @@ pub fn env_file() -> Option<String> {
 }
 
 pub fn init_config(runtime: &Option<String>, env_override: &Option<String>) -> Result<()> {
-    let _ = runtime.as_ref().and_then(|v| RUNTIME.lock().unwrap().replace(v.to_string()));
+    // If it's already been initialize, just fail silently. This will allow a setup method to be
+    // called by unit tests over and over again without issue.
+    if INIT.compare_and_swap(false, true, Ordering::Release) {
+        Ok(())
+    } else {
+        init_config_impl(runtime, env_override)
+    }
+}
+
+fn init_config_impl(runtime: &Option<String>, env_override: &Option<String>) -> Result<()> {
+    let populated_runtime = populate_runtime_config(runtime)?;
+    let _ = populated_runtime.and_then(|v| RUNTIME.lock().unwrap().replace(v));
 
     let env_path = if let Some(f) = env_override {
         PathBuf::from(f)
@@ -119,6 +136,7 @@ async fn load_config_with_instant(
                     .get(build_dir)
                     .map_or(true, |item| is_cache_item_expired(item, now));
                 if write {
+                    let runtime = RUNTIME.lock().unwrap().as_ref().map(|v| v.clone());
                     (*write_guard).insert(
                         build_dir.as_ref().cloned(),
                         CacheItem {
@@ -126,7 +144,7 @@ async fn load_config_with_instant(
                             config: Arc::new(RwLock::new(Config::new(
                                 &Environment::try_load(ENV_FILE.lock().unwrap().as_ref()),
                                 build_dir,
-                                &RUNTIME.lock().unwrap(),
+                                runtime,
                             )?)),
                         },
                     );
@@ -232,7 +250,7 @@ mod test {
             config: Arc::new(RwLock::new(Config::new(
                 &Environment::try_load(None),
                 &build_dirs[0],
-                &None,
+                None,
             )?)),
         };
         assert!(!is_cache_item_expired(&item, now));

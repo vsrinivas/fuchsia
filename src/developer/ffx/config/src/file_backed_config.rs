@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::environment::Environment,
     crate::persistent_config::Persistent,
-    crate::ConfigLevel,
+    crate::ConfigQuery,
     anyhow::{Context, Result},
     serde_json::Value,
     std::{
@@ -69,7 +68,7 @@ impl FileBacked {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
-        runtime: &Option<String>,
+        runtime: Option<Value>,
     ) -> Result<Self> {
         Ok(Self {
             data: Persistent::load(
@@ -97,7 +96,7 @@ impl FileBacked {
     pub(crate) fn new(
         env: &Environment,
         build_dir: &Option<String>,
-        runtime: &Option<String>,
+        runtime: Option<Value>,
     ) -> Result<Self> {
         Self::load_from_environment(env, build_dir, runtime)
     }
@@ -105,40 +104,41 @@ impl FileBacked {
     fn load_from_environment(
         env: &Environment,
         build_dir: &Option<String>,
-        runtime: &Option<String>,
+        runtime: Option<Value>,
     ) -> Result<Self> {
+        let runtime_clone = runtime.clone();
         build_dir.as_ref().map_or_else(
-            || Self::load(&env.global, &None, &env.user, &runtime),
+            || Self::load(&env.global, &None, &env.user, runtime),
             |b| {
                 Self::load(
                     &env.global,
                     &env.build.as_ref().and_then(|c| c.get(b)),
                     &env.user,
-                    &runtime,
+                    runtime_clone,
                 )
             },
         )
     }
-}
 
-impl ReadConfig for FileBacked {
-    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
-        self.data.get(key, mapper)
+    pub fn get<T: Fn(Value) -> Option<Value>>(
+        &self,
+        query: &ConfigQuery<'_>,
+        mapper: &T,
+    ) -> Option<Value> {
+        self.data.get(query, mapper)
+    }
+
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<()> {
+        self.data.set(query, value)
+    }
+
+    pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
+        self.data.remove(query)
     }
 }
 
 impl fmt::Display for FileBacked {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.data)
-    }
-}
-
-impl WriteConfig for FileBacked {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
-        self.data.set(level, key, value)
-    }
-
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
-        self.data.remove(level, key)
     }
 }

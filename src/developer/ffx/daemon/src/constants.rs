@@ -31,7 +31,7 @@ pub(crate) const OVERNET_SOCKET: &str = "overnet.socket";
 
 #[cfg(not(test))]
 pub(crate) async fn get_socket() -> String {
-    ffx_config::get!(str, OVERNET_SOCKET, DEFAULT_SOCKET).await
+    ffx_config::get(OVERNET_SOCKET).await.unwrap_or(DEFAULT_SOCKET.to_string())
 }
 
 #[cfg(test)]

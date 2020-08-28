@@ -5,7 +5,7 @@ use {
     crate::constants::{SSH_PORT, SSH_PRIV},
     crate::target::TargetAddr,
     anyhow::{anyhow, Result},
-    ffx_config::get,
+    ffx_config::{file, get},
     std::collections::HashSet,
     std::process::Command,
 };
@@ -24,8 +24,8 @@ pub async fn build_ssh_command(addrs: HashSet<TargetAddr>, command: Vec<&str>) -
         return Err(anyhow!("missing SSH command"));
     }
 
-    let port = get!(str, SSH_PORT).await?;
-    let key = get!(file_str, SSH_PRIV).await?;
+    let port: Option<String> = get(SSH_PORT).await?;
+    let key: String = file(SSH_PRIV).await?;
 
     let mut c = Command::new("ssh");
 
@@ -33,9 +33,7 @@ pub async fn build_ssh_command(addrs: HashSet<TargetAddr>, command: Vec<&str>) -
         c.arg("-p").arg(p);
     }
 
-    if let Some(k) = key {
-        c.arg("-i").arg(k);
-    }
+    c.arg("-i").arg(key);
 
     let addr = addrs.iter().next().ok_or(anyhow!("no IP's for chosen target"))?;
 
@@ -48,6 +46,7 @@ mod test {
     use {
         super::build_ssh_command,
         crate::target::TargetAddr,
+        anyhow::Result,
         std::collections::HashSet,
         std::net::{IpAddr, Ipv4Addr},
     };
@@ -65,7 +64,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_valid_inputs() {
+    async fn test_valid_inputs() -> Result<()> {
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
         std::env::set_var("FUCHSIA_SSH_PORT", "1234");
@@ -80,5 +79,6 @@ mod test {
 
         assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), dbgstr);
         assert!(dbgstr.contains(&ip.to_string()), dbgstr);
+        Ok(())
     }
 }
