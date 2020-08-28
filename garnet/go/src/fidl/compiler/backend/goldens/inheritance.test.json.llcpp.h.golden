@@ -279,6 +279,25 @@ class super final {
     fooUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 24 bytes of response buffer on the stack. Request is
+    // heap-allocated.
+    static ResultOf::foo foo(::zx::unowned_channel _client_end,
+                             ::fidl::StringView s);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
+                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::StringView s,
+                                    ::fidl::BytePart _response_buffer);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -303,25 +322,6 @@ class super final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    static ResultOf::foo foo(::zx::unowned_channel _client_end,
-                             ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
-                                    ::fidl::StringView s,
-                                    ::fidl::BytePart _response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -624,6 +624,25 @@ class sub final {
     fooUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 24 bytes of response buffer on the stack. Request is
+    // heap-allocated.
+    static ResultOf::foo foo(::zx::unowned_channel _client_end,
+                             ::fidl::StringView s);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
+                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::StringView s,
+                                    ::fidl::BytePart _response_buffer);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -648,25 +667,6 @@ class sub final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 24 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    static ResultOf::foo foo(::zx::unowned_channel _client_end,
-                             ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
-                                    ::fidl::StringView s,
-                                    ::fidl::BytePart _response_buffer);
   };
 
   struct AsyncEventHandlers;

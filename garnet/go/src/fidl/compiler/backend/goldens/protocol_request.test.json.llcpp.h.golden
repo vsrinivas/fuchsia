@@ -759,6 +759,54 @@ class Parent final {
     TakeChildRequestUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::GetChild GetChild(::zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::GetChild GetChild(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::GetChildRequest GetChildRequest(
+        ::zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::GetChildRequest GetChildRequest(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::TakeChild TakeChild(::zx::unowned_channel _client_end,
+                                         ::zx::channel c);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::TakeChild TakeChild(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::channel c);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::TakeChildRequest TakeChildRequest(
+        ::zx::unowned_channel _client_end, ::zx::channel r);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::TakeChildRequest TakeChildRequest(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::channel r);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -808,54 +856,6 @@ class Parent final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::GetChild GetChild(::zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::GetChild GetChild(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::GetChildRequest GetChildRequest(
-        ::zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::GetChildRequest GetChildRequest(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::TakeChild TakeChild(::zx::unowned_channel _client_end,
-                                         ::zx::channel c);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::TakeChild TakeChild(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::zx::channel c);
-
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::TakeChildRequest TakeChildRequest(
-        ::zx::unowned_channel _client_end, ::zx::channel r);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::TakeChildRequest TakeChildRequest(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::zx::channel r);
   };
 
   struct AsyncEventHandlers;
@@ -974,6 +974,14 @@ class Child final {
    public:
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -988,14 +996,6 @@ class Child final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
   };
 
   struct AsyncEventHandlers;

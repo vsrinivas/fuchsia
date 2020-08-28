@@ -165,6 +165,18 @@ class SecondProtocol final {
     MethodOnSecondUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::MethodOnSecond MethodOnSecond(
+        ::zx::unowned_channel _client_end);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -183,18 +195,6 @@ class SecondProtocol final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::MethodOnSecond MethodOnSecond(
-        ::zx::unowned_channel _client_end);
   };
 
   struct AsyncEventHandlers;
@@ -360,6 +360,18 @@ class FirstProtocol final {
     MethodOnFirstUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::MethodOnFirst MethodOnFirst(
+        ::zx::unowned_channel _client_end);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -378,18 +390,6 @@ class FirstProtocol final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::MethodOnFirst MethodOnFirst(
-        ::zx::unowned_channel _client_end);
   };
 
   struct AsyncEventHandlers;

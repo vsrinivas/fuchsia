@@ -196,6 +196,14 @@ class SomeProtocol final {
    public:
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -210,14 +218,6 @@ class SomeProtocol final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
   };
 
   struct AsyncEventHandlers;

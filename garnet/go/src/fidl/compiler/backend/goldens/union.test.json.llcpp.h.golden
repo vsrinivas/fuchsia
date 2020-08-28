@@ -3020,6 +3020,37 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+    StrictXUnionHenceResponseMayBeStackAllocated(
+        ::zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+    StrictXUnionHenceResponseMayBeStackAllocated(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Allocates 16 bytes of request buffer on the stack. Response is
+    // heap-allocated.
+    static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+    FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        ::zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+    FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -3056,37 +3087,6 @@ class TestProtocol final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Allocates 88 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Allocates 16 bytes of request buffer on the stack. Response is
-    // heap-allocated.
-    static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
   };
 
   struct AsyncEventHandlers;

@@ -538,6 +538,37 @@ class {{ .Name }} final {
     {{ end }}
   {{ end }}
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+{{ "" }}
+    {{- /* Client-calling functions do not apply to events. */}}
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- range .DocComments }}
+    //{{ . }}
+      {{- end }}
+    //{{ template "ClientAllocationComment" . }}
+    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
+{{ "" }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
+      {{- end }}
+{{ "" }}
+    {{- end }}
+    {{- if .HasEvents }}
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding handler
+    // defined in |EventHandlers|. The return status of the handler function is folded with any
+    // transport-level errors and returned.
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
+    {{- end }}
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -576,37 +607,6 @@ class {{ .Name }} final {
     {{- end }}
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-   public:
-{{ "" }}
-    {{- /* Client-calling functions do not apply to events. */}}
-    {{- range FilterMethodsWithoutReqs .Methods -}}
-      {{- range .DocComments }}
-    //{{ . }}
-      {{- end }}
-    //{{ template "ClientAllocationComment" . }}
-    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
-{{ "" }}
-      {{- if or .Request .Response }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
-      {{- end }}
-{{ "" }}
-    {{- end }}
-    {{- if .HasEvents }}
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
-    {{- end }}
   };
 
 {{ template "ClientForwardDeclaration" . }}

@@ -589,6 +589,28 @@ class Interface final {
     OnEventUnownedResponse message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // method comment #1
+    //
+    // method comment #3
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::Method Method(::zx::unowned_channel _client_end);
+
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
+                                    EventHandlers handlers);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -617,28 +639,6 @@ class Interface final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // method comment #1
-    //
-    // method comment #3
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    static ResultOf::Method Method(::zx::unowned_channel _client_end);
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding handler defined in |EventHandlers|. The return status of
-    // the handler function is folded with any transport-level errors and
-    // returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
-                                    EventHandlers handlers);
   };
 
   struct AsyncEventHandlers;

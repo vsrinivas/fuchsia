@@ -806,6 +806,39 @@ class Protocol final {
     RequestFlexibleResponseStrictUnownedRequest message_;
   };
 
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Request is heap-allocated. Response is heap-allocated.
+    static ResultOf::RequestStrictResponseFlexible
+    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
+                                  ::llcpp::fidl::test::json::StrictFoo s);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::RequestStrictResponseFlexible
+    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
+                                  ::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::StrictFoo s,
+                                  ::fidl::BytePart _response_buffer);
+
+    // Request is heap-allocated. Response is heap-allocated.
+    static ResultOf::RequestFlexibleResponseStrict
+    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
+                                  ::llcpp::fidl::test::json::FlexibleFoo s);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::RequestFlexibleResponseStrict
+    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
+                                  ::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::FlexibleFoo s,
+                                  ::fidl::BytePart _response_buffer);
+  };
+
   class SyncClient final {
    public:
     SyncClient() = default;
@@ -842,39 +875,6 @@ class Protocol final {
 
    private:
     ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
-  // setting up a client.
-  class Call final {
-    Call() = delete;
-
-   public:
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
-                                  ::llcpp::fidl::test::json::StrictFoo s);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::StrictFoo s,
-                                  ::fidl::BytePart _response_buffer);
-
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
-                                  ::llcpp::fidl::test::json::FlexibleFoo s);
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    static UnownedResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _request_buffer,
-                                  ::llcpp::fidl::test::json::FlexibleFoo s,
-                                  ::fidl::BytePart _response_buffer);
   };
 
   struct AsyncEventHandlers;
