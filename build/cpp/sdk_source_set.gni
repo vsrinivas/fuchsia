@@ -43,7 +43,6 @@ import("//build/sdk/sdk_atom.gni")
 #   non_sdk_deps (optional)
 #     List of dependencies that should not be reflected in SDKs.
 #     Mostly useful for code generation.
-
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
   assert(defined(invoker.sdk_name), "Must define an SDK name")
@@ -225,4 +224,8 @@ template("sdk_source_set") {
       non_sdk_deps += invoker.non_sdk_deps
     }
   }
+}
+
+set_defaults("sdk_source_set") {
+  configs = default_common_binary_configs
 }

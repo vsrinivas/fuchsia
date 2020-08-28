@@ -132,6 +132,11 @@ sdk_source_set("cpp_base") {
       "//zircon/system/ulib/fidl-async",
     ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("test_util") {
