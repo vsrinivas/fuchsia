@@ -118,6 +118,7 @@ class TestMounter : public FilesystemMounter {
         break;
       case FilesystemType::kFactoryfs:
         server = &factoryfs_server_;
+        break;
       default:
         ADD_FAILURE("Unexpected filesystem type");
     }
@@ -143,6 +144,17 @@ TEST_F(MounterTest, DurableMount) {
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountDurable(zx::channel(), options));
   ASSERT_TRUE(mounter.DurableMounted());
+}
+
+TEST_F(MounterTest, FactoryMount) {
+  BlockWatcherOptions block_options = {};
+  TestMounter mounter(TakeManager(), block_options);
+
+  mount_options_t options = default_mount_options;
+  mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
+  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), options));
+
+  ASSERT_TRUE(mounter.FactoryMounted());
 }
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
