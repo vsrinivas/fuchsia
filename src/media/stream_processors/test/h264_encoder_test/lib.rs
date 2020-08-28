@@ -9,8 +9,13 @@ use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_async as fasync;
 use h264_stream::*;
+use lazy_static::lazy_static;
 use std::rc::Rc;
 use stream_processor_test::*;
+
+lazy_static! {
+    static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");
+}
 
 // Instructions for capturing output of encoder:
 // 1. Set the `output_file` field to write the encoded output into "/tmp/".
@@ -22,6 +27,7 @@ use stream_processor_test::*;
 
 #[test]
 fn h264_stream_output_generated() -> Result<()> {
+    *LOGGER;
     const WIDTH: u32 = 320;
     const HEIGHT: u32 = 240;
     let mut exec = fasync::Executor::new()?;

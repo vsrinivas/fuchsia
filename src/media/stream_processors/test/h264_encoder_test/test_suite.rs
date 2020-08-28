@@ -157,10 +157,13 @@ impl H264EncoderTestCase {
         const MAX_NORMALIZED_SAD: f64 = 0xffff as f64;
 
         let stream = self.create_test_stream()?;
-        let mut validators: Vec<Rc<dyn OutputValidator>> = vec![Rc::new(H264NalValidator {
-            expected_nals: self.expected_nals.clone(),
-            output_file: self.output_file,
-        })];
+        let mut validators: Vec<Rc<dyn OutputValidator>> = vec![
+            Rc::new(H264NalValidator {
+                expected_nals: self.expected_nals.clone(),
+                output_file: self.output_file,
+            }),
+            Rc::new(TimestampValidator { generator: stream.timestamp_generator() }),
+        ];
 
         if self.decode_output {
             validators.push(Rc::new(H264DecoderValidator {
@@ -188,13 +191,27 @@ impl H264EncoderTestCase {
         spec.run().await
     }
 
+    fn get_frame_rate(&self) -> usize {
+        const DEFAULT_FRAMERATE: usize = 30;
+        match (self.settings)() {
+            EncoderSettings::H264(H264EncoderSettings { frame_rate: Some(frame_rate), .. }) => {
+                frame_rate as usize
+            }
+            _ => DEFAULT_FRAMERATE,
+        }
+    }
+
+    fn get_timebase(&self) -> u64 {
+        zx::Duration::from_seconds(1).into_nanos() as u64
+    }
+
     fn create_test_stream(&self) -> Result<Rc<VideoFrameStream>> {
         Ok(Rc::new(VideoFrameStream::create(
             self.input_format,
             self.num_frames,
             self.settings.clone(),
-            /*frames_per_second=*/ 30,
-            /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
+            self.get_frame_rate(),
+            Some(self.get_timebase()),
             /*mime_type=*/ "video/h264",
         )?))
     }

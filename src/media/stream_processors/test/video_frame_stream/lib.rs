@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::format_err;
+use async_trait::async_trait;
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
@@ -55,14 +57,45 @@ impl VideoFrame {
 ///
 /// Since the rate is constant, this can also be used to extrapolate timestamps.
 pub struct TimestampGenerator {
-    timebase: u64,
-    frames_per_second: usize,
+    pub timebase: u64,
+    pub frames_per_second: usize,
 }
 
 impl TimestampGenerator {
     pub fn timestamp_at(&self, input_index: usize) -> u64 {
         let fps = self.frames_per_second as u64;
         (input_index as u64) * self.timebase / fps
+    }
+}
+
+/// Validates that timestamps match the expected output from the specified generator
+pub struct TimestampValidator {
+    pub generator: Option<TimestampGenerator>,
+}
+
+#[async_trait(?Send)]
+impl OutputValidator for TimestampValidator {
+    async fn validate(&self, output: &[Output]) -> Result<()> {
+        let packets = output_packets(output);
+        for (pos, packet) in packets.enumerate() {
+            if packet.packet.timestamp_ish.is_none() {
+                return Err(format_err!("Missing timestamp"));
+            }
+
+            if let Some(generator) = &self.generator {
+                let current_ts = packet.packet.timestamp_ish.unwrap();
+                let expected_ts = generator.timestamp_at(pos);
+
+                if current_ts != expected_ts {
+                    return Err(format_err!(
+                        "Unexpected timestamp {} (expected {})",
+                        current_ts,
+                        expected_ts
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 }
 
