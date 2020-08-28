@@ -52,6 +52,7 @@ zx_library("amlogic") {
   ]
   sources = [
     "a113-clocks.c",
+    "aml-g12-saradc.cc",
     "aml-pdm-audio.cc",
     "aml-tdm-audio.cc",
     "aml-tdm-in-audio.cc",

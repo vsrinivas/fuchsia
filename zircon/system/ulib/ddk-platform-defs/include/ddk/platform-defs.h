@@ -138,6 +138,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_RAM_CTL     0x24
 #define PDEV_DID_AMLOGIC_HEVC_ENC    0x25
 #define PDEV_DID_AMLOGIC_POWER       0x26
+#define PDEV_DID_ASTRO_THERMISTOR    0x27
 
 // Broadcom
 #define PDEV_VID_BROADCOM           0x06

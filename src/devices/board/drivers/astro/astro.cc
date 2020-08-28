@@ -152,6 +152,10 @@ int Astro::Thread() {
     zxlogf(ERROR, "ThermalInit failed: %d", status);
   }
 
+  if ((status = ThermistorInit()) != ZX_OK) {
+    zxlogf(ERROR, "ThermistorInit failed: %d", status);
+  }
+
   if ((status = AudioInit()) != ZX_OK) {
     zxlogf(ERROR, "AudioInit failed: %d", status);
   }
