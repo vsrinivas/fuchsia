@@ -21,34 +21,6 @@
     }
   },
   {
-    "type": "CrashReportHandler",
-    "name": "crash_handler"
-  },
-  {
-    "type": "CpuStatsHandler",
-    "name": "cpu_stats"
-  },
-  {
-    "type": "DeviceControlHandler",
-    "name": "cpu_dev",
-    "config": {
-      "driver_path": "/dev/class/cpu-ctrl/000"
-    }
-  },
-  {
-    "type": "CpuControlHandler",
-    "name": "cpu_control",
-    "config": {
-      "driver_path": "/dev/class/cpu-ctrl/000",
-      "capacitance": 1E-12,
-      "min_cpu_clock_speed": 1000000000.0
-    },
-    "dependencies": {
-      "cpu_stats_handler_node": "cpu_stats",
-      "cpu_dev_handler_node": "cpu_dev"
-    }
-  },
-  {
     "type": "TemperatureHandler",
     "name": "temperature",
     "config": {
@@ -56,34 +28,16 @@
     }
   },
   {
-    "type": "ThermalLimiter",
-    "name": "thermal_limiter"
-  },
-  {
-    "type": "ThermalPolicy",
-    "name": "thermal_policy",
+    "type": "ThermalShutdown",
+    "name": "thermal_shutdown",
     "dependencies": {
-      "crash_report_handler_node": "crash_handler",
-      "temperature_handler_node": "temperature",
-      "cpu_control_nodes": [
-        "cpu_control"
-      ],
-      "system_power_handler_node": "sys_shutdown",
-      "thermal_limiter_node": "thermal_limiter"
+      "system_shutdown_node": "sys_shutdown",
+      "temperature_handler_node": "temperature"
     },
     "config": {
-      "controller_params": {
-        "sample_interval": 1.0,
-        "filter_time_constant": 5.0,
-        "target_temperature": 110.0,
-        "e_integral_min": -1.0,
-        "e_integral_max": 0.0,
-        "sustainable_power": 20.0,
-        "proportional_gain": 0.0,
-        "integral_gain": 0.00
-      },
-      "thermal_shutdown_temperature": 100.0,
-      "throttle_end_delay": 60.0
+      "thermal_shutdown_temperature_c": 100.0,
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 5
     }
   }
 ]
