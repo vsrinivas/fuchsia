@@ -115,8 +115,6 @@ bool Queue::Upload(const Store::Uid& local_report_id) {
 
   std::string server_report_id;
   if (Upload(report.value(), &server_report_id)) {
-    FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
-                  << server_report_id;
     info_.MarkReportAsUploaded(server_report_id, upload_attempts_[local_report_id]);
     upload_attempts_.erase(local_report_id);
     store_.Remove(local_report_id);
