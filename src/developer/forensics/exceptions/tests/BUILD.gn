@@ -70,8 +70,8 @@ executable("exception_broker_unittest_exe") {
   testonly = true
 
   sources = [
+    "crash_reporter_unittest.cc",
     "exception_broker_unittest.cc",
-    "handler_unittest.cc",
     "minidump_unittest.cc",
     "process_limbo_manager_unittest.cc",
   ]
@@ -103,6 +103,13 @@ executable("stub_exception_handler_exe") {
   output_dir = target_out_dir
 
   sources = [ "stub_exception_handler.cc" ]
+
+  deps = [
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
+    "//zircon/public/lib/fit",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
 }
 
 executable("limbo_client_unittest_exe") {

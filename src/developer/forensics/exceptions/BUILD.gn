@@ -19,6 +19,8 @@ source_set("lib") {
     "json_utils.h",
     "pending_exception.cc",
     "pending_exception.h",
+    "process_handler.cc",
+    "process_handler.h",
     "process_limbo_manager.cc",
     "process_limbo_manager.h",
   ]
@@ -28,6 +30,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async",

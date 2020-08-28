@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include <string>
 
@@ -21,14 +22,14 @@ class PendingException {
 
   zx::exception&& TakeException();
   std::string CrashedProcessName() const;
-  std::string CrashedProcessKoid() const;
+  zx_koid_t CrashedProcessKoid() const;
 
  private:
   void Reset();
 
   zx::exception exception_;
   std::string crashed_process_name_;
-  std::string crashed_process_koid_;
+  zx_koid_t crashed_process_koid_;
   async::TaskClosureMethod<PendingException, &PendingException::Reset> reset_{this};
 };
 

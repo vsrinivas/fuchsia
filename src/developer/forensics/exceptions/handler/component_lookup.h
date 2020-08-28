@@ -12,9 +12,7 @@
 
 #include <memory>
 
-#include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
-#include "src/lib/fxl/macros.h"
 
 namespace forensics {
 namespace exceptions {
@@ -26,25 +24,6 @@ namespace handler {
 ::fit::promise<fuchsia::sys::internal::SourceIdentity> GetComponentSourceIdentity(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout, zx_koid_t process_koid);
-
-// Wraps around fuchsia::sys::internal::CrashIntrospectPtr to handle establishing the connection,
-// losing the connection, waiting for the callback, enforcing a timeout, etc.
-//
-// GetSourceIdentity() is expected to be called only once.
-class ComponentLookup {
- public:
-  // fuchsia.sys.internal.CrashIntrospect is expected to be in |services|.
-  ComponentLookup(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
-
-  ::fit::promise<fuchsia::sys::internal::SourceIdentity> GetSourceIdentity(zx_koid_t process_koid,
-                                                                           fit::Timeout timeout);
-
- private:
-  fidl::OneShotPtr<fuchsia::sys::internal::CrashIntrospect, fuchsia::sys::internal::SourceIdentity>
-      introspect_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentLookup);
-};
 
 }  // namespace handler
 }  // namespace exceptions

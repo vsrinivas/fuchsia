@@ -43,7 +43,7 @@ ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
 }
 
 TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
-  constexpr size_t kNumExceptions = 5;
+  constexpr size_t kNumExceptions = 50;
   std::vector<ExceptionContext> exceptions(kNumExceptions);
 
   fuchsia::exception::HandlerSyncPtr exception_handler;

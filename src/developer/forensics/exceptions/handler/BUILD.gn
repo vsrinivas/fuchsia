@@ -9,8 +9,8 @@ source_set("lib") {
   sources = [
     "component_lookup.cc",
     "component_lookup.h",
-    "handler.cc",
-    "handler.h",
+    "crash_reporter.cc",
+    "crash_reporter.h",
     "minidump.cc",
     "minidump.h",
     "report_builder.cc",
@@ -22,6 +22,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",
     "//third_party/crashpad/minidump",

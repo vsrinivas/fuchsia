@@ -6,7 +6,7 @@ namespace forensics {
 namespace exceptions {
 namespace handler {
 
-int main(int argc, const char** argv);
+int main();
 
 }  // namespace handler
 }  // namespace exceptions

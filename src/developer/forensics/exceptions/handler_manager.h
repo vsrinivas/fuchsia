@@ -11,12 +11,11 @@
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 
-#include <cstdint>
 #include <deque>
-#include <map>
-#include <memory>
+#include <vector>
 
 #include "src/developer/forensics/exceptions/pending_exception.h"
+#include "src/developer/forensics/exceptions/process_handler.h"
 
 namespace forensics {
 namespace exceptions {
@@ -34,26 +33,16 @@ class HandlerManager {
  private:
   void HandleNextPendingException();
 
-  class Handler {
-   public:
-    Handler(async_dispatcher_t* dispatcher, zx::process subprocess,
-            async::WaitOnce::Handler on_subprocess_exit);
-
-   private:
-    zx::process subprocess_;
-    async::WaitOnce on_subprocess_exit_;
-  };
-
   async_dispatcher_t* dispatcher_;
-  size_t max_num_subprocesses_;
-  zx::duration exception_ttl_;
 
+  zx::duration exception_ttl_;
   std::deque<PendingException> pending_exceptions_;
 
-  size_t num_active_subprocesses_{0};
+  // The |max_num_handlers| handlers.
+  std::vector<ProcessHandler> handlers_;
 
-  std::map<size_t, std::unique_ptr<Handler>> handlers_;
-  size_t next_handler_id_{0};
+  // List of indexes from 0 to |max_num_handlers|-1 of available handlers among |handlers_|.
+  std::deque<size_t> available_handlers_;
 };
 
 }  // namespace exceptions

@@ -14,6 +14,10 @@ namespace exceptions {
 PendingException::PendingException(async_dispatcher_t* dispatcher, zx::duration ttl,
                                    zx::exception exception)
     : exception_(std::move(exception)) {
+  if (!exception_.is_valid()) {
+    return;
+  }
+
   zx::process process;
   if (const zx_status_t status = exception_.get_process(&process); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get process; releasing the exception";
@@ -22,7 +26,7 @@ PendingException::PendingException(async_dispatcher_t* dispatcher, zx::duration 
 
   crashed_process_name_ =
       (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
-  crashed_process_koid_ = std::to_string(fsl::GetKoid(process.get()));
+  crashed_process_koid_ = fsl::GetKoid(process.get());
 
   if (const zx_status_t status = reset_.PostDelayed(dispatcher, ttl); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post reset task for exception; releasing the exception";
@@ -34,7 +38,7 @@ zx::exception&& PendingException::TakeException() { return std::move(exception_)
 
 std::string PendingException::CrashedProcessName() const { return crashed_process_name_; }
 
-std::string PendingException::CrashedProcessKoid() const { return crashed_process_koid_; }
+zx_koid_t PendingException::CrashedProcessKoid() const { return crashed_process_koid_; }
 
 void PendingException::Reset() { exception_.reset(); }
 

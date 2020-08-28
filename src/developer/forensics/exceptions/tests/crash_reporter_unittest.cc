@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/handler/handler.h"
+#include "src/developer/forensics/exceptions/handler/crash_reporter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
+#include <memory>
 #include <type_traits>
 
 #include <gtest/gtest.h>
@@ -113,23 +111,26 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
 
 class HandlerTest : public UnitTestFixture {
  public:
-  HandlerTest() : executor_(dispatcher()) {}
-
   void HandleException(
       zx::exception exception, zx::duration component_lookup_timeout,
       ::fit::closure callback = [] {}) {
-    executor_.schedule_task(
-        Handle(std::move(exception), dispatcher(), services(), component_lookup_timeout)
-            .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
+    handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
+
+    zx::process process;
+    exception.get_process(&process);
+    const std::string process_name = fsl::GetObjectName(process.get());
+    const zx_koid_t process_koid = fsl::GetKoid(process.get());
+
+    handler_->Send(process_name, process_koid, std::move(exception), std::move(callback));
     RunLoopUntilIdle();
   }
 
   void HandleException(
       const std::string& process_name, const zx_koid_t process_koid,
       zx::duration component_lookup_timeout, ::fit::closure callback = [] {}) {
-    executor_.schedule_task(
-        Handle(process_name, process_koid, dispatcher(), services(), component_lookup_timeout)
-            .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
+    handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
+
+    handler_->Send(process_name, process_koid, zx::exception{}, std::move(callback));
     RunLoopUntilIdle();
   }
 
@@ -142,7 +143,7 @@ class HandlerTest : public UnitTestFixture {
   const StubCrashIntrospect& introspect() const { return introspect_; }
 
  private:
-  async::Executor executor_;
+  std::unique_ptr<CrashReporter> handler_{nullptr};
 
   StubCrashReporter crash_reporter_;
   StubCrashIntrospect introspect_;

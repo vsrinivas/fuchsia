@@ -3,8 +3,6 @@
 
 #include "src/developer/forensics/exceptions/exception_broker.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <array>
 
 #include <gtest/gtest.h>
@@ -28,6 +26,18 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   return MarkExceptionAsHandled(pe);
 }
 
+size_t NumSubprocesses() {
+  size_t actual{0};
+  size_t avail{0};
+  std::array<zx_koid_t, 8> children;
+  children.fill(ZX_KOID_INVALID);
+  zx_object_get_info(zx_job_default(), ZX_INFO_JOB_PROCESSES, children.data(),
+                     children.size() * sizeof(zx_koid_t), &actual, &avail);
+
+  // Account for the process the test is runnning in.
+  return actual - 1;
+}
+
 using PendingExceptionTest = UnitTestFixture;
 
 TEST_F(PendingExceptionTest, ExceptionExpires) {
@@ -48,6 +58,38 @@ TEST_F(PendingExceptionTest, ExceptionExpires) {
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
   exception.job.kill();
+}
+
+using ProcessHandlerTest = UnitTestFixture;
+
+TEST_F(ProcessHandlerTest, ManagesSubprocessLifetime) {
+  {
+    ProcessHandler process_handler(dispatcher(), [] {});
+    PendingException pending_exception(dispatcher(), zx::duration::infinite(), zx::exception{});
+    ASSERT_EQ(NumSubprocesses(), 0u);
+
+    process_handler.Handle(pending_exception);
+
+    ASSERT_EQ(NumSubprocesses(), 1u);
+  }
+
+  while (NumSubprocesses() > 0) {
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(NumSubprocesses(), 0u);
+}
+
+TEST_F(ProcessHandlerTest, OnAvailableCalled) {
+  bool available = false;
+  ProcessHandler process_handler(dispatcher(), [&available] { available = true; });
+
+  PendingException pending_exception(dispatcher(), zx::duration::infinite(), zx::exception{});
+  process_handler.Handle(pending_exception);
+
+  while (!available) {
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace

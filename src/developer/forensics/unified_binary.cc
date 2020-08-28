@@ -25,8 +25,8 @@ int main(int argc, const char** argv) {
   if (argv0 == "/pkg/bin/exceptions") {
     return ::forensics::exceptions::main();
   }
-  if (argv0.rfind("crashed_") == 0) {
-    return ::forensics::exceptions::handler::main(argc, argv);
+  if (argv0.rfind("handler_") == 0) {
+    return ::forensics::exceptions::handler::main();
   }
   if (argv0 == "/pkg/bin/feedback_data") {
     return ::forensics::feedback_data::main();
