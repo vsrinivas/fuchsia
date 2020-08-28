@@ -55,6 +55,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/devices.rs",
+    "src/dhcpv4.rs",
     "src/dhcpv6.rs",
     "src/dns.rs",
     "src/errors.rs",

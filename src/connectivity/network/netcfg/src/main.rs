@@ -12,6 +12,7 @@
 extern crate network_manager_core_interface as interface;
 
 mod devices;
+mod dhcpv4;
 mod dhcpv6;
 mod dns;
 mod errors;
@@ -730,7 +731,9 @@ impl<'a> NetCfg<'a> {
                     "WLAN AP interface with id={} is removed, stopping DHCP server",
                     interface_id
                 );
-                let () = self.stop_dhcp_server().await.context("error stopping DHCP server")?;
+                let () = dhcpv4::stop_server(&self.dhcp_server)
+                    .await
+                    .context("error stopping DHCP server")?;
             }
         }
 
@@ -869,14 +872,17 @@ impl<'a> NetCfg<'a> {
 
                 if up {
                     info!("WLAN AP interface {} (id={}) came up so starting DHCP server", name, id);
-                    let () =
-                        self.start_dhcp_server().await.context("error starting DHCP server")?;
+                    let () = dhcpv4::start_server(&self.dhcp_server)
+                        .await
+                        .context("error starting DHCP server")?;
                 } else {
                     info!(
                         "WLAN AP interface {} (id={}) went down so stopping DHCP server",
                         name, id
                     );
-                    let () = self.stop_dhcp_server().await.context("error stopping DHCP server")?;
+                    let () = dhcpv4::stop_server(&self.dhcp_server)
+                        .await
+                        .context("error stopping DHCP server")?;
                 }
             }
         }
@@ -1030,27 +1036,6 @@ impl<'a> NetCfg<'a> {
             .await
             .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
-    }
-
-    /// Start the DHCP server.
-    async fn start_dhcp_server(&self) -> Result<(), errors::Error> {
-        self.dhcp_server
-            .start_serving()
-            .await
-            .context("eerror sending start DHCP server request")
-            .map_err(errors::Error::NonFatal)?
-            .map_err(zx::Status::from_raw)
-            .context("error starting DHCP server")
-            .map_err(errors::Error::NonFatal)
-    }
-
-    /// Stop the DHCP server.
-    async fn stop_dhcp_server(&self) -> Result<(), errors::Error> {
-        self.dhcp_server
-            .stop_serving()
-            .await
-            .context("error sending stop DHCP server request")
-            .map_err(errors::Error::NonFatal)
     }
 
     /// Configure an ethernet interface.
