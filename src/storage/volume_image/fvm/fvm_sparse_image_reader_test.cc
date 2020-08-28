@@ -14,6 +14,9 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/fvm.h>
+#include <fvm/format.h>
+#include <fvm/fvm-sparse.h>
+#include <fvm/fvm.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
@@ -65,7 +68,7 @@ zx::status<std::string> AttachFvm(const std::string& device_path) {
 TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
   auto base_reader_or = FdReader::Create(sparse_image_path);
   ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
-  auto sparse_image_or = OpenSparseImage(base_reader_or.value());
+  auto sparse_image_or = OpenSparseImage(base_reader_or.value(), std::nullopt);
   ASSERT_TRUE(sparse_image_or.is_ok()) << sparse_image_or.error();
 
   // Create a ram-disk.
@@ -168,12 +171,41 @@ class NullWriter : public Writer {
   }
 };
 
+TEST(FvmSparseImageReaderTest, ImageWithMaxSizeALlocatesEnoughMetadata) {
+  auto base_reader_or = FdReader::Create(sparse_image_path);
+  ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
+
+  fvm::SparseImage image = {};
+  auto image_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&image), sizeof(image));
+  auto read_result = base_reader_or.value().Read(0, image_stream);
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error();
+  ASSERT_EQ(image.magic, fvm::kSparseFormatMagic);
+
+  auto sparse_image_or = OpenSparseImage(base_reader_or.value(), 300 << 20);
+  ASSERT_TRUE(sparse_image_or.is_ok()) << sparse_image_or.error();
+  auto sparse_image = sparse_image_or.take_value();
+
+  auto expected_format_info = fvm::FormatInfo::FromDiskSize(300 << 20, image.slice_size);
+
+  fvm::Header header = {};
+  auto header_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header));
+  read_result = sparse_image.reader()->Read(sparse_image.reader()->GetMaximumOffset() -
+                                                2 * expected_format_info.metadata_allocated_size(),
+                                            header_stream);
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error();
+  ASSERT_EQ(header.magic, fvm::kMagic);
+
+  auto actual_format_info = fvm::FormatInfo(header);
+  EXPECT_EQ(expected_format_info.metadata_allocated_size(),
+            actual_format_info.metadata_allocated_size());
+}
+
 // This doesn't test that the resulting image is valid, but it least tests that FtlImageWrite can
 // consume the sparse image without complaining.
 TEST(FvmSparseImageReaderTest, WriteFtlImageSucceeds) {
   auto base_reader_or = FdReader::Create(sparse_image_path);
   ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
-  auto sparse_image_or = OpenSparseImage(base_reader_or.value());
+  auto sparse_image_or = OpenSparseImage(base_reader_or.value(), std::nullopt);
   ASSERT_TRUE(sparse_image_or.is_ok()) << sparse_image_or.error();
 
   constexpr int kFtlPageSize = 8192;

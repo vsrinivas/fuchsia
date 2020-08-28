@@ -7,6 +7,8 @@
 #include <lib/fit/result.h>
 #include <zircon/status.h>
 
+#include <string>
+
 #include <digest/digest.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/fvm.h>
@@ -138,7 +140,8 @@ class SparseImageReader : public Reader {
   std::vector<uint8_t> metadata_;
 };
 
-fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader) {
+fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
+                                                    std::optional<uint64_t> maximum_disk_size) {
   // Start by reading the header.
   fvm::SparseImage fvm_sparse_header;
   auto result = base_reader.Read(0, FixedSizeStructToSpan(fvm_sparse_header));
@@ -154,6 +157,10 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader) {
   }
   if ((fvm_sparse_header.flags & fvm::kSparseFlagLz4) == 0) {
     return fit::error("Only Lz4 supported");
+  }
+
+  if (maximum_disk_size.has_value()) {
+    fvm_sparse_header.maximum_disk_size = maximum_disk_size.value();
   }
 
   const uint64_t slice_size = fvm_sparse_header.slice_size;
@@ -227,7 +234,10 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader) {
   }
 
   fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size, slice_size);
-  ZX_ASSERT(total_slices <= format_info.slice_count());
+  if (total_slices > format_info.slice_count()) {
+    return fit::error("Fvm Sparse Image Reader, found " + std::to_string(total_slices) +
+                      ", but disk size allows " + std::to_string(format_info.slice_count()) + ".");
+  }
 
   // Now we need to synthesize the FVM metadata, which consists of the super-block a.k.a
   // fvm::Header, partition table, followed by the allocation table.

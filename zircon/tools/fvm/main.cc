@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <fbl/alloc_checker.h>
@@ -577,7 +578,13 @@ int main(int argc, char** argv) {
     auto ftl_image_writer = ftl_image_writer_or.take_value();
     RawBlockImageWriter raw_writer(&ftl_image_writer);
 
-    auto fvm_partition_or = storage::volume_image::OpenSparseImage(sparse_image_reader);
+    std::optional<uint64_t> max_disk_size_opt = std::nullopt;
+    if (max_disk_size != 0) {
+      max_disk_size_opt = max_disk_size;
+    }
+
+    auto fvm_partition_or =
+        storage::volume_image::OpenSparseImage(sparse_image_reader, max_disk_size_opt);
     if (fvm_partition_or.is_error()) {
       fprintf(stderr, "%s\n", fvm_partition_or.error().c_str());
       return -1;
