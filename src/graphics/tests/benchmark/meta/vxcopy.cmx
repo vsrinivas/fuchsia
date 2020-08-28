@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.tracing.provider.Registry"
+            ]
+        }
+    },
     "program": {
         "binary": "test/vxcopy"
     },
