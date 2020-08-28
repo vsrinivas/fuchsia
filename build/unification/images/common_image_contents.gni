@@ -97,4 +97,8 @@ common_image_contents = [
   "//zircon/third_party/uapp/fsck-msdosfs",
   "//zircon/third_party/uapp/kilo",
   "//zircon/third_party/uapp/mkfs-msdosfs",
+
+  # TODO(56988): We shouldn't need runtests, but right now it's used by profile
+  # builders, so include it here until we remove that dependency.
+  "//src/testing/runtests",
 ]
