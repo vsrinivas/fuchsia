@@ -20,6 +20,9 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/fidl:component-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/lib/async-utils",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -36,6 +39,7 @@ rustc_binary("bin") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
+    "src/inspect.rs",
     "src/main.rs",
     "src/test_util.rs",
     "src/util.rs",

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "256"]
-
 use {
-    crate::util::{into_urls, to_display_str},
     anyhow::{anyhow, Error},
     argh::FromArgs,
     async_utils::event::Event,
@@ -16,11 +13,13 @@ use {
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{self as fasync, Time, TimeoutExt},
     fuchsia_component::{client, server::ServiceFs},
+    fuchsia_inspect::Node,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::BoxFuture,
-        select,
+        future::{self, BoxFuture},
+        pin_mut, select,
         sink::SinkExt,
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
         FutureExt,
@@ -28,6 +27,12 @@ use {
     log::{error, info, warn},
 };
 
+use crate::{
+    inspect::A2dpManagerInspect,
+    util::{into_urls, to_display_str},
+};
+
+mod inspect;
 #[cfg(test)]
 mod test_util;
 mod util;
@@ -45,6 +50,7 @@ struct Handler {
     child_events: FuturesUnordered<BoxFuture<'static, Result<client::ExitStatus, Error>>>,
     /// Signal indicating that a new future has been added to `child_events`.
     child_added: Event,
+    inspect: A2dpManagerInspect,
 }
 
 impl Handler {
@@ -56,6 +62,7 @@ impl Handler {
             children: vec![],
             child_events: FuturesUnordered::new(),
             child_added: Event::new(),
+            inspect: A2dpManagerInspect::default(),
         }
     }
 
@@ -68,6 +75,7 @@ impl Handler {
                 self.launch_profile(url.to_string()).await?;
             }
             self.active_role = Some(role);
+            self.inspect.set_role(role).await;
         }
         Ok(())
     }
@@ -144,40 +152,44 @@ impl Handler {
             return result;
         }
     }
-}
 
-/// Handle a coalesced stream of `AudioModeRequest`s. All requests are serialized and processed in
-/// the order the component receives them. A request to switch roles will not be processed until the
-/// previous request is complete.
-async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launcher: LauncherProxy) {
-    let mut handler = Handler::new(launcher);
-
-    loop {
-        select! {
-            request = requests.next().fuse() => {
-                if let Some(AudioModeRequest::SetRole { role, responder }) = request {
-                    info!("Setting A2DP mode to {}", to_display_str(role));
-                    match handler.handle(role).await {
-                        Ok(()) => {
-                            // Error can be ignored since there is nothing more to do in the case
-                            // of an error.
-                            let _ = responder.send();
+    /// Handle a coalesced stream of `AudioModeRequest`s. All requests are serialized and processed in
+    /// the order the component receives them. A request to switch roles will not be processed until the
+    /// previous request is complete.
+    async fn handle_requests(&mut self, mut requests: mpsc::Receiver<AudioModeRequest>) {
+        loop {
+            select! {
+                request = requests.next().fuse() => {
+                    if let Some(AudioModeRequest::SetRole { role, responder }) = request {
+                        info!("Setting A2DP mode to {}", to_display_str(role));
+                        match self.handle(role).await {
+                            Ok(()) => {
+                                // Error can be ignored since there is nothing more to do in the case
+                                // of an error.
+                                let _ = responder.send();
+                            }
+                            Err(e) => {
+                                error!("Failed to set role {:?}: {}", role, e);
+                                responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
+                            }
                         }
-                        Err(e) => {
-                            error!("Failed to set role {:?}: {}", role, e);
-                            responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
-                        }
+                    } else {
+                        // Requests channel closed
+                        break;
                     }
-                } else {
-                    // Requests channel closed
+                }
+                exit_status = self.supervise().fuse() => {
+                    error!("Active role {:?} exited unexpectedly: {}", self.active_role, exit_status);
                     break;
                 }
             }
-            exit_status = handler.supervise().fuse() => {
-                error!("Active role {:?} exited unexpectedly: {}", handler.active_role, exit_status);
-                break;
-            }
         }
+    }
+}
+
+impl Inspect for &mut Handler {
+    fn iattach<'a>(self, parent: &'a Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name)
     }
 }
 
@@ -256,14 +268,23 @@ async fn main() {
     let (sender, receiver) = mpsc::channel(0);
 
     let mut fs = ServiceFs::new();
+    let inspector = fuchsia_inspect::Inspector::new();
+    if let Err(e) = inspector.serve(&mut fs) {
+        warn!("Could not serve inspect: {}", e);
+    }
+
     fs.dir("svc").add_fidl_service(move |stream| handle_client_connection(sender.clone(), stream));
     fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
-    let mut drive_service_fs = fs.collect::<()>().fuse();
+    let drive_service_fs = fs.collect::<()>();
+    pin_mut!(drive_service_fs);
 
-    select! {
-        _ = handle_requests(receiver, launcher).fuse() => {}
-        _ = drive_service_fs => {}
-    }
+    let mut handler = Handler::new(launcher);
+    let _ = handler.iattach(inspector.root(), "operating_mode");
+    let handle_requests = handler.handle_requests(receiver);
+
+    pin_mut!(handle_requests);
+
+    future::select(drive_service_fs, handle_requests).await;
 }
 
 #[cfg(test)]
@@ -308,7 +329,8 @@ mod tests {
         let (mut launcher, launcher_proxy) = mock_launcher();
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
-        let handler = handle_requests(receiver, launcher_proxy);
+        let mut handler = Handler::new(launcher_proxy);
+        let handler = handler.handle_requests(receiver);
         pin_mut!(handler);
 
         let role = Role::Source;
@@ -340,7 +362,8 @@ mod tests {
         let (mut launcher, launcher_proxy) = mock_launcher();
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
-        let handler = handle_requests(receiver, launcher_proxy);
+        let mut handler = Handler::new(launcher_proxy);
+        let handler = handler.handle_requests(receiver);
         pin_mut!(handler);
 
         // A first request
@@ -402,7 +425,8 @@ mod tests {
         let (mut launcher, launcher_proxy) = mock_launcher();
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
-        let handler = handle_requests(receiver, launcher_proxy);
+        let mut handler = Handler::new(launcher_proxy);
+        let handler = handler.handle_requests(receiver);
         pin_mut!(handler);
 
         // A first request
@@ -460,7 +484,8 @@ mod tests {
         let (mut launcher, launcher_proxy) = mock_launcher();
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
-        let handler = handle_requests(receiver, launcher_proxy);
+        let mut handler = Handler::new(launcher_proxy);
+        let handler = handler.handle_requests(receiver);
         pin_mut!(handler);
 
         let role = Role::Source;
@@ -503,7 +528,8 @@ mod tests {
 
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
-        let handler = handle_requests(receiver, launcher_proxy);
+        let mut handler = Handler::new(launcher_proxy);
+        let handler = handler.handle_requests(receiver);
         pin_mut!(handler);
 
         let role = Role::Source;
