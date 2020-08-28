@@ -26,8 +26,6 @@ import (
 )
 
 var (
-	// TODO(jayzhuang): deprecate `-filename` in favor of `-ninjalog`.
-	filename     = flag.String("filename", "", "path of .ninja_log")
 	ninjalogPath = flag.String("ninjalog", "", "path of .ninja_log")
 	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
 	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
@@ -126,18 +124,12 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	// TODO(jayzhuang): deprecate `-filename` in favor of `-ninjalog`.
-	logPath := *filename
-	if logPath == "" {
-		logPath = *ninjalogPath
-	}
-	traces, err := convert(logPath)
+	traces, err := convert(*ninjalogPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if *traceJSON != "" {
-		err = output(*traceJSON, traces)
-		if err != nil {
+		if err := output(*traceJSON, traces); err != nil {
 			log.Fatal(err)
 		}
 	}
