@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     async_trait::async_trait,
     dns::{
-        async_resolver::{Handle, Resolver},
+        async_resolver::{Resolver, Spawner},
         policy::{ServerConfigSink, ServerConfigSinkError, ServerList},
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
@@ -177,8 +177,7 @@ trait ResolverLookup {
 #[async_trait]
 impl ResolverLookup for Resolver {
     async fn new(config: ResolverConfig, options: ResolverOpts) -> Self {
-        let handle = Handle::new(fasync::EHandle::local());
-        Resolver::new(config, options, handle).await.expect("failed to create resolver")
+        Resolver::new(config, options, Spawner).await.expect("failed to create resolver")
     }
 
     async fn lookup_ip<N: IntoName + TryParseIp + Send>(
@@ -463,15 +462,11 @@ async fn main() -> Result<(), Error> {
     let () = fuchsia_syslog::init_with_tags(&["dns_resolver"]).context("cannot init logger")?;
     info!("dns_resolver started");
 
-    // Creates a handle to a thead-local executor which is used to spawn a background
-    // task to resolve DNS requests.
-    let handle = Handle::new(fasync::EHandle::local());
-
     let mut resolver_opts = ResolverOpts::default();
     // Resolver will query for A and AAAA in parallel for lookup_ip.
     resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
     let resolver = SharedResolver::new(
-        Resolver::new(ResolverConfig::default(), resolver_opts, handle)
+        Resolver::new(ResolverConfig::default(), resolver_opts, Spawner)
             .await
             .expect("failed to create resolver"),
     );
@@ -557,16 +552,12 @@ mod tests {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
             .expect("failed to create NamelookupProxy");
 
-        // Creates a handle to a thead-local executor which is used to spawn a background
-        // task to resolve DNS requests.
-        let handle = Handle::new(fasync::EHandle::local());
-
         let mut resolver_opts = ResolverOpts::default();
         // Resolver will query for A and AAAA in parallel for lookup_ip.
         resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
 
         let resolver = SharedResolver::new(
-            Resolver::new(ResolverConfig::default(), resolver_opts, handle)
+            Resolver::new(ResolverConfig::default(), resolver_opts, Spawner)
                 .await
                 .expect("failed to create resolver"),
         );

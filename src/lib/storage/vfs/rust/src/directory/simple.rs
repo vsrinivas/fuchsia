@@ -290,10 +290,9 @@ where
             iter::once(&".".to_string()).chain(entry_names).cloned().collect()
         });
 
-        if let Some(controller) = this.watchers.add(scope, self.clone(), mask, channel) {
-            controller.send_event(&mut names);
-            controller.send_event(&mut SingleNameEventProducer::idle());
-        }
+        let controller = this.watchers.add(scope, self.clone(), mask, channel);
+        controller.send_event(&mut names);
+        controller.send_event(&mut SingleNameEventProducer::idle());
 
         Ok(())
     }

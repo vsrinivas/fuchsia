@@ -483,7 +483,7 @@ mod tests {
         let (dir_proxy_for_watcher, dir_server_for_watcher) =
             create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let server_end_for_watcher = dir_server_for_watcher.into_channel().into();
-        let scope_for_watcher = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -498,7 +498,7 @@ mod tests {
         let (dir_proxy_for_pipeline, dir_server_for_pipeline) =
             create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let server_end_for_pipeline = dir_server_for_pipeline.into_channel().into();
-        let scope_for_pipeline = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -555,7 +555,7 @@ mod tests {
         let (dir_proxy_for_watcher, dir_server_for_watcher) =
             create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let server_end_for_watcher = dir_server_for_watcher.into_channel().into();
-        let scope_for_watcher = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope_for_watcher = ExecutionScope::new();
         dir.open(
             scope_for_watcher,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -570,7 +570,7 @@ mod tests {
         let (dir_proxy_for_pipeline, dir_server_for_pipeline) =
             create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let server_end_for_pipeline = dir_server_for_pipeline.into_channel().into();
-        let scope_for_pipeline = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope_for_pipeline = ExecutionScope::new();
         pseudo_dir_clone.open(
             scope_for_pipeline,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

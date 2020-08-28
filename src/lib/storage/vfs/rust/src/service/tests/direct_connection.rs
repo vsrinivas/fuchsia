@@ -62,11 +62,9 @@ fn simple_endpoint() {
     run_server_client(
         READ_WRITE,
         endpoint(|scope, channel| {
-            scope
-                .spawn(async move {
-                    echo_server(RequestStream::from_channel(channel), None, None).await;
-                })
-                .unwrap();
+            scope.spawn(async move {
+                echo_server(RequestStream::from_channel(channel), None, None).await;
+            });
         }),
         |node_proxy| async move {
             let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());

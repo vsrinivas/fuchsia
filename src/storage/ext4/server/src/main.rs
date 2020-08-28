@@ -18,7 +18,6 @@ use {
         ReaderReadError, RequiredFeatureIncompat, Server_Request, Server_RequestStream,
         ServiceRequest, Success,
     },
-    fuchsia_async::{self, EHandle},
     fuchsia_component::server::ServiceFs,
     futures::{
         future::TryFutureExt,
@@ -34,7 +33,7 @@ async fn run_ext4_server(mut stream: Server_RequestStream) -> Result<(), Error> 
                 // Each mount get's its own scope.  We may provide additional control over this
                 // scope in the future.  For example, one thing we may want to do is also return an
                 // "administrative chanel" that would allow calling "shutdown" on a mount.
-                let scope = ExecutionScope::from_executor(Box::new(EHandle::local()));
+                let scope = ExecutionScope::new();
 
                 let mut res = serve_vmo(scope, source, flags, root);
 

@@ -458,9 +458,7 @@ mod tests {
     impl MockFilesystem {
         pub fn new() -> Self {
             let token_registry = token_registry::Simple::new();
-            let scope = ExecutionScope::build(Box::new(fasync::EHandle::local()))
-                .token_registry(token_registry)
-                .new();
+            let scope = ExecutionScope::build().token_registry(token_registry).new();
             MockFilesystem { cur_id: Mutex::new(0), scope, events: Mutex::new(vec![]) }
         }
 

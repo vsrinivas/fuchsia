@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
             })),
     };
     out_dir.open(
-        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+        ExecutionScope::new(),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
         path::Path::empty(),

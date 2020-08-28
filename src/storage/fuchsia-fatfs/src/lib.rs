@@ -318,7 +318,7 @@ mod tests {
         structure.create(&disk.root_dir());
 
         let fatfs = disk.into_fatfs();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         let (proxy, remote) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
         let root = fatfs.get_root();
         root.open(scope, OPEN_RIGHT_READABLE, 0, Path::empty(), remote);

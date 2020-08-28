@@ -584,7 +584,7 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
         fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory marker");
     let dir = simple();
     let server_end = server.into_channel().into();
-    let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+    let scope = ExecutionScope::new();
     dir.clone().open(
         scope,
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

@@ -683,37 +683,36 @@ impl Directory for FatDirectory {
         let mut data = self.data.write().unwrap();
         let is_deleted = data.deleted;
         let is_root = data.parent.is_none();
-        if let Some(controller) = data.watchers.add(scope, self.clone(), mask, channel) {
-            if mask & WATCH_MASK_EXISTING != 0 && !is_deleted {
-                let entries = {
-                    let dir = self.borrow_dir(&fs_lock)?;
-                    let synthesized_dot = if is_root {
-                        // We need to synthesize a "." entry.
-                        Some(Ok(".".to_owned()))
-                    } else {
-                        None
-                    };
-                    synthesized_dot
-                        .into_iter()
-                        .chain(dir.iter().filter_map(|maybe_entry| {
-                            maybe_entry
-                                .map(|entry| {
-                                    let name = entry.file_name();
-                                    if &name == ".." {
-                                        None
-                                    } else {
-                                        Some(name)
-                                    }
-                                })
-                                .transpose()
-                        }))
-                        .collect::<std::io::Result<Vec<String>>>()
-                        .map_err(fatfs_error_to_status)?
+        let controller = data.watchers.add(scope, self.clone(), mask, channel);
+        if mask & WATCH_MASK_EXISTING != 0 && !is_deleted {
+            let entries = {
+                let dir = self.borrow_dir(&fs_lock)?;
+                let synthesized_dot = if is_root {
+                    // We need to synthesize a "." entry.
+                    Some(Ok(".".to_owned()))
+                } else {
+                    None
                 };
-                controller.send_event(&mut StaticVecEventProducer::existing(entries));
-            }
-            controller.send_event(&mut SingleNameEventProducer::idle());
+                synthesized_dot
+                    .into_iter()
+                    .chain(dir.iter().filter_map(|maybe_entry| {
+                        maybe_entry
+                            .map(|entry| {
+                                let name = entry.file_name();
+                                if &name == ".." {
+                                    None
+                                } else {
+                                    Some(name)
+                                }
+                            })
+                            .transpose()
+                    }))
+                    .collect::<std::io::Result<Vec<String>>>()
+                    .map_err(fatfs_error_to_status)?
+            };
+            controller.send_event(&mut StaticVecEventProducer::existing(entries));
         }
+        controller.send_event(&mut SingleNameEventProducer::idle());
         Ok(())
     }
 

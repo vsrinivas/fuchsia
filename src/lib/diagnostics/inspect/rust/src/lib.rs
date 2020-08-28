@@ -21,7 +21,6 @@ use {
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_syslog::macros::*,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -200,7 +199,7 @@ impl Inspector {
         };
 
         let server_end = server.into_channel().into();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::empty(), server_end);
         service_fs.add_remote(SERVICE_DIR, proxy);
 

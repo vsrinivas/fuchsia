@@ -443,7 +443,7 @@ mod tests {
             },
         };
         let (dir_proxy, dir_server) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
@@ -472,7 +472,7 @@ mod tests {
             },
         };
         let (dir_proxy, dir_server) = endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,

@@ -218,7 +218,7 @@ mod tests {
                         }
                     };
                     out_dir.open(
-                        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                        ExecutionScope::new(),
                         flags,
                         fio::MODE_TYPE_FILE,
                         vfs::path::Path::validate_and_split(path_str)

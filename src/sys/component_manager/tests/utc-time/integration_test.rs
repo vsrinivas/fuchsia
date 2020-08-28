@@ -38,7 +38,7 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
     };
 
     let (client, server) = zx::Channel::create().expect("failed to create channel pair");
-    let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+    let scope = ExecutionScope::new();
     dir.open(
         scope,
         fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,

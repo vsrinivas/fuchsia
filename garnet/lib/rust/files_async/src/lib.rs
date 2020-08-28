@@ -464,7 +464,7 @@ mod tests {
                 "ignored" => read_only_static(""),
             },
         };
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
@@ -497,7 +497,7 @@ mod tests {
                 "ignored" => read_only_static(""),
             },
         };
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         let () = dir.open(
             scope,
             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,

@@ -676,7 +676,7 @@ mod tests {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<FileMarker>().expect("Create proxy to succeed");
 
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         FileConnection::create_connection(
             scope.clone(),
             OpenFile::new(file.clone(), scope.clone()),

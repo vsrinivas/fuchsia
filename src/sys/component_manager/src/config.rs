@@ -191,9 +191,7 @@ mod tests {
         crate::model::moniker::ChildMoniker,
         fidl::encoding::encode_persistent,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_io as fio,
-        fuchsia_async::EHandle,
-        fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio, fuchsia_zircon as zx,
         futures::future,
         matches::assert_matches,
         std::sync::Arc,
@@ -306,7 +304,7 @@ mod tests {
         );
         let (dir_server, dir_client) = zx::Channel::create().unwrap();
         dir.open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             path::Path::empty(),

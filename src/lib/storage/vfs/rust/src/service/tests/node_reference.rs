@@ -67,11 +67,11 @@ fn get_attr() {
 #[test]
 fn describe() {
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     let server = endpoint(|_scope, _channel| ());
 
     run_client(exec, || async move {
+        let scope = ExecutionScope::new();
         let (proxy, server_end) =
             create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 

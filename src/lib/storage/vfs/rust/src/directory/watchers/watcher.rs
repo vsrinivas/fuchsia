@@ -4,10 +4,7 @@
 
 //! A task that is run to process communication with an individual watcher.
 
-use crate::{
-    directory::watchers::event_producers::EventProducer,
-    execution_scope::{ExecutionScope, SpawnError},
-};
+use crate::{directory::watchers::event_producers::EventProducer, execution_scope::ExecutionScope};
 
 use {
     fuchsia_async::Channel,
@@ -32,7 +29,7 @@ pub(crate) fn new(
     mask: u32,
     channel: Channel,
     done: impl FnOnce() + Send + 'static,
-) -> Result<Controller, SpawnError> {
+) -> Controller {
     let (sender, mut receiver) = mpsc::unbounded();
 
     let task = async move {
@@ -61,9 +58,8 @@ pub(crate) fn new(
         }
     };
 
-    scope
-        .spawn(Box::pin(FutureWithDrop::new(task, done)))
-        .map(|()| Controller { mask, commands: sender })
+    scope.spawn(Box::pin(FutureWithDrop::new(task, done)));
+    Controller { mask, commands: sender }
 }
 
 pub struct Controller {

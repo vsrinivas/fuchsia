@@ -19,7 +19,6 @@ use {
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_async::EHandle,
     fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
     std::{
@@ -392,13 +391,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         let path =
             pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");
         let server_end = channel::take_channel(server_end);
-        dir.open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
-            flags,
-            open_mode,
-            path,
-            ServerEnd::new(server_end),
-        );
+        dir.open(ExecutionScope::new(), flags, open_mode, path, ServerEnd::new(server_end));
 
         Ok(())
     }

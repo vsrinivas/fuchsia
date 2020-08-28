@@ -327,7 +327,7 @@ mod tests {
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
-        fuchsia_async::{self as fasync, EHandle},
+        fuchsia_async as fasync,
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
@@ -545,7 +545,7 @@ mod tests {
             "test_file" => read_only_static(test_content_bytes),
         };
         dir.clone().open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             path::Path::empty(),

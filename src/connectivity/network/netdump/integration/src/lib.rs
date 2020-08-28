@@ -297,9 +297,7 @@ impl TestEnvironment {
 
             let (client_dir, server_dir) =
                 fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
-            let scope = vfs::execution_scope::ExecutionScope::from_executor(Box::new(
-                fasync::EHandle::local(),
-            ));
+            let scope = vfs::execution_scope::ExecutionScope::new();
             dir.open(
                 scope,
                 fidl_fuchsia_io::OPEN_FLAG_DIRECTORY

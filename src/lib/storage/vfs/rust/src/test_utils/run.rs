@@ -225,7 +225,7 @@ macro_rules! field_setter {
             self.$name = Some($name);
             self
         }
-    }
+    };
 }
 
 impl<'test_refs, Marker> AsyncServerClientTestParams<'test_refs, Marker>
@@ -256,7 +256,7 @@ where
         let (client_proxy, server_end) =
             create_proxy::<Marker>().expect("Failed to create connection endpoints");
 
-        let scope_builder = ExecutionScope::build(Box::new(exec.ehandle()));
+        let scope_builder = ExecutionScope::build();
         let scope_builder = match self.token_registry {
             Some(token_registry) => scope_builder.token_registry(token_registry),
             None => scope_builder,

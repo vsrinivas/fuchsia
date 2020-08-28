@@ -91,16 +91,12 @@ async fn handle_register_watcher(
 ) {
     // Optimize the case when we do not need to send the list of existing entries.
     if mask & WATCH_MASK_EXISTING == 0 {
-        if let Some(controller) = watchers.add(scope, directory, mask, channel) {
-            controller.send_event(&mut SingleNameEventProducer::idle());
-        }
+        let controller = watchers.add(scope, directory, mask, channel);
+        controller.send_event(&mut SingleNameEventProducer::idle());
         return;
     }
 
-    let controller = match watchers.add(scope, directory.clone(), mask, channel) {
-        Some(controller) => controller,
-        None => return,
-    };
+    let controller = watchers.add(scope, directory.clone(), mask, channel);
 
     // We will use `directory.read_dirents` to produce up to one full buffer of entry names, that
     // we will send to the new watcher.  `pos` will be used to remember the position in the listing

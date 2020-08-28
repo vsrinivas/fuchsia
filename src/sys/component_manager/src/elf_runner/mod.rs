@@ -19,7 +19,6 @@ use {
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::{LifecycleMarker, LifecycleProxy},
     fuchsia_async as fasync,
-    fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
     fuchsia_zircon::{
@@ -197,7 +196,7 @@ impl ElfRunner {
 
         let runtime_directory = runtime_tree_builder.build();
         runtime_directory.clone().open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
             fvfsPath::empty(),

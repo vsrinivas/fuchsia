@@ -156,9 +156,7 @@ mod tests {
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_io2 as fio2,
-        fuchsia_async::EHandle,
-        fuchsia_zircon as zx,
+        fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
         std::{convert::TryFrom, sync::Arc},
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
@@ -203,7 +201,7 @@ mod tests {
             .expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             path::Path::empty(),
@@ -278,7 +276,7 @@ mod tests {
             .expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             path::Path::empty(),

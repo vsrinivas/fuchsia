@@ -25,7 +25,6 @@ use {
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_async::EHandle,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{
         future::{AbortHandle, Abortable},
@@ -118,13 +117,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                     );
                     let path =
                         Path::validate_and_split(relative_path).expect("Failed to split path");
-                    sub_dir.open(
-                        ExecutionScope::from_executor(Box::new(EHandle::local())),
-                        flags,
-                        mode,
-                        path,
-                        server_end,
-                    );
+                    sub_dir.open(ExecutionScope::new(), flags, mode, path, server_end);
                 }
                 CapabilityType::Service => panic!("service capability unsupported"),
                 CapabilityType::Runner => panic!("runner capability unsupported"),

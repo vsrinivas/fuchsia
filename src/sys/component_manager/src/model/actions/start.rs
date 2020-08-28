@@ -16,9 +16,7 @@ use {
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::{self as fasync, EHandle},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
     std::sync::Arc,
     vfs::execution_scope::ExecutionScope,
@@ -144,11 +142,7 @@ async fn make_execution_runtime(
     ModelError,
 > {
     // Create incoming/outgoing directories, and populate them.
-    let exposed_dir = ExposedDir::new(
-        ExecutionScope::from_executor(Box::new(EHandle::local())),
-        realm.clone(),
-        decl.clone(),
-    )?;
+    let exposed_dir = ExposedDir::new(ExecutionScope::new(), realm.clone(), decl.clone())?;
     let (outgoing_dir_client, outgoing_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let (runtime_dir_client, runtime_dir_server) =

@@ -313,7 +313,7 @@ mod tests {
         };
         let (example_dir_proxy, example_dir_service) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         example_dir.open(
             scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

@@ -50,8 +50,7 @@ impl Watchers {
         directory: Arc<dyn Directory>,
         mask: u32,
         channel: Channel,
-    ) -> Option<&mut Controller>
-where {
+    ) -> &mut Controller {
         let entry = self.0.vacant_entry();
         let key = entry.key();
 
@@ -59,15 +58,8 @@ where {
             directory.unregister_watcher(key);
         };
 
-        match watcher::new(scope, mask, channel, done) {
-            Ok(controller) => Some(entry.insert(controller)),
-            Err(_err) => {
-                // If we failed to add a watcher, it should only happen due to the executor been
-                // shutdown.  Nothing we can do here.  Slab will not add an entry, unless we call
-                // `entry.insert()`.
-                None
-            }
-        }
+        let controller = watcher::new(scope, mask, channel, done);
+        entry.insert(controller)
     }
 
     /// Informs all the connected watchers about the specified event.  While `mask` and `event`

@@ -214,7 +214,7 @@ mod tests {
 
     fn spawn_vfs(dir: Arc<vfs::directory::immutable::simple::Simple>) -> DirectoryProxy {
         let (proxy, proxy_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let scope = ExecutionScope::from_executor(Box::new(fuchsia_async::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             io_util::OPEN_RIGHT_READABLE,

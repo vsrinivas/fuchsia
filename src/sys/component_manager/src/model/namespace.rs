@@ -13,9 +13,7 @@ use {
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_async::EHandle,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
     std::{collections::HashMap, sync::Arc},
@@ -320,7 +318,7 @@ impl IncomingNamespace {
             let (client_end, server_end) =
                 create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
             pseudo_dir.clone().open(
-                ExecutionScope::from_executor(Box::new(EHandle::local())),
+                ExecutionScope::new(),
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 Path::empty(),

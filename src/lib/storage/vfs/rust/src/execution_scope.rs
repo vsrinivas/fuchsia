@@ -24,7 +24,6 @@ use crate::{
 use {
     futures::{
         channel::oneshot,
-        future::FutureObj,
         task::{self, Context, Poll, Spawn},
         Future, FutureExt,
     },
@@ -44,7 +43,7 @@ pub type SpawnError = task::SpawnError;
 /// [`FuturesUnordered`], but this some additional functionality specific to the vfs
 /// library.
 ///
-/// Use [`ExecutionScope::from_executor()`] or [`ExecutionScope::build()`] to construct new
+/// Use [`ExecutionScope::new()`] or [`ExecutionScope::build()`] to construct new
 /// `ExecutionScope`es.
 pub struct ExecutionScope {
     executor: Arc<Mutex<Executor>>,
@@ -57,8 +56,6 @@ pub struct ExecutionScope {
 }
 
 struct Executor {
-    upstream: Box<dyn Spawn + Send>,
-
     /// This is a list of shutdown channels for all the tasks that might be currently running.
     /// When we initiate a task shutdown by sending a message over the channel, but as we need to
     /// consume the sender in the process, we use `Option`s turning the consumed ones into `None`s.
@@ -69,23 +66,22 @@ struct Executor {
 }
 
 impl ExecutionScope {
-    /// Constructs an execution scope that has only an upstream executor attached.  No
-    /// `token_registry`, `inode_registry`, nor `entry_constructor`.  Use [`build()`] if you want
-    /// to specify other parameters.
-    pub fn from_executor(upstream: Box<dyn Spawn + Send>) -> Self {
-        Self::build(upstream).new()
+    /// Constructs an execution scope that has no `token_registry`, `inode_registry`, nor
+    /// `entry_constructor`.  Use [`build()`] if you want to specify other parameters.
+    pub fn new() -> Self {
+        Self::build().new()
+    }
+
+    // TODO: Remove spawn once deps in other repos are resolved.
+    pub fn from_executor(_upstream: Box<dyn Spawn + Send>) -> Self {
+        Self::new()
     }
 
     /// Constructs a new execution scope builder, wrapping the specified executor and optionally
     /// accepting additional parameters.  Run [`ExecutionScopeParams::new()`] to get an actual
     /// [`ExecutionScope`] object.
-    pub fn build(upstream: Box<dyn Spawn + Send>) -> ExecutionScopeParams {
-        ExecutionScopeParams {
-            upstream,
-            token_registry: None,
-            inode_registry: None,
-            entry_constructor: None,
-        }
+    pub fn build() -> ExecutionScopeParams {
+        ExecutionScopeParams { token_registry: None, inode_registry: None, entry_constructor: None }
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -99,7 +95,7 @@ impl ExecutionScope {
     /// access.  And as the implementation is employing internal mutability there are no downsides.
     /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
     /// for now.
-    pub fn spawn<Task>(&self, task: Task) -> Result<(), SpawnError>
+    pub fn spawn<Task>(&self, task: Task)
     where
         Task: Future<Output = ()> + Send + 'static,
     {
@@ -119,10 +115,7 @@ impl ExecutionScope {
     /// access.  And as the implementation is employing internal mutability there are no downsides.
     /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
     /// for now.
-    pub fn spawn_with_shutdown<Constructor, Task>(
-        &self,
-        constructor: Constructor,
-    ) -> Result<(), SpawnError>
+    pub fn spawn_with_shutdown<Constructor, Task>(&self, constructor: Constructor)
     where
         Constructor: FnOnce(oneshot::Receiver<()>) -> Task + 'static,
         Task: Future<Output = ()> + Send + 'static,
@@ -178,7 +171,6 @@ impl Clone for ExecutionScope {
 }
 
 pub struct ExecutionScopeParams {
-    upstream: Box<dyn Spawn + Send>,
     token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
     entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
@@ -205,11 +197,7 @@ impl ExecutionScopeParams {
 
     pub fn new(self) -> ExecutionScope {
         ExecutionScope {
-            executor: Arc::new(Mutex::new(Executor {
-                upstream: self.upstream,
-                running: Slab::new(),
-                waiters: Vec::new(),
-            })),
+            executor: Arc::new(Mutex::new(Executor { running: Slab::new(), waiters: Vec::new() })),
             token_registry: self.token_registry,
             inode_registry: self.inode_registry,
             entry_constructor: self.entry_constructor,
@@ -256,7 +244,7 @@ impl Executor {
     fn run_abort_any_time<F: 'static + Future<Output = ()> + Send>(
         executor: Arc<Mutex<Executor>>,
         task: F,
-    ) -> Result<(), SpawnError> {
+    ) {
         let (sender, receiver) = oneshot::channel();
         Self::run_abort_with_shutdown(executor, task.or(receiver), sender)
     }
@@ -265,20 +253,14 @@ impl Executor {
         executor: Arc<Mutex<Executor>>,
         task: F,
         shutdown: oneshot::Sender<()>,
-    ) -> Result<(), SpawnError> {
+    ) {
         let mut this = executor.lock();
 
         let task_id = this.running.insert(Some(shutdown));
         let executor_clone = executor.clone();
         let task =
             task.then(move |_| async move { executor_clone.lock().task_did_finish(task_id) });
-        match this.upstream.spawn_obj(FutureObj::new(task.boxed())) {
-            Ok(()) => Ok(()),
-            Err(err) => {
-                this.task_did_finish(task_id);
-                Err(err)
-            }
-        }
+        fuchsia_async::Task::spawn(task).detach();
     }
 
     fn shutdown(&mut self) {
@@ -346,7 +328,7 @@ mod tests {
     {
         let mut exec = Executor::new().expect("Executor creation failed");
 
-        let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+        let scope = ExecutionScope::new();
 
         let test = get_test(scope);
 
@@ -361,7 +343,7 @@ mod tests {
                 let (sender, receiver) = oneshot::channel();
                 let (counters, task) = mocks::ImmediateTask::new(sender);
 
-                scope.spawn(task).unwrap();
+                scope.spawn(task);
 
                 // Make sure our task had a chance to execute.
                 receiver.await.unwrap();
@@ -382,7 +364,7 @@ mod tests {
                 let (counters, task) =
                     mocks::ControlledTask::new(poll_sender, processing_done_receiver, drop_sender);
 
-                scope.spawn(task).unwrap();
+                scope.spawn(task);
 
                 poll_receiver.await.unwrap();
 
@@ -405,7 +387,7 @@ mod tests {
     #[test]
     fn test_wait_waits_for_tasks_to_finish() {
         let mut executor = Executor::new().expect("Executor creation failed");
-        let scope = ExecutionScope::from_executor(Box::new(executor.ehandle()));
+        let scope = ExecutionScope::new();
         executor.run_singlethreaded(async {
             let (poll_sender, poll_receiver) = oneshot::channel();
             let (processing_done_sender, processing_done_receiver) = oneshot::channel();
@@ -413,7 +395,7 @@ mod tests {
             let (_, task) =
                 mocks::ControlledTask::new(poll_sender, processing_done_receiver, drop_sender);
 
-            scope.spawn(task).unwrap();
+            scope.spawn(task);
 
             poll_receiver.await.unwrap();
 
@@ -441,12 +423,10 @@ mod tests {
             let (processing_done_sender, processing_done_receiver) = oneshot::channel();
             let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
 
-            scope
-                .spawn_with_shutdown(|_shutdown| async move {
-                    processing_done_receiver.await.unwrap();
-                    shutdown_complete_sender.send(()).unwrap();
-                })
-                .unwrap();
+            scope.spawn_with_shutdown(|_shutdown| async move {
+                processing_done_receiver.await.unwrap();
+                shutdown_complete_sender.send(()).unwrap();
+            });
 
             processing_done_sender.send(()).unwrap();
 
@@ -463,27 +443,25 @@ mod tests {
 
             let tick_count = Arc::new(AtomicUsize::new(0));
 
-            scope
-                .spawn_with_shutdown({
-                    let tick_count = tick_count.clone();
+            scope.spawn_with_shutdown({
+                let tick_count = tick_count.clone();
 
-                    |shutdown| async move {
-                        let mut tick_receiver = tick_receiver.fuse();
-                        let mut shutdown = shutdown.fuse();
-                        loop {
-                            select! {
-                                tick = tick_receiver.next() => {
-                                    tick.unwrap();
-                                    tick_count.fetch_add(1, Ordering::Relaxed);
-                                    tick_confirmation_sender.unbounded_send(()).unwrap();
-                                },
-                                _ = shutdown => break,
-                            }
+                |shutdown| async move {
+                    let mut tick_receiver = tick_receiver.fuse();
+                    let mut shutdown = shutdown.fuse();
+                    loop {
+                        select! {
+                            tick = tick_receiver.next() => {
+                                tick.unwrap();
+                                tick_count.fetch_add(1, Ordering::Relaxed);
+                                tick_confirmation_sender.unbounded_send(()).unwrap();
+                            },
+                            _ = shutdown => break,
                         }
-                        shutdown_complete_sender.send(()).unwrap();
                     }
-                })
-                .unwrap();
+                    shutdown_complete_sender.send(()).unwrap();
+                }
+            });
 
             assert_eq!(tick_count.load(Ordering::Relaxed), 0);
 
@@ -506,9 +484,7 @@ mod tests {
     fn with_token_registry() {
         let registry = token_registry::Simple::new();
 
-        let exec = Executor::new().expect("Executor creation failed");
-        let scope =
-            ExecutionScope::build(Box::new(exec.ehandle())).token_registry(registry.clone()).new();
+        let scope = ExecutionScope::build().token_registry(registry.clone()).new();
 
         let registry2 = scope.token_registry().unwrap();
         assert!(
@@ -521,9 +497,7 @@ mod tests {
     fn with_inode_registry() {
         let registry = inode_registry::Simple::new();
 
-        let exec = Executor::new().expect("Executor creation failed");
-        let scope =
-            ExecutionScope::build(Box::new(exec.ehandle())).inode_registry(registry.clone()).new();
+        let scope = ExecutionScope::build().inode_registry(registry.clone()).new();
 
         let registry2 = scope.inode_registry().unwrap();
         assert!(
@@ -536,10 +510,7 @@ mod tests {
     fn with_mock_entry_constructor() {
         let entry_constructor = mocks::MockEntryConstructor::new();
 
-        let exec = Executor::new().expect("Executor creation failed");
-        let scope = ExecutionScope::build(Box::new(exec.ehandle()))
-            .entry_constructor(entry_constructor.clone())
-            .new();
+        let scope = ExecutionScope::build().entry_constructor(entry_constructor.clone()).new();
 
         let entry_constructor2 = scope.entry_constructor().unwrap();
         assert!(

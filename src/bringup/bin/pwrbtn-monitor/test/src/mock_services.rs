@@ -12,8 +12,7 @@ use {
     fidl_fuchsia_io::{
         DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_test_pwrbtn as test_pwrbtn,
-    fuchsia_async::{self as fasync, EHandle},
+    fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
@@ -161,7 +160,7 @@ async fn main() -> Result<(), Error> {
     };
     let (proxy, server_end) = create_proxy()?;
     input_dir.clone().open(
-        ExecutionScope::from_executor(Box::new(EHandle::local())),
+        ExecutionScope::new(),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
         pfsPath::empty(),

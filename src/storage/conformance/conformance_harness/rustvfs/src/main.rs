@@ -30,7 +30,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 control_handle: _,
             } => {
                 let dir = simple();
-                let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+                let scope = ExecutionScope::new();
                 dir.open(scope, flags, 0, Path::empty(), directory_request.into_channel().into());
             }
             Io1HarnessRequest::GetDirectoryWithVmoFile {
@@ -54,7 +54,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     }
                 });
                 dir.clone().add_entry(name, file)?;
-                let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+                let scope = ExecutionScope::new();
                 dir.open(scope, flags, 0, Path::empty(), directory_request.into_channel().into());
             }
             _ => return Err(anyhow!("Unsupported request type.")),

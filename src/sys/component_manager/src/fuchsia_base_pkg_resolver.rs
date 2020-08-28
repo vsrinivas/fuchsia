@@ -288,7 +288,7 @@ mod tests {
                         }
                     };
                     sub_dir.open(
-                        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                        ExecutionScope::new(),
                         fio::OPEN_RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
                         vfs::path::Path::empty(),

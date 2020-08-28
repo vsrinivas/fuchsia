@@ -23,7 +23,6 @@ use {
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
-    fuchsia_async::EHandle,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::{
@@ -117,7 +116,7 @@ impl Hub {
         Ok(Hub {
             model: Arc::downgrade(model),
             instances: Mutex::new(instances_map),
-            scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
+            scope: ExecutionScope::new(),
         })
     }
 
@@ -598,7 +597,6 @@ mod tests {
             OPEN_RIGHT_WRITABLE,
         },
         fidl_fuchsia_io2 as fio2,
-        fuchsia_async::EHandle,
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -617,7 +615,7 @@ mod tests {
             );
 
             out_dir.clone().open(
-                ExecutionScope::from_executor(Box::new(EHandle::local())),
+                ExecutionScope::new(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 pfsPath::empty(),
@@ -634,7 +632,7 @@ mod tests {
             );
 
             pseudo_dir.clone().open(
-                ExecutionScope::from_executor(Box::new(EHandle::local())),
+                ExecutionScope::new(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 pfsPath::empty(),

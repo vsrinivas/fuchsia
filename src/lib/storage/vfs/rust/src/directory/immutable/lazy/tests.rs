@@ -145,7 +145,7 @@ fn empty_with_watchers() {
     let (mut watcher_events, watcher_events_consumer) = mpsc::unbounded();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let server =
         lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_events_consumer);
@@ -473,7 +473,7 @@ fn watch_empty() {
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_stream);
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
@@ -500,7 +500,7 @@ fn watch_non_empty() {
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -535,7 +535,7 @@ fn watch_two_watchers() {
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -582,7 +582,7 @@ fn watch_with_mask() {
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -606,7 +606,7 @@ fn watch_addition() {
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -649,7 +649,7 @@ fn watch_removal() {
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -691,7 +691,7 @@ fn watch_watcher_stream_closed() {
     let (_, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
@@ -716,7 +716,7 @@ fn watch_close_watcher_stream() {
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::new();
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 

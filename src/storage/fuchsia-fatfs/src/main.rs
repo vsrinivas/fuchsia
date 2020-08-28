@@ -58,8 +58,7 @@ async fn main() -> Result<(), Error> {
 
     // VFS initialization.
     let registry = token_registry::Simple::new();
-    let scope =
-        ExecutionScope::build(Box::new(fasync::EHandle::local())).token_registry(registry).new();
+    let scope = ExecutionScope::build().token_registry(registry).new();
 
     // Start the filesystem and open the root directory.
     let fatfs = FatFs::new(device).map_err(|_| Status::IO)?;

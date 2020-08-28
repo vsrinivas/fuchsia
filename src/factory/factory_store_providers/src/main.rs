@@ -428,7 +428,7 @@ mod tests {
             },
         };
         let (dir_proxy, dir_server) = create_proxy::<DirectoryMarker>().unwrap();
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

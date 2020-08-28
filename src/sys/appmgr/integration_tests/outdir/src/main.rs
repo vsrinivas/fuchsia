@@ -99,7 +99,7 @@ async fn main() -> Result<(), Error> {
             },
         };
         fake_pkgfs.open(
-            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+            ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             pfsPath::empty(),
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Error> {
     fasync::Task::spawn(async move {
         let fake_svc_for_sys = pseudo_directory! {};
         fake_svc_for_sys.open(
-            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+            ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
             pfsPath::empty(),

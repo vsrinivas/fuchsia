@@ -785,6 +785,7 @@ impl fmt::Debug for EHandle {
     }
 }
 
+// TODO: Remove spawn once deps in other repos are resolved.
 impl Spawn for EHandle {
     fn spawn_obj(&self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
         Inner::spawn(&self.inner, f);

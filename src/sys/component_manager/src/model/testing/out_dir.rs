@@ -81,7 +81,7 @@ impl OutDir {
         // `server_end` to the directory.
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
             dir.clone().open(
-                ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                ExecutionScope::new(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 vfs::path::Path::empty(),
