@@ -14,7 +14,6 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/base_renderer.h"
-#include "src/media/audio/audio_core/intermediate_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -47,13 +46,11 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
                    AudioClock& audio_clock)
-    : MixStage(std::make_shared<IntermediateBuffer>(
-          output_format, block_size, reference_clock_to_fractional_frame, audio_clock)) {}
-
-MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
-    : ReadableStream(output_stream->format()),
-      output_stream_(std::move(output_stream)),
-      output_ref_clock_(output_stream_->reference_clock()) {}
+    : ReadableStream(output_format),
+      output_buffer_frames_(block_size),
+      output_buffer_(block_size * output_format.channels()),
+      output_ref_clock_(audio_clock),
+      output_ref_clock_to_fractional_frame_(reference_clock_to_fractional_frame) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           std::optional<float> initial_dest_gain_db,
@@ -115,16 +112,10 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  auto output_buffer = output_stream_->WriteLock(dest_ref_time, frame, frame_count);
-  if (!output_buffer) {
-    return std::nullopt;
-  }
-  FX_DCHECK(output_buffer->start().Floor() == frame);
+  auto snapshot = ReferenceClockToFixed();
 
-  auto snapshot = output_stream_->ReferenceClockToFixed();
-
-  cur_mix_job_.buf = static_cast<float*>(output_buffer->payload());
-  cur_mix_job_.buf_frames = output_buffer->length().Floor();
+  cur_mix_job_.buf = &output_buffer_[0];
+  cur_mix_job_.buf_frames = std::min<uint32_t>(frame_count, output_buffer_frames_);
   cur_mix_job_.start_pts_of = frame;
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
@@ -138,14 +129,17 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
   // TODO(fxbug.dev/50669): If this buffer is not fully consumed, we should save this buffer and
   // reuse it for the next call to ReadLock, rather than mixing new data.
   return std::make_optional<ReadableStream::Buffer>(
-      output_buffer->start(), output_buffer->length(), output_buffer->payload(), true,
-      cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db,
-      [output_buffer = std::move(output_buffer)](bool) mutable { output_buffer = std::nullopt; });
+      frame, cur_mix_job_.buf_frames, cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
+      cur_mix_job_.applied_gain_db);
 }
 
 BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFixed() const {
   TRACE_DURATION("audio", "MixStage::ReferenceClockToFixed");
-  return output_stream_->ReferenceClockToFixed();
+  auto [timeline_function, generation] = output_ref_clock_to_fractional_frame_->get();
+  return {
+      .timeline_function = timeline_function,
+      .generation = generation,
+  };
 }
 
 void MixStage::SetMinLeadTime(zx::duration min_lead_time) {

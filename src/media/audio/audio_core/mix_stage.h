@@ -41,7 +41,6 @@ class MixStage : public ReadableStream {
   void RemoveInput(const ReadableStream& stream);
 
  private:
-  MixStage(std::shared_ptr<WritableStream> output_stream);
   void SetupMixBuffer(uint32_t max_mix_frames);
 
   struct MixJob {
@@ -72,14 +71,13 @@ class MixStage : public ReadableStream {
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);
 
-  std::shared_ptr<WritableStream> output_stream_;
-
   // State used by the mix task.
   MixJob cur_mix_job_;
 
-  // We are passed our destination stream's reference clock at construction time, and we cache it
-  // here, so we need not do multiple levels of dereferencing at clock-read time.
+  const size_t output_buffer_frames_;
+  std::vector<float> output_buffer_;
   AudioClock& output_ref_clock_;
+  fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;
 };
 
 }  // namespace media::audio
