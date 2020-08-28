@@ -102,8 +102,8 @@ success("FlexibleEnumKnownValue") {
 }
 
 success("FlexibleEnumUnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Dart, Rust, HLCPP, and LLCPP.
-    bindings_denylist = [go,dart,rust,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumStruct {
         e: 0xffffffff,
     },
@@ -116,7 +116,7 @@ success("FlexibleEnumUnknownValue") {
 
 success("FlexibleEnumUint64UnknownValue") {
     // TODO(fxb/7847): Implement flexible enums in Go, Dart, Rust, HLCPP, and LLCPP.
-    bindings_denylist = [go,dart,rust,cpp,llcpp],
+    bindings_denylist = [go,rust,cpp,llcpp],
     value = FlexibleEnumUint64Struct {
         e: 0x0102030405060708,
     },

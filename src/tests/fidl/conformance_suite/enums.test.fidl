@@ -44,12 +44,12 @@ strict enum StrictEnumUint64 : uint64 {
     SECOND = 0x1112131415161718;
 };
 
-enum FlexibleEnum {
+flexible enum FlexibleEnum {
     FIRST = 1;
     SECOND = 2;
 };
 
-enum FlexibleEnumUint64 : uint64 {
+flexible enum FlexibleEnumUint64 : uint64 {
     FIRST = 1;
     SECOND = 2;
 };
