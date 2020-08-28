@@ -35,6 +35,7 @@ if (is_host) {
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:tempfile",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]

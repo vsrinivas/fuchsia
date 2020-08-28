@@ -219,6 +219,7 @@ impl Daemon {
     pub async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
         log::debug!("daemon received request: {:?}", req);
         match req {
+            DaemonRequest::Crash { .. } => panic!("instructed to crash by client!"),
             DaemonRequest::EchoString { value, responder } => {
                 log::info!("Received echo request for string {:?}", value);
                 responder.send(value.as_ref()).context("error sending response")?;

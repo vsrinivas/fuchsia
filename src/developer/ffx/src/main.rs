@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::logger::setup_logger,
     anyhow::{Context, Result},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
@@ -12,9 +11,6 @@ use {
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
 };
-
-mod constants;
-mod logger;
 
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
     if !is_daemon_running().await {
@@ -39,20 +35,20 @@ async fn is_experiment_subcommand_on(key: &'static str) -> bool {
     ffx_config::get!(bool, key, false).await
 }
 
-fn get_log_name(subcommand: &Option<Subcommand>) -> &'static str {
+fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     if let Some(Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
         subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
     })) = subcommand
     {
-        "ffx.daemon"
-    } else {
-        "ffx"
+        return true;
     }
+    false
 }
 
 async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
-    setup_logger(get_log_name(&app.subcommand)).await;
+    let is_daemon = is_daemon(&app.subcommand);
+    ffx_config::logging::init(is_daemon).await?;
     ffx_lib_suite::ffx_plugin_impl(
         get_daemon_proxy,
         get_remote_proxy,

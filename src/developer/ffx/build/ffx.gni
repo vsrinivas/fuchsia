@@ -60,7 +60,6 @@ template("ffx") {
              "//third_party/rust_crates:argh",
              "//third_party/rust_crates:futures",
              "//third_party/rust_crates:log",
-             "//third_party/rust_crates:simplelog",
            ]
     non_rust_deps = [ "//third_party/boringssl" ]
     forward_variables_from(invoker,

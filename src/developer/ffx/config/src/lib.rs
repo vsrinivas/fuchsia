@@ -239,6 +239,79 @@ fn init_env_file(path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
+pub mod logging {
+    use {
+        anyhow::{Context as _, Result},
+        simplelog::{
+            CombinedLogger, Config, ConfigBuilder, LevelFilter, SimpleLogger, TermLogger,
+            TerminalMode, WriteLogger,
+        },
+        std::fs::{create_dir_all, OpenOptions},
+        std::path::PathBuf,
+    };
+
+    const LOG_DIR: &str = "log.dir";
+    const LOG_ENABLED: &str = "log.enabled";
+
+    fn config() -> Config {
+        // Sets the target level to "Error" so that all logs show their module
+        // target in the logs.
+        ConfigBuilder::new().set_target_level(LevelFilter::Error).build()
+    }
+
+    async fn log_dir() -> PathBuf {
+        let default_log_dir = {
+            let mut path = ffx_core::get_base_path();
+            path.push("logs");
+            path.to_string_lossy().into_owned()
+        };
+        PathBuf::from(
+            super::get_config_str(
+                LOG_DIR,
+                &default_log_dir,
+                super::ffx_cmd!(),
+                super::find_env_file(),
+            )
+            .await,
+        )
+    }
+
+    pub async fn log_file(name: &str) -> Result<std::fs::File> {
+        let mut log_path = log_dir().await;
+        create_dir_all(&log_path).expect("cannot create log directory");
+        log_path.push(format!("{}.log", name));
+        OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(log_path)
+            .context("opening log file")
+    }
+
+    pub async fn is_enabled() -> bool {
+        super::get_config_bool(LOG_ENABLED, false, super::ffx_cmd!(), super::find_env_file()).await
+    }
+
+    pub async fn init(stdio: bool) -> Result<()> {
+        let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> =
+            vec![TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed)
+                .context("initializing terminal error logger")?];
+
+        if is_enabled().await {
+            // The daemon logs to stdio, and is redirected to file by spawn_daemon,
+            // which enables panics and backtraces to also be included.
+            if stdio {
+                loggers.push(SimpleLogger::new(LevelFilter::Debug, config()));
+            } else {
+                let file = log_file("ffx").await?;
+                loggers.push(WriteLogger::new(LevelFilter::Debug, config(), file));
+            }
+        }
+
+        CombinedLogger::init(loggers).context("initializing logger")
+    }
+}
+
 #[cfg(test)]
 fn get_default_user_file_path() -> PathBuf {
     lazy_static::lazy_static! {

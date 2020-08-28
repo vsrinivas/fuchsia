@@ -19,7 +19,7 @@ use {
     libc,
     std::env,
     std::os::unix::process::CommandExt,
-    std::process::Command,
+    std::process::{Command, Stdio},
 };
 
 mod constants;
@@ -78,10 +78,23 @@ pub async fn spawn_daemon() -> Result<()> {
     // when we daemonize, our path will change to /, so get the canonical path before that occurs.
     ffx_path = std::fs::canonicalize(ffx_path)?;
     log::info!("Starting new ffx background daemon from {:?}", &ffx_path);
+
+    let mut stdout = Stdio::null();
+    let mut stderr = Stdio::null();
+    if ffx_config::logging::is_enabled().await {
+        // TODO(raggi): maybe dup instead.
+        stdout = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+        stderr = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+    }
+
     let ffx: Ffx = argh::from_env();
     let config_string = ffx.config.unwrap_or("".to_owned());
     daemonize(
         Command::new(ffx_path)
+            .stdin(Stdio::null())
+            .stdout(stdout)
+            .stderr(stderr)
+            .env("RUST_BACKTRACE", "full")
             .arg("--env")
             .arg(ffx_config::find_env_file()?)
             .arg("--config")

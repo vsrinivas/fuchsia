@@ -14,6 +14,9 @@ enum DaemonError {
 
 [Discoverable]
 protocol Daemon {
+    /// Crashes the daemon. Primarily used for testing.
+    Crash() -> ();
+
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
 
