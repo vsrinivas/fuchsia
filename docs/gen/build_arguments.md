@@ -205,7 +205,7 @@ From //build/images/fvm.gni:41
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:16
 
@@ -278,7 +278,7 @@ From //build/board.gni:11
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:20
 
@@ -312,7 +312,7 @@ From //build/images/args.gni:131
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/security/policy/zxcrypt:null"]`
 
 From //boards/arm64.gni:18
 
@@ -634,7 +634,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -642,14 +642,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -865,7 +865,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -880,14 +880,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/871ce40cdceb1611b129bc589cb93248a24d4a59/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/9870ca0afcc1d57c12a71bcc78ff57df009e4f7a/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
