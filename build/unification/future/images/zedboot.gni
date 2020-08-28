@@ -69,7 +69,6 @@ zedboot_deps += [
   "//src/bringup/bin/virtcon:virtual-console",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
-  "//src/connectivity/ethernet/drivers/ethertap",
   "//src/devices/bin/driver_manager",
   "//src/devices/block/drivers/aml-sd-emmc",
   "//src/devices/block/drivers/ftl",

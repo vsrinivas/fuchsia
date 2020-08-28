@@ -16,7 +16,6 @@ common_image_contents = [
   "//src/bringup/bundles:bootstrap",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
-  "//src/connectivity/ethernet/drivers/ethertap",
   "//src/connectivity/network/bin/ping",
   "//src/developer/cmd:bin",
   "//src/developer/forensics/crasher/cpp:crasher_exe",
