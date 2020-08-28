@@ -80,6 +80,10 @@ impl ActionResults {
         &self.gauges
     }
 
+    pub fn get_sub_results_mut(&mut self) -> &mut Vec<(String, Box<ActionResults>)> {
+        &mut self.sub_results
+    }
+
     pub fn get_sub_results(&self) -> &Vec<(String, Box<ActionResults>)> {
         &self.sub_results
     }

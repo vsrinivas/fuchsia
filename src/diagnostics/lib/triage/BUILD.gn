@@ -21,41 +21,32 @@ lib_deps = [
   "//third_party/rust_crates:serde_json5",
 ]
 
+library_sources = [
+  "src/act.rs",
+  "src/config.rs",
+  "src/config/parse.rs",
+  "src/lib.rs",
+  "src/metrics.rs",
+  "src/metrics/fetch.rs",
+  "src/plugins.rs",
+  "src/plugins/crashes.rs",
+  "src/plugins/sandbox_errors.rs",
+  "src/result_format.rs",
+  "src/validate.rs",
+]
+
 rustc_library("triage") {
   edition = 2018
   version = "0.0.1"
 
   deps = lib_deps
-
-  sources = [
-    "src/act.rs",
-    "src/config.rs",
-    "src/config/parse.rs",
-    "src/lib.rs",
-    "src/metrics.rs",
-    "src/metrics/fetch.rs",
-    "src/plugins.rs",
-    "src/plugins/crashes.rs",
-    "src/result_format.rs",
-    "src/validate.rs",
-  ]
+  sources = library_sources
 }
 
 rustc_test("triage_lib_unittests") {
   deps = [ ":triage" ] + lib_deps
 
-  sources = [
-    "src/act.rs",
-    "src/config.rs",
-    "src/config/parse.rs",
-    "src/lib.rs",
-    "src/metrics.rs",
-    "src/metrics/fetch.rs",
-    "src/plugins.rs",
-    "src/plugins/crashes.rs",
-    "src/result_format.rs",
-    "src/validate.rs",
-  ]
+  sources = library_sources
 }
 
 group("tests") {

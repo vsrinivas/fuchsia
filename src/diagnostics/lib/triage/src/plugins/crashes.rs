@@ -20,7 +20,7 @@ impl Plugin for CrashesPlugin {
     }
 
     fn run(&self, inputs: &FileDataFetcher<'_>) -> ActionResults {
-        let mut ret = ActionResults::new();
+        let mut results = ActionResults::new();
 
         let re = Regex::new(r"\[(\d+)\.(\d+)\].*(?:CRASH:|fatal :)\s*([\w\-_\s\.]+)")
             .expect("regex compilation");
@@ -33,7 +33,7 @@ impl Plugin for CrashesPlugin {
                     let formatted_time =
                         format!("{}h{}m{}.{}s", s / 3600, s % 3600 / 60, s % 60, ms);
 
-                    ret.add_warning(format!(
+                    results.add_warning(format!(
                         "[WARNING]: {} crashed at {} [{}.{}]",
                         captures.get(3).unwrap().as_str(),
                         formatted_time,
@@ -44,7 +44,7 @@ impl Plugin for CrashesPlugin {
                 _ => {}
             };
         }
-        ret
+        results
     }
 }
 

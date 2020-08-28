@@ -218,7 +218,7 @@ mod test {
         }
     }"#;
 
-    const OK_PLUGINS_PREFIX: &str = "Process Crashes Plugin - OK\n";
+    const OK_PLUGINS_PREFIX: &str = "Process Crashes Plugin - OK\nSandbox Errors Plugin - OK\n";
 
     #[test]
     fn analyze() {
@@ -338,6 +338,7 @@ mod test {
                 + OK_PLUGINS_PREFIX
         );
 
+        // Test that plugin output is property triggered and formatted.
         let targets;
         let context;
         {
@@ -350,14 +351,17 @@ mod test {
             );
             context = empty_context(&mut manager);
         }
-        assert_eq!(
-            manager.analyze(&targets, context).unwrap(),
-            r#"Process Crashes Plugin
+        let result = manager.analyze(&targets, context).unwrap();
+        assert!(
+            result.contains(
+                r#"Process Crashes Plugin
 Warnings
 --------
 [WARNING]: my_component.cmx crashed at 1h1m1.123s [3661.123]
 [WARNING]: my_component.cmx crashed at 1h1m1.124s [3661.124]
 "#
+            ),
+            format!("not found in:\n{}", result)
         );
     }
 

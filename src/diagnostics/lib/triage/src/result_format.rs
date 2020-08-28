@@ -88,7 +88,7 @@ impl<'a> ActionResultFormatter<'a> {
         if results.is_empty() {
             None
         } else {
-            Some((warning, results.join("\n\n")))
+            Some((warning, results.join("\n")))
         }
     }
 
@@ -151,5 +151,69 @@ mod test {
         let formatter = ActionResultFormatter::new(&action_results);
 
         assert_eq!(warnings, formatter.to_text());
+    }
+
+    #[test]
+    fn action_result_formatter_sorts_output() {
+        let warnings = String::from(
+            "Gauges\n\
+            ------\n\
+            g1\n\
+            g2\n\n\
+            Warnings\n\
+        --------\n\
+        w1\n\
+        w2\n\n\
+        Crashes Plugin - OK\n\
+        Warning Plugin\n\
+        Warnings\n\
+        --------\n\
+        w1\n\
+        w2\n\
+        ",
+        );
+
+        {
+            let mut action_results = ActionResults::new();
+            action_results.add_warning(String::from("w1"));
+            action_results.add_warning(String::from("w2"));
+            action_results.add_gauge(String::from("g1"));
+            action_results.add_gauge(String::from("g2"));
+            let mut warnings_plugin = ActionResults::new();
+            warnings_plugin.add_warning(String::from("w1"));
+            warnings_plugin.add_warning(String::from("w2"));
+            action_results
+                .get_sub_results_mut()
+                .push(("Crashes".to_string(), Box::new(ActionResults::new())));
+            action_results
+                .get_sub_results_mut()
+                .push(("Warning".to_string(), Box::new(warnings_plugin)));
+
+            let formatter = ActionResultFormatter::new(&action_results);
+
+            assert_eq!(warnings, formatter.to_text());
+        }
+
+        // Same as before, but reversed to test sorting.
+        {
+            let mut action_results = ActionResults::new();
+            action_results.add_warning(String::from("w2"));
+            action_results.add_warning(String::from("w1"));
+            action_results.add_gauge(String::from("g2"));
+            action_results.add_gauge(String::from("g1"));
+            let mut warnings_plugin = ActionResults::new();
+            warnings_plugin.add_warning(String::from("w2"));
+            warnings_plugin.add_warning(String::from("w1"));
+            action_results
+                .get_sub_results_mut()
+                .push(("Warning".to_string(), Box::new(warnings_plugin)));
+            action_results
+                .get_sub_results_mut()
+                .push(("Crashes".to_string(), Box::new(ActionResults::new())));
+
+            let formatter = ActionResultFormatter::new(&action_results);
+
+            assert_eq!(warnings, formatter.to_text());
+        }
     }
 }

@@ -5,6 +5,7 @@
 use crate::{act::ActionResults, metrics::FileDataFetcher};
 
 mod crashes;
+mod sandbox_errors;
 
 pub trait Plugin {
     /// Returns a unique name for the plugin.
@@ -23,5 +24,5 @@ pub trait Plugin {
 
 /// Retrieve the list of all plugins registered with this library.
 pub fn register_plugins() -> Vec<Box<dyn Plugin>> {
-    vec![Box::new(crashes::CrashesPlugin {})]
+    vec![Box::new(crashes::CrashesPlugin {}), Box::new(sandbox_errors::SandboxErrorsPlugin {})]
 }
