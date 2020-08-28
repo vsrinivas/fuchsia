@@ -8,6 +8,7 @@
             "class/light",
             "class/temperature",
             "class/thermal",
+            "sherlock-emmc",
             "sys"
         ],
         "services": [
