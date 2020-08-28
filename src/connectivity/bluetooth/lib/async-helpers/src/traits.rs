@@ -33,6 +33,7 @@ pub trait PollExt<T> {
 
 impl<T> PollExt<T> for Poll<T> {
     #[inline]
+    #[track_caller]
     fn unwrap(self) -> T {
         match self {
             Poll::Ready(val) => val,
@@ -41,6 +42,7 @@ impl<T> PollExt<T> for Poll<T> {
     }
 
     #[inline]
+    #[track_caller]
     fn expect(self, msg: &str) -> T {
         match self {
             Poll::Ready(val) => val,
