@@ -90,43 +90,6 @@ success("StrictEnumUint64Struct") {
     },
 }
 
-success("FlexibleEnumKnownValue") {
-    value = FlexibleEnumStruct {
-        e: 1,
-    },
-    bytes = {
-        v1 = [
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ],
-    },
-}
-
-success("FlexibleEnumUnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
-    bindings_denylist = [go,rust,cpp,llcpp],
-    value = FlexibleEnumStruct {
-        e: 0xffffffff,
-    },
-    bytes = {
-        v1 = [
-            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-        ],
-    },
-}
-
-success("FlexibleEnumUint64UnknownValue") {
-    // TODO(fxb/7847): Implement flexible enums in Go, Dart, Rust, HLCPP, and LLCPP.
-    bindings_denylist = [go,rust,cpp,llcpp],
-    value = FlexibleEnumUint64Struct {
-        e: 0x0102030405060708,
-    },
-    bytes = {
-        v1 = [
-            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
-        ],
-    },
-}
-
 encode_failure("StrictEnumInt8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],

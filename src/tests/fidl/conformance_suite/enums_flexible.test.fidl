@@ -1,0 +1,77 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+flexible enum FlexibleEnumInt8 : int8 {
+    FIRST = 0x01;
+    SECOND = 0x11;
+};
+
+flexible enum FlexibleEnumInt16 : int16 {
+    FIRST = 0x0102;
+    SECOND = 0x1112;
+};
+
+flexible enum FlexibleEnumInt32 : int32 {
+    FIRST = 0x01020304;
+    SECOND = 0x11121314;
+};
+
+flexible enum FlexibleEnumInt64 : int64 {
+    FIRST = 0x0102030405060708;
+    SECOND = 0x1112131415161718;
+};
+
+flexible enum FlexibleEnumUint8 : uint8 {
+    FIRST = 1;
+    SECOND = 2;
+};
+
+flexible enum FlexibleEnumUint16 : uint16 {
+    FIRST = 0x0102;
+    SECOND = 0x1112;
+};
+
+flexible enum FlexibleEnumUint32 : uint32 {
+    FIRST = 0x01020304;
+    SECOND = 0x11121314;
+};
+
+flexible enum FlexibleEnumUint64 : uint64 {
+    FIRST = 0x0102030405060708;
+    SECOND = 0x1112131415161718;
+};
+
+struct FlexibleEnumInt8Struct {
+    FlexibleEnumInt8 e;
+};
+
+struct FlexibleEnumInt16Struct {
+    FlexibleEnumInt16 e;
+};
+
+struct FlexibleEnumInt32Struct {
+    FlexibleEnumInt32 e;
+};
+
+struct FlexibleEnumInt64Struct {
+    FlexibleEnumInt64 e;
+};
+
+struct FlexibleEnumUint8Struct {
+    FlexibleEnumUint8 e;
+};
+
+struct FlexibleEnumUint16Struct {
+    FlexibleEnumUint16 e;
+};
+
+struct FlexibleEnumUint32Struct {
+    FlexibleEnumUint32 e;
+};
+
+struct FlexibleEnumUint64Struct {
+    FlexibleEnumUint64 e;
+};

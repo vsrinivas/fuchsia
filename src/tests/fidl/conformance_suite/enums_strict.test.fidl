@@ -44,16 +44,6 @@ strict enum StrictEnumUint64 : uint64 {
     SECOND = 0x1112131415161718;
 };
 
-flexible enum FlexibleEnum {
-    FIRST = 1;
-    SECOND = 2;
-};
-
-flexible enum FlexibleEnumUint64 : uint64 {
-    FIRST = 1;
-    SECOND = 2;
-};
-
 struct StrictEnumInt8Struct {
     StrictEnumInt8 e;
 };
@@ -84,12 +74,4 @@ struct StrictEnumUint32Struct {
 
 struct StrictEnumUint64Struct {
     StrictEnumUint64 e;
-};
-
-struct FlexibleEnumStruct {
-    FlexibleEnum e;
-};
-
-struct FlexibleEnumUint64Struct {
-    FlexibleEnumUint64 e;
 };

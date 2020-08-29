@@ -1,0 +1,195 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("FlexibleEnumInt8") {
+    value = FlexibleEnumInt8Struct {
+        e: 0x01,
+    },
+    bytes = {
+        v1 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("FlexibleEnumInt16") {
+    value = FlexibleEnumInt16Struct {
+        e: 0x0102,
+    },
+    bytes = {
+        v1 = [
+            0x02, 0x01, padding:6,
+        ],
+    },
+}
+
+success("FlexibleEnumInt32") {
+    value = FlexibleEnumInt32Struct {
+        e: 0x01020304,
+    },
+    bytes = {
+        v1 = [
+            0x04, 0x03, 0x02, 0x01, padding:4,
+        ],
+    },
+}
+
+success("FlexibleEnumInt64") {
+    value = FlexibleEnumInt64Struct {
+        e: 0x0102030405060708,
+    },
+    bytes = {
+        v1 = [
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        ],
+    },
+}
+
+success("FlexibleEnumUint8") {
+    value = FlexibleEnumUint8Struct {
+        e: 0x01,
+    },
+    bytes = {
+        v1 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("FlexibleEnumUint16") {
+    value = FlexibleEnumUint16Struct {
+        e: 0x0102,
+    },
+    bytes = {
+        v1 = [
+            0x02, 0x01, padding:6,
+        ],
+    },
+}
+
+success("FlexibleEnumUint32") {
+    value = FlexibleEnumUint32Struct {
+        e: 0x01020304,
+    },
+    bytes = {
+        v1 = [
+            0x04, 0x03, 0x02, 0x01, padding:4,
+        ],
+    },
+}
+
+success("FlexibleEnumUint64") {
+    value = FlexibleEnumUint64Struct {
+        e: 0x0102030405060708,
+    },
+    bytes = {
+        v1 = [
+            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        ],
+    },
+}
+
+success("FlexibleEnumInt8UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumInt8Struct {
+        e: 0x0f,
+    },
+    bytes = {
+        v1 = [
+            0x0f, padding:7,
+        ],
+    },
+}
+
+success("FlexibleEnumInt16UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumInt16Struct {
+        e: 0x0fee,
+    },
+    bytes = {
+        v1 = [
+            0xee, 0x0f, padding:6,
+        ],
+    },
+}
+
+success("FlexibleEnumInt32UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumInt32Struct {
+        e: 0x0feeddcc,
+    },
+    bytes = {
+        v1 = [
+            0xcc, 0xdd, 0xee, 0x0f, padding:4,
+        ],
+    },
+}
+
+success("FlexibleEnumInt64UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumInt64Struct {
+        e: 0x0feeddccbbaa9988,
+    },
+    bytes = {
+        v1 = [
+            0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0x0f,
+        ],
+    },
+}
+
+success("FlexibleEnumUint8UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumUint8Struct {
+        e: 0xff,
+    },
+    bytes = {
+        v1 = [
+            0xff, padding:7,
+        ],
+    },
+}
+
+success("FlexibleEnumUint16UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumUint16Struct {
+        e: 0xffee,
+    },
+    bytes = {
+        v1 = [
+            0xee, 0xff, padding:6,
+        ],
+    },
+}
+
+success("FlexibleEnumUint32UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumUint32Struct {
+        e: 0xffeeddcc,
+    },
+    bytes = {
+        v1 = [
+            0xcc, 0xdd, 0xee, 0xff, padding:4,
+        ],
+    },
+}
+
+success("FlexibleEnumUint64UnknownValue") {
+    // TODO(fxb/7847): Implement flexible enums in Go, Rust, HLCPP, and LLCPP.
+    bindings_denylist = [go,rust,cpp,llcpp],
+    value = FlexibleEnumUint64Struct {
+        e: 0xffeeddccbbaa9988,
+    },
+    bytes = {
+        v1 = [
+            0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+        ],
+    },
+}
