@@ -577,6 +577,10 @@ config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
   visibility = [
     "//third_party/*",
+    "//sdk/lib/fidl/cpp/*",
+    "//src/ui/lib/escher/*",
+    "//zircon/system/ulib/trace/*",
+
     # TODO(fxb/58162): use this as needed and populate this list
   ]
 }
