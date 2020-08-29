@@ -1869,14 +1869,14 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:35
+From //build/rust/config.gni:48
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:27
+From //build/rust/config.gni:40
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1885,7 +1885,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:45
+From //build/rust/config.gni:58
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1894,7 +1894,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:40
+From //build/rust/config.gni:53
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
@@ -1902,14 +1902,14 @@ looks for the standard library
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:24
+From //build/rust/config.gni:37
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:30
+From //build/rust/config.gni:43
 
 ### rust_v0_symbol_mangling
 Controls whether the rust compiler uses v0 symbol mangling scheme
@@ -1935,7 +1935,19 @@ This can be used to test custom Rust toolchains.
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:20
+From //build/rust/config.gni:25
+
+### rustc_version_string
+This is a string identifying the particular toolchain version in use.  Its
+only purpose is to be unique enough that it changes when switching to a new
+toolchain, so that recompilations with the new compiler can be triggered.
+
+When using the prebuilt, this is ignored and the CIPD instance ID of the
+prebuilt is used.
+
+**Current value (from the default):** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
+
+From //build/rust/config.gni:33
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
@@ -2654,6 +2666,7 @@ silently clobber the default value shown here.
   disable_kernel_pci = false
   goma_dir = "/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
+  rustc_version_string = "0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"
   use_ccache = false
   use_goma = false
   variants = []

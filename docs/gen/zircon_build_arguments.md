@@ -88,7 +88,7 @@ TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-x64", "//tools:all-hosts"]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:6
 
 **Overridden from the default:** `false`
 
@@ -100,7 +100,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
 
 **Overridden from the default:** `false`
 
@@ -378,6 +378,22 @@ the host.
 
 From //public/gn/toolchain/rustc.gni:13
 
+### rustc_version_string
+This is a string identifying the particular toolchain version in use.  Its
+only purpose is to be unique enough that it changes when switching to a new
+toolchain, so that recompilations with the new compiler can be triggered.
+
+When using the prebuilt, this defaults to the CIPD instance ID of the
+prebuilt.
+
+**Current value for `target_cpu = `:** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+
+**Overridden from the default:** `""`
+
+From //public/gn/toolchain/rustc.gni:21
+
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
 zero add increasing details at the cost of increased trace buffer use.
@@ -475,7 +491,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `false`
 
@@ -486,7 +502,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `false`
 
@@ -730,7 +746,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `[]`
 
@@ -749,7 +765,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `"zstd"`
 
@@ -781,7 +797,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:20
 
 **Overridden from the default:** `0`
 
