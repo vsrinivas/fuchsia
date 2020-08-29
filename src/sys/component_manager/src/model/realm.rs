@@ -1427,7 +1427,7 @@ pub mod tests {
         let server_channel_koid = server
             .as_handle_ref()
             .basic_info()
-            .expect("failed to ge t basic info on server channel")
+            .expect("failed to get basic info on server channel")
             .koid;
 
         // Create a request map which the MockController will fill with

@@ -533,7 +533,7 @@ struct ElfComponent {
     job: Arc<Job>,
 
     /// Process made for the program binary defined for this component.
-    process: Process,
+    process: Option<Arc<Process>>,
 
     /// Client end of the channel given to an ElfComponent which says it
     /// implements the Lifecycle protocol. If the component does not implement
@@ -553,7 +553,19 @@ impl ElfComponent {
         lifecycle_channel: Option<LifecycleProxy>,
         main_process_critical: bool,
     ) -> Self {
-        Self { _runtime_dir, job: Arc::new(job), process, lifecycle_channel, main_process_critical }
+        Self {
+            _runtime_dir,
+            job: Arc::new(job),
+            process: Some(Arc::new(process)),
+            lifecycle_channel,
+            main_process_critical,
+        }
+    }
+
+    /// Return a pointer to the Process, returns None if the component has no
+    /// Process.
+    pub fn copy_process(&self) -> Option<Arc<Process>> {
+        self.process.clone()
     }
 }
 
@@ -571,16 +583,61 @@ impl Controllable for ElfComponent {
             let _ = lifecycle_chan.stop();
 
             let job = self.job.clone();
-            async move {
-                let _ = fasync::OnSignals::new(
-                    &lifecycle_chan.as_handle_ref(),
-                    zx::Signals::CHANNEL_PEER_CLOSED,
-                )
-                .await
-                .map_err(|e| { error!("killing component's job after failure waiting on lifecycle channel, err: {}", e) } );
-                let _ = job.kill().map_err(|e| error!("failed killing job in stop after lifecycle channel closed: {}", e));
+
+            // If the component's main process is critical we must watch for
+            // the main process to exit, otherwise we could end up killing that
+            // process and therefore killing the root job.
+            if self.main_process_critical {
+                if self.process.is_none() {
+                    // This is a bit strange because there's no process, but there is a lifecycle
+                    // channel. Since there is no process it seems like killing it can't kill
+                    // component manager.
+                    warn!("killing job of component with 'main_process_critical' set because component has lifecycle channel, but no process main process.");
+                    let _ = self.job.kill().map_err(|e| {
+                        error!("failed killing job for component with no lifecycle channel: {}", e)
+                    });
+                    return async {}.boxed();
+                }
+                // Try to duplicate the Process handle so we can us it to wait for
+                // process termination
+                let proc_handle = self.process.take().unwrap();
+
+                async move {
+                    let _ = fasync::OnSignals::new(
+                        &proc_handle.as_handle_ref(),
+                        zx::Signals::PROCESS_TERMINATED,
+                    )
+                    .await
+                    .map_err(|e| {
+                        error!(
+                        "killing component's job after failure waiting on process exit, err: {}",
+                        e
+                    )
+                    });
+                    let _ = job.kill().map_err(|e| {
+                        error!("failed killing job in stop after lifecycle channel closed: {}", e)
+                    });
+                }
+                .boxed()
+            } else {
+                async move {
+                    let _ = fasync::OnSignals::new(
+                       &lifecycle_chan.as_handle_ref(),
+                       zx::Signals::CHANNEL_PEER_CLOSED,
+                    )
+                    .await
+                    .map_err(|e| {
+                        error!(
+                        "killing component's job after failure waiting on lifecycle channel, err: {}",
+                        e
+                        )
+                    });
+                    let _ = job.kill().map_err(|e| {
+                        error!("failed killing job in stop after lifecycle channel closed: {}", e)
+                    });
+                }
+                .boxed()
             }
-            .boxed()
         } else {
             let _ = self.job.kill().map_err(|e| {
                 error!("failed killing job for component with no lifecycle channel: {}", e)
@@ -640,25 +697,21 @@ impl Runner for ScopedElfRunner {
                         .into()
                 });
 
-                let proc_copy = Process::from(
-                    match elf_component.process.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS) {
-                        Ok(copy) => copy,
-                        Err(e) => {
-                            runner::component::report_start_error(
-                                zx::Status::from_raw(
-                                    i32::try_from(
-                                        fcomp::Error::InstanceCannotStart.into_primitive(),
-                                    )
+                let proc_copy = match elf_component.copy_process() {
+                    Some(copy) => copy,
+                    None => {
+                        runner::component::report_start_error(
+                            zx::Status::from_raw(
+                                i32::try_from(fcomp::Error::InstanceCannotStart.into_primitive())
                                     .unwrap(),
-                                ),
-                                format!("Component process failed to clone: {}", e),
-                                &resolved_url,
-                                server_end,
-                            );
-                            return;
-                        }
-                    },
-                );
+                            ),
+                            "Component unexpectedly had no process".to_string(),
+                            &resolved_url,
+                            server_end,
+                        );
+                        return;
+                    }
+                };
 
                 // Spawn a future that watches for the process to exit
                 fasync::Task::spawn(async move {
@@ -676,7 +729,6 @@ impl Runner for ScopedElfRunner {
                             zx::Status::OK.try_into().unwrap()
                         }
                         Ok(_) => fcomp::Error::InstanceDied.into(),
-                        // TODO(jmatt) log? Try again? Why would this fail?
                         Err(e) => {
                             warn!("Unable to query process info: {}", e);
                             fcomp::Error::Internal.into()
@@ -772,6 +824,7 @@ mod tests {
         io_util,
         matches::assert_matches,
         runner::component::Controllable,
+        scoped_task,
         std::{convert::TryFrom, ffi::CString, task::Poll},
     };
 
@@ -884,15 +937,20 @@ mod tests {
         }
     }
 
-    fn create_dummy_process(job: &Job, raw_path: &str, name_for_builtin: &str) -> Process {
+    fn create_dummy_process(
+        job: &scoped_task::Scoped<Job>,
+        raw_path: &str,
+        name_for_builtin: &str,
+    ) -> Process {
         if !should_use_builtin_process_launcher() {
-            fdio::spawn(
+            scoped_task::spawn(
                 job,
                 fdio::SpawnOptions::CLONE_ALL,
                 &CString::new(raw_path).expect("could not make cstring"),
                 &[&CString::new(raw_path).expect("could not make cstring")],
             )
             .expect("failed to spawn process")
+            .into_inner()
         } else {
             let (process, _vmar) = job
                 .create_child_process(name_for_builtin.as_bytes())
@@ -901,8 +959,11 @@ mod tests {
         }
     }
 
-    fn make_default_elf_component(lifecycle_client: Option<LifecycleProxy>) -> (Job, ElfComponent) {
-        let job = job_default().create_child_job().expect("failed to make child job");
+    fn make_default_elf_component(
+        lifecycle_client: Option<LifecycleProxy>,
+        critical: bool,
+    ) -> (Job, ElfComponent) {
+        let job = scoped_task::create_child_job().expect("failed to make child job");
         let dummy_process = create_dummy_process(&job, "/pkg/bin/run_indefinitely", "dummy");
         let job_copy = Job::from(
             job.as_handle_ref()
@@ -914,9 +975,9 @@ mod tests {
             job_copy,
             dummy_process,
             lifecycle_client,
-            false,
+            critical,
         );
-        (job, component)
+        (job.into_inner(), component)
     }
 
     // TODO(fsamuel): A variation of this is used in a couple of places. We should consider
@@ -1010,7 +1071,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_kill_component() -> Result<(), Error> {
-        let (job, component) = make_default_elf_component(None);
+        let (job, component) = make_default_elf_component(None, false);
 
         let job_info = job.info()?;
         assert!(!job_info.exited);
@@ -1028,11 +1089,58 @@ mod tests {
     }
 
     #[test]
-    fn test_stop_component() -> Result<(), Error> {
+    fn test_stop_critical_component() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("Unable to create new executor");
+        // Presence of the Lifecycle channel isn't use by ElfComponent to sense
+        // component exit, but it does modify the stop behavior and this is
+        // what we want to test.
+        let (lifecycle_client, _lifecycle_server) =
+            fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client), true);
+        let process = component.copy_process().unwrap();
+        let job_info = job.info()?;
+        assert!(!job_info.exited);
+
+        // Ask the runner to stop the component, it returns a future which
+        // completes when the component closes its side of the lifecycle
+        // channel
+        let mut completes_when_stopped = component.stop();
+
+        // The returned future shouldn't complete because we're holding the
+        // lifecycle channel open.
+        match exec.run_until_stalled(&mut completes_when_stopped) {
+            Poll::Ready(_) => {
+                panic!("runner should still be waiting for lifecycle channel to stop");
+            }
+            _ => {}
+        }
+        assert_eq!(process.kill(), Ok(()));
+
+        exec.run_singlethreaded(&mut completes_when_stopped);
+
+        // Check that the runner killed the job hosting the exited component.
+        let h = job.as_handle_ref();
+        let termination_fut = async move {
+            fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
+                .await
+                .expect("failed waiting for termination signal");
+        };
+        exec.run_singlethreaded(termination_fut);
+
+        let job_info = job.info()?;
+        assert!(job_info.exited);
+        Ok(())
+    }
+
+    #[test]
+    fn test_stop_noncritical_component() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("Unable to create new executor");
+        // Presence of the Lifecycle channel isn't use by ElfComponent to sense
+        // component exit, but it does modify the stop behavior and this is
+        // what we want to test.
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
-        let (job, mut component) = make_default_elf_component(Some(lifecycle_client));
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client), false);
 
         let job_info = job.info()?;
         assert!(!job_info.exited);
@@ -1050,18 +1158,14 @@ mod tests {
             }
             _ => {}
         }
-
-        // Close our side of the lifecycle channel
         drop(lifecycle_server);
 
-        // We now expect the future to complete
         match exec.run_until_stalled(&mut completes_when_stopped) {
             Poll::Ready(_) => {}
             _ => {
-                panic!("runner future should have completed, lifecycle channel is closed");
+                panic!("runner future should have completed, lifecycle channel is closed.");
             }
         }
-
         // Check that the runner killed the job hosting the exited component.
         let h = job.as_handle_ref();
         let termination_fut = async move {
@@ -1080,7 +1184,7 @@ mod tests {
     /// equivalent to killing a component directly.
     #[fasync::run_singlethreaded(test)]
     async fn test_stop_component_without_lifecycle() -> Result<(), Error> {
-        let (job, mut component) = make_default_elf_component(None);
+        let (job, mut component) = make_default_elf_component(None, false);
 
         let job_info = job.info()?;
         assert!(!job_info.exited);
@@ -1098,16 +1202,44 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_stop_component_with_closed_lifecycle() -> Result<(), Error> {
+    async fn test_stop_critical_component_with_closed_lifecycle() -> Result<(), Error> {
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
-        let (job, mut component) = make_default_elf_component(Some(lifecycle_client));
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client), true);
+        let process = component.copy_process().unwrap();
+        let job_info = job.info()?;
+        assert!(!job_info.exited);
+
+        // Close the lifecycle channel
+        drop(lifecycle_server);
+        // Kill the process because this is what ElfComponent monitors to
+        // determine if the component exited.
+        process.kill()?;
+        component.stop().await;
+
+        let h = job.as_handle_ref();
+        fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
+            .await
+            .expect("failed waiting for termination signal");
+
+        let job_info = job.info()?;
+        assert!(job_info.exited);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_stop_noncritical_component_with_closed_lifecycle() -> Result<(), Error> {
+        let (lifecycle_client, lifecycle_server) =
+            fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client), false);
 
         let job_info = job.info()?;
         assert!(!job_info.exited);
 
         // Close the lifecycle channel
         drop(lifecycle_server);
+        // Kill the process because this is what ElfComponent monitors to
+        // determine if the component exited.
         component.stop().await;
 
         let h = job.as_handle_ref();
@@ -1123,7 +1255,7 @@ mod tests {
     /// Dropping the component should kill the job hosting it.
     #[fasync::run_singlethreaded(test)]
     async fn test_drop() -> Result<(), Error> {
-        let (job, component) = make_default_elf_component(None);
+        let (job, component) = make_default_elf_component(None, false);
 
         let job_info = job.info()?;
         assert!(!job_info.exited);
