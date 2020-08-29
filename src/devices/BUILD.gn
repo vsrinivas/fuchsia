@@ -51,11 +51,3 @@ group("tests") {
     "usb/tests",
   ]
 }
-
-group("bootfs") {
-  deps = [
-    "bin",
-    "//src/bringup/bin/virtcon:virtual-console",
-    "//src/ui/input/drivers/hid-input-report",
-  ]
-}
