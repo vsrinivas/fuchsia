@@ -7,7 +7,7 @@ use crate::runtime::DurationExt;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
-use futures::task::{waker_ref, ArcWake, AtomicWaker, Spawn, SpawnError};
+use futures::task::{waker_ref, ArcWake, AtomicWaker};
 use futures::FutureExt;
 use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
@@ -782,14 +782,6 @@ pub struct EHandle {
 impl fmt::Debug for EHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EHandle").field("port", &self.inner.port).finish()
-    }
-}
-
-// TODO: Remove spawn once deps in other repos are resolved.
-impl Spawn for EHandle {
-    fn spawn_obj(&self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
-        Inner::spawn(&self.inner, f);
-        Ok(())
     }
 }
 

@@ -24,7 +24,7 @@ use crate::{
 use {
     futures::{
         channel::oneshot,
-        task::{self, Context, Poll, Spawn},
+        task::{self, Context, Poll},
         Future, FutureExt,
     },
     parking_lot::Mutex,
@@ -70,11 +70,6 @@ impl ExecutionScope {
     /// `entry_constructor`.  Use [`build()`] if you want to specify other parameters.
     pub fn new() -> Self {
         Self::build().new()
-    }
-
-    // TODO: Remove spawn once deps in other repos are resolved.
-    pub fn from_executor(_upstream: Box<dyn Spawn + Send>) -> Self {
-        Self::new()
     }
 
     /// Constructs a new execution scope builder, wrapping the specified executor and optionally
