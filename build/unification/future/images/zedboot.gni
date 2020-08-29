@@ -75,7 +75,6 @@ zedboot_deps += [
   "//src/devices/block/drivers/fvm",
   "//src/devices/block/drivers/ramdisk",
   "//src/devices/block/drivers/zxcrypt",
-  "//src/devices/board/drivers/machina",
   "//src/devices/bus/drivers/pci:bus-pci",
   "//src/devices/bus/drivers/pci:bus-pci",
   "//src/devices/bus/drivers/pci:bus-pci.proxy",
