@@ -14,6 +14,8 @@ require (
 	go.fuchsia.dev/fuchsia/tools v0.0.0-20200821151753-3226fa91b98e
 	go.uber.org/multierr v1.5.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
+	golang.org/x/sys v0.0.0-20200828081204-131dc92a58d5 // indirect
 	gvisor.dev/gvisor v0.0.0-20200826214235-983a55aa0649
 )
 
@@ -28,5 +30,6 @@ replace (
 	golang.org/x/crypto => ../third_party/golibs/golang.org/x/crypto
 	golang.org/x/net => ../third_party/golibs/golang.org/x/net
 	golang.org/x/sys => ../third_party/golibs/golang.org/x/sys
+	golang.org/x/xerrors => ../third_party/golibs/golang.org/x/xerrors
 	gvisor.dev/gvisor => ../third_party/golibs/gvisor.dev/gvisor
 )

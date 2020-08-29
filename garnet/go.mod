@@ -11,8 +11,8 @@ require (
 	github.com/pkg/sftp v1.12.0
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
+	gvisor.dev/gvisor v0.0.0-20200828123349-7bc9f9b47f61 // indirect
 )
 
 replace (

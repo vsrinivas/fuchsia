@@ -3,18 +3,19 @@ module go.fuchsia.dev/fuchsia/tools
 go 1.15
 
 require (
-	cloud.google.com/go v0.64.0
+	cloud.google.com/go v0.65.0
 	github.com/creack/pty v1.1.11
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/golang/mock v1.4.4 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-cmp v0.5.1
+	github.com/google/go-cmp v0.5.2
 	github.com/google/subcommands v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
-	github.com/pkg/sftp v1.11.0
-	go.chromium.org/luci v0.0.0-20200821095028-79bd0b964db3
+	github.com/pkg/sftp v1.12.0
+	go.chromium.org/luci v0.0.0-20200828094204-41b976d93de1
 	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
