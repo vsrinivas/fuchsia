@@ -5,6 +5,7 @@
 
 #include <lib/inspect/testing/cpp/inspect.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -25,6 +26,14 @@ using ::inspect::testing::UintIs;
 using ::testing::AllOf;
 using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
+
+::testing::Matcher<const ::inspect::Hierarchy&> NodeAlive(const std::string& name) {
+  return NodeMatches(AllOf(NameMatches(name), PropertyList(Contains(BoolIs("alive", true)))));
+}
+
+::testing::Matcher<const ::inspect::Hierarchy&> NodeDead(const std::string& name) {
+  return NodeMatches(AllOf(NameMatches(name), PropertyList(Contains(BoolIs("alive", false)))));
+}
 
 class ReporterTest : public testing::ThreadingModelFixture {
  public:
@@ -104,58 +113,64 @@ TEST_F(ReporterTest, RootMetrics) {
 
 // Tests methods that add and remove devices.
 TEST_F(ReporterTest, AddRemoveDevices) {
-  auto output_device_a = under_test_.CreateOutputDevice("output_device_a");
-  auto output_device_b = under_test_.CreateOutputDevice("output_device_b");
-  auto input_device_a = under_test_.CreateInputDevice("input_device_a");
-  auto input_device_b = under_test_.CreateInputDevice("input_device_b");
-
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("output_device_a")),
-                                                   NodeMatches(NameMatches("output_device_b"))))),
-          AllOf(NodeMatches(NameMatches("input devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("input_device_a")),
-                                                   NodeMatches(NameMatches("input_device_b"))))),
-          NodeMatches(NameMatches("renderers")), NodeMatches(NameMatches("capturers")))));
-
-  output_device_a.reset(nullptr);
-  input_device_b.reset(nullptr);
-
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("output_device_b"))))),
-          AllOf(NodeMatches(NameMatches("input devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("input_device_a"))))),
-          NodeMatches(NameMatches("renderers")), NodeMatches(NameMatches("capturers")))));
-
-  output_device_a = under_test_.CreateOutputDevice("output_device_a");
-  input_device_b = under_test_.CreateInputDevice("input_device_b");
-
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("output devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("output_device_a")),
-                                                   NodeMatches(NameMatches("output_device_b"))))),
-          AllOf(NodeMatches(NameMatches("input devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("input_device_a")),
-                                                   NodeMatches(NameMatches("input_device_b"))))),
-          NodeMatches(NameMatches("renderers")), NodeMatches(NameMatches("capturers")))));
-
-  output_device_a.reset(nullptr);
-  output_device_b.reset(nullptr);
-  input_device_a.reset(nullptr);
-  input_device_b.reset(nullptr);
+  std::vector<Reporter::Container<Reporter::OutputDevice>::Ptr> outputs;
+  std::vector<Reporter::Container<Reporter::InputDevice>::Ptr> inputs;
+  for (size_t k = 0; k < 5; k++) {
+    outputs.push_back(under_test_.CreateOutputDevice(fxl::StringPrintf("output_device_%lu", k)));
+  }
+  for (size_t k = 0; k < 5; k++) {
+    inputs.push_back(under_test_.CreateInputDevice(fxl::StringPrintf("input_device_%lu", k)));
+  }
 
   EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(UnorderedElementsAre(
-                  AllOf(NodeMatches(NameMatches("output devices")), ChildrenMatch(IsEmpty())),
-                  AllOf(NodeMatches(NameMatches("input devices")), ChildrenMatch(IsEmpty())),
-                  NodeMatches(NameMatches("renderers")), NodeMatches(NameMatches("capturers")))));
+              ChildrenMatch(IsSupersetOf(
+                  {AllOf(NodeMatches(NameMatches("output devices")),
+                         ChildrenMatch(UnorderedElementsAre(
+                             NodeAlive("output_device_0"), NodeAlive("output_device_1"),
+                             NodeAlive("output_device_2"), NodeAlive("output_device_3"),
+                             NodeAlive("output_device_4")))),
+                   AllOf(NodeMatches(NameMatches("input devices")),
+                         ChildrenMatch(UnorderedElementsAre(
+                             NodeAlive("input_device_0"), NodeAlive("input_device_1"),
+                             NodeAlive("input_device_2"), NodeAlive("input_device_3"),
+                             NodeAlive("input_device_4"))))})));
+
+  outputs[0].Drop();
+  outputs[1].Drop();
+  outputs[2].Drop();
+  outputs[3].Drop();
+  inputs[0].Drop();
+  inputs[1].Drop();
+  inputs[2].Drop();
+  inputs[3].Drop();
+
+  EXPECT_THAT(GetHierarchy(),
+              ChildrenMatch(
+                  IsSupersetOf({AllOf(NodeMatches(NameMatches("output devices")),
+                                      ChildrenMatch(UnorderedElementsAre(
+                                          NodeDead("output_device_0"), NodeDead("output_device_1"),
+                                          NodeDead("output_device_2"), NodeDead("output_device_3"),
+                                          NodeAlive("output_device_4")))),
+                                AllOf(NodeMatches(NameMatches("input devices")),
+                                      ChildrenMatch(UnorderedElementsAre(
+                                          NodeDead("input_device_0"), NodeDead("input_device_1"),
+                                          NodeDead("input_device_2"), NodeDead("input_device_3"),
+                                          NodeAlive("input_device_4"))))})));
+
+  outputs[4].Drop();
+  inputs[4].Drop();
+
+  // Garbage collect [0].
+  EXPECT_THAT(GetHierarchy(),
+              ChildrenMatch(IsSupersetOf(
+                  {AllOf(NodeMatches(NameMatches("output devices")),
+                         ChildrenMatch(UnorderedElementsAre(
+                             NodeDead("output_device_1"), NodeDead("output_device_2"),
+                             NodeDead("output_device_3"), NodeDead("output_device_4")))),
+                   AllOf(NodeMatches(NameMatches("input devices")),
+                         ChildrenMatch(UnorderedElementsAre(
+                             NodeDead("input_device_1"), NodeDead("input_device_2"),
+                             NodeDead("input_device_3"), NodeDead("input_device_4"))))})));
 }
 
 // Tests methods that change device metrics.
@@ -193,14 +208,14 @@ TEST_F(ReporterTest, DeviceMetrics) {
                     NodeMatches(AllOf(
                         NameMatches("output_device"),
                         PropertyList(UnorderedElementsAre(
-                            DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
                             BoolIs("agc supported", false), BoolIs("agc enabled", false))))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(
-                    AllOf(NameMatches("input_device"),
-                          PropertyList(UnorderedElementsAre(
-                              DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                              BoolIs("agc supported", false), BoolIs("agc enabled", false)))))))),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                    NameMatches("input_device"),
+                    PropertyList(UnorderedElementsAre(
+                        BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                        BoolIs("agc supported", false), BoolIs("agc enabled", false)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
@@ -319,59 +334,56 @@ TEST_F(ReporterTest, DeviceSetGainInfo) {
 
 // Tests methods that add and remove client ports.
 TEST_F(ReporterTest, AddRemoveClientPorts) {
-  auto renderer_a = under_test_.CreateRenderer();
-  auto renderer_b = under_test_.CreateRenderer();
-  auto capturer_a = under_test_.CreateCapturer();
-  auto capturer_b = under_test_.CreateCapturer();
+  std::vector<Reporter::Container<Reporter::Renderer>::Ptr> renderers;
+  std::vector<Reporter::Container<Reporter::Capturer>::Ptr> capturers;
+  for (size_t k = 0; k < 5; k++) {
+    renderers.push_back(under_test_.CreateRenderer());
+  }
+  for (size_t k = 0; k < 5; k++) {
+    capturers.push_back(under_test_.CreateCapturer());
+  }
 
   EXPECT_THAT(
       GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("renderers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("1")),
-                                                   NodeMatches(NameMatches("2"))))),
-          AllOf(NodeMatches(NameMatches("capturers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("1")),
-                                                   NodeMatches(NameMatches("2"))))),
-          NodeMatches(NameMatches("output devices")), NodeMatches(NameMatches("input devices")))));
+      ChildrenMatch(IsSupersetOf(
+          {AllOf(NodeMatches(NameMatches("renderers")),
+                 ChildrenMatch(UnorderedElementsAre(NodeAlive("1"), NodeAlive("2"), NodeAlive("3"),
+                                                    NodeAlive("4"), NodeAlive("5")))),
+           AllOf(NodeMatches(NameMatches("capturers")),
+                 ChildrenMatch(UnorderedElementsAre(NodeAlive("1"), NodeAlive("2"), NodeAlive("3"),
+                                                    NodeAlive("4"), NodeAlive("5"))))})));
 
-  renderer_a.reset(nullptr);
-  capturer_b.reset(nullptr);
-
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("renderers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("2"))))),
-          AllOf(NodeMatches(NameMatches("capturers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("1"))))),
-          NodeMatches(NameMatches("output devices")), NodeMatches(NameMatches("input devices")))));
-
-  renderer_a = under_test_.CreateRenderer();
-  capturer_b = under_test_.CreateCapturer();
+  renderers[0].Drop();
+  renderers[1].Drop();
+  renderers[2].Drop();
+  renderers[3].Drop();
+  capturers[0].Drop();
+  capturers[1].Drop();
+  capturers[2].Drop();
+  capturers[3].Drop();
 
   EXPECT_THAT(
       GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("renderers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("3")),
-                                                   NodeMatches(NameMatches("2"))))),
-          AllOf(NodeMatches(NameMatches("capturers")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("1")),
-                                                   NodeMatches(NameMatches("3"))))),
-          NodeMatches(NameMatches("output devices")), NodeMatches(NameMatches("input devices")))));
+      ChildrenMatch(IsSupersetOf(
+          {AllOf(NodeMatches(NameMatches("renderers")),
+                 ChildrenMatch(UnorderedElementsAre(NodeDead("1"), NodeDead("2"), NodeDead("3"),
+                                                    NodeDead("4"), NodeAlive("5")))),
+           AllOf(NodeMatches(NameMatches("capturers")),
+                 ChildrenMatch(UnorderedElementsAre(NodeDead("1"), NodeDead("2"), NodeDead("3"),
+                                                    NodeDead("4"), NodeAlive("5"))))})));
 
-  renderer_a.reset(nullptr);
-  renderer_b.reset(nullptr);
-  capturer_a.reset(nullptr);
-  capturer_b.reset(nullptr);
+  renderers[4].Drop();
+  capturers[4].Drop();
 
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
-          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())),
-          NodeMatches(NameMatches("output devices")), NodeMatches(NameMatches("input devices")))));
+  // Garbage collect [0].
+  EXPECT_THAT(GetHierarchy(),
+              ChildrenMatch(IsSupersetOf(
+                  {AllOf(NodeMatches(NameMatches("renderers")),
+                         ChildrenMatch(UnorderedElementsAre(NodeDead("2"), NodeDead("3"),
+                                                            NodeDead("4"), NodeDead("5")))),
+                   AllOf(NodeMatches(NameMatches("capturers")),
+                         ChildrenMatch(UnorderedElementsAre(NodeDead("2"), NodeDead("3"),
+                                                            NodeDead("4"), NodeDead("5"))))})));
 }
 
 // Tests methods that change renderer metrics.
@@ -393,14 +405,14 @@ TEST_F(ReporterTest, RendererMetrics) {
                                         StringIs("sample format", "unknown"), UintIs("channels", 0),
                                         UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(AllOf(
-                  NameMatches("1"),
-                  PropertyList(UnorderedElementsAre(
-                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                      UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
-                      DoubleIs("pts continuity threshold (s)", 0.0),
-                      DoubleIs("final stream gain (post-volume) dbfs", 0),
-                      StringIs("usage", "default"))))))))))));
+              NodeMatches(
+                  AllOf(NameMatches("1"),
+                        PropertyList(UnorderedElementsAre(
+                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                            UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
+                            DoubleIs("pts continuity threshold (s)", 0.0),
+                            DoubleIs("final stream gain (post-volume) dbfs", 0),
+                            StringIs("usage", "default"))))))))))));
 
   renderer->SetUsage(RenderUsage::MEDIA);
   renderer->SetFormat(
@@ -453,7 +465,7 @@ TEST_F(ReporterTest, RendererMetrics) {
               NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(UnorderedElementsAre(
-                      DoubleIs("gain db", -1.0), BoolIs("muted", true),
+                      BoolIs("alive", true), DoubleIs("gain db", -1.0), BoolIs("muted", true),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0),
                       DoubleIs("final stream gain (post-volume) dbfs", -6.0),
@@ -479,12 +491,12 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                         StringIs("sample format", "unknown"), UintIs("channels", 0),
                                         UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(AllOf(
-                  NameMatches("1"),
-                  PropertyList(UnorderedElementsAre(
-                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                      UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
-                      StringIs("usage", "default"))))))))))));
+              NodeMatches(
+                  AllOf(NameMatches("1"),
+                        PropertyList(UnorderedElementsAre(
+                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                            UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
+                            StringIs("usage", "default"))))))))))));
 
   capturer->SetUsage(CaptureUsage::FOREGROUND);
   capturer->SetFormat(
@@ -530,8 +542,8 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                                                      UintIs("packets", 1)))))))))),
               NodeMatches(AllOf(NameMatches("1"),
                                 PropertyList(UnorderedElementsAre(
-                                    DoubleIs("gain db", -1.0), BoolIs("muted", true),
-                                    UintIs("min fence time (ns)", 2'000'000),
+                                    BoolIs("alive", true), DoubleIs("gain db", -1.0),
+                                    BoolIs("muted", true), UintIs("min fence time (ns)", 2'000'000),
                                     UintIs("calls to SetGainWithRamp", 2),
                                     StringIs("usage", "CaptureUsage::FOREGROUND"))))))))))));
 }
