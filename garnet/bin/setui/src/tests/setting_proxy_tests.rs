@@ -20,7 +20,6 @@ use crate::handler::setting_handler::ControllerError;
 use crate::handler::setting_proxy::SettingProxy;
 use crate::internal::core::message::{create_hub, Messenger, Receptor};
 use crate::internal::core::{self, Address, Payload};
-use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
@@ -28,15 +27,13 @@ use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
 
-const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
-
 pub type SwitchboardReceptor = BaseReceptor<Payload, Address>;
 
 struct SettingHandler {
     setting_type: SettingType,
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
-    responses: Vec<(SettingRequest, SettingHandlerResult)>,
+    next_response: Option<(SettingRequest, SettingHandlerResult)>,
     done_tx: Option<oneshot::Sender<()>>,
     proxy_signature: handler::message::Signature,
 }
@@ -47,8 +44,8 @@ impl SettingHandler {
         Ok(None)
     }
 
-    pub fn queue_response(&mut self, request: SettingRequest, response: SettingHandlerResult) {
-        self.responses.push((request, response));
+    pub fn set_next_response(&mut self, request: SettingRequest, response: SettingHandlerResult) {
+        self.next_response = Some((request, response));
     }
 
     pub fn notify(&self) {
@@ -62,7 +59,7 @@ impl SettingHandler {
     }
 
     fn process_request(&mut self, request: SettingRequest) -> SettingHandlerResult {
-        if let Some((match_request, result)) = self.responses.pop() {
+        if let Some((match_request, result)) = self.next_response.take() {
             if request == match_request {
                 return result;
             }
@@ -83,7 +80,7 @@ impl SettingHandler {
             messenger,
             setting_type,
             state_tx,
-            responses: vec![],
+            next_response: None,
             done_tx,
             proxy_signature,
         }));
@@ -183,26 +180,6 @@ pub struct TestEnvironment {
     handler_factory: Arc<Mutex<FakeFactory>>,
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
-    setting_type: SettingType,
-    event_factory: event::message::Factory,
-}
-
-impl TestEnvironment {
-    async fn regenerate_handler(&mut self, done_tx: Option<oneshot::Sender<()>>) {
-        let (handler_messenger, handler_receptor) =
-            self.handler_factory.lock().await.create(self.setting_type).await;
-        let (state_tx, state_rx) = futures::channel::mpsc::unbounded::<State>();
-        self.setting_handler = SettingHandler::create(
-            handler_messenger,
-            handler_receptor,
-            self.proxy_handler_signature,
-            self.setting_type,
-            state_tx,
-            done_tx,
-        );
-
-        self.setting_handler_rx = state_rx;
-    }
 }
 
 /// Generates a setting proxy, switchboard, and setting handler for testing.
@@ -214,7 +191,6 @@ async fn create_test_environment(
 ) -> TestEnvironment {
     let messenger_factory = create_hub();
     let handler_messenger_factory = handler::message::create_hub();
-    let event_messenger_factory = event::message::create_hub();
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
@@ -223,8 +199,6 @@ async fn create_test_environment(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
-        event_messenger_factory.clone(),
-        SETTING_PROXY_MAX_ATTEMPTS,
     )
     .await
     .expect("proxy creation should succeed");
@@ -251,8 +225,6 @@ async fn create_test_environment(
         handler_factory,
         setting_handler_rx: state_rx,
         setting_handler: handler,
-        event_factory: event_messenger_factory,
-        setting_type,
     }
 }
 
@@ -331,7 +303,7 @@ async fn test_request() {
     let request_id = 42;
     let environment = create_test_environment(setting_type, None).await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
 
     // Send initial request.
     let mut receptor = environment
@@ -367,7 +339,7 @@ async fn test_request_order() {
     let request_id_2 = 43;
     let environment = create_test_environment(setting_type, None).await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
 
     // Send multiple requests.
     let receptor_1 = environment
@@ -399,7 +371,7 @@ async fn test_request_order() {
     let mut receptor_1_fuse = receptor_1.fuse();
     let mut receptor_2_fuse = receptor_2.fuse();
     loop {
-        environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+        environment.setting_handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Some(MessageEvent::Message(
@@ -569,116 +541,6 @@ async fn test_regeneration() {
 
     // Check that the handler was re-generated.
     assert_eq!(2, environment.handler_factory.lock().await.get_request_count(setting_type));
-}
-
-/// Exercises the retry flow, ensuring the setting proxy goes through the
-/// defined number of tests and correctly reports back activity.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_retry() {
-    let setting_type = SettingType::Unknown;
-    let mut environment = create_test_environment(setting_type, None).await;
-
-    let (_, mut event_receptor) = environment
-        .event_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("Should be able to retrieve receptor");
-
-    // Queue up external failure responses in the handler.
-    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-        environment.setting_handler.lock().await.queue_response(
-            SettingRequest::Get,
-            Err(ControllerError::ExternalFailure(
-                setting_type,
-                "test_commponent".into(),
-                "connect".into(),
-            )),
-        );
-    }
-
-    let request_id = 2;
-    let request = SettingRequest::Get;
-
-    // Send request.
-    let (returned_request_id, handler_result) = get_response(
-        environment
-            .messenger_client
-            .message(
-                Payload::Action(SettingAction {
-                    id: request_id,
-                    setting_type,
-                    data: SettingActionData::Request(request.clone()),
-                }),
-                Audience::Messenger(environment.proxy_signature),
-            )
-            .send(),
-    )
-    .await
-    .expect("result should be present");
-
-    // Ensure returned request id matches the outgoing id
-    assert_eq!(request_id, returned_request_id);
-
-    // Make sure the result is an `ControllerError::IrrecoverableError`
-    if let Err(error) = handler_result {
-        assert_eq!(error, ControllerError::IrrecoverableError);
-    } else {
-        panic!("error should have been encountered");
-    }
-
-    // For each failed attempt, make sure a retry event was broadcasted
-    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
-        verify_handler_event(
-            event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Retry(setting_type, request.clone()),
-        );
-    }
-
-    // Ensure that the final event reports that attempts were exceeded
-    verify_handler_event(
-        event_receptor.next().await.expect("should be notified of external failure"),
-        event::handler::Event::AttemptsExceeded(setting_type, request.clone()),
-    );
-
-    // Regenerate setting handler
-    environment.regenerate_handler(None).await;
-
-    // Queue successful response
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
-
-    // Ensure subsequent request succeeds
-    assert!(get_response(
-        environment
-            .messenger_client
-            .message(
-                Payload::Action(SettingAction {
-                    id: request_id,
-                    setting_type,
-                    data: SettingActionData::Request(request.clone()),
-                }),
-                Audience::Messenger(environment.proxy_signature),
-            )
-            .send(),
-    )
-    .await
-    .expect("result should be present")
-    .1
-    .is_ok());
-}
-
-/// Checks that the supplied message event specifies the supplied handler event.
-fn verify_handler_event(
-    message_event: MessageEvent<event::Payload, event::Address>,
-    event: event::handler::Event,
-) {
-    if let MessageEvent::Message(event::Payload::Event(event::Event::Handler(captured_event)), _) =
-        message_event
-    {
-        assert_eq!(event, captured_event);
-        return;
-    }
-
-    panic!("should have matched the provided event");
 }
 
 async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingHandlerResult)> {

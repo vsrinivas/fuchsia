@@ -61,9 +61,6 @@ pub enum SwitchboardError {
 
     #[error("Communication error")]
     CommunicationError,
-
-    #[error("Irrecoverable error")]
-    IrrecoverableError,
 }
 
 impl From<ControllerError> for SwitchboardError {
@@ -95,7 +92,6 @@ impl From<ControllerError> for SwitchboardError {
             ControllerError::DeliveryError(setting_type, setting_type_2) => {
                 SwitchboardError::DeliveryError(setting_type, setting_type_2)
             }
-            ControllerError::IrrecoverableError => SwitchboardError::IrrecoverableError,
         }
     }
 }
