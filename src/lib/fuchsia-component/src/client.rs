@@ -986,7 +986,7 @@ mod tests {
         };
         let (dir_proxy, dir_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
-        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let scope = ExecutionScope::new();
         dir.open(
             scope,
             fidl_fuchsia_io::OPEN_RIGHT_READABLE,
