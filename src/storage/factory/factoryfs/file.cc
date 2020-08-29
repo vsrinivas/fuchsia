@@ -92,10 +92,13 @@ zx_status_t File::GetAttributes(fs::VnodeAttributes* attributes) {
   attributes->content_size = directory_entry_->GetDataSize();
   // There is no concept of inode number in factoryfs
   attributes->inode = ::llcpp::fuchsia::io::INO_UNKNOWN;
-  attributes->storage_size = directory_entry_->GetDataSize();  // TODO(manalib) convert to blocks.
+  attributes->storage_size =
+      fbl::round_up<uint32_t>(directory_entry_->GetDataSize(), kFactoryfsBlockSize);
   attributes->link_count = 1;
-  attributes->creation_time = 0;      // TODO(manalib)
-  attributes->modification_time = 0;  // TODO(manalib)
+  // Creation time and modification time for factoryfs should be the same,
+  // i.e when exporter formatted the partition last.
+  attributes->creation_time = factoryfs_.Info().create_time;
+  attributes->modification_time = factoryfs_.Info().create_time;
   return ZX_OK;
 }
 
