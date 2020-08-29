@@ -11,22 +11,32 @@ declare_args() {
   # supported.  This toolchain is expected to support both Fuchsia targets and
   # the host.
   rustc_tool_dir = ""
+
+  # This is a string identifying the particular toolchain version in use.  Its
+  # only purpose is to be unique enough that it changes when switching to a new
+  # toolchain, so that recompilations with the new compiler can be triggered.
+  #
+  # When using the prebuilt, this defaults to the CIPD instance ID of the
+  # prebuilt.
+  rustc_version_string = ""
 }
 
-# This is a string identifying the particular toolchain version in use.  Its
-# only purpose is to be unique enough that it changes when switching to a new
-# toolchain, so that recompilations with the new compiler can be triggered.
-#
-# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
-# When not using the prebuilt, there isn't a quick way to extract the compiler
-# version.  But at least changing the setting to a different compiler will
-# change the string.
 if (rustc_tool_dir == "") {
   _prebuilt_rustc_dir = "$prebuilt_dir/third_party/rust/$host_platform"
   rustc_tool_dir = "$_prebuilt_rustc_dir/bin"
-  _prebuilt_rustc_cipd_version =
-      read_file("$_prebuilt_rustc_dir/.versions/rust.cipd_version", "json")
-  rustc_version_string = _prebuilt_rustc_cipd_version.instance_id
+
+  # When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
+  # When not using the prebuilt, there isn't a quick way to extract the compiler
+  # version.  But at least changing the setting to a different compiler will
+  # change the string.
+  #
+  # This logic is duplicated in the Fuchsia build, and we use its value when
+  # being driven by that build.
+  if (rustc_version_string == "") {
+    _prebuilt_rustc_cipd_version =
+        read_file("$_prebuilt_rustc_dir/.versions/rust.cipd_version", "json")
+    rustc_version_string = _prebuilt_rustc_cipd_version.instance_id
+  }
 }
 
 # Human-readable identifier for the toolchain version.

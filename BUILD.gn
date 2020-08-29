@@ -121,6 +121,7 @@ declare_args() {
     if (rustc_prefix != default_rustc_prefix) {
       rustc_tool_dir = rebase_path(rustc_prefix, "", root_build_dir)
     }
+    rustc_version_string = rustc_version_string
     if (host_os == "mac") {
       mac_sdk_path = mac_sdk_path
     }

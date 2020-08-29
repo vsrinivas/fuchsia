@@ -14,10 +14,23 @@ default_rustc_prefix =
     rebase_path("//prebuilt/third_party/rust/${host_platform}/bin",
                 root_build_dir)
 
+_rustc_version = read_file(
+        "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
+        "json")
+default_rustc_version_string = _rustc_version.instance_id
+
 declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
   rustc_prefix = default_rustc_prefix
+
+  # This is a string identifying the particular toolchain version in use.  Its
+  # only purpose is to be unique enough that it changes when switching to a new
+  # toolchain, so that recompilations with the new compiler can be triggered.
+  #
+  # When using the prebuilt, this is ignored and the CIPD instance ID of the
+  # prebuilt is used.
+  rustc_version_string = default_rustc_version_string
 
   # Sets a custom base directory for where rust tooling
   # looks for the standard library
@@ -43,6 +56,14 @@ declare_args() {
   # debug/release flags or the `with_lto` arg to the rustc_ templates.
   # Valid values are "none", "thin", and "fat".
   rust_override_lto = ""
+}
+
+if (rustc_prefix == default_rustc_prefix &&
+    rustc_version_string != default_rustc_version_string) {
+  # You almost never want to set this when using a prebuilt, it could result in
+  # failing to rebuild when the prebuilt updates.
+  print(
+      "WARNING: Using prebuilt toolchain, but rustc_version_string is set! Toolchain updates won't be detected.")
 }
 
 if (is_fuchsia) {

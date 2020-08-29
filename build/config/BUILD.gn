@@ -179,12 +179,7 @@ config("toolchain_version_stamp") {
             "json")
     defines = [ "TOOLCHAIN_VERSION=${clang_version.instance_id}" ]
   }
-  if (rustc_prefix == default_rustc_prefix) {
-    rustc_version = read_file(
-            "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
-            "json")
-    rustflags = [ "--cfg=__rust_toolchain=\"${rustc_version.instance_id}\"" ]
-  }
+  rustflags = [ "--cfg=__rust_toolchain=\"${rustc_version_string}\"" ]
 }
 
 config("relative_paths") {
