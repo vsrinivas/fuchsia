@@ -8,61 +8,54 @@ import("//topaz/runtime/dart/flutter_test.gni")
 dart_library("widgets") {
   package_name = "lib.widgets"
 
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
-  sources_required = false
-
   sources = [
     "application.dart",
     "model.dart",
+    "src/application/application_widget.dart",
     "src/model/model.dart",
+    "src/model/provider.dart",
     "src/model/spring_model.dart",
     "src/model/ticking_model.dart",
     "src/model/tracing_spring_model.dart",
+    "src/utils/change_notifiers.dart",
+    "src/utils/deprecate.dart",
+    "src/utils/frame_rate_tracer.dart",
+    "src/utils/pointer_data_resampler.dart",
+    "src/utils/pointer_events_listener.dart",
     "src/widgets/alphatar.dart",
     "src/widgets/conditional_builder.dart",
     "src/widgets/fuchsia_spinner.dart",
     "src/widgets/future_widget.dart",
     "src/widgets/rk4_spring_simulation.dart",
+    "src/widgets/screen_container.dart",
+    "src/widgets/settings_item.dart",
     "src/widgets/ticking_state.dart",
     "src/widgets/window_media_query.dart",
+    "utils.dart",
     "widgets.dart",
-
-    # Including these files causes analysis errors
-    # "utils.dart",
-    # "utils_deprecated.dart",
-    # "src/utils/frame_rate_tracer.dart",
-    # "src/utils/deprecate.dart",
-    # "src/utils/pointer_data_resampler.dart",
-    # "src/utils/pointer_events_listener.dart",
-    # "src/utils/change_notifiers.dart",
-    # "src/model/provider.dart",
-    # "src/widgets/screen_container.dart",
-    # "src/widgets/settings_item.dart",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/flutter_image",
+    "//third_party/dart-pkg/pub/meta",
     "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/zircon",
   ]
 }
 
 flutter_test("dart_widget_tests") {
-  # TODO(fxb/57840): This package has transitive dependencies.
-  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
-  disable_strict_deps_check = true
-
   sources = [
     "alphatar_test.dart",
     "pointer_data_resampler_test.dart",

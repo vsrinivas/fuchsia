@@ -9,7 +9,7 @@
 /// Dart FIDL bindings. A special class of Fuchisa specific widgets will be
 /// provided as code is refactored.
 
-import 'package:lib.app.dart/logging.dart';
+import 'package:fuchsia_logger/logger.dart';
 
 /// Adds a logger message about the impending deprecation of a given class or
 /// method related to MS-1613.

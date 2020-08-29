@@ -80,13 +80,13 @@ class PointerEventsListener extends PointerCaptureListenerHack {
   final _downEvent = <int, bool>{};
 
   // Scheduler used for frame callbacks.
-  var _scheduler;
+  SchedulerBinding _scheduler;
 
   // [onPointerDataCallback] used to dispatch pointer data callbacks.
-  var _callback;
+  ui.PointerDataPacketCallback _callback;
 
   // Offset used for resampling.
-  final _samplingOffset;
+  final Duration _samplingOffset;
 
   // Flag to track if a frame callback has been scheduled.
   var _frameCallbackScheduled = false;
@@ -192,9 +192,9 @@ class PointerEventsListener extends PointerCaptureListenerHack {
       final packet =
           _getPacket(_clone(event, event.phase, event.x, event.y, eventTime));
       if (packet != null) {
-        var resampler = _resamplers.putIfAbsent(
-            packet.device, () => PointerDataResampler());
-        resampler.addData(packet);
+        _resamplers
+            .putIfAbsent(packet.device, () => PointerDataResampler())
+            .addData(packet);
         _dispatchEvents();
       }
     }, arguments: eventArguments);
