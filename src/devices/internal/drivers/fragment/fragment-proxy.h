@@ -26,6 +26,7 @@
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/tee.h>
 #include <ddktl/protocol/usb/modeswitch.h>
+#include <ddktl/protocol/vreg.h>
 
 #include "proxy-protocol.h"
 
@@ -49,7 +50,8 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::SpiProtocol<FragmentProxy>,
                       public ddk::SysmemProtocol<FragmentProxy>,
                       public ddk::TeeProtocol<FragmentProxy>,
-                      public ddk::UsbModeSwitchProtocol<FragmentProxy> {
+                      public ddk::UsbModeSwitchProtocol<FragmentProxy>,
+                      public ddk::VregProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -130,6 +132,9 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
   zx_status_t SysmemUnregisterSecureMem();
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
+  zx_status_t VregSetVoltageStep(uint32_t step);
+  uint32_t VregGetVoltageStep();
+  void VregGetRegulatorParams(vreg_params_t* out_params);
 
   void CodecReset(codec_reset_callback callback, void* cookie);
   void CodecStop(codec_stop_callback callback, void* cookie);

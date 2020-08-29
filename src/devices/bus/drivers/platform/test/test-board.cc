@@ -78,6 +78,11 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: RpmbInit failed: %d", __func__, status);
   }
 
+  status = VregInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: VregInit failed: %d", __func__, status);
+  }
+
   return 0;
 }
 
@@ -161,6 +166,9 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const zx_bind_inst_t rpmb_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
   };
+  const zx_bind_inst_t vreg_match[] = {
+      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
+  };
   device_fragment_part_t gpio_fragment[] = {
       {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
@@ -193,6 +201,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   device_fragment_part_t rpmb_fragment[] = {
       {std::size(root_match), root_match},
       {std::size(rpmb_match), rpmb_match},
+  };
+  device_fragment_part_t vreg_fragment[] = {
+      {std::size(root_match), root_match},
+      {std::size(vreg_match), vreg_match},
   };
 
   device_fragment_t composite[] = {
@@ -240,6 +252,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {std::size(clock_fragment), clock_fragment},   {std::size(power_fragment), power_fragment},
       {std::size(child4_fragment), child4_fragment}, {std::size(spi_fragment), spi_fragment},
       {std::size(pwm_fragment), pwm_fragment},       {std::size(rpmb_fragment), rpmb_fragment},
+      {std::size(vreg_fragment), vreg_fragment},
   };
 
   pbus_dev_t pdev2 = {};

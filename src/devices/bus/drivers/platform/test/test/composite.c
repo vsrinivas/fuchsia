@@ -25,6 +25,7 @@
 #include <ddk/protocol/pwm.h>
 #include <ddk/protocol/rpmb.h>
 #include <ddk/protocol/spi.h>
+#include <ddk/protocol/vreg.h>
 
 #include "../test-metadata.h"
 
@@ -49,6 +50,7 @@ enum Fragments_2 {
   FRAGMENT_SPI_2,
   FRAGMENT_PWM_2,
   FRAGMENT_RPMB_2,
+  FRAGMENT_VREG_2,
   FRAGMENT_COUNT_2,
 };
 
@@ -506,6 +508,30 @@ static zx_status_t test_rpmb(rpmb_protocol_t* rpmb) {
   return zx_handle_close(client);
 }
 
+static zx_status_t test_vreg(vreg_protocol_t* vreg) {
+  zx_status_t st = ZX_OK;
+
+  st = vreg_set_voltage_step(vreg, 123);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  uint32_t step = vreg_get_voltage_step(vreg);
+  if (step != 123) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  vreg_params_t params;
+  vreg_get_regulator_params(vreg, &params);
+  if ((params.min_uv != 123) ||
+      (params.step_size_uv != 456) ||
+      (params.num_steps != 789)) {
+        return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status;
@@ -563,6 +589,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   spi_protocol_t spi;
   pwm_protocol_t pwm;
   rpmb_protocol_t rpmb;
+  vreg_protocol_t vreg;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
@@ -658,6 +685,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_RPMB", DRIVER_NAME);
       return status;
     }
+    status = device_get_protocol(fragments[FRAGMENT_VREG_2], ZX_PROTOCOL_VREG, &vreg);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_VREG", DRIVER_NAME);
+      return status;
+    }
 
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
@@ -677,6 +709,10 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_rpmb(&rpmb)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_rpmb failed: %d", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_vreg(&vreg)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_vreg failed: %d", DRIVER_NAME, status);
       return status;
     }
   }

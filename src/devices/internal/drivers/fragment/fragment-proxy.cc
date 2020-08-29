@@ -72,6 +72,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_TEE:
       proto->ops = &tee_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_VREG:
+      proto->ops = &vreg_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_USB_MODE_SWITCH:
       proto->ops = &usb_mode_switch_protocol_ops_;
       return ZX_OK;
@@ -919,6 +922,43 @@ zx_status_t FragmentProxy::PwmDisable() {
   req.op = PwmOp::DISABLE;
 
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t FragmentProxy::VregSetVoltageStep(uint32_t step) {
+  VregProxyRequest req = {};
+  VregProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_VREG;
+  req.op = VregOp::SET_VOLTAGE_STEP;
+  req.step = step;
+
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+uint32_t FragmentProxy::VregGetVoltageStep() {
+  VregProxyRequest req = {};
+  VregProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_VREG;
+  req.op = VregOp::GET_VOLTAGE_STEP;
+
+  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+  return resp.step;
+}
+
+void FragmentProxy::VregGetRegulatorParams(vreg_params_t* out_params) {
+  VregProxyRequest req = {};
+  VregProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_VREG;
+  req.op = VregOp::GET_REGULATOR_PARAMS;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+  if (status != ZX_OK) {
+    return;
+  }
+
+  out_params->min_uv = resp.params.min_uv;
+  out_params->step_size_uv = resp.params.step_size_uv;
+  out_params->num_steps = resp.params.num_steps;
 }
 
 void FragmentProxy::RpmbConnectServer(zx::channel server) {

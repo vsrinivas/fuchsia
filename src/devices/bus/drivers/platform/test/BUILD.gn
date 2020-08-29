@@ -50,6 +50,7 @@ driver_module("test-board") {
     "test-pwm.cc",
     "test-rpmb.cc",
     "test-spi.cc",
+    "test-vreg.cc",
     "test.cc",
   ]
   deps = [
@@ -236,6 +237,27 @@ driver_module("test-rpmb") {
   ]
 }
 
+driver_module("test-vreg") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [ "test/vreg.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.vreg",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 foreach(driver, simple_drivers) {
   driver_module("test-$driver") {
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -257,6 +279,7 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.pwm",
       "//sdk/banjo/ddk.protocol.rpmb",
       "//sdk/banjo/ddk.protocol.spi",
+      "//sdk/banjo/ddk.protocol.vreg",
       "//src/devices/i2c/lib/device-protocol-i2c",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
@@ -278,6 +301,7 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-pwm",
     ":test-rpmb",
     ":test-spi",
+    ":test-vreg",
     "//src/devices/bus/drivers/platform",
     "//src/devices/clock/drivers/clock",
     "//src/devices/gpio/drivers/gpio",
@@ -302,9 +326,7 @@ driver_module("test-bti-board") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [
-    "test-bti-board.cc",
-  ]
+  sources = [ "test-bti-board.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
@@ -353,8 +375,8 @@ isolated_devmgr_unittest_package("platform-bus-bti-test") {
   services = [ "fuchsia.boot.RootResource" ]
   deps = [
     ":platform-bus-bti",
-    ":test-bti-board",
     ":test-bti",
+    ":test-bti-board",
     "//src/devices/bus/drivers/platform",
     "//src/devices/internal/drivers/fragment",
   ]

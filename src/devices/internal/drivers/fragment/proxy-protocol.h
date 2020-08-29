@@ -299,6 +299,25 @@ struct TeeProxyRequest {
   TeeOp op;
 };
 
+// ZX_PROTOCOL_VREG proxy support.
+enum class VregOp {
+  SET_VOLTAGE_STEP,
+  GET_VOLTAGE_STEP,
+  GET_REGULATOR_PARAMS,
+};
+
+struct VregProxyRequest {
+  ProxyRequest header;
+  VregOp op;
+  uint32_t step;
+};
+
+struct VregProxyResponse {
+  ProxyResponse header;
+  vreg_params_t params;
+  uint32_t step;
+};
+
 // ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.
 enum class AmlogicCanvasOp {
   CONFIG,
