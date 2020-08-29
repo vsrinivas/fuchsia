@@ -797,12 +797,13 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		if len(optVal) < sizeOfInt32 {
 			return tcpip.ErrInvalidOptionValue
 		}
-		v := binary.LittleEndian.Uint32(optVal)
 		// Linux uses this socket option to override `tcp_fin_timeout`, which is in
 		// seconds.
 		//
 		// See the man page for details: https://man7.org/linux/man-pages/man7/tcp.7.html
-		return ep.SetSockOpt(tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(v)))
+		return ep.SetSockOpt(tcpip.TCPLingerTimeoutOption(time.Second * time.Duration(
+			int32(binary.LittleEndian.Uint32(optVal)),
+		)))
 
 	case C.TCP_REPAIR_OPTIONS:
 
