@@ -75,12 +75,12 @@ For example:
 fx gn path out/default //bundles/buildbot:core <var>path-to-fuzzer</var>
 </pre>
 
-For `//examples/fuzzer`, this yields:
+For `//examples/fuzzers`, this yields:
 
 <pre>
 //bundles/buildbot:core --[public]-->
 //examples:examples --[private]-->
-//examples/fuzzer:fuzzer
+//examples/fuzzers:fuzzers
 
 1 non-data path found. It is not public.
 </pre>

@@ -69,9 +69,9 @@ For example, the relevant function where the `panic` occurred in the following s
 #4    0x000023c56780e87c in std::panicking::default_hook::hd85edcd963c04eae <>+0x19587c
 #5    0x000023c56780f271 in std::panicking::rust_panic_with_hook::h8960558cc7e69505 <>+0x196271
 #6    0x000023c5677973d5 in std::panicking::begin_panic::h97c6d4cd722282c5 /b/s/w/ir/k/rust/src/libstd/panicking.rs:397 <>+0x11e3d5
-#7    0x000023c56777f2d0 in _toy_example_arbitrary_lib_rustc_static::toy_example::h573322211ba71c22 ../../out/default/../../examples/fuzzer/rust/src/lib.rs:22 <>+0x1062d0
-#8    0x000023c567780a03 in _toy_example_arbitrary_lib_rustc_static::_::toy_example_arbitrary::hc02c288d17b25ac2 ../../out/default/../../examples/fuzzer/rust/src/lib.rs:35 <>+0x107a03
-#9    0x000023c56778136c in LLVMFuzzerTestOneInput ../../out/default/../../examples/fuzzer/rust/src/lib.rs:33 <>+0x10836c
+#7    0x000023c56777f2d0 in _toy_example_arbitrary_lib_rustc_static::toy_example::h573322211ba71c22 ../../out/default/../../examples/fuzzers/rust/src/lib.rs:22 <>+0x1062d0
+#8    0x000023c567780a03 in _toy_example_arbitrary_lib_rustc_static::_::toy_example_arbitrary::hc02c288d17b25ac2 ../../out/default/../../examples/fuzzers/rust/src/lib.rs:35 <>+0x107a03
+#9    0x000023c56778136c in LLVMFuzzerTestOneInput ../../out/default/../../examples/fuzzers/rust/src/lib.rs:33 <>+0x10836c
 #10   0x000023c56772ab86 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) <>+0xb1b86
 #11   0x000023c567716ae5 in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) ../recipe_cleanup/clangshYTOG/llvm_build_dir/tools/clang/stage2-bins/runtimes/runtimes-x86_64-unknown-fuchsia-bins/compiler-rt/lib/fuzzer/FuzzerDriver.cpp:296 <>+0x9dae5
 #12   0x000023c56771c535 in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) <>+0xa3535
@@ -163,5 +163,5 @@ You can also see graphs of this information using the Fuchsia fuzzing bug [dashb
 [fuzzing-bug-template]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Fuzzing+Bug
 [monorail]: https://goto.google.com/fuchsia-found-by-fuzzing
 [security-libfuzzer]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ASecurity%3Elibfuzzer&can=2
-[toy-example]: /examples/fuzzer/rust/src/lib.rs
+[toy-example]: /examples/fuzzers/rust/src/lib.rs
 [zxdb]: /docs/development/debugger

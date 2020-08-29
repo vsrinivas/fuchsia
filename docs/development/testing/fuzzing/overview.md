@@ -13,6 +13,6 @@ You can learn more details about:
  * [How to improve your fuzzer](improve-a-fuzzer.md)
  * [Experimental efforts to fuzz FIDL](fidl-fuzzing.md)
 
-You can find complete examples under [`//examples/fuzzer`](/examples/fuzzer).
+You can find complete examples under [`//examples/fuzzers`](/examples/fuzzers).
 
 [background]: /docs/concepts/testing/fuzz_testing.md

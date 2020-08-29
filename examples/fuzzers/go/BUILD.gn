@@ -7,7 +7,7 @@ import("//build/go/go_fuzzer.gni")
 import("//build/go/go_library.gni")
 
 go_fuzzer("basic_fuzzer") {
-  gopackage = "go.fuchsia.dev/fuchsia/examples/fuzzer/go/basic"
+  gopackage = "go.fuchsia.dev/fuchsia/examples/fuzzers/go/basic"
   deps = [ ":fuzzer_lib" ]
 }
 

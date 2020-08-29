@@ -11,7 +11,7 @@ group("examples") {
     "diagnostics",
     "dotmatrix_display",
     "fortune",
-    "fuzzer",
+    "fuzzers",
     "hello_world",
     "isolated_cache",
     "rolldice",
@@ -28,7 +28,7 @@ group("tests") {
   testonly = true
   data_deps = [
     "diagnostics:tests",
-    "fuzzer:tests",
+    "fuzzers:tests",
     "hello_world:tests",
     "isolated_cache:tests",
     "rolldice:rolldice-tests",

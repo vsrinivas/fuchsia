@@ -4,11 +4,13 @@
 
 import("//build/fuzzing/fuzzer.gni")
 
-group("fuzzer") {
+group("fuzzers") {
   testonly = true
   deps = [ ":tests" ]
 }
 
+# This target is the same as the one above; whether fuzzers or unit tests are built depends on which
+# toolchain variant is active. Typically, you should include fuzzers in your package's tests.
 group("tests") {
   testonly = true
   deps = [ ":fuzzing-examples" ]
@@ -22,18 +24,20 @@ fuzzers_package("fuzzing-examples") {
   fuzz_host = true
 
   # `fuzzers` (without a language prefix) are folded into `cpp_fuzzers` below.
-  fuzzers = [ ":corpus_fuzzer" ]
+  fuzzers = [ "cpp:crash_fuzzer" ]
 
   # Fuzzers are defined for each supported language
   cpp_fuzzers = [
     # Each list of fuzzers can contain simple labels...
-    ":overflow_fuzzer",
-    ":trap_fuzzer",
-    ":baz_fuzzer",
-    ":fuzzed_data_provider_fuzzer",
+    "cpp:overflow_fuzzer",
+    "cpp:corpus_fuzzer",
+    "cpp:corpus_fuzzer_without_corpus",
+    "cpp:dictionary_fuzzer",
+    "cpp:dictionary_fuzzer_without_dictionary",
+    "cpp:fuzzed_data_provider_fuzzer",
     {
       # ... or scopes with additional fields, like a non-default output name.
-      label = ":oom_fuzzer"
+      label = "cpp:oom_fuzzer"
       output_name = "out_of_memory_fuzzer"
     },
     {
@@ -54,35 +58,4 @@ fuzzers_package("fuzzing-examples") {
   if (host_os != "mac") {
     go_fuzzers = [ "go:basic_fuzzer" ]
   }
-}
-
-fuzzer("oom_fuzzer") {
-  output_name = "out_of_memory_fuzzer"
-  sources = [ "oom.cc" ]
-}
-
-fuzzer("overflow_fuzzer") {
-  sources = [ "overflow.cc" ]
-}
-
-fuzzer("trap_fuzzer") {
-  sources = [ "trap.cc" ]
-}
-
-fuzzer("fuzzed_data_provider_fuzzer") {
-  sources = [ "fuzzed-data-provider.cc" ]
-}
-
-fuzzer("corpus_fuzzer") {
-  sources = [ "corpus.cc" ]
-}
-
-fuzzer("baz_fuzzer") {
-  sources = [ "target.cc" ]
-  deps = [ ":baz" ]
-}
-
-source_set("baz") {
-  sources = [ "baz.cc" ]
-  deps = [ "//src/lib/fxl" ]
 }

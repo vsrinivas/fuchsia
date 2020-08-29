@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/* A simple fuzzer that should quickly OOM. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-static const size_t kLeakSize = 10UL << 20;  // 10 MiB
+// A simple fuzzer that should quickly OOM.
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+// The code under test. Normally this would be in a separate library.
+namespace {
+
+const size_t kLeakSize = 10UL << 20;  // 10 MiB
+
+void leaker(uint8_t num) {
   // Simulate a fuzzer that only leaks on a specific input
-  if (size < 1 || data[0] != 42) {
-    return 0;
+  if (num != 42) {
+    return;
   }
 
   // Note: In addition to allocating, we must also write to the memory to ensure
@@ -25,6 +29,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // RssThread in libFuzzer only checks RSS once per second, so let's not go
   // so fast that we risk OOMing the system before that check happens
   usleep(100e3);  // 0.1 seconds
+}
 
+}  // namespace
+
+// The fuzz target function
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  if (size != 0) {
+    leaker(data[0]);
+  }
   return 0;
 }

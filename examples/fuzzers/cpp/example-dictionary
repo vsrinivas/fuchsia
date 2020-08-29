@@ -1,0 +1,20 @@
+# Delimiter
+" "
+
+# Include keywords for select numbers
+"zero"
+"one"
+"two"
+
+# Include verbs and prepositions
+"add"
+"to"
+
+"subtract"
+"from"
+
+"multiply"
+"by"
+
+"divide"
+"by"
