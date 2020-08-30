@@ -36,4 +36,7 @@ all_variant_tags = [
   # build C/C++ binaries. This should only be used for Zircon specific
   # toolchains.
   "gcc",
+
+  # The `profile` tag is used for profile instrumentation.
+  "profile",
 ]

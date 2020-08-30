@@ -759,7 +759,10 @@ declare_args() {
 
     {
       configs = [ "//build/config/profile" ]
-      tags = [ "instrumented" ]
+      tags = [
+        "instrumented",
+        "profile",
+      ]
     },
 
     {
