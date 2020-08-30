@@ -34,6 +34,7 @@ config("suppress-warning.config") {
 
     # TODO(44971): Referenced in environment configs.
     "$zx/kernel/*",
+    "$zx/public/gn/*",
     "$zx/system/ulib/*",
     "$zx/third_party/lib/*",
     "$zx/third_party/ulib/*",
