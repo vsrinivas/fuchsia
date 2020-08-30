@@ -12,6 +12,25 @@
 
 namespace isolated_devmgr {
 
+zx::status<> OneTimeSetUp() {
+  static zx::status<> status = []() -> zx::status<> {
+    // Mark this process as critical so that if this process terminates, all other processes
+    // within this job get terminated (e.g. file system processes).
+    auto status = zx::make_status(zx::job::default_job()->set_critical(0, *zx::process::self()));
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Unable to make process critical: " << status.status_string();
+      return status;
+    }
+    status = isolated_devmgr::BindDevfsToNamespace();
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Unable to bind devfs to namespace: " << status.status_string();
+      return status;
+    }
+    return zx::ok();
+  }();
+  return status;
+}
+
 zx::status<> BindDevfsToNamespace() {
   fdio_ns_t* name_space;
   auto status = zx::make_status(fdio_ns_get_installed(&name_space));

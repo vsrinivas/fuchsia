@@ -10,6 +10,9 @@
 
 namespace isolated_devmgr {
 
+// Performs one-time set up for the isolated-devmgr, including a call to BindDevfsToNamespace.
+zx::status<> OneTimeSetUp();
+
 // Binds /dev from the isolated-devmgr to the current namespace.
 zx::status<> BindDevfsToNamespace();
 

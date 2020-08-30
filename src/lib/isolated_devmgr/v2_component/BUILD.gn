@@ -55,14 +55,24 @@ package("isolated-devmgr") {
       name = "fvm.so"
       dest = "driver/fvm.so"
     },
+    {
+      name = "ram-nand.so"
+      dest = "driver/ram-nand.so"
+    },
+    {
+      name = "ftl.so"
+      dest = "driver/ftl.so"
+    },
   ]
   deps = [
     ":support",
     "//src/devices/bin/driver_host:driver_host",
     "//src/devices/bin/driver_manager",
     "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl:ftl",
     "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk:ramdisk",
+    "//src/devices/nand/drivers/ram-nand:ram-nand",
   ]
 }
 
