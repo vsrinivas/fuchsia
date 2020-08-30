@@ -10,7 +10,4 @@ group("sensors") {
   if (board_name == "sherlock") {
     deps = [ "imx227" ]
   }
-  if (board_name == "luis") {
-    deps = [ "imx355" ]
-  }
 }
