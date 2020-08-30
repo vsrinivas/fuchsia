@@ -227,7 +227,7 @@ if (( $DISK )); then
     if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,drive=mydisk"
     elif [[ "$DISKTYPE" == "ahci" ]]; then
-        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-hd,drive=mydisk,bus=ahci.0"
     elif [[ "$DISKTYPE" == "nvme" ]]; then
         ARGS+=" -device nvme,drive=mydisk,serial=zircon"
     elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
@@ -242,7 +242,7 @@ ahcinum=1
 for ahcifile in ${AHCI[@]}; do
     ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${ahcinum}"
     ARGS+=" -device ich9-ahci,id=ahci${ahcinum}"
-    ARGS+=" -device ide-drive,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
+    ARGS+=" -device ide-hd,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
     ahcinum=$((ahcinum + 1))
 done
 
