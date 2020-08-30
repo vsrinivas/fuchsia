@@ -241,6 +241,11 @@ static const zx_bind_inst_t gpio_cam_vana_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_VANA_ENABLE),
 };
+static const zx_bind_inst_t i2c_eeprom_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x51),  // luis camera module EEPROM
+};
 
 static const zx_bind_inst_t clk_sensor_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
@@ -279,6 +284,10 @@ static const device_fragment_part_t gpio_cam_vana_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_cam_vana_match), gpio_cam_vana_match},
 };
+static const device_fragment_part_t i2c_eeprom_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(i2c_eeprom_match), i2c_eeprom_match},
+};
 
 static const device_fragment_part_t clk_sensor_fragment[] = {
     {countof(root_match), root_match},
@@ -299,6 +308,7 @@ static const device_fragment_t imx227_sensor_fragments[] = {
 static const device_fragment_t imx355_sensor_fragments[] = {
     {countof(mipicsi_fragment), mipicsi_fragment},
     {countof(i2c_fragment), i2c_fragment},
+    {countof(i2c_eeprom_fragment), i2c_eeprom_fragment},
     {countof(gpio_cam_mute_fragment), gpio_cam_mute_fragment},
     {countof(gpio_reset_fragment), gpio_reset_fragment},
     {countof(gpio_cam_vana_fragment), gpio_cam_vana_fragment},
