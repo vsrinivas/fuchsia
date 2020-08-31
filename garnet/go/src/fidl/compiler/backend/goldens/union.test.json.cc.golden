@@ -80,7 +80,7 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPrimitive: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -331,7 +331,7 @@ void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPrimitive: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -549,7 +549,7 @@ void StrictSimpleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kI: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -742,7 +742,7 @@ void StrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kS: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
@@ -905,7 +905,7 @@ void StrictBoundedXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kV: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::vector<uint8_t>, ::fidl::Encoder>(
@@ -1056,7 +1056,7 @@ void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kSecond: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
@@ -1276,7 +1276,7 @@ void StrictPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPizza: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
@@ -1452,7 +1452,7 @@ void PizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPizza: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
@@ -1639,7 +1639,7 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPizza: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
@@ -1653,6 +1653,10 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -1728,6 +1732,12 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pizza(class Pizza value) {
 FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(class Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
+  return *this;
+}
+FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -1830,7 +1840,7 @@ void ExplicitPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPizza: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
@@ -2012,7 +2022,7 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kI: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
@@ -2026,6 +2036,10 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -2097,6 +2111,12 @@ OlderSimpleUnion& OlderSimpleUnion::set_i(int64_t value) {
 OlderSimpleUnion& OlderSimpleUnion::set_f(float value) {
   EnsureStorageInitialized(Tag::kF);
   f_ = std::move(value);
+  return *this;
+}
+OlderSimpleUnion& OlderSimpleUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -2525,7 +2545,7 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kI: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
@@ -2546,6 +2566,10 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -2632,6 +2656,12 @@ NewerSimpleUnion& NewerSimpleUnion::set_s(::std::string value) {
 NewerSimpleUnion& NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
   EnsureStorageInitialized(Tag::kV);
   v_ = std::move(value);
+  return *this;
+}
+NewerSimpleUnion& NewerSimpleUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -2758,7 +2788,7 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPrimitive: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -2780,6 +2810,10 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -2872,6 +2906,12 @@ FlexibleUnion& FlexibleUnion::set_VectorStringAlsoNeedsConstructor(
     ::std::vector<::std::string> value) {
   EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
   VectorStringAlsoNeedsConstructor_ = std::move(value);
+  return *this;
+}
+FlexibleUnion& FlexibleUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -2983,7 +3023,7 @@ void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kS: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
@@ -2997,6 +3037,10 @@ void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -3070,6 +3114,12 @@ FlexibleFoo& FlexibleFoo::set_s(::std::string value) {
 FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
   EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
+  return *this;
+}
+FlexibleFoo& FlexibleFoo::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -3154,7 +3204,7 @@ void FieldCollision::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kFieldCollisionTag: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -3307,7 +3357,7 @@ void ExplicitXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kI: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
@@ -3321,6 +3371,10 @@ void ExplicitXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -3392,6 +3446,12 @@ ExplicitXUnion& ExplicitXUnion::set_i(int64_t value) {
 ExplicitXUnion& ExplicitXUnion::set_f(float value) {
   EnsureStorageInitialized(Tag::kF);
   f_ = std::move(value);
+  return *this;
+}
+ExplicitXUnion& ExplicitXUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -3487,7 +3547,7 @@ void ExplicitUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kPrimitive: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
@@ -3661,7 +3721,7 @@ void ExplicitStrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kS: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
@@ -3840,7 +3900,7 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kS: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
@@ -3854,6 +3914,10 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -3927,6 +3991,12 @@ ExplicitFoo& ExplicitFoo::set_s(::std::string value) {
 ExplicitFoo& ExplicitFoo::set_i(int32_t value) {
   EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
+  return *this;
+}
+ExplicitFoo& ExplicitFoo::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -4050,7 +4120,7 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kEmpty: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class Empty, ::fidl::Encoder>(encoder));
@@ -4058,6 +4128,10 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -4123,6 +4197,13 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(
     class Empty value) {
   EnsureStorageInitialized(Tag::kEmpty);
   empty_ = std::move(value);
+  return *this;
+}
+XUnionContainingEmptyStruct&
+XUnionContainingEmptyStruct::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 

@@ -123,7 +123,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder,
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<
@@ -355,7 +355,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder,
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<
@@ -1667,7 +1667,7 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder,
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class WithErrorSyntax_ErrorAsEnum_Response,

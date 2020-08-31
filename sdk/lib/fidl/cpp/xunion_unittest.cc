@@ -29,50 +29,6 @@ TEST(XUnion, SetterReturnsSelf) {
   EXPECT_TRUE(fidl::Equals(u, SampleXUnion().set_st(std::move(SimpleTable().set_x(42)))));
 }
 
-// TODO(FIDL-725): Port this test to GIDL.
-TEST(XUnion, FlexibleXUnionWithUnknownData) {
-  using test::misc::SampleXUnion;
-  using test::misc::SampleXUnionInStruct;
-
-  std::vector<uint8_t> input = {
-      0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
-      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
-      0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
-  };
-
-  auto s = ::fidl::test::util::DecodedBytes<SampleXUnionInStruct>(input);
-  SampleXUnion xu = std::move(s.xu);
-
-  EXPECT_EQ(xu.Which(), SampleXUnion::Tag::kUnknown);
-  EXPECT_EQ(xu.Ordinal(), 0xba5eba11);
-  EXPECT_EQ(*xu.UnknownData(),
-            std::vector<uint8_t>(input.cbegin() + sizeof(fidl_xunion_t), input.cend()));
-
-  // TODO(fxbug.dev/7847): Decide how unions with unknown data should be re-encoded
-  // The union itself is re-encoded as an empty union
-  std::vector<uint8_t> empty_union = {
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes, num handles
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // data is not present
-  };
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(xu, empty_union));
-
-  // Encoding the union in a non-nullable context fails.
-  auto xu_in_struct = ::fidl::test::util::DecodedBytes<SampleXUnionInStruct>(input);
-
-  // This code is just util::CheckEncodeFailure, but without the call to
-  // fidl::Clone beceause this hangs for unions with unknown data
-  ::fidl::test::util::CheckEncodeFailure(xu_in_struct, ZX_ERR_INVALID_ARGS);
-
-  // Reset the xunion to a known field, and ensure it behaves correctly.
-  xu.set_i(5);
-  EXPECT_EQ(xu.i(), 5);
-  EXPECT_EQ(xu.Which(), SampleXUnion::Tag::kI);
-  EXPECT_EQ(xu.Ordinal(), SampleXUnion::Tag::kI);
-  EXPECT_EQ(xu.UnknownData(), nullptr);
-}
-
 TEST(XUnion, EmptyXUnionEquality) {
   using test::misc::SampleXUnion;
 
@@ -163,7 +119,7 @@ TEST(XUnion, XUnionContainingEmptyStruct) {
 
   XUnionContainingEmptyStruct xu;
 
-  EXPECT_EQ(xu.Which(), XUnionContainingEmptyStruct::Tag::kUnknown);
+  EXPECT_EQ(xu.Which(), XUnionContainingEmptyStruct::Tag::Invalid);
   EXPECT_FALSE(xu.is_empty());
 
   Empty empty;

@@ -60,7 +60,7 @@ void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kH: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(encoder));
@@ -68,6 +68,10 @@ void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -130,6 +134,12 @@ zx_status_t UnionWithHandle::Clone(UnionWithHandle* result) const {
 UnionWithHandle& UnionWithHandle::set_h(::zx::vmo value) {
   EnsureStorageInitialized(Tag::kH);
   h_ = std::move(value);
+  return *this;
+}
+UnionWithHandle& UnionWithHandle::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 

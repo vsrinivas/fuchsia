@@ -288,9 +288,12 @@ class ExampleXUnion final {
     return variant_;
   }
   ExampleXUnion& set_variant(uint32_t value);
+  ExampleXUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kVariant:
         return Tag(tag_);
       default:

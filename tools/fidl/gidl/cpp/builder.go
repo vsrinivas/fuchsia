@@ -116,21 +116,24 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 	}
 
 	for _, field := range value.Fields {
-		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+		accessor := "."
+		if nullable {
+			accessor = "->"
 		}
 		b.Builder.WriteString("\n")
+
+		if field.Key.IsUnknown() {
+			unknownData := field.Value.(gidlir.UnknownData)
+			b.Builder.WriteString(fmt.Sprintf(
+				"%s%s_experimental_set_unknown_data(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n", containerVar, accessor, field.Key.UnknownOrdinal, bytesBuilder(unknownData.Bytes)))
+			continue
+		}
 
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		fieldVar := b.visit(field.Value, fieldDecl)
-
-		accessor := "."
-		if nullable {
-			accessor = "->"
-		}
 
 		switch decl.(type) {
 		case *gidlmixer.StructDecl:

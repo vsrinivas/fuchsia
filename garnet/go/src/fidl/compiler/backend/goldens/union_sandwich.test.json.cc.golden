@@ -54,7 +54,7 @@ void UnionSize8Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
@@ -234,7 +234,7 @@ void UnionSize36Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint8_t, 32>,
@@ -420,7 +420,7 @@ void UnionSize12Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<::std::array<uint8_t, 6>, ::fidl::Encoder>(
@@ -641,7 +641,7 @@ void UnionSize24Alignment8::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<class StructSize16Alignment8,

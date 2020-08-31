@@ -94,9 +94,14 @@ class {{ .Name }} final {
   {{ $.Name }}& set_{{ .Name }}({{ .Type.Identifier }} value);
   {{- end }}
 
+  {{- if .IsFlexible }}
+  {{ .Name }}& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
+  {{- end }}
+
   Tag Which() const {
     {{ if .IsFlexible }}
     switch (tag_) {
+      case Tag::Invalid:
       {{- range .Members }}
       case Tag::{{ .TagName }}:
       {{- end }}
@@ -255,7 +260,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     {{- range .Members }}
     case Tag::{{ .TagName }}: {
       envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Identifier }}, ::fidl::Encoder>(encoder));
@@ -265,6 +270,9 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
     {{- end }}
     {{- if .IsFlexible }}
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(), encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     {{- end }}
     default:
        break;
@@ -347,6 +355,14 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return *this;
 }
 
+{{- end }}
+
+{{- if .IsFlexible }}
+{{ .Name }}& {{ .Name }}::_experimental_set_unknown_data(fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
+  return *this;
+}
 {{- end }}
 
 void {{ .Name }}::Destroy() {

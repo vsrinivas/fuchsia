@@ -176,7 +176,7 @@ void ExampleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
@@ -184,6 +184,10 @@ void ExampleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      std::copy(unknown_data_.begin(), unknown_data_.end(),
+                encoder->template GetPtr<uint8_t>(envelope_offset));
+      break;
     default:
       break;
   }
@@ -244,6 +248,12 @@ zx_status_t ExampleXUnion::Clone(ExampleXUnion* result) const {
 ExampleXUnion& ExampleXUnion::set_variant(uint32_t value) {
   EnsureStorageInitialized(Tag::kVariant);
   variant_ = std::move(value);
+  return *this;
+}
+ExampleXUnion& ExampleXUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> value) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(value);
   return *this;
 }
 
@@ -321,7 +331,7 @@ void ExampleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kVariant: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));

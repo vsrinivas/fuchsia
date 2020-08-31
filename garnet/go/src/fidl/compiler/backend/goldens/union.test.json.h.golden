@@ -903,9 +903,12 @@ class FlexiblePizzaOrPasta final {
     return pasta_;
   }
   FlexiblePizzaOrPasta& set_pasta(class Pasta value);
+  FlexiblePizzaOrPasta& _experimental_set_unknown_data(
+      fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kPizza:
       case Tag::kPasta:
         return Tag(tag_);
@@ -1090,9 +1093,12 @@ class OlderSimpleUnion final {
     return f_;
   }
   OlderSimpleUnion& set_f(float value);
+  OlderSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                   std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kI:
       case Tag::kF:
         return Tag(tag_);
@@ -1468,9 +1474,12 @@ class NewerSimpleUnion final {
     return v_;
   }
   NewerSimpleUnion& set_v(::std::vector<::std::string> value);
+  NewerSimpleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                   std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kI:
       case Tag::kS:
       case Tag::kV:
@@ -1593,9 +1602,12 @@ class FlexibleUnion final {
   }
   FlexibleUnion& set_VectorStringAlsoNeedsConstructor(
       ::std::vector<::std::string> value);
+  FlexibleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kPrimitive:
       case Tag::kStringNeedsConstructor:
       case Tag::kVectorStringAlsoNeedsConstructor:
@@ -1697,9 +1709,12 @@ class FlexibleFoo final {
     return i_;
   }
   FlexibleFoo& set_i(int32_t value);
+  FlexibleFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                              std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kS:
       case Tag::kI:
         return Tag(tag_);
@@ -1870,9 +1885,12 @@ class ExplicitXUnion final {
     return f_;
   }
   ExplicitXUnion& set_f(float value);
+  ExplicitXUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                 std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kI:
       case Tag::kF:
         return Tag(tag_);
@@ -2144,9 +2162,12 @@ class ExplicitFoo final {
     return i_;
   }
   ExplicitFoo& set_i(int32_t value);
+  ExplicitFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                              std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kS:
       case Tag::kI:
         return Tag(tag_);
@@ -2253,9 +2274,12 @@ class XUnionContainingEmptyStruct final {
     return empty_;
   }
   XUnionContainingEmptyStruct& set_empty(class Empty value);
+  XUnionContainingEmptyStruct& _experimental_set_unknown_data(
+      fidl_xunion_tag_t ordinal, std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kEmpty:
         return Tag(tag_);
       default:

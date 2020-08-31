@@ -96,7 +96,7 @@ void Example_foo_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   size_t envelope_offset = 0;
 
-  switch (tag_) {
+  switch (Which()) {
     case Tag::kResponse: {
       envelope_offset =
           encoder->Alloc(::fidl::EncodingInlineSize<class Example_foo_Response,

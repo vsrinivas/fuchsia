@@ -172,9 +172,12 @@ class FlexibleFoo final {
     return i_;
   }
   FlexibleFoo& set_i(int32_t value);
+  FlexibleFoo& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                              std::vector<uint8_t> value);
 
   Tag Which() const {
     switch (tag_) {
+      case Tag::Invalid:
       case Tag::kS:
       case Tag::kI:
         return Tag(tag_);

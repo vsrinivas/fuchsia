@@ -75,7 +75,7 @@ success("ReverseOrdinalUnion") {
 success("FlexibleUnionUnknownValue") {
     // TODO(8047) Enable support for this in language bindings after determining how it should
     // be handled in each binding.
-    bindings_allowlist = [rust],
+    bindings_allowlist = [cpp,rust],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion{
             1234: {
@@ -131,7 +131,7 @@ decode_success("FlexibleUnionUnknownValue") {
 
 decode_failure("StrictUnionUnknownValue") {
     // TODO(8047) Enable for each binding and remove redundant manual tests
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [cpp,go,rust],
     type = TestStrictXUnionInStruct,
     bytes = {
         v1 = [

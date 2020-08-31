@@ -121,9 +121,6 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
-		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
-			continue
-		}
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(encodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
@@ -150,9 +147,6 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
-		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
-			continue
-		}
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
@@ -178,9 +172,6 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
-		}
-		if gidlir.ContainsUnknownField(encodeFailure.Value) {
-			continue
 		}
 
 		valueBuilder := newCppValueBuilder()
