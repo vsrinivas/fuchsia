@@ -80,13 +80,6 @@ func BenchmarkEncode{{ .Name }}(b *testing.B) {
 	}
 }
 
-func EncodeCount{{ .Name }}() (int, int, error) {
-	bytes := make([]byte, 65536)
-	handles := make([]zx.HandleDisposition, 64)
-	input := {{ .Value }}
-	return fidl.Marshal(&input, bytes, handles)
-}
-
 func BenchmarkDecode{{ .Name }}(b *testing.B) {
 	data := make([]byte, 65536)
 	input := {{ .Value }}
@@ -123,21 +116,6 @@ var Benchmarks = []Benchmark{
 		BenchFunc: BenchmarkDecode{{ .Name }},
 	},
 {{ end }}
-}
-
-type EncodeCount struct {
-	Label string
-	Func func() (nbytes int, nhandles int, err error)
-}
-
-// EncodeCounts is read by go_fidl_benchmarks_lib.
-var EncodeCounts = []EncodeCount{
-	{{ range .Benchmarks }}
-	{
-		Label: "{{ .ChromeperfPath }}",
-		Func: EncodeCount{{ .Name }},
-	},
-	{{ end }}
 }
 `))
 

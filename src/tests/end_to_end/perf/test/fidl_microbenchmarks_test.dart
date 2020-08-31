@@ -62,7 +62,7 @@ void main(List<String> args) {
   enableLoggingOutput();
 
   runFidlBenchmark('go_fidl_microbenchmarks',
-      '--encode_counts --out_file ${tmpPerfResultsJson('go_fidl_microbenchmarks')}');
+      '--out_file ${tmpPerfResultsJson('go_fidl_microbenchmarks')}');
   runPerftestFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('lib_fidl_microbenchmarks');
   runPerftestFidlBenchmark('llcpp_fidl_microbenchmarks');
