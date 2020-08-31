@@ -205,7 +205,7 @@ Right aliases are simply expanded into their longform counterparts:
 "x*" -> ["connect", "enumerate", "traverse", "execute_bytes"]
 ```
 
-Merged aliases line `rw*` are simply `r*` and `w*` merged without duplicates.
+Merged aliases like `rw*` are simply `r*` and `w*` merged without duplicates.
 
 This example shows usage of a directory use declaration annotated with rights:
 

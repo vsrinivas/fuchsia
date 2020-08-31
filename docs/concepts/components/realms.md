@@ -137,7 +137,7 @@ Collections support two modes of *durability*:
     option to be available.
 
 For more information about component execution and persistence, see
-[lifecycle][lifecycle.md].
+[lifecycle][lifecycle].
 
 Collections are declared in the [`collections`][collections] section of a
 component manifest. When an [`offer`][offer] declaration targets a collection,
