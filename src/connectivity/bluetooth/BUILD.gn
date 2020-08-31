@@ -25,6 +25,7 @@ group("core") {
     "profiles/bt-a2dp-sink",
     "profiles/bt-avrcp",
     "profiles/bt-hog",
+    "profiles/bt-rfcomm",
     "tools/bt-snoop",
   ]
 }
