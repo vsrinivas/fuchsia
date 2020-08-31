@@ -152,6 +152,10 @@ impl Blob {
         &mut self.handles
     }
 
+    pub fn data(&self) -> &BlobData {
+        &self.data
+    }
+
     pub fn num_handles(&self) -> u64 {
         self.handles.len() as u64
     }

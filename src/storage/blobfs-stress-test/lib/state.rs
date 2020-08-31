@@ -16,20 +16,22 @@ enum BlobfsOperation {
     DeleteSomeBlobs,
     FillDiskWithSmallBlobs,
     DeleteAllBlobs,
-    NewHandle,
+    NewHandles,
     CloseAllHandles,
+    ReadFromAllHandles,
     VerifyBlobs,
 }
 
 impl BlobfsOperation {
     fn random(rng: &mut SmallRng) -> BlobfsOperation {
-        match rng.gen_range(0, 7) {
+        match rng.gen_range(0, 8) {
             0 => BlobfsOperation::CreateReasonableBlobs,
             1 => BlobfsOperation::DeleteSomeBlobs,
             2 => BlobfsOperation::FillDiskWithSmallBlobs,
             3 => BlobfsOperation::DeleteAllBlobs,
-            4 => BlobfsOperation::NewHandle,
+            4 => BlobfsOperation::NewHandles,
             5 => BlobfsOperation::CloseAllHandles,
+            6 => BlobfsOperation::ReadFromAllHandles,
             _ => BlobfsOperation::VerifyBlobs,
         }
     }
@@ -130,18 +132,24 @@ impl BlobfsState {
         }
     }
 
-    // Selects a random blob and creates an open handle for it.
-    async fn new_handle(&mut self) {
+    // Creates open handles for a random number of blobs
+    async fn new_handles(&mut self) {
         if self.num_blobs() == 0 {
             return;
         }
 
-        // Choose a random blob and open a handle to it
-        let blob = self.blobs.choose_mut(&mut self.rng).unwrap();
-        let handle = self.root_dir.open(blob.merkle_root_hash()).await;
-        blob.handles().push(handle);
+        // Decide how many blobs to create new handles for
+        let num_blobs_with_new_handles = self.rng.gen_range(0, self.num_blobs());
+        debug!("Creating handles for {} blobs", num_blobs_with_new_handles);
 
-        debug!("Opened blob {} [handles:{}]", blob.merkle_root_hash(), blob.num_handles());
+        // Randomly select blobs from the list and create handles to them
+        for _ in 0..num_blobs_with_new_handles {
+            // Choose a random blob and open a handle to it
+            let blob = self.blobs.choose_mut(&mut self.rng).unwrap();
+            let handle = self.root_dir.open(blob.merkle_root_hash()).await;
+            blob.handles().push(handle);
+            debug!("Opened blob {} [handles:{}]", blob.merkle_root_hash(), blob.num_handles());
+        }
     }
 
     // Closes all open handles to all blobs.
@@ -156,6 +164,43 @@ impl BlobfsState {
             }
         }
         debug!("Closed {} handles to blobs", count);
+    }
+
+    // Reads random portions of a blob from all open handles
+    async fn read_from_all_handles(&mut self) {
+        let mut count: u64 = 0;
+        let mut total_bytes_read: u64 = 0;
+        for blob in &mut self.blobs {
+            let data_size_bytes = blob.data().size_bytes;
+            let data_bytes = blob.data().generate_bytes();
+
+            for handle in blob.handles() {
+                // Choose an offset (0 if the blob is empty)
+                let offset =
+                    if data_size_bytes == 0 { 0 } else { self.rng.gen_range(0, data_size_bytes) };
+
+                // Determine the length of this read (0 if the blob is empty)
+                let end_pos = if data_size_bytes == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(offset, data_size_bytes)
+                };
+
+                assert!(end_pos >= offset);
+                let length = end_pos - offset;
+
+                // Read the data from the handle and verify it
+                handle.seek_from_start(offset).await;
+                let actual_data_bytes = handle.read(length).await;
+                let expected_data_bytes = &data_bytes[offset as usize..end_pos as usize];
+                assert_eq!(expected_data_bytes, actual_data_bytes);
+
+                // We successfully read from a file
+                total_bytes_read += length;
+                count += 1;
+            }
+        }
+        debug!("Read {} bytes from {} handles", total_bytes_read, count);
     }
 
     // Fills the disk with blobs that are |BLOCK_SIZE| bytes in size (when uncompressed)
@@ -211,11 +256,14 @@ impl BlobfsState {
             BlobfsOperation::DeleteAllBlobs => {
                 self.delete_all_blobs().await;
             }
-            BlobfsOperation::NewHandle => {
-                self.new_handle().await;
+            BlobfsOperation::NewHandles => {
+                self.new_handles().await;
             }
             BlobfsOperation::CloseAllHandles => {
                 self.close_all_handles().await;
+            }
+            BlobfsOperation::ReadFromAllHandles => {
+                self.read_from_all_handles().await;
             }
             BlobfsOperation::VerifyBlobs => {
                 self.verify_blobs().await;
