@@ -214,7 +214,7 @@ impl<'a> Encoder<'a> {
 
                     // Zero the last 8 bytes in the block to ensure padding bytes are zero.
                     let padding_ptr = buf.get_unchecked_mut(aligned_inline_size - 8);
-                    *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
+                    std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
                 }
             }
             handles.truncate(0);
@@ -257,7 +257,7 @@ impl<'a> Encoder<'a> {
 
             // Zero the last 8 bytes in the block to ensure padding bytes are zero.
             let padding_ptr = self.buf.get_unchecked_mut(new_len - 8);
-            *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
+            std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
         }
         f(self, new_offset, new_depth)
     }
@@ -289,7 +289,7 @@ impl<'a> Encoder<'a> {
             resize_vec_no_zeroing(self.buf, end);
 
             let padding_ptr = self.buf.get_unchecked_mut(end - 8);
-            *std::mem::transmute::<*mut u8, *mut u64>(padding_ptr) = 0;
+            std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
 
             std::ptr::copy_nonoverlapping(
                 bytes.as_ptr(),
@@ -440,7 +440,7 @@ impl<'a> Decoder<'a> {
         // self.next_out_of_line <= self.buf.len() based on if statement above.
         let last_u64 = unsafe {
             let last_u64_ptr = self.buf.get_unchecked(self.next_out_of_line - 8);
-            *std::mem::transmute::<*const u8, *const u64>(last_u64_ptr)
+            std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
         };
         let padding = aligned_len - len;
         // padding == 0 => mask == 0x0000000000000000
@@ -768,7 +768,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
             let int_ptr = std::mem::transmute::<*mut u8, *mut $int_ty>(ptr);
-            *int_ptr = *self;
+            int_ptr.write_unaligned(*self);
             Ok(())
         }
     }
@@ -782,7 +782,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
             let int_ptr = std::mem::transmute::<*const u8, *const $int_ty>(ptr);
-            *self = *int_ptr;
+            *self = int_ptr.read_unaligned();
             Ok(())
         }
     }
@@ -805,7 +805,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
             let float_ptr = std::mem::transmute::<*mut u8, *mut $float_ty>(ptr);
-            *float_ptr = *self;
+            float_ptr.write_unaligned(*self);
             Ok(())
         }
     }
@@ -818,7 +818,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
             let float_ptr = std::mem::transmute::<*const u8, *const $float_ty>(ptr);
-            *self = *float_ptr;
+            *self = float_ptr.read_unaligned();
             Ok(())
         }
     }
@@ -2066,7 +2066,7 @@ macro_rules! fidl_struct {
                 // when the field is written.
                 $(
                     let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset);
-                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr) = 0;
+                    std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr).write_unaligned(0);
                 )*
                 // Write the fields.
                 $(
@@ -2089,7 +2089,7 @@ macro_rules! fidl_struct {
                 // Apply masks to check if padded regions are zero.
                 $(
                     let ptr = decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset);
-                    let padval = *std::mem::transmute::<*const u8, *const $padding_ty>(ptr);
+                    let padval = std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned();
                     let maskedval = padval & $padding_mask;
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
@@ -2171,7 +2171,8 @@ macro_rules! fidl_struct_copy {
 
                 $(
                     let ptr = buf_ptr.offset($padding_offset);
-                    *std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr) &= !$padding_mask;
+                    let padding_ptr = std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr);
+                    padding_ptr.write_unaligned(padding_ptr.read_unaligned() & !$padding_mask);
                 )*
                 Ok(())
             }
@@ -2192,7 +2193,7 @@ macro_rules! fidl_struct_copy {
                 // Apply masks to check if padded regions are zero.
                 $(
                     let ptr = buf_ptr.offset($padding_offset);
-                    let padval = *std::mem::transmute::<*const u8, *const $padding_ty>(ptr);
+                    let padval = std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned();
                     let maskedval = padval & $padding_mask;
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
