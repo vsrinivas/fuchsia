@@ -62,6 +62,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

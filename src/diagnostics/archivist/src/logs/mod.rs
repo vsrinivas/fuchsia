@@ -526,7 +526,9 @@ mod tests {
                     } },
                     buffer_stats: {
                         rolled_out_entries: 0u64,
-                    }
+                    },
+                    granular_stats: contains {
+                    },
                 },
             }
         );
@@ -594,6 +596,8 @@ mod tests {
                             error_logs: 1u64,
                             fatal_logs: 0u64,
                         }
+                    },
+                    granular_stats: contains {
                     },
                     buffer_stats: {
                         rolled_out_entries: 0u64,
@@ -748,7 +752,9 @@ mod tests {
                     },
                     buffer_stats: {
                         rolled_out_entries: 0u64,
-                    }
+                    },
+                    granular_stats: contains {
+                    },
                 },
             }
         );
