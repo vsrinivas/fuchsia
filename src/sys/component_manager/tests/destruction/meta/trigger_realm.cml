@@ -17,6 +17,9 @@
             startup: "eager",
         },
     ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
     ],
@@ -24,7 +27,7 @@
     // Expose my Trigger service so the integration test can invoke it.
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
     ],

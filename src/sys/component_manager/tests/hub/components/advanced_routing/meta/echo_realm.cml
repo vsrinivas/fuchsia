@@ -20,19 +20,19 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: [ "#reporter" ],
         },
         {
-            directory: "/hub",
+            directory: "hub",
             from: "framework",
             to: [ "#reporter" ],
         },
         {
-            directory: "/hub",
+            directory: "hub",
             from: "#echo_server",
-            as: "/sibling_hub",
+            as: "sibling_hub",
             to: [ "#reporter" ],
         },
     ],

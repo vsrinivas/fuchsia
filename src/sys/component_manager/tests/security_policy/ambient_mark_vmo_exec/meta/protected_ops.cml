@@ -3,12 +3,15 @@
         binary: "bin/protected_ops_util",
         job_policy_ambient_mark_vmo_exec: "true",
     },
+    capabilities: [
+        { protocol: "test.policy.ProtectedOperations" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/test.policy.ProtectedOperations",
+            protocol: "test.policy.ProtectedOperations",
             from: "self",
         },
     ],

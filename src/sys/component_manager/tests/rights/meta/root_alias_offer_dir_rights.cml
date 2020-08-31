@@ -12,44 +12,44 @@
     ],
     offer: [
         {
-            directory: "/read_only",
+            directory: "read_only",
             from: "#expose_dir_rights",
             to: [ "#use_dir_rights" ],
         },
         {
-            directory: "/read_write",
+            directory: "read_write",
             from: "#expose_dir_rights",
             to: [ "#use_dir_rights" ],
         },
         {
-            directory: "/read_write",
+            directory: "read_write",
             from: "#expose_dir_rights",
-            as: "/read_write_dup",
+            as: "read_write_dup",
             to: [ "#use_dir_rights" ],
         },
         {
-            directory: "/read_exec",
+            directory: "read_exec",
             from: "#expose_dir_rights",
             to: [ "#use_dir_rights" ],
         },
         {
-            directory: "/read_admin",
+            directory: "read_admin",
             from: "#expose_dir_rights",
             to: [ "#use_dir_rights" ],
         },
 
         // This permission is scoped from rw to r within an alias.
         {
-            directory: "/read_write",
+            directory: "read_write",
             from: "#expose_dir_rights",
-            as: "/read_only_after_scoped",
+            as: "read_only_after_scoped",
             to: [ "#use_dir_rights" ],
             rights: [ "r*" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "#use_dir_rights",
         },
     ],

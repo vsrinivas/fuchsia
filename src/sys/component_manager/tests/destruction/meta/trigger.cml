@@ -4,12 +4,15 @@
     program: {
         binary: "bin/trigger",
     },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
     ],

@@ -11,13 +11,14 @@
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.test.hub.HubReport",
+            protocol: "fuchsia.test.hub.HubReport",
             from: "framework",
         },
         {
-            directory: "/hub",
+            directory: "hub",
             from: "framework",
             rights: [ "r*" ],
+            path: "/hub",
         },
     ],
 }

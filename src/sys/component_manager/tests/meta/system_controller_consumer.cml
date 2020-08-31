@@ -10,7 +10,7 @@
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.sys2.SystemController",
+                "fuchsia.sys2.SystemController",
             ],
         },
     ],

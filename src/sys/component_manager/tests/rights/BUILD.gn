@@ -17,6 +17,7 @@ rustc_test("rights_integration_test_bin") {
   edition = "2018"
   source_root = "rights_integration_test.rs"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
@@ -141,6 +142,10 @@ test_package("rights_integration_test") {
     {
       path = rebase_path("meta/use_dir_rights.cml")
       dest = "use_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/use_dir_rights_path_based.cml")
+      dest = "use_dir_rights_path_based.cm"
     },
     {
       path = rebase_path("meta/expose_dir_rights.cml")

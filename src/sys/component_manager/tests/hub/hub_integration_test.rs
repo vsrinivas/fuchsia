@@ -217,11 +217,11 @@ async fn advanced_routing() {
         .await;
 
     let expose_dir = "children/echo_server/exec/expose";
-    let expose_svc_dir = "children/echo_server/exec/expose/svc";
 
     // Verify that the Echo service is exposed by echo_server
-    test_runner.verify_directory_listing_externally(expose_dir, vec!["hub", "svc"]).await;
-    test_runner.verify_directory_listing_externally(expose_svc_dir, vec![echo_service_name]).await;
+    test_runner
+        .verify_directory_listing_externally(expose_dir, vec![echo_service_name, "hub"])
+        .await;
 
     let out_dir = "children/echo_server/exec/out";
     let out_svc_dir = "children/echo_server/exec/out/svc";
@@ -251,7 +251,7 @@ async fn advanced_routing() {
     test_runner.connect_to_echo_service(in_echo_service_path).await.unwrap();
 
     // Verify that we can connect to the echo service from the expose/svc directory.
-    let expose_echo_service_path = format!("{}/{}", expose_svc_dir, echo_service_name);
+    let expose_echo_service_path = format!("{}/{}", expose_dir, echo_service_name);
     test_runner.connect_to_echo_service(expose_echo_service_path).await.unwrap();
 
     // Verify that the 'hub' directory is available. The 'hub' mapped to 'reporter''s

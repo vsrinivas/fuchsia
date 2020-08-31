@@ -20,7 +20,7 @@
         // Expose the root realm's Realm protocol so that the test logic can bind to specific
         // children.
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],

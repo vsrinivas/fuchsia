@@ -3,12 +3,15 @@
         binary: "bin/exit_on_command",
         main_process_critical: "true",
     },
+    capabilities: [
+        { protocol: "test.policy.ExitController" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/test.policy.ExitController",
+            protocol: "test.policy.ExitController",
             from: "self",
         },
     ],

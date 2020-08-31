@@ -304,16 +304,27 @@ impl HubInjectionTestHook {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
-        let mut relative_path = match (&capability_provider, capability) {
-            (Some(_), InternalCapability::Directory(CapabilityNameOrPath::Path(source_path))) => {
-                source_path.split()
+        let relative_path = match (&capability_provider, capability) {
+            (Some(_), InternalCapability::Directory(name_or_path)) => {
+                match name_or_path {
+                    CapabilityNameOrPath::Path(source_path) => {
+                        let mut relative_path = source_path.split();
+                        // The source path must begin with "hub"
+                        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
+                            return Ok(capability_provider);
+                        }
+                        relative_path
+                    }
+                    CapabilityNameOrPath::Name(source_name) => {
+                        if source_name.str() != "hub" {
+                            return Ok(capability_provider);
+                        }
+                        vec![]
+                    }
+                }
             }
             _ => return Ok(capability_provider),
         };
-
-        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-            return Ok(capability_provider);
-        }
 
         Ok(Some(Box::new(HubInjectionCapabilityProvider::new(
             scope_moniker,

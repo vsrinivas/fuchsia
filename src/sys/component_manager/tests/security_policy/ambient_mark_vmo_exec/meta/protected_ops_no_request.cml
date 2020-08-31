@@ -2,12 +2,15 @@
     program: {
         binary: "bin/protected_ops_util",
     },
+    capabilities: [
+        { protocol: "test.policy.ProtectedOperations" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/test.policy.ProtectedOperations",
+            protocol: "test.policy.ProtectedOperations",
             from: "self",
         },
     ],

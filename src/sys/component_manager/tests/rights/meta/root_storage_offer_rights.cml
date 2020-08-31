@@ -15,7 +15,7 @@
         {
             storage: "mystorage",
             from: "#expose_dir_rights",
-            path: "/read_write",
+            backing_dir: "read_write",
         },
     ],
     offer: [
@@ -27,7 +27,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "#use_storage",
         },
     ],

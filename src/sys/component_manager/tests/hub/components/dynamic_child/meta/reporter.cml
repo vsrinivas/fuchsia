@@ -13,15 +13,16 @@
         { protocol: "/svc/fuchsia.sys2.BlockingEventSource" },
         {
             protocol: [
-                "/svc/fuchsia.sys2.Realm",
-                "/svc/fuchsia.test.hub.HubReport",
+                "fuchsia.sys2.Realm",
+                "fuchsia.test.hub.HubReport",
             ],
             from: "framework",
         },
         {
-            directory: "/hub",
+            directory: "hub",
             from: "framework",
             rights: [ "r*" ],
+            path: "/hub",
         },
         {
             event: [

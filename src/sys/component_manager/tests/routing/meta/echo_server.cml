@@ -1,0 +1,19 @@
+// Component manifest for the `echo_server` example program, which hosts the Echo service used
+// by `echo_client`.
+{
+    program: {
+        binary: "bin/echo_server",
+    },
+    capabilities: [
+        { protocol: "fidl.examples.routing.echo.Echo" },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "self",
+        },
+    ],
+}

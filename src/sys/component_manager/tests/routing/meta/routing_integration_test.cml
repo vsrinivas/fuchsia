@@ -17,12 +17,15 @@
             url: "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/trigger.cm",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
 
         // Needed to bind to children
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
@@ -33,14 +36,14 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: [ "#echo_client" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

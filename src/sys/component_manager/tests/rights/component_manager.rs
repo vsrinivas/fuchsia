@@ -63,7 +63,7 @@ async fn main() -> Result<(), Error> {
     // make sure root component exposes trigger protocol.
     let expose_dir_proxy = io_util::open_directory(
         &hub_proxy,
-        &PathBuf::from("exec/expose/svc"),
+        &PathBuf::from("exec/expose"),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");

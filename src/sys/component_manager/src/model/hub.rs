@@ -488,22 +488,28 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_capability_routed_async");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
-            capability: InternalCapability::Directory(source_name_or_path),
+            capability: InternalCapability::Directory(name_or_path),
             scope_moniker,
         } = source
         {
-            // TODO(56604): Support routing hub by name
-            let source_path = match source_name_or_path {
-                CapabilityNameOrPath::Path(source_path) => source_path,
-                CapabilityNameOrPath::Name(_) => {
-                    return Ok(());
+            let relative_path = match name_or_path {
+                CapabilityNameOrPath::Path(source_path) => {
+                    let mut relative_path = source_path.split();
+                    // The source path must begin with "hub"
+                    if relative_path.is_empty() || relative_path.remove(0) != "hub" {
+                        return Ok(());
+                    }
+                    relative_path
+                }
+                CapabilityNameOrPath::Name(source_name) => {
+                    // There's only one "hub" name-based capability, but `subdir` (handled by
+                    // routing logic, not here) can achieve the same effect.
+                    if source_name.str() != "hub" {
+                        return Ok(());
+                    }
+                    vec![]
                 }
             };
-            let mut relative_path = source_path.split();
-            // The source path must begin with "hub"
-            if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-                return Ok(());
-            }
 
             // Set the capability provider, if not already set.
             let mut capability_provider = capability_provider.lock().await;
@@ -777,7 +783,7 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_path: CapabilityNameOrPath::try_from("/hub").unwrap(),
+                        source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
@@ -830,10 +836,10 @@ mod tests {
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
-                        source_path: CapabilityNameOrPath::try_from("/hub/exec").unwrap(),
+                        source_path: CapabilityNameOrPath::try_from("hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
-                        subdir: None,
+                        subdir: Some("exec".into()),
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,

@@ -136,7 +136,7 @@ async fn list_children(realm: &fsys::RealmProxy) -> Result<String, Error> {
 fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
     let node_proxy = io_util::open_node(
         dir,
-        &PathBuf::from("svc/fidl.test.components.Trigger"),
+        &PathBuf::from("fidl.test.components.Trigger"),
         OPEN_RIGHT_READABLE,
         MODE_TYPE_SERVICE,
     )

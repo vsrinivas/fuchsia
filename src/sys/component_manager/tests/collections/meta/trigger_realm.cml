@@ -11,8 +11,8 @@
     offer: [
         {
             protocol: [
-                "/svc/fidl.examples.routing.echo.Echo",
                 "/svc/fuchsia.logger.LogSink",
+                "fidl.examples.routing.echo.Echo",
             ],
             from: "parent",
             to: [ "#trigger" ],
@@ -22,7 +22,7 @@
     // Expose Trigger service from child.
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "#trigger",
         },
     ],

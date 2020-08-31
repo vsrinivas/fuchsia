@@ -2,13 +2,16 @@
     program: {
         binary: "bin/use_storage",
     },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
         { storage: "data" },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
     ],

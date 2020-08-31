@@ -5,6 +5,9 @@
     program: {
         binary: "bin/component_time_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
         { runner: "rust_test_runner" },
@@ -13,7 +16,7 @@
         // The Fuchsia Test Framework expects this service to be exposed from the
         // test component. The Rust test adapter provides this service.
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

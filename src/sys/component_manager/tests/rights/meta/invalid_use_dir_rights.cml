@@ -2,41 +2,50 @@
     program: {
         binary: "bin/use_dir_rights",
     },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
 
         // This is invalid and should fail.
         {
-            directory: "/read_only",
+            directory: "read_only",
             rights: [ "rw*" ],
+            path: "/read_only",
         },
         {
-            directory: "/read_write",
+            directory: "read_write",
             rights: [ "rw*" ],
+            path: "/read_write",
         },
         {
-            directory: "/read_write_dup",
+            directory: "read_write_dup",
             rights: [ "rw*" ],
+            path: "/read_write_dup",
         },
         {
-            directory: "/read_exec",
+            directory: "read_exec",
             rights: [ "rx*" ],
+            path: "/read_exec",
         },
         {
-            directory: "/read_admin",
+            directory: "read_admin",
             rights: [
                 "admin",
                 "r*",
             ],
+            path: "/read_admin",
         },
         {
-            directory: "/read_only_after_scoped",
+            directory: "read_only_after_scoped",
             rights: [ "r*" ],
+            path: "/read_only_after_scoped",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
     ],

@@ -5,13 +5,16 @@
         binary: "bin/trigger",
         args: [ "Triggered" ],
     },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.test.components.Trigger",
+            protocol: "fidl.test.components.Trigger",
             from: "self",
         },
     ],

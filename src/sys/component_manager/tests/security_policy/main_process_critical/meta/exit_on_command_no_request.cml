@@ -2,12 +2,15 @@
     program: {
         binary: "bin/exit_on_command",
     },
+    capabilities: [
+        { protocol: "test.policy.ExitController" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/test.policy.ExitController",
+            protocol: "test.policy.ExitController",
             from: "self",
         },
     ],

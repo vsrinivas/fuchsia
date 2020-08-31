@@ -39,7 +39,7 @@ test_package("routing_integration_test") {
   meta = [
     {
       path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
+              "//examples/components/routing/echo_server/meta/echo_server_name_based.cml")
       dest = "echo_server.cm"
     },
     {

@@ -181,7 +181,7 @@ async fn route_directories_from_component_manager_namespace() {
     ];
 
     run_test_with_extra_dirs(
-        "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
+        "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights_path_based.cm",
         dir_handles,
         "All tests passed",
     )

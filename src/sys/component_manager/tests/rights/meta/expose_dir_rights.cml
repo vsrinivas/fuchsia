@@ -6,39 +6,62 @@
     program: {
         binary: "bin/expose_dir_rights",
     },
+    capabilities: [
+        {
+            directory: "read_only",
+            rights: [ "r*" ],
+            path: "/read_only",
+        },
+        {
+            directory: "read_write",
+            rights: [ "rw*" ],
+            path: "/read_write",
+        },
+        {
+            directory: "read_exec",
+            rights: [ "rx*" ],
+            path: "/read_exec",
+        },
+        {
+            directory: "read_admin",
+            rights: [
+                "admin",
+                "r*",
+            ],
+            path: "/read_admin",
+        },
+
+        // This will be scoped to "r*" by the parent before offering it to the sibling.
+        {
+            directory: "read_only_after_scoped",
+            from: "self",
+            rights: [ "rw*" ],
+            path: "/read_only_after_scoped",
+        },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            directory: "/read_only",
+            directory: "read_only",
             from: "self",
-            rights: [ "r*" ],
         },
         {
-            directory: "/read_write",
+            directory: "read_write",
             from: "self",
-            rights: [ "rw*" ],
         },
         {
-            directory: "/read_exec",
+            directory: "read_exec",
             from: "self",
-            rights: [ "rx*" ],
         },
         {
-            directory: "/read_admin",
+            directory: "read_admin",
             from: "self",
-            rights: [
-                "admin",
-                "r*",
-            ],
         },
-
-        // This will be scoped to "r*" by the parent before offering it to the sibling.
         {
-            directory: "/read_only_after_scoped",
+            directory: "read_only_after_scoped",
             from: "self",
-            rights: [ "rw*" ],
         },
     ],
 }
