@@ -19,7 +19,6 @@ group("tests") {
     "//src/bringup/bin/sysinfo:sysinfo-test",  # This is a package.
     "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
-    "//src/devices/block/drivers/ftl/test:ftl-integration-package",  # HW-required.
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-bootfs-test",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",  # HW-required.
     "//src/devices/nand/drivers/ram-nand:ram-nand-test-bootfs-test",
