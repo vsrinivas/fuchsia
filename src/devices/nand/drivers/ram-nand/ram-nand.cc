@@ -115,16 +115,8 @@ NandDevice::~NandDevice() {
     sync_completion_signal(&wake_signal_);
     int result_code;
     thrd_join(worker_, &result_code);
-
-    for (;;) {
-      RamNandOp* nand_op = list_remove_head_type(&txn_list_, RamNandOp, node);
-      if (!nand_op) {
-        break;
-      }
-      nand_op->completion_cb(nand_op->cookie, ZX_ERR_BAD_STATE, &nand_op->op);
-    }
   }
-
+  ZX_ASSERT(list_is_empty(&txn_list_));
   if (mapped_addr_) {
     zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, DdkGetSize());
   }
@@ -205,7 +197,6 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
     memset(reinterpret_cast<char*>(mapped_addr_), 0xff, DdkGetSize());
   }
 
-  list_initialize(&txn_list_);
   if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -304,26 +295,28 @@ bool NandDevice::AddToList(nand_operation_t* operation, nand_queue_callback comp
 
 bool NandDevice::RemoveFromList(nand_operation_t** operation) {
   fbl::AutoLock lock(&lock_);
-  bool is_dead = dead_;
-  if (!dead_) {
-    RamNandOp* nand_op = list_remove_head_type(&txn_list_, RamNandOp, node);
-    *operation = reinterpret_cast<nand_operation_t*>(nand_op);
-  }
-  return !is_dead;
+  RamNandOp* nand_op = list_remove_head_type(&txn_list_, RamNandOp, node);
+  *operation = reinterpret_cast<nand_operation_t*>(nand_op);
+  return !dead_;
 }
 
 int NandDevice::WorkerThread() {
   for (;;) {
     nand_operation_t* operation;
     for (;;) {
-      if (!RemoveFromList(&operation)) {
-        return 0;
-      }
+      bool alive = RemoveFromList(&operation);
       if (operation) {
-        sync_completion_reset(&wake_signal_);
-        break;
-      } else {
+        if (alive) {
+          sync_completion_reset(&wake_signal_);
+          break;
+        } else {
+          auto* op = reinterpret_cast<RamNandOp*>(operation);
+          op->completion_cb(op->cookie, ZX_ERR_BAD_STATE, operation);
+        }
+      } else if (alive) {
         sync_completion_wait(&wake_signal_, ZX_TIME_INFINITE);
+      } else {
+        return 0;
       }
     }
 

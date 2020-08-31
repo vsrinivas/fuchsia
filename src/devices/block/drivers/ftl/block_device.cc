@@ -83,16 +83,8 @@ BlockDevice::~BlockDevice() {
     sync_completion_signal(&wake_signal_);
     int result_code;
     thrd_join(worker_, &result_code);
-
-    for (;;) {
-      FtlOp* nand_op = list_remove_head_type(&txn_list_, FtlOp, node);
-      if (!nand_op) {
-        break;
-      }
-      nand_op->completion_cb(nand_op->cookie, ZX_ERR_BAD_STATE, &nand_op->op);
-    }
   }
-
+  ZX_ASSERT(list_is_empty(&txn_list_));
   bool volume_created = (DdkGetSize() != 0);
   if (volume_created) {
     if (volume_->Unmount() != ZX_OK) {
@@ -130,7 +122,6 @@ void BlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
 
 zx_status_t BlockDevice::Init() {
   ZX_DEBUG_ASSERT(!thread_created_);
-  list_initialize(&txn_list_);
   if (thrd_create_with_name(&worker_, WorkerThreadStub, this, "ftl_worker") != thrd_success) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -302,9 +293,7 @@ bool BlockDevice::AddToList(FtlOp* operation) {
 
 bool BlockDevice::RemoveFromList(FtlOp** operation) {
   fbl::AutoLock lock(&lock_);
-  if (!dead_) {
-    *operation = list_remove_head_type(&txn_list_, FtlOp, node);
-  }
+  *operation = list_remove_head_type(&txn_list_, FtlOp, node);
   return !dead_;
 }
 
@@ -316,13 +305,15 @@ int BlockDevice::WorkerThread() {
   for (;;) {
     FtlOp* operation;
     for (;;) {
-      if (!RemoveFromList(&operation)) {
-        return 0;
-      }
+      bool alive = RemoveFromList(&operation);
       if (operation) {
-        sync_completion_reset(&wake_signal_);
-        break;
-      } else {
+        if (alive) {
+          sync_completion_reset(&wake_signal_);
+          break;
+        } else {
+          operation->completion_cb(operation->cookie, ZX_ERR_BAD_STATE, &operation->op);
+        }
+      } else if (alive) {
         // Flush any pending data after 15 seconds of inactivity. This is
         // meant to reduce the chances of data loss if power is removed.
         // This value is only a guess.
@@ -332,6 +323,8 @@ int BlockDevice::WorkerThread() {
           Flush();
           pending_flush_ = false;
         }
+      } else {
+        return 0;
       }
     }
 

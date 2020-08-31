@@ -114,7 +114,7 @@ class BlockDevice : public DeviceType,
   BlockParams params_ = {};
 
   fbl::Mutex lock_;
-  list_node_t txn_list_ TA_GUARDED(lock_) = {};
+  list_node_t txn_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(txn_list_);
   bool dead_ TA_GUARDED(lock_) = false;
 
   bool thread_created_ = false;
