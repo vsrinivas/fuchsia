@@ -70,11 +70,12 @@ async fn main() -> Result<(), Error> {
     info!("connecting to real time clock");
     let optional_rtc = RtcImpl::only_device()
         .map_err(|err| {
-            warn!("failed to connect to RTC: {}", err);
+            warn!("failed to connect to RTC, ZX_CLOCK_UTC won't be updated: {}", err);
             let cobalt_err = err.into();
             cobalt.log_rtc_event(cobalt_err);
             inspect.rtc_initialize(cobalt_err, None);
         })
+        .map(|rtc| Arc::new(rtc))
         .ok();
 
     info!("connecting to external update service");
@@ -131,7 +132,7 @@ fn initial_utc_source(utc_clock: &zx::Clock) -> ftime::UtcSource {
 /// plan to deprecate.
 async fn maintain_utc<C: CobaltDiagnostics, R: Rtc>(
     utc_clock: Arc<zx::Clock>,
-    optional_rtc: Option<R>,
+    mut optional_rtc: Option<Arc<R>>,
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
     netstack_service: fnetstack::NetstackProxy,
@@ -148,7 +149,7 @@ async fn maintain_utc<C: CobaltDiagnostics, R: Rtc>(
         }
     }
 
-    if let Some(rtc) = optional_rtc {
+    if let Some(rtc) = &optional_rtc.as_mut() {
         info!("reading initial RTC time.");
         match rtc.get().await {
             Err(err) => {
@@ -182,11 +183,30 @@ async fn maintain_utc<C: CobaltDiagnostics, R: Rtc>(
         match time_service.update(1).await {
             Ok(Some(updated_time)) => {
                 let updated_time = zx::Time::from_nanos(updated_time.utc_time);
+                let updated_chrono = Utc.timestamp_nanos(updated_time.into_nanos());
                 if let Err(status) = utc_clock.update(zx::ClockUpdate::new().value(updated_time)) {
-                    error!("failed to update UTC clock to time {:?}: {}", updated_time, status);
+                    error!("failed to update UTC clock to {}: {}", updated_chrono, status);
+                } else {
+                    inspect.update_clock();
+                    info!("adjusted UTC time to {}", updated_chrono);
                 }
-                inspect.update_clock();
-                info!("adjusted UTC time to {}", Utc.timestamp_nanos(updated_time.into_nanos()));
+                if let Some(rtc) = optional_rtc {
+                    match rtc.set(updated_time).await {
+                        Err(err) => {
+                            error!(
+                                "failed to update RTC and ZX_CLOCK_UTC to {}: {}",
+                                updated_chrono, err
+                            );
+                            inspect.rtc_write(false);
+                            cobalt.log_rtc_event(RtcEventType::WriteFailed);
+                        }
+                        Ok(()) => {
+                            info!("updated RTC to {}", updated_chrono);
+                            inspect.rtc_write(true);
+                            cobalt.log_rtc_event(RtcEventType::WriteSucceeded);
+                        }
+                    }
+                }
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 let utc_now = Utc::now().timestamp_nanos();
                 let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
@@ -329,6 +349,8 @@ mod tests {
         clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
+        let rtc = Arc::new(FakeRtc::valid(*RTC_TIME));
+
         let inspector = Inspector::new();
         let inspect_diagnostics =
             diagnostics::InspectDiagnostics::new(inspector.root(), Arc::clone(&clock));
@@ -349,7 +371,7 @@ mod tests {
 
         fasync::Task::spawn(maintain_utc(
             Arc::clone(&clock),
-            Some(FakeRtc::valid(*RTC_TIME)),
+            Some(Arc::clone(&rtc)),
             notifier.clone(),
             time_service,
             netstack_service,
@@ -375,9 +397,11 @@ mod tests {
 
         info!("checking that the clock has not been updated yet");
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
+        assert_eq!(rtc.last_set(), None);
 
         info!("checking that the initial state was logged to Cobalt");
         cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::InitializedBeforeUtcStart]);
+        cobalt_monitor.assert_rtc_events(&[RtcEventType::ReadSucceeded]);
         cobalt_monitor.reset();
 
         let task_waker = futures::future::poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
@@ -395,9 +419,11 @@ mod tests {
         info!("waiting for time source update");
         assert_eq!(hanging.await.unwrap().source.unwrap(), ftime::UtcSource::External);
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
+        assert_eq!(rtc.last_set(), Some(*UPDATE_TIME));
 
         info!("checking that the started clock was logged to Cobalt");
         cobalt_monitor.assert_lifecycle_events(&[LifecycleEventType::StartedUtcFromTimeSource]);
+        cobalt_monitor.assert_rtc_events(&[RtcEventType::WriteSucceeded]);
     }
 
     #[fasync::run_singlethreaded(test)]

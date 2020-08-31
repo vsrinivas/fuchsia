@@ -13,11 +13,9 @@
 namespace network_time_service {
 
 TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
-                                 time_server::SystemTimeUpdater time_updater,
                                  time_server::RoughTimeServer rough_time_server,
                                  async_dispatcher_t* dispatcher, RetryConfig retry_config)
     : context_(std::move(context)),
-      time_updater_(std::move(time_updater)),
       rough_time_server_(std::move(rough_time_server)),
       push_source_binding_(this),
       status_watcher_(time_external::Status::OK),
@@ -70,11 +68,6 @@ void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
 std::optional<zx::time_utc> TimeServiceImpl::UpdateSystemTime() {
   auto ret = rough_time_server_.GetTimeFromServer();
   if (ret.first != time_server::OK) {
-    return std::nullopt;
-  }
-  // TODO(57747): move RTC interactions to Timekeeper before using new API.
-  if (!time_updater_.SetSystemTime(*ret.second)) {
-    FX_LOGS(ERROR) << "Inexplicably failed to set system time";
     return std::nullopt;
   }
   return ret.second;

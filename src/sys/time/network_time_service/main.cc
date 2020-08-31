@@ -12,7 +12,6 @@
 #include "lib/fit/function.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/sys/time/lib/network_time/system_time_updater.h"
 #include "src/sys/time/lib/network_time/time_server_config.h"
 #include "src/sys/time/network_time_service/service.h"
 
@@ -35,17 +34,12 @@ int main(int argc, char** argv) {
   // Currently this only supports one roughtime server.
   time_server::RoughTimeServer server = server_config.ServerList()[0];
 
-  const std::string rtc_path =
-      command_line.GetOptionValueWithDefault("rtc_path", time_server::kRealRtcDevicePath);
-  FX_LOGS(INFO) << "Connecting to RTC device at " << rtc_path;
   bool immediate = command_line.HasOption("immediate");
-
-  time_server::SystemTimeUpdater updater(std::move(rtc_path));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network_time_service::TimeServiceImpl svc(
-      sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(updater),
-      std::move(server), loop.dispatcher());
+      sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(server),
+      loop.dispatcher());
   if (immediate) {
     svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](auto result) {
                  FX_LOGS(INFO) << "time sync result " << (result ? "succeeded" : "failed");

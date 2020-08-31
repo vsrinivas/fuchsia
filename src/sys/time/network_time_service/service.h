@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/sys/time/lib/network_time/system_time_updater.h"
 #include "src/sys/time/lib/network_time/time_server_config.h"
 #include "src/sys/time/network_time_service/watcher.h"
 
@@ -68,7 +67,6 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
  public:
   // Constructs the time service with a caller-owned application context.
   TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
-                  time_server::SystemTimeUpdater time_updater,
                   time_server::RoughTimeServer rough_time_server, async_dispatcher_t* dispatcher,
                   RetryConfig retry_config = RetryConfig());
   ~TimeServiceImpl();
@@ -100,7 +98,6 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService,
 
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService> deprecated_bindings_;
-  time_server::SystemTimeUpdater time_updater_;
   time_server::RoughTimeServer rough_time_server_;
 
   fidl::Binding<time_external::PushSource> push_source_binding_;

@@ -68,11 +68,10 @@ class PushSourceTest : public gtest::TestLoopFixture {
     if (!time_service_) {
       time_server::TimeServerConfig config = ConfigForLocalServer(roughtime_port);
       time_server::RoughTimeServer server = config.ServerList()[0];
-      time_server::SystemTimeUpdater updater;
       network_time_service::RetryConfig retry_config(kTestNanosAfterPoll, 0, 1,
                                                      kTestNanosAfterPoll);
-      time_service_.reset(new TimeServiceImpl(provider_.TakeContext(), updater, server,
-                                              dispatcher(), retry_config));
+      time_service_.reset(
+          new TimeServiceImpl(provider_.TakeContext(), server, dispatcher(), retry_config));
     }
     time_external::PushSourcePtr push_source;
     provider_.ConnectToPublicService(push_source.NewRequest());
