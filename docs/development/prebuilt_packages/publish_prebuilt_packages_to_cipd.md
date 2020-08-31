@@ -1,119 +1,128 @@
-# Prebuilt CIPD packages in Fuchsia
+# Publish prebuilt packages to CIPD
 
-The Fuchsia project uses Chrome Infrastructure Package Deployment
-([CIPD](https://github.com/luci/luci-go/tree/master/cipd){: .external})
-to store and distribute prebuilt files.
+This page explains how to integrate your software into the Fuchsia project as a
+[prebuilt CIPD package](/docs/concepts/prebuilt_packages/prebuilt_cipd_packages_in_fuchsia.md).
 
-A CIPD package is an arbitrary collection of files, stored on [a remote
-content-addressed store](https://chrome-infra-packages.appspot.com/p/fuchsia){: .external},
-and distributed to a Fuchsia checkout through the
-[`jiri`](https://fuchsia.googlesource.com/jiri/+/master/){: .external} tool.
-It is also posible to download them directly using the `cipd` command-line tool
-(e.g. to verify their content).
+To publish your prebuilt package to
+[CIPD](https://github.com/luci/luci-go/tree/master/cipd){:.external},
+see the following guidelines:
 
-Once you set up continuous integration (CI) with Fuchsia,
-whenever you publish new versions of the prebuilt packages to CIPD,
-Fuchsia’s CI system fetches those new packages and
-rolls them into Fuchsia through
-the [global integration](https://fuchsia.googlesource.com/integration/+/refs/heads/master)
-process.
+*   [Prerequisites](#prerequisites)
+*   [Choose a CIPD package path](#choose-a-cipd-package-path)
+*   [Set CIPD package versioning](#set-cipd-package-versioning)
+*   [Upload a CIPD package](#upload-a-cipd-package)
 
-CIPD packages are typically used to distribute:
+After publishing your prebuilt package to CIDP,
+[update the Fuchsia Jiri manifests](/docs/development/prebuilt_packages/make_your_cipd_package_visible_to_fuchsia_developers.md)
+to ensure that the content of the package is available to Fuchsia's
+continuous integration (CI) and Fuchsia developers.
 
-- Host prebuilt binaries required by the build (e.g. clang toolchain).
-- Fuchsia prebuilt [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format){: .external}
-  binaries generated out-of-tree (e.g. Goldfish Vulkan ICD).
-- Prebuilt Fuchsia archive
-  ([FAR](/docs/concepts/source_code/archive_format.md)) files that contain
-  binaries and metadata for software built for Fuchsia by other teams, e.g.
-  [chromium/fuchsia/webrunner-arm64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/webrunner-arm64/+/){: .external}.
+## Prerequisites
 
-This page explains how to integrate your software into the Fuchsia project as
-a prebuilt package, i.e. how to publish it to CIPD, and how to update the
-Fuchsia Jiri manifests to ensure it is available to Fuchsia platform developers
-and Fuchsia continuous integration (CI).
+If you plan on using a Fuchsia archive
+([FAR](/docs/concepts/source_code/archive_format.md)) to publish your prebuilt
+package, see
+[Build a package](/docs/development/sdk/documentation/packages.md#build-package)
+(using FAR).
 
-Note: CIPD is not a package repository for Fuchsia devices.
-A running Fuchsia device doesn't install prebuilt packages from CIPD.
+Note: Provide only one Fuchsia archive (FAR) file per prebuilt package (for example,
+`chromium.far`, `webrunner.far`).
 
+If your prebuilt package contains
+[ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format){:.external}
+binaries (whether inside a FAR or not), they need to be stripped. Additionally,
+for Fuchsia ELF binaries, you need to generate and upload a
+[companion symbols package](/docs/development/prebuilt_packages/publish_a_cipd_symbols_package_for_elf_binaries.md)
+to support symbolization and debugging.
 
-## Publish prebuilt packages to CIPD {#publish-prebuilt-packages-to-cipd}
+## Choose a CIPD package path {#choose-a-cipd-package-path}
 
-### Prerequisites
+Each CIPD package has a distinctive path in the CIPD store. The naming
+convention of this path depends on whether the prebuilts are generated (or
+maintained) by the Fuchsia project.
 
-If you plan on publishing a prebuilt FAR, you need to know how to
-[build a prebuilt package](/docs/development/sdk/documentation/packages.md#build-package).
+### A CIPD package contributed by an external project {#a-cipd-package-contributed-by-an-external-project}
 
-If your prebuilt package contains ELF binaries (whether inside a FAR or not),
-they need to be stripped. For Fuchsia ELF binaries, a [companion symbols
-package](#publish-a-symbols-cipd-package) also needs to be generated and
-uploaded, to support symbolization and debugging.
+For a prebuilt CIPD package contributed by an external team or project,
+use the following CIPD path naming convention:
 
-### Choose a CIPD package path {#choose-a-cipd-package-path}
+```none
+<PROJECT>/fuchsia/<PACKAGE>-<CIPD_TARGET_ARCHITECTURE>
+```
 
-Each CIPD package has a path on the CIPD store. Path naming convention depends
-on whether the prebuilts are generated and/or maintained by the Fuchsia team
-itself.
+`<CIPD_TARGET_ARCHITECTURE>` is a CIPD-compatible CPU architecture
+name (for instance, `amd64` for 64-bit Intel binaries, not `x64` or
+`x86_64`).
 
-For a CIPD package contributed by an external team or project:
+See the following examples:
 
-*   Use the following CIPD path naming convention:
+*   [chromium/fuchsia/webrunner-arm64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/webrunner-arm64/+/){: .external}
+*   [chromium/fuchsia/castrunner-amd64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/castrunner-amd64/+/){: .external}
+
+Note: A prebuild package contributed by an external project needs to include
+a `LICENSE` file that contains the legal notices of the software.
+
+### A CIPD package generated by the Fuchsia project {#a-cipd-package-generated-by-the-fuchsia-project}
+
+For prebuilt packages that are generated or maintained by the Fuchsia project,
+use the following CIPD path naming conventions:
+
+*   Use `fuchsia/` as the root project directory for all prebuilt packages.
+
+*   For prebuilts generated from third-party open source projects, use a path
+    under `fuchsia/third_party/`.
+
+    For example, `fuchsia/third_party/ninja/` contains packages for prebuilt
+    binaries of the Ninja build tool, while `fuchsia/sdk/core` contains packages
+    corresponding to Fuchsia IDK archives generated by the Fuchsia project.
+
+*   For the last directory entry of host prebuilts, use the following
+    convention:
 
     ```none
-    <PROJECT>/fuchsia/<PACKAGE>-<CIPD_TARGET_ARCHITECTURE>
+    <CIPD_OS>-<CIPD_HOST_ARCHITECTURE>
     ```
-    Where `<CIPD_TARGET_ARCHITECTURE>` is a CIPD-compatible CPU architecture name
-    (e.g. `amd64` for 64-bit Intel binaries, not `x64` or `x86_64`). For example,
-    [chromium/fuchsia/webrunner-arm64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/webrunner-arm64/+/){: .external}
-    and
-    [chromium/fuchsia/castrunner-amd64](https://chrome-infra-packages.appspot.com/p/chromium/fuchsia/castrunner-amd64/+/){: .external}.
-*   Include a `LICENSE` file that contains the legal notices of the software.
-*   Provide a Fuchsia archive (FAR) file per prebuilt package.
-    For example, `chromium.far`, `webrunner.far`.
 
-For prebuilts that are generated or maintained by the Fuchsia project however,
-the following path conventions apply:
+    *   `<CIPD_OS>` is a CIPD-compatible OS name.
+        *   Use `linux` or `mac` for `<CIPD_OS>` (not `Linux`, `osx`, `darwin`
+            or `mach`).
+    *   `<CIPD_HOST_ARCHITECTURE>` a CIPD-compatible CPU architecture name.
+        *   Use `i386`, `amd64` or `arm64` for `<CIPD_HOST_ARCHITECTURE>` (not
+            `x86`, `x64` or `aarch64`).
 
-*  Use `fuchsia/` as the root project directory for all prebuilt packages.
+    For example, `fuchsia/third_party/clang/mac-amd64` is the path used for the
+    CIPD package that contains the 64-bit Intel OS X Clang toolchain binaries.
 
-   Prebuilts generated directly from third-party open-source projects need to
-   use a path under `fuchsia/third_party/`.
+*   Fuchsia ELF prebuilts need to use a path that ends with the following:
 
-   E.g. `fuchsia/third_party/ninja/` contains several packages for prebuilt
-   binaries of the Ninja build tool, while `fuchsia/sdk/core` contains several
-   packages corresponding to Fuchsia IDK archives generated by the Fuchsia
-   team.
+    ```none
+    arch/<ARCH>
+    ```
 
-*  Host prebuilts should use `<CIPD_OS>-<CIPD_HOST_ARCHITECTURE>` as their last
-   directory entry, where `<CIPD_OS>` is a CIPD-compatible OS name, and
-   `<CIPD_HOST_ARCHITECTURE>` a CIPD-compatible CPU architecture name
+    *  `<ARCH>` is a Fuchsia-compatible CPU architecture name.
 
-   This means `linux` or `mac` for `<CIPD_OS>` (but **not** `Linux`, `osx`,
-   `darwin` or `mach`), and also `i386`, `amd64` or `arm64` for
-   `<CIPD_HOST_ARCHITECTURE>` (but **not** `x86`, `x64` or `aarch64`).
+       *  Use `x64` or `arm64` (not `amd64`, `x86_64` or `aarch64`).
 
-   E.g. `fuchsia/third_party/clang/mac-amd64` is the path used for the CIPD
-   package that contains the 64-bit Intel OS X Clang toolchain binaries.
+    In the case of 64-bit Intel binaries, `amd64` is only used for
+    host prebuilts while `x64` is only used for Fuchsia ELF prebuilts.
 
-* Fuchsia ELF prebuilts should use a path that ends with `arch/<ARCH>`,
-  where `<ARCH>` is a Fuchsia-compatible CPU architecture name (e.g. `x64`
-  or `arm64`, **not** `amd64`, `x86_64` or `aarch64`).
+    For example, `fuchsia/third_party/swiftshader/arch/x64` is the path used for
+    the SwitfShader-based Vulkan ICD/driver that is built for Fuchsia.
 
-  E.g. `fuchsia/third_party/swiftshader/arch/x64` is the path used for the
-  SwitfShader-based Vulkan ICD/driver, built for Fuchsia.
-
-Note that in the case of 64-bit Intel binaries, `amd64` is only used for
-host prebuilts, while `x64` is only used for Fuchsia ones.
-
-### Set CIPD package versioning {#set-cipd-package-versioning}
+## Set CIPD package versioning {#set-cipd-package-versioning}
 
 Fuchsia developers need to be able to identify which source code is used to
-generate a CIPD package instance. Fuchsia recommends that your project's
-documentation provides instructions on how to obtain the sources that match
-a given package instance's version identifier.
+generate each CIPD package instance.
 
-To identify the source of prebuilt packages, [tag](https://github.com/luci/luci-go/tree/master/cipd#tags){: .external}
-each revision with a version identifier in the form of:
+Note: Fuchsia recommends that your project's documentation provides instructions
+on how to obtain the sources that match a given package instance's version
+identifier.
+
+### version
+
+To identify the source of prebuilt packages,
+[tag](https://github.com/luci/luci-go/tree/master/cipd#tags){: .external} each
+revision with a version identifier in the form of:
 
 ```none
 version:<VERSION_ID_OF_INSTANCE>
@@ -121,8 +130,10 @@ version:<VERSION_ID_OF_INSTANCE>
 
 For example, `version:77.0.3835.0` and `version:176326.`
 
-Additionally, when available (e.g. building third-party open-source projects),
-use:
+### git_revision
+
+In addition to specifying `version`, if available (for example, building
+third-party open source projects), include a Git commit hash:
 
 ```none
 git_revision:<GIT_COMMIT_HASH>
@@ -131,43 +142,29 @@ git_revision:<GIT_COMMIT_HASH>
 This `git_revision` tag identifies the exact Git commit of the source tree used
 to build the binaries.
 
-If several revisions are different but built from the same Git hash (e.g.
-because the first one was mistakenly built in debug, instead of release mode),
-it is usual to use a suffix separated with a dash, as in
-`git_revision:<commit>-2`, for the new revision's tag.
+If several revisions are built from the same Git commit hash (for example,
+the first instance was mistakenly built in debug, instead of release mode),
+you can use a suffix separated with a dash (`-`), as in
+`git_revision:<GIT_COMMIT_HASH>-2`, for the new revision's tag.
 
-When you publish a new revision of your CIPD package, the `latest`
-[ref](https://github.com/luci/luci-go/tree/master/cipd#refs){: .external}
-automatically point to the new revision. Fuchsia’s CI system monitors your
-package’s `latest` ref; when it detects that it was updated, the system fetches
-the new package and rolls it into Fuchsia.
+## Upload a CIPD package {#upload-a-cipd-package}
 
-<a name="figure-1"></a>
-<figure>
-  <img src="/docs/images/development/prebuilt_packages/publish-prebuilt-packages-to-fuchsia-00.png"
-       alt="The latest ref and other refs shown in the CIPD UI">
-  <figcaption><b>Figure 1</b>. The CIPD UI shows
-  the latest ref and other refs used for this CIPD package instances.</figcaption>
-</figure>
+Note: Whenever possible, use
+[LUCI Recipes](https://github.com/luci/recipes-py){: .external} to build and
+upload CIPD packages. This guarantees hermetic and reproducible builds, running
+on securely isolated bots. Follow the content of this section only when this is
+not possible.
 
+Manually uploading a new CIPD package revision requires you to be authentified
+with `cipd auth-login`, then run the `cipd create` command. Example instructions
+are available from
+[this CIPD page](https://g3doc.corp.google.com/company/teams/chrome/ops/luci/cipd.md?cl=head#creating-a-new-package){: .external}.
 
-### Upload a CIPD package {#upload-a-cipd-package}
-
-Note: Whenever possible, CIPD packages should be built and  uploaded using
-[LUCI Recipes](https://github.com/luci/recipes-py){: .external}, which
-guarantee hermetic and reproducible builds, running on securely segregated bots.
-Follow the content of this section only when this is not possible.
-
-Uploading a new CIPD package revision manually requires to be authentified
-with `cipd auth-login`, then to run the `cipd create` command.
-
-Example instructions are available from [this CIPD
-page](https://g3doc.corp.google.com/company/teams/chrome/ops/luci/cipd.md?cl=head#creating-a-new-package){: .external}.
 Using a `cipd.yaml` file is strongly recommended. A good practice is to
-auto-generate it from your rebuild script, and include uploading instructions
-in a comment, as in this pseudo-example:
+auto-generate this file from your rebuild script and include uploading
+instructions in a comment, as shown in the following pseudo-example:
 
-```yaml
+```none
 # This file was auto-generated by build-project-fuchsia-package.sh
 # For more information, see http://myproject.url/docs/fuchsia/
 #
@@ -184,165 +181,7 @@ data:
   - file: libpackage.so
 ```
 
-Don't forget to publish a
-[companion symbols package](#publish-a-symbols-cipd-package) if your package
-contains Fuchsia ELF binaries.
+Don't forget to also upload a
+[companion symbols package](/docs/development/prebuilt_packages/publish_a_cipd_symbols_package_for_elf_binaries.md)
+if your package contains Fuchsia ELF binaries.
 
-
-## Make your prebuilt CIPD package visible to Fuchsia platform developers
-
-Once a prebuilt package has been uploaded to CIPD, it can be made available to
-Fuchsia team developers by updating a Jiri manifest, which is listed under
-`${FUCHSIA_DIR}/integration/`. To do so:
-
-*   Locate the appropriate manifest file to modify. For instance prebuilts are
-    listed in `integration/fuchsia/prebuilt` if you use the Google-internal
-    repository checkout. Location might be different for an open-source
-    checkout.
-
-*   Determine the Jiri checkout path. This should be under
-    `${FUCHSIA_DIR}/prebuilt/` with a path reflecting the CIPD one. For
-    example `${FUCHSIA_DIR}/prebuilt/third_party/ninja/linux-x64/` is used
-    for the package at CIPD path `fuchsia/third_party/ninja/linux-amd64`.
-    Note that they use different conventions for the CPU architecture.
-
-*   Add or update the Jiri manifest entry appropriately, looking at other
-    existing manifests for inspiration. Here's the one for the QEMU emulator
-    binary:
-
-    <pre>
-    &lt;package name="fuchsia/third_party/qemu/${platform}"
-             version="git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f,1"
-             platforms="linux-amd64,linux-arm64,mac-amd64"
-             path="prebuilt/third_party/qemu/&#0123{.OS}}-&#0123{.Arch}}"/&gt;
-    </pre>
-
-    Note that in the example above:
-
-    - The `name` attribute points to the CIPD package path. And
-      `${platform}` will expand to a string matching the CIPD-compatible
-      host platform name (e.g. `linux-amd64`).
-
-    - The `version` attribute points to a CIPD tag for the package's revision
-      to download.
-
-    - The `path` attribute points to the checkout path under `${FUCHSIA_DIR}`,
-      and uses a special pattern that will expand to a Fuchsia-compatible
-      system and CPU architecture names for the developer's or infra bot
-      machine (e.g. `linux-x64`).
-
-    - The `platforms` attribute is optional and restricts the list of
-      supported build platforms (Jiri will not download this specific package
-      on unlisted systems).
-
-*   Update the Jiri lock files if necessary. This applies to the
-    Google-internal checkout. Invoke the `integration/update-lockfiles.sh`.
-    This script will update a couple of necessary `jiri.lock` files.
-
-*   Create a new branch under `integration` (or whatever directory contains
-    your Jiri manifest for prebuilts), that includes your manifest change
-    and `jiri.lock` changes, if any, and upload it to Gerrit as usual for
-    review.
-
-
-## Publish a CIPD symbols package for ELF binaries {#publish-a-symbols-cipd-package}
-
-A CIPD prebuilt package that contains Fuchsia ELF binaries should also have
-a companion symbols package that contains the debug information for the
-binaries. These are using for symbolization in logs, crashes and for debugging.
-
-*   Each ELF binary in the original CIPD package must include
-    an ELF `NT_GNU_BUILD_ID` note section, which includes a unique `build-id`
-    hash value that uniquely identifies its non-debug-related content.
-
-    This note is created at link time when producing the ELF binary. Recent
-    versions of GCC, or the prebuilt Fuchsia Clang toolchain, produce it
-    automatically (however, regular Clang requires passing a special linker
-    flag (i.e. `-Wl,--build-id`).
-
-    Note: To print the `build-id` of an existing library, use either one of
-    `file <LIBRARY>` or
-    `readelf -n <LIBRARY> | grep "Build ID"`
-
-*   The symbols package must use the directory layout typical of `.build-id`
-    directories used to store
-    [debug information in separate files](https://sourceware.org/gdb/current/onlinedocs/gdb/Separate-Debug-Files.html){: .external}.
-    This means that each file must be stored as `<xx>/<xxxxxxxxxx>.debug`,
-    where `<xx>` and `<xxxxxxxxx>` are hex strings derived from the `build-id`
-    hash value, of the unstripped binary. Each such file should match one
-    stripped ELF binary with the same `build-id` from the original package.
-
-    Note: The symbols package should not include a top-level `.build-id`
-    directory.
-
-*   The symbols package must use the same version identifiers (tags)
-    as the original CIPD package they refer to. This allows them to be
-    rolled together.
-
-*   If several CIPD packages that contain stripped ELF binaries are rolled
-    together (using the same version identifiers), then grouping the debug
-    symbols for all of them in a single CIPD symbols package is acceptable,
-    but not required.
-
-*   The CIPD path for the symbols package should include the
-    `-debug-symbols-<ARCH>` suffix, E.g.
-    `myproject/fuchsia/mypackage-debug-symbols-amd64` contains the symbols
-    for the `myproject/fuchsia/mypackage-amd64` prebuilt package.
-
-*   The Jiri checkout path for all symbols package must be
-    `${FUCHSIA_DIR}/prebuilt/.build-id`.
-
-This example shows the directory structure of a CIPD symbols package with
-unstripped ELF binaries:
-
-```none
-1d/
-  bca0bd1be33e19.debug
-1f/
-  512abdcbe453ee.debug
-  90dd45623deab1.debug
-2b/
-  0e519bcf3942dd.debug
-3d/
-  aca0b11beff127.debug
-5b/
-  66bc85af2da641697328996cbc04d62b84fc58.debug
-```
-
-The usual way to generate this package is to:
-
-*   Compile all your ELF binaries with DWARF debug information (e.g.
-    passing the `-g` flag to the compiler, even in release mode).
-
-*   Ensure the ELF binaries include an `NT_GNU_BUILD_ID` note. This is
-    the default on recent GCC versions and the Fuchsia prebuilt Clang
-    toolchain, but regular Clang requires passing a special flag to the
-    linker (i.e. `-Wl,--build-id`).
-
-It is possible to generate the stripped binary and the corresponding build id
-directories with a single call to `llvm-objcopy` as in:
-
-```sh
-# Copy out/libfoo.so to symbols/<xx>/<xxxxxxx>.debug according to its
-# `build-id` value (requires the library to be linked with -Wl,--build-id when
-# using Clang), and also copy the stripped version of the library to
-# stripped/libfoo.so
-#
-# NOTE: To strip executables, instead of libraries, replace --strip-all below
-#       with --strip-sections
-#
-UNSTRIPPED_LIB=out/libfoo.so
-STRIPPED_LIB=stripped/libfoo.so
-SYMBOLS_DIR=./symbols
-
-llvm-objcopy --strip-all \
-    --build-id-link-dir="${SYMBOLS_DIR}" \
-    --build-id-link-input=.debug \
-    "${UNSTRIPPED_LIB}" "${STRIPPED_LIB}"
-```
-
-Repeat as many times as necessary to populate the `symbols/` directory,
-then upload its content (i.e. files under `symbols/`) as your symbols package.
-
-Do not forget to copy the content of the `stripped/` directory to your
-prebuilt CIPD package as well.

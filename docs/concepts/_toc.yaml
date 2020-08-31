@@ -52,6 +52,9 @@ toc:
 - title: "Packages"
   section:
   - include: /docs/concepts/packages/_toc.yaml
+- title: "Prebuilt packages"
+  section:
+  - include: /docs/concepts/prebuilt_packages/_toc.yaml
 - title: "Session"
   section:
   - include: /docs/concepts/session/_toc.yaml

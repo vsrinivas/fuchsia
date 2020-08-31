@@ -1,0 +1,6 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Prebuilt CIPD packages in Fuchsia"
+  path: /docs/concepts/prebuilt_packages/prebuilt_cipd_packages_in_fuchsia.md
