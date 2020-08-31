@@ -190,7 +190,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 Monitor::~Monitor() {}
 
 void Monitor::SetRamDevice(fuchsia::hardware::ram::metrics::DevicePtr ptr) {
-  ram_device_ =  std::move(ptr);
+  ram_device_ = std::move(ptr);
   if (ram_device_.is_bound())
     PeriodicMeasureBandwidth();
 }
@@ -279,6 +279,19 @@ inspect::Inspector Monitor::Inspect() {
   if (!previous_high_water_string.empty()) {
     root.CreateString("high_water_previous_boot", previous_high_water_string, &inspector);
   }
+
+  // Expose raw values for downstream computation.
+  auto values = root.CreateChild("values");
+  values.CreateUint("free_bytes", capture.kmem().free_bytes, &inspector);
+  values.CreateUint("free_heap_bytes", capture.kmem().free_heap_bytes, &inspector);
+  values.CreateUint("ipc_bytes", capture.kmem().ipc_bytes, &inspector);
+  values.CreateUint("mmu_overhead_bytes", capture.kmem().mmu_overhead_bytes, &inspector);
+  values.CreateUint("other_bytes", capture.kmem().other_bytes, &inspector);
+  values.CreateUint("total_bytes", capture.kmem().total_bytes, &inspector);
+  values.CreateUint("total_heap_bytes", capture.kmem().total_heap_bytes, &inspector);
+  values.CreateUint("vmo_bytes", capture.kmem().vmo_bytes, &inspector);
+  values.CreateUint("wired_bytes", capture.kmem().wired_bytes, &inspector);
+  inspector.emplace(std::move(values));
 
   Digester digester;
   Digest digest(capture, &digester);
@@ -410,20 +423,19 @@ void Monitor::PeriodicMeasureBandwidth() {
 
   uint64_t cycles_to_measure = kMemCyclesToMeasure;
   ram_device_->MeasureBandwidth(
-      BuildConfig(cycles_to_measure), [this, cycles_to_measure](
-                  fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
+      BuildConfig(cycles_to_measure),
+      [this,
+       cycles_to_measure](fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "Bad bandwidth measurement result: " << result.err();
         } else {
           const auto& info = result.response().info;
           uint64_t total_readwrite_cycles = TotalReadWriteCycles(info);
-          total_readwrite_cycles = std::max(total_readwrite_cycles,
-                                            info.total.readwrite_cycles);
+          total_readwrite_cycles = std::max(total_readwrite_cycles, info.total.readwrite_cycles);
 
-          uint64_t memory_bandwidth_reading = CounterToBandwidth(total_readwrite_cycles,
-                                                                 info.frequency,
-                                                                 cycles_to_measure)
-                                              * info.bytes_per_cycle;
+          uint64_t memory_bandwidth_reading =
+              CounterToBandwidth(total_readwrite_cycles, info.frequency, cycles_to_measure) *
+              info.bytes_per_cycle;
           if (metrics_)
             metrics_->NextMemoryBandwidthReading(memory_bandwidth_reading, info.timestamp);
         }

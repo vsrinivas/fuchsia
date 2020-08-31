@@ -115,7 +115,10 @@ TEST_F(InspectTest, FirstLaunch) {
                                           StringIs("current", Not(IsEmpty())),
                                           StringIs("current_digest", Not(IsEmpty())),
                                           StringIs("high_water", Not(IsEmpty())),
-                                          StringIs("high_water_digest", Not(IsEmpty()))))))));
+                                          StringIs("high_water_digest", Not(IsEmpty())))))),
+
+                    ChildrenMatch(UnorderedElementsAre(
+                        NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
 }
 
 TEST_F(InspectTest, SecondLaunch) {
@@ -130,7 +133,10 @@ TEST_F(InspectTest, SecondLaunch) {
                                           StringIs("current", Not(IsEmpty())),
                                           StringIs("current_digest", Not(IsEmpty())),
                                           StringIs("high_water", Not(IsEmpty())),
-                                          StringIs("high_water_digest", Not(IsEmpty()))))))));
+                                          StringIs("high_water_digest", Not(IsEmpty())))))),
+
+                    ChildrenMatch(UnorderedElementsAre(
+                        NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
   CheckShutdown();
   Connect();
   result = GetInspectHierarchy();
@@ -138,14 +144,16 @@ TEST_F(InspectTest, SecondLaunch) {
   hierarchy = result.take_value();
   EXPECT_THAT(
       hierarchy,
-      AllOf(NodeMatches(
-          AllOf(NameMatches("root"),
+      AllOf(NodeMatches(AllOf(
+                NameMatches("root"),
                 PropertyList(UnorderedElementsAre(
                     StringIs("current", Not(IsEmpty())), StringIs("current_digest", Not(IsEmpty())),
                     StringIs("high_water_previous_boot", Not(IsEmpty())),
                     StringIs("high_water_digest_previous_boot", Not(IsEmpty())),
                     StringIs("high_water", Not(IsEmpty())),
-                    StringIs("high_water_digest", Not(IsEmpty()))))))));
+                    StringIs("high_water_digest", Not(IsEmpty())))))),
+            ChildrenMatch(UnorderedElementsAre(
+                NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
 }
 
 }  // namespace
