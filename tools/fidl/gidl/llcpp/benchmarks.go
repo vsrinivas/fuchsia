@@ -26,7 +26,6 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/echo_call_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/send_event_benchmark_util.h"
-#include "src/tests/benchmarks/fidl/llcpp/memcpy_benchmark_util.h"
 
 namespace {
 
@@ -54,9 +53,6 @@ bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }}Heap);
 }
 {{- end -}}
-bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::MemcpyBenchmark(state, Build{{ .Name }}Heap);
-}
 
 void RegisterTests() {
 	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/WallTime", BenchmarkBuilder{{ .Name }}Heap);
@@ -68,7 +64,6 @@ void RegisterTests() {
 	{{ if .EnableEchoCallBenchmark }}
 	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
 	{{- end -}}
-	perftest::RegisterTest("Memcpy/{{ .Path }}", BenchmarkMemcpy{{ .Name }});
 }
 PERFTEST_CTOR(RegisterTests)
 
