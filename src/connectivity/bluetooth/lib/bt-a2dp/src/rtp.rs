@@ -38,83 +38,87 @@ pub trait RtpPacketBuilder: Send {
     fn add_frame(&mut self, frame: Vec<u8>, samples: u32) -> Result<Vec<Vec<u8>>, Error>;
 }
 
-/// An RtpPacketBuilder that will only pack whole frames, has a maximum number of frames per
-/// packet, and will add an arbitrary header to the frame data after the RTP header.
-// TODO(52616): deprecate this so we can fragment AAC packets.
-pub(crate) struct FrameRtpPacketBuilder {
-    /// The maximum number of frames to be included in each packet
-    max_frames_per_packet: u8,
-    /// The maximum size of a packet (usually the max TX SDU)
+/// A PacketBuilder that implements the SBC RTP Payload format as specified in A2DP 1.3.2 Section
+/// 4.3.4.
+pub(crate) struct SbcRtpPacketBuilder {
+    /// maximum size of the RTP packet, including headers
     max_packet_size: usize,
-    /// The next packet's sequence number
-    next_sequence_number: u16,
-    /// Timestamp of the end of the packets sent so far. This is currently in audio sample units.
+    /// next sequence number to be used
+    next_sequence: u16,
+    /// Timestamp of the last packet sent so far, in audio sample units
     timestamp: u32,
     /// Frames that will be in the next RtpPacket to be sent.
     frames: VecDeque<Vec<u8>>,
-    /// Time that those frames represent, in the same units as `timestamp`
-    frame_samples: VecDeque<u32>,
-    /// Extra header to include in each packet before `frames` are added
-    frame_header: Vec<u8>,
+    /// Total samples that those frames represent.
+    samples: u32,
 }
 
-impl FrameRtpPacketBuilder {
-    /// Make a new builder that will vend a packet every `frames_per_packet` frames. `frame_header`
-    /// are header bytes added to each packet before frames are added.
-    pub fn new(max_frames_per_packet: u8, max_packet_size: usize, frame_header: Vec<u8>) -> Self {
+impl SbcRtpPacketBuilder {
+    const MAX_FRAMES_PER_PACKET: usize = 15;
+
+    pub fn new(max_packet_size: usize) -> Self {
         Self {
-            max_frames_per_packet,
-            next_sequence_number: 1,
-            timestamp: 0,
-            frames: VecDeque::with_capacity(max_frames_per_packet.into()),
-            frame_samples: VecDeque::with_capacity(max_frames_per_packet.into()),
             max_packet_size,
-            frame_header,
+            next_sequence: 1,
+            timestamp: 0,
+            frames: VecDeque::new(),
+            samples: 0,
         }
     }
 
-    fn header_size(&self) -> usize {
-        self.frame_header.len() + RTP_HEADER_LEN
+    /// Return the header length of a RTP packet encapsulating SBC, including the pre-frame
+    /// data, which is one octet long.
+    fn header_len(&self) -> usize {
+        RTP_HEADER_LEN + 1
     }
 
-    fn pending_total_size(&self) -> usize {
-        self.frames.iter().map(Vec::len).sum::<usize>() + self.header_size()
+    /// The total number of bytes currently waiting to be sent in the next frame.
+    fn frame_bytes_len(&self) -> usize {
+        self.frames.iter().map(Vec::len).sum()
     }
-}
 
-impl RtpPacketBuilder for FrameRtpPacketBuilder {
-    /// Add a frame that represents `samples` pcm audio samples into the builder.
-    /// Returns one serialized RTP packet if this frame fills a packet.
-    /// An error is returned if `frame` will never fit into a single packet.
-    fn add_frame(&mut self, frame: Vec<u8>, samples: u32) -> Result<Vec<Vec<u8>>, Error> {
-        if (frame.len() + self.header_size()) > self.max_packet_size {
-            return Err(format_err!("Media packet too large for RTP max size"));
+    /// Build the next RTP packet using the frames queued.
+    /// After the packet is returned, the frames are clear and the state is updated to
+    /// track building the next packet.
+    /// Panics if called when there are no frames to be sent.
+    fn build_packet(&mut self) -> Vec<u8> {
+        if self.frames.is_empty() {
+            panic!("Can't build an empty RTP SBC packet: no frames");
         }
-        self.frames.push_back(frame);
-        self.frame_samples.push_back(samples);
-        // IF Some(idx), a packet should be produced using the frames 0..idx.
-        let packet_ready_idx = if self.pending_total_size() > self.max_packet_size {
-            // The newest frame put us over the limit, so
-            self.frames.len() - 1
-        } else if self.frames.len() >= self.max_frames_per_packet.into() {
-            self.frames.len()
-        } else {
-            // Don't need to produce a frame
-            return Ok(vec![]);
-        };
         let mut header = RtpHeader([0; RTP_HEADER_LEN]);
         header.set_version(RTP_VERSION);
         header.set_payload_type(RTP_PAYLOAD_DYNAMIC);
-        header.set_sequence_number(self.next_sequence_number);
+        header.set_sequence_number(self.next_sequence);
         header.set_timestamp(self.timestamp);
-        let header_iter = header.0.iter().cloned();
-        let frame_header_iter = self.frame_header.iter().cloned();
-        let frame_bytes_iter = self.frames.drain(..packet_ready_idx).flatten();
-        let packet = header_iter.chain(frame_header_iter).chain(frame_bytes_iter).collect();
-        self.next_sequence_number = self.next_sequence_number.wrapping_add(1);
-        let frame_samples: u32 = self.frame_samples.drain(..packet_ready_idx).sum();
-        self.timestamp = self.timestamp + frame_samples;
-        Ok(vec![packet])
+        let mut packet: Vec<u8> = header.0.iter().cloned().collect();
+        packet.push(self.frames.len() as u8);
+        let mut frames_bytes = self.frames.drain(..).flatten().collect();
+        packet.append(&mut frames_bytes);
+
+        self.next_sequence = self.next_sequence.wrapping_add(1);
+        self.timestamp = self.timestamp.wrapping_add(self.samples);
+        self.samples = 0;
+
+        packet
+    }
+}
+
+impl RtpPacketBuilder for SbcRtpPacketBuilder {
+    fn add_frame(&mut self, frame: Vec<u8>, samples: u32) -> Result<Vec<Vec<u8>>, Error> {
+        if (frame.len() + self.header_len()) > self.max_packet_size {
+            return Err(format_err!("Media packet too large for RTP max size"));
+        }
+        let mut packets = Vec::new();
+        let packet_size_with_new = self.header_len() + self.frame_bytes_len() + frame.len();
+        if packet_size_with_new > self.max_packet_size {
+            packets.push(self.build_packet());
+        }
+        self.frames.push_back(frame);
+        self.samples = self.samples + samples;
+        if self.frames.len() == Self::MAX_FRAMES_PER_PACKET {
+            packets.push(self.build_packet());
+        }
+        Ok(packets)
     }
 }
 
@@ -168,54 +172,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_packet_builder_sbc() {
-        let mut builder = FrameRtpPacketBuilder::new(5, 673, vec![5]);
-
-        assert!(builder.add_frame(vec![0xf0], 1).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x9f], 2).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x92], 4).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x96], 8).unwrap().is_empty());
-
-        let mut result = builder.add_frame(vec![0x33], 16).expect("no error");
-
-        let expected = &[
-            0x80, 0x60, 0x00, 0x01, // Sequence num
-            0x00, 0x00, 0x00, 0x00, // timestamp = 0
-            0x00, 0x00, 0x00, 0x00, // SSRC = 0
-            0x05, // Frames in this packet
-            0xf0, 0x9f, 0x92, 0x96, 0x33, // 💖!
-        ];
-
-        let result = result.drain(..).next().expect("a packet after 5 more frames");
-
-        assert_eq!(expected.len(), result.len());
-        assert_eq!(expected, &result[0..expected.len()]);
-
-        assert!(builder.add_frame(vec![0xf0], 32).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x9f], 64).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x92], 128).unwrap().is_empty());
-        assert!(builder.add_frame(vec![0x96], 256).unwrap().is_empty());
-
-        let mut result = builder.add_frame(vec![0x33], 512).expect("no error");
-
-        let expected = &[
-            0x80, 0x60, 0x00, 0x02, // Sequence num
-            0x00, 0x00, 0x00, 0x1F, // timestamp = 2^0 + 2^1 + 2^2 + 2^3 + 2^4)
-            0x00, 0x00, 0x00, 0x00, // SSRC = 0
-            0x05, // Frames in this packet
-            0xf0, 0x9f, 0x92, 0x96, 0x33, // 💖!
-        ];
-
-        let result = result.drain(..).next().expect("a packet after 5 more frames");
-
-        assert_eq!(expected.len(), result.len());
-        assert_eq!(expected, &result[0..expected.len()]);
-    }
-
-    #[test]
-    fn test_packet_builder_max_len() {
-        // Max size 16 = header (12) + 4
-        let mut builder = FrameRtpPacketBuilder::new(5, 4 + RTP_HEADER_LEN, vec![]);
+    fn sbc_packet_builder_max_len() {
+        // 4 bytes leeway for the frames, plus one byte for the payload header.
+        let mut builder = SbcRtpPacketBuilder::new(RTP_HEADER_LEN + 5);
 
         assert!(builder.add_frame(vec![0xf0], 1).unwrap().is_empty());
         assert!(builder.add_frame(vec![0x9f], 2).unwrap().is_empty());
@@ -228,26 +187,30 @@ mod tests {
             0x80, 0x60, 0x00, 0x01, // Sequence num
             0x00, 0x00, 0x00, 0x00, // timestamp = 0
             0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0x04, // Frames in this packet
             0xf0, 0x9f, 0x92, 0x96, // 💖
         ];
 
-        let result = result.drain(..).next().expect("a packet after max size is reached");
+        let result = result.drain(..).next().expect("a packet after 4 frames");
 
         assert_eq!(expected.len(), result.len());
         assert_eq!(expected, &result[0..expected.len()]);
 
-        assert!(builder.add_frame(vec![0x9f, 0x92, 0x96], 32).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x9f], 32).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x92], 64).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x96], 128).unwrap().is_empty());
 
-        let mut result = builder.add_frame(vec![0x33], 64).expect("no error");
+        let mut result = builder.add_frame(vec![0x33], 256).expect("no error");
 
         let expected = &[
             0x80, 0x60, 0x00, 0x02, // Sequence num
-            0x00, 0x00, 0x00, 0x0F, // timestamp = 2^0 + 2^1 + 2^2 + 2^3 (sent last time)
+            0x00, 0x00, 0x00, 0x0F, // timestamp = 2^0 + 2^1 + 2^2 + 2^3)
             0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0x04, // Frames in this packet
             0xf0, 0x9f, 0x92, 0x96, // 💖
         ];
 
-        let result = result.drain(..).next().expect("a packet after 4 more bytes");
+        let result = result.drain(..).next().expect("a packet after 4 more frames");
 
         assert_eq!(expected.len(), result.len());
         assert_eq!(expected, &result[0..expected.len()]);
@@ -255,6 +218,64 @@ mod tests {
         // Trying to push a packet that will never fit in the max returns an error.
         let result = builder.add_frame(vec![0x01, 0x02, 0x03, 0x04, 0x05], 512);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn sbc_packet_builder_max_frames() {
+        let max_tx_size = 200;
+        let mut builder = SbcRtpPacketBuilder::new(max_tx_size);
+
+        assert!(builder.add_frame(vec![0xf0], 1).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x9f], 2).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x92], 4).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x96], 8).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0xf0], 16).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x9f], 32).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x92], 64).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x96], 128).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0xf0], 256).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x9f], 512).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x92], 1024).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x96], 2048).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x33], 4096).unwrap().is_empty());
+        assert!(builder.add_frame(vec![0x33], 8192).unwrap().is_empty());
+
+        let mut result = builder.add_frame(vec![0x33], 16384).expect("no error");
+
+        let expected = &[
+            0x80, 0x60, 0x00, 0x01, // Sequence num
+            0x00, 0x00, 0x00, 0x00, // timestamp = 0
+            0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0x0F, // 15 frames in this packet
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+            0x33, 0x33, 0x33, // !!!
+        ];
+
+        let result = result.drain(..).next().expect("should have a packet");
+
+        assert_eq!(expected.len(), result.len());
+        assert_eq!(expected, &result[0..expected.len()]);
+
+        assert!(builder.add_frame(vec![0xf0, 0x9f, 0x92, 0x96], 32768).unwrap().is_empty());
+        let rest_of_packet: Vec<u8> = (4..(max_tx_size - RTP_HEADER_LEN - 1) as u8).collect();
+        assert!(builder.add_frame(rest_of_packet, 65536).unwrap().is_empty());
+
+        let mut result = builder.add_frame(vec![0x33], 131072).expect("no error");
+
+        let expected = &[
+            0x80, 0x60, 0x00, 0x02, // Sequence num
+            0x00, 0x00, 0x7F, 0xFF, // timestamp = 2^0 + 2^1 + ... + 2^14 (sent last time)
+            0x00, 0x00, 0x00, 0x00, // SSRC = 0
+            0x02, // 2 frames in this packet
+            0xf0, 0x9f, 0x92, 0x96, // 💖
+        ];
+
+        let result = result.drain(..).next().expect("a packet after max bytes exceeded");
+
+        assert!(expected.len() <= result.len());
+        assert_eq!(expected, &result[0..expected.len()]);
     }
 
     #[test]
