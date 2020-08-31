@@ -38,9 +38,7 @@ class ConfigTest : public ::testing::Test {
   std::string NewJSONFile(const std::string& dir, const std::string& json) {
     const std::string json_file =
         fxl::Substitute("$0/json_file$1", dir, std::to_string(unique_id_++));
-    if (!files::WriteFile(json_file, json.data(), json.size())) {
-      return "";
-    }
+    ZX_ASSERT(files::WriteFile(json_file, json.data(), json.size()));
     return json_file;
   }
 
@@ -160,6 +158,28 @@ TEST_F(ConfigTest, FailWhenDuplicateDetected) {
             "json_file1: Duplicate definition in map for 'services': fuchsia.logger.Log\n"
             "json_file2: Duplicate definition in map for 'services': fuchsia.Debug");
   EXPECT_TRUE(config.HasError());
+}
+
+TEST_F(ConfigTest, CriticalComponents) {
+  constexpr char kServices[] = R"json({
+    "services": {
+      "fuchsia.logger.Log": "logger",
+      "fuchsia.Debug": ["debug", "arg1"]
+    },
+    "startup_services": ["fuchsia.logger.Log"],
+    "optional_services": ["fuchsia.tracing.controller.Controller"]
+  })json";
+  constexpr char kCriticalComponents[] = R"json({
+    "critical_components": ["logger"]
+  })json";
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kServices);
+  NewJSONFile(dir, kCriticalComponents);
+
+  Config config;
+  EXPECT_TRUE(config.ParseFromDirectory(dir));
+  EXPECT_EQ(std::vector<std::string>{"logger"}, config.TakeCriticalComponents());
 }
 
 }  // namespace

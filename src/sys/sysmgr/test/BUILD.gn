@@ -11,15 +11,21 @@ group("test") {
   deps = [ ":sysmgr-tests" ]
 }
 
-executable("bin") {
+executable("app_test") {
   testonly = true
-  output_name = "config_test"
-  sources = [ "config_test.cc" ]
+  output_name = "app_test"
+  sources = [
+    "app_test.cc",
+    "config_test.cc",
+  ]
   deps = [
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/sysmgr:lib",
     "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   # TODO(46846): Fix the leaks and remove this.
@@ -27,6 +33,6 @@ executable("bin") {
 }
 
 fuchsia_unittest_package("sysmgr-tests") {
-  manifest = "meta/config_test.cmx"
-  deps = [ ":bin" ]
+  manifest = "meta/app_test.cmx"
+  deps = [ ":app_test" ]
 }

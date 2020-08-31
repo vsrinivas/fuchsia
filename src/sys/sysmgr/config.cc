@@ -4,6 +4,8 @@
 
 #include "src/sys/sysmgr/config.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -21,11 +23,15 @@ constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
 constexpr char kOptionalServices[] = "optional_services";
 constexpr char kUpdateDependencies[] = "update_dependencies";
+constexpr char kCriticalComponents[] = "critical_components";
 }  // namespace
 
 bool Config::ParseFromDirectory(const std::string& dir) {
   auto cb = [this](rapidjson::Document document) { ParseDocument(std::move(document)); };
   json_parser_.ParseFromDirectory(dir, cb);
+  if (json_parser_.HasError()) {
+    FX_LOGS(INFO) << json_parser_.error_str();
+  }
   return !json_parser_.HasError();
 }
 
@@ -79,6 +85,7 @@ void Config::ParseDocument(rapidjson::Document document) {
   ReadJsonStringArray(document, kStartupServices, &startup_services_);
   ReadJsonStringArray(document, kUpdateDependencies, &update_dependencies_);
   ReadJsonStringArray(document, kOptionalServices, &optional_services_);
+  ReadJsonStringArray(document, kCriticalComponents, &critical_components_);
 }
 
 bool Config::ParseServiceMap(const rapidjson::Document& document, const std::string& key,

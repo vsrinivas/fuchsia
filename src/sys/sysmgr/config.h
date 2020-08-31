@@ -27,6 +27,7 @@ class Config {
   using UpdateDependencies = std::vector<std::string>;
   using OptionalServices = std::vector<std::string>;
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
+  using CriticalComponents = std::vector<std::string>;
 
   Config() = default;
   Config(Config&&) = default;
@@ -47,6 +48,8 @@ class Config {
 
   OptionalServices TakeOptionalServices() { return std::move(optional_services_); }
 
+  CriticalComponents TakeCriticalComponents() { return std::move(critical_components_); }
+
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
@@ -64,6 +67,8 @@ class Config {
   OptionalServices optional_services_;
   AppVector apps_;
   json::JSONParser json_parser_;
+  std::string diagnostics_url_;
+  CriticalComponents critical_components_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

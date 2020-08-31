@@ -30,7 +30,9 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  sysmgr::App app(std::move(config), &loop);
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  FX_DCHECK(component_context);
+  sysmgr::App app(std::move(config), component_context->svc(), &loop);
   loop.Run();
   return 0;
 }

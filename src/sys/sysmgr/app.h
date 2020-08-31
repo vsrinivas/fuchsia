@@ -11,11 +11,12 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/zx/time.h>
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_set>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/sysmgr/config.h"
@@ -31,22 +32,33 @@ namespace sysmgr {
 // of the environment.
 class App {
  public:
-  explicit App(Config config, async::Loop* loop);
+  explicit App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services,
+               async::Loop* loop);
   ~App();
+
+  // Launch component in the sys realm.
+  // If the component is marked as critical, it is tracked and restarted when it crashes.
+  void LaunchComponent(const fuchsia::sys::LaunchInfo& launch_info,
+                       fuchsia::sys::ComponentController::OnTerminatedCallback on_terminate,
+                       fit::function<void(zx_status_t)> on_ctrl_err);
 
  private:
   zx::channel OpenAsDirectory();
   void ConnectToService(const std::string& service_name, zx::channel channel);
 
   void RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPtr launch_info,
-                         bool optional);
+                         bool is_optional_service);
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
-  void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  void RestartCriticalComponent(const std::string& component_url);
 
-  // Keep track of all services, indexed by url.
+  void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
+
+  async::Loop* loop_;
+  std::shared_ptr<sys::ServiceDirectory> incoming_services_;
+
+  // Keep track of services provided by each cmoponent URL.
   std::map<std::string, std::shared_ptr<sys::ServiceDirectory>> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
@@ -62,6 +74,19 @@ class App {
   fidl::BindingSet<fuchsia::sys::Loader> loader_bindings_;
 
   bool auto_updates_enabled_;
+
+  // A record of critical components.
+  //
+  // All critical compnoents have entries in this map, regardless of if they're running.
+  // The associated |ComponentController| may be `nullptr` if it is not running.
+  struct CriticalComponentRuntimeInfo {
+    fuchsia::sys::LaunchInfo latest_launch_info;
+    std::deque<zx::time> crash_history;
+  };
+  std::unordered_map<std::string, CriticalComponentRuntimeInfo> critical_components_;
+  // Contains the ComponentControllers of all component URLs launched by sysmgr.
+  // They are removed from this map when the associated component dies.
+  std::unordered_map<std::string, fuchsia::sys::ComponentControllerPtr> controllers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
