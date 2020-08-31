@@ -1,8 +1,8 @@
 # FIDL Cross-Petal Change Tests
 
-These are tests to validate source compatibility through various changes to FIDL
-libraries. They do not test binary compatibility. Tests for compiled languages
-are only meant to be built, not executed, since source compatibility issues show
+These are tests to validate source-compatibility through various changes to FIDL
+libraries. They do not test binary-compatibility. Tests for compiled languages
+are only meant to be built, not executed, since source-compatibility issues show
 up at compile time.
 
 ## Transitions

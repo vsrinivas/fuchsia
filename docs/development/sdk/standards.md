@@ -53,7 +53,7 @@ FIDL definitions in the IDK might evolve in source-incompatible ways. For
 example, we might rename a method in a protocol while maintaining its ordinal
 and semantics (the ordinal can be maintained by adding a `Selector` attribute
 that is set to the original name). Such a change preserves the ABI but breaks
-source compatibility.
+source-compatibility.
 
 We do not currently have any standards about when we should break source
 compatibility.

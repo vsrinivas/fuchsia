@@ -493,9 +493,9 @@ Use `array` for fixed-length data:
 
 Both structs and tables represent an object with multiple named fields. The
 difference is that structs have a fixed layout in the wire format, which means
-they *cannot* be modified without breaking binary compatibility. By contrast,
+they *cannot* be modified without breaking binary-compatibility. By contrast,
 tables have a flexible layout in the wire format, which means fields *can* be
-added to a table over time without breaking binary compatibility.
+added to a table over time without breaking binary-compatibility.
 
 Use structs for performance-critical protocol elements or for protocol elements
 that are very unlikely to change in the future. For example, use a struct to

@@ -7,8 +7,8 @@ toc:
     path: /docs/development/languages/fidl/guides/style.md
   - title: "Designing APIs"
     path: /docs/development/languages/fidl/guides/api-design.md
-  - title: "Evolving APIs"
-    path: /docs/development/languages/fidl/guides/abi-compat.md
+  - title: "Binary and and source-compatibility"
+    path: /docs/development/languages/fidl/guides/abi-api-compat.md
   - title: "Maxing out pagination"
     path: /docs/development/languages/fidl/guides/max-out-pagination.md
   - title: "Picking between C, LLCPP, and HLCPP bindings"

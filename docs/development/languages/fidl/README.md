@@ -12,14 +12,17 @@ Read the [concepts doc][concepts] to get a brief overview of what FIDL is,
 including some of its design goals, requirements, and workflow.
 
 ## Developer Guides
-* [Running FIDL][cli] &mdash; quick CLI overview of the various programs in the FIDL toolchain
+
+* [Running FIDL][cli] &mdash; quick CLI overview of the various programs in the
+  FIDL toolchain
 * [Style Guide][style]
 * [Designing APIs][designing-apis]
-* [Evolving APIs][evolving-apis] &mdash; details the possible transitions for each FIDL type,
-  taking into account API and ABI compatibility
-* [Maxing Out Pagination][pagination] &mdash; help on determining how much data can fit into a single
-   message
-* [C Family Binding Comparison][c-family] &mdash; how to decide which binding (HLCPP, LLCPP, or C) to use
+* [ABI and API compatibility guide][abi-api-compat] &mdash; details the possible
+  transitions for each FIDL type, taking into account ABI and API compatibility
+* [Maxing Out Pagination][pagination] &mdash; help on determining how much data
+   can fit into a single message
+* [C Family Binding Comparison][c-family] &mdash; how to decide which binding
+  (HLCPP, LLCPP, or C) to use
 
 ## References
 
@@ -36,7 +39,7 @@ Please read the [contributing doc][contributing] for more information.
 [cli]: /docs/development/languages/fidl/guides/cli.md
 [style]: /docs/development/languages/fidl/guides/style.md
 [designing-apis]: /docs/development/languages/fidl/guides/api-design.md
-[evolving-apis]: /docs/development/languages/fidl/guides/abi-compat.md
+[abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md
 
