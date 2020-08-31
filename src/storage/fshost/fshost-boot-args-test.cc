@@ -104,3 +104,12 @@ TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
 
   EXPECT_EQ(std::nullopt, boot_args().blobfs_write_compression_algorithm());
 }
+
+TEST_F(FshostBootArgsTest, GetBlockVeritySeal) {
+  std::map<std::string, std::string> config = {
+      {"factory_verity_seal", "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7"}};
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+
+  EXPECT_EQ("ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+            boot_args().block_verity_seal());
+}

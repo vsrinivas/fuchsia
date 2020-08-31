@@ -95,4 +95,8 @@ zx::status<std::string> FshostBootArgs::pkgfs_cmd() {
   return GetStringArgument("zircon.system.pkgfs.cmd");
 }
 
+zx::status<std::string> FshostBootArgs::block_verity_seal() {
+  return GetStringArgument("factory_verity_seal");
+}
+
 }  // namespace devmgr

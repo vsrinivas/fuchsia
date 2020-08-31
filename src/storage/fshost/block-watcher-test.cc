@@ -70,6 +70,15 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
   zx_status_t MountFilesystem() override {
     ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
+  zx::status<std::string> VeritySeal() override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
+  zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
+  bool ShouldAllowAuthoringFactory() override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
 };
 
 // Tests adding a device which has no GUID and an unknown format.
@@ -186,7 +195,6 @@ TEST(AddDeviceTestCase, AddUnformattedBlockVerityDevice) {
     }
     zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
                                         bool* is_path) final {
-      EXPECT_STR_EQ("/mutable/block", expected_path.data());
       *is_path = false;
       return ZX_OK;
     }
@@ -213,20 +221,58 @@ TEST(AddDeviceTestCase, AddUnformattedMutableBlockVerityDevice) {
     }
     zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
                                         bool* is_path) final {
-      EXPECT_STR_EQ("/mutable/block", expected_path.data());
-      *is_path = true;
+      if (strcmp("/mutable/block", expected_path.data()) == 0) {
+        *is_path = true;
+        mutable_path_checked = true;
+      } else {
+        *is_path = false;
+      }
       return ZX_OK;
     }
     zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
       *out_guid = GPT_FACTORY_TYPE_GUID;
       return ZX_OK;
     }
+    bool mutable_path_checked = false;
   };
   BlockVerityDevice device;
   EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.mutable_path_checked);
 }
 
-// Tests adding a device with the block-verity disk format.
+// Tests adding a device with a factory GUID but an unknown disk format with the
+// topological path suffice /verified/block
+TEST(AddDeviceTestCase, AddUnformattedVerifiedBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      ADD_FATAL_FAILURE("Should not attach a driver");
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      if (strcmp("/verified/block", expected_path.data()) == 0) {
+        *is_path = true;
+        verified_path_checked = true;
+      } else {
+        *is_path = false;
+      }
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+    bool verified_path_checked = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.verified_path_checked);
+}
+
+// Tests adding a device with the block-verity disk format
+const char kFakeSeal[] = "0000000000000000000000000000000000000000000000000000000000000000";
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
   class BlockVerityDevice : public MockBlockDevice {
    public:
@@ -234,6 +280,70 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
     zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
       attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return false; }
+    zx::status<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
+    zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
+      EXPECT_STR_EQ(kFakeSeal, seal_hex);
+      opened = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+    bool opened = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
+  EXPECT_TRUE(device.opened);
+}
+
+// Tests adding a device with block-verity format but no seal provided by
+// bootloader
+TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return false; }
+    zx::status<std::string> VeritySeal() final {
+      seal_read = true;
+      return zx::error_status(ZX_ERR_NOT_FOUND);
+    }
+    zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
+      ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
+      return ZX_OK;
+    }
+    bool attached = false;
+    bool seal_read = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, device.Add());
+  EXPECT_TRUE(device.attached);
+  EXPECT_TRUE(device.seal_read);
+}
+
+// Tests adding a device with block-verity format while in factory authoring mode
+TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool ShouldAllowAuthoringFactory() final { return true; }
+    zx::status<std::string> VeritySeal() final {
+      ADD_FATAL_FAILURE("Should not call VeritySeal");
+      return zx::error_status(ZX_ERR_NOT_FOUND);
+    }
+    zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
+      ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
       return ZX_OK;
     }
     bool attached = false;

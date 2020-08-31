@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -87,6 +88,15 @@ class BlockDeviceInterface {
 
   // Attempts to mount the filesystem with the format returned by |GetFormat()|.
   virtual zx_status_t MountFilesystem() = 0;
+
+  // Queries the seal used to open the verity device.
+  virtual zx::status<std::string> VeritySeal() = 0;
+
+  // Opens the block-verity device for reading.
+  virtual zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) = 0;
+
+  // Queries if we should allow factory partition modifications.
+  virtual bool ShouldAllowAuthoringFactory() = 0;
 };
 
 }  // namespace devmgr

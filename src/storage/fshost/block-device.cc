@@ -18,6 +18,7 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,9 +43,12 @@
 #include "block-watcher.h"
 #include "encrypted-volume.h"
 #include "pkgfs-launcher.h"
+#include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 
 namespace devmgr {
 namespace {
+
+const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-factory";
 
 // Attempt to mount the device pointed to be the file descriptor at a known
 // location.
@@ -88,6 +92,35 @@ int UnsealZxcryptThread(void* arg) {
   fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
   EncryptedVolume volume(std::move(fd), std::move(devfs_root));
   volume.EnsureUnsealedAndFormatIfNeeded();
+  return 0;
+}
+
+// Holds thread state for OpenVerityDeviceThread
+struct VerityDeviceThreadState {
+  fbl::unique_fd fd;
+  digest::Digest seal;
+};
+
+// return value is ignored
+int OpenVerityDeviceThread(void* arg) {
+  std::unique_ptr<VerityDeviceThreadState> state(static_cast<VerityDeviceThreadState*>(arg));
+  fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
+
+  std::unique_ptr<block_verity::VerifiedVolumeClient> vvc;
+  zx_status_t status = block_verity::VerifiedVolumeClient::CreateFromBlockDevice(
+      state->fd.get(), std::move(devfs_root),
+      block_verity::VerifiedVolumeClient::Disposition::kDriverAlreadyBound, zx::sec(5), &vvc);
+  if (status != ZX_OK) {
+    printf("fshost: Couldn't create VerifiedVolumeClient: %s\n", zx_status_get_string(status));
+    return 1;
+  }
+
+  fbl::unique_fd inner_block_fd;
+  status = vvc->OpenForVerifiedRead(std::move(state->seal), zx::sec(5), inner_block_fd);
+  if (status != ZX_OK) {
+    printf("fshost: OpenForVerifiedRead failed: %s\n", zx_status_get_string(status));
+    return 1;
+  }
   return 0;
 }
 
@@ -160,12 +193,41 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
   thrd_t th;
   int err = thrd_create_with_name(&th, &UnsealZxcryptThread, raw_fd_ptr, "zxcrypt-unseal");
   if (err != thrd_success) {
-    printf("fshost: failed to spawn zxcrypt unseal thread");
+    printf("fshost: failed to spawn zxcrypt worker thread\n");
     close(loose_fd);
     delete raw_fd_ptr;
+    return ZX_ERR_INTERNAL;
   } else {
     thrd_detach(th);
   }
+  return ZX_OK;
+}
+
+zx_status_t BlockDevice::OpenBlockVerityForVerifiedRead(std::string seal_hex) {
+  printf("fshost: preparing block-verity\n");
+
+  std::unique_ptr<VerityDeviceThreadState> state = std::make_unique<VerityDeviceThreadState>();
+  zx_status_t rc = state->seal.Parse(seal_hex.c_str());
+  if (rc != ZX_OK) {
+    printf("block-verity seal %s did not parse as SHA256 hex digest: %s\n", seal_hex.c_str(),
+           zx_status_get_string(rc));
+    return rc;
+  }
+
+  // Transfer FD to thread state.
+  state->fd = std::move(fd_);
+
+  thrd_t th;
+  int err = thrd_create_with_name(&th, OpenVerityDeviceThread, state.get(), "block-verity-open");
+  if (err != thrd_success) {
+    printf("fshost: failed to spawn block-verity worker thread\n");
+    return ZX_ERR_INTERNAL;
+  } else {
+    // Release our reference to the state now owned by the other thread.
+    state.release();
+    thrd_detach(th);
+  }
+
   return ZX_OK;
 }
 
@@ -222,6 +284,16 @@ zx_status_t BlockDevice::FormatZxcrypt() {
   }
   EncryptedVolume volume(fd_.duplicate(), std::move(devfs_root_fd));
   return volume.Format();
+}
+
+zx::status<std::string> BlockDevice::VeritySeal() {
+  return mounter_->boot_args()->block_verity_seal();
+}
+
+bool BlockDevice::ShouldAllowAuthoringFactory() {
+  // Checks for presence of /boot/config/allow-authoring-factory
+  fbl::unique_fd allow_authoring_factory_fd(open(kAllowAuthoringFactoryConfigFile, O_RDONLY));
+  return allow_authoring_factory_fd.is_valid();
 }
 
 bool BlockDevice::ShouldCheckFilesystems() { return mounter_->ShouldCheckFilesystems(); }
@@ -427,9 +499,22 @@ zx_status_t BlockDeviceInterface::Add() {
       return AttachDriver(kMBRDriverPath);
     }
     case DISK_FORMAT_BLOCK_VERITY: {
-      // TODO(fxbug.dev/55936): this should launch a thread to call OpenForVerifiedRead when the
-      // verity device is available. It should only launch that thread if we are not in FCT mode.
-      return AttachDriver(kBlockVerityDriverPath);
+      zx_status_t rc = AttachDriver(kBlockVerityDriverPath);
+      if (rc != ZX_OK) {
+        return rc;
+      }
+
+      if (!ShouldAllowAuthoringFactory()) {
+        zx::status<std::string> seal_text = VeritySeal();
+        if (seal_text.is_error()) {
+          printf("Couldn't get block-verity seal: %s\n", seal_text.status_string());
+          return seal_text.error_value();
+        }
+
+        return OpenBlockVerityForVerifiedRead(seal_text.value());
+      }
+
+      return ZX_OK;
     }
     case DISK_FORMAT_ZXCRYPT: {
       if (!Netbooting()) {
@@ -536,7 +621,18 @@ zx_status_t BlockDeviceInterface::Add() {
           return ZX_ERR_NOT_SUPPORTED;
         }
         if (is_already_bound) {
-          // the factory service takes care of this block device
+          // This is the child device of a block device that already has the
+          // verity driver bound.  Don't bind, lest we cause a second layer of indirection!
+          return ZX_OK;
+        }
+
+        if (IsTopologicalPathSuffix(std::string_view("/verified/block"), &is_already_bound) !=
+            ZX_OK) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (is_already_bound) {
+          // This is the child device of a block device that already has the
+          // verity driver bound.  Don't bind, lest we cause a second layer of indirection!
           return ZX_OK;
         }
 

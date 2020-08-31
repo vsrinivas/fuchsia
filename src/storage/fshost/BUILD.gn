@@ -132,7 +132,9 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+    "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/loader_service",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
@@ -140,11 +142,13 @@ source_set("block-watcher") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/minfs",
+    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
@@ -205,6 +209,17 @@ test("fshost_test") {
 
   # TODO(46432): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+# Include this target from a product config if you want to allow authoring
+# factory partition contents in mutable mode and prevent opening block-verity
+# volumes in verified read mode.
+generated_resource("allow-authoring-factory") {
+  outputs = [ "config/allow-authoring-factory" ]
+  contents = "yes"
+
+  # We should never allow authoring factory from a production, user-facing build.
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 fuchsia_unittest_component("fshost-test") {

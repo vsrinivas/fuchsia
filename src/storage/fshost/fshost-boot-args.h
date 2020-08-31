@@ -44,6 +44,9 @@ class FshostBootArgs {
     return blobfs_write_compression_algorithm_;
   }
 
+  // The seal of the factory partition, required for opening the block device for verified read.
+  zx::status<std::string> block_verity_seal();
+
  protected:
  private:
   zx::status<std::string> GetStringArgument(std::string key);
