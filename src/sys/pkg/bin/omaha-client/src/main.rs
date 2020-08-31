@@ -135,6 +135,7 @@ fn main() -> Result<(), Error> {
             state_node,
             channel_configs,
             Box::new(api_metrics_reporter),
+            channel_data.name,
         );
         let fidl = Rc::new(RefCell::new(fidl));
 

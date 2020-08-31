@@ -156,6 +156,8 @@ where
     monitor_queue: ControlHandle<StateNotifier, State>,
 
     metrics_reporter: Box<dyn ApiMetricsReporter>,
+
+    current_channel: Option<String>,
 }
 
 pub enum IncomingServices {
@@ -177,6 +179,7 @@ where
         state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
         metrics_reporter: Box<dyn ApiMetricsReporter>,
+        current_channel: Option<String>,
     ) -> Self {
         let state = State {
             manager_state: state_machine::State::Idle,
@@ -196,6 +199,7 @@ where
             state,
             monitor_queue,
             metrics_reporter,
+            current_channel,
         }
     }
 
@@ -314,6 +318,8 @@ where
                             name, appid
                         );
                     }
+                    // TODO(fxb/58887): only OTA that follows can change the current channel.
+                    // Simplify this logic.
                     app_set.set_target_channel(channel_name, appid).await;
                 } else {
                     let server = server.borrow();
@@ -354,8 +360,15 @@ where
                 responder.send(&channel).context("error sending response")?;
             }
             ChannelControlRequest::GetCurrent { responder } => {
-                let app_set = server.borrow().app_set.clone();
-                let channel = app_set.get_current_channel().await;
+                let (current_channel, app_set) = {
+                    let server = server.borrow();
+                    (server.current_channel.clone(), server.app_set.clone()) // server borrow is dropped
+                };
+                let channel = match current_channel {
+                    Some(channel) => channel.to_string(),
+                    None => app_set.get_current_channel().await,
+                };
+
                 responder.send(&channel).context("error sending response")?;
             }
             ChannelControlRequest::GetTargetList { responder } => {
@@ -380,8 +393,14 @@ where
     ) -> Result<(), Error> {
         match request {
             ProviderRequest::GetCurrent { responder } => {
-                let app_set = server.borrow().app_set.clone();
-                let channel = app_set.get_current_channel().await;
+                let (current_channel, app_set) = {
+                    let server = server.borrow();
+                    (server.current_channel.clone(), server.app_set.clone()) // server borrow is dropped
+                };
+                let channel = match current_channel {
+                    Some(channel) => channel.to_string(),
+                    None => app_set.get_current_channel().await,
+                };
                 responder.send(&channel).context("error sending response")?;
             }
         }
@@ -562,6 +581,7 @@ mod stub {
         allow_update_check: bool,
         state_machine_control: Option<StubStateMachineController>,
         time_source: Option<MockTimeSource>,
+        current_channel: Option<String>,
     }
 
     impl FidlServerBuilder {
@@ -574,6 +594,7 @@ mod stub {
                 allow_update_check: true,
                 state_machine_control: None,
                 time_source: None,
+                current_channel: None,
             }
         }
     }
@@ -618,6 +639,11 @@ mod stub {
             self
         }
 
+        pub fn with_current_channel(mut self, current_channel: Option<String>) -> Self {
+            self.current_channel = current_channel.into();
+            self
+        }
+
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
@@ -659,6 +685,7 @@ mod stub {
                 state_node,
                 self.channel_configs,
                 Box::new(StubApiMetricsReporter),
+                self.current_channel,
             )));
 
             let schedule_node = ScheduleNode::new(root.create_child("schedule"));
@@ -906,9 +933,9 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_get_channel() {
+    async fn test_get_channel_from_app() {
         let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
+            .with_cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
             .build()];
         let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
@@ -919,13 +946,78 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_provider_get_channel() {
+    async fn test_get_current_channel_from_constructor() {
+        let fidl = FidlServerBuilder::new()
+            .with_current_channel("current-channel".to_string().into())
+            .build()
+            .await;
+
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            Rc::clone(&fidl),
+            IncomingServices::ChannelControl,
+        );
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_changing_target_doesnt_change_current_channel() {
+        let fidl = FidlServerBuilder::new()
+            .with_current_channel("current-channel".to_string().into())
+            .build()
+            .await;
+
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            Rc::clone(&fidl),
+            IncomingServices::ChannelControl,
+        );
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+
+        let fidl = fidl.borrow();
+        fidl.app_set.set_target_channel(None, None).await;
+
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_provider_get_channel_from_constructor() {
+        let fidl = FidlServerBuilder::new()
+            .with_current_channel("current-channel".to_string().into())
+            .build()
+            .await;
+
+        let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
+
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_provider_get_current_channel_from_app() {
         let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
+            .with_cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
             .build()];
         let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
+
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_changing_target_doesnt_change_current_channel_provider() {
+        let fidl = FidlServerBuilder::new()
+            .with_current_channel("current-channel".to_string().into())
+            .build()
+            .await;
+
+        let proxy = spawn_fidl_server::<ProviderMarker>(
+            Rc::clone(&fidl),
+            IncomingServices::ChannelProvider,
+        );
+
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+
+        let fidl = fidl.borrow();
+        fidl.app_set.set_target_channel(None, None).await;
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
@@ -973,7 +1065,7 @@ mod tests {
     async fn test_set_target_empty() {
         let fidl = FidlServerBuilder::new()
             .with_channel_configs(ChannelConfigs {
-                default_channel: Some("default-channel".to_string()),
+                default_channel: "default-channel".to_string().into(),
                 known_channels: vec![ChannelConfig::with_appid("default-channel", "default-app")],
             })
             .build()
