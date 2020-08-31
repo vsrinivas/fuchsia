@@ -1,0 +1,81 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test "contrib/format-code" script.
+
+readonly TESTDATA="data/fx_format_code_test"
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/contrib/format-code"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/image_build_vars.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/tests/subcommands/${TESTDATA}/cplusplus.cc"
+  "tools/devshell/tests/subcommands/${TESTDATA}/rust.rs"
+  "tools/devshell/tests/subcommands/${TESTDATA}/gn.gn"
+  "tools/devshell/tests/subcommands/${TESTDATA}/gn.gni"
+  "tools/devshell/tests/subcommands/${TESTDATA}/python3.py"
+)
+
+MOCK_CLANG_DIR="prebuilt/third_party/clang/test"
+MOCK_GN="prebuilt/third_party/gn/test/gn"
+MOCK_PYTHON3_DIR="prebuilt/third_party/python3/test"
+MOCK_RUST_TOOLS_DIR="prebuilt/third_party/rust_tools/test"
+BT_MOCKED_TOOLS=(
+  "tools/devshell/lib/prebuilt.sh"
+  "prebuilt/third_party/vpython/vpython3"
+  "${MOCK_CLANG_DIR}/bin/clang-format"
+  "${MOCK_GN}"
+  "${MOCK_PYTHON3_DIR}/bin/python3.8"
+  "${MOCK_RUST_TOOLS_DIR}/bin/rustfmt"
+)
+
+BT_MKDIR_DEPS=(
+  ".jiri_root"
+)
+
+BT_SET_UP() {
+  # Set up the testing framework.
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  # Set up mocked replacements for system utils.
+  export PATH="${BT_TEMP_DIR}/bin:${PATH}"
+  cat > "${BT_TEMP_DIR}/tools/devshell/lib/prebuilt.sh.mock_side_effects" <<EOF
+    readonly PREBUILT_CLANG_DIR=${BT_TEMP_DIR}/${MOCK_CLANG_DIR}
+    readonly PREBUILT_GN=${BT_TEMP_DIR}/${MOCK_GN}
+    readonly PREBUILT_PYTHON3_DIR=${BT_TEMP_DIR}/${MOCK_PYTHON3_DIR}
+    readonly PREBUILT_RUST_TOOLS_DIR=${BT_TEMP_DIR}/${MOCK_RUST_TOOLS_DIR}
+EOF
+}
+
+# Ensure that formatting an unchanged tree works
+TEST_fx-format-code-no-args() {
+  BT_EXPECT ${fx} format-code 2> stderr
+}
+
+# Ensure that the commands for common file types are sensible.
+TEST_fx-format-code-commands() {
+  local out="${BT_TEMP_DIR}/_fx_format_code_output"
+  local files=(
+    "${TESTDATA}/cplusplus.cc"
+    "${TESTDATA}/rust.rs"
+    "${TESTDATA}/gn.gn"
+    "${TESTDATA}/gn.gni"
+    "${TESTDATA}/python3.py"
+  )
+  local csfiles
+  printf -v csfiles ",%s" "${files[@]}"
+  BT_EXPECT ${fx} format-code --verbose --files="${csfiles:1}" > "${out}"
+  BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
+  BT_EXPECT grep -q -E '"gn format.*gn.gn"' "${out}"
+  BT_EXPECT grep -q -E '"gn format.*gn.gni"' "${out}"
+  BT_EXPECT grep -q -E '"rustfmt.*rust.rs"' "${out}"
+  BT_EXPECT grep -q -E '"yapf.*python3.py"' "${out}"
+}
+
+BT_RUN_TESTS "$@"

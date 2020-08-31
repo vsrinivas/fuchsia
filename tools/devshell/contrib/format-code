@@ -23,6 +23,7 @@
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
+##   --verbose Print all formatting commands prior to execution.
 ##    -- PATTERN
 ##             For --all or --git, passes along -- PATTERN to `git ls-files`
 ##             to filter what files are affected.
@@ -165,7 +166,10 @@ readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 readonly JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
 readonly JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
 readonly MARKDOWN_FMT_CMD="${FUCHSIA_OUT_DIR}/default/dart-tools/doc-checker"
-readonly PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
+PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython3"
+PY_CMD+=" -vpython-interpreter ${PREBUILT_PYTHON3_DIR}/bin/python3.8"
+PY_CMD+=" ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
+declare -r PY_CMD
 readonly RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
 readonly RUST_FMT_CMD="${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 
@@ -194,8 +198,11 @@ for file in ${FILES[@]}; do
 
   # Format the file
   declare fcmd=$(format-cmd ${file})
-  [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
   declare hgcmd=$(hg-cmd ${file})
+  if [[ -n "${VERBOSE}" ]]; then
+    echo ${fcmd} "${file}"
+  fi
+  [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
   [[ -n "${hgcmd}" ]] && ${hgcmd} "${file}"
 
   # Collect markdown
