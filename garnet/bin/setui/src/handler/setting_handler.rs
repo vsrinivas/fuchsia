@@ -45,6 +45,8 @@ pub enum ControllerError {
     UndeliverableError(SettingType, SettingRequest),
     #[error("Delivery error for type: {0:?} received by: {1:?}")]
     DeliveryError(SettingType, SettingType),
+    #[error("Irrecoverable error")]
+    IrrecoverableError,
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;

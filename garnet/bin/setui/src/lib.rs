@@ -84,6 +84,8 @@ pub mod message;
 pub mod service_context;
 pub mod switchboard;
 
+const DEFAULT_SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
+
 /// A common trigger for exiting.
 pub type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 
@@ -457,6 +459,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     let mut proxies = HashMap::new();
 
+    // TODO(58893): make max attempts a configurable option.
     for setting_type in &components {
         proxies.insert(
             *setting_type,
@@ -465,6 +468,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
                 handler_factory.clone(),
                 core_messenger_factory.clone(),
                 setting_handler_messenger_factory.clone(),
+                event_messenger_factory.clone(),
+                DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
             )
             .await?
             .0,
