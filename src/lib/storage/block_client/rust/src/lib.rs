@@ -407,6 +407,11 @@ impl RemoteBlockDevice {
     pub fn block_count(&self) -> u64 {
         self.block_count
     }
+
+    /// Returns true if the remote fifo is still connected.
+    pub fn is_connected(&self) -> bool {
+        self.fifo_state.lock().unwrap().fifo.is_some()
+    }
 }
 
 impl Drop for RemoteBlockDevice {
@@ -678,6 +683,7 @@ mod tests {
                     .read_at(MutableBufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 0),
             );
         }
+        assert!(remote_block_device.is_connected());
         let _ = futures::join!(futures::future::join_all(reads), async {
             ramdisk.destroy().expect("ramdisk.destroy failed")
         });
@@ -687,6 +693,7 @@ mod tests {
             .await
             .is_ok()
         {}
+        assert_eq!(remote_block_device.is_connected(), false);
         let _ = remote_block_device.detach_vmo(vmo_id).await;
     }
 
