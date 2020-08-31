@@ -30,7 +30,7 @@ declare_args() {
   } else if (current_cpu == "x64") {
     kernel_base = "0xffffffff80100000"  # Has KERNEL_LOAD_OFFSET baked into it.
   } else if (current_cpu == "riscv64") {
-    kernel_base = "0xffff800088340000"  # Has KERNEL_LOAD_OFFSET baked into it.
+    kernel_base = "0xffffffe000000000"
   }
 
   # Enable kernel lock dependency tracking.

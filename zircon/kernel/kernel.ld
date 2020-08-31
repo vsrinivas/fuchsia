@@ -375,6 +375,7 @@ SECTIONS
         PROVIDE_HIDDEN(__sancov_pc_counts_vmo_end = .);
 
         *(.bss*)
+        *(.sbss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
     }

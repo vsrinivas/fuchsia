@@ -22,14 +22,14 @@ FUNCTION(_start)
     lla     t0, zbi_paddr
     sd      a0, (t0)
 
-    // make sure the boot allocator is given a chance to figure out where we
-    // are loaded in physical memory
-    jal     boot_alloc_init
-
-    // save the physical address the kernel is loaded at
-    lla     a0, __code_start
-    lla     t0, kernel_base_phys
-    sd      a0, (t0)
+    // The fixup code appears right after the kernel image (at __data_end in
+    // our view).  Note this code overlaps with the kernel's bss!  It
+    // expects a0 to contain the current physical address of __code_start and
+    // a1 to contain the desired virtual address of __code_start.
+    lla     t0, kernel_relocated_base
+    ld      s10, (t0)
+    mv      a1, s10
+    jal     __data_end
 
     // zero bss
 1:
@@ -40,44 +40,50 @@ FUNCTION(_start)
     add     t0, t0, 8
     bne     t0, t1, 0b
 
-    // initialize the kernel page tables
-    // for all MMU versions, identity map some amount of memory near 0 and
-    // the same amount at the bottom of the kernel's address space
-    lla     t0, kernel_pgtable
+    // make sure the boot allocator is given a chance to figure out where we
+    // are loaded in physical memory
+    jal     boot_alloc_init
 
-    // store the physical address of the pgtable for future use
-    lla     t1, kernel_pgtable_phys
-    sd      t0, (t1)
+    // save the physical address the kernel is loaded at
+    lla     a0, __code_start
+    lla     t0, kernel_base_phys
+    sd      a0, (t0)
 
-    // compute kernel pgtable pointer (index 256)
-    addi    t1, t0, (8 * 128)
-    addi    t1, t1, (8 * 128)
+    // void riscv64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags);
+    lla     a0, riscv64_kernel_translation_table
+    li      a1, 0
+    li      a2, 0
+    li      a3, ARCH_PHYSMAP_SIZE
+    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    jal     riscv64_boot_map
 
-    // page table entry: address 0, A, D, G, XWR, V
-    li      t2, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    // map a large run of physical memory at the base of the kernel's address space
+    // TODO(fxb/47856): Only map the arenas.
+    lla     a0, riscv64_kernel_translation_table
+    li      a1, KERNEL_ASPACE_BASE
+    li      a2, 0
+    li      a3, ARCH_PHYSMAP_SIZE
+    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    jal     riscv64_boot_map
 
-    // num interations and increment count
-    // RV48: map the first 512GB of the physical address space at the
-    // bottom of the kernel address space using a single terapage
-    li      t3, 1
-    li      t4, (512 * 1024 * 1024 * 1024) >> 2
-
-    // loop, writing t3 entries out and incrementing by t4 address
-0:
-    sd      t2, (t1)
-    sd      t2, (t0)
-    add     t2, t2, t4
-    addi    t0, t0, 8
-    addi    t1, t1, 8
-    addi    t3, t3, -1
-    bnez    t3, 0b
+    // map the kernel to a fixed address
+    // note: mapping the kernel here with full rwx, this will get locked down
+    // later in vm initialization;
+    lla     a0, riscv64_kernel_translation_table
+    lla     t0, kernel_relocated_base
+    ld      a1, (t0)
+    lla     a2, __code_start
+    lla     a3, _end
+    sub     a3, a3, a2
+    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    jal     riscv64_boot_map
 
     // ensure it's written out
     fence   w,w
 
     // set the satp register and enable the mmu
-    // ASID 0, kernel_pgtable address
-    lla     t0, kernel_pgtable
+    // ASID 0, riscv64_kernel_translation_table address
+    lla     t0, riscv64_kernel_translation_table
     srli    t1, t0, 12
     li      t2, (9 << 60)   // mode 9, SV48
     or      t1, t1, t2
@@ -88,22 +94,9 @@ FUNCTION(_start)
 
     // mmu is initialized and we're running out of an identity physical map
 
-    // save the physical address of .Lhigh
-    lla     t1, .Lhigh
-
-    // bounce to the high address
-    lla     t0, .Lhigh_addr
-    ld      t0, (t0)
-    jr      t0
-
-    // the full virtual address of the .Lhigh label
-.Lhigh_addr:
-    .quad   .Lhigh
-.Lhigh:
-
-    // we're now running at the high virtual address
     // compute the delta between the old physical and newer high addresses
-    sub     t0, t0, t1
+    lla     t0, __code_start
+    sub     t0, s10, t0
 
     // fix up the gp, stack pointer, and return address
     add     gp, gp, t0

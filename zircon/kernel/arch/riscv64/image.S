@@ -66,10 +66,40 @@ END_DATA(kernel_image)
 // Immediately after the kernel image comes the fixup code.
 // The start.S code sees this address as __data_end.
 
+// TODO(revest): Use IMAGE_LOAD_START when LLVM supports it
+// This constant was found in the boot-shim logs with the formula:
+//   "Kernel to 0000000089180000" - "Kernel at 0000000088200000"
+#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0xf80000)
+
+// This code must be purely position-independent and have no relocs.
+// This is called with the physical address of __code_start in a0 and the
+// desired virtual address of __code_start in a1.
+FUNCTION(apply_fixups)
+    // This is the constant address the kernel was linked for.
+    li   t1, KERNEL_BASE
+    sub  t1, a1, t1
+
+// The generated kernel-fixups.inc invokes this macro for each run of fixups.
 .macro fixup addr, n, stride
+    li  t2, FIXUP_LOCATION(\addr)
+    add t2, t2, a0
+    // TODO(revest): Optimize this macro to use less instructions when n < 3
+    li   t3, \n
+0:
+    ld   t4, (t2)
+    add  t4, t4, t1
+    sd   t4, (t2)
+    addi t2, t2, \stride
+    addi t3, t3, -1
+    bnez t3, 0b
 .endm
 
 #include "kernel-fixups.inc"
+
+    ret
+
+DATA(apply_fixups_end)
+END_FUNCTION(apply_fixups)
 
 .balign 8
 DATA(boot_load_end)
