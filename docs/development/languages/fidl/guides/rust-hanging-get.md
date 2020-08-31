@@ -11,9 +11,13 @@ same `Proxy` has been dropped.
 
 To avoid invalidating the `Proxy` when using such combinators, a good pattern is
 to wrap the hanging get call in a `stream` by using
-[`HangingGetStream`][hanging-get-stream-impl] or using the pattern below.
-Dropping a `Stream::next` future is always safe because it will not cause the
-underlying FIDL request to be dropped.
+[`HangingGetStream`][hanging-get-stream-impl]:
+
+```rust
+let watch_foo_stream = HangingGetStream::new(Box::new(move || Some(proxy.watch_foo())));
+```
+
+Another alternative is using the pattern below to create a stream.
 
 ```rust
 fn hanging_get_stream(proxy: &FooProxy) -> impl futures::Stream<Item=Result<FooResult, fidl::Error>> + '_ {
@@ -22,6 +26,11 @@ fn hanging_get_stream(proxy: &FooProxy) -> impl futures::Stream<Item=Result<FooR
     })
 }
 ```
+
+Dropping a `Stream::next` future is always safe because it will not cause the
+underlying FIDL request to be dropped.  If the stream itself is dropped while already waiting for a
+response, the response will be ignored.  This is important if a FIDL server doesn't allow
+multiple hanging get waiters at once.
 
 [hanging-get-pattern]: /docs/concepts/api/fidl.md#hanging-get
 [hanging-get-stream-impl]: https://fuchsia-docs.firebaseapp.com/rust/async_utils/hanging_get/client/type.HangingGetStream.html
