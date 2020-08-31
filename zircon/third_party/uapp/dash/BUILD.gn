@@ -81,6 +81,7 @@ executable("dash") {
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 
   configs += [ "//build/config:Wno-unused-function" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("output_h") {

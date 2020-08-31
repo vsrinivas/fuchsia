@@ -39,6 +39,10 @@ executable("fvm") {
   } else {
     sources += [ "mtd-stub.cc" ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 sdk_host_tool("fvm_sdk") {

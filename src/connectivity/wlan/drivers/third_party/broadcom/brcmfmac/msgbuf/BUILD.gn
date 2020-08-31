@@ -32,4 +32,5 @@ source_set("msgbuf") {
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

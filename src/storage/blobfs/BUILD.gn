@@ -203,4 +203,8 @@ zx_library("blobfs") {
     deps += [ "//zircon/system/ulib/fs-host" ]
   }
   include_dirs = [ "." ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

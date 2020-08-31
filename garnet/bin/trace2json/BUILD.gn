@@ -37,6 +37,10 @@ source_set("lib") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 sdk_host_tool("bin_sdk") {

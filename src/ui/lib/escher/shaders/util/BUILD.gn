@@ -18,4 +18,8 @@ static_library("shader_utils") {
     "//src/ui/lib/escher/vk",
     "//third_party/glm",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

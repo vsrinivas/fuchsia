@@ -24,4 +24,8 @@ source_set("far") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

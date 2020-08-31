@@ -17,6 +17,10 @@ executable("merkleroot") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/digest",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 sdk_host_tool("merkleroot_sdk") {

@@ -36,6 +36,10 @@ source_set("svg") {
     "${graphics_compute_dir}/tests:common",
   ]
   public_configs = [ ":public_config" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 executable("spn_svg_dump") {
@@ -54,5 +58,9 @@ graphics_compute_unittests("unittests") {
   deps = [
     ":svg",
     "${graphics_compute_dir}/tests:common_test_utils",
+  ]
+  configs = [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }

@@ -22,6 +22,10 @@ source_set("verified-volume-client") {
 
 source_set("geometry") {
   sources = [ "geometry.cc" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 test("geometry-test") {

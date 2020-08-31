@@ -25,4 +25,5 @@ source_set("chipset") {
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

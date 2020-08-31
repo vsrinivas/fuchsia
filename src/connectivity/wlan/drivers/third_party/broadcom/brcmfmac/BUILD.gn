@@ -50,6 +50,7 @@ source_set("debug") {
     "//src/lib/ddk",
     "//zircon/system/public",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for utility classes.  Classes here should be small and self-contained, having no
@@ -82,6 +83,7 @@ source_set("linuxisms") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//zircon/system/public",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for DMA buffer handling.
@@ -102,6 +104,7 @@ source_set("dmabuf") {
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for the BCDC firmware protocol.
@@ -118,6 +121,7 @@ source_set("bcdc") {
     ":linuxisms",
     "//zircon/system/public",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for the driver core logic.
@@ -194,6 +198,7 @@ source_set("core") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   friend = [ "test/*" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Source set including the driver sources, and the bus definitions conditionally compiled in on each

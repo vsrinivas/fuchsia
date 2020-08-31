@@ -14,6 +14,10 @@ static_library("elflib") {
   deps = [ "//zircon/system/public" ]
 
   public_deps = [ "//zircon/public/lib/fbl" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # An example stripped binary. Originally copied from out/x64/cowsay.

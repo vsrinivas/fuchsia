@@ -36,4 +36,5 @@ source_set("platform") {
     "//third_party/openthread:lib-ot-core",
     "//zircon/public/lib/zx",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

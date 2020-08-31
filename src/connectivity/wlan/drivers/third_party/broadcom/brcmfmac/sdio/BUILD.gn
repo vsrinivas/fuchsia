@@ -27,9 +27,9 @@ source_set("sdio") {
   public = [ "sdio_device.h" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/devices/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -46,4 +46,5 @@ source_set("sdio") {
   ]
   public_configs = [ ":config_sdio" ]
   friend = [ "test/*" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

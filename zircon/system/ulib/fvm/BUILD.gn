@@ -63,4 +63,8 @@ zx_library("fvm") {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
     public_deps += [ "//zircon/public/lib/zircon-headers" ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

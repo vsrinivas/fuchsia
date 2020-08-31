@@ -54,6 +54,10 @@ source_set("guid") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("guid-test") {

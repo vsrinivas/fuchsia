@@ -6,6 +6,10 @@ import("//build/host.gni")
 
 executable("loglistener") {
   sources = [ "loglistener.c" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 install_host_tools("host") {

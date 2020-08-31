@@ -20,5 +20,9 @@ if (is_host) {
       "transpose.h",
     ]
     deps = [ "${graphics_compute_dir}/common" ]
+    configs += [
+      # TODO(fxb/58162): delete the below and fix compiler warnings
+      "//build/config:Wno-conversion",
+    ]
   }
 }

@@ -9,7 +9,6 @@ rustc_library("lib") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-
   non_rust_deps = [ ":ext_ping" ]
 
   deps = [
@@ -47,4 +46,8 @@ rustc_library("lib") {
 static_library("ext_ping") {
   sources = [ "src/ping.cc" ]
   deps = [ "//zircon/public/lib/zx" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

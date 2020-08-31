@@ -1,7 +1,6 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 ##########################################
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
@@ -47,5 +46,10 @@ zx_library("fzl") {
 
     # Many public headers here use various zx headers.
     "//zircon/public/lib/zx",
+  ]
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }

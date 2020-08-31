@@ -60,6 +60,10 @@ static_library("spinel") {
   ]
   deps = [ "${graphics_compute_dir}/common" ]
   public_deps = [ ":spinel_headers" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 group("spinel_ext_unittests") {

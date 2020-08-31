@@ -21,4 +21,8 @@ static_library("usb_bulk") {
   }
 
   cflags = [ "-fPIC" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

@@ -149,4 +149,8 @@ zx_library("minfs") {
     public_deps += [ "//zircon/public/lib/zircon-headers" ]
   }
   include_dirs = [ "." ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

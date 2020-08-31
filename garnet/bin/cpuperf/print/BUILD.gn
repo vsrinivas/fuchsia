@@ -30,6 +30,10 @@ executable("cpuperf_print") {
     "//garnet/lib/perfmon",
     "//src/lib/fxl",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 install_host_tools("host_cpuperf_print") {

@@ -23,4 +23,8 @@ source_set("geometry") {
   deps = [ "${graphics_compute_dir}/spinel:spinel_headers" ]
 
   public_configs = [ ":geometry_config" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

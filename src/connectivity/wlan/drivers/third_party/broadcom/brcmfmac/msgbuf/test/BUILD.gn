@@ -19,6 +19,7 @@ source_set("fake_msgbuf_interfaces") {
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_utils") {
@@ -81,6 +82,7 @@ executable("msgbuf_ring_handler_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("brcmfmac_msgbuf_test") {

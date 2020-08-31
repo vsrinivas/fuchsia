@@ -97,18 +97,17 @@ zx_library("fs") {
       "watcher.cc",
     ]
     public_deps += [
-      "//zircon/public/lib/async",
-      "//zircon/public/lib/fit",
-      "//zircon/public/lib/zx",
-
       # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-
-      # <fs/trace.h> has #include <lib/trace/event.h>.
-      "//zircon/system/ulib/trace",
+      "//zircon/public/lib/async",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
       "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
+
+      # <fs/trace.h> has #include <lib/trace/event.h>.
+      "//zircon/system/ulib/trace",
     ]
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
@@ -125,4 +124,9 @@ zx_library("fs") {
       "//zircon/system/ulib/trace",
     ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

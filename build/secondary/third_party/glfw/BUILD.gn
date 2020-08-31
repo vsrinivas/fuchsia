@@ -77,4 +77,5 @@ static_library("glfw") {
     ]
   }
   public_configs = [ ":glfw_config" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

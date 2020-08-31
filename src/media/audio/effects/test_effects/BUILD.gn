@@ -6,4 +6,8 @@ loadable_module("test_effects") {
   sources = [ "test_effects.cc" ]
 
   deps = [ "//sdk/lib/media/audio/effects" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

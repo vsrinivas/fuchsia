@@ -7,8 +7,8 @@
 source_set("getifaddrs-internal") {
   visibility = [
     "//sdk/lib/fdio:*",
-    "//sdk/lib/fdio:fdio_sdk_manifest_meta_copy",
     "//sdk/lib/fdio:fdio_sdk_manifest",
+    "//sdk/lib/fdio:fdio_sdk_manifest_meta_copy",
   ]
   sources = [ "src/network/getifaddrs.h" ]
   public_configs = [ ":getifaddrs_include_dirs" ]

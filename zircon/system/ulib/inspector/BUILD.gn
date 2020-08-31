@@ -1,7 +1,6 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 ##########################################
 # Though under //zircon, this build file #
 # is meant to be used in the Fuchsia GN  #
@@ -19,7 +18,6 @@ zx_library("inspector") {
   # the otherwise problematic ngunwind symbols.
   shared = true
   static = false
-
   sdk = "shared"
   sdk_headers = [ "inspector/inspector.h" ]
   sources = [
@@ -46,4 +44,9 @@ zx_library("inspector") {
     configs -= [ "//build/config:default_frame_pointers" ]
     configs += [ "//build/config:frame_pointers" ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

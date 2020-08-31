@@ -24,4 +24,5 @@ source_set("fdt") {
     "libfdt_internal.h",
   ]
   public_configs = [ ":fdt_config" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

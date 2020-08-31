@@ -19,12 +19,16 @@ source_set("src") {
   ]
 
   public_deps = [ "//src/lib/fxl" ]
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 executable("bin") {
   output_name = "sockscripter"
   sources = [ "main.cc" ]
-
   deps = [ ":src" ]
 }
 
@@ -34,11 +38,14 @@ executable("sockscripter_test") {
     "addr_test.cc",
     "sockscripter_test.cc",
   ]
-
   deps = [
     ":src",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 
@@ -51,7 +58,6 @@ group("sockscripter") {
 
 group("tests") {
   testonly = true
-
   deps = [
     ":sockscripter",
     ":sockscripter_test($host_toolchain)",
@@ -72,14 +78,12 @@ unittest_package("sockscripter_unittest") {
 package("package") {
   package_name = "sockscripter"
   deps = [ ":bin" ]
-
   binaries = [
     {
       name = "sockscripter"
       shell = true
     },
   ]
-
   meta = [
     {
       path = rebase_path("meta/sockscripter.cmx")

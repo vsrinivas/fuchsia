@@ -12,6 +12,10 @@ executable("bootserver") {
     "tftp.c",
   ]
   deps = [ "//zircon/public/lib/tftp" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 sdk_host_tool("bootserver_sdk") {

@@ -20,7 +20,6 @@ syslog_headers = [
   "lib/syslog/wire_format.h",
 ]
 
-
 zx_library("syslog") {
   sdk = "shared"
   sdk_publishable = true
@@ -40,6 +39,10 @@ zx_library("syslog") {
     "//zircon/public/lib/zx",
   ]
   runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # This static library should have no shared library dependencies,

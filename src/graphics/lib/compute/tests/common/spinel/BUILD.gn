@@ -31,6 +31,10 @@ source_set("spinel_utils") {
     "${graphics_compute_dir}/spinel:spinel_headers",
     "${graphics_compute_dir}/svg:svg",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # Spinel-related test utilities. Only depends on the Spinel API headers, and

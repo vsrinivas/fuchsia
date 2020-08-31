@@ -39,6 +39,10 @@ source_set("memory") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("strings") {
@@ -73,6 +77,10 @@ source_set("strings") {
     ":common",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 
@@ -112,6 +120,10 @@ static_library("fxl") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//zircon/public/lib/fit",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 

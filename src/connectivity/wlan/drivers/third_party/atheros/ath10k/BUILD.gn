@@ -86,6 +86,7 @@ driver_module("ath10k_driver") {
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (internal_access) {
@@ -162,6 +163,7 @@ executable("sparse_array_tests") {
   ]
 
   deps = [ "//src/lib/fxl/test:gtest_main" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bitarr_tests") {
@@ -174,6 +176,7 @@ executable("bitarr_tests") {
   ]
 
   deps = [ "//src/lib/fxl/test:gtest_main" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("ath10k_test") {

@@ -7,6 +7,10 @@ import("//build/host.gni")
 source_set("common") {
   sources = [ "netprotocol.c" ]
   deps = [ "//zircon/system/public" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 executable("netruncmd") {
@@ -19,6 +23,10 @@ executable("netcp") {
   deps = [
     ":common",
     "//zircon/public/lib/tftp",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 

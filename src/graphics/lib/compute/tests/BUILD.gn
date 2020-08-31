@@ -47,6 +47,10 @@ source_set("common") {
     "common/utils.h",
   ]
   public_configs = [ ":common_public_config" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("common_test_utils") {
@@ -60,6 +64,10 @@ source_set("common_test_utils") {
     graphics_compute_gtest_target,
   ]
   testonly = true
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 graphics_compute_unittests("common_unittests") {
@@ -75,6 +83,10 @@ graphics_compute_unittests("common_unittests") {
   deps = [
     ":common",
     ":common_test_utils",
+  ]
+  configs = [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 

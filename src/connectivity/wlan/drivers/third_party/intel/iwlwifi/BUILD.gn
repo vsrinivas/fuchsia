@@ -76,6 +76,7 @@ source_set("core") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/backtrace-request",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Contains the entire driver, separate from the driver_module for the unit
@@ -114,6 +115,7 @@ source_set("pcie") {
   # should be addressed. The config is removed from this target in the
   # meantime.
   configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("iwlwifi_driver") {

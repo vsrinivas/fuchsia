@@ -6,6 +6,10 @@ import("//src/virtualization/buildtools/romfs_image.gni")
 
 executable("mkromfs") {
   sources = [ "mkromfs.cc" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 test_file = "${target_out_dir}/foo"

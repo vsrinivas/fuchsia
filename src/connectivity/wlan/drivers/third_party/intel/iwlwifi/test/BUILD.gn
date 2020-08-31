@@ -38,6 +38,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("test") {

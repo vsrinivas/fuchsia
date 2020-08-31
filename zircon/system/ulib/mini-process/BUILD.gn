@@ -55,6 +55,10 @@ if (toolchain_variant.instrumented) {
       # This defeats optimizations that break the assumptions.
       ":subprocess.config",
     ]
+    configs += [
+      # TODO(fxb/58162): delete the below and fix compiler warnings
+      "//build/config:Wno-conversion",
+    ]
   }
 
   config("subprocess.config") {

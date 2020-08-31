@@ -51,6 +51,10 @@ source_set("macros") {
     "dlog.h",
     "macros.h",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("status") {
@@ -61,6 +65,10 @@ source_set("status") {
   sources = [ "status.h" ]
 
   public_deps = [ "$magma_build_root/include:magma_abi_common" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("mapped_batch") {
@@ -109,6 +117,10 @@ source_set("allocator") {
   public_deps = [
     ":macros",
     "//zircon/public/lib/fit",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 

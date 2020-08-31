@@ -25,6 +25,10 @@ static_library("line_input") {
       "//zircon/public/lib/zx",
     ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 if (is_host) {
@@ -47,6 +51,10 @@ if (is_host) {
     sources = [ "line_input_example.cc" ]
 
     deps = [ ":line_input" ]
+    configs += [
+      # TODO(fxb/58162): delete the below and fix compiler warnings
+      "//build/config:Wno-conversion",
+    ]
   }
 } else {
   executable("line_input_tests_bin") {

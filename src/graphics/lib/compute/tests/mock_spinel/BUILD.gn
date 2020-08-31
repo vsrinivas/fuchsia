@@ -22,6 +22,10 @@ source_set("mock_spinel") {
     "${graphics_compute_dir}/spinel:spinel_headers",
     "${graphics_compute_dir}/tests:common",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 graphics_compute_unittests("mock_spinel_unittests") {

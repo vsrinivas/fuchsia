@@ -5,6 +5,7 @@
 # Do not use - depend directly on //src/lib/json_parser instead.
 # This is a transitional target and will be removed soon.
 # Bug: 36759
+
 group("json") {
   public_deps = [ ":json_parser" ]
 }
@@ -51,6 +52,11 @@ executable("json_parser_unittests_bin") {
 
   # TODO(46748): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 if (is_fuchsia) {

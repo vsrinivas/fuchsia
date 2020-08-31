@@ -74,6 +74,11 @@ static_library("perfmon") {
   if (!is_fuchsia) {
     public_deps += [ "//zircon/system/public" ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 executable("perfmon_tests_app") {

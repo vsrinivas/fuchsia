@@ -163,6 +163,10 @@ static_library("client") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("test_support") {
@@ -191,6 +195,10 @@ source_set("test_support") {
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 
@@ -284,5 +292,9 @@ source_set("tests") {
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }

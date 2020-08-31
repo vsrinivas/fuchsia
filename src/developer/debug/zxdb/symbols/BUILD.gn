@@ -164,6 +164,10 @@ static_library("symbols") {
     "//src/lib/elflib",
     "//src/lib/llvm:LLVMDebugInfoDWARF",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 static_library("test_support") {
@@ -194,6 +198,10 @@ static_library("test_support") {
     ":symbols",
     "//src/developer/debug/zxdb/common:test_support",
     "//src/lib/llvm:LLVMDebugInfoDWARF",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 
@@ -290,6 +298,10 @@ source_set("tests") {
       ":test_so",
     ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("perf_tests") {

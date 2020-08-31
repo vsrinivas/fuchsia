@@ -45,6 +45,7 @@ source_set("pcie") {
     ":pcie_driver_test",
     "test/*",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("pcie_driver_test") {

@@ -23,4 +23,5 @@ zx_library("linenoise") {
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/lib/fdio",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

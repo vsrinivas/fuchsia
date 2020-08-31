@@ -80,7 +80,10 @@ static_library("zstd") {
 
   public_configs = [ ":zstd_include" ]
 
-  configs += [ ":zstd_config" ]
+  configs += [
+    ":zstd_config",
+    "//build/config:Wno-conversion",
+  ]
 
   # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
   # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
@@ -124,5 +127,6 @@ static_library("zstdseek") {
   configs += [
     ":zstd_config",
     ":zstd_seekable_config",
+    "//build/config:Wno-conversion",
   ]
 }

@@ -46,4 +46,5 @@ executable("unittests") {
   ]
 
   include_dirs = [ "//third_party/openthread/include" ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

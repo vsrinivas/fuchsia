@@ -76,6 +76,10 @@ static_library("libunwindstack") {
   if (is_mac) {
     deps += [ ":copy_elf_h" ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 if (is_mac) {

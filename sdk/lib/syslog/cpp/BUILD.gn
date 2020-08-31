@@ -27,6 +27,11 @@ sdk_source_set("cpp") {
   public_deps = [ "//zircon/public/lib/fit" ]
 
   public_configs = [ "//sdk/config" ]
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 sdk_source_set("backend_host") {
@@ -135,6 +140,11 @@ executable("logging_cpp_unittests") {
     sources += [ "logging_socket_unittest.cc" ]
     deps += [ ":backend_legacy" ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 executable("logging_cpp_unittests_structured") {

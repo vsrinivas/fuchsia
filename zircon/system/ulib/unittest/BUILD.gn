@@ -33,6 +33,10 @@ zx_library("unittest") {
   if (is_fuchsia) {
     deps += [ "//zircon/public/lib/zx" ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # This static version is used for host binaries in the GN build.

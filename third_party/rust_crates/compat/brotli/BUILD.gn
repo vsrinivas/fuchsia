@@ -32,4 +32,5 @@ static_library("brotli") {
     "$brotli_crate/enc/static_dict.c",
     "$brotli_crate/enc/utf8_util.c",
   ]
+  configs += [ "//build/config:Wno-conversion" ]
 }

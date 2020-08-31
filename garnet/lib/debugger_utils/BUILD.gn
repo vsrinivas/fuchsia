@@ -7,7 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 # A collection of utilities useful to debuggers and similar programs.
-
+#
 static_library("debugger_utils") {
   sources = [
     "build_ids.cc",
@@ -58,4 +58,9 @@ static_library("debugger_utils") {
   } else {
     deps += [ "//zircon/system/public" ]
   }
+
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

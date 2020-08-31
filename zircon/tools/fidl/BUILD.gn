@@ -46,4 +46,8 @@ source_set("compiler") {
       "//zircon/public/lib/safemath",
     ]
   }
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

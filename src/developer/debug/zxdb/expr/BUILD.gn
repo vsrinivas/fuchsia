@@ -98,6 +98,10 @@ static_library("expr") {
     "//third_party/double-conversion",
     "//zircon/public/lib/fit",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("test_support") {
@@ -171,6 +175,10 @@ source_set("tests") {
     "//src/developer/debug/zxdb/symbols:test_support",
     "//src/lib/llvm:LLVMBinaryFormat",
     "//third_party/googletest:gtest",
+  ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
   ]
 }
 

@@ -18,6 +18,10 @@ source_set("yxml") {
   ]
 
   public_configs = [ ":yxml_config" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 #
@@ -42,6 +46,10 @@ source_set("svg") {
   ]
 
   public_configs = [ ":svg_config" ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 #
