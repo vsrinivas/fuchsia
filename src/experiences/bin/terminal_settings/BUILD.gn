@@ -9,6 +9,7 @@ flutter_app("terminal_settings") {
   main_dart = "lib/main.dart"
 
   sources = [
+    "main.dart",
     "src/widgets/settings_container.dart",
     "src/widgets/settings_pane.dart",
   ]
@@ -31,9 +32,7 @@ flutter_app("terminal_settings") {
 }
 
 flutter_test("terminal_settings_unittests") {
-  sources = [
-    "settings_container_test.dart",
-  ]
+  sources = [ "settings_container_test.dart" ]
 
   deps = [
     ":terminal_settings_dart_library",

@@ -5,12 +5,12 @@
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("wifi_settings") {
-
   main_dart = "lib/main.dart"
 
   manifest = "pubspec.yaml"
 
   sources = [
+    "main.dart",
     "src/fuchsia/access_point.dart",
     "src/fuchsia/wifi_settings_model.dart",
     "src/wlan_manager.dart",
@@ -24,10 +24,10 @@ flutter_app("wifi_settings") {
   ]
 
   deps = [
-    "//src/experiences/settings/lib/settings",
-    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.wlan.service",
+    "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",

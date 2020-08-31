@@ -5,12 +5,12 @@
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("bluetooth_settings") {
-
   main_dart = "lib/main.dart"
 
   manifest = "pubspec.yaml"
 
   sources = [
+    "main.dart",
     "src/bluetooth_model.dart",
     "src/bluetooth_settings.dart",
   ]
@@ -23,12 +23,12 @@ flutter_app("bluetooth_settings") {
   ]
 
   deps = [
-    "//src/experiences/settings/lib/settings",
-    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.bluetooth.gatt",
     "//sdk/fidl/fuchsia.bluetooth.le",
+    "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",

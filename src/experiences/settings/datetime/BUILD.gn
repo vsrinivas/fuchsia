@@ -9,8 +9,7 @@ flutter_app("datetime_settings") {
 
   manifest = "pubspec.yaml"
 
-  sources = [
-  ]
+  sources = [ "main.dart" ]
 
   meta = [
     {
@@ -20,9 +19,9 @@ flutter_app("datetime_settings") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//src/experiences/settings/lib/settings",
     "//src/experiences/settings/lib/widgets",
-    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",

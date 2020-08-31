@@ -9,6 +9,20 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 settings_app("settings") {
   config = "settings.config"
+
+  additional_sources = [
+    "main.dart",
+    "src/models/embedded_module.dart",
+    "src/models/settings_status.dart",
+    "src/setting_entry_parser.dart",
+  ]
+
+  additional_deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//third_party/dart-pkg/pub/yaml",
+    "//topaz/public/dart/zircon",
+  ]
 }
 
 flutter_test("settings_tests") {
@@ -28,7 +42,5 @@ flutter_test("settings_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":settings_tests",
-  ]
+  deps = [ ":settings_tests" ]
 }

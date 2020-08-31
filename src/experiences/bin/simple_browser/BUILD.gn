@@ -28,9 +28,26 @@ flutter_app("simple_browser") {
   manifest = "pubspec.yaml"
 
   sources = [
+    "app.dart",
+    "create_web_context.dart",
     "main.dart",
     "src/blocs/tabs_bloc.dart",
+    "src/blocs/webpage_bloc.dart",
+    "src/models/app_model.dart",
     "src/models/tabs_action.dart",
+    "src/models/webpage_action.dart",
+    "src/services/simple_browser_navigation_event_listener.dart",
+    "src/services/simple_browser_web_service.dart",
+    "src/utils/browser_shortcuts.dart",
+    "src/utils/sanitize_url.dart",
+    "src/utils/tld_checker.dart",
+    "src/utils/tlds_provider.dart",
+    "src/utils/valid_tlds.dart",
+    "src/widgets/error_page.dart",
+    "src/widgets/history_buttons.dart",
+    "src/widgets/navigation_bar.dart",
+    "src/widgets/navigation_field.dart",
+    "src/widgets/tabs_widget.dart",
   ]
 
   deps = [

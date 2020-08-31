@@ -13,6 +13,10 @@ template("settings_app") {
     "src/widgets/all_settings.dart",
   ]
 
+  if (defined(invoker.additional_sources)) {
+    base_sources += invoker.additional_sources
+  }
+
   base_resources = [
     {
       path = rebase_path(config)
@@ -21,11 +25,11 @@ template("settings_app") {
   ]
 
   base_deps = [
-    "//src/experiences/settings/lib/settings",
-    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
+    "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/meta",
@@ -34,12 +38,16 @@ template("settings_app") {
     "//topaz/public/dart/fuchsia_services",
   ]
 
+  if (defined(invoker.additional_deps)) {
+    base_deps += invoker.additional_deps
+  }
+
   base_meta = [
-      {
-        path = "//src/experiences/settings/bin/meta/settings.cmx"
-        dest = "settings.cmx"
-      },
-    ]
+    {
+      path = "//src/experiences/settings/bin/meta/settings.cmx"
+      dest = "settings.cmx"
+    },
+  ]
 
   # We cannot define the flutter app as a component for the base/canonical
   # target as tests target the dart library, which is only generated correctly
