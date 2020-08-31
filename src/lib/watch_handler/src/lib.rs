@@ -6,7 +6,7 @@
 
 //! A common handler for hanging_gets
 
-use anyhow::{format_err, Error};
+use thiserror::Error;
 
 /// Function used to determine whether a change should cause any parked watchers to return.
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -72,14 +72,15 @@ where
         }
     }
 
-    /// Park a new hanging get in the handler
-    pub fn watch(&mut self, responder: ST) -> Result<(), Error> {
+    /// Park a new hanging get in the handler. If a hanging get is already parked, returns the
+    /// new responder.
+    pub fn watch(&mut self, responder: ST) -> Result<(), WatchError<ST>> {
         if let None = self.watch_responder {
             self.watch_responder = Some(responder);
             self.send_if_needed();
             Ok(())
         } else {
-            Err(format_err!("Inconsistent state; existing handler in state"))
+            Err(WatchError { responder })
         }
     }
 
@@ -116,6 +117,20 @@ where
     }
 }
 
+/// Error returned if watch fails.
+#[derive(Error)]
+#[error("Inconsistent state; existing handler in state")]
+pub struct WatchError<ST> {
+    /// The responder that could not be parked.
+    pub responder: ST,
+}
+
+impl<ST> std::fmt::Debug for WatchError<ST> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,6 +148,7 @@ mod tests {
         id: i32,
     }
 
+    #[derive(Debug, PartialEq)]
     struct TestSender {
         sent_value: Rc<RefCell<i32>>,
     }
@@ -210,11 +226,11 @@ mod tests {
         // second watch hangs
         handler.watch(TestSender { sent_value: sent_value.clone() }).unwrap();
 
-        let sent_value = Rc::new(RefCell::new(ID_INVALID));
+        let sent_value = Rc::new(RefCell::new(ID4));
         // third results in an error
         let result = handler.watch(TestSender { sent_value: sent_value.clone() });
 
-        assert_eq!(result.is_err(), true);
+        assert_eq!(result.unwrap_err().responder, TestSender { sent_value: sent_value.clone() });
     }
 
     #[test]
