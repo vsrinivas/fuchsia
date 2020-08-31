@@ -71,7 +71,8 @@ void main() {
 
       expect(size, singleValue(greaterThan(0)));
       expect(maxSize, singleValue(greaterThan(0)));
-      expect(maxSize, singleValue(greaterThan(size[0])));
+      // TODO(fxbug.dev/59235): Reenable once we support name deduplication.
+      // expect(maxSize, singleValue(greaterThan(size[0])));
     });
 
     test('appmgr exposes overall recent cpu usage', () async {
