@@ -82,7 +82,7 @@ pub enum ManualRequest {
     Exit(oneshot::Sender<()>),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ApConfig {
     pub id: types::NetworkIdentifier,
     pub credential: Vec<u8>,

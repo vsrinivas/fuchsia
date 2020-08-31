@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mode_management::{iface_manager::IfaceManagerApi, phy_manager::PhyManagerApi},
+    crate::mode_management::{iface_manager_api::IfaceManagerApi, phy_manager::PhyManagerApi},
     anyhow::{bail, Context, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
@@ -15,7 +15,7 @@ use {
     std::sync::Arc,
 };
 
-pub(crate) struct RegulatoryManager<I: IfaceManagerApi, P: PhyManagerApi> {
+pub(crate) struct RegulatoryManager<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> {
     regulatory_service: RegulatoryRegionWatcherProxy,
     device_service: DeviceServiceProxy,
     phy_manager: Arc<Mutex<P>>,
@@ -24,7 +24,7 @@ pub(crate) struct RegulatoryManager<I: IfaceManagerApi, P: PhyManagerApi> {
 
 const REGION_CODE_LEN: usize = 2;
 
-impl<I: IfaceManagerApi, P: PhyManagerApi> RegulatoryManager<I, P> {
+impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
     pub fn new(
         regulatory_service: RegulatoryRegionWatcherProxy,
         device_service: DeviceServiceProxy,
@@ -762,19 +762,19 @@ mod tests {
             unimplemented!();
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!();
         }
 
-        fn has_idle_client(&self) -> bool {
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
             unimplemented!();
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!();
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!();
         }
 

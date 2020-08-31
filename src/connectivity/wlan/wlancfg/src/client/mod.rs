@@ -9,7 +9,7 @@ use {
         config_management::{
             Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManager,
         },
-        mode_management::iface_manager::IfaceManagerApi,
+        mode_management::iface_manager_api::IfaceManagerApi,
         util::listener,
     },
     anyhow::{format_err, Error},
@@ -126,11 +126,17 @@ pub(crate) async fn serve_provider_requests(
                 // disconnected, attempt to reconnect now that the network selector has been
                 // updated with fresh scan results.
                 let temp_iface_manager = iface_manager.clone();
-                let temp_iface_manager = temp_iface_manager.lock().await;
-                if temp_iface_manager.has_idle_client() {
-                    drop(temp_iface_manager);
-                    info!("Detected idle interface, attempting connection with new scan results");
-                    connect_to_best_network(iface_manager.clone(), network_selector.clone()).await;
+                let mut temp_iface_manager = temp_iface_manager.lock().await;
+                match temp_iface_manager.has_idle_client().await {
+                    Ok(true) => {
+                        drop(temp_iface_manager);
+                        info!("Detected idle interface, attempting connection with new scan results");
+                        connect_to_best_network(iface_manager.clone(), network_selector.clone()).await;
+                    },
+                    Ok(false) => {},
+                    Err(e) => {
+                        error!("Unable to query idle clients on scan completion: {:?}", e);
+                    }
                 }
             },
         }
@@ -331,9 +337,15 @@ async fn handle_client_request_save_network(
     let connect_req = client_fsm::ConnectRequest { network: net_id, credential: credential };
     let mut iface_manager = iface_manager.lock().await;
 
-    if iface_manager.has_idle_client() {
-        info!("Idle interface available, will attempt connection to new saved network");
-        let _ = iface_manager.connect(connect_req).await;
+    match iface_manager.has_idle_client().await {
+        Ok(true) => {
+            info!("Idle interface available, will attempt connection to new saved network");
+            let _ = iface_manager.connect(connect_req).await;
+        }
+        Ok(false) => {}
+        Err(e) => {
+            error!("Unable to query idle client state while saving network: {:?}", e);
+        }
     }
 
     Ok(())
@@ -494,14 +506,23 @@ pub(crate) async fn handle_client_state_machine_event(
             // Record the idle interface.
             let temp_iface_manager = iface_manager.clone();
             let mut temp_iface_manager = temp_iface_manager.lock().await;
-            temp_iface_manager.record_idle_client(iface_id);
-            drop(temp_iface_manager);
+            match temp_iface_manager.record_idle_client(iface_id).await {
+                Ok(()) => {
+                    drop(temp_iface_manager);
 
-            // See what networks are available and attempt a reconnect.
-            info!("Received notification of idle interface, will attempt to reconnect");
-            if scan_for_network_selector(iface_manager.clone(), selector.clone()).await.is_ok() {
-                // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
-                connect_to_best_network(iface_manager, selector).await;
+                    // See what networks are available and attempt a reconnect.
+                    info!("Received notification of idle interface, will attempt to reconnect");
+                    if scan_for_network_selector(iface_manager.clone(), selector.clone())
+                        .await
+                        .is_ok()
+                    {
+                        // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+                        connect_to_best_network(iface_manager, selector).await;
+                    }
+                }
+                Err(e) => {
+                    error!("Unable to record idle client {}: {:?}", iface_id, e);
+                }
             }
         }
     }
@@ -536,7 +557,6 @@ mod tests {
             access_point::state_machine as ap_fsm,
             client::{scan::ScanResultUpdate, sme_credential_from_policy},
             config_management::{Credential, NetworkConfig, SecurityType, PSK_BYTE_LEN},
-            mode_management::iface_manager::IfaceManagerApi,
             util::logger::set_logger_for_test,
         },
         async_trait::async_trait,
@@ -609,19 +629,19 @@ mod tests {
             Ok(receiver)
         }
 
-        fn record_idle_client(&mut self, iface_id: u16) {
-            self.disconnected_ifaces.push(iface_id)
+        async fn record_idle_client(&mut self, iface_id: u16) -> Result<(), Error> {
+            Ok(self.disconnected_ifaces.push(iface_id))
         }
 
-        fn has_idle_client(&self) -> bool {
-            !self.disconnected_ifaces.is_empty()
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
+            Ok(!self.disconnected_ifaces.is_empty())
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -1311,7 +1331,9 @@ mod tests {
                 Poll::Ready(iface_manager) => iface_manager,
                 Poll::Pending => panic!("expected to acquire iface_manager lock"),
             };
-            iface_manager.record_idle_client(0);
+            let record_idle_fut = iface_manager.record_idle_client(0);
+            pin_mut!(record_idle_fut);
+            assert_variant!(exec.run_until_stalled(&mut record_idle_fut), Poll::Ready(Ok(())));
         }
 
         // No request has been sent yet. Future should be idle.
@@ -1858,19 +1880,19 @@ mod tests {
             Err(format_err!("No ifaces"))
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        fn has_idle_client(&self) -> bool {
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
             unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -2033,7 +2055,9 @@ mod tests {
                 Poll::Ready(iface_manager) => iface_manager,
                 Poll::Pending => panic!("expected to acquire iface_manager lock"),
             };
-            iface_manager.record_idle_client(0);
+            let record_idle_fut = iface_manager.record_idle_client(0);
+            pin_mut!(record_idle_fut);
+            assert_variant!(exec.run_until_stalled(&mut record_idle_fut), Poll::Ready(Ok(())));
         }
 
         // Record some results to show that we have previously connected to this network and that
@@ -2100,8 +2124,8 @@ mod tests {
 
         {
             let iface_manager = iface_manager.clone();
-            let iface_manager = iface_manager.lock().await;
-            assert!(!iface_manager.has_idle_client());
+            let mut iface_manager = iface_manager.lock().await;
+            assert!(!iface_manager.has_idle_client().await.expect("failed to query idle client"));
         }
 
         let (cobalt_sender, _) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);

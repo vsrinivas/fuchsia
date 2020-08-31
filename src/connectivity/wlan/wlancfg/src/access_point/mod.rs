@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mode_management::iface_manager::IfaceManagerApi, util::listener},
+    crate::{mode_management::iface_manager_api::IfaceManagerApi, util::listener},
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -400,19 +400,19 @@ mod tests {
             unimplemented!()
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        fn has_idle_client(&self) -> bool {
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
             unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 

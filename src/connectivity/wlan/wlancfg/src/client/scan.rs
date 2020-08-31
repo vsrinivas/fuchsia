@@ -5,7 +5,7 @@
 //! Manages Scan requests for the Client Policy API.
 use {
     crate::{
-        client::types, mode_management::iface_manager::IfaceManagerApi,
+        client::types, mode_management::iface_manager_api::IfaceManagerApi,
         util::sme_conversion::security_from_sme_protection,
     },
     anyhow::{format_err, Error},
@@ -311,19 +311,19 @@ mod tests {
             unimplemented!()
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        fn has_idle_client(&self) -> bool {
+        async fn has_idle_client(&mut self) -> Result<bool, Error> {
             unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
             unimplemented!()
         }
 

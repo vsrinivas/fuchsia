@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        legacy::shim, mode_management::iface_manager::IfaceManagerApi,
+        legacy::shim, mode_management::iface_manager_api::IfaceManagerApi,
         mode_management::phy_manager::PhyManagerApi,
     },
     anyhow::format_err,
@@ -56,7 +56,10 @@ pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
         }
         DeviceWatcherEvent::OnIfaceRemoved { iface_id } => {
             let mut iface_manager = listener.iface_manager.lock().await;
-            iface_manager.handle_removed_iface(iface_id).await;
+            match iface_manager.handle_removed_iface(iface_id).await {
+                Ok(()) => {}
+                Err(e) => info!("Unable to record idle interface {}: {:?}", iface_id, e),
+            }
 
             listener.legacy_shim.remove_if_matching(iface_id);
             info!("iface removed: {}", iface_id);

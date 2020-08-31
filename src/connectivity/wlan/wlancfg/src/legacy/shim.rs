@@ -5,7 +5,7 @@ use {
     crate::{
         client::state_machine as client_fsm,
         config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
-        mode_management::iface_manager::IfaceManagerApi,
+        mode_management::iface_manager_api::IfaceManagerApi,
     },
     fidl, fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service as wlan_service, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -622,19 +622,19 @@ mod tests {
             Ok(receiver)
         }
 
-        fn record_idle_client(&mut self, _iface_id: u16) {
+        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), anyhow::Error> {
             unimplemented!()
         }
 
-        fn has_idle_client(&self) -> bool {
+        async fn has_idle_client(&mut self) -> Result<bool, anyhow::Error> {
             unimplemented!()
         }
 
-        async fn handle_added_iface(&mut self, _iface_id: u16) {
+        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), anyhow::Error> {
             unimplemented!()
         }
 
-        async fn handle_removed_iface(&mut self, _iface_id: u16) {
+        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), anyhow::Error> {
             unimplemented!()
         }
 

@@ -103,7 +103,7 @@ fn send_listener_state_update(
     };
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConnectRequest {
     pub network: types::NetworkIdentifier,
     pub credential: Credential,

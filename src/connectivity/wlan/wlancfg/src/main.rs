@@ -24,8 +24,7 @@ use {
         config_management::SavedNetworksManager,
         legacy::{device, shim},
         mode_management::{
-            iface_manager::{IfaceManager, IfaceManagerApi},
-            phy_manager::PhyManager,
+            create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
         },
     },
     anyhow::{format_err, Context as _, Error},
@@ -36,7 +35,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{
-        self, channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt,
+        self, channel::mpsc, future::try_join3, lock::Mutex, prelude::*, select, TryFutureExt,
     },
     log::{error, info},
     pin_utils::pin_mut,
@@ -83,21 +82,26 @@ async fn monitor_client_connectivity(
         }
 
         let temp_iface_manager = iface_manager.clone();
-        let temp_iface_manager = temp_iface_manager.lock().await;
-        if temp_iface_manager.has_idle_client() {
-            drop(temp_iface_manager);
-            info!("Detected idle interface, scanning to allow automatic reconnect");
-            if scan_for_network_selector(iface_manager.clone(), selector.clone()).await.is_ok() {
-                // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
-                connect_to_best_network(iface_manager.clone(), selector.clone()).await;
+        let mut temp_iface_manager = temp_iface_manager.lock().await;
 
-                // Reset the retry interval to 1 second.
-                retry_interval = 1;
-            } else {
-                retry_interval = (2 * retry_interval).min(MAX_AUTO_CONNECT_RETRY_SECONDS);
+        match temp_iface_manager.has_idle_client().await {
+            Ok(true) => {
+                info!("Detected idle interface, scanning to allow automatic reconnect");
+                drop(temp_iface_manager);
+                if scan_for_network_selector(iface_manager.clone(), selector.clone()).await.is_ok()
+                {
+                    // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+                    connect_to_best_network(iface_manager.clone(), selector.clone()).await;
+
+                    // Reset the retry interval to 1 second.
+                    retry_interval = 1;
+                } else {
+                    retry_interval = (2 * retry_interval).min(MAX_AUTO_CONNECT_RETRY_SECONDS);
+                }
             }
-        } else {
-            retry_interval = 1;
+            Ok(false) | Err(_) => {
+                retry_interval = 1;
+            }
         }
     }
 }
@@ -232,14 +236,15 @@ fn main() -> Result<(), Error> {
     let (client_sender, client_receiver) = mpsc::unbounded();
     let (ap_sender, ap_receiver) = mpsc::unbounded();
     let (client_event_sender, client_event_receiver) = mpsc::channel(0);
-    let iface_manager = Arc::new(Mutex::new(IfaceManager::new(
+    let (iface_manager, iface_manager_service) = create_iface_manager(
         phy_manager.clone(),
         client_sender.clone(),
         ap_sender.clone(),
         wlan_svc.clone(),
         saved_networks.clone(),
         client_event_sender,
-    )));
+    );
+    let iface_manager = Arc::new(Mutex::new(iface_manager));
 
     let legacy_client = shim::IfaceRef::new();
     let listener = device::Listener::new(
@@ -263,11 +268,13 @@ fn main() -> Result<(), Error> {
         client_event_receiver,
     );
 
-    let fut = watcher_proxy
+    let dev_watcher_fut = watcher_proxy
         .take_event_stream()
         .try_for_each(|evt| device::handle_event(&listener, evt).map(Ok))
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
-    executor.run_singlethreaded(try_join(fidl_fut, fut)).map(|_: (Void, Void)| ())
+    executor
+        .run_singlethreaded(try_join3(fidl_fut, dev_watcher_fut, iface_manager_service))
+        .map(|_: (Void, (), Void)| ())
 }
