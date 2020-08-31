@@ -19,6 +19,13 @@ class Time {
     return DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
   }
 
+  /// Returns the system time on the DUT in UTC, as reported by the kernel maintained
+  /// UTC clock (ZX_CLOCK_UTC).
+  Future<DateTime> kernelTime() async {
+    final timestampMillis = await _sl4f.request('time_facade.KernelTimeMillis');
+    return DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
+  }
+
   /// Returns whether or not system time on the DUT is synchronized to an external source.
   Future<bool> isSystemTimeSynchronized() async =>
       await _sl4f.request('time_facade.IsSynchronized');

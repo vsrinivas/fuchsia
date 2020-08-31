@@ -26,5 +26,13 @@ void main(List<String> args) {
 
       expect(await time.systemTime(), equals(resultTime));
     });
+
+    test('Kernel time', () async {
+      final resultTime = DateTime.utc(2038, 1, 20);
+      when(sl4f.request('time_facade.KernelTimeMillis'))
+          .thenAnswer((_) async => resultTime.millisecondsSinceEpoch);
+
+      expect(await time.kernelTime(), equals(resultTime));
+    });
   });
 }

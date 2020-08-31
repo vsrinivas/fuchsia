@@ -5,8 +5,11 @@
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_time::{UtcMarker, UtcSource};
 use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 use std::convert::TryInto;
 use std::time::SystemTime;
+
+const NANOS_IN_MILLIS: u64 = 1000000;
 
 /// Facade providing access to system time.
 #[derive(Debug)]
@@ -17,11 +20,18 @@ impl TimeFacade {
         TimeFacade {}
     }
 
-    /// Returns the system's reported UTC time in millis since the Unix epoch.
+    /// Returns the system's reported UTC time in millis since the Unix epoch retrieved
+    /// through standard language libraries.
     pub fn system_time_millis() -> Result<u64, Error> {
         let time_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_millis();
         // Zircon stores time as 64 bits so truncating from u128 should not fail.
         Ok(time_millis.try_into()?)
+    }
+
+    /// Returns the UTC time in millis since the Unix epoch, according to the kernel maintained
+    /// UTC clock (ZX_CLOCK_UTC). This clock will soon be removed in favor of the userspace clock.
+    pub fn kernel_time_millis() -> Result<u64, Error> {
+        Ok(zx::Time::get(zx::ClockId::UTC).into_nanos() as u64 / NANOS_IN_MILLIS)
     }
 
     /// Returns true iff system time has been synchronized with some source.

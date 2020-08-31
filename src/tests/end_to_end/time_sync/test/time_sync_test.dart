@@ -29,10 +29,16 @@ void main() {
       sleep(pollPeriod);
     }
     final systemTime = await sl4fTime.systemTime();
+
     // Do a fairly permissive check as it takes time to check the time
     // and the host may be set slightly different.
     final hostTime = DateTime.now().toUtc();
     expect(systemTime.isAfter(hostTime.subtract(Duration(minutes: 1))), isTrue);
     expect(systemTime.isBefore(hostTime.add(Duration(minutes: 1))), isTrue);
+
+    // kernel time should also roughly agree.
+    final kernelTime = await sl4fTime.kernelTime();
+    expect(kernelTime.isAfter(hostTime.subtract(Duration(minutes: 1))), isTrue);
+    expect(kernelTime.isBefore(hostTime.add(Duration(minutes: 1))), isTrue);
   });
 }
