@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <lib/operation/ethernet.h>
+#include <lib/virtio/ring.h>
 #include <lib/zircon-internal/align.h>
 #include <limits.h>
 #include <stddef.h>
@@ -30,7 +31,6 @@
 #include <virtio/net.h>
 #include <virtio/virtio.h>
 
-#include "src/devices/bus/lib/virtio/ring.h"
 #include "src/devices/bus/lib/virtio/trace.h"
 
 // Enables/disables debugging info

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/virtio/driver_utils.h>
 #include <zircon/types.h>
 
 #include <ddk/driver.h>
 
 #include "gpu.h"
-#include "src/devices/bus/lib/virtio/driver_utils.h"
 
 static zx_status_t virtio_gpu_bind(void* ctx, zx_device_t* bus_device) {
   const char* flag = getenv("driver.virtio-gpu.disable");

@@ -1,9 +1,10 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_DEVICE_H_
-#define SRC_DEVICES_BUS_LIB_VIRTIO_DEVICE_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DEVICE_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DEVICE_H_
 
+#include <lib/virtio/backends/backend.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/handle.h>
 #include <threads.h>
@@ -17,8 +18,6 @@
 #include <ddk/protocol/pci.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
-
-#include "src/devices/bus/lib/virtio/backends/backend.h"
 
 // Virtio devices are represented by a derived class specific to their type (eg
 // gpu) with a virtio::Device base. The device class handles general work around
@@ -116,4 +115,4 @@ class Device {
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_DEVICE_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DEVICE_H_

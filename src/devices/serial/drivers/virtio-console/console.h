@@ -1,12 +1,14 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
-#define SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
@@ -17,9 +19,6 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fs/managed_vfs.h>
-
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 
@@ -121,4 +120,4 @@ class ConsoleDevice : public Device,
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_

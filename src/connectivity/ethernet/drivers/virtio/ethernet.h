@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_VIRTIO_ETHERNET_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_VIRTIO_ETHERNET_H_
 
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -20,9 +22,6 @@
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/macros.h>
 #include <virtio/net.h>
-
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 

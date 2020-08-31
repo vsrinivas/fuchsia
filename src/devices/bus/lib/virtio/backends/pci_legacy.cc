@@ -8,7 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/inout.h>
 
-#include "pci.h"
+#include "../include/lib/virtio/backends/pci.h"
 
 namespace virtio {
 

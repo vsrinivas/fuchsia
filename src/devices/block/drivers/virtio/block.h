@@ -1,10 +1,13 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
 
 #include <lib/sync/completion.h>
+#include <lib/virtio/backends/backend.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -16,10 +19,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <virtio/block.h>
-
-#include "src/devices/bus/lib/virtio/backends/backend.h"
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 
@@ -127,4 +126,4 @@ class BlockDevice : public Device,
 
 }  // namespace virtio
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_BLOCK_H_

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bus/lib/virtio/ring.h"
-
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <lib/zx/vmar.h>
 #include <limits.h>
 #include <stdint.h>
@@ -14,11 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/algorithm.h>
-
-#include "device.h"
-#include "trace.h"
-
-#define LOCAL_TRACE 0
 
 namespace virtio {
 
@@ -39,7 +34,7 @@ zx_status_t Ring::Init(uint16_t index) {
 }
 
 zx_status_t Ring::Init(uint16_t index, uint16_t count) {
-  LTRACEF("index %u, count %u\n", index, count);
+  zxlogf(TRACE, "%s: index %u, count %u\n", __func__, index, count);
 
   // check that count is a power of 2
   if (!fbl::is_pow2(count)) {
@@ -58,7 +53,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 
   // allocate a ring
   size_t size = vring_size(count, PAGE_SIZE);
-  LTRACEF("need %zu bytes\n", size);
+  zxlogf(TRACE, "%s: need %zu bytes\n", __func__, size);
 
   zx_status_t status =
       io_buffer_init(&ring_buf_, device_->bti().get(), size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
@@ -66,8 +61,8 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     return status;
   }
 
-  LTRACEF("allocated vring at %p, physical address %#" PRIxPTR "\n", io_buffer_virt(&ring_buf_),
-          io_buffer_phys(&ring_buf_));
+  zxlogf(TRACE, "%s: allocated vring at %p, physical address %#" PRIxPTR "\n", __func__,
+         io_buffer_virt(&ring_buf_), io_buffer_phys(&ring_buf_));
 
   /* initialize the ring */
   vring_init(&ring_, count, io_buffer_virt(&ring_buf_), PAGE_SIZE);
@@ -89,7 +84,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 }
 
 void Ring::FreeDesc(uint16_t desc_index) {
-  LTRACEF("index %u free_count %u\n", desc_index, ring_.free_count);
+  zxlogf(TRACE, "%s: index %u free_count %u\n", __func__, desc_index, ring_.free_count);
   ring_.desc[desc_index].next = ring_.free_list;
   ring_.free_list = desc_index;
   ring_.free_count++;
@@ -131,7 +126,7 @@ struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
 }
 
 void Ring::SubmitChain(uint16_t desc_index) {
-  LTRACEF("desc %u\n", desc_index);
+  zxlogf(TRACE, "%s: desc %u\n", __func__, desc_index);
 
   /* add the chain to the available list */
   struct vring_avail* avail = ring_.avail;
@@ -144,7 +139,7 @@ void Ring::SubmitChain(uint16_t desc_index) {
 }
 
 void Ring::Kick() {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
   // Write memory barrier before notifying the device. Updates to avail->idx must be visible
   // before the device sees the wakeup notification (so it processes the latest descriptors).
   hw_mb();

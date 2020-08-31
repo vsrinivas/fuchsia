@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_FAKE_H_
-#define SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_FAKE_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_FAKE_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_FAKE_H_
 
 #include <assert.h>
+#include <lib/virtio/backends/backend.h>
 
 #include <initializer_list>
 #include <map>
@@ -13,8 +14,6 @@
 #include <utility>
 
 #include <zxtest/zxtest.h>
-
-#include "src/devices/bus/lib/virtio/backends/backend.h"
 
 namespace virtio {
 
@@ -183,4 +182,4 @@ class FakeBackend : public Backend {
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_FAKE_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_FAKE_H_

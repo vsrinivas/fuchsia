@@ -9,6 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -27,9 +29,6 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>
 #include <virtio/vsock.h>
-
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 

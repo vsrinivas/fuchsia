@@ -10,11 +10,10 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
+#include <lib/virtio/backends/fake.h>
 
 #include <ddk/protocol/display/controller.h>
 #include <zxtest/zxtest.h>
-
-#include "src/devices/bus/lib/virtio/backends/fake.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 

@@ -5,6 +5,8 @@
 #define SRC_UI_INPUT_DRIVERS_VIRTIO_INPUT_H_
 
 #include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <stdlib.h>
 
 #include <memory>
@@ -18,8 +20,6 @@
 
 #include "input_kbd.h"
 #include "input_touch.h"
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 

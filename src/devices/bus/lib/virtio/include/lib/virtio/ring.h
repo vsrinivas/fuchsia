@@ -1,16 +1,15 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_RING_H_
-#define SRC_DEVICES_BUS_LIB_VIRTIO_RING_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_
 
 #include <zircon/types.h>
 
+#include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <hw/arch_ops.h>
 #include <virtio/virtio_ring.h>
-
-#include "trace.h"
 
 namespace virtio {
 
@@ -55,8 +54,8 @@ class Ring {
 // perform the main loop of finding free descriptor chains and passing it to a passed in function
 template <typename T>
 inline void Ring::IrqRingUpdate(T free_chain) {
-  // TRACEF("used flags %#x idx %#x last_used %u\n",
-  //         ring_.used->flags, ring_.used->idx, ring_.last_used);
+  zxlogf(TRACE, "used flags %#x idx %#x last_used %u", ring_.used->flags, ring_.used->idx,
+         ring_.last_used);
 
   // find a new free chain of descriptors
   uint16_t cur_idx = ring_.used->idx;
@@ -80,4 +79,4 @@ void virtio_dump_desc(const struct vring_desc* desc);
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_RING_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_

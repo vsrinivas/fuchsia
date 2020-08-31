@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_
-#define SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 
 #include <lib/mmio/mmio.h>
+#include <lib/virtio/backends/backend.h>
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
 
 #include <optional>
 
 #include <ddktl/protocol/pci.h>
-
-#include "src/devices/bus/lib/virtio/backends/backend.h"
 
 namespace virtio {
 
@@ -152,4 +151,4 @@ class PciModernBackend : public PciBackend {
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_

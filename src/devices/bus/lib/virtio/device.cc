@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bus/lib/virtio/device.h"
-
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/virtio/device.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>

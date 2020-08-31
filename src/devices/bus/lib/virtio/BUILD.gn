@@ -1,19 +1,25 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/unification/zx_library.gni")
 
-source_set("virtio") {
+zx_library("virtio") {
+  sdk = "static"
+  sdk_headers = [
+    "lib/virtio/driver_utils.h",
+    "lib/virtio/device.h",
+    "lib/virtio/ring.h",
+    "lib/virtio/backends/fake.h",
+    "lib/virtio/backends/pci.h",
+  ]
+
   configs += [ "//build/config:all_source" ]
   sources = [
-    "backends/fake.h",
     "backends/pci.cc",
-    "backends/pci.h",
     "backends/pci_legacy.cc",
     "backends/pci_modern.cc",
     "device.cc",
-    "device.h",
     "driver_utils.cc",
-    "driver_utils.h",
     "ring.cc",
   ]
   public_deps = [
@@ -23,12 +29,12 @@ source_set("virtio") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/virtio",
   ]

@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <semaphore.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
@@ -17,8 +19,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 #include "virtio_gpu.h"
 
 namespace virtio {

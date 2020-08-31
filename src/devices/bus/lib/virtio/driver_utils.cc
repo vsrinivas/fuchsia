@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver_utils.h"
+#include "include/lib/virtio/driver_utils.h"
 
-#include <lib/fit/result.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,25 +13,27 @@
 
 #include <ddktl/protocol/pci.h>
 
-fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> GetBtiAndBackend(
+#include "include/lib/virtio/backends/pci.h"
+
+zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device) {
   zx_status_t status;
   ddk::PciProtocolClient pci(bus_device);
 
   if (!pci.is_valid()) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_pcie_device_info_t info;
   status = pci.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return zx::error(status);
   }
 
   zx::bti bti;
   status = pci.GetBti(0, &bti);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return zx::error(status);
   }
 
   // Due to the similarity between Virtio 0.9.5 legacy devices and Virtio 1.0
@@ -52,8 +54,8 @@ fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> G
 
   status = backend->Bind();
   if (status != ZX_OK) {
-    return fit::error(status);
+    return zx::error(status);
   }
 
-  return fit::ok(std::make_pair(std::move(bti), std::move(backend)));
+  return zx::ok(std::make_pair(std::move(bti), std::move(backend)));
 }

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/virtio/driver_utils.h>
 #include <zircon/types.h>
 
 #include <ddk/driver.h>
 
 #include "socket.h"
-#include "src/devices/bus/lib/virtio/driver_utils.h"
 
 static const zx_driver_ops_t virtio_socket_driver_ops = []() {
   zx_driver_ops_t ops = {};

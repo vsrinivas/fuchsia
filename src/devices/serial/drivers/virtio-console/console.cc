@@ -22,8 +22,6 @@
 #include <fs/vnode.h>
 #include <virtio/virtio.h>
 
-#define LOCAL_TRACE 0
-
 namespace virtio {
 
 namespace {
@@ -126,7 +124,7 @@ ConsoleDevice::~ConsoleDevice() {}
 
 // We don't need to hold request_lock_ during initialization
 zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
 
   zx_status_t status = zx::eventpair::create(0, &event_, &event_remote_);
   if (status != ZX_OK) {
@@ -210,7 +208,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   StartIrqThread();
   DriverStatusOk();
 
-  LTRACE_EXIT;
+  zxlogf(TRACE, "%s: exit", __func__);
   return ZX_OK;
 }
 
@@ -230,7 +228,7 @@ void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
 }
 
 void ConsoleDevice::IrqRingUpdate() {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
 
   fbl::AutoLock a(&request_lock_);
 
@@ -282,11 +280,11 @@ void ConsoleDevice::IrqRingUpdate() {
     }
     event_.signal_peer(0, DEV_STATE_WRITABLE);
   });
-  LTRACE_EXIT;
+  zxlogf(TRACE, "%s: exit", __func__);
 }
 
 zx_status_t ConsoleDevice::Read(void* buf, size_t count, size_t* actual) {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
   *actual = 0;
 
   if (count > UINT32_MAX)
@@ -312,12 +310,12 @@ zx_status_t ConsoleDevice::Read(void* buf, size_t count, size_t* actual) {
     port0_receive_queue_.Kick();
   }
 
-  LTRACE_EXIT;
+  zxlogf(TRACE, "%s: exit", __func__);
   return ZX_OK;
 }
 
 zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) {
-  LTRACE_ENTRY;
+  zxlogf(TRACE, "%s: entry", __func__);
   *actual = 0;
 
   if (count > UINT32_MAX)
@@ -339,7 +337,7 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) 
   QueueTransfer(&port0_transmit_queue_, desc->phys, desc->used_len, /*write*/ 1);
   port0_transmit_queue_.Kick();
 
-  LTRACE_EXIT;
+  zxlogf(TRACE, "%s: exit", __func__);
   return ZX_OK;
 }
 

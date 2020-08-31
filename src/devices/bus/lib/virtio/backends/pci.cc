@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "pci.h"
+#include "../include/lib/virtio/backends/pci.h"
 
 #include <assert.h>
 #include <lib/zx/handle.h>

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_SCSI_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_SCSI_H_
 
 #include <lib/scsi/scsilib_controller.h>
 #include <lib/sync/completion.h>
+#include <lib/virtio/backends/backend.h>
+#include <lib/virtio/device.h>
+#include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdlib.h>
 #include <sys/uio.h>
@@ -19,10 +22,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <virtio/scsi.h>
-
-#include "src/devices/bus/lib/virtio/backends/backend.h"
-#include "src/devices/bus/lib/virtio/device.h"
-#include "src/devices/bus/lib/virtio/ring.h"
 
 namespace virtio {
 
@@ -104,4 +103,4 @@ class ScsiDevice : public virtio::Device,
 
 }  // namespace virtio
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_VIRTIO_SCSI_H_

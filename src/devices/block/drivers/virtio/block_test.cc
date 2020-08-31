@@ -7,12 +7,11 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
+#include <lib/virtio/backends/fake.h>
 
 #include <memory>
 
 #include <zxtest/zxtest.h>
-
-#include "src/devices/bus/lib/virtio/backends/fake.h"
 
 namespace {
 

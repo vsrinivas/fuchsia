@@ -125,7 +125,9 @@ zx_status_t RngDevice::Request() {
   desc->len = kBufferSize;
   desc->flags = VRING_DESC_F_WRITE;
   zxlogf(TRACE, "%s: allocated descriptor chain desc %p, i %u", tag(), desc, i);
-  LTRACE_DO(virtio_dump_desc(desc));
+  if (zxlog_level_enabled(TRACE)) {
+    virtio_dump_desc(desc);
+  }
 
   vring_.SubmitChain(i);
   vring_.Kick();

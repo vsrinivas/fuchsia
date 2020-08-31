@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_
-#define SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DRIVER_UTILS_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DRIVER_UTILS_H_
 
-#include <lib/fit/result.h>
+#include <lib/zx/status.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -17,11 +17,10 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include "backends/pci.h"
 #include "device.h"
 
 // Get the bti and virtio backend for a given pci virtio device.
-fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> GetBtiAndBackend(
+zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device);
 
 // Creates a virtio device, calls DdkAdd, and releases it to the dev_mgr.
@@ -30,7 +29,7 @@ template <class VirtioDevice, class = typename std::enable_if<
 zx_status_t CreateAndBind(void* /*ctx*/, zx_device_t* device) {
   auto bti_and_backend = GetBtiAndBackend(device);
   if (!bti_and_backend.is_ok()) {
-    return bti_and_backend.error();
+    return bti_and_backend.status_value();
   }
   auto dev = std::make_unique<VirtioDevice>(device, std::move(bti_and_backend.value().first),
                                             std::move(bti_and_backend.value().second));
@@ -42,4 +41,4 @@ zx_status_t CreateAndBind(void* /*ctx*/, zx_device_t* device) {
   return status;
 }
 
-#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DRIVER_UTILS_H_
