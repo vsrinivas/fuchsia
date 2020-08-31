@@ -64,12 +64,19 @@ protocol A {
 Selectors can also be used to maintain backwards compatibility with the wire
 format in cases where developers wish to change the name of a method.
 
-### Library structure
+## Library structure
+
+Grouping of FIDL declarations into FIDL libraries has two specific goals:
+
+* Help FIDL developers (those using the FIDL libraries) navigate the API
+  surface.
+* Provide structure to hierarchically scope FIDL declarations within FIDL
+  libraries.
 
 Carefully consider how you divide your type and protocol definitions into
 libraries.  How you decompose these definitions into libraries has a large
 effect on the consumers of these definitions because a FIDL library is the unit
-of dependency and distribution for your protocols.
+of dependency and distribution for your types and protocols.
 
 The FIDL compiler requires that the dependency graph between libraries is a DAG,
 which means you cannot create a circular dependency across library boundaries.
@@ -101,6 +108,103 @@ is a global optimum.  However, Conway's law states that "organizations which
 design systems \[...\] are constrained to produce designs which are copies of
 the communication structures of these organizations."  We should spend a
 moderate amount of time fighting Conway's law.
+
+### Access control is at protocol granularity
+
+When deciding in which library to define a protocol, do not take into account
+access control considerations. Generally, access control is expressed at
+protocol granularity. The library in which a protocol is defined has no bearing
+on access control, and cannot be used to determine whether it can or cannot be
+accessed.
+
+As an example, a process may access `fuchsia.logger.LogSink`, or a process is
+given a client end of the `fuchsia.media.StreamSource` protocol. However, FIDL
+is not designed and cannot be used to express access to the `fuchsia.logger`
+library, or prevent access the `fuchsia.ldsvc` library.
+
+Note: Finer grained access controls is possible, and can further reduce the
+granularity discussed to method level, or further with dynamic access control
+based on authentication schemes.
+
+### The `fuchsia` namespace {#fuchsia-namespace}
+
+FIDL libraries defined in the Platform Source Tree (i.e., defined in
+[fuchsia.googlesource.com](https://fuchsia.googlesource.com)) must be in the
+`fuchsia` top-level namespace (e.g., `fuchsia.ui`) unless one of the following
+is true:
+
+* The library defines the portions of the FIDL language itself or its
+  conformance test suite, in which case the top-level namespace must be `fidl`.
+* The library is only used for internal testing and is not included in the SDK
+  or in production builds, in which case the top-level namespace must be `test`.
+
+FIDL libraries in the top-level namespace `fuchsia` namespace are strongly
+encouraged to have no more than four components, i.e. `fuchsia.<api-namespace>`,
+`fuchsia.<api-namespace>.<name>` or `fuchsia.<api-namespace>.<name>.<subname>`.
+Choose an appropriate `api-namespace`, possibly with the help of an [API Council
+member][api-council-membership].
+
+For instance, FIDL libraries defined in the Platform Source Tree for the purpose
+of exposing hardware functionality to applications must be in the
+`fuchsia.hardware` namespace.  For example, a protocol for exposing an ethernet
+device might be named `fuchsia.hardware.ethernet.Device`.  Higher-level
+functionality built on top of these FIDL protocols does not belong in the
+`fuchsia.hardware` namespace. For example, it is more appropriate for network
+protocols to be under `fuchsia.net` than `fuchsia.hardware`.
+
+### Avoid nesting too deeply
+
+Prefer library names with three components (e.g. ` fuchsia.net.ppp`), and avoid
+library names with more than four components (e.g., `fuchsia.apps.foo.bar.baz`).
+If you use more than four components, you should have a specific reason for that
+choice.
+
+### Library dependencies
+
+It is preferable to introduce dependencies from libraries with more specific
+names to libraries with less specific names.  For example, `fuchsia.foo.bar`
+might depend on `fuchsia.foo`, but `fuchsia.foo` should not depend on
+`fuchsia.foo.bar`. This pattern is better for extensibility because over time we
+can add more libraries with more specific names but there are only a finite
+number of libraries with less specific names.
+
+### Visibility to importing libraries
+
+To expand on the second goal of grouping of FIDL declarations into FIDL
+libraries, we expect to evolve FIDL to provide visibility rules altering whether
+elements may be used by importing libraries ("child libraries"), e.g `public` or
+`private` modifiers.
+
+The `internal` library component name is intended to be treated specially, and
+indicates a local restriction of visibility rules. For instance, a public
+declaration in the `fuchsia.net.dhcp.internal.foo` library might only be visible
+to it’s parent `fuchsia.net.dhcp`, or its siblings e.g.
+`fuchsia.net.dhcp.internal.bar`.
+
+### Using multi-words library components
+
+While library names with components which join multiple words (e.g.
+`fuchsia.modular.storymodel`) are allowed, their use should be exceptional.
+Library authors can resort to joining multiple words together if the library
+name would violate nesting rules, or if neither word should take precedence over
+the other when thinking hierarchically about placement of the library.
+
+### Version strings
+
+Should a library need to be versioned, a single version number should be
+suffixed e.g. `fuchsia.io2` or `fuchsia.something.something4.` Version numbers
+should not be multi-part, e.g. `fuchsia.io2.1` is not acceptable, and should
+instead be `fuchsia.io3`. Any library component may be versioned, though it is
+strongly discouraged to have multiple versioned components, e.g. `
+fuchsia.hardware.cpu2.ctrl` but not `fuchsia.hardware.cpu2.ctrl4`.
+
+Version numbers should only indicate a more recent version of a library, rather
+than a materially different domain. As a counterexample, `fuchsia.input` library
+is used for lower level device handling, while `fuchsia.ui.input{2,3}` is used
+for input that's interacting with scenic and with software components that
+render UIs. Focusing solely on versioning, it would have been clearer as
+`fuchsia.ui.scenic.input` and `fuchsia.ui.scenic.input2` to distinguish from the
+other domain which `fuchsia.input` serves.
 
 ## Types
 
@@ -1427,6 +1531,8 @@ interact with a potentially large set of logical objects through a single
 protocol.
 
 <!-- xrefs -->
+[api-council]: /docs/concepts/api/council.md
+[api-council-membership]: /docs/concepts/api/council.md#membership
 [ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md

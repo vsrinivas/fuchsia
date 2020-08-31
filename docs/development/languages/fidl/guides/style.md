@@ -85,8 +85,6 @@ enum members               | _upper snake case_ | `RGB_888`
 
 ### Libraries
 
-#### Syntax
-
 Library names are period-separated lists of identifiers. Portions of the library
 name other than the last are also referred to as namespaces. Each component of
 the name is in lowercase and must match the following regular expression:
@@ -139,44 +137,6 @@ should be avoided:
 * `base`
 * `f<letter>l`
 * `zx<word>`
-
-#### Fuchsia Libraries
-
-FIDL libraries defined in the Platform Source Tree (i.e., defined in
-fuchsia.googlesource.com) must be in the `fuchsia` top-level namespace (e.g.,
-`fuchsia.ui`) unless (a) the library defines portions of the FIDL language
-itself or its conformance test suite, in which case the top-level namespace must
-be `fidl`, or (b) the library is used only for internal testing and is not
-included in the SDK or in production builds, in which case the top-level
-namespace must be `test`.
-
-FIDL libraries defined in the Platform Source Tree for the purpose of exposing
-hardware functionality to applications must be in the `fuchsia.hardware`
-namespace.  For example, a protocol for exposing an ethernet device might
-be named `fuchsia.hardware.ethernet.Device`.  Higher-level functionality built
-on top of these FIDL protocols does not belong in the `fuchsia.hardware` namespace.
-For example, it is more appropriate for network protocols to be under
-`fuchsia.net` than `fuchsia.hardware`.
-
-#### Namespace Nesting: Not Too Deeply
-
-Avoid library names with more than two dots (e.g., `fuchsia.foo.bar.baz`).
-There are some cases when a third dot is appropriate, but those cases are rare.
-If you use more than two dots, you should have a specific reason for that
-choice.  For the case of the `fuchsia.hardware` namespace described above, this
-is relaxed to "three" and "four" dots, instead of "two" and "three", to
-accommodate the longer namespace.
-
-#### Library Dependencies
-
-Prefer to introduce dependencies from libraries with more specific names to
-libraries with less specific names rather than the reverse.  For example,
-`fuchsia.foo.bar` might depend on `fuchsia.foo`, but `fuchsia.foo` should not
-depend on `fuchsia.foo.bar`.  This pattern is better for extensibility because
-over time we can add more libraries with more specific names but there are only
-a finite number of libraries with less specific names.  Having libraries with
-less specific names know about libraries with more specific names privileges the
-current status quo relative to the future.
 
 ### Top-level
 
@@ -260,6 +220,25 @@ tense.
 
 For example, the `AudioCapturer` protocol has an event named
 `OnPacketCaptured`.
+
+#### Single method protocols
+
+The method of a single method protocol should be the verb phrase of the
+protocol's non phrase they are defined in, e.g. `Loader.Load`, `Getter.Get`,
+`Uploader.Upload`. In the case of qualified nouns phrases such as `JobCreator`
+or `ProcessStopper`, the unqualified verb phrase should be used, i.e.
+`JobCreator.Create` or `ProcessStopper.Stop`.
+
+Protocols which are single method but intend to evolve to multi-method overtime
+do not necessarily need to follow this naming convention, i.e if there is a
+known extension of the protocol for which the recommended naming is not
+appropriate, then choosing another name early on might be preferred. When in
+doubt, following the default advice should be preferred.
+
+Because replacing a protocol is harder than evolving a protocol, if an API was
+never intended to evolve but eventually finds a need to move to a multi-method
+protocol, it is preferred to evolve the existing protocol by adding a method,
+and possibly renaming the existing method.
 
 ### Structs, unions, and tables
 

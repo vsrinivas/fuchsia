@@ -113,7 +113,7 @@ To achieve these goals, the council focus on the following metrics:
     burden. For example, council members should respond promptly and
     respectfully to requests for API reviews.
 
-## Membership
+## Membership {#membership}
 
 The council is comprised of Fuchsia contributors who have demonstrated:
 
@@ -270,7 +270,7 @@ of its APIs.
 
 The chair selects the order in which the council works through the backlog,
 attempting to balance reviewing APIs from diverse areas of the project with the
-urgency to review APIs that are acreeting a large number of clients.
+urgency to review APIs that are accreting a large number of clients.
 
 When reviewing an API, the council member who is responsible for the area that
 contains the API (hereafter the *responsible member*) will present the API,

@@ -53,10 +53,13 @@ protocol, struct, table, union, using, xunion.
 
 ### Identifiers
 
-FIDL identifiers must match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`.
+FIDL identifiers must match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`. In
+words: identifiers must start with a letter, can contain letters, numbers, and
+underscores, but cannot end with an underscore.
 
-In words: identifiers must start with a letter, can contain letters,
-numbers, and underscores, but cannot end with an underscore.
+FIDL library identifiers must match the regex `[a-z][a-z0-9]*`. In words:
+library identifiers must start with a lowercase letter, can contain lowercase
+letters, and numbers (they cannot contain uppercase letters, nor underscores).
 
 Identifiers are case-sensitive.
 
@@ -80,7 +83,7 @@ See the `Names` section of the
 
 FIDL always looks for unqualified symbols within the scope of the current
 library. To reference symbols in other libraries, they must be qualified by
-prefixing the identifier with the library name or alias.
+prefixing the identifier with the library name or alias thereof.
 
 **objects.fidl:**
 
