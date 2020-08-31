@@ -58,7 +58,6 @@ group("all") {
     "//garnet/packages/prod:test_runner",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan_drivers",
     "//src/connectivity/network/dhcp:dhcpd",
@@ -522,13 +521,6 @@ group("tracing") {
 group("usb_video") {
   testonly = true
   public_deps = [ "//src/camera/drivers/usb_video" ]
-}
-
-# Note: known to infrastructure for the purposes of building the vboot prebuilts.
-group("vboot_reference") {
-  public_deps = [
-    "//tools/vboot_reference",
-  ]
 }
 
 group("vim") {
