@@ -66,16 +66,8 @@ impl TestHarness {
     }
 
     fn make(hold_sinks: bool) -> Self {
-        let inner = Arc::new(Mutex::new(ManagerInner {
-            listeners: Pool::default(),
-            interest_dispatcher: InterestDispatcher::default(),
-            log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-            stats: stats::LogManagerStats::new_detached(),
-            inspect_node: inspect::Node::default(),
-        }));
-
         let inspector = inspect::Inspector::new();
-        let log_manager = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
+        let log_manager = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
 
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
@@ -352,15 +344,7 @@ pub async fn debuglog_test(
     debug_log: TestDebugLog,
 ) -> inspect::Inspector {
     let inspector = inspect::Inspector::new();
-    let inner = Arc::new(Mutex::new(ManagerInner {
-        listeners: Pool::default(),
-        interest_dispatcher: InterestDispatcher::default(),
-        log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-        stats: stats::LogManagerStats::new_detached(),
-        inspect_node: inspect::Node::default(),
-    }));
-
-    let lm = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
+    let lm = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     fasync::Task::spawn(lm.clone().handle_log(log_stream)).detach();
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

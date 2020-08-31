@@ -3,6 +3,7 @@
 
 use diagnostics_data::InspectData;
 use diagnostics_reader::{ArchiveReader, ComponentSelector};
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::{ComponentControllerEvent::*, LauncherProxy};
@@ -43,9 +44,25 @@ impl EnvWithDiagnostics {
             fs.collect::<()>().await
         });
 
-        let archivist =
-            launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, LaunchOptions::new())
-                .unwrap();
+        // creating a proxy to logsink in our own environment, otherwise embedded archivist just
+        // eats its own logs via logconnector
+        let options = {
+            let mut options = LaunchOptions::new();
+            let (dir_client, dir_server) = zx::Channel::create().unwrap();
+            let mut fs = ServiceFs::new();
+            fs.add_proxy_service::<LogSinkMarker, _>().serve_connection(dir_server).unwrap();
+            Task::spawn(fs.collect()).detach();
+            options.set_additional_services(vec![LogSinkMarker::NAME.to_string()], dir_client);
+            options
+        };
+
+        let archivist = launch_with_options(
+            &launcher,
+            ARCHIVIST_URL.to_string(),
+            Some(vec!["--forward-logs".into()]),
+            options,
+        )
+        .unwrap();
         let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
         let mut archivist_events = archivist.controller().take_event_stream();

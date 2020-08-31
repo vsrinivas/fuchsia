@@ -36,7 +36,7 @@ pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 use interest::InterestDispatcher;
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
 use message::Message;
-use socket::{Encoding, LogMessageSocket};
+use socket::{Encoding, Forwarder, LegacyEncoding, LogMessageSocket, StructuredEncoding};
 use stats::LogSource;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
@@ -55,6 +55,10 @@ struct ManagerInner {
     listeners: Pool,
     #[inspect(skip)]
     interest_dispatcher: InterestDispatcher,
+    #[inspect(skip)]
+    legacy_forwarder: Forwarder<LegacyEncoding>,
+    #[inspect(skip)]
+    structured_forwarder: Forwarder<StructuredEncoding>,
     #[inspect(rename = "buffer_stats")]
     log_msg_buffer: buffer::MemoryBoundedBuffer<Message>,
     stats: stats::LogManagerStats,
@@ -70,6 +74,8 @@ impl LogManager {
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
                 stats: stats::LogManagerStats::new_detached(),
                 inspect_node: inspect::Node::default(),
+                legacy_forwarder: Forwarder::new(),
+                structured_forwarder: Forwarder::new(),
             })),
         }
     }
@@ -118,11 +124,12 @@ impl LogManager {
 
     /// Drain log sink for messages sent by the archivist itself.
     pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
+        let forwarder = self.inner.lock().await.legacy_forwarder.clone();
         // TODO(50105): Figure out how to properly populate SourceIdentity
         let mut source = SourceIdentity::empty();
         source.component_name = Some(name.to_owned());
         let source = Arc::new(source);
-        let log_stream = LogMessageSocket::new(socket, source)
+        let log_stream = LogMessageSocket::new(socket, source, forwarder)
             .expect("failed to create internal LogMessageSocket");
         self.drain_messages(log_stream).await;
         unreachable!();
@@ -180,7 +187,8 @@ impl LogManager {
         while let Some(next) = stream.next().await {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
-                    match LogMessageSocket::new(socket, source.clone())
+                    let forwarder = { self.inner.lock().await.legacy_forwarder.clone() };
+                    match LogMessageSocket::new(socket, source.clone(), forwarder)
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
@@ -199,7 +207,8 @@ impl LogManager {
                     };
                 }
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
-                    match LogMessageSocket::new_structured(socket, source.clone())
+                    let forwarder = { self.inner.lock().await.structured_forwarder.clone() };
+                    match LogMessageSocket::new_structured(socket, source.clone(), forwarder)
                         .context("creating log stream from socket")
                     {
                         Ok(log_stream) => {
@@ -433,6 +442,31 @@ impl LogManager {
         inner.stats.record_log(&log_msg, source);
         inner.listeners.send(&log_msg).await;
         inner.log_msg_buffer.push(log_msg);
+    }
+
+    /// Initializes internal log forwarders.
+    pub fn forward_logs(self) {
+        fasync::Task::spawn(async move {
+            if let Err(e) = self.init_forwarders().await {
+                error!("couldn't forward logs: {:?}", e);
+            }
+        })
+        .detach();
+    }
+
+    async fn init_forwarders(self) -> Result<(), Error> {
+        let sink = fuchsia_component::client::connect_to_service::<LogSinkMarker>()?;
+        let mut inner = self.inner.lock().await;
+
+        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
+        sink.connect(recv)?;
+        inner.legacy_forwarder.init(send);
+
+        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
+        sink.connect_structured(recv)?;
+        inner.structured_forwarder.init(send);
+
+        Ok(())
     }
 }
 

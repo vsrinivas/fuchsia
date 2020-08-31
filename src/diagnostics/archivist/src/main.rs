@@ -40,6 +40,10 @@ pub struct Args {
     #[argh(switch)]
     consume_own_logs: bool,
 
+    /// send all logs to environment's LogSink
+    #[argh(switch)]
+    forward_logs: bool,
+
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
     install_controller: bool,
@@ -60,7 +64,7 @@ fn main() -> Result<(), Error> {
         fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
         info!("Logging started.");
     } else {
-        fuchsia_syslog::init_with_tags(&[log_name, "embedded"])?;
+        fuchsia_syslog::init_with_tags(&["embedded"])?;
     }
 
     let mut executor = fasync::Executor::new()?;
@@ -90,6 +94,10 @@ fn main() -> Result<(), Error> {
             archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name),
         )
         .detach();
+    }
+
+    if opt.forward_logs {
+        archivist.log_manager().clone().forward_logs();
     }
 
     if opt.install_controller {
