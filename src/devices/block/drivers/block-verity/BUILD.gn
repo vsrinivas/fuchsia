@@ -7,6 +7,19 @@ import("//build/test.gni")
 import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
+source_set("verified-volume-client") {
+  sources = [ "verified-volume-client.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/ramdevice-client",
+  ]
+}
+
 source_set("geometry") {
   sources = [ "geometry.cc" ]
 }
@@ -135,13 +148,16 @@ test("block-verity-test") {
   output_name = "block-verity-test"
   sources = [ "block-verity-test.cc" ]
   deps = [
+    ":verified-volume-client",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fvm-devices",
     "//zircon/system/ulib/ramdevice-client",
   ]

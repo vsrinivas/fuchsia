@@ -21,6 +21,10 @@
 #include <fvm/test/device-ref.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
+
+#include "constants.h"
+#include "verified-volume-client.h"
+
 namespace {
 
 constexpr uint64_t kBlockSize = 4096;
@@ -62,125 +66,33 @@ class BlockVerityTest : public zxtest::Test {
   }
 
  protected:
-  void OpenVerityDeviceManager() {
-    // wait for block-verity device to appear and open it
-    std::string verity_path = std::string(ramdisk_->path()) + "/verity";
-    fbl::unique_fd verity_fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                            verity_path.c_str(), &verity_fd));
-
-    // claim channel from fd
-    ASSERT_OK(fdio_get_service_handle(verity_fd.release(), verity_chan_.reset_and_get_address()));
+  void BindAndOpenVerityDeviceManager() {
+    fbl::unique_fd devfs_root(dup(ramdisk_->devfs_root_fd()));
+    ASSERT_OK(block_verity::VerifiedVolumeClient::CreateFromBlockDevice(
+        ramdisk_->fd(), std::move(devfs_root),
+        block_verity::VerifiedVolumeClient::Disposition::kDriverNeedsBinding,
+        zx::duration::infinite(), &vvc_));
   }
 
   void OpenForAuthoring(fbl::unique_fd& mutable_block_fd) {
-    // make FIDL call to open in authoring mode
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-        ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-        ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-    auto config =
-        ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-            std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-            .set_hash_function(fidl::unowned_ptr(&hash_function))
-            .set_block_size(fidl::unowned_ptr(&block_size))
-            .build();
-
-    // Request the device be opened for writes
-    auto open_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForWrite(
-        zx::unowned_channel(verity_chan_), std::move(config));
-    ASSERT_OK(open_resp.status());
-    ASSERT_FALSE(open_resp->result.is_err());
-
-    // Wait for the `mutable` child device to appear
-    fbl::unique_fd mutable_fd;
-    std::string mutable_path = std::string(ramdisk_->path()) + "/verity/mutable";
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                            mutable_path.c_str(), &mutable_fd));
-
-    // And then wait for the `block` driver to bind to that device too
-    std::string mutable_block_path = mutable_path + "/block";
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), mutable_block_path.c_str(), &mutable_block_fd));
+    ASSERT_OK(vvc_->OpenForAuthoring(zx::duration::infinite(), mutable_block_fd));
   }
 
   void CloseAndGenerateSeal(
       ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
-    // We use the caller-provided buffer FIDL call style because we need to keep
-    // the response object alive so that the test code can interact with it
-    // after this function returns.
-    auto seal_resp =
-        ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::CloseAndGenerateSeal(
-            zx::unowned_channel(verity_chan_), seal_response_buffer_.view());
-    ASSERT_OK(seal_resp.status());
-    ASSERT_FALSE(seal_resp->result.is_err());
-    *out = std::move(seal_resp->result);
+    ASSERT_OK(vvc_->CloseAndGenerateSeal(&seal_response_buffer_, out));
   }
 
   zx_status_t OpenForVerifiedRead(
       const ::llcpp::fuchsia::hardware::block::verified::Seal& expected_seal,
       fbl::unique_fd& verified_block_fd) {
-    // make FIDL call to open in authoring mode
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-        ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-        ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-    auto config =
-        ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-            std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
-            .set_hash_function(fidl::unowned_ptr(&hash_function))
-            .set_block_size(fidl::unowned_ptr(&block_size))
-            .build();
-
-    // Make a copy of the seal to send.
-    ::llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;
-    const ::llcpp::fuchsia::hardware::block::verified::Sha256Seal& expected_sha256 =
-        expected_seal.sha256();
-    std::copy(expected_sha256.superblock_hash.begin(), expected_sha256.superblock_hash.end(),
-              sha256_seal.superblock_hash.begin());
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
-        std::move(sha256_seal);
-    auto seal_to_send =
-        ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned));
-
-    // Request the device be opened for verified read
-    auto open_resp =
-        ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForVerifiedRead(
-            zx::unowned_channel(verity_chan_), std::move(config), std::move(seal_to_send));
-    if (open_resp.status() != ZX_OK) {
-      return open_resp.status();
-    }
-    if (open_resp->result.is_err()) {
-      return open_resp->result.err();
-    }
-
-    // Wait for the `verified` child device to appear
-    fbl::unique_fd verified_fd;
-    std::string verified_path = std::string(ramdisk_->path()) + "/verity/verified";
-    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), verified_path.c_str(), &verified_fd);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // And then wait for the `block` driver to bind to that device too
-    std::string verified_block_path = verified_path + "/block";
-    status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), verified_block_path.c_str(), &verified_block_fd);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    return ZX_OK;
+    uint8_t buf[block_verity::kHashOutputSize];
+    memcpy(buf, expected_seal.sha256().superblock_hash.begin(), block_verity::kHashOutputSize);
+    digest::Digest digest(buf);
+    return vvc_->OpenForVerifiedRead(digest, zx::duration::infinite(), verified_block_fd);
   }
 
-  void Close() {
-    // Close the device cleanly
-    auto close_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::Close(
-        zx::unowned_channel(verity_chan_));
-    ASSERT_OK(close_resp.status());
-    ASSERT_FALSE(close_resp->result.is_err());
-  }
+  void Close() { ASSERT_OK(vvc_->Close()); }
 
   void ZeroUnderlyingRamdisk() {
     fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
@@ -197,17 +109,21 @@ class BlockVerityTest : public zxtest::Test {
       llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>
       seal_response_buffer_;
 
-  zx::channel verity_chan_;
+  std::unique_ptr<block_verity::VerifiedVolumeClient> vvc_;
 };
 
-TEST_F(BlockVerityTest, Bind) { ASSERT_OK(BindVerityDriver(ramdisk_->channel())); }
+TEST_F(BlockVerityTest, Bind) {
+  ASSERT_OK(BindVerityDriver(ramdisk_->channel()));
+  std::unique_ptr<block_verity::VerifiedVolumeClient> vvc;
+  fbl::unique_fd devfs_root(dup(ramdisk_->devfs_root_fd()));
+  ASSERT_OK(block_verity::VerifiedVolumeClient::CreateFromBlockDevice(
+      ramdisk_->fd(), std::move(devfs_root),
+      block_verity::VerifiedVolumeClient::Disposition::kDriverAlreadyBound,
+      zx::duration::infinite(), &vvc));
+}
 
 TEST_F(BlockVerityTest, BasicWrites) {
-  // Bind the driver to the ramdisk
-  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
-
-  // Open channel to block-verity driver
-  OpenVerityDeviceManager();
+  BindAndOpenVerityDeviceManager();
 
   // Open for authoring
   fbl::unique_fd mutable_block_fd;
@@ -277,11 +193,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   // Zero out the underlying ramdisk.
   ZeroUnderlyingRamdisk();
 
-  // Bind the driver to the ramdisk
-  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
-
-  // Open channel to block-verity driver
-  OpenVerityDeviceManager();
+  BindAndOpenVerityDeviceManager();
 
   // Open for authoring
   fbl::unique_fd mutable_block_fd;
@@ -433,11 +345,7 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   // Zero out the underlying ramdisk.
   ZeroUnderlyingRamdisk();
 
-  // Bind the driver to the ramdisk
-  ASSERT_OK(BindVerityDriver(zx::unowned_channel(ramdisk_->channel())));
-
-  // Open channel to block-verity driver
-  OpenVerityDeviceManager();
+  BindAndOpenVerityDeviceManager();
 
   // Open for authoring
   fbl::unique_fd mutable_block_fd;
