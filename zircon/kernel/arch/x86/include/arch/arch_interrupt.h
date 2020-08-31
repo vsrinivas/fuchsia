@@ -23,13 +23,25 @@ typedef x86_flags_t interrupt_saved_state_t;
 __WARN_UNUSED_RESULT
 static inline interrupt_saved_state_t arch_interrupt_save(void) {
   interrupt_saved_state_t state = x86_save_flags();
-  x86_cli();
+  if ((state & X86_FLAGS_IF) != 0) {
+    x86_cli();
+  }
+
+  // Prevent the compiler from moving code into or out of the "interrupts
+  // disabled" region.
   atomic_signal_fence();
+
   return state;
 }
 
 static inline void arch_interrupt_restore(interrupt_saved_state_t old_state) {
-  x86_restore_flags(old_state);
+  // Prevent the compiler from moving code into or out of the "interrupts
+  // disabled" region.
+  atomic_signal_fence();
+
+  if ((old_state & X86_FLAGS_IF) != 0) {
+    x86_restore_flags(old_state);
+  }
 }
 
 __END_CDECLS
