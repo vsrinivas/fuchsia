@@ -7,15 +7,11 @@ group("all") {
   deps = [
     "client",
     "client_sync",
+    "fidl_crates",
     "request_pipelining/client",
     "request_pipelining/server",
     "server",
     "services/client",
     "services/server",
   ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ "fidl_crates" ]
 }

@@ -120,7 +120,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: /rustfmt.toml
-[fidl-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-rust.md
+[fidl-tutorial]: /docs/development/languages/fidl/tutorials/rust
 [rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers
 [rust-proc-macros]: https://doc.rust-lang.org/reference/procedural-macros.html

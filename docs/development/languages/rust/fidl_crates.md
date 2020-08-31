@@ -6,7 +6,9 @@ way to use FIDL from Rust is by generating a "FIDL crate" from a FIDL library
 and then importing it from your Rust library or binary.
 
 See [the FIDL Rust bindings](/docs/reference/fidl/bindings/rust-bindings.md) to
-understand how different FIDL constructs map into their Rust equivalents.
+understand how different FIDL constructs map into their Rust equivalents, and
+[the FIDL Rust tutorials][tutorials] for examples on using the Rust
+bindings.
 
 ## Build Instructions {#build}
 
@@ -65,5 +67,10 @@ FIDL crates in the public Fuchsia source tree are published in the
 ## Generated Rust Code {#code}
 
 To manually inspect the generated Rust code for a FIDL crate, the Rust
-source files are available under the `BUILD_DIR/fidling/gen`. Note that
+source files are available under the `BUILD_DIR/fidling/gen` (refer to the
+[Generated code guide][generated-code] for an example). Note that
 the FIDL crate must first have been built (e.g. using `fx build`).
+
+<!-- xrefs -->
+[generated-code]: /docs/development/languages/fidl/guides/generated-code.md#rust
+[tutorials]: /docs/development/languages/fidl/tutorials/rust

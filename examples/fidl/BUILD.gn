@@ -8,7 +8,6 @@ group("tests") {
     "go:tests",
     "hlcpp:tests",
     "llcpp:tests",
-    "rust:tests",
     "test",
   ]
 }

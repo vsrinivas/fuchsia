@@ -28,7 +28,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
 
   * [High Level C++ (HLCPP) Tutorial][hlcpp]
   <!-- * [Low Level C++ (HLCPP) Tutorial][llcpp] -->
-  <!-- * [Rust Tutorial][rust] -->
+  * [Rust Tutorial][rust]
   * [Dart Tutorial][dart]
 
 <!-- xrefs -->
@@ -37,7 +37,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [hlcpp]: hlcpp/README.md
 <!-- [llcpp]: llcpp/README.md -->
-<!-- [rust]: rust/README.md -->
+[rust]: rust/README.md
 [dart]: dart/README.md
 [c]: /docs/development/languages/fidl/tutorials/tutorial-c.md
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md

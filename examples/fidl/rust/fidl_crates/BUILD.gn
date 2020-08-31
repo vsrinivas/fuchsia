@@ -3,16 +3,16 @@
 # found in the LICENSE file.
 
 # [START imports]
-import("//build/rust/rustc_test.gni")
+import("//build/rust/rustc_binary.gni")
 
 # [END imports]
 
 # [START test]
-rustc_test("fidl_crates_test") {
+rustc_binary("fidl_crates_bin") {
   edition = "2018"
   deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [ "src/main.rs" ]
 }
 
 # [END test]
@@ -20,6 +20,6 @@ rustc_test("fidl_crates_test") {
 # [START group]
 group("fidl_crates") {
   testonly = true
-  deps = [ ":fidl_crates_test($host_toolchain)" ]
+  deps = [ ":fidl_crates_bin($host_toolchain)" ]
 }
 # [END group]
