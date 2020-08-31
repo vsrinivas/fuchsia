@@ -40,7 +40,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1080
+From //build/config/BUILDCONFIG.gn:1083
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -822,7 +822,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:838
+From //build/config/BUILDCONFIG.gn:841
 
 ### fastboot_product
 
@@ -1333,7 +1333,7 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/lto:thinlto"]
 }, {
   configs = ["//build/config/profile"]
-  tags = ["instrumented"]
+  tags = ["instrumented", "profile"]
 }, {
   configs = ["//build/config/scudo"]
 }, {
@@ -2066,7 +2066,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1070
+From //build/config/BUILDCONFIG.gn:1073
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2075,7 +2075,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1075
+From //build/config/BUILDCONFIG.gn:1078
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2111,7 +2111,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:884
+From //build/config/BUILDCONFIG.gn:887
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2368,7 +2368,7 @@ From //build/config/sanitizers/BUILD.gn:29
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:858
+From //build/config/BUILDCONFIG.gn:861
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
