@@ -143,11 +143,11 @@ bool GetRuntimeInfoThreadsConcurrent(perftest::RepeatState* state) {
       ASSERT_OK(event->signal_peer(0, ZX_USER_SIGNAL_0));
     }
 
-    while (!done) {
+    do {
       ASSERT_OK(event->wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
       ASSERT_OK(event->signal(ZX_USER_SIGNAL_0, 0));
       ASSERT_OK(event->signal_peer(0, ZX_USER_SIGNAL_0));
-    }
+    } while (!done);
   };
 
   std::thread t1(thread_action, &e1, true);
