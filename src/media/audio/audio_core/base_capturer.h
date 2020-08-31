@@ -269,7 +269,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   StopAsyncCaptureCallback pending_async_stop_cbk_;
 
   std::shared_ptr<MixStage> mix_stage_;
-  Reporter::Container<Reporter::Capturer>::Ptr reporter_;
+  std::unique_ptr<Reporter::Capturer> reporter_;
 
   AudioClock audio_clock_;
 

@@ -139,7 +139,7 @@ class AudioOutput : public AudioDevice {
   size_t max_block_size_frames_;
 
   std::unique_ptr<OutputPipeline> pipeline_;
-  Reporter::Container<Reporter::OutputDevice>::Ptr reporter_;
+  std::unique_ptr<Reporter::OutputDevice> reporter_;
 };
 
 }  // namespace media::audio

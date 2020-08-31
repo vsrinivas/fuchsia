@@ -5,8 +5,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <queue>
-
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 
@@ -27,8 +25,6 @@ static std::unique_ptr<Reporter> singleton_real;
 namespace {
 class OutputDeviceNop : public Reporter::OutputDevice {
  public:
-  void Destroy() override {}
-
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
@@ -41,8 +37,6 @@ class OutputDeviceNop : public Reporter::OutputDevice {
 
 class InputDeviceNop : public Reporter::InputDevice {
  public:
-  void Destroy() override {}
-
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
@@ -53,8 +47,6 @@ class InputDeviceNop : public Reporter::InputDevice {
 
 class RendererNop : public Reporter::Renderer {
  public:
-  void Destroy() override {}
-
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
@@ -76,8 +68,6 @@ class RendererNop : public Reporter::Renderer {
 
 class CapturerNop : public Reporter::Capturer {
  public:
-  void Destroy() override {}
-
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
 
@@ -220,7 +210,6 @@ class DeviceDriverInfo {
  private:
   inspect::Node node_;
   inspect::StringProperty name_;
-  inspect::BoolProperty alive_;
   inspect::UintProperty total_delay_;
   inspect::UintProperty external_delay_;
   inspect::UintProperty fifo_delay_;
@@ -269,7 +258,6 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name)
       : node_(impl.outputs_node.CreateChild(name)),
-        alive_(node_.CreateBool("alive", true)),
         driver_info_(node_),
         gain_info_(node_),
         device_underflows_(
@@ -288,8 +276,6 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
                 .is_underflow = true,
                 .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputPipeline,
             })) {}
-
-  void Destroy() override { alive_.Set(false); }
 
   void StartSession(zx::time start_time) override {
     device_underflows_->StartSession(start_time);
@@ -318,7 +304,6 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 
  private:
   inspect::Node node_;
-  inspect::BoolProperty alive_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
   std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
@@ -328,12 +313,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  public:
   InputDeviceImpl(Reporter::Impl& impl, const std::string& name)
-      : node_(impl.inputs_node.CreateChild(name)),
-        alive_(node_.CreateBool("alive", true)),
-        driver_info_(node_),
-        gain_info_(node_) {}
-
-  void Destroy() override { alive_.Set(false); }
+      : node_(impl.inputs_node.CreateChild(name)), driver_info_(node_), gain_info_(node_) {}
 
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
@@ -347,7 +327,6 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
 
  private:
   inspect::Node node_;
-  inspect::BoolProperty alive_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
 };
@@ -420,7 +399,6 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   RendererImpl(Reporter::Impl& impl)
       : node_(impl.renderers_node.CreateChild(impl.NextRendererName())),
         client_port_(node_),
-        alive_(node_.CreateBool("alive", true)),
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
         final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
@@ -432,8 +410,6 @@ class Reporter::RendererImpl : public Reporter::Renderer {
             .is_underflow = true,
             .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Renderer,
         })) {}
-
-  void Destroy() override { alive_.Set(false); }
 
   void StartSession(zx::time start_time) override { underflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { underflows_->StopSession(stop_time); }
@@ -471,7 +447,6 @@ class Reporter::RendererImpl : public Reporter::Renderer {
  private:
   inspect::Node node_;
   ClientPort client_port_;
-  inspect::BoolProperty alive_;
   inspect::UintProperty min_lead_time_ns_;
   inspect::DoubleProperty pts_continuity_threshold_seconds_;
   inspect::DoubleProperty final_stream_gain_;
@@ -484,7 +459,6 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
   CapturerImpl(Reporter::Impl& impl)
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
         client_port_(node_),
-        alive_(node_.CreateBool("alive", true)),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
         usage_(node_.CreateString("usage", "default")),
         overflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -494,8 +468,6 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
             .is_underflow = false,
             .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Capturer,
         })) {}
-
-  void Destroy() override { alive_.Set(false); }
 
   void StartSession(zx::time start_time) override { overflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { overflows_->StopSession(stop_time); }
@@ -526,7 +498,6 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
  private:
   inspect::Node node_;
   ClientPort client_port_;
-  inspect::BoolProperty alive_;
   inspect::UintProperty min_fence_time_ns_;
   inspect::StringProperty usage_;
   std::unique_ptr<OverflowUnderflowTracker> overflows_;
@@ -601,30 +572,36 @@ void Reporter::InitCobalt() {
       });
 }
 
-Reporter::Container<Reporter::OutputDevice>::Ptr Reporter::CreateOutputDevice(
-    const std::string& name) {
+std::unique_ptr<Reporter::OutputDevice> Reporter::CreateOutputDevice(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  return outputs_.New(impl_ ? static_cast<OutputDevice*>(new OutputDeviceImpl(*impl_, name))
-                            : static_cast<OutputDevice*>(new OutputDeviceNop));
+  if (!impl_) {
+    return std::make_unique<OutputDeviceNop>();
+  }
+  return std::make_unique<Reporter::OutputDeviceImpl>(*impl_, name);
 }
 
-Reporter::Container<Reporter::InputDevice>::Ptr Reporter::CreateInputDevice(
-    const std::string& name) {
+std::unique_ptr<Reporter::InputDevice> Reporter::CreateInputDevice(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  return inputs_.New(impl_ ? static_cast<InputDevice*>(new InputDeviceImpl(*impl_, name))
-                           : static_cast<InputDevice*>(new InputDeviceNop));
+  if (!impl_) {
+    return std::make_unique<InputDeviceNop>();
+  }
+  return std::make_unique<Reporter::InputDeviceImpl>(*impl_, name);
 }
 
-Reporter::Container<Reporter::Renderer>::Ptr Reporter::CreateRenderer() {
+std::unique_ptr<Reporter::Renderer> Reporter::CreateRenderer() {
   std::lock_guard<std::mutex> lock(mutex_);
-  return renderers_.New(impl_ ? static_cast<Renderer*>(new RendererImpl(*impl_))
-                              : static_cast<Renderer*>(new RendererNop));
+  if (!impl_) {
+    return std::make_unique<RendererNop>();
+  }
+  return std::make_unique<Reporter::RendererImpl>(*impl_);
 }
 
-Reporter::Container<Reporter::Capturer>::Ptr Reporter::CreateCapturer() {
+std::unique_ptr<Reporter::Capturer> Reporter::CreateCapturer() {
   std::lock_guard<std::mutex> lock(mutex_);
-  return capturers_.New(impl_ ? static_cast<Capturer*>(new CapturerImpl(*impl_))
-                              : static_cast<Capturer*>(new CapturerNop));
+  if (!impl_) {
+    return std::make_unique<CapturerNop>();
+  }
+  return std::make_unique<Reporter::CapturerImpl>(*impl_);
 }
 
 void Reporter::FailedToOpenDevice(const std::string& name, bool is_input, int err) {
@@ -660,11 +637,6 @@ void Reporter::FailedToStartDevice(const std::string& name) {
   }
   impl_->failed_to_start_device_count.Add(1);
 }
-
-Reporter::Impl::Impl(sys::ComponentContext& cc, ThreadingModel& tm)
-    : component_context(cc), threading_model(tm) {}
-
-Reporter::Impl::~Impl() {}
 
 //////////////////////////////////////////////////////////////////////////////////
 // OverflowUnderflowTracker implementation
