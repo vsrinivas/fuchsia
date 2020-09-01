@@ -926,6 +926,11 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   DLOG("Offset delimiter %d", params_.Read32(HardwareRenderParams::kOffsetDelimiterLo));
   DLOG("Mode 8x8 flags: 0x%x\n", params_.data[HardwareRenderParams::kMode8x8Flags]);
 
+  DLOG("kMaxReferenceFrameNum: 0x%x", params_.data[HardwareRenderParams::kMaxReferenceFrameNum]);
+  DLOG("kMaxBufferFrame: 0x%x", params_.data[HardwareRenderParams::kMaxBufferFrame]);
+  DLOG("kMaxNumReorderFramesNewerFirmware: 0x%x",
+       params_.data[HardwareRenderParams::kMaxNumReorderFramesNewerFirmware]);
+
   // Don't need StreamInfo here - saved anything needed from there in ConfigureDpb().
   //
   // SequenceInfo may not be reliable at slice header interrupt time, judging from how

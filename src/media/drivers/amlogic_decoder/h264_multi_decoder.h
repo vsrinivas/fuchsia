@@ -157,7 +157,16 @@ class H264MultiDecoder : public VideoDecoder {
 
     static constexpr uint32_t kCroppingLeftRight = 0x6a;
     static constexpr uint32_t kCroppingTopBottom = 0x6b;
-    // Maybe another copy of max_reference_size at this offset, or maybe something else.
+    // Only newer versions of the firmware put max_num_reorder_frames here.  The current version of
+    // the FW has 0 here.
+    static constexpr uint32_t kMaxNumReorderFramesNewerFirmware = 0x6d;
+    // jbauman points out that this may be max_dec_frame_buffering, based on how new versions of
+    // the firmware put max_num_reorder_frames at 0x6d, and the two being adjacent in VUI
+    // parameters.
+    //
+    // We've seen one test stream where this is 0 while kMaxReferenceFrameNum is 2, so probably this
+    // isn't max_num_ref_frames, but it's unclear whether that stream is fully compliant or not;
+    // max_dec_frame_buffering is supposed to be >= max_num_ref_frames.
     static constexpr uint32_t kMaxBufferFrame = 0x6e;
 
     static constexpr uint32_t kSkipPicCount = 0x74;
