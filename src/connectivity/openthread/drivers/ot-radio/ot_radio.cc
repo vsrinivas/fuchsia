@@ -131,7 +131,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
     uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync completer) {
-  zxlogf(DEBUG, "allow to receive %u frame", number_of_frames);
+  zxlogf(DEBUG, "ot-radio: allow to receive %u frame", number_of_frames);
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
@@ -151,7 +151,7 @@ zx_status_t OtRadioDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void OtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync completer) {
   if (fidl_impl_obj_ != nullptr) {
-    zxlogf(ERROR, "ot-audio: channel already set");
+    zxlogf(ERROR, "ot-radio: channel already set");
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
     return;
   }
@@ -405,6 +405,8 @@ zx_status_t OtRadioDevice::RadioThread() {
         gpio_[OT_RADIO_INT_PIN].Read(&pin_level);
         // Interrupt has de-asserted or no more frames can be received.
         if (pin_level != 0 || inbound_allowance_ == 0) {
+          zxlogf(DEBUG, "ot-radio: break int handling: int_pin:%d, inbound_allowance_:%d",
+                 pin_level, inbound_allowance_);
           break;
         }
         spinel_framer_->HandleInterrupt();
