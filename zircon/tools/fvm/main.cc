@@ -563,10 +563,22 @@ int main(int argc, char** argv) {
       fprintf(stderr, "%s\n", sparse_image_reader_or.error().c_str());
       return -1;
     }
-    fbl::unique_fd ftl_output(open(path, O_CREAT | O_RDWR, 0644));
-    if (!ftl_output.is_valid()) {
-      fprintf(stderr, "Failed to create output path. Error %s.\n", strerror(errno));
-      return -1;
+
+    // The FTL writer intentionally leaves existing content in place when
+    // opening a file, so we need to delete the output file first so that any
+    // existing file data doesn't carry over - in particular, if the existing
+    // NAND image is larger than the one we're about to generate, the excess
+    // data would be left in-place, corrupting the FTL metadata.
+    {
+      fbl::unique_fd ftl_output(open(path, O_CREAT | O_RDWR, 0644));
+      if (!ftl_output.is_valid()) {
+        fprintf(stderr, "Failed to create output path. Error %s.\n", strerror(errno));
+        return -1;
+      }
+      if (ftruncate(ftl_output.get(), 0) != 0) {
+        fprintf(stderr, "Failed to truncate output path. Error %s.\n", strerror(errno));
+        return -1;
+      }
     }
 
     auto sparse_image_reader = sparse_image_reader_or.take_value();
