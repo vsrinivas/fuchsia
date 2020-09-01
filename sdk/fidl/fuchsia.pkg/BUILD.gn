@@ -16,6 +16,7 @@ fidl("fuchsia.pkg") {
     "cache.fidl",
     "common.fidl",
     "font_resolver.fidl",
+    "local_mirror.fidl",
     "repo.fidl",
     "resolver.fidl",
   ]

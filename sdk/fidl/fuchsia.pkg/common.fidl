@@ -17,9 +17,15 @@ struct BlobInfo {
     uint64 length;
 };
 
-/// The URL for a package.
-/// https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
+/// A fuchsia-pkg:// URL indicating a package.
+/// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package_identity
 struct PackageUrl {
+    string:2048 url;
+};
+
+/// A fuchsia-pkg:// URL indicating a repository.
+/// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository_identity
+struct RepositoryUrl {
     string:2048 url;
 };
 

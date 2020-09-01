@@ -1,0 +1,60 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.pkg;
+
+using fuchsia.io;
+
+/// A collection of TUF repositories contained in an attached storage device.
+[Discoverable]
+protocol LocalMirror {
+    /// Obtains and returns a named TUF metadata file from an attached storage
+    /// device.
+    ///
+    /// + request `repo_url` the URL of the TUF repository for which to return
+    ///     metadata.
+    /// + request `path` the path of the metadata file in the TUF repository.
+    /// + request `metadata` a server end for a TUF metadata file to be opened
+    ///     with `OPEN_RIGHT_READABLE`.
+    /// * error a `GetMetadataError` value
+    GetMetadata(
+        RepositoryUrl repo_url,
+        string:fuchsia.io.MAX_PATH path,
+        request<fuchsia.io.File> metadata
+        ) -> () error GetMetadataError;
+
+    /// Obtains and returns a blob from an attached storage device.
+    ///
+    /// + request `blob_id` the id of the blob to return.
+    /// + request `blob` a server end for a blob file to be opened with
+    ///    `OPEN_RIGHT_READABLE`.
+    /// * error a `GetBlobError` value
+    GetBlob(
+        BlobId blob_id,
+        request<fuchsia.io.File> blob
+        ) -> () error GetBlobError;
+};
+
+/// Error type for [`fuchsia.pkg/LocalMirror.GetMetadata`].
+enum GetMetadataError {
+    /// Attached storage does not have a directory corresponding to the provided
+    /// `repo_url`.
+    MISSING_REPO_URL_DIRECTORY = 1;
+
+    /// Attached storage does not have the requested metadata file.
+    MISSING_METADATA_FILE = 2;
+
+    /// The requested metadata file was found, but an error occurred while
+    /// opening it.
+    ERROR_OPENING_METADATA = 3;
+};
+
+/// Error type for [`fuchsia.pkg/LocalMirror.GetBlob`].
+enum GetBlobError {
+    /// Attached storage does not have the requested blob.
+    MISSING_BLOB = 1;
+
+    /// The requested blob was found, but an error occured while opening it.
+    ERROR_OPENING_BLOB = 2;
+};
