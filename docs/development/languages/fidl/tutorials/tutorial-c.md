@@ -209,7 +209,7 @@ produces.
 | `uint64`                                       | `uint64_t`                 |
 | `float32`                                      | `float`                    |
 | `float64`                                      | `double`                   |
-| `handle`, `handle?`, `handle<T>`, `handle<T>?` | `zx_handle_t`              |
+| `handle`, `handle?`, `handle:T`, `handle:T?`   | `zx_handle_t`              |
 | `string`, `string?`                            | `fidl_string_t`            |
 | `vector`, `vector?`                            | `fidl_vector_t`            |
 | `array<T>:N`                                   | `T[N]`                     |

@@ -574,7 +574,7 @@ Use shared-memory primitives for blobs:
 
  * Use `fuchsia.mem.Buffer` for images and (large) protobufs, when it makes
    sense to buffer the data completely.
- * Use `handle<socket>` for audio and video streams because data may arrive over
+ * Use `zx.handle:SOCKET` for audio and video streams because data may arrive over
    time, or when it makes sense to process data before completely written or
    available.
 
@@ -1275,11 +1275,11 @@ identifier for the now-shared object:
 
 ```fidl
 protocol Foo {
-    ExportThing(uint32 client_assigned_id, ..., handle<eventpair> export_token);
+    ExportThing(uint32 client_assigned_id, ..., zx.handle:EVENTPAIR export_token);
 };
 
 protocol Bar {
-    ImportThing(uint32 some_other_client_assigned_id, ..., handle<eventpair> import_token);
+    ImportThing(uint32 some_other_client_assigned_id, ..., zx.handle:EVENTPAIR import_token);
 };
 ```
 

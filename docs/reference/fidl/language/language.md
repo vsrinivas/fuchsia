@@ -448,9 +448,9 @@ Handles are denoted:
     unspecified type
 *   **`handle?`** : nullable Zircon handle of
     unspecified type
-*   **`handle<H>`** : non-nullable Zircon handle
+*   **`handle:H`** : non-nullable Zircon handle
     of type _H_
-*   **`handle<H>?`** : nullable Zircon handle of
+*   **`handle:H?`** : nullable Zircon handle of
     type _H_
 
 _H_ can be any [object](/docs/reference/kernel_objects/objects.md) supported by
@@ -464,7 +464,7 @@ struct Record {
     handle h;
 
     // an optional channel
-    handle<channel>? c;
+    handle:CHANNEL? c;
 };
 ```
 

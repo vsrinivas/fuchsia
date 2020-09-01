@@ -87,7 +87,7 @@ library fuchsia.fleet;
 struct Planet {
     string name;
     float64 mass;
-    handle<channel> radio;
+    handle:CHANNEL radio;
 };
 ```
 
@@ -925,7 +925,7 @@ FIDL                                        | Low-Level C++
 `float32`                                   | `float`
 `float64`                                   | `double`
 `handle`, `handle?`                         | `zx::handle`
-`handle<T>`,`handle<T>?`                    | `zx::T` *(subclass of zx::object\<T\>)*
+`handle:T`,`handle:T?`                      | `zx::T` *(subclass of zx::object\<T\>)*
 `string`                                    | `fidl::StringView`
 `string?`                                   | `fidl::StringView`
 `vector<T>`                                 | `fidl::VectorView<T>`

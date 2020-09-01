@@ -707,7 +707,7 @@ Type(s)                      | Size (in-line)                    | Size (out-of-
 `union`, `union?`            | 24                                | sizeof(selected variant)                                        | 8
 
 The `handle` entry above refers to all flavors of handles, specifically
-`handle`, `handle?`, `handle<H>`, `handle<H>?`, `Protocol`, `Protocol?`,
+`handle`, `handle?`, `handle:H`, `handle:H?`, `Protocol`, `Protocol?`,
 `request<Protocol>`, and `request<Protocol>?`.
 
 Similarly, the `vector` entry above refers to all flavors of vectors,

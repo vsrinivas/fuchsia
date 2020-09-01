@@ -70,11 +70,11 @@ The FIDL types are converted to Dart types based on the following table:
 |`string`|`String`|
 |`request<P>`|`fidl.InterfaceRequest<P>`|
 |`P`|`fidl.InterfaceHandle<P>`|
-|`handle<channel>`|`zircon.Channel`|
-|`handle<eventpair>`|`zircon.EventPair`|
-|`handle<socket>`|`zircon.Socket`|
-|`handle<vmo>`|`zircon.Vmo`|
-|`handle<S>`, `handle`|`zircon.Handle`|
+|`handle:CHANNEL`|`zircon.Channel`|
+|`handle:EVENTPAIR`|`zircon.EventPair`|
+|`handle:SOCKET`|`zircon.Socket`|
+|`handle:VMO`|`zircon.Vmo`|
+|`handle:S`, `handle`|`zircon.Handle`|
 
 ### Response and event parameters {#response-event-parameters}
 
