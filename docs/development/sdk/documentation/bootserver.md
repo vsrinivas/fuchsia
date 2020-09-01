@@ -1,8 +1,9 @@
 # Bootserver
 
 The `bootserver` host tool can be used to pave, netboot or boot Fuchsia on a
-target device. This tool is very likely to go away in the short future with
-a replacement being currently implemented.
+target device. It serves the needed image artifacts to the device, as well
+as performs validations that the images/device are both valid and
+compatible. Lastly, it signals the device to begin the boot process.
 
 ## x64
 
