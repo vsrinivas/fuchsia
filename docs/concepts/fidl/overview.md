@@ -448,7 +448,7 @@ but that's the basic outline.
 
 #### Server implementation
 
-The `fidlc` FIDL compiler can also generate server code for a given target
+The `fidlc` FIDL compiler also generates server code for a given target
 language. Just like the client code, this code has a common structure regardless
 of the target language. The code:
 
