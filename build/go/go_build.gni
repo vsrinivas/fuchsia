@@ -241,6 +241,10 @@ template("go_build") {
         target_name,
       ]
 
+      if (defined(invoker.check_sources) && invoker.check_sources) {
+        args += [ "--check_sources" ]
+      }
+
       if (!(defined(invoker.cgo) && !invoker.cgo)) {
         args += [ "--cgo" ]
       }
@@ -350,21 +354,19 @@ template("go_build") {
 
       use_prebuilt_go = !is_fuchsia
       if (defined(invoker.use_prebuilt_go)) {
-          use_prebuilt_go = invoker.use_prebuilt_go
+        use_prebuilt_go = invoker.use_prebuilt_go
       }
       if (use_prebuilt_go) {
-          args += [
-            "--go-root",
-            rebase_path("//prebuilt/third_party/go/${host_platform}"),
-          ]
+        args += [
+          "--go-root",
+          rebase_path("//prebuilt/third_party/go/${host_platform}"),
+        ]
       } else {
-          args += [
-            "--go-root",
-            rebase_path("$host_tools_dir/goroot"),
-          ]
-          deps += [
-            "//third_party/go:go_runtime",
-          ]
+        args += [
+          "--go-root",
+          rebase_path("$host_tools_dir/goroot"),
+        ]
+        deps += [ "//third_party/go:go_runtime" ]
       }
 
       if (!carchive) {

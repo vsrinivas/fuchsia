@@ -112,10 +112,10 @@ def main():
     parser.add_argument(
         '--gn_target_name', help='The name of the gn target', default='')
     parser.add_argument(
-        '--verify_depfile',
+        '--check_sources',
         help=
         'Whether or not to verify the sources in the gn targets match the generated depfile',
-        default=False)
+        action='store_true')
     args = parser.parse_args()
 
     try:
@@ -340,7 +340,7 @@ def main():
             with open(args.depfile, 'wb') as into:
                 subprocess.check_call(godepfile_args, env=env, stdout=into)
 
-            if args.verify_depfile:
+            if args.check_sources:
                 try:
                     with open(args.source_list_path, 'r') as file:
                         sources = file.readlines()
@@ -354,7 +354,10 @@ def main():
                         subprocess.check_call(verify_args, env=env)
                 except FileNotFoundError:
                     # TODO(fxb/58776): This will be an error when source listings are enforced.
-                    pass
+                    print(
+                        'Could not find source list file: ' +
+                        args.source_list_path)
+                    return 1
 
     return retcode
 

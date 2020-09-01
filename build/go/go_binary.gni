@@ -23,6 +23,10 @@ import("//build/go/go_build.gni")
 #     List of labels representing elements that should be added to SDKs
 #     alongside the present binary.
 #     Labels in the list must represent SDK-ready targets.
+#
+#   check_sources (optional)
+#     Boolean indicating whether or not the source list should be verified against
+#     the generated dep file.
 
 template("go_binary") {
   go_build(target_name) {
