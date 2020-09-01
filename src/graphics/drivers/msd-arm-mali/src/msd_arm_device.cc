@@ -1217,10 +1217,6 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
       *value_out = IsProtectedModeSupported();
       return MAGMA_STATUS_OK;
 
-    case kMsdArmVendorQueryTodoRemoveFxb47016:
-      *value_out = 0;
-      return MAGMA_STATUS_OK;
-
     default:
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }
