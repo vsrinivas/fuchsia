@@ -96,6 +96,10 @@
             TestEvent::test_case_started("WriteToStdout.TestPass"),
             TestEvent::log_message("WriteToStdout.TestPass", "first msg"),
             TestEvent::log_message("WriteToStdout.TestPass", "second msg"),
+            TestEvent::log_message("WriteToStdout.TestPass", ""),
+            TestEvent::log_message("WriteToStdout.TestPass", ""),
+            TestEvent::log_message("WriteToStdout.TestPass", "third msg"),
+            TestEvent::log_message("WriteToStdout.TestPass", ""),
             TestEvent::test_case_finished("WriteToStdout.TestPass", TestResult::Passed),
         ],
 
@@ -104,7 +108,7 @@
             TestEvent::log_message("WriteToStdout.TestFail", "first msg"),
             TestEvent::log_message(
                 "WriteToStdout.TestFail",
-                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:41: Failure",
+                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:42: Failure",
             ),
             TestEvent::log_message("WriteToStdout.TestFail", "Value of: true"),
             TestEvent::log_message("WriteToStdout.TestFail", "  Actual: true"),

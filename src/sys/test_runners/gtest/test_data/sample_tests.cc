@@ -33,7 +33,8 @@ INSTANTIATE_TEST_SUITE_P(Tests, SampleParameterizedTestFixture,
 
 TEST(WriteToStdout, TestPass) {
   printf("first msg\n");
-  printf("second msg\n");
+  printf("second msg\n\n\n");
+  printf("third msg\n\n");
 }
 
 TEST(WriteToStdout, TestFail) {

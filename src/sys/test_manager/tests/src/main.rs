@@ -77,15 +77,16 @@ async fn run_test(
     // break logs as they can come in any order.
     for event in events {
         match event {
-            TestEvent::LogMessage { test_case_name, msg } => {
+            TestEvent::LogMessage { test_case_name, mut msg } => {
+                if msg.ends_with("\n") {
+                    msg.truncate(msg.len() - 1)
+                }
                 let logs = msg.split("\n");
                 for log in logs {
-                    if log.len() > 0 {
-                        test_events.push(TestEvent::LogMessage {
-                            test_case_name: test_case_name.clone(),
-                            msg: log.to_string(),
-                        });
-                    }
+                    test_events.push(TestEvent::LogMessage {
+                        test_case_name: test_case_name.clone(),
+                        msg: log.to_string(),
+                    });
                 }
             }
             event => {

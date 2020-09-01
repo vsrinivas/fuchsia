@@ -382,18 +382,30 @@ impl TestServer {
             "[       OK ]".as_bytes(),
         ];
 
-        while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
+        let mut last_line_excluded = false;
+        while let Some(mut bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
             if bytes.is_empty() {
                 continue;
             }
 
+            // Avoid printing trailing empty line
+            if *bytes.last().unwrap() == NEWLINE {
+                bytes.truncate(bytes.len() - 1);
+            }
+
             let mut iter = bytes.split(|&x| x == NEWLINE);
 
-            while let Some(buf) = iter.next() {
-                let exclude = PREFIXES_TO_EXCLUDE.iter().any(|p| buf.starts_with(p));
-                if !exclude {
-                    let buf = [buf, &[NEWLINE]].concat();
-                    test_logger.write(&buf).await?;
+            while let Some(line) = iter.next() {
+                if line.len() == 0 && last_line_excluded {
+                    // sometimes excluded lines print two newlines, we don't want to print blank
+                    // output to user's screen.
+                    continue;
+                }
+                last_line_excluded = PREFIXES_TO_EXCLUDE.iter().any(|p| line.starts_with(p));
+
+                if !last_line_excluded {
+                    let line = [line, &[NEWLINE]].concat();
+                    test_logger.write(&line).await?;
                 }
             }
         }
