@@ -50,7 +50,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
-#define CTL_DONE_TIMEOUT_MSEC (2500)
 
 #if !defined(NDEBUG)
 
@@ -60,13 +59,6 @@
 
 /* Device console log buffer state */
 #define CONSOLE_BUFFER_MAX 2024
-
-struct rte_log_le {
-  uint32_t buf; /* Can't be pointer on (64-bit) hosts */
-  uint32_t buf_size;
-  uint32_t idx;
-  char* _buf_compat; /* Redundant pointer for backward compat. */
-};
 
 struct rte_console {
   /* Virtual UART
@@ -332,16 +324,6 @@ static uint prio2prec(uint32_t prio) {
 }
 
 #if !defined(NDEBUG)
-/* Device console log buffer state */
-struct brcmf_console {
-  uint count;               /* Poll interval msec counter */
-  uint log_addr;            /* Log struct address (fixed) */
-  struct rte_log_le log_le; /* Log struct (host copy) */
-  uint bufsize;             /* Size of log buffer */
-  uint8_t* buf;             /* Log buffer (host copy) */
-  uint last;                /* Last buffer read index */
-};
-
 struct brcmf_trap_info {
   uint32_t type;
   uint32_t epc;
@@ -392,146 +374,6 @@ struct sdpcm_shared_le {
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
-};
-
-/* dongle SDIO bus specific header info */
-struct brcmf_sdio_hdrinfo {
-  uint8_t seq_num;
-  uint8_t channel;
-  uint16_t len;
-  uint16_t len_left;
-  uint16_t len_nxtfrm;
-  uint8_t dat_offset;
-  bool lastfrm;
-  uint16_t tail_pad;
-};
-
-/*
- * hold counter variables
- */
-struct brcmf_sdio_count {
-  uint intrcount;         /* Count of device interrupt callbacks */
-  uint lastintrs;         /* Count as of last watchdog timer */
-  uint pollcnt;           /* Count of active polls */
-  uint regfails;          /* Count of R_REG failures */
-  uint tx_sderrs;         /* Count of tx attempts with sd errors */
-  uint fcqueued;          /* Tx packets that got queued */
-  uint rxrtx;             /* Count of rtx requests (NAK to dongle) */
-  uint rx_toolong;        /* Receive frames too long to receive */
-  uint rxc_errors;        /* SDIO errors when reading control frames */
-  uint rx_hdrfail;        /* SDIO errors on header reads */
-  uint rx_badhdr;         /* Bad received headers (roosync?) */
-  uint rx_badseq;         /* Mismatched rx sequence number */
-  uint fc_rcvd;           /* Number of flow-control events received */
-  uint fc_xoff;           /* Number which turned on flow-control */
-  uint fc_xon;            /* Number which turned off flow-control */
-  uint rxglomfail;        /* Failed deglom attempts */
-  uint rxglomframes;      /* Number of glom frames (superframes) */
-  uint rxglompkts;        /* Number of packets from glom frames */
-  uint f2rxhdrs;          /* Number of header reads */
-  uint f2rxdata;          /* Number of frame data reads */
-  uint f2txdata;          /* Number of f2 frame writes */
-  uint f1regdata;         /* Number of f1 register accesses */
-  uint tickcnt;           /* Number of watchdog been schedule */
-  ulong tx_ctlerrs;       /* Err of sending ctrl frames */
-  ulong tx_ctlpkts;       /* Ctrl frames sent to dongle */
-  ulong rx_ctlerrs;       /* Err of processing rx ctrl frames */
-  ulong rx_ctlpkts;       /* Ctrl frames processed from dongle */
-  ulong rx_readahead_cnt; /* packets where header read-ahead was used */
-};
-
-/* misc chip info needed by some of the routines */
-/* Private data for SDIO bus interaction */
-struct brcmf_sdio {
-  struct brcmf_sdio_dev* sdiodev; /* sdio device handler */
-  struct brcmf_chip* ci;          /* Chip info struct */
-  struct brcmf_core* sdio_core;   /* sdio core info struct */
-
-  uint32_t hostintmask;       /* Copy of Host Interrupt Mask */
-  std::atomic<int> intstatus; /* Intstatus bits (events) pending */
-  std::atomic<int> fcstate;   /* State of dongle flow-control */
-
-  uint16_t blocksize; /* Block size of SDIO transfers */
-  uint roundup;       /* Max roundup limit */
-
-  struct pktq txq;     /* Queue length used for flow-control */
-  uint8_t flowcontrol; /* per prio flow control bitmask */
-  uint8_t tx_seq;      /* Transmit sequence number (next) */
-  uint8_t tx_max;      /* Maximum transmit sequence allowed */
-
-  uint8_t* hdrbuf; /* buffer for handling rx frame */
-  uint8_t* rxhdr;  /* Header of current rx frame (in hdrbuf) */
-  uint8_t rx_seq;  /* Receive sequence number (expected) */
-  struct brcmf_sdio_hdrinfo cur_read;
-  /* info of current read frame */
-  bool rxskip;    /* Skip receive (awaiting NAK ACK) */
-  bool rxpending; /* Data frame pending in dongle */
-
-  uint rxbound; /* Rx frames to read before resched */
-  uint txbound; /* Tx frames to send before resched */
-  uint txminmax;
-
-  struct brcmf_netbuf* glomd;    /* Packet containing glomming descriptor */
-  struct brcmf_netbuf_list glom; /* Packet list for glommed superframe */
-
-  uint8_t* rxbuf;      /* Buffer for receiving control packets */
-  uint rxblen;         /* Allocated length of rxbuf */
-  uint8_t* rxctl;      /* Aligned pointer into rxbuf */
-  uint8_t* rxctl_orig; /* pointer for freeing rxctl */
-  uint rxlen;          /* Length of valid data in buffer */
-  // spinlock_t rxctl_lock; /* protection lock for ctrl frame resources */
-
-  uint8_t sdpcm_ver; /* Bus protocol reported by dongle */
-
-  bool intr;              /* Use interrupts */
-  bool poll;              /* Use polling */
-  std::atomic<int> ipend; /* Device interrupt is pending */
-  uint spurious;          /* Count of spurious interrupts */
-  uint pollrate;          /* Ticks between device polls */
-  uint polltick;          /* Tick counter */
-
-#if !defined(NDEBUG)
-  uint console_interval;
-  struct brcmf_console console; /* Console output polling support */
-  uint console_addr;            /* Console address from shared struct */
-#endif /* !defined(NDEBUG) */
-
-  uint clkstate;     /* State of sd and backplane clock(s) */
-  int32_t idletime;  /* Control for activity timeout */
-  int32_t idlecount; /* Activity timeout counter */
-  int32_t idleclock; /* How to set bus driver when idle */
-  bool rxflow_mode;  /* Rx flow control mode */
-  bool rxflow;       /* Is rx flow control on */
-  bool alp_only;     /* Don't use HT clock (ALP only) */
-
-  uint8_t* ctrl_frame_buf;
-  uint16_t ctrl_frame_len;
-  std::atomic<bool> ctrl_frame_stat;
-  zx_status_t ctrl_frame_err;
-
-  // spinlock_t txq_lock; /* protect bus->txq */
-  sync_completion_t ctrl_wait;
-  sync_completion_t dcmd_resp_wait;
-
-  Timer* timer;
-  sync_completion_t watchdog_wait;
-  std::atomic<bool> watchdog_should_stop;
-  thrd_t watchdog_tsk;
-  std::atomic<bool> wd_active;
-
-  WorkQueue* brcmf_wq;
-  WorkItem datawork;
-  std::atomic<bool> dpc_triggered;
-  bool dpc_running;
-
-  bool txoff; /* Transmit flow-controlled */
-  struct brcmf_sdio_count sdcnt;
-  bool sr_enabled; /* SaveRestore enabled */
-  bool sleeping;
-
-  uint8_t tx_hdrlen;      /* sdio bus header length for tx packet */
-  uint16_t head_align;    /* buffer pointer alignment */
-  uint16_t sgentry_align; /* scatter-gather buffer alignment */
 };
 
 /* clkstate */
@@ -595,6 +437,35 @@ void pkt_align(struct brcmf_netbuf* p, int len, int align) {
 static bool data_ok(struct brcmf_sdio* bus) {
   return (uint8_t)(bus->tx_max - bus->tx_seq) != 0 &&
          ((uint8_t)(bus->tx_max - bus->tx_seq) & 0x80) == 0;
+}
+
+/*
+ * Read bus->ctrl_frame_stat, and if it's value is true, acquire the lock for bus->sdiodev->func1,
+ * call fn(), set bus->ctrl_frame_stat to false, and release the lock.
+ */
+void brcmf_sdio_if_ctrl_frame_stat_set(struct brcmf_sdio* bus, std::function<void()> fn) {
+  if (bus->ctrl_frame_stat.load()) {
+    sdio_claim_host(bus->sdiodev->func1);
+    if (bus->ctrl_frame_stat.load()) {
+      fn();
+      bus->ctrl_frame_stat.store(false);
+    }
+    sdio_release_host(bus->sdiodev->func1);
+  }
+}
+
+/*
+ * Read bus->ctrl_frame_stat, and if it's value is false, acquire the lock for bus->sdiodev->func1,
+ * call fn(), and release the lock.
+ */
+void brcmf_sdio_if_ctrl_frame_stat_clear(struct brcmf_sdio* bus, std::function<void()> fn) {
+  if (!bus->ctrl_frame_stat.load()) {
+    sdio_claim_host(bus->sdiodev->func1);
+    if (!bus->ctrl_frame_stat.load()) {
+      fn();
+    }
+    sdio_release_host(bus->sdiodev->func1);
+  }
 }
 
 static zx_status_t brcmf_sdio_kso_control(struct brcmf_sdio* bus, bool on) {
@@ -1873,7 +1744,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
   return rxcount;
 }
 
-static void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
+void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
   sync_completion_signal(&bus->ctrl_wait);
   return;
 }
@@ -2372,16 +2243,13 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     bus->intstatus.fetch_or(intstatus);
   }
 
-  if (bus->ctrl_frame_stat.load() && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
-    sdio_claim_host(bus->sdiodev->func1);
-    if (bus->ctrl_frame_stat.load()) {
+  if ((bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
+    brcmf_sdio_if_ctrl_frame_stat_set(bus, [&bus, &err]() {
       err = brcmf_sdio_tx_ctrlframe(bus, bus->ctrl_frame_buf, bus->ctrl_frame_len);
       bus->ctrl_frame_err = err;
       std::atomic_thread_fence(std::memory_order_seq_cst);
-      bus->ctrl_frame_stat.store(false);
-    }
-    sdio_release_host(bus->sdiodev->func1);
-    brcmf_sdio_wait_event_wakeup(bus);
+      brcmf_sdio_wait_event_wakeup(bus);
+    });
   }
   /* Send queued frames (limit 1 if rx may still be pending) */
   if ((bus->clkstate == CLK_AVAIL) && !bus->fcstate.load() &&
@@ -2405,16 +2273,11 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
   if ((bus->sdiodev->state != BRCMF_SDIOD_DATA) || (err != ZX_OK)) {
     BRCMF_ERR("failed backplane access over SDIO, halting operation");
     bus->intstatus.store(0);
-    if (bus->ctrl_frame_stat.load()) {
-      sdio_claim_host(bus->sdiodev->func1);
-      if (bus->ctrl_frame_stat.load()) {
-        bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        bus->ctrl_frame_stat.store(false);
-        brcmf_sdio_wait_event_wakeup(bus);
-      }
-      sdio_release_host(bus->sdiodev->func1);
-    }
+    brcmf_sdio_if_ctrl_frame_stat_set(bus, [&bus]() {
+      bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
+      std::atomic_thread_fence(std::memory_order_seq_cst);
+      brcmf_sdio_wait_event_wakeup(bus);
+    });
   } else if (bus->intstatus.load() || bus->ipend.load() > 0 ||
              (!bus->fcstate.load() && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
               data_ok(bus))) {
@@ -2633,10 +2496,10 @@ break2:
 }
 #endif /* !defined(NDEBUG) */
 
-static zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen) {
+zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
-  zx_status_t ret;
+  zx_status_t wait_status;
 
   BRCMF_DBG(TRACE, "Enter");
   if (sdiodev->state != BRCMF_SDIOD_DATA) {
@@ -2652,34 +2515,32 @@ static zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, u
   brcmf_sdio_trigger_dpc(bus);
 
   // Wait for a response from firmware
-  zx_status_t wait_status = sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
+  wait_status = sync_completion_wait(&bus->ctrl_wait, sdiodev->ctl_done_timeout);
   if (wait_status == ZX_ERR_TIMED_OUT) {
-    BRCMF_ERR("timed out waiting for txctl sdio operation to complete");
-  }
-
-  ret = ZX_OK;
-  if (bus->ctrl_frame_stat.load()) {
-    sdio_claim_host(bus->sdiodev->func1);
-    if (bus->ctrl_frame_stat.load()) {
-      BRCMF_DBG(SDIO, "ctrl_frame timeout");
-      bus->ctrl_frame_stat.store(false);
-      ret = ZX_ERR_SHOULD_WAIT;
-    }
-    sdio_release_host(bus->sdiodev->func1);
-  }
-  if (ret == ZX_OK) {
-    BRCMF_DBG(SDIO, "ctrl_frame complete, err=%d", bus->ctrl_frame_err);
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    ret = bus->ctrl_frame_err;
-  }
-
-  if (ret != ZX_OK) {
+    BRCMF_ERR("timed out waiting for txctl sdio operation to complete: %s",
+              zx_status_get_string(wait_status));
+    brcmf_sdio_if_ctrl_frame_stat_clear(bus, []() {
+      BRCMF_ERR(
+          "Unexpected clearing of ctrl_frame_stat by brcmf_sdio_dpc thread even though sdio "
+          "operation timed out.");
+    });
     bus->sdcnt.tx_ctlerrs++;
-  } else {
-    bus->sdcnt.tx_ctlpkts++;
+    return wait_status;
   }
 
-  return ret;
+  zx_status_t status = ZX_OK;
+  brcmf_sdio_if_ctrl_frame_stat_set(bus, [&status]() { status = ZX_ERR_SHOULD_WAIT; });
+
+  if (status != ZX_OK) {
+    BRCMF_ERR("txctl ctrl_frame timeout: %s", zx_status_get_string(status));
+    bus->sdcnt.tx_ctlerrs++;
+    return status;
+  }
+
+  BRCMF_DBG(SDIO, "ctrl_frame complete, err=%d", bus->ctrl_frame_err);
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  bus->sdcnt.tx_ctlpkts++;
+  return bus->ctrl_frame_err;
 }
 
 #if !defined(NDEBUG)

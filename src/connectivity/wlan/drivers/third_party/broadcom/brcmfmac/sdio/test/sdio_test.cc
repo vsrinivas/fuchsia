@@ -231,46 +231,39 @@ TEST(Sdio, DmaTransfer) {
   auto unaligned_size = MakeSdioTxn(0x458ef43b, 1233, true, true, false, ZX_HANDLE_INVALID);
   auto too_small_for_dma = MakeSdioTxn(0x216977b9, 16, true, true, false, ZX_HANDLE_INVALID);
   // These transactions should have DMA enabled
-  auto perfect_for_dma = MakeSdioTxn(0x9da7a590, dma_test_data.size(), true, true,
-                                     true, sdio_dev.dma_buffer.get());
+  auto perfect_for_dma =
+      MakeSdioTxn(0x9da7a590, dma_test_data.size(), true, true, true, sdio_dev.dma_buffer.get());
 
   sdio1.ExpectDoRwTxn(ZX_OK, unaligned_size)
-       .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
-       .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
+      .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
+      .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
 
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x458ef43b, true, nullptr,
-                           unaligned_size.data_size, false));
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x216977b9, true, nullptr,
-                           too_small_for_dma.data_size, false));
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x9da7a590, true, dma_test_data.data(),
-                           dma_test_data.size(), false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x458ef43b, true, nullptr,
+                                 unaligned_size.data_size, false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x216977b9, true, nullptr,
+                                 too_small_for_dma.data_size, false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x9da7a590, true, dma_test_data.data(),
+                                 dma_test_data.size(), false));
 
   sdio1.VerifyAndClear();
 
   sdio2.ExpectDoRwTxn(ZX_OK, unaligned_size)
-       .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
-       .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
+      .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
+      .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
 
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x458ef43b, true, nullptr,
-                           unaligned_size.data_size, false));
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x216977b9, true, nullptr,
-                           too_small_for_dma.data_size, false));
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, dma_test_data.data(),
-                           dma_test_data.size(), false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x458ef43b, true, nullptr,
+                                 unaligned_size.data_size, false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x216977b9, true, nullptr,
+                                 too_small_for_dma.data_size, false));
+  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, dma_test_data.data(),
+                                 dma_test_data.size(), false));
 
   sdio2.VerifyAndClear();
 
   // Data provided is a nullptr, ensure this is not OK when using DMA, that
   // data needs to be copied.
-  EXPECT_NOT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, nullptr,
-                           dma_test_data.size(), false));
+  EXPECT_NOT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, nullptr,
+                                     dma_test_data.size(), false));
   // And make sure there are no interactions with sdio
   sdio2.VerifyAndClear();
 }
@@ -364,4 +357,123 @@ TEST(Sdio, PktAlignTest) {
   }
 }
 
+/*
+ * The sdio_bus_txctl_test() test helper calls brcmf_sdio_bus_txctl() by mocking the state around
+ * the call using the function arguments. This helper returns the status returned by the
+ * brcmf_sdio_bus_txctl() call.
+ *
+ *   sdiod_state       - state of the brcmf_sdio_dev contained in brcmf_bus
+ *   ctl_done_timeout  - duration brcmf_sdio_bus_txctl() should wait for the
+ *                       work_item_handler to complete before timing out
+ *   workqueue_name    - name of the workqueue that effecively mocks dpc
+ *   work_item_handler - WorkItem loaded into a WorkQueue to mock dpc
+ *   expected_tx_ctlpkts - expected value of sdcnt.tx_ctlpkts after calling brcmf_sdio_bus_txctl()
+ *   expected_tx_ctlerrs - expected value of sdcnt.tx_ctlerrs after calling brcmf_sdio_bus_txctl()
+ *
+ */
+static zx_status_t sdio_bus_txctl_test(enum brcmf_sdiod_state sdiod_state,
+                                       zx_duration_t ctl_done_timeout, const char* workqueue_name,
+                                       void (*work_item_handler)(WorkItem* work),
+                                       ulong expected_tx_ctlpkts, ulong expected_tx_ctlerrs) {
+  // Minimal initialization of brcmf_sdio_dev, brcmf_bus, and brcmf_sdio required to call
+  // brcmf_sdio_bus_txctl().
+  brcmf_sdio_dev sdio_dev = {.ctl_done_timeout = ctl_done_timeout, .state = sdiod_state};
+
+  sdio_func func1 = {};
+  pthread_mutex_init(&func1.lock, nullptr);
+  sdio_dev.func1 = &func1;
+
+  struct brcmf_bus bus_if = {};
+  bus_if.bus_priv.sdio = &sdio_dev;
+  sdio_dev.bus_if = &bus_if;
+
+  struct brcmf_sdio bus = {};
+  sdio_dev.bus = &bus;
+  bus.sdiodev = &sdio_dev;
+
+  // Prepare a WorkQueue with a single WorkItem to run the work_item_handler when
+  // brcmf_sdio_bus_txctl is called.
+  WorkQueue wq = WorkQueue(workqueue_name);
+  bus.brcmf_wq = &wq;
+  bus.datawork = WorkItem(work_item_handler);
+  bus.dpc_triggered.store(false);
+
+  // Call brcmf_sdio_bus_txctl() with a blank message. Message processing is not mocked,
+  // so this call purely tests
+  unsigned char msg[] = "";
+  uint msglen = strlen((char*)msg);
+  zx_status_t status = brcmf_sdio_bus_txctl(&bus_if, msg, msglen);
+  EXPECT_EQ(bus.sdcnt.tx_ctlpkts, expected_tx_ctlpkts);
+  EXPECT_EQ(bus.sdcnt.tx_ctlerrs, expected_tx_ctlerrs);
+
+  return status;
+}
+
+TEST(Sdio, TxCtlSdioDown) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DOWN, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC), "brcmf_wq/txctl_sdio_down",
+      [](WorkItem* work_item) {}, 0, 0);
+  EXPECT_EQ(status, ZX_ERR_IO);
+}
+
+TEST(Sdio, TxCtlOk) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DATA, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC), "brcmf_wq/txctl_ok",
+      [](WorkItem* work) {
+        struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+        brcmf_sdio_if_ctrl_frame_stat_set(bus, [&bus]() {
+          bus->ctrl_frame_err = ZX_OK;
+          std::atomic_thread_fence(std::memory_order_seq_cst);
+          brcmf_sdio_wait_event_wakeup(bus);
+        });
+      },
+      1, 0);
+  EXPECT_EQ(status, ZX_OK);
+}
+
+TEST(Sdio, TxCtlTimeout) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DATA, ZX_MSEC(1), "brcmf_wq/txctl_timeout", [](WorkItem* work) {}, 0, 1);
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+}
+
+TEST(Sdio, TxCtlTimeoutUnexpectedCtrlFrameStatClear) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DATA, ZX_MSEC(1), "brcmf_wq/txctl_timeout_unexpected_ctrl_frame_stat_clear",
+      [](WorkItem* work) {
+        struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+        brcmf_sdio_if_ctrl_frame_stat_set(bus, [&bus]() { bus->ctrl_frame_err = ZX_OK; });
+      },
+      0, 1);
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+}
+
+TEST(Sdio, TxCtlCtrlFrameStateNotCleared) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DATA, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC),
+      "brcmf_wq/txctl_ctrl_frame_stat_not_cleared",
+      [](WorkItem* work) {
+        struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        brcmf_sdio_wait_event_wakeup(bus);
+      },
+      0, 1);
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
+}
+
+TEST(Sdio, TxCtlCtrlFrameStateClearedWithError) {
+  zx_status_t status = sdio_bus_txctl_test(
+      BRCMF_SDIOD_DATA, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC),
+      "brcmf_wq/txctl_ctrl_frame_stat_cleared_with_error",
+      [](WorkItem* work) {
+        struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+        brcmf_sdio_if_ctrl_frame_stat_set(bus, [&bus]() {
+          bus->ctrl_frame_err = ZX_ERR_NO_MEMORY;
+          std::atomic_thread_fence(std::memory_order_seq_cst);
+          brcmf_sdio_wait_event_wakeup(bus);
+        });
+      },
+      1, 0);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY);
+}
 }  // namespace

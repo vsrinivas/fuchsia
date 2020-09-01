@@ -17,14 +17,18 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
+
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
-#include <lib/zx/vmo.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
 
 #define SDIOD_FBR_SIZE 0x100
 
@@ -207,6 +211,7 @@ struct brcmf_sdio;
 struct brcmf_sdio_dev {
   struct sdio_func* func1;
   struct sdio_func* func2;
+  zx_duration_t ctl_done_timeout;
   uint32_t manufacturer_id;
   uint32_t product_id;
   sdio_protocol_t sdio_proto_fn1;
@@ -226,7 +231,7 @@ struct brcmf_sdio_dev {
   bool irq_wake; /* irq wake enable flags */
   bool wowl_enabled;
   enum brcmf_sdiod_state state;
-  zx::vmo dma_buffer; /* DMA buffer used for SDIO transfers */
+  zx::vmo dma_buffer;     /* DMA buffer used for SDIO transfers */
   size_t dma_buffer_size; /* Cached size of the DMA buffer */
 };
 
@@ -410,5 +415,175 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
 void brcmf_sdio_exit(struct brcmf_bus* bus);
 
 void pkt_align(struct brcmf_netbuf* p, int len, int align);
+
+// The following definitions are made public for unit tests only. Note that sdio/BUILD.gn
+// keeps the scope of these definitions relatively limited by declaring test/* as the
+// only friends of this header file.
+#define CTL_DONE_TIMEOUT_MSEC (2500)
+
+#if !defined(NDEBUG)
+struct rte_log_le {
+  uint32_t buf; /* Can't be pointer on (64-bit) hosts */
+  uint32_t buf_size;
+  uint32_t idx;
+  char* _buf_compat; /* Redundant pointer for backward compat. */
+};
+
+/* Device console log buffer state */
+struct brcmf_console {
+  uint count;               /* Poll interval msec counter */
+  uint log_addr;            /* Log struct address (fixed) */
+  struct rte_log_le log_le; /* Log struct (host copy) */
+  uint bufsize;             /* Size of log buffer */
+  uint8_t* buf;             /* Log buffer (host copy) */
+  uint last;                /* Last buffer read index */
+};
+
+#endif /* !defined(NDEBUG) */
+
+/* dongle SDIO bus specific header info */
+struct brcmf_sdio_hdrinfo {
+  uint8_t seq_num;
+  uint8_t channel;
+  uint16_t len;
+  uint16_t len_left;
+  uint16_t len_nxtfrm;
+  uint8_t dat_offset;
+  bool lastfrm;
+  uint16_t tail_pad;
+};
+
+/*
+ * hold counter variables
+ */
+struct brcmf_sdio_count {
+  uint intrcount;         /* Count of device interrupt callbacks */
+  uint lastintrs;         /* Count as of last watchdog timer */
+  uint pollcnt;           /* Count of active polls */
+  uint regfails;          /* Count of R_REG failures */
+  uint tx_sderrs;         /* Count of tx attempts with sd errors */
+  uint fcqueued;          /* Tx packets that got queued */
+  uint rxrtx;             /* Count of rtx requests (NAK to dongle) */
+  uint rx_toolong;        /* Receive frames too long to receive */
+  uint rxc_errors;        /* SDIO errors when reading control frames */
+  uint rx_hdrfail;        /* SDIO errors on header reads */
+  uint rx_badhdr;         /* Bad received headers (roosync?) */
+  uint rx_badseq;         /* Mismatched rx sequence number */
+  uint fc_rcvd;           /* Number of flow-control events received */
+  uint fc_xoff;           /* Number which turned on flow-control */
+  uint fc_xon;            /* Number which turned off flow-control */
+  uint rxglomfail;        /* Failed deglom attempts */
+  uint rxglomframes;      /* Number of glom frames (superframes) */
+  uint rxglompkts;        /* Number of packets from glom frames */
+  uint f2rxhdrs;          /* Number of header reads */
+  uint f2rxdata;          /* Number of frame data reads */
+  uint f2txdata;          /* Number of f2 frame writes */
+  uint f1regdata;         /* Number of f1 register accesses */
+  uint tickcnt;           /* Number of watchdog been schedule */
+  ulong tx_ctlerrs;       /* Err of sending ctrl frames */
+  ulong tx_ctlpkts;       /* Ctrl frames sent to dongle */
+  ulong rx_ctlerrs;       /* Err of processing rx ctrl frames */
+  ulong rx_ctlpkts;       /* Ctrl frames processed from dongle */
+  ulong rx_readahead_cnt; /* packets where header read-ahead was used */
+};
+
+/* misc chip info needed by some of the routines */
+/* Private data for SDIO bus interaction */
+struct brcmf_sdio {
+  struct brcmf_sdio_dev* sdiodev; /* sdio device handler */
+  struct brcmf_chip* ci;          /* Chip info struct */
+  struct brcmf_core* sdio_core;   /* sdio core info struct */
+
+  uint32_t hostintmask;       /* Copy of Host Interrupt Mask */
+  std::atomic<int> intstatus; /* Intstatus bits (events) pending */
+  std::atomic<int> fcstate;   /* State of dongle flow-control */
+
+  uint16_t blocksize; /* Block size of SDIO transfers */
+  uint roundup;       /* Max roundup limit */
+
+  struct pktq txq;     /* Queue length used for flow-control */
+  uint8_t flowcontrol; /* per prio flow control bitmask */
+  uint8_t tx_seq;      /* Transmit sequence number (next) */
+  uint8_t tx_max;      /* Maximum transmit sequence allowed */
+
+  uint8_t* hdrbuf; /* buffer for handling rx frame */
+  uint8_t* rxhdr;  /* Header of current rx frame (in hdrbuf) */
+  uint8_t rx_seq;  /* Receive sequence number (expected) */
+  struct brcmf_sdio_hdrinfo cur_read;
+  /* info of current read frame */
+  bool rxskip;    /* Skip receive (awaiting NAK ACK) */
+  bool rxpending; /* Data frame pending in dongle */
+
+  uint rxbound; /* Rx frames to read before resched */
+  uint txbound; /* Tx frames to send before resched */
+  uint txminmax;
+
+  struct brcmf_netbuf* glomd;    /* Packet containing glomming descriptor */
+  struct brcmf_netbuf_list glom; /* Packet list for glommed superframe */
+
+  uint8_t* rxbuf;      /* Buffer for receiving control packets */
+  uint rxblen;         /* Allocated length of rxbuf */
+  uint8_t* rxctl;      /* Aligned pointer into rxbuf */
+  uint8_t* rxctl_orig; /* pointer for freeing rxctl */
+  uint rxlen;          /* Length of valid data in buffer */
+  // spinlock_t rxctl_lock; /* protection lock for ctrl frame resources */
+
+  uint8_t sdpcm_ver; /* Bus protocol reported by dongle */
+
+  bool intr;              /* Use interrupts */
+  bool poll;              /* Use polling */
+  std::atomic<int> ipend; /* Device interrupt is pending */
+  uint spurious;          /* Count of spurious interrupts */
+  uint pollrate;          /* Ticks between device polls */
+  uint polltick;          /* Tick counter */
+
+#if !defined(NDEBUG)
+  uint console_interval;
+  struct brcmf_console console; /* Console output polling support */
+  uint console_addr;            /* Console address from shared struct */
+#endif                          /* !defined(NDEBUG) */
+
+  uint clkstate;     /* State of sd and backplane clock(s) */
+  int32_t idletime;  /* Control for activity timeout */
+  int32_t idlecount; /* Activity timeout counter */
+  int32_t idleclock; /* How to set bus driver when idle */
+  bool rxflow_mode;  /* Rx flow control mode */
+  bool rxflow;       /* Is rx flow control on */
+  bool alp_only;     /* Don't use HT clock (ALP only) */
+
+  uint8_t* ctrl_frame_buf;
+  uint16_t ctrl_frame_len;
+  std::atomic<bool> ctrl_frame_stat;
+  zx_status_t ctrl_frame_err;
+
+  // spinlock_t txq_lock; /* protect bus->txq */
+  sync_completion_t ctrl_wait;
+  sync_completion_t dcmd_resp_wait;
+
+  Timer* timer;
+  sync_completion_t watchdog_wait;
+  std::atomic<bool> watchdog_should_stop;
+  thrd_t watchdog_tsk;
+  std::atomic<bool> wd_active;
+
+  WorkQueue* brcmf_wq;
+  WorkItem datawork;
+  std::atomic<bool> dpc_triggered;
+  bool dpc_running;
+
+  bool txoff; /* Transmit flow-controlled */
+  struct brcmf_sdio_count sdcnt;
+  bool sr_enabled; /* SaveRestore enabled */
+  bool sleeping;
+
+  uint8_t tx_hdrlen;      /* sdio bus header length for tx packet */
+  uint16_t head_align;    /* buffer pointer alignment */
+  uint16_t sgentry_align; /* scatter-gather buffer alignment */
+};
+
+void brcmf_sdio_if_ctrl_frame_stat_set(struct brcmf_sdio* bus, std::function<void()> fn);
+void brcmf_sdio_if_ctrl_frame_stat_clear(struct brcmf_sdio* bus, std::function<void()> fn);
+void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus);
+zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_

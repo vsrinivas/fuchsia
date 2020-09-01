@@ -903,6 +903,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   sdiodev->bus_if = bus_if.get();
   sdiodev->func1 = func1;
   sdiodev->func2 = func2;
+  sdiodev->ctl_done_timeout = ZX_MSEC(CTL_DONE_TIMEOUT_MSEC);
   sdiodev->drvr = drvr;
   bus_if->bus_priv.sdio = sdiodev;
 
