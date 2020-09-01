@@ -9,7 +9,7 @@ use {
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_fatfs::FatFs,
-    fuchsia_syslog::{self, fx_log_info},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     remote_block_device::RemoteBlockDevice,
     std::ops::Deref,
@@ -62,13 +62,23 @@ impl FatDevice {
 
     /// Serve the root directory of the device on this channel.
     pub fn open_root(&self, remote: zx::Channel) {
-        self.fs.get_root().open(
+        let end = fidl::endpoints::ServerEnd::new(remote);
+        let root_dir = match self.fs.get_root() {
+            Ok(root) => root,
+            Err(e) => {
+                end.close_with_epitaph(e)
+                    .unwrap_or_else(|e| fx_log_warn!("Failed to close connection: {:?}", e));
+                return;
+            }
+        };
+        root_dir.clone().open(
             self.scope.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
             Path::empty(),
-            fidl::endpoints::ServerEnd::new(remote),
+            end,
         );
+        root_dir.close().unwrap_or_else(|e| fx_log_warn!("Failed to close file: {:?}", e));
     }
 
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.

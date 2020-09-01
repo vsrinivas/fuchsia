@@ -561,6 +561,7 @@ impl DirectoryEntry for FatDirectory {
         server_end: ServerEnd<NodeMarker>,
     ) {
         let mut closer = Closer::new(&self.filesystem);
+
         match self.lookup(flags, mode, path, &mut closer) {
             Err(e) => send_on_open_with_error(flags, server_end, e),
             Ok(FatNode::Dir(entry)) => {
@@ -750,6 +751,7 @@ mod tests {
     use {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         scopeguard::defer,
         vfs::directory::dirents_sink::{AppendResult, Sealed},
     };
@@ -924,5 +926,34 @@ mod tests {
             DummySink::from_sealed(sealed).entries,
             vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
         );
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_reopen_root() {
+        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
+        let structure = TestDiskContents::dir().add_child("test", "Hello".into());
+        structure.create(&disk.root_dir());
+
+        let fs = disk.into_fatfs();
+        let dir = fs.get_root().expect("get_root OK");
+
+        let scope = ExecutionScope::new();
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+        dir.clone().open(scope.clone(), OPEN_RIGHT_READABLE, 0, Path::empty(), server_end);
+        let scope_clone = scope.clone();
+
+        Status::ok(proxy.close().await.expect("Send request OK")).expect("First close OK");
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+        dir.clone().open(
+            scope_clone,
+            OPEN_RIGHT_READABLE,
+            0,
+            Path::validate_and_split("test").unwrap(),
+            server_end,
+        );
+        Status::ok(proxy.close().await.expect("Send request OK")).expect("Second close OK");
+        dir.close().expect("Close OK");
     }
 }

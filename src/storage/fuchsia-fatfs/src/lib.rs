@@ -10,7 +10,10 @@ use {
     fuchsia_zircon::{Event, HandleBased, Rights, Status},
     std::pin::Pin,
     std::sync::Arc,
-    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
+    vfs::{
+        directory::{entry::DirectoryEntry, entry_container::Directory},
+        execution_scope::ExecutionScope,
+    },
 };
 
 mod directory;
@@ -29,6 +32,9 @@ pub use crate::types::Disk;
 /// This is the minimum possible value. For instance, a 300 byte UTF-8 string could fit inside 255
 /// UCS-2 codepoints (if it had some 16 bit characters), but a 300 byte ASCII string would not fit.
 const MAX_FILENAME_LEN: u32 = 255;
+
+pub trait RootDirectory: DirectoryEntry + Directory {}
+impl<T: DirectoryEntry + Directory> RootDirectory for T {}
 
 pub struct FatFs {
     inner: Pin<Arc<FatFilesystem>>,
@@ -63,8 +69,11 @@ impl FatFs {
     }
 
     /// Get the root directory of this filesystem.
-    pub fn get_root(&self) -> Arc<dyn DirectoryEntry> {
-        self.root.clone()
+    /// The caller must call close() on the returned entry when it's finished with it.
+    pub fn get_root(&self) -> Result<Arc<dyn RootDirectory>, Status> {
+        // Make sure it's open.
+        self.root.open_ref(&self.inner.lock().unwrap())?;
+        Ok(self.root.clone())
     }
 
     fn get_info(&self, query: FilesystemInfoQuery) -> Result<FilesystemInfo, Status> {
@@ -326,8 +335,9 @@ mod tests {
         let fatfs = disk.into_fatfs();
         let scope = ExecutionScope::new();
         let (proxy, remote) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
-        let root = fatfs.get_root();
-        root.open(scope, OPEN_RIGHT_READABLE, 0, Path::empty(), remote);
+        let root = fatfs.get_root().expect("get_root OK");
+        root.clone().open(scope, OPEN_RIGHT_READABLE, 0, Path::empty(), remote);
+        root.close().expect("Close OK");
 
         structure.verify(proxy).await.expect("Verify succeeds");
     }

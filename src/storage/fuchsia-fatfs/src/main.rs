@@ -63,7 +63,8 @@ async fn main() -> Result<(), Error> {
     // Start the filesystem and open the root directory.
     let fatfs = FatFs::new(device).map_err(|_| Status::IO)?;
     let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
-    fatfs.get_root().open(
+    let root = fatfs.get_root()?;
+    root.clone().open(
         scope.clone(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         0,
@@ -89,6 +90,8 @@ async fn main() -> Result<(), Error> {
     // At this point all direct connections to ServiceFs will have been closed (and cannot be
     // resurrected), but before we finish, we must wait for all VFS connections to be closed.
     scope.wait().await;
+
+    root.close().unwrap_or_else(|e| fx_log_err!("Failed to close root: {:?}", e));
 
     // Make sure that fatfs has been cleanly shut down.
     fatfs.shut_down().unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e));
