@@ -17,7 +17,7 @@ class TestThrottleOutput : public ThrottleOutput {
                      LinkMatrix* link_matrix)
       : ThrottleOutput(threading_model, registry, link_matrix) {}
 
-  using ThrottleOutput::driver_ptscts_ref_clock_to_fractional_frames;
+  using ThrottleOutput::driver_ref_time_to_frac_presentation_frame;
   using ThrottleOutput::last_sched_time_mono;
   using ThrottleOutput::StartMixJob;
 };
@@ -55,7 +55,7 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
 TEST_F(ThrottleOutputTest, ThrottleHasGoodClock) {
   const auto want_frames_per_ns = throttle_output_->output_pipeline()->format().frames_per_ns();
   const auto got_frac_frames_per_ns =
-      throttle_output_->driver_ptscts_ref_clock_to_fractional_frames().rate();
+      throttle_output_->driver_ref_time_to_frac_presentation_frame().rate();
 
   const auto want_frames_per_sec = want_frames_per_ns.Scale(zx::sec(1).get());
   const auto got_frames_per_ns =

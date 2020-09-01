@@ -40,6 +40,8 @@ class FakeAudioDevice : public AudioDevice {
     driver_plug_time_ = plug_time;
   }
 
+  using AudioDevice::SetPresentationDelay;
+
  protected:
   ThreadingModel::OwnedDomainPtr mix_domain_;
 
@@ -77,21 +79,16 @@ class FakeAudioOutput : public FakeAudioDevice {
 
   fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
-    stream->SetPresentationDelay(presentation_delay_);
+    stream->SetPresentationDelay(presentation_delay());
     stream_ = std::move(stream);
     return fit::ok(std::make_pair(mixer_, mix_domain_.get()));
   }
-  void SetPresentationDelay(zx::duration delay) { presentation_delay_ = delay; }
 
   const std::shared_ptr<ReadableStream>& stream() const { return stream_; }
-
-  // Must implement, because this class descends from AudioDevice, not AudioOutput
-  zx::duration presentation_delay() const override { return presentation_delay_; }
 
  private:
   std::shared_ptr<ReadableStream> stream_;
   std::shared_ptr<mixer::NoOp> mixer_ = std::make_shared<mixer::NoOp>();
-  zx::duration presentation_delay_;
 };
 
 }  // namespace media::audio::testing

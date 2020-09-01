@@ -130,7 +130,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   }
 
   FX_DCHECK(driver_writable_ring_buffer() != nullptr);
-  const auto& ref_clock_to_safe_wr_frame = driver_safe_read_or_write_ref_clock_to_frames();
+  const auto& ref_clock_to_safe_wr_frame = driver_ref_time_to_safe_read_or_write_frame();
   const auto& output_frames_per_reference_tick = ref_clock_to_safe_wr_frame.rate();
   const auto& rb = *driver_writable_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
@@ -283,7 +283,7 @@ void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span, float* buffe
 
   if (VERBOSE_TIMING_DEBUG) {
     auto now = async::Now(mix_domain().dispatcher());
-    const auto& ref_clock_to_safe_wr_frame = driver_safe_read_or_write_ref_clock_to_frames();
+    const auto& ref_clock_to_safe_wr_frame = driver_ref_time_to_safe_read_or_write_frame();
     int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(now.get());
     int64_t playback_lead_end = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_start = playback_lead_end - span.length;
@@ -332,7 +332,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // will be time to wake up.
   int64_t low_water_frame_number = frames_sent_ - low_water_frames_;
   int64_t low_water_ref_time =
-      driver_safe_read_or_write_ref_clock_to_frames().ApplyInverse(low_water_frame_number);
+      driver_ref_time_to_safe_read_or_write_frame().ApplyInverse(low_water_frame_number);
   auto low_water_mono_time =
       reference_clock().MonotonicTimeFromReferenceTime(zx::time(low_water_ref_time));
 
@@ -521,7 +521,7 @@ void DriverOutput::OnDriverStartComplete() {
   FX_DCHECK(format);
   SetupMixTask(config().output_device_profile(driver()->persistent_unique_id()),
                driver_writable_ring_buffer()->frames(),
-               driver_ptscts_ref_clock_to_fractional_frames());
+               driver_ref_time_to_frac_presentation_frame());
 
   // Tell AudioDeviceManager we are ready to be an active audio device.
   ActivateSelf();
@@ -530,7 +530,7 @@ void DriverOutput::OnDriverStartComplete() {
   // frames ahead of the safe write position we ever want to be.  When we hit
   // the point where we are only this number of frames ahead of the safe write
   // position, we need to wake up and fill up to our high water mark.
-  const TimelineRate& rate = driver_safe_read_or_write_ref_clock_to_frames().rate();
+  const TimelineRate& rate = driver_ref_time_to_safe_read_or_write_frame().rate();
   low_water_frames_ = rate.Scale(kDefaultLowWaterNsec.get());
 
   // We started with a buffer full of silence.  Set up our bookkeeping so we

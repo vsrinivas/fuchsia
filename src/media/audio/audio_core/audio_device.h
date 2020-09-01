@@ -85,11 +85,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
     config_ = config;
   }
 
-  // AudioObjects with Type::Output must override this; this version should never be called.
-  virtual zx::duration presentation_delay() const {
-    FX_CHECK(false) << "presentation_delay() not supported on AudioDevice";
-    return zx::nsec(0);
-  }
+  // Presentation delay for this device.
+  zx::duration presentation_delay() const { return presentation_delay_; }
 
   // Sets the configuration of all effects with the given instance name.
   virtual fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
@@ -254,7 +251,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Maps from a presentation/capture time on the reference clock to fractional
   // frame number in the stream.  The presentation/capture time refers to the
   // time that the sound either exits the speaker or enters the microphone.
-  virtual const TimelineFunction& driver_ptscts_ref_clock_to_fractional_frames() const
+  virtual const TimelineFunction& driver_ref_time_to_frac_presentation_frame() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Maps from a time on the reference clock to the safe read/write frame number
@@ -265,8 +262,11 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // an output stream may have already moved data to be transmitted from RAM
   // into the hardware.  When consuming or producing audio from an input or
   // output stream, users must always stay ahead of this point.
-  virtual const TimelineFunction& driver_safe_read_or_write_ref_clock_to_frames() const
+  virtual const TimelineFunction& driver_ref_time_to_safe_read_or_write_frame() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  // Update the presentation delay for this device (defaults to zero).
+  void SetPresentationDelay(zx::duration delay) { presentation_delay_ = delay; }
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
   ThreadingModel& threading_model() { return threading_model_; }
@@ -323,6 +323,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   volatile bool activated_ = false;
 
   LinkMatrix& link_matrix_;
+  zx::duration presentation_delay_;
 };
 
 }  // namespace media::audio

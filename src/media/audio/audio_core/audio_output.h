@@ -25,9 +25,6 @@ class AudioOutput : public AudioDevice {
  public:
   ~AudioOutput() override = default;
 
-  // Maximum presentation delay for this output.
-  zx::duration presentation_delay() const override { return presentation_delay_; }
-
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
@@ -75,8 +72,6 @@ class AudioOutput : public AudioDevice {
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
       TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock);
-
-  void SetPresentationDelay(zx::duration delay) { presentation_delay_ = delay; }
 
   void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
@@ -134,7 +129,6 @@ class AudioOutput : public AudioDevice {
   async::TaskClosureMethod<AudioOutput, &AudioOutput::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain().token()){this};
 
-  zx::duration presentation_delay_;
   std::optional<zx::time> next_sched_time_mono_;
   size_t max_block_size_frames_;
 

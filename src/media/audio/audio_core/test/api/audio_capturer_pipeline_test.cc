@@ -40,6 +40,105 @@ struct RendererHolder {
 };
 }  // namespace
 
+class AudioCapturerPipelineTest : public HermeticAudioTest {
+ protected:
+  static constexpr size_t kFrameRate = 48000;
+  static constexpr size_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
+  const TypedFormat<ASF::SIGNED_16> format_;
+
+  AudioCapturerPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
+
+  void SetUp() {
+    HermeticAudioTest::SetUp();
+    // The payloads can store exactly 1s of audio data.
+    input_ = CreateInput({{0xff, 0x00}}, format_, kFrameRate);
+    capturer_ = CreateAudioCapturer(format_, kFrameRate,
+                                    fuchsia::media::AudioCapturerConfiguration::WithInput(
+                                        fuchsia::media::InputAudioCapturerConfiguration()));
+  }
+
+  void TearDown() {
+    // None of our tests should underflow.
+    ExpectNoOverflowsOrUnderflows();
+  }
+
+  VirtualInput<ASF::SIGNED_16>* input_ = nullptr;
+  AudioCapturerShim<ASF::SIGNED_16>* capturer_ = nullptr;
+};
+
+TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
+  constexpr auto num_packets = 1;
+  constexpr auto num_frames = num_packets * kPacketFrames;
+  constexpr int16_t first_sample = 1;
+
+  // Start capturing from the input device.
+  std::optional<int64_t> first_capture_pts;
+  std::optional<int64_t> last_capture_pts;
+  AudioBuffer<ASF::SIGNED_16> capture_buffer(format_, 0);
+
+  capturer_->capturer().events().OnPacketProduced = [this, &first_capture_pts, &last_capture_pts,
+                                                     &capture_buffer](StreamPacket p) mutable {
+    EXPECT_EQ(p.payload_buffer_id, 0u);
+    if (!first_capture_pts) {
+      EXPECT_TRUE(p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY);
+      first_capture_pts = p.pts;
+    } else {
+      EXPECT_FALSE(p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY);
+    }
+    last_capture_pts = p.pts;
+    auto data = capturer_->SnapshotPacket(p);
+    capture_buffer.samples().insert(capture_buffer.samples().end(), data.samples().begin(),
+                                    data.samples().end());
+  };
+
+  capturer_->capturer()->StartAsyncCapture(kPacketFrames);
+
+  // Write data to the input ring_buffer which should be readable at start_time.
+  // Ensure the start_time is at least 10ms from now to allow time to setup the ring buffer.
+  auto min_start_time = zx::clock::get_monotonic() + zx::msec(10);
+  auto start_time = input_->NextSynchronizedTimestamp(min_start_time);
+  auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, first_sample);
+  input_->WriteRingBufferAt(0, AudioBufferSlice(&input_buffer));
+
+  // Wait until the packet is capture_buffer.
+  auto end_time = start_time + zx::msec(num_packets * RendererShimImpl::kPacketMs);
+  RunLoopUntil([&last_capture_pts, end_time]() {
+    return last_capture_pts && last_capture_pts > end_time.get();
+  });
+
+  // Stop the capture so we don't overflow while running the following tests.
+  capturer_->capturer().events().OnPacketProduced = nullptr;
+  capturer_->capturer()->StopAsyncCaptureNoReply();
+
+  // The captured data should be silence up to start_time, followed by the input_buffer,
+  // followed by more silence.
+  auto data_start_frame = format_.frames_per_ns().Scale(start_time.get() - *first_capture_pts);
+  if (capture_buffer.SampleAt(data_start_frame, 0) != first_sample) {
+    // Since captured packets are not perfectly aligned with the input ring buffer,
+    // the start frame might be off by one.
+    if (capture_buffer.SampleAt(data_start_frame - 1, 0) == first_sample) {
+      data_start_frame--;
+    } else if (capture_buffer.SampleAt(data_start_frame + 1, 0) == first_sample) {
+      data_start_frame++;
+    } else {
+      ADD_FAILURE() << "Start frame not found, expected at frame " << data_start_frame << " +/- 1";
+    }
+  }
+  auto data_end_frame = data_start_frame + num_frames;
+
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = kPacketFrames;
+  opts.test_label = "check first silence";
+  CompareAudioBuffers(AudioBufferSlice(&capture_buffer, 0, data_start_frame),
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
+  opts.test_label = "check data";
+  CompareAudioBuffers(AudioBufferSlice(&capture_buffer, data_start_frame, data_end_frame),
+                      AudioBufferSlice(&input_buffer, 0, num_frames), opts);
+  opts.test_label = "check second silence";
+  CompareAudioBuffers(AudioBufferSlice(&capture_buffer, data_end_frame, capture_buffer.NumFrames()),
+                      AudioBufferSlice<ASF::SIGNED_16>(), opts);
+}
+
 class AudioLoopbackPipelineTest : public HermeticAudioTest {
  protected:
   static constexpr size_t kFrameRate = 48000;

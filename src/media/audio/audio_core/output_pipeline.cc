@@ -117,7 +117,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     FX_DCHECK(!loopback) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        root->format(), ref_pts_to_fractional_frame, audio_clock, ring_size, 0,
+        root->format(), ref_pts_to_fractional_frame, audio_clock, ring_size,
         [ref_pts_to_fractional_frame, &audio_clock]() {
           // The loopback capture has no presentation delay. Whatever frame is being presented "now"
           // is the latest safe_write_frame;

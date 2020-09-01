@@ -289,12 +289,12 @@ const std::shared_ptr<WritableRingBuffer>& AudioDevice::driver_writable_ring_buf
   return driver_->writable_ring_buffer();
 };
 
-const TimelineFunction& AudioDevice::driver_ptscts_ref_clock_to_fractional_frames() const {
-  return driver()->ptscts_ref_clock_to_fractional_frames();
+const TimelineFunction& AudioDevice::driver_ref_time_to_frac_presentation_frame() const {
+  return driver()->ref_time_to_frac_presentation_frame();
 }
 
-const TimelineFunction& AudioDevice::driver_safe_read_or_write_ref_clock_to_frames() const {
-  return driver()->safe_read_or_write_ref_clock_to_frames();
+const TimelineFunction& AudioDevice::driver_ref_time_to_safe_read_or_write_frame() const {
+  return driver()->ref_time_to_safe_read_or_write_frame();
 }
 
 fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {

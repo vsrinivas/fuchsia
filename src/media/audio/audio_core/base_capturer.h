@@ -192,20 +192,17 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
     Process();
   }
 
-  void RecomputeMinFenceTime();
+  void RecomputePresentationDelay();
 
   TimelineRate dest_frames_to_ref_clock_rate() {
     return TimelineRate(ZX_SEC(1), format_.frames_per_second());
-  }
-  TimelineRate fractional_dest_frames_to_ref_clock_rate() {
-    return TimelineRate(ZX_SEC(1), Fixed(format_.frames_per_second()).raw_value());
   }
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   Context& context_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
   std::atomic<State> state_;
-  zx::duration min_fence_time_;
+  zx::duration presentation_delay_;
 
   // Capture format and gain state.
   Format format_;
@@ -261,9 +258,10 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::vector<LinkMatrix::LinkHandle> source_links_ FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
-  fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_dest_frames_ =
+  fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
-  int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
+  bool discontinuity_ FXL_GUARDED_BY(mix_domain_->token()) = true;
+  int64_t frame_pointer_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   uint64_t overflow_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
   StopAsyncCaptureCallback pending_async_stop_cbk_;

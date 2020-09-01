@@ -44,7 +44,8 @@ AudioDriverV2::AudioDriverV2(AudioDevice* owner) : AudioDriverV2(owner, LogMisse
 AudioDriverV2::AudioDriverV2(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
-      ref_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
+      versioned_ref_time_to_frac_presentation_frame__(
+          fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
 
   // We create the clock as a clone of MONOTONIC, but once the driver provides details (such as the
@@ -108,7 +109,7 @@ void AudioDriverV2::Cleanup() {
     readable_ring_buffer = std::move(readable_ring_buffer_);
     writable_ring_buffer = std::move(writable_ring_buffer_);
   }
-  ref_clock_to_fractional_frames_->Update({});
+  versioned_ref_time_to_frac_presentation_frame__->Update({});
   readable_ring_buffer = nullptr;
   writable_ring_buffer = nullptr;
 
@@ -373,28 +374,26 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
             auto format = GetFormat();
             if (owner_->is_input()) {
               readable_ring_buffer_ = BaseRingBuffer::CreateReadableHardwareBuffer(
-                  *format, ref_clock_to_fractional_frames_, reference_clock(),
-                  std::move(result.response().ring_buffer), result.response().num_frames,
-                  fifo_depth_frames(), [this]() {
+                  *format, versioned_ref_time_to_frac_presentation_frame__, reference_clock(),
+                  std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
                     auto t = audio_clock_.Read();
-                    return safe_read_or_write_ref_clock_to_frames_.Apply(t.get());
+                    return ref_time_to_safe_read_or_write_frame_.Apply(t.get());
                   });
             } else {
               writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
-                  *format, ref_clock_to_fractional_frames_, reference_clock(),
-                  std::move(result.response().ring_buffer), result.response().num_frames, 0,
-                  [this]() {
+                  *format, versioned_ref_time_to_frac_presentation_frame__, reference_clock(),
+                  std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
                     auto t = audio_clock_.Read();
-                    return safe_read_or_write_ref_clock_to_frames_.Apply(t.get());
+                    return ref_time_to_safe_read_or_write_frame_.Apply(t.get());
                   });
             }
             if (!readable_ring_buffer_ && !writable_ring_buffer_) {
               ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
               return;
             }
-            FX_DCHECK(!ref_clock_to_fractional_frames_->get().first.invertible());
+            FX_DCHECK(!versioned_ref_time_to_frac_presentation_frame__->get().first.invertible());
           }
 
           // We are now Configured. Let our owner know about this important milestone.
@@ -493,51 +492,81 @@ zx_status_t AudioDriverV2::Start() {
                      << static_cast<uint32_t>(state_);
       return;
     }
-    auto format = GetFormat();
-    // TODO(johngro) : Drivers _always_ report their start time in clock monotonic
-    // time, but we want to set up all of our transformations to be defined in our
-    // reference timeline.
-    //
-    // When we get to the point that audio devices don't always use
-    // clock_monotonic as their reference, and instead may be recovering their own
-    // reference clock, we want to come back here and make sure that we use our
-    // device's kernel clock to transform this clock monotonic start time into a
-    // reference clock start time.
-    //
-    // Note that it is not safe to assume that every time a driver starts that
-    // it's reference clock will (initially) be a clone of clock monotonic.
-    // Inputs and outputs operating in the same non-monotonic clock domain will be
-    // sharing a reference clock which may have already deviated from monotonic by
-    // the time that this driver starts.  Also, eventually drivers should be
-    // stopping when idle and starting again later when there is work to do.  This
-    // does not destroy the clock for the domain, so the second time that the
-    // driver starts, it is very likely that the driver reference clock is no
-    // longer clock monotonic.
-    //
+
     mono_start_time_ = zx::time(start_time);
     ref_start_time_ = reference_clock().ReferenceTimeFromMonotonicTime(mono_start_time_);
 
-    // We are almost Started. Compute various useful timeline functions.
-    // See the comments for the accessors in audio_device.h for detailed descriptions.
-    zx::time first_ptscts_time = ref_start_time() + external_delay_;
-    uint32_t frames_per_sec = format->frames_per_second();
-    uint32_t frac_frames_per_sec = Fixed(frames_per_sec).raw_value();
+    auto format = GetFormat();
+    auto frac_fps = TimelineRate(Fixed(format->frames_per_second()).raw_value(), zx::sec(1).get());
+    auto fps = TimelineRate(format->frames_per_second(), zx::sec(1).get());
 
-    ptscts_ref_clock_to_fractional_frames_ = TimelineFunction{
-        0,                        // First frac_frame presented/captured at ring buffer is always 0.
-        first_ptscts_time.get(),  // First pres/cap time is the start time + the external delay.
-        frac_frames_per_sec,      // number of fractional frames per second
-        zx::sec(1).get()          // number of clock ticks per second
-    };
+    if (owner_->is_output()) {
+      // Abstractly, we can think of the hardware buffer as an infinitely
+      // long sequence of frames, where the hardware maintains three pointers
+      // into this sequence:
+      //
+      //        |<--- external delay --->|<--- FIFO depth --->|
+      //      +-+------------------------+-+------------------+-+
+      //  ... |P|                        |F|                  |W| ...
+      //      +-+------------------------+-+------------------+-+
+      //
+      // At P, the frame is being presented to the speaker.
+      // At F, the frame is at the head of the FIFO.
+      // At W, the frame is about to be enqueued into the FIFO.
+      //
+      // At ref_start_time_, F points at frame 0. As time advances one frame,
+      // each pointer shifts to the right by one frame. We define functions to
+      // locate W and P at a given time T:
+      //
+      //   ref_pts_to_frame(T) = P
+      //   ref_time_to_safe_read_or_write_frame(T) = W
+      //
+      // W is the lowest-numbered frame that may be written to the hardware buffer,
+      // aka the "first safe" write position.
+      ref_time_to_frac_presentation_frame__ = TimelineFunction(
+          0,                                          // first frame
+          (ref_start_time_ + external_delay_).get(),  // first frame presented after external delay
+          frac_fps                                    // fps in fractional frames
+      );
+      ref_time_to_safe_read_or_write_frame_ = TimelineFunction(
+          fifo_depth_frames_,     // first safe frame is one FIFO depth after the start time
+          ref_start_time_.get(),  // start time
+          fps                     // fps in integer frames
+      );
+    } else {
+      // The capture buffer works in a similar way, with three analogous pointers:
+      //
+      //        |<--- FIFO depth --->|<--- external delay --->|
+      //      +-+------------------+-+------------------------+-+
+      //  ... |R|                  |F|                        |C| ...
+      //      +-+------------------+-+------------------------+-+
+      //
+      // At C, the frame is being captured by the microphone.
+      // At F, the frame is at the tail of the FIFO.
+      // At R, the frame is just outside the FIFO.
+      //
+      // As above, F points at frame 0 at ref_start_time_, pointers shift to the right
+      // as time advances, and we define functions to locate C and R:
+      //
+      //   ref_pts_to_frame(T) = C
+      //   ref_time_to_safe_read_or_write_frame(T) = R
+      //
+      // R is the highest-numbered frame that may be read from the hardware buffer,
+      // aka the "last safe" read position.
+      ref_time_to_frac_presentation_frame__ = TimelineFunction(
+          0,                                          // first frame
+          (ref_start_time_ - external_delay_).get(),  // first frame presented external delay ago
+          frac_fps                                    // fps in fractional frames
+      );
+      ref_time_to_safe_read_or_write_frame_ = TimelineFunction(
+          -static_cast<int64_t>(
+              fifo_depth_frames_),  // first safe frame is one FIFO depth before the start time
+          ref_start_time_.get(),    // start time
+          fps                       // fps in integer frames
+      );
+    }
 
-    safe_read_or_write_ref_clock_to_frames_ = TimelineFunction{
-        fifo_depth_frames_,      // The first safe frame at startup is a FIFO's distance away.
-        ref_start_time().get(),  // TX/RX start time
-        frames_per_sec,          // number of frames per second
-        zx::sec(1).get()         // number of clock ticks per second
-    };
-
-    ref_clock_to_fractional_frames_->Update(ptscts_ref_clock_to_fractional_frames_);
+    versioned_ref_time_to_frac_presentation_frame__->Update(ref_time_to_frac_presentation_frame__);
 
     // We are now Started. Let our owner know about this important milestone.
     state_ = State::Started;
@@ -566,7 +595,7 @@ zx_status_t AudioDriverV2::Stop() {
   }
 
   // Invalidate our timeline transformation here. To outside observers, we are now stopped.
-  ref_clock_to_fractional_frames_->Update({});
+  versioned_ref_time_to_frac_presentation_frame__->Update({});
 
   // We are now in the Stopping state.
   state_ = State::Stopping;

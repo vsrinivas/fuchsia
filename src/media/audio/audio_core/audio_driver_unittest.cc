@@ -153,10 +153,10 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   ASSERT_TRUE(this->device_->driver_start_complete());
   ASSERT_EQ(this->driver_->state(), AudioDriver::State::Started);
 
-  const auto& ptscts_ref_clock_to_fractional_frames =
-      this->driver_->ptscts_ref_clock_to_fractional_frames();
-  const auto& safe_read_or_write_ref_clock_to_frames =
-      this->driver_->safe_read_or_write_ref_clock_to_frames();
+  const auto& ref_time_to_frac_presentation_frame =
+      this->driver_->ref_time_to_frac_presentation_frame();
+  const auto& ref_time_to_safe_read_or_write_frame =
+      this->driver_->ref_time_to_safe_read_or_write_frame();
 
   // Get the driver's external delay and fifo depth expressed in frames.
   uint32_t fifo_depth_frames = this->driver_->fifo_depth_frames();
@@ -170,12 +170,12 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // At startup, the tx/rx position should be 0, and the safe read/write position
   // should be fifo_depth_frames ahead of this.
   zx::time ref_now = this->driver_->ref_start_time();
-  EXPECT_EQ(fifo_depth_frames, safe_read_or_write_ref_clock_to_frames.Apply(ref_now.get()));
+  EXPECT_EQ(fifo_depth_frames, ref_time_to_safe_read_or_write_frame.Apply(ref_now.get()));
 
   // After |external_delay| has passed, we should be at frame zero in the
   // pts/cts timeline.
   ref_now += external_delay;
-  EXPECT_EQ(0, ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()));
+  EXPECT_EQ(0, ref_time_to_frac_presentation_frame.Apply(ref_now.get()));
 
   // Advance time by an arbitrary amount and sanity check the results of the
   // various transformations against each other.
@@ -190,12 +190,12 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // the pts/ctx position.  Note, we need convert the fractional frames result
   // of the pts/cts position to integer frames, rounding down in the process, in
   // order to compare the two.
-  int64_t safe_read_write_pos = safe_read_or_write_ref_clock_to_frames.Apply(ref_now.get());
+  int64_t safe_read_write_pos = ref_time_to_safe_read_or_write_frame.Apply(ref_now.get());
   int64_t txrx_pos = safe_read_write_pos - fifo_depth_frames;
 
   ref_now += external_delay;
   int64_t ptscts_pos_frames =
-      ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()) / Fixed(1).raw_value();
+      ref_time_to_frac_presentation_frame.Apply(ref_now.get()) / Fixed(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
 }
 

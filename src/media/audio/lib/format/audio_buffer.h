@@ -88,7 +88,9 @@ class AudioBufferSlice {
   AudioBufferSlice(const AudioBuffer<SampleFormat>* b, size_t s, size_t e)
       : buf_(b),
         start_frame_(std::min(s, b->NumFrames())),
-        end_frame_(std::min(e, b->NumFrames())) {}
+        end_frame_(std::min(e, b->NumFrames())) {
+    FX_CHECK(s <= e) << "start=" << s << ", end=" << e;
+  }
 
   const AudioBuffer<SampleFormat>* buf() const { return buf_; }
   const Format& format() const {

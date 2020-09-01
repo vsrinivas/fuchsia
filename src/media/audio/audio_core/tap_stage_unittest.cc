@@ -55,7 +55,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         kDefaultFormat, tap_timeline_function, packet_queue_->reference_clock(),
-        kRingBufferFrameCount, 0, [this] { return safe_write_frame_; });
+        kRingBufferFrameCount, [this] { return safe_write_frame_; });
     ring_buffer_ = std::move(endpoints.reader);
 
     ASSERT_TRUE(ring_buffer_);

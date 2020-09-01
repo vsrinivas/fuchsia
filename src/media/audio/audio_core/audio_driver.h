@@ -106,8 +106,8 @@ class AudioDriver {
       FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
   virtual const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
       FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
-  virtual const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const = 0;
-  virtual const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const = 0;
+  virtual const TimelineFunction& ref_time_to_frac_presentation_frame() const = 0;
+  virtual const TimelineFunction& ref_time_to_safe_read_or_write_frame() const = 0;
 
   virtual AudioClock& reference_clock() = 0;
 };
@@ -144,11 +144,11 @@ class AudioDriverV1 : public AudioDriver {
   zx_koid_t stream_channel_koid() const override { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
 
-  const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const override {
-    return ptscts_ref_clock_to_fractional_frames_;
+  const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
+    return ref_time_to_frac_presentation_frame__;
   }
-  const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const override {
-    return safe_read_or_write_ref_clock_to_frames_;
+  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
+    return ref_time_to_safe_read_or_write_frame_;
   }
 
   const audio_stream_unique_id_t& persistent_unique_id() const override {
@@ -323,13 +323,13 @@ class AudioDriverV1 : public AudioDriver {
   // IOW - given a frame number in the stream, the inverse of this function can
   // be used to map to the time (on the device's reference clock) that the frame
   // either was captured, or will be presented.
-  fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frames_;
+  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame__;
 
   // Useful timeline functions which are computed after streaming starts.  See
   // the comments for the accessors in audio_device.h for detailed descriptions.
-  TimelineFunction ptscts_ref_clock_to_fractional_frames_
+  TimelineFunction ref_time_to_frac_presentation_frame__
       FXL_GUARDED_BY(owner_->mix_domain().token());
-  TimelineFunction safe_read_or_write_ref_clock_to_frames_
+  TimelineFunction ref_time_to_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
 
   // Plug detection state.
@@ -378,11 +378,11 @@ class AudioDriverV2 : public AudioDriver {
   zx_koid_t stream_channel_koid() const override { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const override { return hw_gain_state_; }
 
-  const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const override {
-    return ptscts_ref_clock_to_fractional_frames_;
+  const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
+    return ref_time_to_frac_presentation_frame__;
   }
-  const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const override {
-    return safe_read_or_write_ref_clock_to_frames_;
+  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
+    return ref_time_to_safe_read_or_write_frame_;
   }
 
   const audio_stream_unique_id_t& persistent_unique_id() const override {
@@ -512,13 +512,13 @@ class AudioDriverV2 : public AudioDriver {
   // IOW - given a frame number in the stream, the inverse of this function can
   // be used to map to the time (on the device's reference clock) that the frame
   // either was captured, or will be presented.
-  fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frames_;
+  fbl::RefPtr<VersionedTimelineFunction> versioned_ref_time_to_frac_presentation_frame__;
 
   // Useful timeline functions which are computed after streaming starts.  See
   // the comments for the accessors in audio_device.h for detailed descriptions.
-  TimelineFunction ptscts_ref_clock_to_fractional_frames_
+  TimelineFunction ref_time_to_frac_presentation_frame__
       FXL_GUARDED_BY(owner_->mix_domain().token());
-  TimelineFunction safe_read_or_write_ref_clock_to_frames_
+  TimelineFunction ref_time_to_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
 
   mutable std::mutex plugged_lock_;

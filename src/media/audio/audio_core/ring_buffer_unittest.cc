@@ -37,7 +37,7 @@ class InputRingBufferTest : public ::testing::Test {
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount, 0,
+        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
         [this]() { return safe_read_frame_; });
     ring_buffer_ = endpoints.reader;
     ASSERT_TRUE(ring_buffer());
@@ -71,7 +71,7 @@ class OutputRingBufferTest : public ::testing::Test {
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount, 0,
+        format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
         [this]() { return safe_write_frame_; });
     ring_buffer_ = endpoints.writer;
     ASSERT_TRUE(ring_buffer());
@@ -232,40 +232,6 @@ TEST_F(OutputRingBufferTest, WriteAfterTruncateBufferAtEndOfTheRing) {
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), kRingBufferFrameCount);
   EXPECT_EQ(buffer->length().Floor(), 48u);
-}
-
-TEST(RingBufferTest, FrameOffset) {
-  const auto& format = kDefaultFormat;
-  const uint32_t frame_offset = 128;
-
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
-
-  auto audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
-
-  auto endpoints =
-      BaseRingBuffer::AllocateSoftwareBuffer(format, std::move(timeline_function), audio_clock,
-                                             kRingBufferFrameCount, frame_offset, [] { return 0; });
-  auto ring_buffer = std::move(endpoints.writer);
-  ASSERT_TRUE(ring_buffer);
-
-  // The first buffer section should be |frame_offset| into the physical ring buffer and can be at
-  // most |kRingBufferFrameCount - frame_offset| frames long.
-  auto buffer = ring_buffer->WriteLock(0, 2 * kRingBufferFrameCount);
-  ASSERT_TRUE(buffer);
-  ASSERT_EQ(0u, buffer->start().Floor());
-  ASSERT_EQ(kRingBufferFrameCount - frame_offset, buffer->length().Floor());
-  ASSERT_EQ(
-      reinterpret_cast<uintptr_t>(buffer->payload()),
-      reinterpret_cast<uintptr_t>(ring_buffer->virt()) + (frame_offset * format.bytes_per_frame()));
-
-  // The second buffer portion back at the start of the physical ring.
-  buffer = ring_buffer->WriteLock(kRingBufferFrameCount - frame_offset, 2 * kRingBufferFrameCount);
-  ASSERT_TRUE(buffer);
-  ASSERT_EQ(kRingBufferFrameCount - frame_offset, buffer->start().Floor());
-  ASSERT_EQ(frame_offset, buffer->length().Floor());
-  ASSERT_EQ(reinterpret_cast<uintptr_t>(buffer->payload()),
-            reinterpret_cast<uintptr_t>(ring_buffer->virt()));
 }
 
 }  // namespace

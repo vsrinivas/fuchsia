@@ -91,7 +91,7 @@ void AudioOutput::Process() {
       } else {
         // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
         // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(driver_safe_read_or_write_ref_clock_to_frames().Apply(ref_now.get()));
+        pipeline_->Trim(driver_ref_time_to_safe_read_or_write_frame().Apply(ref_now.get()));
         frames_remaining = 0;
       }
 
@@ -182,7 +182,7 @@ std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
   auto pipeline =
       std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
                                            device_reference_clock_to_fractional_frame, ref_clock);
-  pipeline->SetPresentationDelay(presentation_delay_);
+  pipeline->SetPresentationDelay(presentation_delay());
   return pipeline;
 }
 

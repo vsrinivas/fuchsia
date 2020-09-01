@@ -302,7 +302,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // Create a new RingBuffer and add it to our mix stage.
   int64_t safe_write_frame = 0;
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames, 0,
+      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames,
       [&safe_write_frame] { return safe_write_frame; });
 
   // We explictly request a SincSampler here to get a non-trivial filter width.

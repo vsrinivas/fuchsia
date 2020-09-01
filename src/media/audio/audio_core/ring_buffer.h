@@ -37,21 +37,18 @@ class BaseRingBuffer {
   // ahead of |ref_time_to_frac_presentation_frame(now)|, with the expectation there is
   // a hardware device consuming frames at the trailing edge.
   //
-  // |offset_frames| determines the mapping of logical frame numbers to physical locations in the
-  // ring buffer. Ex: if |offset_frames| is 5, then frame 0 is located at ring buffer frame 5.
-  //
   // |safe_read_frame| reports the last safe read frame at the current time.
   // |safe_write_frame| reports the first safe write frame at the current time.
   static std::shared_ptr<ReadableRingBuffer> CreateReadableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames,
+      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count,
       SafeReadWriteFrameFn safe_read_frame);
 
   static std::shared_ptr<WritableRingBuffer> CreateWritableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count, uint32_t offset_frames,
+      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count,
       SafeReadWriteFrameFn safe_write_frame);
 
   struct Endpoints {
@@ -63,19 +60,17 @@ class BaseRingBuffer {
   static Endpoints AllocateSoftwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, uint32_t frame_count, uint32_t frame_offset,
-      SafeReadWriteFrameFn safe_write_frame);
+      AudioClock& audio_clock, uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame);
 
   uint64_t size() const { return vmo_mapper_->size(); }
   uint32_t frames() const { return frames_; }
-  uint32_t offset_frames() const { return offset_frames_; }
   uint8_t* virt() const { return reinterpret_cast<uint8_t*>(vmo_mapper_->start()); }
 
  protected:
   BaseRingBuffer(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                  AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                 uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
+                 uint32_t frame_count, bool is_hardware_buffer);
   virtual ~BaseRingBuffer() = default;
 
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFixedImpl() const;
@@ -84,7 +79,6 @@ class BaseRingBuffer {
   const uint32_t frames_ = 0;
   const fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame_;
   AudioClock& audio_clock_;
-  const uint32_t offset_frames_;
   const bool is_hardware_buffer_;
 };
 
@@ -95,8 +89,8 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   ReadableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, uint32_t offset_frames,
-                     SafeReadWriteFrameFn safe_read_frame, bool is_hardware_buffer);
+                     uint32_t frame_count, SafeReadWriteFrameFn safe_read_frame,
+                     bool is_hardware_buffer);
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
@@ -117,8 +111,8 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   WritableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, uint32_t offset_frames,
-                     SafeReadWriteFrameFn safe_write_frame, bool is_hardware_buffer);
+                     uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame,
+                     bool is_hardware_buffer);
 
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;

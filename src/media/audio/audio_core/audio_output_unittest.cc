@@ -74,10 +74,10 @@ class StubDriver : public AudioDriverV1 {
 
   StubDriver(AudioDevice* owner) : AudioDriverV1(owner) {}
 
-  const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const override {
+  const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return kDriverRefPtsToFractionalFrames;
   }
-  const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const override {
+  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
     return safe_write_ref_clock_to_frames_;
   }
 
@@ -160,7 +160,7 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
   void SetupMixTask() {
     audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), StubDriver::kRingBufferFrames,
-                                stub_driver()->ptscts_ref_clock_to_fractional_frames());
+                                stub_driver()->ref_time_to_frac_presentation_frame());
   }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {

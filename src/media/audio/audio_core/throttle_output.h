@@ -32,9 +32,9 @@ class ThrottleOutput : public AudioOutput {
       : AudioOutput("throttle", threading_model, registry, link_matrix) {
     const auto ref_now = reference_clock().Read();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;
-    ref_pts_to_fractional_frame_ =
+    ref_time_to_frac_presentation_frame_ =
         TimelineFunction(0, ref_now.get(), Fixed(fps).raw_value(), zx::sec(1).get());
-    safe_read_or_write_ref_clock_to_frame_ =
+    ref_time_to_safe_read_or_write_frame_ =
         TimelineFunction(0, ref_now.get(), fps, zx::sec(1).get());
 
     // This is just some placeholder format that we can use to instantiate a mix
@@ -49,7 +49,7 @@ class ThrottleOutput : public AudioOutput {
     // output.
     static const uint32_t kMaxBatchSize = PAGE_SIZE;
     SetupMixTask(DeviceConfig::OutputDeviceProfile(), kMaxBatchSize,
-                 driver_ptscts_ref_clock_to_fractional_frames());
+                 driver_ref_time_to_frac_presentation_frame());
   }
 
   ~ThrottleOutput() override = default;
@@ -106,19 +106,19 @@ class ThrottleOutput : public AudioOutput {
   virtual zx::time last_sched_time_mono() { return last_sched_time_mono_; }
 
   // Override these since we don't have a real driver.
-  const TimelineFunction& driver_ptscts_ref_clock_to_fractional_frames() const override {
-    return ref_pts_to_fractional_frame_;
+  const TimelineFunction& driver_ref_time_to_frac_presentation_frame() const override {
+    return ref_time_to_frac_presentation_frame_;
   }
-  const TimelineFunction& driver_safe_read_or_write_ref_clock_to_frames() const override {
-    return safe_read_or_write_ref_clock_to_frame_;
+  const TimelineFunction& driver_ref_time_to_safe_read_or_write_frame() const override {
+    return ref_time_to_safe_read_or_write_frame_;
   }
 
  private:
   zx::time last_sched_time_mono_;
 
   bool uninitialized_ = true;
-  TimelineFunction ref_pts_to_fractional_frame_;
-  TimelineFunction safe_read_or_write_ref_clock_to_frame_;
+  TimelineFunction ref_time_to_frac_presentation_frame_;
+  TimelineFunction ref_time_to_safe_read_or_write_frame_;
 };
 
 }  // namespace media::audio

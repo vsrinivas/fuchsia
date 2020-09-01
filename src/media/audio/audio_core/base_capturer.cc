@@ -31,10 +31,10 @@ static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
 // Currently, the time we spend mixing must also be taken into account when reasoning about the
-// capture fence duration. Today (before any attempt at optimization), a particularly heavy mix
+// capture presentation delay. Today (before any attempt at optimization), a particularly heavy mix
 // pass may take longer than 1.5 msec on a DEBUG build(!) on relevant hardware. The constant below
 // accounts for this, with additional padding for safety.
-const zx::duration kFenceTimePadding = zx::msec(3);
+const zx::duration kPresentationDelayPadding = zx::msec(3);
 
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
 
@@ -56,7 +56,6 @@ BaseCapturer::BaseCapturer(
       context_(*context),
       mix_domain_(context_.threading_model().AcquireMixDomain()),
       state_(State::WaitingForVmo),
-      min_fence_time_(zx::nsec(0)),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
       reporter_(Reporter::Singleton().CreateCapturer()) {
@@ -86,7 +85,7 @@ BaseCapturer::BaseCapturer(
 
 BaseCapturer::~BaseCapturer() { TRACE_DURATION("audio.debug", "BaseCapturer::~BaseCapturer"); }
 
-void BaseCapturer::OnLinkAdded() { RecomputeMinFenceTime(); }
+void BaseCapturer::OnLinkAdded() { RecomputePresentationDelay(); }
 
 void BaseCapturer::UpdateState(State new_state) {
   if (new_state == State::OperatingSync) {
@@ -453,26 +452,24 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   mix_wakeup_.Signal();
 }
 
-void BaseCapturer::RecomputeMinFenceTime() {
-  TRACE_DURATION("audio", "BaseCapturer::RecomputeMinFenceTime");
+void BaseCapturer::RecomputePresentationDelay() {
+  TRACE_DURATION("audio", "BaseCapturer::RecomputePresentationDelay");
 
-  zx::duration cur_min_fence_time{0};
-  context_.link_matrix().ForEachSourceLink(
-      *this, [&cur_min_fence_time](LinkMatrix::LinkHandle link) {
-        if (link.object->is_input()) {
-          const auto& device = static_cast<const AudioDevice&>(*link.object);
-          auto fence_time = device.driver()->fifo_depth_duration();
+  zx::duration cur_max{0};
+  context_.link_matrix().ForEachSourceLink(*this, [&cur_max](LinkMatrix::LinkHandle link) {
+    if (link.object->is_input()) {
+      const auto& device = static_cast<const AudioDevice&>(*link.object);
+      cur_max = std::max(cur_max, device.presentation_delay());
+    }
+  });
 
-          cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
-        }
-      });
+  cur_max += kPresentationDelayPadding;
+  if (presentation_delay_ != cur_max) {
+    FX_LOGS(TRACE) << "Changing presentation_delay_ (ns) from " << presentation_delay_.get()
+                   << " to " << cur_max.get();
 
-  if (min_fence_time_ != cur_min_fence_time) {
-    FX_LOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
-                   << cur_min_fence_time.get();
-
-    reporter_->SetMinFenceTime(cur_min_fence_time);
-    min_fence_time_ = cur_min_fence_time;
+    reporter_->SetMinFenceTime(cur_max);
+    presentation_delay_ = cur_max;
   }
 }
 
@@ -528,8 +525,7 @@ zx_status_t BaseCapturer::Process() {
     // Either way, this is an overflow. Invalidate the frames_to_ref_clock transformation and make
     // sure we don't have a wakeup timer pending.
     if (!mix_state) {
-      ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
-      frame_count_ = 0;
+      discontinuity_ = true;
       mix_timer_.Cancel();
 
       if (state_.load() == State::OperatingSync) {
@@ -551,57 +547,36 @@ zx_status_t BaseCapturer::Process() {
       continue;
     }
 
-    // Establish the transform from capture frames to clock monotonic, if we haven't already.
-    //
-    // Ideally, if there were only one capture source and our frame rates match, we would align our
-    // start time exactly with a source sample boundary.
-    auto ref_now = reference_clock().Read();
-
-    if (!ref_clock_to_fractional_dest_frames_->get().first.invertible()) {
-      // This packet is guaranteed to be discontinuous relative to the previous one (if any).
-      mix_state->flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
-      // Ideally a timeline function could alter offsets without also recalculating the scale
-      // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
-      // Since we supply a rate that is already reduced, this should go pretty quickly.
-      ref_clock_to_fractional_dest_frames_->Update(
-          TimelineFunction(Fixed(frame_count_).raw_value(), ref_now.get(),
-                           fractional_dest_frames_to_ref_clock_rate().Inverse()));
-    }
-
-    // Assign a timestamp if one has not already been assigned.
-    if (mix_state->capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
-      auto [ref_clock_to_fractional_dest_frames, _] = ref_clock_to_fractional_dest_frames_->get();
-      FX_DCHECK(ref_clock_to_fractional_dest_frames.invertible());
-      mix_state->capture_timestamp =
-          ref_clock_to_fractional_dest_frames.Inverse().Apply(Fixed(frame_count_).raw_value());
-    }
-
     // Limit our job size to our max job size.
     if (mix_state->frames > max_frames_per_capture_) {
       mix_state->frames = max_frames_per_capture_;
     }
 
-    // Figure out when we can finish the job. If in the future, wait until then.
-    zx::time last_frame_ref_time =
-        zx::time(ref_clock_to_fractional_dest_frames_->get().first.Inverse().Apply(
-            Fixed(frame_count_ + mix_state->frames).raw_value()));
-    if (last_frame_ref_time.get() == TimelineRate::kOverflow) {
-      FX_LOGS(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
-      ShutdownFromMixDomain();
-      return ZX_ERR_INTERNAL;
+    // Establish the frame pointer.
+    // We continue at the current frame pointer, unless there was a discontinuity,
+    // at which point we need to recompute the frame pointer.
+    auto ref_now = reference_clock().Read();
+    auto [ref_pts_to_frac_frame, _] = ref_pts_to_fractional_frame_->get();
+    FX_CHECK(ref_pts_to_frac_frame.invertible());
+
+    if (discontinuity_) {
+      // On discontinuities, align the target frame with the current time.
+      discontinuity_ = false;
+      mix_state->flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
+      frame_pointer_ = Fixed::FromRaw(ref_pts_to_frac_frame.Apply(ref_now.get())).Floor();
     }
 
-    if (last_frame_ref_time > ref_now) {
-      // TODO(fxbug.dev/40183): We should not assume anything about fence times for our sources.
-      // Instead, we should heed the actual reported fence times (FIFO depth), and the arrivals and
-      // departures of sources, and update this number dynamically.
-      //
-      // Additionally, we must be mindful that if a newly-arriving source causes our "fence time" to
-      // increase, we will wake up early. At wakeup time, we need to be able to detect this case and
-      // sleep a bit longer before mixing.
-      zx::time next_mix_ref_time = last_frame_ref_time + min_fence_time_ + kFenceTimePadding;
+    // If we woke too soon to perform the requested mix, sleep until it's safe
+    // to read the last frame.
+    auto ref_safe_time = ref_now - presentation_delay_;
+    int64_t safe_frame = Fixed::FromRaw(ref_pts_to_frac_frame.Apply(ref_safe_time.get())).Floor();
+    int64_t last_frame = frame_pointer_ + mix_state->frames;
+    if (last_frame > safe_frame) {
+      auto ref_last_frame_time =
+          zx::time(ref_pts_to_frac_frame.Inverse().Apply(Fixed(last_frame).raw_value()));
 
-      auto mono_wakeup_time = reference_clock().MonotonicTimeFromReferenceTime(next_mix_ref_time);
+      auto ref_wakeup_time = ref_last_frame_time + presentation_delay_;
+      auto mono_wakeup_time = reference_clock().MonotonicTimeFromReferenceTime(ref_wakeup_time);
 
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time);
       if (status != ZX_OK) {
@@ -617,10 +592,16 @@ zx_status_t BaseCapturer::Process() {
       return ZX_OK;
     }
 
-    // Mix the requested number of frames from sources to intermediate buffer, then into output.
-    auto buf = mix_stage_->ReadLock(frame_count_, mix_state->frames);
+    // Assign a timestamp if one has not already been assigned.
+    if (mix_state->capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
+      mix_state->capture_timestamp =
+          ref_pts_to_frac_frame.Inverse().Apply(Fixed(frame_pointer_).raw_value());
+    }
+
+    // Mix the requested number of frames.
+    auto buf = mix_stage_->ReadLock(frame_pointer_, mix_state->frames);
     FX_DCHECK(buf);
-    FX_DCHECK(buf->start().Floor() == frame_count_);
+    FX_DCHECK(buf->start().Floor() == frame_pointer_);
     FX_DCHECK(buf->length().Floor() > 0);
     FX_DCHECK(static_cast<size_t>(buf->length().Floor()) == mix_state->frames);
     if (!buf) {
@@ -640,7 +621,7 @@ zx_status_t BaseCapturer::Process() {
         ready_packets_wakeup_.Signal();
         if (auto s = pq->ReadySize(); s > 0 && s % 20 == 0) {
           FX_LOGS_FIRST_N(WARNING, 100)
-              << "Process producing a lot of packets " << s << " frame_count_ " << frame_count_;
+              << "Process producing a lot of packets " << s << " @ frame " << frame_pointer_;
         }
         break;
 
@@ -649,16 +630,13 @@ zx_status_t BaseCapturer::Process() {
         break;
 
       case CapturePacketQueue::PacketMixStatus::Discarded:
-        // It looks like we were flushed while we were mixing. Invalidate our timeline function,
-        // we will re-establish it and flag a discontinuity next time we have work to do.
-        ref_clock_to_fractional_dest_frames_->Update(
-            TimelineFunction(Fixed(frame_count_).raw_value(), ref_now.get(),
-                             fractional_dest_frames_to_ref_clock_rate().Inverse()));
+        // It looks like we were flushed while we were mixing: the next mix is not continuous.
+        discontinuity_ = true;
         break;
     }
 
     // Update the total number of frames we have mixed so far.
-    frame_count_ += mix_state->frames;
+    frame_pointer_ += mix_state->frames;
   }  // while (true)
 }
 
@@ -693,9 +671,7 @@ void BaseCapturer::DoStopAsyncCapture() {
   // because we're transitioning back to OperatingSync, at which time we'll create
   // an entirely new CapturePacketQueue.
   packet_queue()->DiscardPendingPackets();
-
-  // Invalidate our clock transformation (our next packet will be discontinuous)
-  ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
+  discontinuity_ = true;
 
   // If we had a timer set, make sure that it is canceled. There is no point in
   // having it armed right now as we are in the process of stopping.
@@ -806,6 +782,10 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   reporter().SetFormat(format);
 
+  auto ref_now = reference_clock().Read();
+  ref_pts_to_fractional_frame_->Update(TimelineFunction(
+      0, ref_now.get(), Fixed(format_.frames_per_second()).raw_value(), zx::sec(1).get()));
+
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.
   //
@@ -826,8 +806,8 @@ void BaseCapturer::UpdateFormat(Format format) {
   //
   // TODO(fxbug.dev/39886): Limit this to something smaller than one second of frames.
   uint32_t max_mix_frames = format_.frames_per_second();
-  mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames,
-                                          ref_clock_to_fractional_dest_frames_, reference_clock());
+  mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames, ref_pts_to_fractional_frame_,
+                                          reference_clock());
 }
 
 // For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.

@@ -136,6 +136,9 @@ void AudioInput::OnDriverInfoFetched() {
 void AudioInput::OnDriverConfigComplete() {
   TRACE_DURATION("audio", "AudioInput::OnDriverConfigComplete");
   driver()->SetPlugDetectEnabled(true);
+
+  // We have all the info needed to compute the presentation delay for this input.
+  SetPresentationDelay(driver()->external_delay() + driver()->fifo_depth_duration());
 }
 
 void AudioInput::OnDriverStartComplete() {
