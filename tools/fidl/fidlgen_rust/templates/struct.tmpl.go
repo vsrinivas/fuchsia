@@ -63,12 +63,13 @@ fidl_struct! {
 }
 {{- else }}
 
-fidl_empty_struct!(
-	{{- range .DocComments}}
-	///{{ . }}
-	{{- end}}
-	{{ .Name }}
-);
+{{- range .DocComments}}
+///{{ . }}
+{{- end}}
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct {{ .Name }};
+
+fidl_empty_struct!({{ .Name }});
 
 {{- end }}
 {{- end }}

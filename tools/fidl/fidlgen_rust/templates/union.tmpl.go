@@ -6,17 +6,31 @@ package templates
 
 const Union = `
 {{- define "UnionDeclaration" }}
-fidl_xunion! {
-	{{- range .DocComments}}
+{{- range .DocComments}}
+///{{ . }}
+{{- end}}
+{{ .Derives }}
+pub enum {{ .Name }} {
+	{{- range .Members }}
+	{{- range .DocComments }}
 	///{{ . }}
-	{{- end}}
-	{{ .Derives }}
+	{{- end }}
+	{{ .Name }}({{ .Type }}),
+	{{- end }}
+	{{- if not .Strictness }}
+	#[doc(hidden)]
+	__UnknownVariant {
+		ordinal: u64,
+		bytes: Vec<u8>,
+		handles: Vec<fidl::Handle>,
+	},
+	{{- end }}
+}
+
+fidl_xunion! {
 	name: {{ .Name }},
 	members: [
 	{{- range .Members }}
-		{{- range .DocComments }}
-		///{{ . }}
-		{{- end}}
 		{{ .Name }} {
 			ty: {{ .Type }},
 			ordinal: {{ .Ordinal }},

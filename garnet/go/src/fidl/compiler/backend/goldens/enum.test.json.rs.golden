@@ -7,34 +7,66 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
-fidl_enum! {
-  MyStrictEnum(u32) {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum MyStrictEnum {
     Foo = 1,
     Bar = 2,
-  }
 }
 
 fidl_enum! {
-  MyFlexibleEnum(u32) {
+    name: MyStrictEnum,
+    prim_ty: u32,
+    members: [
+        Foo { value: 1, },
+        Bar { value: 2, },
+    ],
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum MyFlexibleEnum {
     Foo = 1,
     Bar = 2,
-  }
 }
 
 fidl_enum! {
-  MyFlexibleEnumWithCustomUnknown(u32) {
+    name: MyFlexibleEnum,
+    prim_ty: u32,
+    members: [
+        Foo { value: 1, },
+        Bar { value: 2, },
+    ],
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum MyFlexibleEnumWithCustomUnknown {
     Foo = 1,
     Bar = 2,
     CustomUnknown = 3,
-  }
+}
+
+fidl_enum! {
+    name: MyFlexibleEnumWithCustomUnknown,
+    prim_ty: u32,
+    members: [
+        Foo { value: 1, },
+        Bar { value: 2, },
+        CustomUnknown { value: 3, },
+    ],
 }

@@ -7,17 +7,24 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Empty;
 
 fidl_empty_struct!(Empty);
 

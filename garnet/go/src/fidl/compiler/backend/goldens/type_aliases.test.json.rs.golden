@@ -7,21 +7,34 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
-#[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
 
-fidl_enum! {
-  ObjType(u32) {
+#[allow(unused_imports)]
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum ObjType {
     None = 0,
     Channel = 4,
-  }
+}
+
+fidl_enum! {
+    name: ObjType,
+    prim_ty: u32,
+    members: [
+        None { value: 0, },
+        Channel { value: 4, },
+    ],
 }
 
 #[derive(Debug, PartialEq)]

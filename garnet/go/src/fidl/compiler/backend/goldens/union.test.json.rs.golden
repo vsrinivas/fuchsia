@@ -7,20 +7,29 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum PizzaOrPasta {
+    Pizza(Pizza),
+    Pasta(Pasta),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: PizzaOrPasta,
     members: [
         Pizza {
@@ -34,8 +43,13 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ExplicitPizzaOrPasta {
+    Pizza(Pizza),
+    Pasta(Pasta),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: ExplicitPizzaOrPasta,
     members: [
         Pizza {
@@ -49,8 +63,19 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FlexiblePizzaOrPasta {
+    Pizza(Pizza),
+    Pasta(Pasta),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: FlexiblePizzaOrPasta,
     members: [
         Pizza {
@@ -65,8 +90,13 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictPizzaOrPasta {
+    Pizza(Pizza),
+    Pasta(Pasta),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: StrictPizzaOrPasta,
     members: [
         Pizza {
@@ -80,8 +110,14 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum Union {
+    Primitive(i32),
+    StringNeedsConstructor(String),
+    VectorStringAlsoNeedsConstructor(Vec<String>),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: Union,
     members: [
         Primitive {
@@ -99,8 +135,20 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FlexibleUnion {
+    Primitive(i32),
+    StringNeedsConstructor(String),
+    VectorStringAlsoNeedsConstructor(Vec<String>),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: FlexibleUnion,
     members: [
         Primitive {
@@ -119,8 +167,14 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictUnion {
+    Primitive(i32),
+    StringNeedsConstructor(String),
+    VectorStringAlsoNeedsConstructor(Vec<String>),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: StrictUnion,
     members: [
         Primitive {
@@ -138,8 +192,12 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum FieldCollision {
+    FieldCollisionTag(i32),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: FieldCollision,
     members: [
         FieldCollisionTag {
@@ -149,8 +207,13 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ExplicitUnion {
+    Primitive(i32),
+    StringNeedsConstructor(String),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: ExplicitUnion,
     members: [
         Primitive {
@@ -164,8 +227,13 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ReverseOrdinalUnion {
+    Second(u32),
+    First(u32),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: ReverseOrdinalUnion,
     members: [
         Second {
@@ -179,8 +247,19 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FlexibleFoo {
+    S(String),
+    I(i32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: FlexibleFoo,
     members: [
         S {
@@ -195,8 +274,13 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictFoo {
+    S(String),
+    I(i32),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: StrictFoo,
     members: [
         S {
@@ -210,8 +294,19 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ExplicitFoo {
+    S(String),
+    I(i32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: ExplicitFoo,
     members: [
         S {
@@ -226,8 +321,13 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ExplicitStrictFoo {
+    S(String),
+    I(i32),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: ExplicitStrictFoo,
     members: [
         S {
@@ -241,8 +341,19 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum OlderSimpleUnion {
+    I(i64),
+    F(f32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: OlderSimpleUnion,
     members: [
         I {
@@ -257,8 +368,20 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum NewerSimpleUnion {
+    I(i64),
+    S(String),
+    V(Vec<String>),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: NewerSimpleUnion,
     members: [
         I {
@@ -277,8 +400,14 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum StrictSimpleXUnion {
+    I(i32),
+    F(f32),
+    S(String),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, PartialEq, PartialOrd)]
     name: StrictSimpleXUnion,
     members: [
         I {
@@ -296,8 +425,18 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum XUnionContainingEmptyStruct {
+    Empty(Empty),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: XUnionContainingEmptyStruct,
     members: [
         Empty {
@@ -308,8 +447,12 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictBoundedXUnion {
+    V(Vec<u8>),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: StrictBoundedXUnion,
     members: [
         V {
@@ -319,8 +462,19 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ExplicitXUnion {
+    I(i64),
+    F(f32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: ExplicitXUnion,
     members: [
         I {
@@ -391,6 +545,9 @@ fidl_struct! {
   size_v1: 24,
   align_v1: 8,
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Empty;
 
 fidl_empty_struct!(Empty);
 

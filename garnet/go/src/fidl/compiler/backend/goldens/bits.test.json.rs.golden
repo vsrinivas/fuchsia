@@ -7,33 +7,52 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
-fidl_bits! {
-  MyBits(u32) {
-    MyFirstBit = 1,
-    MyOtherBit = 2,
-  }
+bitflags! {
+    pub struct MyBits: u32 {
+        const MyFirstBit = 1;
+        const MyOtherBit = 2;
+    }
 }
 
 fidl_bits! {
-  StrictBits(u64) {
-    Smallest = 1,
-    Biggest = 9223372036854775808,
-  }
+    name: MyBits,
+    prim_ty: u32,
+}
+
+bitflags! {
+    pub struct StrictBits: u64 {
+        const Smallest = 1;
+        const Biggest = 9223372036854775808;
+    }
 }
 
 fidl_bits! {
-  FlexibleBits(u64) {
-    Smallest = 1,
-    Biggest = 9223372036854775808,
-  }
+    name: StrictBits,
+    prim_ty: u64,
+}
+
+bitflags! {
+    pub struct FlexibleBits: u64 {
+        const Smallest = 1;
+        const Biggest = 9223372036854775808;
+    }
+}
+
+fidl_bits! {
+    name: FlexibleBits,
+    prim_ty: u64,
 }

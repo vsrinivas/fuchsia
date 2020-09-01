@@ -16,9 +16,6 @@ pub mod server;
 
 mod error;
 pub use self::error::{Error, Result};
-// Used to generate the types for fidl Bits.
-#[doc(hidden)]
-pub use bitflags::bitflags;
 
 pub use server::ServeInner;
 

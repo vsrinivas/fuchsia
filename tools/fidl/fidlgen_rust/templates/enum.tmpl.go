@@ -6,13 +6,28 @@ package templates
 
 const Enum = `
 {{- define "EnumDeclaration" -}}
-{{- $enum := . }}
+{{- range .DocComments}}
+///{{ . }}
+{{- end}}
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr({{ .Type }})]
+pub enum {{ .Name }} {
+	{{- range .Members }}
+	{{- range .DocComments }}
+	///{{ . }}
+	{{- end }}
+	{{ .Name }} = {{ .Value }},
+	{{- end }}
+}
+
 fidl_enum! {
-  {{ $enum.Name }}({{ $enum.Type }}) {
-    {{- range $member :=  $enum.Members }}
-    {{ $member.Name }} = {{ $member.Value }},
-  {{- end }}
-  }
+	name: {{ .Name }},
+	prim_ty: {{ .Type }},
+	members: [
+		{{- range .Members }}
+		{{ .Name }} { value: {{ .Value }}, },
+		{{- end }}
+	],
 }
 {{ end }}
 `

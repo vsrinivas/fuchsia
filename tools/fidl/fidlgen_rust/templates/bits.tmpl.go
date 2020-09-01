@@ -6,13 +6,23 @@ package templates
 
 const Bits = `
 {{- define "BitsDeclaration" -}}
-{{- $bits := . }}
+bitflags! {
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
+	pub struct {{ .Name }}: {{ .Type }} {
+		{{- range .Members }}
+		{{- range .DocComments}}
+		///{{ . }}
+		{{- end}}
+		const {{ .Name }} = {{ .Value }};
+		{{- end }}
+	}
+}
+
 fidl_bits! {
-  {{ $bits.Name }}({{ $bits.Type.Decl }}) {
-    {{- range $member :=  $bits.Members }}
-    {{ $member.Name }} = {{ $member.Value }},
-  {{- end }}
-  }
+	name: {{ .Name }},
+	prim_ty: {{ .Type }},
 }
 {{ end }}
 `

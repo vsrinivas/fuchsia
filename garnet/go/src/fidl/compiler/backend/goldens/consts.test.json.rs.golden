@@ -7,21 +7,30 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
+
+bitflags! {
+    pub struct BitsType: u32 {
+        const Value = 1;
+        const True_ = 2;
+    }
+}
 
 fidl_bits! {
-  BitsType(u32) {
-    Value = 1,
-    True_ = 2,
-  }
+    name: BitsType,
+    prim_ty: u32,
 }
 
 pub const ENABLED_FLAG: bool = true;
@@ -60,9 +69,18 @@ pub const BITS_TRUE: BitsType = BitsType::True_;
 
 pub const BITS_PRIMITIVE_TRUE: i32 = BitsType::True_;
 
-fidl_enum! {
-  EnumType(i32) {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(i32)]
+pub enum EnumType {
     Value = 1,
     True_ = 2,
-  }
+}
+
+fidl_enum! {
+    name: EnumType,
+    prim_ty: i32,
+    members: [
+        Value { value: 1, },
+        True_ { value: 2, },
+    ],
 }

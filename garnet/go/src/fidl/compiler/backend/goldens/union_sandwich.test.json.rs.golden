@@ -7,18 +7,26 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum UnionSize8Alignment4 {
+    Variant(u32),
+}
 
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: UnionSize8Alignment4,
     members: [
         Variant {
@@ -28,8 +36,12 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum UnionSize12Alignment4 {
+    Variant([u8; 6]),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: UnionSize12Alignment4,
     members: [
         Variant {
@@ -39,8 +51,12 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum UnionSize24Alignment8 {
+    Variant(StructSize16Alignment8),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: UnionSize24Alignment8,
     members: [
         Variant {
@@ -50,8 +66,12 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum UnionSize36Alignment4 {
+    Variant([u8; 32]),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: UnionSize36Alignment4,
     members: [
         Variant {

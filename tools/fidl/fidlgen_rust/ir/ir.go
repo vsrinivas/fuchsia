@@ -27,7 +27,7 @@ type Type struct {
 type Bits struct {
 	types.Attributes
 	Name    string
-	Type    Type
+	Type    string
 	Members []BitsMember
 }
 
@@ -673,7 +673,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	e := Bits{
 		val.Attributes,
 		c.compileCamelCompoundIdentifier(val.Name),
-		c.compileType(val.Type, false),
+		c.compileType(val.Type, false).Decl,
 		[]BitsMember{},
 	}
 	for _, v := range val.Members {

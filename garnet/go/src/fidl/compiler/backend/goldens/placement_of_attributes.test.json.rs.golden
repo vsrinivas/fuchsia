@@ -7,34 +7,54 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+bitflags! {
+    pub struct ExampleBits: u32 {
+        const Member = 1;
+    }
+}
 
 fidl_bits! {
-  ExampleBits(u32) {
-    Member = 1,
-  }
+    name: ExampleBits,
+    prim_ty: u32,
 }
 
 pub const EXAMPLE_CONST: u32 = 0;
 
-fidl_enum! {
-  ExampleEnum(u32) {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum ExampleEnum {
     Member = 1,
-  }
+}
+
+fidl_enum! {
+    name: ExampleEnum,
+    prim_ty: u32,
+    members: [
+        Member { value: 1, },
+    ],
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ExampleUnion {
+    Variant(u32),
 }
 
 fidl_xunion! {
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: ExampleUnion,
     members: [
         Variant {
@@ -44,8 +64,18 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ExampleXUnion {
+    Variant(u32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: ExampleXUnion,
     members: [
         Variant {

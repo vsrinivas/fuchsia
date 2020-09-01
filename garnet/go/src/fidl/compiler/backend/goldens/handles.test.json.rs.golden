@@ -7,20 +7,25 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-fidl_enum! {
-  ObjType(u32) {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum ObjType {
     None = 0,
     Process = 1,
     Thread = 2,
@@ -51,7 +56,43 @@ fidl_enum! {
     Stream = 31,
     MsiAllocation = 32,
     MsiInterrupt = 33,
-  }
+}
+
+fidl_enum! {
+    name: ObjType,
+    prim_ty: u32,
+    members: [
+        None { value: 0, },
+        Process { value: 1, },
+        Thread { value: 2, },
+        Vmo { value: 3, },
+        Channel { value: 4, },
+        Event { value: 5, },
+        Port { value: 6, },
+        Interrupt { value: 9, },
+        PciDevice { value: 11, },
+        Log { value: 12, },
+        Socket { value: 14, },
+        Resource { value: 15, },
+        Eventpair { value: 16, },
+        Job { value: 17, },
+        Vmar { value: 18, },
+        Fifo { value: 19, },
+        Guest { value: 20, },
+        Vcpu { value: 21, },
+        Timer { value: 22, },
+        Iommu { value: 23, },
+        Bti { value: 24, },
+        Profile { value: 25, },
+        Pmt { value: 26, },
+        SuspendToken { value: 27, },
+        Pager { value: 28, },
+        Exception { value: 29, },
+        Clock { value: 30, },
+        Stream { value: 31, },
+        MsiAllocation { value: 32, },
+        MsiInterrupt { value: 33, },
+    ],
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

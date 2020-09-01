@@ -7,23 +7,37 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+bitflags! {
+    /// bits comment #1
+    ///
+    /// bits comment #2
+    pub struct MyBits: u32 {
+        /// bits member comment #1
+        ///
+        /// bits member comment #3
+        const MyFirstBit = 1;
+        const MyOtherBit = 2;
+    }
+}
 
 fidl_bits! {
-  MyBits(u32) {
-    MyFirstBit = 1,
-    MyOtherBit = 2,
-  }
+    name: MyBits,
+    prim_ty: u32,
 }
 
 /// const comment #1
@@ -31,23 +45,40 @@ fidl_bits! {
 /// const comment #3
 pub const C: i32 = 4;
 
-fidl_enum! {
-  MyEnum(u32) {
+/// enum comment #1.
+///
+/// enum comment #2.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum MyEnum {
+    /// enum Member comment 1.
     Foo = 1,
     Bar = 2,
-  }
+}
+
+fidl_enum! {
+    name: MyEnum,
+    prim_ty: u32,
+    members: [
+        Foo { value: 1, },
+        Bar { value: 2, },
+    ],
+}
+
+/// union comment #1
+///
+/// union comment #3
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum Union {
+    /// union member comment #1
+    ///
+    /// union member comment #3
+    Field(i32),
 }
 
 fidl_xunion! {
-    /// union comment #1
-    ///
-    /// union comment #3
-    #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: Union,
     members: [
-        /// union member comment #1
-        ///
-        /// union member comment #3
         Field {
             ty: i32,
             ordinal: 1,

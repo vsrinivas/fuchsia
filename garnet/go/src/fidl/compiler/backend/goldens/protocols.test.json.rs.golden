@@ -7,30 +7,52 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-fidl_enum! {
-  ObjType(u32) {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum ObjType {
     None = 0,
     Socket = 14,
-  }
 }
 
 fidl_enum! {
-  ErrorEnun(u32) {
+    name: ObjType,
+    prim_ty: u32,
+    members: [
+        None { value: 0, },
+        Socket { value: 14, },
+    ],
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum ErrorEnun {
     ErrFoo = 1,
     ErrBar = 2,
-  }
+}
+
+fidl_enum! {
+    name: ErrorEnun,
+    prim_ty: u32,
+    members: [
+        ErrFoo { value: 1, },
+        ErrBar { value: 2, },
+    ],
 }
 
 pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;
@@ -70,7 +92,13 @@ fidl_struct_copy! {
   align_v1: 8,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct WithErrorSyntaxErrorAsPrimitiveResponse;
+
 fidl_empty_struct!(WithErrorSyntaxErrorAsPrimitiveResponse);
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct WithErrorSyntaxErrorAsEnumResponse;
 
 fidl_empty_struct!(WithErrorSyntaxErrorAsEnumResponse);
 

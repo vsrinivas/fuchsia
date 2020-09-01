@@ -7,20 +7,35 @@
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
-#[allow(unused_imports)]
-use fidl::{
-    fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-};
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
+
 #[allow(unused_imports)]
-use fuchsia_zircon_status as zx_status;
+use {
+    bitflags::bitflags,
+    fidl::{
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion,
+    },
+    fuchsia_zircon_status as zx_status,
+};
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
+#[derive(Debug, PartialEq)]
+pub enum FlexibleFoo {
+    S(String),
+    I(i32),
+    #[doc(hidden)]
+    __UnknownVariant {
+        ordinal: u64,
+        bytes: Vec<u8>,
+        handles: Vec<fidl::Handle>,
+    },
+}
+
 fidl_xunion! {
-    #[derive(Debug, PartialEq)]
     name: FlexibleFoo,
     members: [
         S {
@@ -35,8 +50,13 @@ fidl_xunion! {
     unknown_member: __UnknownVariant,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum StrictFoo {
+    S(String),
+    I(i32),
+}
+
 fidl_xunion! {
-    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     name: StrictFoo,
     members: [
         S {
