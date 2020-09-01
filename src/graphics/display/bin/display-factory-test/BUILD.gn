@@ -53,6 +53,7 @@ executable("display-color") {
 
 rustc_binary("display_png") {
   source_root = "display-png.rs"
+  with_unit_tests = true
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

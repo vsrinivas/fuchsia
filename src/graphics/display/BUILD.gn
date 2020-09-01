@@ -9,6 +9,7 @@ group("tests") {
 
   deps = [
     ":display-fuzzers",
+    "bin/display-factory-test:display_png_test",
     "drivers:tests",
   ]
 }

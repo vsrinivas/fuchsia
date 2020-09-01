@@ -1,0 +1,37 @@
+library_search_paths = [
+    "obj/src/graphics/lib/compute/common",
+    "obj/src/graphics/lib/compute/common/vk",
+    "obj/src/graphics/lib/compute/hotsort/platforms/vk",
+    "obj/src/graphics/lib/compute/spinel",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/arm/bifrost8",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/arm/bifrost8/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+]
+
+additional_shared_libraries = [
+    "libvulkan.so",
+    "librust-trace-provider.so",
+]
+
+additional_static_libraries = [
+    "compute_common",
+    "compute_common_vk",
+    "hotsort_vk",
+    "hotsort_vk_hs_amd_gcn3_u64",
+    "hotsort_vk_hs_arm_bifrost8_u64",
+    "hotsort_vk_hs_intel_gen8_u64",
+    "hotsort_vk_hs_nvidia_sm35_u64",
+    "spinel",
+    "spinel_vk",
+    "spinel_vk_find_target",
+    "spinel_vk_spn_amd_gcn3",
+    "spinel_vk_spn_arm_bifrost8",
+    "spinel_vk_spn_intel_gen8",
+    "spinel_vk_spn_nvidia_sm50",
+]
