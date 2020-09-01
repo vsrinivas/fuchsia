@@ -19,6 +19,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",
@@ -47,6 +49,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/network.rs",
     "src/rtc.rs",
+    "src/time_source.rs",
   ]
 
   test_deps = [

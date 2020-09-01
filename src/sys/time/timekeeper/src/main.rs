@@ -9,6 +9,7 @@
 mod diagnostics;
 mod network;
 mod rtc;
+mod time_source;
 
 use {
     crate::{
