@@ -380,7 +380,18 @@ TEST(ConstsTests, BadConstTestHandleOfThread) {
   TestLibrary library(R"FIDL(
 library example;
 
-const handle<thread> c = -1;
+enum obj_type : uint32 {
+    NONE = 0;
+    THREAD = 2;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+const handle:THREAD c = -1;
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();

@@ -24,8 +24,19 @@ TEST(HandleTests, handle_rights_test) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct MyStruct {
-    handle<vmo, 1> h;
+    handle:<VMO, 1> h;
 };
 )FIDL",
                       std::move(experimental_flags));
@@ -34,7 +45,11 @@ struct MyStruct {
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
-  ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
+  EXPECT_FALSE(h_type_ctor->handle_subtype.has_value());
+  EXPECT_TRUE(h_type_ctor->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(h_type_ctor->handle_subtype_identifier.value().span()->data() == "VMO");
+  ASSERT_NOT_NULL(h_type_ctor->handle_rights);
+
   ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
                 h_type_ctor->handle_rights->Value())
                 .value,
@@ -48,8 +63,19 @@ TEST(HandleTests, no_handle_rights_test) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct MyStruct {
-    handle<vmo> h;
+    handle:VMO h;
 };
 )FIDL",
                       std::move(experimental_flags));
@@ -58,7 +84,9 @@ struct MyStruct {
 
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
-  ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
+  EXPECT_FALSE(h_type_ctor->handle_subtype.has_value());
+  EXPECT_TRUE(h_type_ctor->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(h_type_ctor->handle_subtype_identifier.value().span()->data() == "VMO");
   ASSERT_NULL(h_type_ctor->handle_rights);
 }
 
@@ -69,8 +97,19 @@ TEST(HandleTests, invalid_handle_rights_test) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 protocol P {
-    Method(handle<vmo, 4294967296> h);  // uint32 max + 1
+    Method(handle:<VMO, 4294967296> h);  // uint32 max + 1
 };
 )FIDL",
                       std::move(experimental_flags));

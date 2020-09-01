@@ -93,35 +93,71 @@ TEST(ParsingTests, parsing_handles_in_struct_test) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+    CHANNEL = 4;
+    EVENT = 5;
+    PORT = 6;
+    INTERRUPT = 9;
+    PCI_DEVICE = 11;
+    LOG = 12;
+    SOCKET = 14;
+    RESOURCE = 15;
+    EVENTPAIR = 16;
+    JOB = 17;
+    VMAR = 18;
+    FIFO = 19;
+    GUEST = 20;
+    VCPU = 21;
+    TIMER = 22;
+    IOMMU = 23;
+    BTI = 24;
+    PROFILE = 25;
+    PMT = 26;
+    SUSPEND_TOKEN = 27;
+    PAGER = 28;
+    EXCEPTION = 29;
+    CLOCK = 30;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct Handles {
     handle plain_handle;
 
-    handle<bti> bti_handle;
-    handle<channel> channel_handle;
-    handle<clock> clock_handle;
-    handle<debuglog> debuglog_handle;
-    handle<event> event_handle;
-    handle<eventpair> eventpair_handle;
-    handle<exception> exception_handle;
-    handle<fifo> fifo_handle;
-    handle<guest> guest_handle;
-    handle<interrupt> interrupt_handle;
-    handle<iommu> iommu_handle;
-    handle<job> job_handle;
-    handle<pager> pager_handle;
-    handle<pcidevice> pcidevice_handle;
-    handle<pmt> pmt_handle;
-    handle<port> port_handle;
-    handle<process> process_handle;
-    handle<profile> profile_handle;
-    handle<resource> resource_handle;
-    handle<socket> socket_handle;
-    handle<suspendtoken> suspendtoken_handle;
-    handle<thread> thread_handle;
-    handle<timer> timer_handle;
-    handle<vcpu> vcpu_handle;
-    handle<vmar> vmar_handle;
-    handle<vmo> vmo_handle;
+    handle:BTI bti_handle;
+    handle:CHANNEL channel_handle;
+    handle:CLOCK clock_handle;
+    handle:LOG debuglog_handle;
+    handle:EVENT event_handle;
+    handle:EVENTPAIR eventpair_handle;
+    handle:EXCEPTION exception_handle;
+    handle:FIFO fifo_handle;
+    handle:GUEST guest_handle;
+    handle:INTERRUPT interrupt_handle;
+    handle:IOMMU iommu_handle;
+    handle:JOB job_handle;
+    handle:PAGER pager_handle;
+    handle:PCI_DEVICE pcidevice_handle;
+    handle:PMT pmt_handle;
+    handle:PORT port_handle;
+    handle:PROCESS process_handle;
+    handle:PROFILE profile_handle;
+    handle:RESOURCE resource_handle;
+    handle:SOCKET socket_handle;
+    handle:SUSPEND_TOKEN suspendtoken_handle;
+    handle:THREAD thread_handle;
+    handle:TIMER timer_handle;
+    handle:VCPU vcpu_handle;
+    handle:VMAR vmar_handle;
+    handle:VMO vmo_handle;
 };
 )FIDL");
 
@@ -135,10 +171,21 @@ TEST(ParsingTests, parsing_handle_constraint_test) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct Handles {
     handle plain_handle;
-    handle<vmo> subtype_handle;
-    handle<vmo, 1> rights_handle;
+    handle:VMO subtype_handle;
+    handle:<VMO, 1> rights_handle;
 };
 )FIDL",
                       std::move(experimental_flags));

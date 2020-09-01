@@ -13,6 +13,26 @@
 
 namespace {
 
+const std::string kPrologWithHandleDefinition(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+    CHANNEL = 4;
+    PORT = 6;
+    TIMER = 22;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+)FIDL");
+
 struct Expected {
   uint32_t inline_size = 0;
   uint32_t alignment = 0;
@@ -245,22 +265,20 @@ struct BoolAndU64 {
 }
 
 TEST(TypeshapeTests, simple_structs_with_handles) {
-  TestLibrary test_library(R"FIDL(
-library example;
-
+  TestLibrary test_library(kPrologWithHandleDefinition + R"FIDL(
 struct OneHandle {
   handle h;
 };
 
 struct TwoHandles {
-  handle<channel> h1;
-  handle<port> h2;
+  handle:CHANNEL h1;
+  handle:PORT h2;
 };
 
 struct ThreeHandlesOneOptional {
-  handle<channel> h1;
-  handle<port> h2;
-  handle<timer>? opt_h3;
+  handle:CHANNEL h1;
+  handle:PORT h2;
+  handle:TIMER? opt_h3;
 };
 
     )FIDL");
@@ -2233,11 +2251,9 @@ struct TheStruct {
 }
 
 TEST(TypeshapeTests, recursive_struct_with_handles) {
-  TestLibrary library(R"FIDL(
-library example;
-
+  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 struct TheStruct {
-  handle<vmo> some_handle;
+  handle:VMO some_handle;
   TheStruct? opt_one_more;
 };
 )FIDL");
@@ -2382,9 +2398,7 @@ struct Bar {
 }
 
 TEST(TypeshapeTests, struct_two_deep) {
-  TestLibrary library(R"FIDL(
-library example;
-
+  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 struct DiffEntry {
     vector<uint8>:256 key;
 
@@ -2399,7 +2413,7 @@ struct Value {
 };
 
 struct Buffer {
-    handle<vmo> vmo;
+    handle:VMO vmo;
     uint64 size;
 };
 

@@ -361,8 +361,19 @@ TEST(CodedTypesGeneratorTests, CodedHandle) {
   TestLibrary library(R"FIDL(
 library example;
 
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 struct MyStruct {
-  handle<vmo, 1> h;
+    handle:<VMO, 1> h;
 };
 
 )FIDL",

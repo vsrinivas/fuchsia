@@ -498,8 +498,8 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
     {ElementType::TypeConstructor,
      {
          R"FIDL(library x; const «int32» x = 1;)FIDL",
-         R"FIDL(library x; const «handle<vmo, zx.rights.READ>?» x = 1;)FIDL",
-         R"FIDL(library x; const «Foo<«Bar<«handle<vmo>»>:20»>?» x = 1;)FIDL",
+         R"FIDL(library x; const «handle:<VMO, zx.rights.READ>?» x = 1;)FIDL",
+         R"FIDL(library x; const «Foo<«Bar<«handle:VMO»>:20»>?» x = 1;)FIDL",
          R"FIDL(library x; const «handle:VMO» x = 1;)FIDL",
      }},
 };

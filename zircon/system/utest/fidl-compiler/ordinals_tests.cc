@@ -14,6 +14,21 @@
 
 namespace {
 
+const std::string kPrologWithHandleDefinition(R"FIDL(
+library methodhasher;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    CHANNEL = 4;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+)FIDL");
+
 // Since a number of these tests rely on specific properties of 64b hashes
 // which are computationally prohibitive to reverse engineer, we rely on
 // a stubbed out method hasher `GetGeneratedOrdinal64ForTesting` defined
@@ -35,12 +50,10 @@ protocol Special {
 }
 
 TEST(OrdinalsTest, clashing_ordinal_values) {
-  TestLibrary library(R"FIDL(
-library methodhasher;
-
+  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 protocol Special {
     ClashOne(string s, bool b) -> (int32 i);
-    ClashTwo(string s) -> (handle<channel> r);
+    ClashTwo(string s) -> (handle:CHANNEL r);
 };
 
 // )FIDL");
@@ -58,14 +71,12 @@ protocol Special {
 }
 
 TEST(OrdinalsTest, clashing_ordinal_values_with_attribute) {
-  TestLibrary library(R"FIDL(
-library methodhasher;
-
+  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 protocol Special {
     [Selector = "ClashOne"]
     foo(string s, bool b) -> (int32 i);
     [Selector = "ClashTwo"]
-    bar(string s) -> (handle<channel> r);
+    bar(string s) -> (handle:CHANNEL r);
 };
 
 )FIDL");
@@ -83,13 +94,11 @@ protocol Special {
 }
 
 TEST(OrdinalsTest, attribute_resolves_clashes) {
-  TestLibrary library(R"FIDL(
-library methodhasher;
-
+  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
 protocol Special {
     [Selector = "ClashOneReplacement"]
     ClashOne(string s, bool b) -> (int32 i);
-    ClashTwo(string s) -> (handle<channel> r);
+    ClashTwo(string s) -> (handle:CHANNEL r);
 };
 
 )FIDL");
