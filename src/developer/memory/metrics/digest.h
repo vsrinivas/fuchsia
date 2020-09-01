@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include <functional>
 #include <regex>
 #include <string>
 #include <unordered_map>
@@ -17,17 +18,22 @@
 
 namespace memory {
 
+using VmoMatcher = std::function<bool(const Vmo&)>;
+
 class BucketMatch {
  public:
   BucketMatch(const std::string& name, const std::string& process, const std::string& vmo);
+  BucketMatch(const std::string& name, const std::string& process, const std::string& vmo,
+              VmoMatcher vmo_matcher);
   const std::string& name() const { return name_; }
   bool ProcessMatch(const std::string& process);
-  bool VmoMatch(const std::string& vmo);
+  bool VmoMatch(const Vmo& vmo);
 
  private:
   const std::string name_;
   const std::regex process_;
   const std::regex vmo_;
+  std::optional<VmoMatcher> vmo_matcher_;
   std::unordered_map<std::string, bool> process_match_;
   std::unordered_map<std::string, bool> vmo_match_;
 };

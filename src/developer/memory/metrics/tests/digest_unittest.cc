@@ -19,14 +19,22 @@ struct ExpectedBucket {
 };
 
 void ConfirmBuckets(const Digest& digest, const std::vector<ExpectedBucket>& expected_buckets) {
-  auto const& buckets = digest.buckets();
-  ASSERT_EQ(expected_buckets.size(), buckets.size());
-  for (size_t i = 0; i < expected_buckets.size(); i++) {
-    const auto& expected_bucket = expected_buckets.at(i);
-    const auto& bucket = buckets.at(i);
+  std::vector<Bucket> buckets_copy = digest.buckets();
+  ASSERT_EQ(expected_buckets.size(), buckets_copy.size());
+  for (size_t i = 0; i < expected_buckets.size(); ++i) {
+    for (size_t j = 0; j < buckets_copy.size(); ++j) {
+      const auto& expected_bucket = expected_buckets.at(i);
+      const auto& bucket = buckets_copy.at(j);
 
-    EXPECT_STREQ(expected_bucket.name.c_str(), bucket.name().c_str());
-    EXPECT_EQ(expected_bucket.size, bucket.size());
+      if (expected_bucket.name == bucket.name()) {
+        EXPECT_EQ(expected_bucket.size, bucket.size());
+        buckets_copy.erase(buckets_copy.begin() + j);
+        break;
+      }
+    }
+  }
+  for (const auto& unmatched_bucket : buckets_copy) {
+    EXPECT_TRUE(false) << "Unmatched bucket: " << unmatched_bucket.name();
   }
 }
 
@@ -168,6 +176,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
               {.koid = 20, .name = "test", .committed_bytes = 20},
               {.koid = 21, .name = "test", .committed_bytes = 21},
               {.koid = 22, .name = "test", .committed_bytes = 22},
+              {.koid = 23, .name = "blob-123", .committed_bytes = 23, .num_children = 0},
+              {.koid = 24, .name = "blob-abc", .committed_bytes = 24, .num_children = 1},
           },
         .processes =
             {
@@ -176,7 +186,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
               {.koid = 3, .name = "driver_host:sys", .vmos = {3, 4}},
               {.koid = 4, .name = "fshost.cm", .vmos = {5}},
               {.koid = 5, .name = "/boot/bin/minfs", .vmos = {6}},
-              {.koid = 6, .name = "/boot/bin/blobfs", .vmos = {7}},
+              {.koid = 6, .name = "/boot/bin/blobfs", .vmos = {7,23,24}},
               {.koid = 7, .name = "io.flutter.product_runner.aot", .vmos = {8,9}},
               {.koid = 10, .name = "kronk.cmx", .vmos = {10}},
               {.koid = 8, .name = "web_engine_exe:renderer", .vmos = {11}},
@@ -197,13 +207,15 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
   Digest d(c, &digester);
   EXPECT_EQ(1U, d.undigested_vmos().size());
 
-  ConfirmBuckets(d, {
-    {"Web", 23U}, {"Context", 21U}, {"Audio", 20U}, {"Cobalt", 19U}, {"Archivist", 18U},
-    {"Cast", 17U}, {"Pkgfs", 16U}, {"Netstack", 15U}, {"Amlogic", 14U}, {"Scenic", 13U},
-    {"Kronk", 10U}, {"Flutter", 9U}, {"FlutterApps", 8U}, {"Blobfs", 7U}, {"Minfs", 6U},
-    {"Fshost", 5U}, {"ContiguousPool", 4U}, {"ProtectedPool", 3U}, {"Graphics", 2U},
-    {"ZBI Buffer", 1U}, {"Undigested", 22U},
-  });
+  ConfirmBuckets(
+      d, {
+             {"Web", 23U},           {"Context", 21U},      {"Audio", 20U},   {"Cobalt", 19U},
+             {"Archivist", 18U},     {"Cast", 17U},         {"Pkgfs", 16U},   {"Netstack", 15U},
+             {"Amlogic", 14U},       {"Scenic", 13U},       {"Kronk", 10U},   {"Flutter", 9U},
+             {"FlutterApps", 8U},    {"Blobfs", 31U},        {"Minfs", 6U},    {"Fshost", 5U},
+             {"ContiguousPool", 4U}, {"ProtectedPool", 3U}, {"Graphics", 2U}, {"ZBI Buffer", 1U},
+             {"BlobfsInactive", 23U}, {"Undigested", 22U},
+         });
 }
 
 }  // namespace test

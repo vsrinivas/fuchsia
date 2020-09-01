@@ -10,6 +10,15 @@
 
 namespace memory {
 
+bool BlobfsIsActiveVmo(const Vmo& vmo) {
+  if (std::regex_match(vmo.name, std::regex("blob-[0-9a-f]+"))) {
+    // Data VMOs are only active when they have clients
+    return vmo.num_children > 0;
+  }
+  // Any other VMO is considered active
+  return true;
+}
+
 const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", ".*", "uncompressed-bootfs"},
     {"Graphics", ".*", "magma_create_buffer"},
@@ -17,7 +26,8 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ContiguousPool", "driver_host:sys", "SysmemContiguousPool"},
     {"Fshost", "fshost.cm", ".*"},
     {"Minfs", ".*minfs", ".*"},
-    {"Blobfs", ".*blobfs", ".*"},
+    {"Blobfs", ".*blobfs", ".*", [](const Vmo& vmo) { return BlobfsIsActiveVmo(vmo); }},
+    {"BlobfsInactive", ".*blobfs", ".*", [](const Vmo& vmo) { return !BlobfsIsActiveVmo(vmo); }},
     {"FlutterApps", "io\\.flutter\\..*", "dart.*"},
     {"Flutter", "io\\.flutter\\..*", ".*"},
     {"Web", "web_engine_exe:.*", ".*"},
@@ -37,6 +47,10 @@ BucketMatch::BucketMatch(const std::string& name, const std::string& process,
                          const std::string& vmo)
     : name_(name), process_(process), vmo_(vmo) {}
 
+BucketMatch::BucketMatch(const std::string& name, const std::string& process,
+                         const std::string& vmo, VmoMatcher vmo_matcher)
+    : name_(name), process_(process), vmo_(vmo), vmo_matcher_(vmo_matcher) {}
+
 bool BucketMatch::ProcessMatch(const std::string& process) {
   const auto& pi = process_match_.find(process);
   if (pi != process_match_.end()) {
@@ -47,13 +61,16 @@ bool BucketMatch::ProcessMatch(const std::string& process) {
   return match;
 }
 
-bool BucketMatch::VmoMatch(const std::string& vmo) {
-  const auto& vi = vmo_match_.find(vmo);
+bool BucketMatch::VmoMatch(const Vmo& vmo) {
+  const auto& vi = vmo_match_.find(vmo.name);
   if (vi != vmo_match_.end()) {
     return vi->second;
   }
-  bool match = std::regex_match(vmo, vmo_);
-  vmo_match_.emplace(vmo, match);
+  bool match = std::regex_match(vmo.name, vmo_);
+  if (vmo_matcher_) {
+    match &= (*vmo_matcher_)(vmo);
+  }
+  vmo_match_.emplace(vmo.name, match);
   return match;
 }
 
@@ -87,7 +104,7 @@ void Digester::Digest(const Capture& capture, class Digest* digest) {
           continue;
         }
         const auto& vmo = capture.vmo_for_koid(v);
-        if (!bucket_match.VmoMatch(vmo.name)) {
+        if (!bucket_match.VmoMatch(vmo)) {
           continue;
         }
         bucket.size_ += vmo.committed_bytes;

@@ -29,13 +29,15 @@ struct Vmo {
       : koid(v.koid),
         parent_koid(v.parent_koid),
         committed_bytes(v.committed_bytes),
-        allocated_bytes(v.size_bytes) {
+        allocated_bytes(v.size_bytes),
+        num_children(v.num_children) {
     memcpy(name, v.name, sizeof(name));
   }
   zx_koid_t koid;
   zx_koid_t parent_koid;
   uint64_t committed_bytes;
   uint64_t allocated_bytes;
+  unsigned num_children;
   char name[ZX_MAX_NAME_LEN];
 };
 

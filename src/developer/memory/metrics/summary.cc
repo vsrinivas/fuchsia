@@ -11,8 +11,8 @@
 namespace memory {
 
 const std::vector<const NameMatch> Summary::kNameMatches = {
-    {"blob-[0-9a-f]{1,3}", "[blobs]"},
-    {"blob-merkle-[0-9a-f]{1,3}", "[blob-merkles]"},
+    {"blob-[0-9a-f]+", "[blobs]"},
+    {"blob-merkle-[0-9a-f]+", "[blob-merkles]"},
     {"thrd_t:0x.*|initial-thread|pthread_t:0x.*", "[stacks]"},
     {"data:.*", "[data]"},
     {"", "[unnamed]"},

@@ -37,6 +37,7 @@ const std::map<std::string, std::string>& GetBucketMap() {
       {"Fshost", "memory_digest:fs_host"},
       {"Minfs", "memory_digest:min_fs"},
       {"Blobfs", "memory_digest:blob_fs"},
+      {"BlobfsInactive", "memory_digest:blob_fs_inactive"},
       {"Flutter", "memory_digest:flutter"},
       {"FlutterApps", "memory_digest:flutter_apps"},
       {"Web", "memory_digest:web"},
