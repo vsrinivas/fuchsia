@@ -2430,49 +2430,53 @@ macro_rules! fidl_table {
                         let end_offset = offset + bytes_len;
                         $(
                             _next_ordinal_to_read += 1;
-                            if next_offset < end_offset {
-                                // Decode unknown envelopes for gaps in ordinals.
-                                while _next_ordinal_to_read < $ordinal {
-                                    $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
-                                    _next_ordinal_to_read += 1;
-                                    next_offset += 16;
-                                }
-                                let mut num_bytes: u32 = 0;
-                                $crate::fidl_decode!(&mut num_bytes, decoder, next_offset)?;
-                                let mut num_handles: u32 = 0;
-                                $crate::fidl_decode!(&mut num_handles, decoder, next_offset + 4)?;
-                                let mut present: u64 = 0;
-                                $crate::fidl_decode!(&mut present, decoder, next_offset + 8)?;
-                                let next_out_of_line = decoder.next_out_of_line();
-                                let handles_before = decoder.remaining_handles();
-                                match present {
-                                    $crate::encoding::ALLOC_PRESENT_U64 => {
-                                        decoder.read_out_of_line(
-                                            decoder.inline_size_of::<$member_ty>(),
-
-                                            |d, offset| {
-                                                let val_ref =
-                                                   self.$member_name.get_or_insert_with(
-                                                        || $crate::fidl_new_empty!($member_ty));
-                                                $crate::fidl_decode!(val_ref, d, offset)?;
-                                                Ok(())
-                                            },
-                                        )?;
-                                    }
-                                    $crate::encoding::ALLOC_ABSENT_U64 => {
-                                        if num_bytes != 0 {
-                                            return Err($crate::Error::UnexpectedNullRef);
-                                        }
-                                    }
-                                    _ => return Err($crate::Error::Invalid),
-                                }
-                                if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                                    return Err($crate::Error::Invalid);
-                                }
-                                if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
-                                    return Err($crate::Error::Invalid);
-                                }
+                            if next_offset >= end_offset {
+                                return Ok(());
                             }
+
+                            // Decode unknown envelopes for gaps in ordinals.
+                            while _next_ordinal_to_read < $ordinal {
+                                $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
+                                _next_ordinal_to_read += 1;
+                                next_offset += 16;
+                            }
+
+                            let mut num_bytes: u32 = 0;
+                            $crate::fidl_decode!(&mut num_bytes, decoder, next_offset)?;
+                            let mut num_handles: u32 = 0;
+                            $crate::fidl_decode!(&mut num_handles, decoder, next_offset + 4)?;
+                            let mut present: u64 = 0;
+                            $crate::fidl_decode!(&mut present, decoder, next_offset + 8)?;
+                            let next_out_of_line = decoder.next_out_of_line();
+                            let handles_before = decoder.remaining_handles();
+                            match present {
+                                $crate::encoding::ALLOC_PRESENT_U64 => {
+                                    decoder.read_out_of_line(
+                                        decoder.inline_size_of::<$member_ty>(),
+
+                                        |d, offset| {
+                                            let val_ref =
+                                                self.$member_name.get_or_insert_with(
+                                                    || $crate::fidl_new_empty!($member_ty));
+                                            $crate::fidl_decode!(val_ref, d, offset)?;
+                                            Ok(())
+                                        },
+                                    )?;
+                                }
+                                $crate::encoding::ALLOC_ABSENT_U64 => {
+                                    if num_bytes != 0 {
+                                        return Err($crate::Error::UnexpectedNullRef);
+                                    }
+                                }
+                                _ => return Err($crate::Error::Invalid),
+                            }
+                            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                                return Err($crate::Error::Invalid);
+                            }
+                            if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+                                return Err($crate::Error::Invalid);
+                            }
+
                             next_offset += 16;
                         )*
 
