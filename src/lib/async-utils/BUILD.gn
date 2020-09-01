@@ -19,6 +19,7 @@ rustc_library("async-utils") {
 
   sources = [
     "src/event.rs",
+    "src/fold.rs",
     "src/hanging_get/client.rs",
     "src/hanging_get/mod.rs",
     "src/lib.rs",
