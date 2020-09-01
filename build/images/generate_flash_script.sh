@@ -16,6 +16,7 @@ SIGNED_IMAGE=
 PRODUCT=
 PRE_ERASE_FLASH=
 FASTBOOT_PATH=
+FIRMWARE=()
 
 erase_raw_flash ()
 {
@@ -80,6 +81,10 @@ case $i in
     FASTBOOT_PATH="\"\$DIR/${i#*=}\""
     shift
     ;;
+    --firmware=*)
+    FIRMWARE+=("${i#*=}")
+    shift
+    ;;
 esac
 done
 
@@ -107,6 +112,13 @@ fi
 EOF
 fi
 
+for firmware in "${FIRMWARE[@]}"; do
+  # Arg format is <partition>:<path>.
+  fw_part="${firmware%%:*}"
+  fw_path="${firmware#*:}"
+  erase_raw_flash "${fw_part}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${fw_part}" \"\${DIR}/${fw_path}\" "${extra_args[@]}" >> "${OUTPUT}"
+done
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
   erase_raw_flash ${ZIRCON_A_PARTITION}
   echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"

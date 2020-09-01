@@ -1227,6 +1227,10 @@ if (target_cpu != "arm64" && !use_vboot) {
   }
 }
 
+# Track some firmware information locally so we can flash it without
+# re-calculating all the names and paths.
+firmware_info = []
+
 foreach(firmware, firmware_prebuilts) {
   if (firmware.type == "") {
     # Don't add a trailing delimiter if firmware.type is empty.
@@ -1297,6 +1301,18 @@ foreach(firmware, firmware_prebuilts) {
       sources = [ "$root_out_dir/$name.img" ]
     },
   ]
+
+  if (defined(firmware.partition)) {
+    firmware_info += [
+      {
+        name = name
+        partition = firmware.partition
+
+        # Both the output dir and the build archive put the image at this path.
+        out_path = "$name.img"
+      },
+    ]
+  }
 }
 
 # If a GPT image was specified, make it available as a build artifact.
@@ -1394,6 +1410,9 @@ group("record_filesystem_sizes") {
 ###
 
 action("flash_script") {
+  # Required for dependency on testonly firmware image targets.
+  testonly = true
+
   script = "//build/images/generate_flash_script.sh"
   outputs = [ "$root_out_dir/flash.sh" ]
   image = "$root_out_dir/zedboot.zbi"
@@ -1416,6 +1435,12 @@ action("flash_script") {
     args += ["--signed=true"]
   }
   deps = [ ":fastboot-copy" ]
+
+  foreach(info, firmware_info) {
+    args += [ "--firmware=${info.partition}:${info.out_path}" ]
+    deps += [ ":${info.name}" ]
+  }
+
   metadata = {
     images = [
       {
@@ -1450,6 +1475,10 @@ action("flash_script_archive") {
   ]
   if (custom_signing_script != "") {
     args += ["--signed=true"]
+  }
+
+  foreach(info, firmware_info) {
+    args += [ "--firmware=${info.partition}:${info.out_path}" ]
   }
 }
 

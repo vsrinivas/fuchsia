@@ -36,14 +36,13 @@ declare_args() {
 
   # List of prebuilt firmware blobs to include in update packages.
   #
-  # Each entry in the list is a scope defining `path` and `type`. A build can
-  # only have a single firmware blob of each `type`.
-  #
-  # Note that `firmware_prebuilts_path_suffix` will be automatically appended to
-  # all `path` variables, so do not include the suffix here.
+  # Each entry in the list is a scope containing:
+  #  * `path`: path to the image (see also `firmware_prebuilts_path_suffix`)
+  #  * `type`: firmware type, a device-specific unique identifier
+  #  * `partition` (optional): if specified, the `fastboot flash` partition
   firmware_prebuilts = []
 
-  # Suffix to append to all `firmware_prebuilts` paths.
+  # Suffix to append to all `firmware_prebuilts` `path` variables.
   #
   # Typically this indicates the hardware revision, and is made available so
   # that users can easily switch revisions using a single arg.
@@ -66,7 +65,8 @@ declare_args() {
   # A list of labels for meta packages to be included in the monolith.
   meta_package_labels = []
 
-  # arguments to fx flash script
+  # Arguments to fx flash script (along with any `firmware_prebuilts` which
+  # specify a partition).
   zircon_a_partition = ""
   zircon_b_partition = ""
   zircon_r_partition = ""
