@@ -84,7 +84,6 @@ common_image_contents = [
   "//src/sys/bin/psutils",
   "//src/sys/bootstrap:root_manifests",
   "//src/sys/component_manager:bootfs",
-  "//src/ui/input/drivers/hidctl",
   "//src/zircon/bin/kcounter",
   "//src/zircon/bin/kstress",
   "//src/zircon/bin/ktrace",

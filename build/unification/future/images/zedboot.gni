@@ -114,5 +114,4 @@ zedboot_deps += [
   "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
   "//src/ui/input/drivers/hid-input-report",
-  "//src/ui/input/drivers/hidctl",
 ]
