@@ -15,6 +15,7 @@ rustc_macro("net-declare-macros") {
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
+    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/macros.rs" ]

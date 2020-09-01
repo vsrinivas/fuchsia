@@ -9,7 +9,9 @@ extern crate quote;
 use proc_macro2::TokenStream;
 use proc_macro_hack::proc_macro_hack;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::num::ParseIntError;
 use std::str::FromStr;
+use syn::export::Formatter;
 
 /// Declares a proc_macro with `name` using `generator` to generate any of `ty`.
 macro_rules! declare_macro {
@@ -24,11 +26,22 @@ macro_rules! declare_macro {
 /// Empty slot in an [`Emitter`].
 struct Skip;
 
+/// The mock error returned by [`Skip`].
+#[derive(Debug)]
+struct SkipError;
+
+impl std::fmt::Display for SkipError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+impl std::error::Error for SkipError {}
+
 impl FromStr for Skip {
-    type Err = ();
+    type Err = SkipError;
 
     fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        Err(())
+        Err(SkipError {})
     }
 }
 
@@ -84,20 +97,25 @@ where
     T2: FromStr,
     T3: FromStr,
     T4: FromStr,
+    T1::Err: std::error::Error,
+    T2::Err: std::error::Error,
+    T3::Err: std::error::Error,
+    T4::Err: std::error::Error,
 {
     /// Emits the resulting [`TokenStream`] (or an error one) after attempting
     /// to parse `input` into all of the `Emitter`'s types sequentially.
     fn emit(input: proc_macro::TokenStream) -> TokenStream {
-        let s = format!("{}", input).replace(" ", "");
+        // Ignore all whitespaces and quotations.
+        let s = format!("{}", input).replace(" ", "").replace("\"", "");
         match try_emit::<G, T1>(&s)
-            .or_else(|_| try_emit::<G, T2>(&s))
-            .or_else(|_| try_emit::<G, T3>(&s))
-            .or_else(|_| try_emit::<G, T4>(&s))
+            .or_else(|e1| try_emit::<G, T2>(&s).map_err(|e2| (e1, e2)))
+            .or_else(|(e1, e2)| try_emit::<G, T3>(&s).map_err(|e3| (e1, e2, e3)))
+            .or_else(|(e1, e2, e3)| try_emit::<G, T4>(&s).map_err(|e4| (e1, e2, e3, e4)))
         {
             Ok(ts) => ts,
-            Err(_e) => syn::Error::new_spanned(
+            Err((e1, e2, e3, e4)) => syn::Error::new_spanned(
                 proc_macro2::TokenStream::from(input),
-                format!("failed to parse as {}", Self::error_str()),
+                format!("failed to parse as {}", Self::error_str(&e1, &e2, &e3, &e4)),
             )
             .to_compile_error()
             .into(),
@@ -106,17 +124,22 @@ where
 
     /// Get the error string reported to the compiler when parsing fails with
     /// this `Emitter`.
-    fn error_str() -> String {
+    fn error_str(
+        e1: &dyn std::error::Error,
+        e2: &dyn std::error::Error,
+        e3: &dyn std::error::Error,
+        e4: &dyn std::error::Error,
+    ) -> String {
         [
-            <G as Generator<T1>>::type_str(),
-            <G as Generator<T2>>::type_str(),
-            <G as Generator<T3>>::type_str(),
-            <G as Generator<T4>>::type_str(),
+            (<G as Generator<T1>>::type_str(), e1),
+            (<G as Generator<T2>>::type_str(), e2),
+            (<G as Generator<T3>>::type_str(), e3),
+            (<G as Generator<T4>>::type_str(), e4),
         ]
         .iter()
-        .filter_map(|x| x.clone())
+        .filter_map(|(ts, e)| ts.map(|t| format!("{}: \"{}\"", t, e)))
         .collect::<Vec<_>>()
-        .join(" or ")
+        .join(", or ")
     }
 }
 
@@ -267,9 +290,58 @@ impl Generator<SocketAddrV6> for FidlGen {
     }
 }
 
+/// Helper struct to parse Mac addresses from string.
+#[derive(Default)]
+struct MacAddress([u8; 6]);
+#[derive(thiserror::Error, Debug)]
+enum MacParseError {
+    #[error("invalid length for MacAddress, should be 6")]
+    InvalidLength,
+    #[error("invalid byte length (\"{0}\") in MacAddress, should be 2")]
+    InvalidByte(String),
+    #[error("failed to parse byte \"{0}\": {1}")]
+    IntError(String, ParseIntError),
+}
+
+impl FromStr for MacAddress {
+    type Err = MacParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut mac = Self::default();
+        let Self(octets) = &mut mac;
+        let mut parse_iter = s.split(':');
+        let mut save_iter = octets.iter_mut();
+        loop {
+            match (parse_iter.next(), save_iter.next()) {
+                (Some(s), Some(b)) => {
+                    if s.len() != 2 {
+                        return Err(MacParseError::InvalidByte(s.to_string()));
+                    }
+                    *b = u8::from_str_radix(s, 16)
+                        .map_err(|e| MacParseError::IntError(s.to_string(), e))?;
+                }
+                (None, Some(_)) | (Some(_), None) => break Err(MacParseError::InvalidLength),
+                (None, None) => break Ok(mac),
+            }
+        }
+    }
+}
+
+impl Generator<MacAddress> for FidlGen {
+    fn generate(input: MacAddress) -> TokenStream {
+        let MacAddress(octets) = input;
+        quote! {
+            fidl_fuchsia_net::MacAddress {
+                octets: [#(#octets),*]
+            }
+        }
+    }
+}
+
 declare_macro!(fidl_ip, FidlGen, IpAddr);
 declare_macro!(fidl_ip_v4, FidlGen, Ipv4Addr);
 declare_macro!(fidl_ip_v6, FidlGen, Ipv6Addr);
 declare_macro!(fidl_socket_addr, FidlGen, SocketAddr);
 declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);
 declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
+declare_macro!(fidl_mac, FidlGen, MacAddress);

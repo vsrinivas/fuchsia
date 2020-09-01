@@ -51,6 +51,10 @@ pub use net_declare_macros::fidl_ip_v4;
 /// string.
 #[proc_macro_hack]
 pub use net_declare_macros::fidl_ip_v6;
+/// Declares a [`fidl_fuchsia_net::MacAddress`] from a parsable MAC address in
+/// the form "aa:bb:cc:dd:ee:ff".
+#[proc_macro_hack]
+pub use net_declare_macros::fidl_mac;
 /// Declares an [`fidl_fuchsia_net::SocketAddress`] from a parsable IP address +
 /// port string (either V4 or V6).
 ///
@@ -91,6 +95,7 @@ pub mod fidl {
     pub use fidl_ip as ip;
     pub use fidl_ip_v4 as ip_v4;
     pub use fidl_ip_v6 as ip_v6;
+    pub use fidl_mac as mac;
     pub use fidl_socket_addr as socket_addr;
     pub use fidl_socket_addr_v4 as socket_addr_v4;
     pub use fidl_socket_addr_v6 as socket_addr_v6;
@@ -240,6 +245,21 @@ mod tests {
                 zone_index: 0,
             },
             fidl_socket_addr_v6!([ff01::0102]:8080)
+        );
+    }
+
+    #[test]
+    fn test_fidl_mac() {
+        assert_eq!(fidl::MacAddress { octets: [0, 1, 2, 3, 4, 5] }, fidl_mac!(00:01:02:03:04:05));
+    }
+
+    #[test]
+    fn test_accept_quotes() {
+        // Rustfmt gets confused with this syntax sometimes, so we allow macros
+        // to receive what looks like a string literal as well.
+        assert_eq!(
+            fidl::MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
+            fidl_mac!("AA:BB:CC:DD:EE:FF")
         );
     }
 }
