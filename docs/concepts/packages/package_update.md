@@ -24,7 +24,7 @@ on the host. The new software will be available until the target is rebooted.
 
 ## Building
 
-> TODO(jmatt): improve to talk about wider variety of build options
+<!-- TODO(jmatt): improve to talk about wider variety of build options -->
 
 To build a package containing the required code, a package type build rule is
 used. If one of these needs to be created for the target package, consult the
@@ -59,10 +59,12 @@ when the target is rebooted.
 
 Packages in Fuchsia are not "installed", they are cached on an as needed
 basis. There are two collections of packages on a Fuchsia system:
+
 * **base** The base package set is a group of software critical to proper
   system function that must remain congruent. This set of software can only be
   updated by performing a whole system update, typically referred to as OTA,
   described below. This is updated using `fx ota`.
+
 * **ephemeral software** The ephemeral software is provided to the system in
   one of two ways, either as a member of the "cache" build group, or entirely
   ephemerally. Typically users configure software in the Fuchsia build as
