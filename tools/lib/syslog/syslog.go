@@ -70,9 +70,3 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
 	}
 }
-
-// Close tidies up the system logging session with the corresponding fuchsia instance.
-// TODO(olivernewman): This is unused and can be deleted.
-func (s *Syslogger) Close() {
-	s.client.Close()
-}

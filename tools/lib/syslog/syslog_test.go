@@ -72,12 +72,6 @@ func TestStream(t *testing.T) {
 	}
 
 	syslogger := Syslogger{c}
-	defer func() {
-		syslogger.Close()
-		if !c.closed {
-			panic("runner was not closed")
-		}
-	}()
 
 	var buf bytes.Buffer
 	streamErrs := make(chan error)

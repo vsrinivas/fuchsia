@@ -320,79 +320,29 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
 	// with a netstack; in this case, do not try to establish a connection.
 	if !r.netboot {
-		p, err := ioutil.ReadFile(t.SSHKey())
+		client, err := r.setupSSHConnection(ctx, t)
 		if err != nil {
 			return err
 		}
-		config, err := sshutil.DefaultSSHConfig(p)
-		if err != nil {
-			return err
-		}
-
-		var client *sshutil.Client
-		// TODO(fxb/52397): Determine whether this is necessary or there is a better
-		// way to address this bug.
-		if err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
-			// TODO(fxb/52397): Remove after done debugging.
-			logger.Debugf(ctx, "creating SSH connection")
-			client, err = sshutil.ConnectToNode(ctx, t.Nodename(), config)
-			if err != nil {
-				return err
-			}
-
-			subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
-
-			ip, err := t.IPv4Addr()
-			if err != nil {
-				logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
-			} else if ip != nil {
-				logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
-				subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
-			}
-
-			if r.repoURL != "" {
-				if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
-					logger.Errorf(ctx, "failed to set up a package repository: %v", err)
-					client.Close()
-					return err
-				}
-			}
-			return nil
-		}, nil); err != nil {
-			return err
-		}
-		// This should generally only fail if the client has already closed by
-		// the keep-alive goroutine, in which case this will return an error
-		// that we can safely ignore.
 		defer client.Close()
 
 		if r.syslogFile != "" {
-			s, err := os.Create(r.syslogFile)
+			stopStreaming, err := r.startSyslogStream(ctx, client)
 			if err != nil {
 				return err
 			}
-			defer s.Close()
+			// Stop streaming syslogs after we've finished running the command.
+			defer stopStreaming()
+		}
 
-			// Note: the syslogger takes ownership of the SSH client.
-			syslogger := syslog.NewSyslogger(client)
-			var wg sync.WaitGroup
-			ctx, cancel := context.WithCancel(ctx)
-			defer func() {
-				// Signal syslogger.Stream to stop and wait for it to finish before return.
-				// This makes sure syslogger.Stream finishes necessary clean-up (e.g. closing any open SSH sessions).
-				// before SSH client is closed.
-				cancel()
-				wg.Wait()
-				// Skip syslogger.Close() to avoid double close; syslogger.Close() only closes the underlying client,
-				// which is closed in another defer above.
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if err := syslogger.Stream(ctx, s); err != nil && !errors.Is(err, ctx.Err()) {
-					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
-				}
-			}()
+		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
+
+		ip, err := t.IPv4Addr()
+		if err != nil {
+			logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
+		} else if ip != nil {
+			logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
+			subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
 		}
 	}
 
@@ -416,6 +366,75 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		return fmt.Errorf("command %v failed: %w", args, err)
 	}
 	return nil
+}
+
+// setupSSHConnection creates an SSH connection to the target and sets up a
+// package repository, if necessary.
+func (r *RunCommand) setupSSHConnection(ctx context.Context, t Target) (*sshutil.Client, error) {
+	p, err := ioutil.ReadFile(t.SSHKey())
+	if err != nil {
+		return nil, err
+	}
+	config, err := sshutil.DefaultSSHConfig(p)
+	if err != nil {
+		return nil, err
+	}
+
+	var client *sshutil.Client
+	// TODO(fxb/52397): Determine whether this is necessary or there is a better
+	// way to address this bug.
+	err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
+		client, err = sshutil.ConnectToNode(ctx, t.Nodename(), config)
+		if err != nil {
+			return err
+		}
+
+		if r.repoURL == "" {
+			// No need to set up a package repo.
+			return nil
+		}
+
+		if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
+			logger.Errorf(ctx, "failed to set up a package repository: %v", err)
+			client.Close()
+			return err
+		}
+		return nil
+	}, nil)
+	return client, err
+}
+
+// startSyslogStream uses the SSH client to start streaming syslogs from the
+// fuchsia target to a file, in a background goroutine. It returns a function
+// that cancels the streaming, which should be deferred by the caller.
+func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Client) (stopStreaming func(), err error) {
+	syslogger := syslog.NewSyslogger(client)
+
+	f, err := os.Create(r.syslogFile)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer f.Close()
+		defer wg.Done()
+		if err := syslogger.Stream(ctx, f); err != nil && !errors.Is(err, ctx.Err()) {
+			logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
+		}
+	}()
+
+	// The caller should call this function when they want to stop streaming syslogs.
+	return func() {
+		// Signal syslogger.Stream to stop and wait for it to finish before
+		// return. This makes sure syslogger.Stream finish necessary clean-up
+		// (e.g. closing any open SSH sessions) before SSH client is closed.
+		cancel()
+		wg.Wait()
+	}, nil
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
