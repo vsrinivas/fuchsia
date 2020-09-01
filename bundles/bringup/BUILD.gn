@@ -70,6 +70,8 @@ group("tests") {
     "//zircon/system/ulib/block-client/test:block-client-unit-bootfs-test",
     "//zircon/system/ulib/c/test:atexit-bootfs-test",
     "//zircon/system/ulib/c/test:debugdata-bootfs-test",
+    "//zircon/system/ulib/c/test:default-stack-size-default-bootfs-test",
+    "//zircon/system/ulib/c/test:default-stack-size-phdr-bootfs-test",
     "//zircon/system/ulib/c/test:posix-clocks-bootfs-test",
     "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils-bootfs-test",
     "//zircon/system/ulib/chromeos-disk-setup/test:chromeos-disk-setup-bootfs-test",

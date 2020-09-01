@@ -50,6 +50,11 @@ foreach(case, default_stack_size_cases) {
       ldflags = [ "-Wl,-z,stack-size=${case.size}" ]
     }
   }
+
+  bootfs_test("default-stack-size-${case.name}-bootfs-test") {
+    name = "default-stack-size-${case.name}"
+    deps = [ ":default-stack-size-${case.name}" ]
+  }
 }
 
 executable("debugdata-test-helper") {

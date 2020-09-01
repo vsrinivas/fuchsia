@@ -29,8 +29,6 @@ common_test_contents = [
   "//src/storage/bin/factoryfs",
   "//src/storage/bin/minfs",
   "//src/zircon/tests/evil",
-  "//zircon/system/ulib/c/test:default-stack-size-default",
-  "//zircon/system/ulib/c/test:default-stack-size-phdr",
   "//zircon/system/ulib/trace-engine/test",
   "//zircon/system/ulib/trace-provider/test",
   "//zircon/system/utest/msd",
