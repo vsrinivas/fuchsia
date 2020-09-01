@@ -66,7 +66,7 @@ class AudioCapturerPipelineTest : public HermeticAudioTest {
   AudioCapturerShim<ASF::SIGNED_16>* capturer_ = nullptr;
 };
 
-TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
+TEST_F(AudioCapturerPipelineTest, DISABLED_CaptureWithPts) {
   constexpr auto num_packets = 1;
   constexpr auto num_frames = num_packets * kPacketFrames;
   constexpr int16_t first_sample = 1;
