@@ -1408,11 +1408,13 @@ action("flash_script") {
     "--vbmeta-b=${vbmeta_b_partition}",
     "--vbmeta-r=${vbmeta_r_partition}",
     "--active=${active_partition}",
-    "--signed=${signed_image}",
     "--product=${fastboot_product}",
     "--pre-erase-flash=${pre_erase_flash}",
     "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
   ]
+  if (custom_signing_script != "") {
+    args += ["--signed=true"]
+  }
   deps = [ ":fastboot-copy" ]
   metadata = {
     images = [
@@ -1442,11 +1444,13 @@ action("flash_script_archive") {
     "--vbmeta-b=${vbmeta_b_partition}",
     "--vbmeta-r=${vbmeta_r_partition}",
     "--active=${active_partition}",
-    "--signed=${signed_image}",
     "--product=${fastboot_product}",
     "--pre-erase-flash=${pre_erase_flash}",
     "--fastboot-path=fastboot.exe.$host_platform",
   ]
+  if (custom_signing_script != "") {
+    args += ["--signed=true"]
+  }
 }
 
 paver_targets = [

@@ -11,7 +11,3 @@ custom_signing_script =
 
 # partitions for fx flash to flash
 zircon_a_partition = "boot"
-
-# The kirin970 image is not actually signed, but defining custom_signing_script
-# means we use zedboot.zbi.signed.
-signed_image = true

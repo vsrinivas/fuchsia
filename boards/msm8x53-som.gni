@@ -36,5 +36,4 @@ zircon_b_partition = "boot_b"
 vbmeta_a_partition = "vbmeta_a"
 vbmeta_b_partition = "vbmeta_b"
 active_partition = "a"
-signed_image = true
 fastboot_product = "msm8x53"

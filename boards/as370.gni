@@ -42,5 +42,4 @@ custom_signing_script =
     "//zircon/kernel/target/arm64/board/as370/package-as370-image.sh"
 
 zircon_a_partition = "boot"
-signed_image = true
 pre_erase_flash = true
