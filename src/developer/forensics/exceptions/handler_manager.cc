@@ -30,10 +30,19 @@ void HandlerManager::HandleNextPendingException() {
     return;
   }
 
-  handlers_[available_handlers_.front()].Handle(pending_exceptions_.front());
-
-  pending_exceptions_.pop_front();
+  // We must reserve all state needed to handle the exception (the handler and the exception) and
+  // remove it from the queues prior to actually handling the exception. This is done to prevent
+  // that state from being erroneously being reused when ProcessHandler::Handle ends up calling
+  // HandleNextPendingException on a failure.
+  const size_t handler_idx = available_handlers_.front();
   available_handlers_.pop_front();
+
+  const std::string crashed_process_name = pending_exceptions_.front().CrashedProcessName();
+  const zx_koid_t crashed_process_koid = pending_exceptions_.front().CrashedProcessKoid();
+  zx::exception exception = pending_exceptions_.front().TakeException();
+  pending_exceptions_.pop_front();
+
+  handlers_[handler_idx].Handle(crashed_process_name, crashed_process_koid, std::move(exception));
 }
 
 }  // namespace exceptions

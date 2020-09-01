@@ -8,9 +8,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/process.h>
-
-#include "src/developer/forensics/exceptions/pending_exception.h"
 
 namespace forensics {
 namespace exceptions {
@@ -25,7 +24,8 @@ class ProcessHandler {
   ProcessHandler(ProcessHandler&&) = default;
   ProcessHandler& operator=(ProcessHandler&&) = default;
 
-  void Handle(PendingException& exception);
+  void Handle(const std::string& crashed_process_name, zx_koid_t crashed_process_koid,
+              zx::exception exception);
 
  private:
   async_dispatcher_t* dispatcher_;

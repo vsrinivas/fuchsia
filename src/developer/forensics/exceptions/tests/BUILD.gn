@@ -94,6 +94,24 @@ executable("exception_broker_unittest_exe") {
   ]
 }
 
+executable("process_launch_failure_unittest_exe") {
+  testonly = true
+
+  sources = [ "process_launch_failure_unittest.cc" ]
+
+  deps = [
+    ":test_lib",
+    "//garnet/public/lib/fostr/fidl/fuchsia.exception",
+    "//src/developer/forensics/exceptions:lib",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("stub_exception_handler_exe") {
   testonly = true
 
@@ -185,6 +203,20 @@ fuchsia_component("exception_broker_unittest") {
   ]
 }
 
+fuchsia_component("process_launch_failure_unittest") {
+  testonly = true
+
+  manifest = "meta/process_launch_failure_unittest.cmx"
+
+  deps = [
+    ":crasher",
+    ":process_launch_failure_unittest_exe",
+
+    # Stub exception handler sub-process that avoids making FIDL calls like the real one.
+    ":stub_exception_handler_exe",
+  ]
+}
+
 fuchsia_component("limbo_client_unittest") {
   testonly = true
 
@@ -202,7 +234,14 @@ fuchsia_test_package("exception-broker-tests") {
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
     ":limbo_client_unittest",
+    ":process_launch_failure_unittest",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 ###############################################################################

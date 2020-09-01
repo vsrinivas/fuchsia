@@ -75,13 +75,14 @@ ProcessHandler::~ProcessHandler() {
   }
 }
 
-void ProcessHandler::Handle(PendingException& exception) {
+void ProcessHandler::Handle(const std::string& crashed_process_name,
+                            const zx_koid_t crashed_process_koid, zx::exception exception) {
   if (!crash_reporter_.is_bound()) {
     zx::channel client;
 
     // If we are not able to spawn a sub-process, we will have to lose the exception.
     if (!SpawnSubprocess(&client, &subprocess_)) {
-      FX_LOGS(WARNING) << "Dropping the exception for process " << exception.CrashedProcessName();
+      FX_LOGS(WARNING) << "Dropping the exception for process " << crashed_process_name;
       on_available_();
       return;
     }
@@ -89,8 +90,8 @@ void ProcessHandler::Handle(PendingException& exception) {
     crash_reporter_.Bind(std::move(client), dispatcher_);
   }
 
-  crash_reporter_->Send(exception.CrashedProcessName(), exception.CrashedProcessKoid(),
-                        exception.TakeException(), [this] { on_available_(); });
+  crash_reporter_->Send(crashed_process_name, crashed_process_koid, std::move(exception),
+                        [this] { on_available_(); });
 }
 
 }  // namespace exceptions

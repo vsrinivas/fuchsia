@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/process_launch_failure_unittest_exe"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
