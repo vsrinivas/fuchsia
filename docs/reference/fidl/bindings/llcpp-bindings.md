@@ -582,10 +582,7 @@ When using a `fidl::Client`, events can be handled asynchronously by passing the
 class a `TicTacToe::AsyncEventHandlers` object. This class has the following
 members:
 
-* `std::variant<fit::function<void(GameState new_state)>,
-  fit::function<void(fidl::DecodedMessage<OnOpponentMoveResponse> msg)>>
-  on_opponent_move`: Handler for an event. Each handler can be in the
-  managed variant or the caller-allocated variant.
+* `fit::function<void(OnOpponentMoveResponse* message)> on_opponent_move`: Handler for an event.
 
 For `SyncClient` and `Call` clients, events are handled synchronously by calling
 a `HandleEvents` function and passing it a `TicTacToe::EventHandlers`.

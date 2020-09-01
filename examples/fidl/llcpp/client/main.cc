@@ -40,8 +40,8 @@ int main(int argc, const char** argv) {
 
   // Define the event handlers for the client. The OnString event handler prints the event
   llcpp::fuchsia::examples::Echo::AsyncEventHandlers handlers = {
-      .on_string = [&](fidl::StringView resp) {
-        std::string event(resp.data(), resp.size());
+      .on_string = [&](llcpp::fuchsia::examples::Echo::OnStringResponse* message) {
+        std::string event(message->response.data(), message->response.size());
         std::cout << "Got event: " << event << std::endl;
         loop.Quit();
       }};

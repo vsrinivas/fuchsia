@@ -750,10 +750,7 @@ namespace test {
 namespace json {
 
 struct EmptyProtocol::AsyncEventHandlers {
-  std::variant<
-      ::fit::function<void(::llcpp::fidl::test::json::Empty e)>,
-      ::fit::function<void(::fidl::DecodedMessage<ReceiveResponse> msg)>>
-      receive;
+  ::fit::function<void(ReceiveResponse* msg)> receive;
 };
 
 class EmptyProtocol::SendAndReceiveResponseContext

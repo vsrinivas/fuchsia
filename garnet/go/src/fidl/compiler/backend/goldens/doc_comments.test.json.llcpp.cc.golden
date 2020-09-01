@@ -58,14 +58,17 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kInterface_OnEvent_Ordinal: {
-      auto result = ::fidl::DecodeAs<OnEventResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(OnEventResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (!handlers_.on_event)
+      if (!handlers_.on_event) {
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                   ZX_ERR_NOT_SUPPORTED};
+      }
       handlers_.on_event();
       break;
     }

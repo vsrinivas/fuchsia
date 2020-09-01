@@ -218,20 +218,18 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kTransitional_Event_Ordinal: {
-      auto result = ::fidl::DecodeAs<EventResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(EventResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (auto* managed = std::get_if<0>(&handlers_.event)) {
-        if (!(*managed))
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                    ZX_ERR_NOT_SUPPORTED};
-        auto message = result.message.message();
-        (*managed)(std::move(message->x));
-      } else {
-        std::get<1>(handlers_.event)(std::move(result.message));
+      if (!handlers_.event) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_NOT_SUPPORTED};
       }
+      handlers_.event(reinterpret_cast<EventResponse*>(msg->bytes));
       break;
     }
     default:
@@ -746,20 +744,18 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kChannelProtocol_EventA_Ordinal: {
-      auto result = ::fidl::DecodeAs<EventAResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(EventAResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (auto* managed = std::get_if<0>(&handlers_.event_a)) {
-        if (!(*managed))
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                    ZX_ERR_NOT_SUPPORTED};
-        auto message = result.message.message();
-        (*managed)(std::move(message->a), std::move(message->b));
-      } else {
-        std::get<1>(handlers_.event_a)(std::move(result.message));
+      if (!handlers_.event_a) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_NOT_SUPPORTED};
       }
+      handlers_.event_a(reinterpret_cast<EventAResponse*>(msg->bytes));
       break;
     }
     default:
@@ -1599,32 +1595,34 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(OnEmptyResponseResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (!handlers_.on_empty_response)
+      if (!handlers_.on_empty_response) {
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                   ZX_ERR_NOT_SUPPORTED};
+      }
       handlers_.on_empty_response();
       break;
     }
     case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      auto result = ::fidl::DecodeAs<OnWithResponseResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(OnWithResponseResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (auto* managed = std::get_if<0>(&handlers_.on_with_response)) {
-        if (!(*managed))
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                    ZX_ERR_NOT_SUPPORTED};
-        auto message = result.message.message();
-        (*managed)(std::move(message->ret));
-      } else {
-        std::get<1>(handlers_.on_with_response)(std::move(result.message));
+      if (!handlers_.on_with_response) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_NOT_SUPPORTED};
       }
+      handlers_.on_with_response(
+          reinterpret_cast<OnWithResponseResponse*>(msg->bytes));
       break;
     }
     default:

@@ -215,20 +215,18 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kEmptyProtocol_Receive_Ordinal: {
-      auto result = ::fidl::DecodeAs<ReceiveResponse>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
+      const char* error_message;
+      zx_status_t status =
+          fidl_decode(ReceiveResponse::Type, msg->bytes, msg->num_bytes,
+                      msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-      if (auto* managed = std::get_if<0>(&handlers_.receive)) {
-        if (!(*managed))
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                    ZX_ERR_NOT_SUPPORTED};
-        auto message = result.message.message();
-        (*managed)(std::move(message->e));
-      } else {
-        std::get<1>(handlers_.receive)(std::move(result.message));
+      if (!handlers_.receive) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                  ZX_ERR_NOT_SUPPORTED};
       }
+      handlers_.receive(reinterpret_cast<ReceiveResponse*>(msg->bytes));
       break;
     }
     default:

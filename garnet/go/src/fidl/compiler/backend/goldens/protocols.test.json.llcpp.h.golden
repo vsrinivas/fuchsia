@@ -5029,9 +5029,7 @@ namespace test {
 namespace name {
 
 struct Transitional::AsyncEventHandlers {
-  std::variant<::fit::function<void(int64_t x)>,
-               ::fit::function<void(::fidl::DecodedMessage<EventResponse> msg)>>
-      event;
+  ::fit::function<void(EventResponse* msg)> event;
 };
 
 class Transitional::RequestResponseContext
@@ -5116,10 +5114,7 @@ class Transitional::EventSender {
 };
 
 struct ChannelProtocol::AsyncEventHandlers {
-  std::variant<
-      ::fit::function<void(int64_t a, int64_t b)>,
-      ::fit::function<void(::fidl::DecodedMessage<EventAResponse> msg)>>
-      event_a;
+  ::fit::function<void(EventAResponse* msg)> event_a;
 };
 
 class ChannelProtocol::MethodBResponseContext
@@ -5239,10 +5234,7 @@ class ChannelProtocol::EventSender {
 struct WithAndWithoutRequestResponse::AsyncEventHandlers {
   ::fit::function<void()> on_empty_response;
 
-  std::variant<
-      ::fit::function<void(::fidl::StringView ret)>,
-      ::fit::function<void(::fidl::DecodedMessage<OnWithResponseResponse> msg)>>
-      on_with_response;
+  ::fit::function<void(OnWithResponseResponse* msg)> on_with_response;
 };
 
 class WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext

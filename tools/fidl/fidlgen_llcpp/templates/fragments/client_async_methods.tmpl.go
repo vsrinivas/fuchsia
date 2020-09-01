@@ -38,14 +38,6 @@ const ClientAsyncMethods = `
 {{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}{{ .Name }}ResponseContext* _context
 {{- end }}
 
-{{- define "AsyncEventHandlerInPlaceMethodSignature" -}}
-  {{- if .Response -}}
-(::fidl::DecodedMessage<{{ .Name }}Response> msg)
-  {{- else -}}
-()
-  {{- end -}}
-{{- end }}
-
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
     : ::fidl::internal::ResponseContext({{ .Name }}Response::Type, {{ .OrdinalName }}) {}

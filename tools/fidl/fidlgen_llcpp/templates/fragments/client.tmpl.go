@@ -20,12 +20,11 @@ struct {{ .Name }}::AsyncEventHandlers {
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-    {{- if .Response }}
-  std::variant<::fit::function<void {{- template "AsyncEventHandlerIndividualMethodSignature" . }}>,
-               ::fit::function<void {{- template "AsyncEventHandlerInPlaceMethodSignature" . }}>> {{ .NameInLowerSnakeCase }};
-    {{- else }}
-  ::fit::function<void()> {{ .NameInLowerSnakeCase }};
-    {{- end }}
+  ::fit::function<void (
+    {{- if .Response -}}
+      {{ .Name }}Response* msg
+    {{- end -}}
+  )> {{ .NameInLowerSnakeCase }};
 {{ "" }}
   {{- end }}
 };
@@ -96,24 +95,20 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_ms
     {{- if not .HasRequest }}
     case {{ .OrdinalName }}:
     {
-      auto result = ::fidl::DecodeAs<{{ .Name }}Response>(msg);
-      if (result.status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, result.status};
+      const char* error_message;
+      zx_status_t status = fidl_decode({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
+                                       msg->handles, msg->num_handles, &error_message);
+      if (status != ZX_OK) {
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
       }
-        {{- if .Response }}
-      if (auto* managed = std::get_if<0>(&handlers_.{{ .NameInLowerSnakeCase }})) {
-        if (!(*managed))
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
-        auto message = result.message.message();
-        (*managed)({{ template "AsyncEventHandlerMoveParams" .Response }});
-      } else {
-        std::get<1>(handlers_.{{ .NameInLowerSnakeCase }})(std::move(result.message));
-      }
-        {{- else }}
-      if (!handlers_.{{ .NameInLowerSnakeCase }})
+      if (!handlers_.{{ .NameInLowerSnakeCase }}) {
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
-      handlers_.{{ .NameInLowerSnakeCase }}();
-        {{- end }}
+      }
+      handlers_.{{ .NameInLowerSnakeCase }}(
+        {{- if .Response -}}
+        reinterpret_cast<{{ .Name }}Response*>(msg->bytes)
+        {{- end -}}
+      );
       break;
     }
     {{- end }}

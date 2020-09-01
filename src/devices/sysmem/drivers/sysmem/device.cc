@@ -419,14 +419,15 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
             },
             {.on_register = [this, heap, wait_for_close = std::move(wait_for_close),
                              heap_client = std::move(heap_client)](
-                                llcpp::fuchsia::sysmem::HeapProperties properties) mutable {
+                                llcpp::fuchsia::sysmem::Heap::OnRegisterResponse* message) mutable {
               // A heap should not be registered twice.
               ZX_DEBUG_ASSERT(heap_client);
               // This replaces any previously registered allocator for heap (also cancels the old
               // wait). This behavior is preferred as it avoids a potential race-condition during
               // heap restart.
               allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
-                  std::move(*heap_client), std::move(wait_for_close), std::move(properties));
+                  std::move(*heap_client), std::move(wait_for_close),
+                  std::move(message->properties));
             }});
         ZX_ASSERT(status == ZX_OK);
       });

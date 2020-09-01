@@ -115,9 +115,9 @@ TEST(GenAPITestCase, EventManaged) {
 
   static constexpr char data[] = "OnEvent() managed";
   sync_completion_t done;
-  Example::AsyncEventHandlers handlers{.on_event = [&done](fidl::StringView out) {
-    ASSERT_EQ(sizeof(data), out.size());
-    EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
+  Example::AsyncEventHandlers handlers{.on_event = [&done](Example::OnEventResponse* message) {
+    ASSERT_EQ(sizeof(data), message->out.size());
+    EXPECT_EQ(0, strncmp(message->out.data(), data, sizeof(data)));
     sync_completion_signal(&done);
   }};
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
@@ -128,36 +128,6 @@ TEST(GenAPITestCase, EventManaged) {
 
   // Wait for the event from the server.
   ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data, sizeof(data))));
-  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
-
-  server_binding.value().Unbind();
-}
-
-TEST(GenAPITestCase, EventInPlace) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-
-  static constexpr char data[] = "OnEvent() in-place";
-  sync_completion_t done;
-  Example::AsyncEventHandlers handlers{
-      .on_event = [&done](fidl::DecodedMessage<Example::OnEventResponse> msg) {
-        auto& out = msg.message()->out;
-        ASSERT_EQ(sizeof(data), out.size());
-        EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
-        sync_completion_signal(&done);
-      }};
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
-
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
-                                         std::make_unique<Server>(data, sizeof(data)));
-  ASSERT_TRUE(server_binding.is_ok());
-
-  // Wait for the event from the server.
-  fidl::Buffer<Example::OnEventResponse> buffer;
-  ASSERT_OK(server_binding.value()->OnEvent(buffer.view(), fidl::StringView(data, sizeof(data))));
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.value().Unbind();
@@ -266,7 +236,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   ASSERT_OK(loop.StartThread());
 
   sync_completion_t done;
-  Example::AsyncEventHandlers handlers{.on_event = [&done](fidl::StringView out) {
+  Example::AsyncEventHandlers handlers{.on_event = [&done](Example::OnEventResponse* message) {
     FAIL();
     sync_completion_signal(&done);
   }};
