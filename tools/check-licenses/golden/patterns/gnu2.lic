@@ -1,6 +1,6 @@
-(?i)\s*Copyright \(C\) .* Free Software Foundation, Inc.
+(?i)\s*Copyright \(C\) [\d]{4}-[\d]{4} Free Software Foundation, Inc.
 \s*This file is part of the GNU C Library.
-(Written by .*)?
+
 \s*The GNU C Library is free software; you can redistribute it and\/or
 \s*modify it under the terms of the GNU Lesser General Public
 \s*License as published by the Free Software Foundation; either
@@ -12,4 +12,5 @@
 \s*Lesser General Public License for more details.
 
 \s*You should have received a copy of the GNU Lesser General Public
-\s*License along with the GNU C Library(.|;)\s*if not, see
+\s*License along with the GNU C Library(.|;)\s*see the file COPYING.LIB. If
+not, see <http:\/\/www.gnu.org\/licenses\/>. 

@@ -45,8 +45,8 @@ func TestPatternsMatchExamples(t *testing.T) {
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}
-		updatedRegex := strings.ReplaceAll(string(pattern), "\n", `[\s\\#\*]*`)
-		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*]*`)
+		updatedRegex := strings.ReplaceAll(string(pattern), "\n", `[\s\\#\*\/]*`)
+		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*\/]*`)
 		if !regexp.MustCompile(updatedRegex).Match(example) {
 			t.Errorf("%v, %v pattern doesn't match example", t.Name(), pattern_file.Name())
 		}
