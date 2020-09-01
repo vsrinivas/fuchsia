@@ -638,14 +638,31 @@ clone_and_build "${VULKAN_VALIDATION_LAYERS}" "${VULKAN_VALIDATION_LAYERS_GIT_UR
     -DBUILD_TESTS=OFF \
     -DBUILD_WSI_WAYLAND_SUPPORT=OFF \
     "${VULKAN_HEADERS_CMD[@]}" "${GLSLANG_CMD[@]}" \
+    -DSPIRV_HEADERS_INSTALL_DIR="${INSTALL_PREFIX}" \
     -DSPIRV_TOOLS_LIB="${INSTALL_PREFIX}/lib/libSPIRV-Tools.a" \
     -DSPIRV_TOOLS_OPT_LIB="${INSTALL_PREFIX}/lib/libSPIRV-Tools-opt.a"
 
 # Finally, copy files of interest to their final location
 #
-# NOTE: libvulkan.so is a symlink, so --dereference is used in the tar command
-# below to ensure its content is copied instead.
+# NOTE: Both libvulkan.so and libvulkan.so.1 are symlinks.
 #
+# Executables are linked with "libvulkan.so.1", but the vulkan.hpp header may
+# call dlopen on "libvulkan.so". On some systems, it will crash if these two
+# files are not the same one.
+#
+# So we make libvulkan.so.1 a copy of the dynamic library it links to, and
+# make libvulkan.so a symbolic link to libvulkan.so.1.
+#
+if [[ ! -f "${INSTALL_PREFIX}/lib/libvulkan.so.1" ]]; then
+  echo "Fatal: libvulkan.so.1 not found!" >&2
+  exit 1
+fi
+TMP_FILE=`mktemp -p ${INSTALL_PREFIX}`
+cp -f "${INSTALL_PREFIX}/lib/libvulkan.so.1" "${TMP_FILE}"
+mv -f "${TMP_FILE}" "${INSTALL_PREFIX}/lib/libvulkan.so.1"
+chmod 640 "${INSTALL_PREFIX}/lib/libvulkan.so.1"
+ln -sf "libvulkan.so.1" "${INSTALL_PREFIX}/lib/libvulkan.so"
+
 FILES=(
   lib/libvk_swiftshader.so
   lib/vk_swiftshader_icd.json
@@ -653,11 +670,10 @@ FILES=(
   lib/libvulkan.so
   lib/libVkLayer_khronos_validation.so
   share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json
-  share/vulkan/explicit_layer.d/VkLayer_standard_validation.json
 )
 
 mkdir -p "${INSTALL_DIR}" &&
-(tar c -f- -C "${INSTALL_PREFIX}" --dereference --preserve-permissions "${FILES[@]}") | (tar x -f- --overwrite -C "${INSTALL_DIR}")
+(tar c -f- -C "${INSTALL_PREFIX}" --preserve-permissions "${FILES[@]}") | (tar x -f- --overwrite -C "${INSTALL_DIR}")
 
 # Copy the build configuration file to the installation directory as well, for reference.
 cp "${BUILD_CONFIG_FILE}" "${INSTALL_DIR}/swiftshader_vulkan.build_config"
