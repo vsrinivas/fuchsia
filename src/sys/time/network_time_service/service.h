@@ -20,7 +20,7 @@
 const uint64_t kMinNanosBetweenFailures = 1 * 1'000'000'000u;
 const uint32_t kMaxRetryExponent = 3;
 const uint32_t kTriesPerExponent = 3;
-const uint64_t kNanosBetweenSuccesses = 30 * 60 * 1'000'000'000u;
+const uint64_t kNanosBetweenSuccesses = 30 * 60 * ((uint64_t)1'000'000'000u);
 
 namespace time_external = fuchsia::time::external;
 namespace network_time_service {
