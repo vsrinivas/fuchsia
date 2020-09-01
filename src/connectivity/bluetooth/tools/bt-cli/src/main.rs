@@ -116,7 +116,7 @@ async fn set_adapter_device_class<'a>(
 
 fn match_peer<'a>(pattern: &'a str, peer: &Peer) -> bool {
     peer.id.to_string().contains(pattern)
-        || peer.address.to_string().contains(pattern)
+        || peer.address.to_string().to_uppercase().contains(&pattern.to_uppercase())
         || peer.name.as_ref().map_or(false, |p| p.contains(pattern))
 }
 
@@ -675,6 +675,9 @@ mod tests {
 
         assert!(match_peer("", &nameless_peer));
         assert!(match_peer("", &named_peer));
+
+        assert!(match_peer("DE", &named_peer));
+        assert!(match_peer("de", &named_peer));
     }
 
     #[test]
