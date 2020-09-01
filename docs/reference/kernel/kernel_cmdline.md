@@ -32,6 +32,20 @@ For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36, with default being 30.
 
+## blobfs.cache-eviction-policy=\<policy\>
+
+Controls blobfs' eviction strategy for blobs with no open handles or VMO clones.
+If unset, an internally defined system default is used.
+
+The following values are supported:
+
+* `NEVER_EVICT`: Nodes are never evicted. It is recommended to enable kernel page
+  eviction (`kernel.page-scanner.enable-user-pager-eviction`) and user paging
+  (`blobfs.userpager`) in this case, as otherwise blobfs will indefinitely retain
+  all data pages in memory.
+* `EVICT_IMMEDIATELY`: Nodes are evicted as soon as they have no open handles or
+  VMO clones. They will need to be loaded from disk again on next access.
+
 ## blobfs.write-compression-algorithm=\<algorithm\>
 
 The compression algorithm that blobfs should use for writing blobs at runtime.

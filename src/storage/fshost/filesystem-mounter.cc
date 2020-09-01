@@ -62,6 +62,10 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
     argv.push_back("--compression");
     argv.push_back(options.write_compression_algorithm);
   }
+  if (options.cache_eviction_policy != nullptr) {
+    argv.push_back("--eviction_policy");
+    argv.push_back(options.cache_eviction_policy);
+  }
   argv.push_back("mount");
   argv.push_back(nullptr);
   status =

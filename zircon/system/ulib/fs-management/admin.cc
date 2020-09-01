@@ -69,6 +69,10 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
     argv.push_back("--compression_level");
     argv.push_back(compression_level.c_str());
   }
+  if (options.cache_eviction_policy) {
+    argv.push_back("--eviction_policy");
+    argv.push_back(options.cache_eviction_policy);
+  }
   if (options.fsck_after_every_transaction) {
     argv.push_back("--fsck_after_every_transaction");
   }
@@ -153,6 +157,7 @@ const init_options_t default_init_options = {
     .enable_pager = false,
     .write_compression_algorithm = nullptr,
     .write_compression_level = -1,
+    .cache_eviction_policy = nullptr,
     .fsck_after_every_transaction = false,
     .callback = launch_stdio_async,
 };

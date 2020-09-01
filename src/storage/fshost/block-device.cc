@@ -444,13 +444,15 @@ zx_status_t BlockDevice::MountFilesystem() {
       mount_options_t options = default_mount_options;
       options.enable_journal = true;
       options.collect_metrics = true;
+      std::optional<std::string> algorithm = std::nullopt;
+      std::optional<std::string> eviction_policy = std::nullopt;
       if (mounter_->boot_args()) {
         options.enable_pager = mounter_->boot_args()->blobfs_enable_userpager();
-        auto algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
-        if (algorithm) {
-          options.write_compression_algorithm = algorithm->c_str();
-        }
+        algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
+        eviction_policy = mounter_->boot_args()->blobfs_eviction_policy();
       }
+      options.write_compression_algorithm = algorithm ? algorithm->c_str() : nullptr;
+      options.cache_eviction_policy = eviction_policy ? eviction_policy->c_str() : nullptr;
       zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
       if (status != ZX_OK) {
         printf("fshost: Failed to mount blobfs partition: %s.\n", zx_status_get_string(status));

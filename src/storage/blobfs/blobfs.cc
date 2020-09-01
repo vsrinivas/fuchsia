@@ -108,6 +108,15 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
   return ZX_OK;
 }
 
+const char* CachePolicyToString(CachePolicy policy) {
+  switch (policy) {
+    case CachePolicy::NeverEvict:
+      return "NEVER_EVICT";
+    case CachePolicy::EvictImmediately:
+      return "EVICT_IMMEDIATELY";
+  }
+}
+
 }  // namespace
 
 // static.
@@ -247,7 +256,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return status;
   }
 
+  FS_TRACE_INFO("blobfs: Using eviction policy %s\n", CachePolicyToString(options->cache_policy));
   fs->Cache().SetCachePolicy(options->cache_policy);
+
   RawBitmap block_map;
   // Keep the block_map aligned to a block multiple
   if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {

@@ -26,6 +26,9 @@ typedef struct mount_options {
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
   const char* write_compression_algorithm;
+  // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
+  // the filesystem supports it).
+  const char* cache_eviction_policy;
   // If true will register with /svc/fuchsia.fshost.Registry.
   bool register_fs;
   // If set, run fsck after every transaction.

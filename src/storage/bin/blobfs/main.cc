@@ -21,6 +21,7 @@
 #include <optional>
 #include <utility>
 
+#include <blobfs/cache-policy.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/fsck.h>
 #include <blobfs/mkfs.h>
@@ -134,6 +135,15 @@ std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   return std::nullopt;
 }
 
+std::optional<blobfs::CachePolicy> ParseEvictionPolicy(const char* str) {
+  if (!strcmp(str, "NEVER_EVICT")) {
+    return blobfs::CachePolicy::NeverEvict;
+  } else if (!strcmp(str, "EVICT_IMMEDIATELY")) {
+    return blobfs::CachePolicy::EvictImmediately;
+  }
+  return std::nullopt;
+}
+
 std::optional<int> ParseInt(const char* str) {
   char* pend;
   long ret = strtol(str, &pend, 10);
@@ -163,6 +173,8 @@ int usage() {
       "         -l|--compression_level n   Aggressiveness of compression to apply to newly stored\n"
       "                                    blobs. Only used if -c is one of ZSTD*, in which case\n"
       "                                    the level is the zstd compression level.\n"
+      "         -e|--eviction_policy |pol| Policy for when to evict blobs with no handles. |pol|\n"
+      "                                    can be one of NEVER_EVICT or EVICT_IMMEDIATELY.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -189,11 +201,12 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {"pager", no_argument, nullptr, 'p'},
         {"compression", required_argument, nullptr, 'c'},
         {"compression_level", required_argument, nullptr, 'l'},
+        {"eviction_policy", required_argument, nullptr, 'e'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmjpc:l:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmjpc:l:e:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -227,6 +240,16 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
           return usage();
         }
         options->compression_settings.compression_level = level;
+        break;
+      }
+      case 'e': {
+        std::optional<blobfs::CachePolicy> policy = ParseEvictionPolicy(optarg);
+        if (!policy) {
+          fprintf(stderr, "Invalid eviction policy: %s\n", optarg);
+          return usage();
+        }
+        options->cache_policy = *policy;
+        break;
       }
       case 'v':
         options->verbose = true;

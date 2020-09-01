@@ -111,6 +111,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
       // needed.
       .write_compression_level = -1,
+      .cache_eviction_policy = options->cache_eviction_policy,
       .fsck_after_every_transaction = options->fsck_after_every_transaction,
       .callback = cb,
   };
@@ -153,6 +154,7 @@ const mount_options_t default_mount_options = {
     .enable_journal = true,
     .enable_pager = false,
     .write_compression_algorithm = nullptr,
+    .cache_eviction_policy = nullptr,
     .register_fs = true,
     .fsck_after_every_transaction = false,
     .admin = true,

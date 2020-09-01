@@ -36,6 +36,9 @@ typedef struct init_options {
   // and the configured |write_compression_algorithm| supports it).
   // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
   int write_compression_level;
+  // An optional eviction policy specifier for the filesystem to use for in-memory structures (if
+  // the filesystem supports it).
+  const char* cache_eviction_policy;
   // If true, run fsck after every transaction (if supported). This is for testing/debugging
   // purposes.
   bool fsck_after_every_transaction;

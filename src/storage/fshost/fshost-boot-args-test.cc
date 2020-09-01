@@ -113,3 +113,16 @@ TEST_F(FshostBootArgsTest, GetBlockVeritySeal) {
   EXPECT_EQ("ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
             boot_args().block_verity_seal());
 }
+
+TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy) {
+  std::map<std::string, std::string> config = {{"blobfs.cache-eviction-policy", "NEVER_EVICT"}};
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+
+  EXPECT_EQ("NEVER_EVICT", boot_args().blobfs_eviction_policy());
+}
+
+TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy_Unspecified) {
+  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
+
+  EXPECT_EQ(std::nullopt, boot_args().blobfs_eviction_policy());
+}

@@ -63,10 +63,22 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
 
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");
   if (algorithm.is_error()) {
-    fprintf(stderr, "fshost: failed to get blobfs compression algorithm: %s\n",
-            algorithm.status_string());
+    if (algorithm.status_value() != ZX_ERR_NOT_FOUND) {
+      fprintf(stderr, "fshost: failed to get blobfs compression algorithm: %s\n",
+              algorithm.status_string());
+    }
   } else {
     blobfs_write_compression_algorithm_ = std::move(algorithm).value();
+  }
+
+  auto eviction_policy = GetStringArgument("blobfs.cache-eviction-policy");
+  if (eviction_policy.is_error()) {
+    if (eviction_policy.status_value() != ZX_ERR_NOT_FOUND) {
+      fprintf(stderr, "fshost: failed to get blobfs eviction policy: %s\n",
+              eviction_policy.status_string());
+    }
+  } else {
+    blobfs_eviction_policy_ = std::move(eviction_policy).value();
   }
 }
 
