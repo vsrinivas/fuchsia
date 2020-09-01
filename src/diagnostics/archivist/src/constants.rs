@@ -26,6 +26,12 @@ pub static PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
 /// inspect exfiltration.
 pub static FEEDBACK_ARCHIVE_ACCESSOR_NAME: &str = "fuchsia.diagnostics.FeedbackArchiveAccessor";
 
+/// Name used by clients to connect to the feedback diagnostics protocol.
+/// This protocol applies static selectors configured under
+/// config/data/legacy_metrics to inspect exfiltration.
+pub static LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME: &str =
+    "fuchsia.diagnostics.LegacyMetricsArchiveAccessor";
+
 /// The maximum number of Inspect files that can be simultaneously snapshotted and formatted per
 /// reader.
 pub static MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 2;

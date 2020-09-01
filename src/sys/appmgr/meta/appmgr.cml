@@ -191,6 +191,10 @@
             as: "/svc_for_sys/fuchsia.diagnostics.FeedbackArchiveAccessor",
         },
         {
+            protocol: "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            as: "/svc_for_sys/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+        },
+        {
             protocol: "/svc/fuchsia.logger.Log",
             as: "/svc_for_sys/fuchsia.logger.Log",
         },

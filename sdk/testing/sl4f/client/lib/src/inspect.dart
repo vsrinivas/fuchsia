@@ -11,6 +11,7 @@ import 'sl4f_client.dart';
 enum InspectPipeline {
   none,
   feedback,
+  legacyMetrics,
 }
 
 extension ServiceNameExtension on InspectPipeline {
@@ -20,6 +21,8 @@ extension ServiceNameExtension on InspectPipeline {
         return 'fuchsia.diagnostics.ArchiveAccessor';
       case InspectPipeline.feedback:
         return 'fuchsia.diagnostics.FeedbackArchiveAccessor';
+      case InspectPipeline.legacyMetrics:
+        return 'fuchsia.diagnostics.LegacyMetricsArchiveAccessor';
     }
     return '';
   }

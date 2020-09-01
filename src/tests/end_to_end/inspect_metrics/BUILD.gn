@@ -120,6 +120,29 @@ dart_test("archivist_metrics_test") {
   }
 }
 
+dart_test("legacy_metrics_test") {
+  sources = [ "legacy_metrics_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+    },
+  ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  if (is_host && target_cpu == "x64") {
+    environments += [ emu_env ]
+  }
+}
+
 group("test") {
   testonly = true
 
@@ -128,5 +151,6 @@ group("test") {
     ":archivist_reader_test($host_toolchain)",
     ":inspect_metrics_emulator_test($host_toolchain)",
     ":inspect_metrics_test($host_toolchain)",
+    ":legacy_metrics_test($host_toolchain)",
   ]
 }

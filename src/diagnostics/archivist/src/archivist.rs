@@ -203,8 +203,6 @@ impl Archivist {
                 .ok()
         });
 
-        // TODO(4601): Refactor this code.
-        // Set up loading feedback pipeline configs.
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline = pipelines_node.create_child("feedback");
         let legacy_pipeline = pipelines_node.create_child("legacy_metrics");
@@ -213,7 +211,7 @@ impl Archivist {
             configs::EmptyBehavior::DoNotFilter,
         );
         feedback_config.record_to_inspect(&feedback_pipeline);
-        let legacy_config = configs::PipelineConfig::from_directory(
+        let mut legacy_config = configs::PipelineConfig::from_directory(
             "/config/data/legacy_metrics",
             configs::EmptyBehavior::Disable,
         );
@@ -226,9 +224,9 @@ impl Archivist {
             data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
         }
 
-        // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
-        // in that it has no statically configured selectors, meaning all diagnostics data is
-        // visible.
+        // The Inspect Repository offered to the ALL_ACCESS pipeline. This
+        // repository is unique in that it has no statically configured
+        // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(55735): Lock down this protocol using allowlists.
         let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
@@ -247,9 +245,31 @@ impl Archivist {
             },
         )));
 
+        // The Inspect Repository offered to the LegacyMetrics
+        // pipeline. This repository applies static selectors configured
+        // under config/data/legacy_metrics to inspect exfiltration.
+        let legacy_metrics_inspect_repository = Arc::new(RwLock::new(
+            DiagnosticsDataRepository::new(match feedback_config.disable_filtering {
+                false => legacy_config.take_inspect_selectors().map(|selectors| {
+                    selectors
+                        .into_iter()
+                        .map(|selector| Arc::new(selector))
+                        .collect::<Vec<Arc<Selector>>>()
+                }),
+                true => None,
+            }),
+        ));
+
+        // TODO(55736): Refactor this code so that we don't store
+        // diagnostics data N times if we have N pipelines. We should be
+        // storing a single copy regardless of the number of pipelines.
         let archivist_state = archive::ArchivistState::new(
             archivist_configuration,
-            vec![all_inspect_repository.clone(), feedback_inspect_repository.clone()],
+            vec![
+                all_inspect_repository.clone(),
+                feedback_inspect_repository.clone(),
+                legacy_metrics_inspect_repository.clone(),
+            ],
             writer,
         )?;
 
@@ -259,6 +279,10 @@ impl Archivist {
 
         let feedback_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
             component::inspector().root().create_child("feedback_archive_accessor"),
+        ));
+
+        let legacy_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+            component::inspector().root().create_child("legacy_metrics_archive_accessor"),
         ));
 
         fs.dir("svc")
@@ -275,6 +299,13 @@ impl Archivist {
                     feedback_accessor_stats.clone(),
                 );
                 feedback_archive_accessor.spawn_archive_accessor_server(chan)
+            })
+            .add_fidl_service_at(constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME, move |chan| {
+                let legacy_archive_accessor = ArchiveAccessor::new(
+                    legacy_metrics_inspect_repository.clone(),
+                    legacy_accessor_stats.clone(),
+                );
+                legacy_archive_accessor.spawn_archive_accessor_server(chan)
             });
 
         let events_node = diagnostics::root().create_child("event_stats");
