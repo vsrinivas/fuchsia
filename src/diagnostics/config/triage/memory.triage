@@ -1,0 +1,71 @@
+{
+    select: {
+        free_bytes: "INSPECT:memory_monitor.cmx:root/values:free_bytes",
+        total_bytes: "INSPECT:memory_monitor.cmx:root/values:total_bytes",
+        kmem_free_bytes: "INSPECT:memory_monitor.cmx:root/values:free_heap_bytes",
+        kmem_total_bytes: "INSPECT:memory_monitor.cmx:root/values:kmem_total_bytes",
+    },
+    eval: {
+        free_ratio: "free_bytes / total_bytes",
+        used_ratio: "(total_bytes - free_bytes) / total_bytes",
+        megabytes: "1024 * 1024",
+
+        // 150MiB free is "CRITICAL"
+        critical_limit: "150 * megabytes",
+
+        // 50MiB free is "OOM"
+        oom_limit: "50 * megabytes",
+    },
+    act: {
+        free_memory_mb: {
+            type: "Gauge",
+            value: "free_bytes // megabytes",
+        },
+        memory_usage: {
+            type: "Gauge",
+            value: "used_ratio",
+            format: "percentage",
+        },
+        critical_memory: {
+            type: "Warning",
+            trigger: "free_bytes < critical_limit",
+            print: "Memory usage is CRITICAL",
+        },
+        oom: {
+            type: "Warning",
+            trigger: "free_bytes < oom_limit",
+            print: "The system is Out of Memory!",
+        },
+    },
+    test: {
+        critical: {
+            yes: [
+                "critical_memory",
+            ],
+            no: [
+                "oom",
+            ],
+            values: {
+                free_bytes: 100000000,
+            },
+        },
+        oom: {
+            yes: [
+                "critical_memory",
+                "oom",
+            ],
+            values: {
+                free_bytes: 100000,
+            },
+        },
+        ok: {
+            no: [
+                "critical_memory",
+                "oom",
+            ],
+            values: {
+                free_bytes: 1000000000000,
+            },
+        },
+    },
+}
