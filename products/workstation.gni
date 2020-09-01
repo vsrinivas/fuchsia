@@ -24,6 +24,7 @@ base_package_labels += [
   "//src/fonts:open-fonts-collection",
   "//src/identity/bin:tier_2",
   "//src/session",
+  "//src/ui/bin/activity",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
