@@ -55,14 +55,6 @@ group("services") {
   public_deps = [ "//src/media/codec/factory" ]
 }
 
-group("factory-test") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec/examples:encode-camera",
-    "//src/media/codec/examples:encode-file",
-  ]
-}
-
 package("codec_factory") {
   deps = [ "//src/media/codec/factory" ]
 
