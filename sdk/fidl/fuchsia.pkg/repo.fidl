@@ -100,6 +100,10 @@ table RepositoryConfig {
     /// to be considered trusted. This value must be greater than or equal to 1.
     /// Optional, defaulting to 1.
     6: uint32 root_threshold;
+
+    /// Whether the package resolver should check attached storage for blobs and
+    /// repository metadata.
+    7: bool use_local_mirror;
 };
 
 /// The keys used by the repository to authenticate its packages.

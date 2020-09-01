@@ -258,6 +258,8 @@ pub struct RepositoryConfig {
     root_keys: Vec<RepositoryKey>,
     mirrors: Vec<MirrorConfig>,
     update_package_url: Option<PkgUrl>,
+    #[serde(default = "default_use_local_mirror")]
+    use_local_mirror: bool,
 }
 
 fn default_root_version() -> u32 {
@@ -266,6 +268,10 @@ fn default_root_version() -> u32 {
 
 fn default_root_threshold() -> u32 {
     1
+}
+
+fn default_use_local_mirror() -> bool {
+    false
 }
 
 impl RepositoryConfig {
@@ -316,6 +322,10 @@ impl RepositoryConfig {
 
     pub fn update_package_url(&self) -> Option<&PkgUrl> {
         self.update_package_url.as_ref()
+    }
+
+    pub fn use_local_mirror(&self) -> bool {
+        self.use_local_mirror
     }
 }
 
@@ -372,6 +382,7 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
                 .map(MirrorConfig::try_from)
                 .collect::<Result<_, _>>()?,
             update_package_url: update_package_url,
+            use_local_mirror: other.use_local_mirror.unwrap_or(false),
         })
     }
 }
@@ -385,6 +396,7 @@ impl From<RepositoryConfig> for fidl::RepositoryConfig {
             root_keys: Some(config.root_keys.into_iter().map(RepositoryKey::into).collect()),
             mirrors: Some(config.mirrors.into_iter().map(MirrorConfig::into).collect()),
             update_package_url: config.update_package_url.map(|url| url.to_string()),
+            use_local_mirror: Some(config.use_local_mirror),
         }
     }
 }
@@ -405,6 +417,7 @@ impl RepositoryConfigBuilder {
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
+                use_local_mirror: false,
             },
         }
     }
@@ -436,6 +449,11 @@ impl RepositoryConfigBuilder {
 
     pub fn update_package_url(mut self, url: PkgUrl) -> Self {
         self.config.update_package_url = Some(url);
+        self
+    }
+
+    pub fn use_local_mirror(mut self, use_local_mirror: bool) -> Self {
+        self.config.use_local_mirror = use_local_mirror;
         self
     }
 
@@ -878,6 +896,7 @@ mod tests {
                 blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: true,
         };
         let as_fidl: fidl::RepositoryConfig = config.into();
         assert_eq!(
@@ -895,12 +914,13 @@ mod tests {
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
+                use_local_mirror: Some(true)
             }
         );
     }
 
     #[test]
-    fn test_repository_config_from_fidl_without_version_and_threshold() {
+    fn test_repository_config_from_fidl_without_version_and_threshold_and_use_local_mirror() {
         let as_fidl = fidl::RepositoryConfig {
             repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
             root_version: None,
@@ -912,6 +932,7 @@ mod tests {
                 blob_mirror_url: None,
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: None,
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -928,12 +949,13 @@ mod tests {
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
+                use_local_mirror: false,
             }
         );
     }
 
     #[test]
-    fn test_repository_config_from_fidl_with_version_and_threshold() {
+    fn test_repository_config_from_fidl_with_version_and_threshold_and_use_local_mirror() {
         let as_fidl = fidl::RepositoryConfig {
             repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
             root_version: Some(2),
@@ -945,6 +967,7 @@ mod tests {
                 blob_mirror_url: None,
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: Some(true),
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -961,6 +984,7 @@ mod tests {
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
+                use_local_mirror: true,
             }
         );
     }
@@ -974,6 +998,7 @@ mod tests {
             root_keys: Some(vec![]),
             mirrors: Some(vec![]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: None,
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -994,13 +1019,15 @@ mod tests {
                 blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: true,
         };
         let as_fidl: fidl::RepositoryConfig = config.clone().into();
         assert_eq!(RepositoryConfig::try_from(as_fidl).unwrap(), config);
     }
 
     #[test]
-    fn test_repository_config_deserialize_missing_root_version_and_threshold() {
+    fn test_repository_config_deserialize_missing_root_version_and_threshold_and_use_local_mirror()
+    {
         let json_value = json!({
             "repo_url": "fuchsia-pkg://fuchsia.com",
             "root_keys": [],
@@ -1018,6 +1045,7 @@ mod tests {
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
+                use_local_mirror: false,
             },
         );
     }
@@ -1032,6 +1060,7 @@ mod tests {
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
+                use_local_mirror: true,
             }]),
             json!({
                 "version": "1",
@@ -1042,6 +1071,7 @@ mod tests {
                     "root_keys": [],
                     "mirrors": [],
                     "update_package_url": null,
+                    "use_local_mirror": true,
                 }],
             }),
         );

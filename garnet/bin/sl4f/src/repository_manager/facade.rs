@@ -225,6 +225,7 @@ mod tests {
                 "update_package_url": "fuchsia-pkg://update.example.com/update",
                 "root_version": 1,
                 "root_threshold": 1,
+                "use_local_mirror": false,
             }),
         );
     }
