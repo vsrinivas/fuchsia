@@ -363,6 +363,7 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     // parse gtest's output.
     if (!quiet) {
       fprintf(log_stream, "[ RUN      ] %s\n", test_name);
+      fflush(log_stream);
     }
 
     fbl::String error_string;
@@ -370,11 +371,13 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
                  &error_string)) {
       fprintf(log_stream, "Error: %s\n", error_string.c_str());
       fprintf(log_stream, "[  FAILED  ] %s\n", test_name);
+      fflush(log_stream);
       ok = false;
       continue;
     }
     if (!quiet) {
       fprintf(log_stream, "[       OK ] %s\n", test_name);
+      fflush(log_stream);
     }
   }
 
