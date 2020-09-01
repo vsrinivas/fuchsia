@@ -37,7 +37,7 @@ class UsbWaiterInterface : public fbl::RefCounted<UsbWaiterInterface> {
 
 class UsbDevice;
 using UsbDeviceType =
-    ddk::Device<UsbDevice, ddk::GetProtocolable, ddk::Messageable, ddk::UnbindableDeprecated>;
+    ddk::Device<UsbDevice, ddk::GetProtocolable, ddk::Messageable, ddk::UnbindableNew>;
 
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
@@ -61,7 +61,7 @@ class UsbDevice : public UsbDeviceType,
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB protocol implementation.

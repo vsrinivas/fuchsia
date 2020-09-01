@@ -80,7 +80,7 @@ zx_status_t UsbBus::UsbBusInterfaceRemoveDevice(uint32_t device_id) {
   if (device == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  device->DdkUnbindDeprecated();
+  device->DdkAsyncRemove();
   devices_[device_id].reset();
 
   return ZX_OK;
@@ -215,17 +215,17 @@ zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device,
   return ZX_OK;
 }
 
-void UsbBus::DdkUnbindDeprecated() {
+void UsbBus::DdkUnbindNew(ddk::UnbindTxn txn) {
   hci_.SetBusInterface(nullptr, nullptr);
 
   for (auto device : devices_) {
     if (device != nullptr) {
-      device->DdkRemoveDeprecated();
+      device->DdkAsyncRemove();
     }
   }
   devices_.reset();
 
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbBus::DdkRelease() { delete this; }
