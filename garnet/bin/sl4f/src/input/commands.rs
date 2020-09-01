@@ -16,6 +16,10 @@ impl Facade for InputFacade {
                 let result = self.tap(args).await?;
                 Ok(to_value(result)?)
             }
+            InputMethod::MultiFingerTap => {
+                let result = self.multi_finger_tap(args).await?;
+                Ok(to_value(result)?)
+            }
             InputMethod::Swipe => {
                 let result = self.swipe(args).await?;
                 Ok(to_value(result)?)

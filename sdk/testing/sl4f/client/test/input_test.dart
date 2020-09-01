@@ -71,6 +71,23 @@ void main(List<String> args) {
         'duration': 100,
       })).called(1);
     });
+
+    test('input multi-finger taps', () async {
+      final fingers = [
+        {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0},
+        {'finger_id': 2, 'x': 20, 'y': 20, 'width': 0, 'height': 0},
+        {'finger_id': 3, 'x': 40, 'y': 40, 'width': 0, 'height': 0},
+        {'finger_id': 4, 'x': 60, 'y': 60, 'width': 0, 'height': 0},
+      ];
+
+      await input.multiFingerTap(fingers, tapEventCount: 10, duration: 100);
+
+      verify(sl4f.request('input_facade.MultiFingerTap', {
+        'fingers': fingers,
+        'tap_event_count': 10,
+        'duration': 100,
+      })).called(1);
+    });
   });
 
   test('input rotates with constructor default', () async {

@@ -76,6 +76,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",

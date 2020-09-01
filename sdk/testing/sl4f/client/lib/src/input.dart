@@ -55,6 +55,44 @@ class Input {
     return result == 'Success';
   }
 
+  /// Multi-Finger taps on the screen.
+  ///
+  /// [fingers] are represented by a list of [dynamic] json that represents
+  /// the FIDL struct `Touch` defined in
+  /// sdk/fidl/fuchsia.ui.input/input_reports.fidl
+  /// Example:
+  /// fingers = [
+  ///   {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0},
+  ///   {'finger_id': 2, 'x': 20, 'y': 20, 'width': 0, 'height': 0},
+  /// ]
+  ///
+  /// TODO(fxbug.dev/59254): Switch from List<dynamic> to list<fidl_input.Touch>
+  /// for fingers when dart_test targets can include //sdk/fidl deps.
+  ///
+  /// Each finger x, y must be in the range of [0, 1000] and
+  /// are scaled to the screen size on the device, and they
+  /// are rotated to compensate for the clockwise [screenRotation].
+  ///
+  /// [tap_event_count]: Number of tap events to send ([duration] is divided
+  /// over the tap events). Defaults to 1.
+  /// [duration]: Duration of the event(s) in milliseconds. Defaults to 0.
+  /// These defaults are set in the input facade.
+  Future<bool> multiFingerTap(List<dynamic> fingers,
+      {Rotation screenRotation, int tapEventCount, int duration}) async {
+    final result = await _sl4f.request('input_facade.MultiFingerTap', {
+      'fingers': fingers.map((finger) {
+        final tcoord = _rotate(Point<int>(finger['x'], finger['y']),
+            screenRotation ?? _screenRotation);
+        finger['x'] = tcoord.x;
+        finger['y'] = tcoord.y;
+        return finger;
+      }).toList(),
+      if (tapEventCount != null) 'tap_event_count': tapEventCount,
+      if (duration != null) 'duration': duration,
+    });
+    return result == 'Success';
+  }
+
   /// Swipes on the screen from coordinates ([from.x], [from.y]) to ([to.x],
   /// [to.y]).
   ///

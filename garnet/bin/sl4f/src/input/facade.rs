@@ -1,4 +1,4 @@
-use crate::input::types::{ActionResult, SwipeRequest, TapRequest};
+use crate::input::types::{ActionResult, MultiFingerTapRequest, SwipeRequest, TapRequest};
 use anyhow::Error;
 use fuchsia_syslog::macros::fx_log_info;
 use input_synthesis as input;
@@ -54,6 +54,64 @@ impl InputFacade {
         };
 
         input::tap_event_command(req.x, req.y, width, height, tap_event_count, duration).await?;
+        Ok(ActionResult::Success)
+    }
+
+    /// Multi-Finger Taps for a touchscreen with default or custom
+    /// width, height, duration, and tap event counts.
+    ///
+    /// # Arguments
+    /// * `value`: will be parsed by MultiFingerTapRequest
+    /// * `fingers`: List of FIDL struct `Touch` defined at
+    ///              sdk/fidl/fuchsia.ui.input/input_reports.fidl.
+    /// * `width`: Width of the display, default to 1000
+    /// * `height`: Height of the display, default to 1000
+    /// * `tap_event_count`: Number of multi-finger tap events to send
+    ///              (`duration` is divided over the events), default to 1
+    /// * `duration`: Duration of the event(s) in milliseconds, default to 0
+    ///
+    /// Example:
+    /// To send a 2-finger triple tap over 3s.
+    /// multi_finger_tap(MultiFingerTap {
+    ///   tap_event_count: 3,
+    ///   duration: 3000,
+    ///   fingers: [
+    ///     Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
+    ///     Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+    ///  ]
+    /// });
+    ///
+    pub async fn multi_finger_tap(&self, args: Value) -> Result<ActionResult, Error> {
+        fx_log_info!("Executing MultiFingerTap in Input Facade.");
+        let req: MultiFingerTapRequest = from_value(args)?;
+        const DEFAULT_TAP_EVENT_COUNT: usize = 1;
+
+        let width = match req.width {
+            Some(x) => x,
+            None => DEFAULT_DIMENSION,
+        };
+        let height = match req.height {
+            Some(x) => x,
+            None => DEFAULT_DIMENSION,
+        };
+
+        let tap_event_count = match req.tap_event_count {
+            Some(x) => x,
+            None => DEFAULT_TAP_EVENT_COUNT,
+        };
+        let duration = match req.duration {
+            Some(x) => Duration::from_millis(x),
+            None => Duration::from_millis(DEFAULT_DURATION),
+        };
+
+        input::multi_finger_tap_event_command(
+            req.fingers,
+            width,
+            height,
+            tap_event_count,
+            duration,
+        )
+        .await?;
         Ok(ActionResult::Success)
     }
 

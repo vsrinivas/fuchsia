@@ -347,6 +347,75 @@ pub async fn tap_event_command(
     tap_event(x, y, width, height, tap_event_count, duration, RegistryServerConsumer)
 }
 
+fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
+    InputReport {
+        event_time: time,
+        keyboard: None,
+        media_buttons: None,
+        mouse: None,
+        stylus: None,
+        touchscreen: Some(Box::new(TouchscreenReport {
+            touches: match fingers {
+                Some(fingers) => fingers,
+                None => vec![],
+            },
+        })),
+        sensor: None,
+        trace_id: 0,
+    }
+}
+
+fn multi_finger_tap_event(
+    fingers: Vec<Touch>,
+    width: u32,
+    height: u32,
+    tap_event_count: usize,
+    duration: Duration,
+    consumer: impl ServerConsumer,
+) -> Result<(), Error> {
+    let input_device = register_touchscreen(consumer, width, height)?;
+    let multi_finger_tap_duration = duration / tap_event_count as u32;
+
+    repeat_with_delay(
+        tap_event_count,
+        multi_finger_tap_duration,
+        |_| {
+            // Touch down.
+            input_device
+                .dispatch_report(&mut multi_finger_tap(Some(fingers.clone()), nanos_from_epoch()?))
+                .map_err(Into::into)
+        },
+        |_| {
+            // Touch up.
+            input_device
+                .dispatch_report(&mut multi_finger_tap(None, nanos_from_epoch()?))
+                .map_err(Into::into)
+        },
+    )
+}
+
+/// Simulates `tap_event_count` times to repeat the multi-finger-taps, for
+/// a touchscreen of explicit `width` and `height`.
+///
+/// `duration` is divided equally between multi-touch-down and multi-touch-up
+/// pairs, while the transition between these is immediate.
+pub async fn multi_finger_tap_event_command(
+    fingers: Vec<Touch>,
+    width: u32,
+    height: u32,
+    tap_event_count: usize,
+    duration: Duration,
+) -> Result<(), Error> {
+    multi_finger_tap_event(
+        fingers,
+        width,
+        height,
+        tap_event_count,
+        duration,
+        RegistryServerConsumer,
+    )
+}
+
 fn swipe(
     x0: u32,
     y0: u32,
@@ -535,6 +604,37 @@ mod tests {
                 {
                     keyboard: KeyboardReport {
                         pressed_keys: vec![]
+                    }
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn multi_finger_tap_event_report() {
+        let fingers = vec![
+            Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
+            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+            Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
+            Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
+        ];
+
+        assert_reports_eq!(TestConsumer,
+            multi_finger_tap_event(fingers, 1000, 1000, 1, Duration::from_millis(0), TestConsumer),
+            [
+                {
+                    touchscreen: TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
+                            Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
+                        ],
+                    }
+                },
+                {
+                    touchscreen: TouchscreenReport {
+                        touches: vec![],
                     }
                 },
             ]
