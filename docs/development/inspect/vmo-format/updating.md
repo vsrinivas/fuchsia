@@ -220,4 +220,4 @@ TODO(43131)
 [state-unittest-cc]: /zircon/system/ulib/inspect/test/state_unittest.cc
 [types-cc]: /zircon/system/ulib/inspect/vmo/types.cc
 [types-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h
-[inspect-vmo]: /docs/concepts/components/inspect/vmo_format.md
+[inspect-vmo]: /docs/concepts/components/v2/inspect/vmo_format.md

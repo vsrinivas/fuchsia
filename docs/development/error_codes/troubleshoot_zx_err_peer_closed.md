@@ -51,7 +51,7 @@ For more information, see:
 * [Building components](/docs/development/components/build.md) for more information on `.cmx` files.
 * [Fidlcat: Monitor and debug your fidl calls](/docs/development/monitor/fidlcat/README.md) for more
   information on `fidlcat`.
-* [Component Realms](/docs/concepts/components/realms.md) for more information on realms.
+* [Component Realms](/docs/concepts/components/v2/realms.md) for more information on realms.
 
 ### A requested file cannot be accessed
 
@@ -63,7 +63,7 @@ the following reasons:
 
 If this is the case, verify that you are requesting an existing file, or that the file and directory
 have the appropriate rights. You can learn more about 
-[directory rights and how they're specified](/docs/concepts/components/component_manifests.md#directory-rights).
+[directory rights and how they're specified](/docs/concepts/components/v2/component_manifests.md#directory-rights).
 
 ### Peer has crashed and the process has been terminated
 

@@ -9,7 +9,7 @@ args, add the `--verbose` flag to its invocation. For example, `Root Presenter`
 and `Scenic` components can issue verbose logging.
 
 The following sample code shows the
-[component manifest](/docs/concepts/storage/component_manifest.md) (`.cmx`) of a
+[component manifest](/docs/concepts/components/v1/component_manifests.md) (`.cmx`) of a
 test that starts a `Scenic` component in its `injected-services` clause:
 
 ```json

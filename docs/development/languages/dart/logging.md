@@ -89,5 +89,5 @@ streams in the system.
 [Logger]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
 [`fx log`]: /docs/development/logs/viewing.md
 [dart-dev]: /docs/development/languages/dart/README.md
-[`.cmx` file]: /docs/concepts/storage/component_manifest.md
+[`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
 [`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr

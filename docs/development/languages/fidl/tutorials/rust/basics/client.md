@@ -196,4 +196,4 @@ You should see the print output in the QEMU console (or using `fx log`).
 [server-tut]: /docs/development/languages/fidl/tutorials/rust/basics/server.md
 [sync-client]: /docs/development/languages/fidl/tutorials/rust/basics/sync-client.md
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[environment]: /docs/concepts/components/environments.md
+[environment]: /docs/concepts/components/v2/environments.md

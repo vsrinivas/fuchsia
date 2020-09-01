@@ -26,12 +26,12 @@ following information:
   allow other components to access the calculator's accumulator register
   using inter-process communication.
 
-[doc-component-urls]: /docs/concepts/components/component_urls.md
-[doc-component-manifests]: /docs/concepts/components/component_manifests.md
-[doc-component-manifests-program]: /docs/concepts/components/component_manifests.md#program
-[doc-component-manifests-use]: /docs/concepts/components/component_manifests.md#use
-[doc-component-manifests-expose]: /docs/concepts/components/component_manifests.md#expose
-[doc-resolvers]: /docs/concepts/components/resolvers.md
-[doc-runners]: /docs/concepts/components/runners.md
-[doc-storage-capability]: /docs/concepts/components/capabilities/storage.md
+[doc-component-urls]: /docs/concepts/components/v2/component_urls.md
+[doc-component-manifests]: /docs/concepts/components/v2/component_manifests.md
+[doc-component-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
+[doc-component-manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
+[doc-component-manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[doc-resolvers]: /docs/concepts/components/v2/resolvers.md
+[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-storage-capability]: /docs/concepts/components/v2/capabilities/storage.md
 [glossary-package]: /docs/glossary.md#package

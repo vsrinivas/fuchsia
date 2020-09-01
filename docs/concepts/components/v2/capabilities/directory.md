@@ -212,10 +212,10 @@ open items in this directory would fail.
 [capability-routing]: ../component_manifests.md#capability-routing
 [directory-rights]: ../component_manifests.md#directory-rights
 [expose]: ../component_manifests.md#expose
-[glossary-directory]: ../../../glossary.md#directory-capability
-[glossary-fidl]: ../../../glossary.md#fidl
-[glossary-namespace]: ../../../glossary.md#namespace
-[glossary-outgoing]: ../../../glossary.md#outgoing-directory
+[glossary-directory]: /docs/glossary.md#directory-capability
+[glossary-fidl]: /docs/glossary.md#fidl
+[glossary-namespace]: /docs/glossary.md#namespace
+[glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [offer]: ../component_manifests.md#offer
 [routing-example]: /examples/components/routing
 [use]: ../component_manifests.md#use

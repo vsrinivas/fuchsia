@@ -331,22 +331,22 @@ offer: [
 ],
 ```
 
-[doc-directory]: /docs/concepts/components/capabilities/directory.md
+[doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-epitaphs]: /docs/reference/fidl/language/wire-format/README.md#epitaphs
 [doc-ftf-driver]: /docs/concepts/testing/fuchsia_testing_framework.md#test-roles
 [doc-ftf-root]: /docs/concepts/testing/fuchsia_testing_framework.md#tests-as-components
 [doc-ftf-runner]: /docs/concepts/testing/fuchsia_testing_framework.md#test-runners
 [doc-ftf]: /docs/concepts/testing/fuchsia_testing_framework.md
-[doc-intro]: /docs/concepts/components/introduction.md
+[doc-intro]: /docs/concepts/components/v2/introduction.md
 [doc-logs]: /docs/development/logs/concepts.md
-[doc-manifests-program]: /docs/concepts/components/component_manifests.md#program
-[doc-manifests]: /docs/concepts/components/component_manifests.md
-[doc-monikers]: /docs/concepts/components/monikers.md
+[doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
+[doc-manifests]: /docs/concepts/components/v2/component_manifests.md
+[doc-monikers]: /docs/concepts/components/v2/monikers.md
 [doc-packages]: /docs/concepts/packages/package.md
-[doc-protocol]: /docs/concepts/components/capabilities/protocol.md
-[doc-routing]: /docs/concepts/components/component_manifests.md#routing
-[doc-runners]: /docs/concepts/components/runners.md
-[doc-service]: /docs/concepts/components/capabilities/service.md
+[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+[doc-routing]: /docs/concepts/components/v2/component_manifests.md#routing
+[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [example-routing-failed]: /examples/components/routing_failed/README.md
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [glossary-namespace]: /docs/glossary.md#namespace

@@ -115,7 +115,7 @@ Consequently clients are responsible for deciding how to present names
 which contain invalid, undisplayable, or ambiguous character sequences to
 the user.
 
-_TODO(jeffbrown): Document a specific strategy for how to present names._
+<!-- _TODO(jeffbrown): Document a specific strategy for how to present names._ -->
 
 ### Object Relative Path Expressions
 
@@ -288,11 +288,14 @@ implementations.
 ### Configuration
 
 Components may have different kinds of configuration data exposed to them
-depending on the features listed in their [Component
-Manifest](/docs/concepts/storage/component_manifest.md) which are exposed as files in
-the /config namespace entry. These are defined by the feature set of the
-component.
+depending on the features listed in their
+[component manifest](/docs/concepts/components/v1/component_manifests.md)
+which are exposed as files in the `/config` namespace entry. These are
+defined by the feature set of the component.
 
+<!--
 ## FIDL Protocols
 
 _TODO(jeffbrown): Explain how the namespace protocols work._
+-->
+

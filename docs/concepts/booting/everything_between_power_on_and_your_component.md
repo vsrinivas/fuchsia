@@ -218,7 +218,7 @@ components on the system can be run.
 [bootfs]: /docs/glossary.md#bootfs
 [bootloader-and-kernel]: /docs/concepts/booting/userboot.md#boot_loader_and_kernel_startup
 [bootsvc]: /docs/glossary.md#bootsvc
-[component-manager]: /docs/concepts/components/introduction.md#component-manager
+[component-manager]: /docs/concepts/components/v2/introduction.md#component-manager
 [component]: /docs/glossary.md#component
 [critical-processes]: /docs/reference/syscalls/job_set_critical.md
 [devfs]: /docs/concepts/drivers/device-model.md

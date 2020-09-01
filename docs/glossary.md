@@ -53,7 +53,7 @@ ABI for drivers to use to call into each other, rather than an IPC protocol.
 `BlackBoxTest` is a Rust client-side library that sets up black box integration
 tests for a v2 component.
 
--   [Documentation](/docs/concepts/components/black_box_testing.md#blackboxtest)
+-   [Documentation](/docs/concepts/components/v2/black_box_testing.md#blackboxtest)
 
 ### **bootfs** {#bootfs}
 
@@ -80,7 +80,7 @@ the breakpoint system in component manager. It allows setting breakpoints on
 system events in component manager. Integration tests use this library to
 verify the state of components.
 
--   [Documentation](/docs/concepts/components/black_box_testing.md#breakpointsystemclient)
+-   [Documentation](/docs/concepts/components/v2/black_box_testing.md#breakpointsystemclient)
 
 ### **Bus Driver** {#bus-driver}
 
@@ -155,7 +155,7 @@ A component is a unit of executable software on Fuchsia. Components support
 [capability routing](#capability-routing), software composition, isolation
 boundaries, continuity between executions, and introspection.
 
--   [Components](/docs/concepts/components)
+-   [Components](/docs/concepts/components/v2)
 
 ### **Component collection** {#component-collection}
 
@@ -219,7 +219,7 @@ runtime configuration, services and directories it receives in its
 In [Components v2](#components-v2), a component manifest is a file with a `.cm`
 extension, that encodes a [component declaration](#component-declaration).
 
--   [Component manifests v2](/docs/concepts/components/component_manifests.md)
+-   [Component manifests v2](/docs/concepts/components/v2/component_manifests.md)
 
 ### **Component Manifest Facet** {#component-manifest-facet}
 
@@ -235,7 +235,7 @@ A v1 component's moniker is defined as a tuple of (path to the component's [real
 
 A v2 component's moniker is defined as a path to the component instance in the [component instance tree](#component-instance-tree).
 
-[moniker]: /docs/concepts/components/monikers.md
+[moniker]: /docs/concepts/components/v2/monikers.md
 
 ### *Component Instance Identifier** {#component-instance-id}
 
@@ -255,7 +255,7 @@ instantiating a component, for example
 
 See also: [fuchsia-pkg URL](#fuchsia-pkg-url)
 
-[component-url]: /docs/concepts/components/component_urls.md
+[component-url]: /docs/concepts/components/v2/component_urls.md
 
 ### **Components v1** {#components-v1}
 
@@ -534,7 +534,7 @@ The hub is a portal for tools to access detailed structural information about
 component instances at runtime, such as their names, job and process ids, and
 exposed capabilities.
 
--   [Hub](/docs/concepts/components/hub.md)
+-   [Hub](/docs/concepts/components/v2/hub.md)
 
 ### **Input pipeline client library** {#input-pipeline-client-library}
 
@@ -744,8 +744,8 @@ any necessary processes, loading executable code, initializing language runtimes
 handing control to the component's entry points, and terminating the component when
 requested by the component framework.
 
--   [ELF runner](/docs/concepts/components/elf_runner.md)
--   [Component runner](/docs/concepts/components/runners.md)
+-   [ELF runner](/docs/concepts/components/v2/elf_runner.md)
+-   [Component runner](/docs/concepts/components/v2/runners.md)
 
 ### **Scenic** {#scenic}
 
@@ -765,7 +765,7 @@ process interacts with another.
 Services can be used and provided to other components by
 [routing](#capability-routing) [service capabilities](#service-capability).
 
--   [Service overview](/docs/concepts/components/services.md)
+-   [Service overview](/docs/concepts/components/v2/services.md)
 
 ### **Service capability** {#service-capability}
 
@@ -847,7 +847,7 @@ There are three types of storage capabilities:
 Storage capability is a [components v2](#components-v2) concept.
 
 -   [Capability routing](#capability-routing)
--   [Storage capabilities](/docs/concepts/components/capabilities/storage.md)
+-   [Storage capabilities](/docs/concepts/components/v2/capabilities/storage.md)
 
 ### **Thread** {#thread}
 

@@ -141,10 +141,10 @@ before the change.
 [component-instance]: /docs/glossary.md#component-instance
 [directory-capabilities]: /docs/glossary.md#directory-capability
 [glossary-storage]: /docs/glossary.md#storage-capability
-[manifests]: /docs/concepts/components/component_manifests.md
+[manifests]: /docs/concepts/components/v2/component_manifests.md
 [offer]: /docs/glossary.md#offer
 [realm]: /docs/glossary.md#realm
-[storage-syntax]: /docs/concepts/components/component_manifests.md#storage
-[storage-types]: /docs/concepts/components/component_manifests.md#storage-types
-[use-syntax]: /docs/concepts/components/component_manifests.md#use
+[storage-syntax]: /docs/concepts/components/v2/component_manifests.md#storage
+[storage-types]: /docs/concepts/components/v2/component_manifests.md#storage-types
+[use-syntax]: /docs/concepts/components/v2/component_manifests.md#use
 [use]: /docs/glossary.md#use

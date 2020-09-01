@@ -2,12 +2,12 @@
 
 This guide demonstrates how to run a test component.
 
-Note: This guide is specific to [components v2](/docs/concepts/components).
+Note: This guide is specific to [components v2](/docs/concepts/components/v2).
 
 A component instance is started in Fuchsia when other components request a
-[capability](/docs/concepts/components/capabilities/README.md) from it. For
+[capability](/docs/concepts/components/v2/capabilities/README.md) from it. For
 instance, a test component is started by a test manager, which is
-[also a component](/docs/concepts/components/introduction.md#everything_is_a_component_almost),
+[also a component](/docs/concepts/components/v2/introduction.md#everything_is_a_component_almost),
 on behalf of a request to run a test.
 
 The guide uses the

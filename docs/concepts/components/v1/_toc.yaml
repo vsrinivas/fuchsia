@@ -2,5 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Block devices"
-  path: /docs/concepts/storage/block_devices.md
+- title: "Component manifests"
+  path: /docs/concepts/components/v1/component_manifests.md

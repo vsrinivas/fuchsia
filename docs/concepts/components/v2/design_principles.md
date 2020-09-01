@@ -123,6 +123,6 @@ interest.
 [doc-hub]: hub.md
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
-[glossary-capability]: ../../glossary.md#capability
+[glossary-capability]: /docs/glossary.md#capability
 [wiki-infosec]: https://en.wikipedia.org/wiki/Information_security
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege

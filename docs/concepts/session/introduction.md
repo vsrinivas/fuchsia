@@ -4,7 +4,7 @@ The session framework is a framework for building products on Fuchsia. The
 framework provides software libraries, FIDL protocols, developer tools, and
 standards to help product owners build their product's user experience.
 
-A session is a [component](/docs/concepts/components/introduction.md)
+A session is a [component](/docs/concepts/components/v2/introduction.md)
 that encapsulates a product’s user experience. It is the first product-specific
 component started  on boot. There is only one session component, but it can be
 composed of many sub-components. For example, the session for a graphical

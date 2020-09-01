@@ -1053,8 +1053,8 @@ templates. These unsupported features include:
     can still be launched with `fx test` followed by the short name of the
     test. See [fxb/55739][fxb-55739] for more details.
 
-[cml-format]: /docs/concepts/components/component_manifests.md
-[cmx-format]: /docs/concepts/storage/component_manifest.md
+[cml-format]: /docs/concepts/components/v2/component_manifests.md
+[cmx-format]: /docs/concepts/components/v1/component_manifests.md
 [component-index]: /src/sys/component_index/component_index.gni
 [executable]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md

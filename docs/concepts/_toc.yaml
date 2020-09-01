@@ -19,9 +19,12 @@ toc:
 - title: "Build system"
   section:
   - include: /docs/concepts/build_system/_toc.yaml
-- title: "Components"
+- title: "Components v1 (appmgr)"
   section:
-  - include: /docs/concepts/components/_toc.yaml
+  - include: /docs/concepts/components/v1/_toc.yaml
+- title: "Components v2 (component framework)"
+  section:
+  - include: /docs/concepts/components/v2/_toc.yaml
 - title: "Drivers"
   section:
   - include: /docs/concepts/drivers/_toc.yaml

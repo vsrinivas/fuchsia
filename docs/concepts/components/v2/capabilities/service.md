@@ -162,10 +162,10 @@ When `C` attempts to open the `example` node in its `/service` directory, `A`
 sees an open request for `/svc/fidl.example.X`. If any of the names don't
 match in this chain, `C` will see its open attempt fail.
 
-[capability-routing]: /docs/concepts/components/component_manifests.md#capability-routing
-[expose]: /docs/concepts/components/component_manifests.md#expose
-[fidl-service]: /docs/concepts/components/services.md
-[framework-services]: /docs/concepts/components/component_manifests.md#framework-services
+[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[fidl-service]: /docs/concepts/components/v2/services.md
+[framework-services]: /docs/concepts/components/v2/component_manifests.md#framework-services
 [glossary-fidl]: /docs/glossary.md#fidl
 [glossary-fidl-protocol]: /docs/glossary.md#protocol
 [glossary-fidl-service]: /docs/glossary.md#service
@@ -173,8 +173,8 @@ match in this chain, `C` will see its open attempt fail.
 [glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [glossary-protocol]: /docs/glossary.md#protocol-capability
 [glossary-service]: /docs/glossary.md#service-capability
-[life-of-a-protocol-open]: /docs/concepts/components/life_of_a_protocol_open.md
-[offer]: /docs/concepts/components/component_manifests.md#offer
-[protocol-capability]: /docs/concepts/components/capabilities/protocol.md
+[life-of-a-protocol-open]: /docs/concepts/components/v2/life_of_a_protocol_open.md
+[offer]: /docs/concepts/components/v2/component_manifests.md#offer
+[protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
 [routing-example]: /examples/components/routing
-[use]: /docs/concepts/components/component_manifests.md#use
+[use]: /docs/concepts/components/v2/component_manifests.md#use

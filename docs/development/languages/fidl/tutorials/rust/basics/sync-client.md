@@ -206,5 +206,5 @@ events, try following the [async client tutorial instead][async-client]
 [server-tut]: /docs/development/languages/fidl/tutorials/rust/basics/server.md
 [async-client]: /docs/development/languages/fidl/tutorials/rust/basics/client.md
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[environment]: /docs/concepts/components/environments.md
+[environment]: /docs/concepts/components/v2/environments.md
 [request-pipelining]: /docs/development/languages/fidl/tutorials/rust/topics/request-pipelining.md

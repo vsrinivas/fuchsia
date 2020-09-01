@@ -48,12 +48,12 @@ components can implement to integrate new functionality with their environment.
   application frameworks.
 - [Resolvers][doc-resolvers]: Integrate software delivery systems.
 
-[doc-capabilities]: /docs/concepts/components/capabilities
-[doc-capability-routing]: /docs/concepts/components/topology.md#capability-routing
-[doc-hub]: /docs/concepts/components/hub.md
+[doc-capabilities]: /docs/concepts/components/v2/capabilities
+[doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
+[doc-hub]: /docs/concepts/components/v2/hub.md
 [doc-lifecycle]: lifecycle.md
-[doc-realms]: /docs/concepts/components/realms.md
-[doc-resolvers]: /docs/concepts/components/resolvers.md
-[doc-runners]: /docs/concepts/components/runners.md
-[doc-topology]: /docs/concepts/components/topology.md
-[doc-services]: /docs/concepts/components/services.md
+[doc-realms]: /docs/concepts/components/v2/realms.md
+[doc-resolvers]: /docs/concepts/components/v2/resolvers.md
+[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-topology]: /docs/concepts/components/v2/topology.md
+[doc-services]: /docs/concepts/components/v2/services.md

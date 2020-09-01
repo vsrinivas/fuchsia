@@ -22,7 +22,7 @@ meta/package
 meta/contents
 : The contents file, typically produced automatically by `pm update` (an
 : implied step in `pm build`) maps the user-facing file names of a package,
-: to the content-addresses ([Merkle Root](/docs/concepts/storage/merkleroot.md))
+: to the content-addresses ([Merkle Root](/docs/concepts/packages/merkleroot.md))
 : of those files.
 
 The format of `meta/package` and `meta/contents` are considered private
@@ -31,4 +31,4 @@ specification at this time, and may be subject to change.
 ## Additional Metadata Items
 
 It is common to store some additional files in the `meta` directory of a
-package, for example [Component Manifests](/docs/concepts/storage/component_manifest.md).
+package, for example [Component Manifests](/docs/concepts/components/v1/component_manifests.md).

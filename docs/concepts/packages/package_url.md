@@ -159,7 +159,7 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 
  * `15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b`
 
-[merkleroot]: /docs/concepts/storage/merkleroot.md
+[merkleroot]: /docs/concepts/packages/merkleroot.md
 
 ## Resource identity
 

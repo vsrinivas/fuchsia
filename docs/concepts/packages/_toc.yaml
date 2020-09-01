@@ -8,3 +8,5 @@ toc:
   path: /docs/concepts/packages/package_url.md
 - title: "Developing with Fuchsia packages"
   path: /docs/concepts/packages/package_update.md
+- title: "Merkle roots"
+  path:  /docs/concepts/packages/merkleroot.md

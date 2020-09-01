@@ -11,7 +11,7 @@ directly referenced outside the scope of their owning Scenic Session.
 
 For a view resource in particular, it is very useful to have a stable and
 consistent view reference, that can be used across
-[component](/docs/concepts/components/introduction.md#components_and_the_component_framework)
+[component](/docs/concepts/components/v2/introduction.md#components_and_the_component_framework)
 boundaries.
 
 We define a [fuchsia.ui.views.ViewRef](/sdk/fidl/fuchsia.ui.views/view_ref.fidl)
@@ -71,7 +71,7 @@ to refer to a View.
 A ViewRef can easily be propagated across protocol boundaries. Hence, it is
 important to *not* use a ViewRef as an authentication mechanism: merely holding
 a ViewRef should not grant the holder powers. Instead, use
-[capability routing](/docs/concepts/components/capabilities/protocol.md) to
+[capability routing](/docs/concepts/components/v2/capabilities/protocol.md) to
 distribute a ViewRef-consuming protocol securely to trusted components.
 
 One example of this is the

@@ -207,7 +207,7 @@ information.
 ## Explore Fuchsia {#explore-fuchsia}
 
 When Fuchsia is booted and displays the `$` prompt in the shell, you can now run
-[components](/docs/concepts/components/). In Fuchsia, components are the basic
+[components](/docs/concepts/components/v2). In Fuchsia, components are the basic
 unit of executable software.
 
 To run components on your Fuchsia device, see

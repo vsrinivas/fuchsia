@@ -194,7 +194,7 @@ You should see the print output in the QEMU console (or using `fx log`).
 [server-tut]: /docs/development/languages/fidl/tutorials/dart/basics/server.md
 [server-handler]: /docs/development/languages/fidl/tutorials/dart/basics/server.md#handler
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[environment]: /docs/concepts/components/environments.md
+[environment]: /docs/concepts/components/v2/environments.md
 [service-name]: /docs/reference/fidl/bindings/dart-bindings.md#discoverable
 [pipeline]: /docs/concepts/api/fidl.md#request-pipelining
 [pipeline-tut]: /docs/development/languages/fidl/tutorials/hlcpp/topics/request-pipelining.md

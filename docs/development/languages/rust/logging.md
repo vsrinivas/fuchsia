@@ -114,5 +114,5 @@ streams in the system.
 [`fuchsia_syslog`]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_syslog/
 [initialized in main]: /docs/development/languages/rust/add-logging.md
 [rust-dev]: /docs/development/languages/rust/README.md
-[`.cmx` file]: /docs/concepts/storage/component_manifest.md
+[`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
 [`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr

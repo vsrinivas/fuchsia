@@ -26,5 +26,5 @@ requires the [`fuchsia.net.NameLookup`] capability.
 [`fuchsia.device.NameProvider`]: https://fuchsia.dev/reference/fidl/fuchsia.device#NameProvider
 [libc]: /docs/concepts/system/libc.md
 [fdio]: /docs/concepts/system/life_of_an_open.md
-[v1_example]: /docs/concepts/storage/component_manifest.md
-[v2_example]: /docs/concepts/components/capabilities/protocol.md#consuming_protocol_capabilities
+[v1_example]: /docs/concepts/components/v1/component_manifests.md
+[v2_example]: /docs/concepts/components/v2/capabilities/protocol.md#consuming_protocol_capabilities

@@ -64,7 +64,7 @@ A histogram with exponentially sized buckets stored in an array.
 
 ### Inspect File Format
 
-The [Inspect File Format](/docs/concepts/components/inspect/vmo_format.md) is a binary format
+The [Inspect File Format](/docs/concepts/components/v2/inspect/vmo_format.md) is a binary format
 that supports efficient insertion, modification, and deletion of Nodes and
 Properties at runtime. Readers take a consistent snapshot of the contents
 without communicating with writers.

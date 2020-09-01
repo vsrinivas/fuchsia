@@ -46,4 +46,4 @@ Services are routed to other Components through
 [FIDL]: /docs/glossary.md#fidl
 [namespace]: /docs/glossary.md#namespace
 [protocol]: /docs/glossary.md#protocol
-[service-capability]: /docs/concepts/components/capabilities/service.md
+[service-capability]: /docs/concepts/components/v2/capabilities/service.md

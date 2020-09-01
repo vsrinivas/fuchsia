@@ -210,4 +210,4 @@ You should see the client print output in the QEMU console (or using `fx log`).
 [sync-client]: /docs/development/languages/fidl/tutorials/hlcpp/basics/sync_client.md
 [proxy]: /docs/reference/fidl/bindings/hlcpp-bindings.md#protocols-client
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[environment]: /docs/concepts/components/environments.md
+[environment]: /docs/concepts/components/v2/environments.md

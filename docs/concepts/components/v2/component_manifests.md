@@ -651,7 +651,7 @@ This section may be omitted.
 [doc-environments]: environments.md
 [doc-glossary-appmgr]: /docs/glossary.md#appmgr
 [doc-glossary-hub]: /docs/glossary.md#hub
-[doc-legacy-manifest]: /docs/concepts/storage/component_manifest.md
+[doc-legacy-manifest]: /docs/concepts/components/v1/component_manifests.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
 [doc-package-url]: /docs/concepts/packages/package_url.md

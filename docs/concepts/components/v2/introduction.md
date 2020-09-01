@@ -119,14 +119,14 @@ There are only a few exceptions, notably:
 - [Component lifecycle][doc-lifecycle]
 - [Design principles][doc-design-principles]
 
-[doc-component-manager]: /docs/concepts/components/component_manager.md
-[doc-declarations]: /docs/concepts/components/declarations.md
-[doc-design-principles]: /docs/concepts/components/design_principles.md
-[doc-instances]: /docs/concepts/components/topology.md#component-instances
-[doc-lifecycle]: /docs/concepts/components/lifecycle.md
-[doc-runners]: /docs/concepts/components/runners.md
-[doc-topology]: /docs/concepts/components/topology.md
-[doc-component-urls]: /docs/concepts/components/component_urls.md
+[doc-component-manager]: /docs/concepts/components/v2/component_manager.md
+[doc-declarations]: /docs/concepts/components/v2/declarations.md
+[doc-design-principles]: /docs/concepts/components/v2/design_principles.md
+[doc-instances]: /docs/concepts/components/v2/topology.md#component-instances
+[doc-lifecycle]: /docs/concepts/components/v2/lifecycle.md
+[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-topology]: /docs/concepts/components/v2/topology.md
+[doc-component-urls]: /docs/concepts/components/v2/component_urls.md
 [glossary-capability]: /docs/glossary.md#capability
 [glossary-channel]: /docs/glossary.md#channel
 [glossary-components-v1]: /docs/glossary.md#components-v1

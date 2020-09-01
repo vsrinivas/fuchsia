@@ -228,7 +228,7 @@ running components.
 
 [archive]: /sdk/fidl/fuchsia.diagnostics/reader.fidl
 [archivist]: /src/diagnostics/archivist
-[events]: /docs/concepts/components/capabilities/event.md
+[events]: /docs/concepts/components/v2/capabilities/event.md
 [fidl-event-provider]: /sdk/fidl/fuchsia.sys.internal/component_event_provider.fidl
 [inspect]: /docs/development/inspect/README.md
 [iquery]: /docs/development/inspect/iquery.md

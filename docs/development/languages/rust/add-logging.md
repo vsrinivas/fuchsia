@@ -128,7 +128,7 @@ The component manifest is a JSON file with the `.cmx` file extension.
 
 The component manifest declares what services and resources your package uses.
 
-For more information, see [Component manifest](/docs/concepts/storage/component_manifest.md).
+For more information, see [Component manifest](/docs/concepts/components/v1/component_manifests.md).
 
 1.  Open the component manifest, `hello_world_rust.cmx`, in your chosen
     text editor.

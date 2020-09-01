@@ -109,13 +109,13 @@ for more information.
 
 <br>![Diagram of component instance realms](images/topology_capability_routing.png)<br>
 
-[doc-collections]: /docs/concepts/components/realms.md#collections
-[doc-environments]: /docs/concepts/components/environments.md
-[doc-manifests]: /docs/concepts/components/component_manifests.md
-[doc-realms]: /docs/concepts/components/realms.md
-[doc-monikers]: /docs/concepts/components/monikers.md
-[doc-capability-routing]: /docs/concepts/components/component_manifests.md#capability-routing
-[doc-component-declaration]: /docs/concepts/components/declarations.md
+[doc-collections]: /docs/concepts/components/v2/realms.md#collections
+[doc-environments]: /docs/concepts/components/v2/environments.md
+[doc-manifests]: /docs/concepts/components/v2/component_manifests.md
+[doc-realms]: /docs/concepts/components/v2/realms.md
+[doc-monikers]: /docs/concepts/components/v2/monikers.md
+[doc-capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[doc-component-declaration]: /docs/concepts/components/v2/declarations.md
 [glossary-component-instance-tree]: /docs/glossary.md#component-instance-tree
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [wiki-object-composition]: https://en.wikipedia.org/wiki/Object_composition

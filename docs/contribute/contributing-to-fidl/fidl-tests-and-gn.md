@@ -388,9 +388,9 @@ tests. Using `fx test`, we can already
 <!-- xrefs -->
 [gn-targets]: https://gn.googlesource.com/gn/+/refs/heads/master/docs/language.md#Targets
 [package]: /docs/concepts/packages/package.md
-[components]: /docs/concepts/components
+[components]: /docs/concepts/components/v2
 [running_tests_as_components]: /docs/development/testing/running_tests_as_components.md
-[component_manifest]: /docs/concepts/storage/component_manifest.md
+[component_manifest]: /docs/concepts/components/v1/component_manifests.md
 [package_url]: /docs/concepts/packages/package_url.md
 [package_names]: /docs/concepts/packages/package_url.md#package_identity
 [source_code_layout]: /docs/concepts/source_code/layout.md

@@ -381,7 +381,7 @@ provided to `run-test-component`.
 `run-test-component` will create transient isolated storage for the test. See
 [isolated-storage][isolated-storage] for more info.
 
-[component_manifest]: /docs/concepts/storage/component_manifest.md
+[component_manifest]: /docs/concepts/components/v1/component_manifests.md
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: /docs/concepts/testing/test_component.md
 [isolated-storage]: /docs/concepts/testing/test_component.md#isolated_storage

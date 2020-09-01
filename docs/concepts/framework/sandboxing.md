@@ -39,8 +39,8 @@ Processes that are [components](/docs/glossary.md#component) receive an `/svc`
 directory in their namespace. The services available through `/svc` are a
 subset of the services provided by the component's
 [environment](/docs/glossary.md#environment). This subset is determined by the
-[`sandbox.services`](/docs/concepts/storage/component_manifest.md#sandbox) allowlist in the
-component's [manifest file](/docs/concepts/storage/component_manifest.md).
+[`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox) allowlist in the
+component's [manifest file](/docs/concepts/components/v1/component_manifests.md).
 
 A typical component will interact with a number of services from `/svc` in
 order to play some useful role in the system. For example, the service
@@ -54,7 +54,7 @@ receive whatever `/svc` their creator decided to provide to them.
 
 If a process requires access to additional resources (e.g., device drivers),
 the package can request access to additional names by including the `sandbox`
-property in its  [Component Manifest](/docs/concepts/storage/component_manifest.md)
+property in its  [Component Manifest](/docs/concepts/components/v1/component_manifests.md)
 for the package. For example, to request direct access the input drive,
 include the following `dev` array in your `sandbox`:
 

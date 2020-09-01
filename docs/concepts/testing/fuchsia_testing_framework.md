@@ -106,10 +106,10 @@ the test, as follows:
 [glossary-component]: ../../glossary.md#component
 [glossary-components-v1]: ../../glossary.md#components-v1
 [glossary-components-v2]: ../../glossary.md#components-v2
-[manifests]: /docs/concepts/components/component_manifests.md
-[manifests-expose]: /docs/concepts/components/component_manifests.md#expose
-[manifests-offer]: /docs/concepts/components/component_manifests.md#offer
-[manifests-use]: /docs/concepts/components/component_manifests.md#use
-[realms]: /docs/concepts/components/realms.md
-[realms-definitions]: /docs/concepts/components/realms.md#definitions
-[test-suite-protocol]: /docs/concepts/components/realms.md
+[manifests]: /docs/concepts/components/v2/component_manifests.md
+[manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
+[manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
+[realms]: /docs/concepts/components/v2/realms.md
+[realms-definitions]: /docs/concepts/components/v2/realms.md#definitions
+[test-suite-protocol]: /docs/concepts/components/v2/realms.md

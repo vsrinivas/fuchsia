@@ -90,6 +90,6 @@ See [`stdout` & `stderr`] in the language-agnostic logging docs for details on t
 streams in the system.
 
 [syslog package]: /src/lib/syslog/go
-[`.cmx` file]: /docs/concepts/storage/component_manifest.md
+[`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
 [go-dev]: /docs/development/languages/go/README.md
 [`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr
