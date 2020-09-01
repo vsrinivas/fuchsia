@@ -21,11 +21,5 @@
             from: "self",
             as: "/svc/fuchsia.fat.Admin",
         },
-        {
-            directory: "/root",
-            from: "self",
-            as: "/fatfs",
-            rights: [ "rw*" ],
-        },
     ],
 }

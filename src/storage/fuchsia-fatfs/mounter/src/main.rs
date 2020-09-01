@@ -6,11 +6,10 @@ use {
     anyhow::Error,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
-    fidl_fuchsia_io::DirectoryRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_err, fx_log_warn},
-    fuchsia_zircon::{self as zx, Status},
+    fuchsia_zircon::Status,
     futures::prelude::*,
     std::sync::{Arc, RwLock},
 };
@@ -22,9 +21,6 @@ use crate::device::FatDevice;
 pub enum Services {
     Admin(AdminRequestStream),
     Query(QueryRequestStream),
-    // Note this wraps a channel and not a RequestStream so that we can pass it to fatfs's open()
-    // call.
-    Root(zx::Channel),
 }
 
 pub struct FatServer {
@@ -61,34 +57,6 @@ impl FatServer {
             }
             *device = Some(fat_device);
         };
-        Ok(())
-    }
-
-    async fn handle_root(&self, channel: zx::Channel) -> Result<(), Error> {
-        match self.ensure_mounted().await {
-            Ok(()) => {}
-            Err(e) => {
-                let stream = DirectoryRequestStream::from_channel(
-                    fidl::AsyncChannel::from_channel(channel)?,
-                );
-                stream.control_handle().shutdown_with_epitaph(e);
-                return Ok(());
-            }
-        };
-        let device = self.device.read().unwrap();
-        if device.as_ref().map_or(true, |d| !d.is_present()) {
-            fx_log_warn!(
-                "Device is none: {} is present: {:?}",
-                device.is_none(),
-                device.as_ref().map(|d| d.is_present())
-            );
-            // The device disappeared because we lost the race.
-            let stream =
-                DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(channel)?);
-            stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
-            return Ok(());
-        }
-        device.as_ref().unwrap().open_root(channel);
         Ok(())
     }
 
@@ -138,7 +106,6 @@ impl FatServer {
 
     pub async fn handle(&self, service: Services) {
         match service {
-            Services::Root(chan) => self.handle_root(chan).await,
             Services::Query(stream) => self.handle_query(stream).await,
             Services::Admin(stream) => self.handle_admin(stream).await,
         }
@@ -150,7 +117,6 @@ async fn run() -> Result<(), Error> {
     let mut fs: ServiceFs<_> = ServiceFs::new();
 
     fs.dir("svc").add_fidl_service(Services::Query).add_fidl_service(Services::Admin);
-    fs.add_service_at("root", |chan| Some(Services::Root(chan)));
     fs.take_and_serve_directory_handle()?;
 
     let device = Arc::new(FatServer::new());

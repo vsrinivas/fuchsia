@@ -6,13 +6,15 @@ use {
     anyhow::Error,
     fatfs::FsOptions,
     fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FilesystemInfoQuery, FsType, QueryRequest},
-    fuchsia_syslog::fx_log_err,
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon::{Event, HandleBased, Rights, Status},
     std::pin::Pin,
     std::sync::Arc,
     vfs::{
         directory::{entry::DirectoryEntry, entry_container::Directory},
         execution_scope::ExecutionScope,
+        path::Path,
     },
 };
 
@@ -140,6 +142,26 @@ impl FatFs {
                 self.shut_down().unwrap_or_else(|e| fx_log_err!("Shutdown failed {:?}", e));
                 responder.send()?;
             }
+            AdminRequest::GetRoot { dir, .. } => {
+                let root = match self.get_root() {
+                    Ok(root) => root,
+                    Err(e) => {
+                        dir.close_with_epitaph(e)?;
+                        return Ok(());
+                    }
+                };
+
+                root.clone().open(
+                    scope.clone(),
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    0,
+                    Path::empty(),
+                    fidl::endpoints::ServerEnd::new(dir.into_channel()),
+                );
+
+                root.close()
+                    .unwrap_or_else(|e| fx_log_warn!("Failed to close root directory: {:?}", e));
+            }
         };
         Ok(())
     }
@@ -159,7 +181,7 @@ mod tests {
         crate::types::{Dir, FileSystem},
         anyhow::{anyhow, Context, Error},
         fatfs::{format_volume, FormatVolumeOptions, FsOptions},
-        fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy, OPEN_RIGHT_READABLE},
+        fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
         fuchsia_async as fasync,
         fuchsia_zircon::{AsHandleRef, Status},
         futures::{future::BoxFuture, prelude::*},

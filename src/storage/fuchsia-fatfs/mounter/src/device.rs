@@ -5,15 +5,13 @@
 use {
     anyhow::{Context, Error},
     fidl_fuchsia_hardware_block_partition::{Guid, PartitionProxy},
-    fidl_fuchsia_io::{
-        DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_fatfs::FatFs,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
+    fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
     remote_block_device::RemoteBlockDevice,
     std::ops::Deref,
-    vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
+    vfs::{execution_scope::ExecutionScope, registry::token_registry},
 };
 
 const MICROSOFT_BASIC_DATA_GUID: [u8; 16] = [
@@ -58,27 +56,6 @@ impl FatDevice {
 
     pub fn is_present(&self) -> bool {
         self.fs.is_present()
-    }
-
-    /// Serve the root directory of the device on this channel.
-    pub fn open_root(&self, remote: zx::Channel) {
-        let end = fidl::endpoints::ServerEnd::new(remote);
-        let root_dir = match self.fs.get_root() {
-            Ok(root) => root,
-            Err(e) => {
-                end.close_with_epitaph(e)
-                    .unwrap_or_else(|e| fx_log_warn!("Failed to close connection: {:?}", e));
-                return;
-            }
-        };
-        root_dir.clone().open(
-            self.scope.clone(),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            0,
-            Path::empty(),
-            end,
-        );
-        root_dir.close().unwrap_or_else(|e| fx_log_warn!("Failed to close file: {:?}", e));
     }
 
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.
@@ -139,12 +116,13 @@ mod test {
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_hardware_block::BlockMarker,
         fidl_fuchsia_hardware_block_partition::{Guid, PartitionMarker, PartitionRequest},
-        fidl_fuchsia_io::DirectoryMarker,
+        fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         futures::prelude::*,
         ramdevice_client::RamdiskClient,
         std::io::Write,
+        vfs::path::Path,
     };
 
     /// Dictates the FIDL protocol a MockPartition should speak.
@@ -331,6 +309,18 @@ mod test {
         fs.unmount().expect("Unmount succeeds");
     }
 
+    fn open_root(dev: &FatDevice, channel: zx::Channel) {
+        let root = dev.get_root().unwrap();
+        root.clone().open(
+            dev.scope.clone(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            0,
+            Path::empty(),
+            fidl::endpoints::ServerEnd::new(channel),
+        );
+        root.close().unwrap();
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_mount_device_succeeds() {
         let ramdisk = create_ramdisk();
@@ -343,7 +333,7 @@ mod test {
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
         let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        dev.open_root(remote.into_channel());
+        open_root(&dev, remote.into_channel());
 
         let mut children: Vec<_> = files_async::readdir(&proxy)
             .await
@@ -384,7 +374,7 @@ mod test {
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
         let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        dev.open_root(remote.into_channel());
+        open_root(&dev, remote.into_channel());
 
         let mut children: Vec<_> = files_async::readdir(&proxy)
             .await
