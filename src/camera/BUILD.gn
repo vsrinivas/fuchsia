@@ -39,9 +39,7 @@ group("factory-tools") {
 
 config_data("camera_factory_config") {
   for_pkg = "sysmgr"
-  sources = [
-    "//src/camera/bin/factory/camera-factory.config",
-  ]
+  sources = [ "//src/camera/bin/factory/camera-factory.config" ]
 }
 
 group("tests") {

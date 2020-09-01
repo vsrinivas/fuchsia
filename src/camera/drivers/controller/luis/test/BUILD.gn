@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("test") {
+  output_name = "luis_configs_test"
+  testonly = true
+  sources = [ "configs_test.cc" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/camera/drivers/controller/luis:config",
+    "//src/camera/drivers/controller/test:constants",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  # Increase the default stack size from 256 KB because creating the configs can take up a very
+  # large amount of stack and would otherwise cause crashes on ASAN builds.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
+}

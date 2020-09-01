@@ -2,11 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
+
 group("drivers") {
   testonly = true
+
+  local_board_name = board_name
+  if (local_board_name != "sherlock" && local_board_name != "luis") {
+    local_board_name = "sherlock"
+  }
+
   deps = [
     "bus",
-    "controller/sherlock",
+    "controller/$local_board_name",
     "hw_accel",
     "sensors",
     "test_utils",
@@ -21,6 +29,7 @@ group("all") {
   testonly = true
   deps = [
     "bus",
+    "controller/luis",
     "controller/sherlock",
     "hw_accel",
     "sensors",
@@ -34,6 +43,16 @@ group("sherlock") {
   deps = [
     "bus",
     "controller/sherlock",
+    "hw_accel",
+    "sensors",
+  ]
+}
+
+group("luis") {
+  testonly = true
+  deps = [
+    "bus",
+    "controller/luis",
     "hw_accel",
     "sensors",
   ]

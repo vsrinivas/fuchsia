@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/luis_configs_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}
