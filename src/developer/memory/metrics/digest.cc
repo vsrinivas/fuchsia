@@ -21,7 +21,7 @@ bool BlobfsIsActiveVmo(const Vmo& vmo) {
 
 const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", ".*", "uncompressed-bootfs"},
-    {"Graphics", ".*", "magma_create_buffer"},
+    {"Graphics", ".*", "magma_create_buffer|Mali .*"},
     {"ProtectedPool", "driver_host:sys", "SysmemAmlogicProtectedPool"},
     {"ContiguousPool", "driver_host:sys", "SysmemContiguousPool"},
     {"Fshost", "fshost.cm", ".*"},
