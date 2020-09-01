@@ -4,9 +4,11 @@
 code-completion engine. YouCompleteMe works natively with Vim but it can also be
 integrated with other editors through [ycmd](https://github.com/Valloric/ycmd).
 
-### Install YouCompleteMe in your editor
+## Install YouCompleteMe in your editor
+
 {% dynamic if user.is_googler %}
-#### gLinux (Googlers only)
+
+### [Googlers only]  gLinux
 
 (This applies to anyone compiling on gLinux, even if editing over SSHFS on
 MacOS) See the Google intranet specific instructions [go/ycm](http://go/ycm).
@@ -28,9 +30,9 @@ guide](https://github.com/Valloric/YouCompleteMe#installation).
 Note: Installing YCM on MacOS with Homebrew is not recommended because of
 library compatibility errors. Use the official installation guide instead.
 
-{%dynamic endif %}
+{% dynamic endif %}
 
-### Generate compilation database
+## Generate compilation database
 
 YouCompleteMe (and other tools like clang-tidy) require a [JSON compilation
 database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) that
@@ -42,7 +44,7 @@ If this database is not present, then Vim can be configured to fall back to the 
 in [/scripts/youcompleteme/ycm_extra_conf.py](/scripts/youcompleteme/ycm_extra_conf.py). See
 [Vim configuration](vim.md) for how to set this up.
 
-### Use it
+## Use it
 
 YouCompleteMe will use `compile_commands.json` to do code completion and find
 symbol definitions/declarations. See your editor's YouCompleteMe docs for
@@ -50,7 +52,7 @@ details. The editor should pick up `compile_commands.json` file automatically.
 
 See [Vim setup](vim.md) for instructions on configuring Vim for Fuchsia development.
 
-### Other editors (ycmd)
+## Other editors (ycmd)
 
 You'll need to set the ycmd config option `global_ycm_extra_conf` to point to
 `${FUCHSIA_DIR}/scripts/youcompleteme/ycm_extra_conf.py`.
@@ -59,6 +61,7 @@ Note you may need to manually replace `${FUCHSIA_DIR}` with the correct path.
 Alternatively, you can create a `.ycm_extra_conf.py` symbolic link to let YCM
 automatically find the config for any fuchsia repository:
 
-```shell
+```posix-terminal
 ln -s $FUCHSIA_DIR/scripts/youcompleteme/ycm_extra_conf.py $FUCHSIA_DIR/.ycm_extra_conf.py
 ```
+

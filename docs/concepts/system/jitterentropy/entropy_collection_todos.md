@@ -14,8 +14,6 @@ HWRNG guide
 ([online here](https://software.intel.com/en-us/articles/intel-digital-random-number-generator-drng-software-implementation-guide);
 see section 4.2.5 "Guaranteeing DBRG Reseeding"). We should fix that.
 
-Googlers: see issue ZX-983
-
 ## Reseeding the CPRNG during runtime
 
 My hacky virtio driver will reseed the CPRNG on qemu (on a five minute recurring timer). I think
@@ -80,8 +78,6 @@ Here are some currently unused entropy sources to consider:
   dedicated hardware RNG, but it's attractive since a few lines of code added in the right places in
   our driver stack should enable entropy collection from a wide variety of very common devices.
 
-Googlers: SEC-29
-
 ## Jitterentropy
 
 ### Replace the noise-generating functions by assembly, and remove '-O0'
@@ -92,22 +88,16 @@ documentation). The reason is the two noise-generating functions: `jent_lfsr_tim
 flags `-S -O0`), then compile the rest of jitterentropy with optimizations enabled. After this, we
 should re-test to make sure our entropy estimates remain accurate.
 
-Googlers: SEC-14
-
 ### Test jitterentropy more thoroughly
 
 I've been testing on the same handful of physical devices. We should test jitterentropy on a few
 other PCs, RPis, etc.
-
-Googlers: SEC-22
 
 ### Test jitterentropy at runtime
 
 Right now, jitterentropy only runs (and was only tested) during the single-core part of the boot
 sequence. We should test jitterentropy during SMP runtime, and consider whether we need to (say)
 disable interrupts or pin ourselves to a CPU inside jitterentropy.
-
-Googlers: ZX-1024
 
 ### More tuning
 
@@ -121,9 +111,8 @@ Note that right now, the `entropy_per_1000_bytes` statistic in
 `kernel/lib/crypto/entropy/jitterentropy_collector.cpp` is hard-coded and not arch/target dependent.
 That should probably also be configurable.
 
-Googlers: ZX-1022
-
 ## Cloning the NIST test suite
 
 We may want to clone the NIST test suite into Fuchsia third\_party. This would help us to automate
 the testing and analysis of our entropy sources (Jitterentropy in particular).
+

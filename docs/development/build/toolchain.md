@@ -83,6 +83,8 @@ cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
 cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
 ```
 
+{% dynamic if user.is_googler %}
+
 ### [Googlers only] Goma
 
 Goma is a service for accelerating builds by distributing compilations across
@@ -114,6 +116,8 @@ supported by Goma such as the Fuchsia Clang installation.
 To verify your compiler is available on Goma, you can set
 `GOMA_USE_LOCAL=0 GOMA_FALLBACK=0` environment variables. If the
 compiler is not available, you will see an error.
+
+{% dynamic endif %}
 
 ## Building a Clang Toolchain for Fuchsia
 
@@ -436,7 +440,9 @@ LIT_FILTER=testname.cpp ninja check-clang
 The same trick can be applied for running tests in other sub-projects by
 specifying different a different `check-<component>`.
 
-## Building Fuchsia with custom Clang on bots (Googlers only)
+{% dynamic if user.is_googler %}
+
+## [Googlers only] Building Fuchsia with custom Clang on bots
 
 Fuchsia's infrastructure has support for using a non-default version of Clang
 to build. Only Clang instances that have been uploaded to CIPD or Isolate are
@@ -470,6 +476,8 @@ It will provide you with a link to the BuildBucket page to track your build.
 
 You will need to run `led auth-login` prior to triggering any builds, and may need to
 file an infra ticket to request access to run led jobs.
+
+{% dynamic endif %}
 
 ## Useful CMake Flags
 

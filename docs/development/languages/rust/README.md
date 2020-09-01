@@ -92,8 +92,14 @@ change with one of the above as the reviewer).
 
 ## Communication channels
 
-Public discussion happens on the [rust@fuchsia.com] mailing list. For
-Googler-only channels, see [go/fuchsia-rust-googlers].
+Public discussion happens on the [rust@fuchsia.com] mailing list.
+
+{% dynamic if user.is_googler %}
+
+**[Googlers only]** For Googler-only channels, see
+[go/fuchsia-rust-googlers].
+
+{% dynamic endif %}
 
 ## Existing Fuchsia Rust libraries
 

@@ -9,9 +9,6 @@ focusing on the ones with which Zircon hackers are most likely to interact.
 
 ## `$zx/` prefix
 
-**TODO(BLD-353): _This is a hold-over from the "layer cake" design and will
-probably change soon:_**
-
 As discussed in [the introduction](intro.md), GN uses "source-absolute" paths
 that look like `//a/b/c`.  In the Zircon GN files, we **never** use `//`.
 Instead, use `$zx/foo` to refer to `//zircon/foo`,
@@ -217,8 +214,7 @@ libraries. In contrast, the files in a static library are only pulled in
 as-needed to resolve symbols.
 
   * Code in the kernel itself should always use `source_set`. Static libraries
-    currently interact poorly with inline assembly (Googlers see bug
-    124318741).
+    currently interact poorly with inline assembly.
 
   * A `source_set` *must* be used when creating groups of tests since the
     test harness depends on static initializers while the static library
