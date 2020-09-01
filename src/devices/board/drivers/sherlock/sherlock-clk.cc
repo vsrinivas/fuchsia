@@ -35,11 +35,13 @@ static const pbus_mmio_t clk_mmios[] = {
 static const clock_id_t clock_ids[] = {
     // For Camera Sensor.
     {g12b_clk::G12B_CLK_CAM_INCK_24M},
-    // For thermal driver.
+    // For cpu driver.
     {g12b_clk::G12B_CLK_SYS_PLL_DIV16},
     {g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16},
     {g12b_clk::G12B_CLK_SYS_PLLB_DIV16},
     {g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16},
+    {g12b_clk::CLK_SYS_CPU_BIG_CLK},
+    {g12b_clk::CLK_SYS_CPU_LITTLE_CLK},
     // For video decoder
     {g12b_clk::G12B_CLK_DOS_GCLK_VDEC},
 };
