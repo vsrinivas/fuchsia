@@ -749,7 +749,8 @@ requested by the component framework.
 
 ### **Scenic** {#scenic}
 
-The system compositor. Includes views, input, compositor, and GPU services.
+Scenic is a system service that composes graphical objects from multiple
+processes into a shared scene graph. Scenic includes views, input, compositor, and GPU services.
 
 ### **Sequential Device Driver** {#sequential-device-driver}
 
