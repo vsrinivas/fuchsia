@@ -18,9 +18,10 @@
 if (zx == "/") {
   # Zircon toolchains without shlib set to true cannot generate
   # shared libraries and loadable modules.
-  _can_build_shared_library = defined(toolchain.shlib) && toolchain.shlib
+  _can_build_shared_library = defined(toolchain.shlib) && toolchain.shlib != ""
 } else {
-  _can_build_shared_library = toolchain_variant.with_shared
+  _can_build_shared_library =
+      toolchain_variant.with_shared || toolchain_variant.is_pic_default
 }
 
 # A canary static library that will end up being linked to a shared

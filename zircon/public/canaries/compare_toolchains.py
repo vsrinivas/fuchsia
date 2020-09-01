@@ -81,8 +81,7 @@ _ALL_TOOLCHAINS = [
         },
         'output_extension': 'exe',
         'no_shared': True,
-    },
-    {
+    }, {
         'name': 'bootloader_arm64',
         'gn': {
             'toolchain': '//zircon/bootloader:efi_arm64',
@@ -92,7 +91,7 @@ _ALL_TOOLCHAINS = [
         },
         'output_extension': 'exe',
         'no_shared': True,
-    },
+    }
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
@@ -332,6 +331,8 @@ def _update_gn_executable_output_directory(commands):
             'TOOLCHAIN/obj/public/canaries/main_with_static',
         'TOOLCHAIN/main_with_shared':
             'TOOLCHAIN/obj/public/canaries/main_with_shared',
+        'TOOLCHAIN_SHARED/libfoo_shared':
+            'TOOLCHAIN_SHARED/obj/public/canaries/libfoo_shared',
     }
 
     result = []
@@ -602,10 +603,6 @@ def main():
             gn_outdir = gn_toolchain_name
             zn_outdir = zn_toolchain_name + '/obj/public/canaries'
 
-            is_shared = target.endswith('shared')
-            if is_shared:
-                gn_outdir += "-shared"
-                zn_outdir += ".shlib"
 
             gn_outfile = os.path.join(gn_outdir, target) + extension
             zn_outfile = os.path.join(zn_outdir, target) + extension
@@ -624,6 +621,21 @@ def main():
                 gn_toolchain_name + '/', 'TOOLCHAIN/')
             zn_commands = zn_commands.replace(
                 zn_toolchain_name + '/', 'TOOLCHAIN/')
+
+            is_shared = target.endswith('shared')
+            if is_shared:
+                gn_commands = gn_commands.replace(
+                    gn_toolchain_name + '-shared/', 'TOOLCHAIN_SHARED/')
+                zn_commands = zn_commands.replace(
+                    zn_toolchain_name + '.shlib/', 'TOOLCHAIN_SHARED/')
+
+            # Build configurations come from //public/gn/config in the ZN build
+            # and from //build/config/zircon in the GN one. These path can
+            # appear in commands in certain cases.
+            gn_commands = gn_commands.replace(
+                'build/config/zircon/', 'BUILD_CONFIGS/')
+            zn_commands = zn_commands.replace(
+                'zircon/public/gn/config/', 'BUILD_CONFIGS/')
 
             # Remove /zircon/ sub-path from GN build commands.
             gn_commands = gn_commands.replace('/obj/zircon/', '/obj/').replace(
