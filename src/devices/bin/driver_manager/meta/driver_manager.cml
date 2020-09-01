@@ -106,6 +106,7 @@
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Loader",
                 "/svc/fuchsia.fshost.Registry",
+                "/svc/fuchsia.hardware.pci.Bus",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Stats",

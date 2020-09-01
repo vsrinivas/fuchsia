@@ -129,6 +129,10 @@
             as: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
         },
         {
+            protocol: "/svc/fuchsia.hardware.pci.Bus",
+            as: "/svc_for_sys/fuchsia.hardware.pci.Bus",
+        },
+        {
             protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
             as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
         },

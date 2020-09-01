@@ -18,6 +18,7 @@ _common_bootfs_deps = [
   "//src/devices/block/drivers/sdhci",
   "//src/devices/board/drivers/x86:platform-bus-x86",
   "//src/devices/i2c/drivers/intel-i2c",
+  "//src/devices/pci/bin:bootfs",
   "//src/devices/rtc/drivers/intel-rtc",
   "//src/devices/serial/drivers/intel-serialio",
   "//src/devices/serial/drivers/uart16550",
