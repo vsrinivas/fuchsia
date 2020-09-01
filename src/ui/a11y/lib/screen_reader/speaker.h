@@ -46,7 +46,7 @@ class Speaker {
 
   explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
                    std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator);
-  virtual ~Speaker() = default;
+  virtual ~Speaker();
 
   // Returns a speech task that speaks the node description.
   virtual fit::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
@@ -66,6 +66,9 @@ class Speaker {
 
   // Returns a string with the last spoken utterance.
   virtual const std::string& last_utterance() const { return last_utterance_; }
+
+  // Sets a message to be spoken just before this object is destroyed.
+  virtual void set_epitaph(fuchsia::intl::l10n::MessageIds epitaph) { epitaph_ = epitaph; }
 
  protected:
   // For mocks.
@@ -127,6 +130,9 @@ class Speaker {
 
   // The last spoken utterance.
   std::string last_utterance_;
+
+  // If set, contains a message to be spoken just before this object is destroyed.
+  std::optional<fuchsia::intl::l10n::MessageIds> epitaph_;
 };
 
 }  // namespace a11y

@@ -103,11 +103,10 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
   action_context_->semantics_source = semantics_source;
   InitializeActions();
   SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT);
+  context_->speaker()->set_epitaph(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
 }
 
-ScreenReader::~ScreenReader() {
-  SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
-}
+ScreenReader::~ScreenReader() = default;
 
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add gestures with higher priority earlier than gestures with lower priority.

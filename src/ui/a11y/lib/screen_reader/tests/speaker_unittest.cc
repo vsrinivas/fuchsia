@@ -255,5 +255,18 @@ TEST_F(SpeakerTest, DoesNotSaveUtterance) {
   EXPECT_TRUE(speaker_->last_utterance().empty());
 }
 
+TEST_F(SpeakerTest, SpeaksEpitaph) {
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance;
+  utterance.utterance.set_message("turning off");
+  mock_screen_reader_message_generator_ptr_->set_message(
+      fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT, std::move(utterance));
+  speaker_->set_epitaph(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
+  speaker_.reset();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "turning off");
+}
+
 }  // namespace
 }  // namespace accessibility_test

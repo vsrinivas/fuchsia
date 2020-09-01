@@ -182,9 +182,7 @@ TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
   MockScreenReaderContext::MockSpeaker::OnDestructionCallback callback =
       [&callback_ran](MockScreenReaderContext::MockSpeaker* speaker) {
         callback_ran = true;
-        EXPECT_EQ(speaker->message_ids().size(), 2u);
-        EXPECT_EQ(speaker->message_ids()[1],
-                  fuchsia::intl::l10n::MessageIds ::SCREEN_READER_OFF_HINT);
+        EXPECT_EQ(speaker->epitaph(), fuchsia::intl::l10n::MessageIds ::SCREEN_READER_OFF_HINT);
       };
   mock_speaker_ptr_->set_on_destruction_callback(std::move(callback));
   screen_reader_.reset();

@@ -51,6 +51,20 @@ Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
   FX_DCHECK(tts_engine_ptr_);
 }
 
+Speaker::~Speaker() {
+  if (epitaph_) {
+    // This logic here is necessary in order to provide a clean way for the Screen Reader to
+    // announce that it is turning off. Because this class generates promises that reference itself,
+    // and those promises run on a loop that runs after this object has been destroyed, we need a
+    // direct way of making a last message to be spoken.
+    auto utterance = screen_reader_message_generator_->GenerateUtteranceByMessageId(*epitaph_);
+    // There is no time to check back the results, so makes a best effort to speak whatever is here
+    // before sutting down.
+    (*tts_engine_ptr_)->Enqueue(std::move(utterance.utterance), [](auto...) {});
+    (*tts_engine_ptr_)->Speak([](auto...) {});
+  }
+}
+
 fit::promise<> Speaker::SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
                                          Options options) {
   auto utterances = screen_reader_message_generator_->DescribeNode(node);

@@ -56,6 +56,9 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     // Sets a callback that will be invoked before this object is destroyed.
     void set_on_destruction_callback(OnDestructionCallback callback);
 
+    void set_epitaph(fuchsia::intl::l10n::MessageIds epitaph) override { epitaph_ = epitaph; }
+    fuchsia::intl::l10n::MessageIds epitaph() { return epitaph_; }
+
    private:
     std::vector<std::string> messages_;
     std::vector<uint32_t> node_ids_;
@@ -63,6 +66,7 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     bool received_speak_ = false;
     bool received_cancel_ = false;
     OnDestructionCallback on_destruction_callback_;
+    fuchsia::intl::l10n::MessageIds epitaph_ = fuchsia::intl::l10n::MessageIds::ROLE_HEADER;
   };
 
   MockScreenReaderContext();
