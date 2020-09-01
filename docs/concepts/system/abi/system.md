@@ -38,8 +38,7 @@ your source code to account for the changes in the ABI.
 
 ## ABI Surfaces
 
-This section describes the various ABI surfaces for Fuchsia components. The ABI
-for drivers is described in [drivers.md](drivers.md).
+This section describes the various ABI surfaces for Fuchsia components.
 
 ### vDSO
 

@@ -8,8 +8,6 @@ toc:
   path: /docs/development/languages/c-cpp/editors.md
 - title: "Naming conventions"
   path: /docs/development/languages/c-cpp/naming.md
-- title: "C style guide"
-  path: /docs/development/languages/c-cpp/c-style.md
 - title: "C++ style guide"
   path: /docs/development/languages/c-cpp/cpp-style.md
 - title: "Lint"

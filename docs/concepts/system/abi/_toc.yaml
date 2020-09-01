@@ -2,7 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Drivers ABI"
-  path: /docs/concepts/system/abi/drivers.md
 - title: "Fuchsia system interface"
   path: /docs/concepts/system/abi/system.md
