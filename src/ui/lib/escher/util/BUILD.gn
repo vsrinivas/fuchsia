@@ -8,7 +8,7 @@ source_set("check_vulkan_support") {
     "check_vulkan_support.h",
   ]
 
-  public_deps = [ "//src/ui/lib/escher:vulkan" ]
+  public_deps = [ "//src/lib/vulkan" ]
   configs += [
     # TODO(fxb/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",

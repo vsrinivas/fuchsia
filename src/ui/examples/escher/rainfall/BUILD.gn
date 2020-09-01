@@ -2,23 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("rainfall") {
-  sources = [ "rainfall_main.cc" ]
+import("//src/lib/vulkan/build/vulkan_targets.gni")
 
-  deps = [
-    ":rainfall_demo",
-    "//src/ui/examples/escher/common",
-    "//src/ui/lib/escher:vulkan",
-  ]
+if (is_mac) {
+  # Escher cannot be built for macOS for now.
+  # Since we may include Escher host tests in the default build,
+  # we substitute in a dummy executable in the case of a mac build.
+  executable("rainfall") {
+    sources = [ "//src/ui/examples/escher/common/null_executable.cc" ]
+  }
+} else {
+  vulkan_executable("rainfall") {
+    sources = [ "rainfall_main.cc" ]
 
-  include_dirs = [
-    "//lib",
-    "//src/ui/lib/escher",
-    "//third_party/glm",
-  ]
+    deps = [
+      ":rainfall_demo",
+      "//src/ui/examples/escher/common",
+    ]
 
-  if (is_fuchsia) {
-    deps += [ "//zircon/system/ulib/trace" ]
+    include_dirs = [
+      "//lib",
+      "//src/ui/lib/escher",
+      "//third_party/glm",
+    ]
+
+    if (is_fuchsia) {
+      deps += [ "//zircon/system/ulib/trace" ]
+    }
   }
 }
 
@@ -30,8 +40,8 @@ source_set("rainfall_demo") {
 
   deps = [
     ":rainfall_scenes",
+    "//src/lib/vulkan",
     "//src/ui/examples/escher/common:demo_base",
-    "//src/ui/lib/escher:vulkan",
   ]
 }
 

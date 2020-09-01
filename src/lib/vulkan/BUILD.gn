@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/sdk/sdk_atom.gni")
+import("//build/testing/host_test_data.gni")
+import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
@@ -13,6 +15,32 @@ import("//src/lib/vulkan/layers.gni")
 group("vulkan") {
   public_configs = [ ":vulkan_hpp" ]
 
+  # Fuchsia target always uses in-tree Vulkan implementation.
+  if (is_fuchsia) {
+    public_deps = [
+      ":headers",
+      "//third_party/Vulkan-Loader:libvulkan",
+    ]
+  }
+
+  # Host target with "null" Vulkan should use Vulkan headers and
+  # link the null Vulkan implementation statically.
+  if (is_host && use_null_vulkan_on_host) {
+    public_deps = [
+      ":headers",
+      "//src/lib/vulkan/third_party/null_vulkan",
+    ]
+  }
+
+  # Host target with non-null Vulkan should link against prebuilt
+  # Vulkan SDK.
+  if (is_host && !use_null_vulkan_on_host) {
+    public_configs += [ ":vulkan_host_config" ]
+    public_deps = [ ":copy_vulkan_runtime" ]
+  }
+}
+
+group("vulkan_headers_and_loader") {
   public_deps = [
     ":headers",
     "//third_party/Vulkan-Loader:libvulkan",
@@ -108,5 +136,76 @@ sdk_atom("vulkan_layers") {
         assert(false, "Unknown CPU type: %target_cpu")
       }
     }
+  }
+}
+
+#
+# Copy Vulkan runtime (loader, validation layers library and layers descriptor)
+# to test_data directory.
+#
+if (is_host) {
+  copy("copy_vulkan_libs") {
+    assert(is_linux, "Vulkan is only supported on Linux host.")
+    _lib_dir = vulkan_host_runtime_sub_dirs.lib
+    sources = [
+      "$vulkan_host_runtime_dir/$_lib_dir/libVkLayer_khronos_validation.so",
+      "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so",
+      "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so.1",
+    ]
+    if (use_swiftshader_vulkan_icd_on_host) {
+      sources += [
+        "$vulkan_host_runtime_dir/$_lib_dir/libvk_swiftshader.so",
+        "$vulkan_host_runtime_dir/$_lib_dir/vk_swiftshader_icd.json",
+      ]
+    }
+    outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
+  }
+
+  copy("copy_vulkan_etc") {
+    assert(is_linux, "Vulkan is only supported on Linux host.")
+    _layers_dir = vulkan_host_runtime_sub_dirs.layers
+    sources = [
+      "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_khronos_validation.json",
+      "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_standard_validation.json",
+    ]
+    outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_layers_dir}/{{source_file_part}}" ]
+  }
+
+  host_test_data("vulkan_test_data") {
+    _lib_dir = vulkan_host_runtime_sub_dirs.lib
+    _layers_dir = vulkan_host_runtime_sub_dirs.layers
+    _data_dir = "${root_out_dir}/${vulkan_host_runtime_out_root}"
+    sources = [
+      "${_data_dir}/${_layers_dir}",
+      "${_data_dir}/${_lib_dir}",
+    ]
+    deps = [
+      ":copy_vulkan_etc",
+      ":copy_vulkan_libs",
+    ]
+  }
+
+  group("copy_vulkan_runtime") {
+    assert(is_linux, "Vulkan is only supported on Linux host.")
+    deps = [
+      ":copy_vulkan_etc",
+      ":copy_vulkan_libs",
+    ]
+  }
+}
+
+#
+# Vulkan dependencies required for Vulkan executables / tests / source sets.
+# This includes headers, loader linkage, and copying of runtime files for host
+# executables.
+#
+config("vulkan_host_config") {
+  if (is_host && is_linux) {
+    include_dirs = [ "$vulkan_host_sdk_dir/include" ]
+    lib_dirs =
+        [ "$vulkan_host_runtime_dir/${vulkan_host_runtime_sub_dirs.lib}" ]
+
+    # Link Vulkan loader to host executables.
+    libs = [ "vulkan" ]
   }
 }

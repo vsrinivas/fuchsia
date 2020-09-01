@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//src/lib/vulkan/build/vulkan_targets.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
 if (is_mac) {
@@ -17,7 +18,7 @@ if (is_mac) {
     ]
   }
 } else {
-  test("escher_examples_test") {
+  vulkan_test("escher_examples_test") {
     sources = [
       "rainfall_smoke_test.cc",
       "run_all_unittests.cc",
@@ -30,6 +31,10 @@ if (is_mac) {
       "//src/ui/examples/escher/waterfall:waterfall_demo",
       "//src/ui/lib/escher/test/common:gtest_escher_with_runtime_glsl",
     ]
+
+    if (is_host && is_linux) {
+      deps += [ "//src/ui/examples/escher/common:host_test_data" ]
+    }
 
     # TODO(46717): Fix the leaks and remove this.
     deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]

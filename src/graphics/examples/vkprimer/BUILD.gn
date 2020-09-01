@@ -6,6 +6,8 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//src/graphics/examples/vkprimer/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/build/config.gni")
+import("//src/lib/vulkan/build/vulkan_targets.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
@@ -48,14 +50,12 @@ config("vulkan_sdk_linux_config") {
   libs = [ "vulkan" ]
 }
 
-executable("bin") {
+vulkan_executable("bin") {
   output_name = "vkprimer"
   sources = common_sources
   sources += [ "example/main.cc" ]
 
   include_dirs = [ "//src/graphics/examples/vkprimer/common" ]
-
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   deps = [ "//src/lib/fxl" ]
 
@@ -69,7 +69,7 @@ executable("bin") {
       "fuchsia/vulkan_surface.h",
     ]
   } else {
-    defines += [ "USE_GLFW=1" ]
+    defines = [ "USE_GLFW=1" ]
 
     include_dirs += [ "//src/graphics/examples/vkprimer/glfw" ]
 
@@ -82,16 +82,6 @@ executable("bin") {
       ":spirv_copy",
       "//third_party/glfw",
     ]
-
-    if (is_linux) {
-      configs += [ ":vulkan_sdk_linux_config($host_toolchain)" ]
-    } else if (is_mac) {
-      include_dirs += [ "${vulkan_sdk}/include" ]
-
-      lib_dirs = [ "${vulkan_sdk}/lib" ]
-
-      libs = [ "vulkan" ]
-    }
   }
 
   data = [
@@ -110,8 +100,13 @@ copy("spirv_copy") {
 }
 
 #
-# Linux / Mac Build
+# Linux / Mac host Build
 #
 group("vkprimer_glfw") {
-  deps = [ ":bin($host_toolchain)" ]
+  deps = []
+
+  # Currently vulkan build only supports Linux.
+  if (is_linux) {
+    deps += [ ":bin($host_toolchain)" ]
+  }
 }

@@ -26,7 +26,7 @@ executable("virtmagma_vulkan_unit_tests") {
   deps = [
     ":basic_compute",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/vulkan",
+    "//src/lib/vulkan:vulkan_headers_and_loader",
   ]
 
   sources = [ "virtmagma_vulkan_unit_tests.cc" ]

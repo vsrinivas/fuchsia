@@ -482,7 +482,7 @@ romfs_image("extras") {
     "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
     "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
     "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
-    "//src/lib/vulkan(${linux_lib_toolchain})",
+    "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
 
   inputs = [

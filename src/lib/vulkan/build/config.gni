@@ -1,0 +1,61 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  if (host_os == "linux" && host_cpu == "x64") {
+    #
+    # |vulkan_host_sdk_dir| is the path to Vulkan SDK, which contains Vulkan
+    # headers and sources to Vulkan loader, layers and tools.
+    #
+    vulkan_host_sdk_dir = "//prebuilt/third_party/vulkansdk/linux/x86_64"
+
+    #
+    # |vulkan_host_runtime_dir| is the path to Vulkan runtime libraries, which
+    # contains prebuilt Vulkan loader, Vulkan layers, SwiftShader Vulkan ICD,
+    # and descriptor files required to load the libraries.
+    #
+    vulkan_host_runtime_dir = "//prebuilt/third_party/vulkan_runtime/linux-x64"
+  }
+
+  # TODO(liyl): Currently macOS doesn't have Vulkan support, so we always
+  # use the null Vulkan implementation instead.
+
+  #
+  # Global arguments for whether we use a "null" Vulkan implementation on
+  # host vulkan_executables and vulkan_tests, so that any attempt to create a
+  # VkInstances or VkDevice will fail.
+  #
+  # This argument will affect all vulkan_{executable/test} build targets.
+  #
+  use_null_vulkan_on_host = is_mac
+
+  #
+  # Global arguments for whether we use the SwiftShader Vulkan ICD on host
+  # vulkan_executables and vulkan_tests.
+  #
+  # This argument will affect all vulkan_{executable/test} build targets and
+  # it only works when use_null_vulkan_on_host is set to false.
+  #
+  use_swiftshader_vulkan_icd_on_host = !is_mac
+}
+
+#
+# Relative path to Vulkan runtime root directory in the host tests' out
+# directory.
+#
+vulkan_host_runtime_out_root = "test_data/vulkan"
+
+#
+# Subdirectories under Vulkan host runtime directories. The Vulkan runtime
+# library in //prebuilts, and the copied Vulkan runtime directories in "out",
+# should have the same directory structure.
+#
+vulkan_host_runtime_sub_dirs = {
+  # All libraries, including Vulkan loaders, validation layers, and ICD are
+  # located in this directory.
+  lib = "lib"
+
+  # Layer description files.
+  layers = "share/vulkan/explicit_layer.d"
+}

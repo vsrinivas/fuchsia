@@ -1,0 +1,240 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/host_test_data.gni")
+import("//src/lib/vulkan/build/config.gni")
+
+# Internal template which creates an executable launcher for Vulkan host
+# executables / tests.
+#
+# It sets up LD_LIBRARY_PATH, VK_LAYER_PATH and VK_ICD_FILENAMES and then
+# switches to the target host executable.
+#
+# This is required for vulkan_tests as it's currently the only possible way
+# to set environments for a specific executable in host tests without affecting
+# other tests, since we cannot specify the test_spec manually.
+#
+template("_vulkan_executable_invoker") {
+  assert(is_host, "This template should be used on host toolchain only!")
+
+  source_set(target_name) {
+    assert(defined(invoker.executable_path))
+
+    forward_variables_from(invoker, [ "executable_path" ])
+    defines = [
+      "EXECUTABLE=\"${executable_path}\"",
+      "VK_LAYER_PATH=\"${vulkan_host_runtime_out_root}/${vulkan_host_runtime_sub_dirs.layers}\"",
+      "VK_LIB_PATH=\"${vulkan_host_runtime_out_root}/${vulkan_host_runtime_sub_dirs.lib}\"",
+    ]
+    if (use_swiftshader_vulkan_icd_on_host) {
+      defines += [ "VK_ICD_PATH=\"${vulkan_host_runtime_out_root}/${vulkan_host_runtime_sub_dirs.lib}/vk_swiftshader_icd.json\"" ]
+    }
+    sources = [ "//src/lib/vulkan/bin/vulkan_executable_invoker/vulkan_executable_invoker.cc" ]
+  }
+}
+
+# This template is used to create intermediate executable with Vulkan
+# dependency for C++ build targets.
+#
+# Note: User should not use this template directly, instead they should
+# use template "vulkan_test" and "vulkan_executable".
+#
+template("_vulkan_executable_intermediate") {
+  assert(is_host, "This template should be used on host toolchain only!")
+
+  # Executable targets built against prebuilt Vulkan runtime.
+  executable(target_name) {
+    forward_variables_from(invoker, "*", [ "deps" ])
+    deps = [ "//src/lib/vulkan" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+
+  host_test_data("${target_name}_test_data") {
+    if (defined(invoker.output_dir)) {
+      _data_dir = invoker.output_dir
+    } else {
+      _data_dir =
+          get_label_info(":${target_name}($host_toolchain)", "root_out_dir")
+    }
+
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    } else {
+      _output_name = invoker.target_name
+    }
+    sources = [ "${_data_dir}/${_output_name}" ]
+    deps = [ ":${invoker.target_name}" ]
+  }
+}
+
+#
+# This template is used to create targets that have Vulkan dependency for
+# C++ build targets. It does the following work:
+#
+#   - For executables / tests on Fuchsia, it adds necessary build dependencies,
+#     including include directories, Vulkan loaders and Vulkan layers linkage.
+#
+#   - For executables / tests running on Linux hosts,
+#
+#     * It creates an executable named "{output_name}_host_executable"
+#       (output_name is set to target_name, unless specifically defined) which
+#       contains the compiled binary results, compiled against prebuilt Vulkan
+#       runtime libraries.
+#
+#     * It also creates an executable named "{output_name}", which sets up all
+#       required environment variables for Vulkan runtime (library lookup path,
+#       Vulkan layer and ICD descriptors), and then executes the
+#       "{output_name}_host_executable" file above.
+#
+#     * The file "{output_name}" (test invoker) will be executed in host tests.
+#
+# Note: User should not use this template directly, instead they should
+# use template "vulkan_test" and "vulkan_executable".
+#
+template("_target_with_vulkan") {
+  # This template only works for C++ build targets ("executable" and "test").
+  # Other build targets (e.g. "dart_test") are not supported.
+  assert(defined(invoker.target_type), "target_type argument is required!")
+  target_type = invoker.target_type
+  assert(target_type == "executable" || target_type == "test",
+         "Unsupported target_type value: $target_type!")
+
+  if (is_host && is_linux) {
+    if (!defined(invoker.output_name)) {
+      _output_name = target_name
+    } else {
+      _output_name = invoker.output_name
+    }
+
+    _vulkan_executable_intermediate("${target_name}_host_executable") {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "target_name",
+                               "output_name",
+                             ])
+      output_name = "${_output_name}_host_executable"
+      testonly = defined(invoker.testonly) && invoker.testonly
+    }
+
+    _vulkan_executable_invoker("${target_name}_invoker") {
+      executable_path = "./${_output_name}_host_executable"
+    }
+
+    target(target_type, target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "environments",
+                               "testonly",
+                               "output_dir",
+                               "output_name",
+                             ])
+
+      deps = [
+        ":${target_name}_host_executable",
+        ":${target_name}_invoker",
+      ]
+
+      if (target_type == "test") {
+        deps += [
+          ":${target_name}_host_executable_test_data($host_toolchain)",
+          "//src/lib/vulkan:vulkan_test_data($host_toolchain)",
+        ]
+      }
+    }
+  } else {
+    target(target_type, target_name) {
+      forward_variables_from(invoker, "*")
+
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//src/lib/vulkan" ]
+    }
+  }
+}
+
+# Build a C/C++ executable to run on the host/target system with Vulkan
+# compile-time and run-time dependency.
+#
+# For Fuchsia targets / macOS hosts, it is equivalent to executable().
+#
+# For Linux hosts, it generates two intermediate executables:
+#
+# - {output_name}_host_executable,
+#   which built from the sources and dependencies specified in the
+#   build target, with Vulkan runtime libraries copied with tests.
+#
+# - {output_name},
+#   which is the invoker() executable which sets up environment variables
+#   (library lookup path, Vulkan layer and ICD descriptors) and executes the
+#   "{output_name}_host_executable" above.
+#
+#   Users should always execute this executable to use correct Vulkan runtime.
+#
+# Parameters
+#
+#   Same as executable().
+#
+template("vulkan_executable") {
+  _target_with_vulkan(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(target_type)) {
+      target_type = "executable"
+    }
+  }
+}
+
+# Build a C/C++ test executable to run on the host/target system with Vulkan
+# compile-time and run-time dependency.
+#
+# For Fuchsia targets / macOS hosts, it is equivalent to test().
+#
+# For Linux hosts, it generates two intermediate executables:
+#
+# - {output_name}_host_executable,
+#   which built from the sources and dependencies specified in the
+#   build target, with Vulkan runtime libraries copied with tests.
+#
+# - {output_name},
+#   which is the "invoker" executable which sets up environment variables
+#   (library lookup path, Vulkan layer and ICD descriptors) and executes the
+#   "{output_name}_host_executable" above.
+#
+#   Users should always execute this executable to use correct Vulkan runtime.
+#
+# Parameters
+#
+#   Same as test().
+#
+template("vulkan_test") {
+  _target_with_vulkan(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(target_type)) {
+      target_type = "test"
+    }
+    if (!defined(testonly)) {
+      testonly = true
+    }
+  }
+}
+
+#
+# "vulkan_executable" should have the same default configurations as
+# "executable" targets, which is defined in "//build/config/BUILDCONFIG.gn".
+#
+set_defaults("vulkan_executable") {
+  configs = default_executable_configs
+}
+
+#
+# "vulkan_test" should have the same default configurations as "test" targets,
+# which is defined in "//build/test.gni".
+#
+set_defaults("vulkan_test") {
+  configs = default_executable_configs
+}

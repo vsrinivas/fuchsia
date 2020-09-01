@@ -9,8 +9,8 @@ static_library("shader_utils") {
   ]
 
   deps = [
+    "//src/lib/vulkan",
     "//src/ui/examples/escher/common",
-    "//src/ui/lib/escher:vulkan",
   ]
 
   include_dirs = [

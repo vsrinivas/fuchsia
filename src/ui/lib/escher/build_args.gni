@@ -3,14 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Using Vulkan on host (i.e. Linux) is an involved affair that involves
-  # downloading the Vulkan SDK, setting environment variables, and so forth...
-  # all things that are difficult to achieve in a CQ environment.  Therefore,
-  # by default we use a stub implementation of Vulkan which fails to create a
-  # VkInstance.  This allows everything to build, and also allows running Escher
-  # unit tests which don't require Vulkan.
-  escher_use_null_vulkan_config_on_host = true
-
   # Determines whether or not escher will build with the glslang and shaderc
   # libraries. When false, these libraries will not be included in the scenic/
   # escher binary and as a result shaders will not be able to be compiled at

@@ -12,7 +12,7 @@ source_set("gtest_vulkan") {
   testonly = true
 
   public_deps = [
-    "//src/ui/lib/escher:vulkan",
+    "//src/lib/vulkan",
     "//third_party/googletest:gtest",
   ]
 

@@ -51,44 +51,6 @@ test_package("escher_tests") {
   resources += escher_examples_assets
 }
 
-# Used by 'source_set("vulkan")' for all Vulkan builds.  If building on Linux
-# and not using the null Vulkan config, then Vulkan is made available via
-# the 'download-vulkan-sdk' script, which downloads the LunarG Vulkan SDK from
-# Google storage.
-config("vulkan_config") {
-  defines = [
-    "VULKAN_HPP_NO_EXCEPTIONS",
-    "VULKAN_HPP_NO_SMART_HANDLE",
-  ]
-
-  if (is_linux && !escher_use_null_vulkan_config_on_host) {
-    # Specify the include/lib dirs and linked libraries for use with the
-    # downloaded LunarG Vulkan SDK.
-    vulkan_sdk = "//prebuilt/third_party/vulkansdk/linux/x86_64"
-    include_dirs = [ "$vulkan_sdk/include" ]
-    lib_dirs = [ "$vulkan_sdk/lib" ]
-    libs = [ "vulkan" ]
-  }
-}
-
-# Cross-platform Vulkan setup; supports both host and target builds.
-source_set("vulkan") {
-  public_configs = [ ":vulkan_config" ]
-
-  if (is_fuchsia) {
-    public_deps = [ "//src/lib/vulkan" ]
-  } else if (escher_use_null_vulkan_config_on_host) {
-    # Host build using stub Vulkan implementation.
-    # Only include the Vulkan headers: since this is used for host builds, we
-    # don't want to depend on the full //src/lib/vulkan impementation.
-    # It which brings in Zircon dependencies which cannot be compiled.
-    public_deps = [ "//src/lib/vulkan:headers" ]
-
-    sources =
-        [ "//src/ui/lib/escher/third_party/null_vulkan/escher_null_vulkan.cc" ]
-  }
-}
-
 config("thread_safety_warning") {
   cflags = [
     "-Wthread-safety",
@@ -111,8 +73,8 @@ config("vk_mem_alloc_error_suppression") {
 
 source_set("vk_mem_alloc") {
   public_deps = [
-    ":vulkan",
     "//src/lib/fxl",
+    "//src/lib/vulkan",
   ]
 
   sources = [
@@ -152,8 +114,8 @@ template("escher_library") {
 
     public_deps = [
       ":vk_mem_alloc",
-      ":vulkan",
       "//src/lib/fxl",
+      "//src/lib/vulkan",
       "//src/ui/lib/escher/base:escher_base",
       "//src/ui/lib/escher/geometry:escher_geometry",
       "//src/ui/lib/escher/types:escher_types",

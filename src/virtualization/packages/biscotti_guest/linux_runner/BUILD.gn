@@ -94,7 +94,7 @@ action("icd_manifest") {
 romfs_image("extras") {
   deps = [
     ":icd_manifest",
-    "//src/lib/vulkan(${linux_lib_toolchain})",
+    "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
 
   inputs = [
