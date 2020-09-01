@@ -3,47 +3,39 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
-    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fuchsia_async as fasync,
+    fidl_fuchsia_io as io,
+    fidl_fuchsia_io_test as io_test,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::StreamExt,
-    io_conformance::{
-        io1_harness_receiver::Io1HarnessReceiver,
-        io1_request_logger_factory::Io1RequestLoggerFactory,
-    },
-    test_utils_lib::test_utils::OpaqueTest,
+    io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
 };
 
-// Creates a OpaqueTest component from the |url|, listens for the child component to connect
-// to a HarnessReceiver injector, and returns the connected HarnessProxy.
-async fn setup_harness_connection(
-    url: String,
-) -> Result<(io_test::Io1HarnessProxy, OpaqueTest), Error> {
-    let test = OpaqueTest::default(&url)
-        .await
-        .context(format!("Cannot create OpaqueTest with url {}", &url))?;
-    let event_source =
-        test.connect_to_event_source().await.context("Cannot connect to event source.")?;
+pub fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
+    // Connect to the realm to get acccess to the outgoing directory for the harness.
+    let (client, server) = zx::Channel::create()?;
+    fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
+    let mut realm = fsys::RealmSynchronousProxy::new(client);
+    // fs_test is the name of the child component defined in the manifest.
+    let mut child_ref = fsys::ChildRef { name: "fs_test".to_string(), collection: None };
+    let (client, server) = zx::Channel::create()?;
+    realm
+        .bind_child(
+            &mut child_ref,
+            fidl::endpoints::ServerEnd::<io::DirectoryMarker>::new(server),
+            zx::Time::INFINITE,
+        )?
+        .map_err(|e| format_err!("Failed to bind to child: {:#?}", e))?;
 
-    // Install HarnessReceiver injector for the child component to connect and to send
-    // the harness to run the test through.
-    let (capability, mut rx) = Io1HarnessReceiver::new();
-    let injector = event_source
-        .install_injector(capability, None)
-        .await
-        .context("Cannot install injector.")?;
-
-    event_source.start_component_tree().await;
-
-    // Wait for the injector to receive the TestHarness connection from the child component
-    // before continuing.
-    let harness = rx.next().await.unwrap();
-    let harness = harness.into_proxy()?;
-
-    injector.abort();
-
-    Ok((harness, test))
+    let exposed_dir = io::DirectoryProxy::new(fidl::AsyncChannel::from_channel(client)?);
+    let proxy = fuchsia_component::client::connect_to_protocol_at_dir_svc::<
+        io_test::Io1HarnessMarker,
+    >(&exposed_dir)?;
+    Ok(proxy)
 }
 
 /// Helper function to open the desired node in the root folder. Only use this
@@ -109,12 +101,7 @@ fn build_flag_combinations(constant_flags: &[u32], variable_flags: &[u32]) -> Ve
 // remote mount point, the server forwards the request to the remote correctly.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let (remote_dir_client, remote_dir_server) =
         create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints.");
@@ -157,12 +144,7 @@ async fn open_remote_directory_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -188,12 +170,7 @@ async fn file_read_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_insufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -219,12 +196,7 @@ async fn file_read_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_sufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -250,12 +222,7 @@ async fn file_read_at_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_insufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -281,12 +248,7 @@ async fn file_read_at_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_sufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -312,12 +274,7 @@ async fn file_write_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_insufficient_rights() {
-    let (harness, _test) = setup_harness_connection(
-        "fuchsia-pkg://fuchsia.com/io_fidl_conformance_tests#meta/io_conformance_harness_ulibfs.cm"
-            .to_string(),
-    )
-    .await
-    .expect("Could not setup harness connection.");
+    let harness = connect_to_harness().expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 

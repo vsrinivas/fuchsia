@@ -532,7 +532,6 @@ group("deprecated_package_underscore") {
     "//src/session/tools/session_control:session_control",
     "//src/session/tools/session_control:session_control_tests",
     "//src/speech/tts:tts_service",
-    "//src/storage/conformance:io_fidl_conformance_tests",
     "//src/storage/ext4/server:ext4_readonly",
     "//src/storage/ext4/server:ext4_server_integration_tests",
     "//src/storage/ext4/server:ext4_server_tests",

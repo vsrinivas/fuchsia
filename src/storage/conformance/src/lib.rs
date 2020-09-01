@@ -10,10 +10,6 @@
 /// Allows logging of requests from a io.Directory channel.
 pub mod directory_request_logger;
 
-/// Injector for child components started by component manager OpaqueTest
-/// to connect and provide Io1TestHarness to the test.
-pub mod io1_harness_receiver;
-
 /// Allows aggregating requests from many io1 protocol channel loggers into one
 /// source.
 pub mod io1_request_logger_factory;

@@ -1,0 +1,44 @@
+{
+    program: {
+        binary: "bin/io1_conformance_test",
+    },
+    children: [
+        {
+            // TODO(fxbug.dev/33880): Don't hardcode the ulibfs URL here. This
+            // needs to work for all the different filesystem test harnesses.
+            name: "fs_test",
+            url: "fuchsia-pkg://fuchsia.com/ulibfs-io1-conformance-test#meta/ulibfs-harness.cm",
+        },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#fs_test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

@@ -164,14 +164,10 @@ int main(int argc, const char** argv) {
 
   UlibfsHarness harness;
   fidl::BindingSet<fuchsia::io::test::Io1Harness> bindings;
-  fuchsia::io::test::Io1HarnessPtr connection;
-  bindings.AddBinding(&harness, connection.NewRequest());
 
-  // Sends a connection of `Io1TestHarness` protocol to the test through a HarnessReceiver.
+  // Expose the Io1Harness protocol as an outgoing service.
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  fuchsia::io::test::Io1HarnessReceiverPtr receiver =
-      context->svc()->Connect<fuchsia::io::test::Io1HarnessReceiver>();
-  receiver->SendIo1Harness(connection.Unbind());
+  context->outgoing()->AddPublicService(bindings.GetHandler(&harness));
 
   return loop.Run();
 }

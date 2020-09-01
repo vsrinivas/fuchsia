@@ -31,28 +31,6 @@ using zx;
 /// See `src/storage/conformance/README.md` for an overview of io conformance
 /// testing.
 ///
-/// Temporary protocol for child components of the test suite component to
-/// expose their io1 harness protocol to prevent race conditions by just having
-/// the child component expose their protocol.
-/// TODO(fxb/45684): Change this to use ComponentManager events for connections
-/// once available.
-[Discoverable]
-protocol Io1HarnessReceiver {
-    /// Send Io1Harness to for the test suite to connect to.
-    SendIo1Harness(Io1Harness harness);
-};
-
-/// Temporary protocol for child components of the test suite component to
-/// expose their io2 harness protocol to prevent race conditions by just having
-/// the child component expose their protocol.
-/// TODO(fxb/45684): Change this to use ComponentManager events for connections
-/// once available.
-[Discoverable]
-protocol Io2HarnessReceiver {
-    /// Send Io2Harness to the test suite to connect to.
-    SendIo2Harness(Io2Harness harness);
-};
-
 /// `Io1Config` lets the test harness modulate the set of expected outcomes and
 /// behaviors validated by the test suite, by declaring specific properties
 /// about the filesystem implementation. For example, setting [`ImmutableFile`]

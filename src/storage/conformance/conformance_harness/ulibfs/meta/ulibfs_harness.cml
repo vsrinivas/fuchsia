@@ -5,13 +5,12 @@
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.io.test.Io1HarnessReceiver",
-            from: "framework",
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.io.test.Io1TestHarness",
+            protocol: "/svc/fuchsia.io.test.Io1Harness",
             from: "self",
         },
     ],
