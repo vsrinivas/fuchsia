@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,23 +7,24 @@ import json
 import sys
 
 def usage():
-  print 'Usage:'
-  print '  virtio_magma.h.gen.py FORMAT INPUT OUTPUT'
-  print '    FORMAT   either \"fuchsia\" or \"linux\"'
-  print '    INPUT    json file containing the magma interface definition'
-  print '    OUTPUT   destination path for the virtio header file to generate'
-  print '  Example: ./virtio_magma.h.gen.py fuchsia ../magma_abi/magma.json ./virtio_magma.h'
-  print '  Generates the virtio magma header based on a provided json definition,'
-  print '  for either fuchsia or the linux kernel.'
+  print('Usage:\n'
+        '  virtio_magma.h.gen.py FORMAT INPUT OUTPUT\n'
+        '    FORMAT   either \"fuchsia\" or \"linux\"\n'
+        '    INPUT    json file containing the magma interface definition\n'
+        '    OUTPUT   destination path for the virtio header file to generate\n'
+        '  Example: ./virtio_magma.h.gen.py fuchsia ../magma_abi/magma.json ./virtio_magma.h\n'
+        '  Generates the virtio magma header based on a provided json definition,\n'
+        '  for either fuchsia or the linux kernel.')
 
 # Generates a c or cpp style comment
 def comment(lines, cpp):
-  ret = ('// ' if cpp else '/* ') + lines[0] + '\n'
-  for line in lines[1:]:
-    ret += ('// ' if cpp else '   ') + line + '\n'
-  if not cpp:
-    ret = ret[:-1] + ' */\n'
-  return ret
+  ret = [f'// {lines[0]}\n' if cpp else f'/* {lines[0]}\n']
+  if cpp:
+      ret.extend(f'// {line}\n' for line in lines[1:])
+  else:
+      ret.extend(f'   {line}\n' for line in lines[1:])
+      ret.append(' */\n')
+  return ''.join(ret)
 
 # Wire formats for various widths
 def wire_format_from_width(width):
@@ -89,15 +90,13 @@ def guards(begin):
 
 # Includes lists.
 def includes():
-  ret = ''
   if fuchsia:
-    ret += '#include <stdint.h>\n'
-    ret += '#include <zircon/compiler.h>\n'
+    return ('#include <stdint.h>\n'
+            '#include <zircon/compiler.h>\n')
   else:
-    ret += '#include <linux/virtio_ids.h>\n'
-    ret += '#include <linux/virtio_config.h>\n'
-    ret += '#include <linux/virtmagma.h>\n'
-  return ret
+    return ('#include <linux/virtio_ids.h>\n'
+            '#include <linux/virtio_config.h>\n'
+            '#include <linux/virtmagma.h>\n')
 
 # Extract the non-"magma_" portion of the name of an export
 def get_name(export):

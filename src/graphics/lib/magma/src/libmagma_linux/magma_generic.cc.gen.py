@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,16 +8,16 @@ import re
 import sys
 
 def usage():
-  print 'Usage:'
-  print '  magma_generic.cc.gen.py INPUT EXISTING OUTPUT [--debug]'
-  print '    INPUT    json file containing the magma interface definition'
-  print '    EXISTING cpp file implementing zero or more magma entrypoints'
-  print '    OUTPUT   destination path for the cpp file to generate'
-  print '    --debug  optional flag to generate debug prints for entrypoints'
-  print '  Example: magma_generic.cc.gen.py magma.json magma.cc magma_generic.cc'
-  print '  Generates generic "glue" magma exports that directly translate between'
-  print '  magma commands and virtmagma structs. Does not generate implementations'
-  print '  for entrypoints that already exist in EXISTING.'
+  print('Usage:\n'
+        '  magma_generic.cc.gen.py INPUT EXISTING OUTPUT [--debug]\n'
+        '    INPUT    json file containing the magma interface definition\n'
+        '    EXISTING cpp file implementing zero or more magma entrypoints\n'
+        '    OUTPUT   destination path for the cpp file to generate\n'
+        '    --debug  optional flag to generate debug prints for entrypoints\n'
+        '  Example: magma_generic.cc.gen.py magma.json magma.cc magma_generic.cc\n'
+        '  Generates generic "glue" magma exports that directly translate between\n'
+        '  magma commands and virtmagma structs. Does not generate implementations\n'
+        '  for entrypoints that already exist in EXISTING.')
 
 # License string for the top of the file.
 def license():

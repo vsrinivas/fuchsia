@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,13 +8,13 @@ import textwrap
 import sys
 
 def usage():
-  print 'Usage:'
-  print '  magma.h.gen.py INPUT OUTPUT'
-  print '    INPUT    json file containing the magma interface definition'
-  print '    OUTPUT   destination path for the magma header file to generate'
-  print '  Example: ./magma.h.gen.py ./magma.json ./magma.h'
-  print '  Generates the magma header based on a provided json definition.'
-  print '  Description fields are generated in the Doxygen format.'
+  print('Usage:\n'
+        '  magma.h.gen.py INPUT OUTPUT\n'
+        '    INPUT    json file containing the magma interface definition\n'
+        '    OUTPUT   destination path for the magma header file to generate\n'
+        '  Example: ./magma.h.gen.py ./magma.json ./magma.h\n'
+        '  Generates the magma header based on a provided json definition.\n'
+        '  Description fields are generated in the Doxygen format.')
 
 # Generate a string for a comment with a Doxygen tag, wrapping text as necessary.
 def format_comment(type, comment):
@@ -96,7 +96,7 @@ def main():
         header += guards(False) + '\n'
         dest.write(header)
   except Exception as e:
-    print 'Error accessing files: ' + str(e)
+    print(f'Error accessing files: {e}')
     usage()
     exit(-2)
 

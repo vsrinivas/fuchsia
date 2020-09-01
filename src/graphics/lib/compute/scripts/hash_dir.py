@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -14,7 +14,6 @@ signature file. SIGNATURE should be the path to an input text file containing
 one such signature. In this mode, the program's status will be 0 in case of
 success, or 1 in case of failure.
 """
-from __future__ import print_function
 
 import argparse
 import hashlib
@@ -106,4 +105,3 @@ def dir_signatures(path):
 
 if __name__ == "__main__":
     main(sys.argv[0], sys.argv[1:])
-
