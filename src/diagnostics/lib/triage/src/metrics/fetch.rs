@@ -33,7 +33,7 @@ impl FromStr for SelectorType {
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct SelectorString {
-    full_selector: String,
+    pub(crate) full_selector: String,
     pub selector_type: SelectorType,
     body: String,
 }

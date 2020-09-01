@@ -143,6 +143,18 @@ impl ParseResult {
         Ok(ParseResult { actions, metrics, tests })
     }
 
+    pub fn all_selectors(&self) -> Vec<String> {
+        let mut result = Vec::new();
+        for (_, metric_set) in self.metrics.iter() {
+            for (_, metric) in metric_set.iter() {
+                if let Metric::Selector(selector) = metric {
+                    result.push(selector.full_selector.to_owned());
+                }
+            }
+        }
+        result
+    }
+
     pub fn validate(&self) -> Result<(), Error> {
         validate(self)
     }
@@ -216,6 +228,7 @@ mod test {
         super::*,
         crate::act::{Action, Warning},
         anyhow::Error,
+        maplit::hashmap,
     };
 
     // initialize() will be tested in the integration test: "fx test triage_lib_test"
@@ -413,5 +426,26 @@ mod test {
         );
         assert_eq!(result.len(), 1);
         assert_has_action!(result, "1", "t1", "p1");
+    }
+
+    #[test]
+    fn all_selectors_works() {
+        macro_rules! s {
+            ($s:expr) => {
+                $s.to_string()
+            };
+        }
+        let file_map = hashmap![
+            s!("file1") => s!(r#"{ select: {selector1: "INSPECT:name:path:label"}}"#),
+            s!("file2") =>
+                s!(r#"{ select: {selector1: "INSPECT:word:stuff:identifier"}, eval: {e: "2+2"} }"#),
+        ];
+        let parse = ParseResult::new(&file_map, &ActionTagDirective::AllowAll).unwrap();
+        let selectors = parse.all_selectors();
+        assert_eq!(selectors.len(), 2);
+        assert!(selectors.contains(&s!("INSPECT:name:path:label")));
+        assert!(selectors.contains(&s!("INSPECT:word:stuff:identifier")));
+        // Internal logic test: Make sure we're not returning eval entries.
+        assert!(!selectors.contains(&s!("2+2")));
     }
 }
