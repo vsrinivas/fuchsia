@@ -485,6 +485,9 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       // Power Device.
       "0p8_ee_buck",
       "cpu_a_buck",
+      // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxb/58584 is
+      // fixed.
+      "dwc2/dwc2/usb-peripheral/function-000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
