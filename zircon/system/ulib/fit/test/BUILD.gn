@@ -83,6 +83,7 @@ test("fit") {
     "scope_tests.cc",
     "sequencer_tests.cc",
     "single_threaded_executor_tests.cc",
+    "source_location_tests.cc",
     "suspended_task_tests.cc",
     "traits_tests.cc",
     "utility_internal_tests.cc",
