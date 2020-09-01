@@ -86,27 +86,6 @@ pub fn round_up_to_align(x: usize, align: usize) -> usize {
     (x + align - 1) & !(align - 1)
 }
 
-/// Split off the first element from a mutable slice.
-fn split_off_first_mut<'a, T>(slice: &mut &'a mut [T]) -> Result<&'a mut T> {
-    split_off_front_mut(slice, 1).map(|res| &mut res[0])
-}
-
-/// Split of the first `n` mutable bytes from `slice`.
-fn split_off_front_mut<'a, T>(slice: &mut &'a mut [T], n: usize) -> Result<&'a mut [T]> {
-    if n > slice.len() {
-        return Err(Error::OutOfRange);
-    }
-    let original = take_slice_mut(slice);
-    let (head, tail) = original.split_at_mut(n);
-    *slice = tail;
-    Ok(head)
-}
-
-/// Empty out a mutable slice.
-fn take_slice_mut<'a, T>(x: &mut &'a mut [T]) -> &'a mut [T] {
-    mem::replace(x, &mut [])
-}
-
 #[doc(hidden)] // only exported for macro use
 pub fn take_handle<T: HandleBased>(handle: &mut T) -> Handle {
     let invalid = T::from_handle(Handle::invalid());
@@ -353,6 +332,9 @@ pub struct Decoder<'a> {
     /// Buffer from which to read handles.
     handles: &'a mut [Handle],
 
+    /// Index of the next handle to read from the handle array
+    next_handle: usize,
+
     /// Decoding context.
     context: &'a Context,
 }
@@ -387,7 +369,14 @@ impl<'a> Decoder<'a> {
         if next_out_of_line > buf.len() {
             return Err(Error::OutOfRange);
         }
-        let mut decoder = Decoder { depth: 0, next_out_of_line, buf, handles, context };
+        let mut decoder = Decoder {
+            depth: 0,
+            next_out_of_line: next_out_of_line,
+            buf: buf,
+            handles: handles,
+            next_handle: 0,
+            context: context,
+        };
         value.decode(&mut decoder, 0)?;
 
         // Put this in a non-polymorphic helper function to reduce binary bloat.
@@ -399,7 +388,7 @@ impl<'a> Decoder<'a> {
             if decoder.next_out_of_line < decoder.buf.len() {
                 return Err(Error::ExtraBytes);
             }
-            if decoder.handles.len() != 0 {
+            if decoder.next_handle < decoder.handles.len() {
                 return Err(Error::ExtraHandles);
             }
             for i in padding_start..padding_end {
@@ -416,9 +405,14 @@ impl<'a> Decoder<'a> {
         post_decoding(&decoder, inline_size, next_out_of_line)
     }
 
-    /// Take the next handle from the `handles` list and shift the list down by one element.
-    pub fn take_handle(&mut self) -> Result<Handle> {
-        split_off_first_mut(&mut self.handles).map(take_handle)
+    /// Take the next handle from the `handles` list.
+    pub fn take_next_handle(&mut self) -> Result<Handle> {
+        if self.next_handle >= self.handles.len() {
+            return Err(Error::OutOfRange);
+        }
+        let handle = take_handle(&mut self.handles[self.next_handle]);
+        self.next_handle += 1;
+        Ok(handle)
     }
 
     /// Runs the provided closure inside an decoder modified
@@ -474,7 +468,7 @@ impl<'a> Decoder<'a> {
 
     /// The number of handles that have not yet been consumed.
     pub fn remaining_handles(&self) -> usize {
-        self.handles.len()
+        self.handles.len() - self.next_handle
     }
 
     /// A convenience method to skip over the specified number of zero bytes used for padding, also
@@ -1695,7 +1689,7 @@ impl Decodable for Handle {
             ALLOC_PRESENT_U32 => {}
             _ => return Err(Error::Invalid),
         }
-        *self = decoder.take_handle()?;
+        *self = decoder.take_next_handle()?;
         Ok(())
     }
 }
@@ -1730,7 +1724,7 @@ impl Decodable for Option<Handle> {
                 Ok(())
             }
             ALLOC_PRESENT_U32 => {
-                *self = Some(decoder.take_handle()?);
+                *self = Some(decoder.take_next_handle()?);
                 Ok(())
             }
             _ => Err(Error::Invalid),
@@ -2314,7 +2308,7 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> R
     match present {
         ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder, _offset| {
             for _ in 0..num_handles {
-                decoder.take_handle()?;
+                decoder.take_next_handle()?;
             }
             Ok(())
         }),
@@ -2794,7 +2788,7 @@ macro_rules! fidl_xunion {
                                     let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
                                     let mut handles = Vec::with_capacity(num_handles as usize);
                                     for _ in 0..num_handles {
-                                        handles.push(decoder.take_handle()?);
+                                        handles.push(decoder.take_next_handle()?);
                                     }
                                     *self = $name::$unknown_name { ordinal, bytes, handles };
                                 }
