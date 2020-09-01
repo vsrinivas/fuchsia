@@ -379,6 +379,13 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         })
     }
 
+    pub fn with_disk<F, T>(&self, func: F) -> T
+    where
+        F: FnOnce(&IO) -> T,
+    {
+        func(self.disk.borrow().borrow_inner())
+    }
+
     /// Returns a type of File Allocation Table (FAT) used by this filesystem.
     pub fn fat_type(&self) -> FatType {
         self.fat_type

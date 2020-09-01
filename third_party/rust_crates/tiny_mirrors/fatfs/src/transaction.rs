@@ -65,6 +65,10 @@ impl<T: Seek + Write> TransactionManager<T> {
         self.active = false;
         self.ops.clear();
     }
+
+    pub fn borrow_inner(&self) -> &T {
+        &self.inner
+    }
 }
 
 impl<T: Read + Seek> Read for TransactionManager<T> {

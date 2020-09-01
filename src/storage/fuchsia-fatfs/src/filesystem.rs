@@ -6,13 +6,11 @@ use {
         directory::{FatDirectory, InsensitiveStringRef},
         node::{Closer, FatNode, Node},
         refs::FatfsDirRef,
-        types::{Dir, FileSystem},
+        types::{Dir, Disk, FileSystem},
         util::fatfs_error_to_status,
     },
     anyhow::Error,
-    fatfs::{
-        self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter, ReadWriteSeek,
-    },
+    fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
     fuchsia_zircon::Status,
     std::{
         any::Any,
@@ -37,6 +35,13 @@ impl FatFilesystemInner {
     /// Get the root fatfs Dir.
     pub fn root_dir(&self) -> Dir<'_> {
         self.filesystem.root_dir()
+    }
+
+    pub fn with_disk<F, T>(&self, func: F) -> T
+    where
+        F: FnOnce(&Box<dyn Disk>) -> T,
+    {
+        self.filesystem.with_disk(func)
     }
 
     pub fn shut_down(&mut self) -> Result<(), Status> {
@@ -68,7 +73,7 @@ pub struct FatFilesystem {
 impl FatFilesystem {
     /// Create a new FatFilesystem.
     pub fn new(
-        disk: Box<dyn ReadWriteSeek + Send>,
+        disk: Box<dyn Disk>,
         options: FsOptions<DefaultTimeProvider, LossyOemCpConverter>,
     ) -> Result<(Pin<Arc<Self>>, Arc<FatDirectory>), Error> {
         let inner = Mutex::new(FatFilesystemInner {

@@ -7,11 +7,26 @@
 
 use fatfs::{DefaultTimeProvider, LossyOemCpConverter, ReadWriteSeek};
 
-pub type FileSystem =
-    fatfs::FileSystem<Box<dyn ReadWriteSeek + Send>, DefaultTimeProvider, LossyOemCpConverter>;
-pub type Dir<'a> =
-    fatfs::Dir<'a, Box<dyn ReadWriteSeek + Send>, DefaultTimeProvider, LossyOemCpConverter>;
+pub trait Disk: ReadWriteSeek + Send {
+    /// Returns true if the underlying block device for this disk is still present.
+    fn is_present(&self) -> bool;
+}
+
+// Default implementation, used for tests.
+impl Disk for std::io::Cursor<Vec<u8>> {
+    fn is_present(&self) -> bool {
+        true
+    }
+}
+
+impl Disk for remote_block_device::Cache {
+    fn is_present(&self) -> bool {
+        self.device().is_connected()
+    }
+}
+
+pub type FileSystem = fatfs::FileSystem<Box<dyn Disk>, DefaultTimeProvider, LossyOemCpConverter>;
+pub type Dir<'a> = fatfs::Dir<'a, Box<dyn Disk>, DefaultTimeProvider, LossyOemCpConverter>;
 pub type DirEntry<'a> =
-    fatfs::DirEntry<'a, Box<dyn ReadWriteSeek + Send>, DefaultTimeProvider, LossyOemCpConverter>;
-pub type File<'a> =
-    fatfs::File<'a, Box<dyn ReadWriteSeek + Send>, DefaultTimeProvider, LossyOemCpConverter>;
+    fatfs::DirEntry<'a, Box<dyn Disk>, DefaultTimeProvider, LossyOemCpConverter>;
+pub type File<'a> = fatfs::File<'a, Box<dyn Disk>, DefaultTimeProvider, LossyOemCpConverter>;

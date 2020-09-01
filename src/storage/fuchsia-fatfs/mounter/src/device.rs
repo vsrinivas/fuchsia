@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_async as fasync,
     fuchsia_fatfs::FatFs,
     fuchsia_syslog::{self, fx_log_info},
     fuchsia_zircon as zx,
@@ -55,6 +54,10 @@ impl FatDevice {
         let scope = ExecutionScope::build().token_registry(registry).new();
 
         Ok(Some(FatDevice { fs, scope }))
+    }
+
+    pub fn is_present(&self) -> bool {
+        self.fs.is_present()
     }
 
     /// Serve the root directory of the device on this channel.
@@ -127,6 +130,7 @@ mod test {
         fidl_fuchsia_hardware_block::BlockMarker,
         fidl_fuchsia_hardware_block_partition::{Guid, PartitionMarker, PartitionRequest},
         fidl_fuchsia_io::DirectoryMarker,
+        fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         futures::prelude::*,
         ramdevice_client::RamdiskClient,

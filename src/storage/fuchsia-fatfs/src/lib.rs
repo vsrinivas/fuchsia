@@ -4,7 +4,7 @@
 use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
-    fatfs::{FsOptions, ReadWriteSeek},
+    fatfs::FsOptions,
     fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FilesystemInfoQuery, FsType, QueryRequest},
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::{Event, HandleBased, Rights, Status},
@@ -21,6 +21,8 @@ mod refs;
 mod types;
 mod util;
 
+pub use crate::types::Disk;
+
 /// Number of UCS-2 characters that fit in a VFAT LFN.
 /// Note that FAT doesn't support the full range of Unicode characters (UCS-2 is only 16 bits),
 /// and short file names can't encode the full 16-bit range of UCS-2.
@@ -36,7 +38,7 @@ pub struct FatFs {
 
 impl FatFs {
     /// Create a new FatFs using the given ReadWriteSeek as the disk.
-    pub fn new(disk: Box<dyn ReadWriteSeek + Send>) -> Result<Self, Error> {
+    pub fn new(disk: Box<dyn Disk>) -> Result<Self, Error> {
         let (inner, root) = FatFilesystem::new(disk, FsOptions::new())?;
         Ok(FatFs { inner, root, fs_id: Event::create()? })
     }
@@ -54,6 +56,10 @@ impl FatFs {
     #[cfg(test)]
     pub fn filesystem(&self) -> &FatFilesystem {
         return &self.inner;
+    }
+
+    pub fn is_present(&self) -> bool {
+        self.inner.lock().unwrap().with_disk(|disk| disk.is_present())
     }
 
     /// Get the root directory of this filesystem.
@@ -279,7 +285,7 @@ mod tests {
             let cursor = std::io::Cursor::new(buffer.as_mut_slice());
 
             format_volume(cursor, FormatVolumeOptions::new()).expect("format volume to succeed");
-            let wrapper: Box<dyn ReadWriteSeek + Send> = Box::new(std::io::Cursor::new(buffer));
+            let wrapper: Box<dyn Disk> = Box::new(std::io::Cursor::new(buffer));
             TestFatDisk {
                 fs: fatfs::FileSystem::new(wrapper, FsOptions::new())
                     .expect("creating FS to succeed"),

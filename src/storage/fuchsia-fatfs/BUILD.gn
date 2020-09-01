@@ -17,6 +17,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",

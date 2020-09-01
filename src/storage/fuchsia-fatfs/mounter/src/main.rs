@@ -41,7 +41,7 @@ impl FatServer {
         // so we need to acquire it once to check if the device exists, and later to update it.
         {
             let device = self.device.read().unwrap();
-            if device.is_some() {
+            if device.as_ref().map_or(false, |d| d.is_present()) {
                 return Ok(());
             }
         };
@@ -55,7 +55,7 @@ impl FatServer {
 
         {
             let mut device = self.device.write().unwrap();
-            if device.is_some() {
+            if device.as_ref().map_or(false, |d| d.is_present()) {
                 // Lost the race.
                 return Ok(());
             }
@@ -76,7 +76,12 @@ impl FatServer {
             }
         };
         let device = self.device.read().unwrap();
-        if device.is_none() {
+        if device.as_ref().map_or(true, |d| !d.is_present()) {
+            fx_log_warn!(
+                "Device is none: {} is present: {:?}",
+                device.is_none(),
+                device.as_ref().map(|d| d.is_present())
+            );
             // The device disappeared because we lost the race.
             let stream =
                 DirectoryRequestStream::from_channel(fidl::AsyncChannel::from_channel(channel)?);
@@ -98,12 +103,13 @@ impl FatServer {
 
         while let Some(req) = stream.try_next().await? {
             let device = self.device.read().unwrap();
-            if let Some(device) = device.as_ref() {
-                device.handle_admin(&device.scope, req)?;
-            } else {
+            if device.as_ref().map_or(true, |d| !d.is_present()) {
+                // Device has gone away.
                 stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
                 break;
             }
+            let device = device.as_ref().unwrap();
+            device.handle_admin(&device.scope, req)?;
         }
         Ok(())
     }
@@ -119,12 +125,13 @@ impl FatServer {
 
         while let Some(req) = stream.try_next().await? {
             let device = self.device.read().unwrap();
-            if let Some(device) = device.as_ref() {
-                device.handle_query(&device.scope, req)?;
-            } else {
+            if device.as_ref().map_or(true, |d| !d.is_present()) {
+                // Device has gone away.
                 stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
                 break;
             }
+            let device = device.as_ref().unwrap();
+            device.handle_query(&device.scope, req)?;
         }
         Ok(())
     }
