@@ -64,8 +64,6 @@ common_image_contents = [
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/thermal/drivers/astro-thermistor",
   "//src/devices/usb/drivers/usb-peripheral-test",
-  "//src/devices/usb/drivers/usb-test/fx3",
-  "//src/devices/usb/drivers/usb-test/usb-tester",
   "//src/devices/usb/drivers/usb-virtual-bus",
   "//src/diagnostics/dlog",
   "//src/power/shutdown-shim:bootfs",
