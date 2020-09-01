@@ -7,7 +7,8 @@ use crate::Result;
 use anyhow::Context as _;
 use fuchsia_inspect_node_hierarchy::Property;
 use futures::TryStreamExt as _;
-use net_declare::fidl_ip;
+use net_declare::{fidl_ip, fidl_mac};
+use netemul::Endpoint as _;
 use std::convert::TryInto as _;
 
 /// A helper type to provide address verification in inspect NIC data.
@@ -144,10 +145,14 @@ async fn inspect_nic() -> Result {
         .create_netstack_environment::<Netstack2, _>("inspect_objects")
         .context("failed to create environment")?;
 
+    const ETH_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
+    const NETDEV_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
+
     let eth = env
-        .join_network::<netemul::Ethernet, _>(
+        .join_network_with(
             &network,
             "eth-ep",
+            netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(ETH_MAC)),
             netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
                 addr: fidl_ip!(192.168.0.1),
                 prefix_len: 24,
@@ -156,9 +161,10 @@ async fn inspect_nic() -> Result {
         .await
         .context("failed to join network with ethernet endpoint")?;
     let netdev = env
-        .join_network::<netemul::NetworkDevice, _>(
+        .join_network_with(
             &network,
             "netdev-ep",
+            netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(NETDEV_MAC)),
             netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
                 addr: fidl_ip!(192.168.0.2),
                 prefix_len: 24,
@@ -218,17 +224,8 @@ async fn inspect_nic() -> Result {
     let eth_id = format!("{}", eth_props.id);
     let netdev_id = format!("{}", netdev_props.id);
 
-    fn slice_to_mac(bytes: &[u8]) -> Result<String> {
-        Ok(format!(
-            "{}",
-            fidl_fuchsia_net_ext::MacAddress {
-                octets: bytes.try_into().context("invalid hardware address length")?
-            }
-        ))
-    }
-
-    let eth_mac = slice_to_mac(&eth_props.hwaddr[..])?;
-    let netdev_mac = slice_to_mac(&netdev_props.hwaddr[..])?;
+    let eth_mac = format!("{}", fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC));
+    let netdev_mac = format!("{}", fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC));
 
     let loopback_addrs = AddressMatcher::new(&loopback_props);
     let eth_addrs = AddressMatcher::new(&eth_props);

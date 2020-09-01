@@ -48,6 +48,18 @@ pub trait Endpoint: Copy + Clone {
     fn dev_path(name: &str) -> PathBuf {
         Path::new(Self::DEV_PATH).join(name)
     }
+
+    /// Returns an [`EndpointConfig`] with the provided parameters for this
+    /// endpoint type.
+    ///
+    /// [`EndpointConfig`]: netemul_network::EndpointConfig
+    fn make_config(mtu: u16, mac: Option<net::MacAddress>) -> netemul_network::EndpointConfig {
+        netemul_network::EndpointConfig {
+            mtu,
+            mac: mac.map(Box::new),
+            backing: Self::NETEMUL_BACKING,
+        }
+    }
 }
 
 /// An Ethernet implementation of `Endpoint`.
@@ -180,15 +192,7 @@ impl TestSandbox {
         S: Into<String>,
         E: Endpoint,
     {
-        self.create_endpoint_with(
-            name,
-            netemul_network::EndpointConfig {
-                mtu: DEFAULT_MTU,
-                mac: None,
-                backing: E::NETEMUL_BACKING,
-            },
-        )
-        .await
+        self.create_endpoint_with(name, E::make_config(DEFAULT_MTU, None)).await
     }
 
     /// Creates a new unattached endpoint with the provided configuration.
@@ -250,15 +254,7 @@ impl<'a> TestEnvironment<'a> {
         Ok(launcher)
     }
 
-    /// Joins `network` with `config`.
-    ///
-    /// `join_network` is a helper to create a new endpoint `ep_name` attached
-    /// to `network` and configure it with `config`. Returns a [`TestInterface`]
-    /// which is already added to this environment's netstack, link
-    /// online, enabled,  and configured according to `config`.
-    ///
-    /// Note that this environment needs a Netstack for this operation to
-    /// succeed.
+    /// Like [`join_network_with`], but uses default endpoint configurations.
     pub async fn join_network<E, S>(
         &self,
         network: &TestNetwork<'a>,
@@ -271,6 +267,39 @@ impl<'a> TestEnvironment<'a> {
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
+        self.install_endpoint(endpoint, config).await
+    }
+
+    /// Joins `network` with by creating an endpoint with `ep_config` and
+    /// installing it into the environment with `if_config`.
+    ///
+    /// `join_network_with` is a helper to create a new endpoint `ep_name`
+    /// attached to `network` and configure it with `if_config`. Returns a
+    /// [`TestInterface`] which is already added to this environment's netstack,
+    /// link online, enabled, and configured according to `config`.
+    ///
+    /// Note that this environment needs a Netstack for this operation to
+    /// succeed.
+    pub async fn join_network_with(
+        &self,
+        network: &TestNetwork<'a>,
+        ep_name: impl Into<String>,
+        ep_config: netemul_network::EndpointConfig,
+        if_config: InterfaceConfig,
+    ) -> Result<TestInterface<'a>> {
+        let endpoint = network
+            .create_endpoint_with(ep_name, ep_config)
+            .await
+            .context("failed to create endpoint")?;
+        self.install_endpoint(endpoint, if_config).await
+    }
+
+    /// Installs and configures `endpoint` in this enviroment with `config`.
+    pub async fn install_endpoint(
+        &self,
+        endpoint: TestEndpoint<'a>,
+        config: InterfaceConfig,
+    ) -> Result<TestInterface<'a>> {
         let interface =
             endpoint.into_interface_in_environment(self).await.context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
@@ -306,7 +335,6 @@ impl<'a> TestEnvironment<'a> {
             .await
             .context("failed to observe interface up")?
             .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
-
         Ok(interface)
     }
 
@@ -402,6 +430,24 @@ impl<'a> TestNetwork<'a> {
         let ep = self
             .sandbox
             .create_endpoint::<E, _>(name)
+            .await
+            .with_context(|| format!("failed to create endpoint for network {}", self.name))?;
+        let () = self.attach_endpoint(&ep).await.with_context(|| {
+            format!("failed to attach endpoint {} to network {}", ep.name, self.name)
+        })?;
+        Ok(ep)
+    }
+
+    /// Creates a new endpoint with `name` and `config` attached to this
+    /// network.
+    pub async fn create_endpoint_with(
+        &self,
+        name: impl Into<String>,
+        config: netemul_network::EndpointConfig,
+    ) -> Result<TestEndpoint<'a>> {
+        let ep = self
+            .sandbox
+            .create_endpoint_with(name, config)
             .await
             .with_context(|| format!("failed to create endpoint for network {}", self.name))?;
         let () = self.attach_endpoint(&ep).await.with_context(|| {
