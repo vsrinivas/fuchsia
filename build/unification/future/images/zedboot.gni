@@ -105,7 +105,6 @@ zedboot_deps += [
   "//src/devices/tests/mock-device",
   "//src/devices/tests/sysdev",
   "//src/devices/usb/drivers/usb-peripheral-test",
-  "//src/devices/usb/drivers/usb-virtual-bus",
   "//src/diagnostics/dlog",
   "//src/media/audio/drivers/alc5663",
   "//src/power/shutdown-shim",
