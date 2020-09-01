@@ -23,6 +23,7 @@
 #include <utility>
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
@@ -61,8 +62,7 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   block_impl_protocol_t bp;
   size_t block_op_size = 0;
   if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK, &bp) != ZX_OK) {
-    fprintf(stderr, "fvm: ERROR: block device '%s': does not support block protocol\n",
-            device_get_name(dev));
+    zxlogf(ERROR, "block device '%s': does not support block protocol", device_get_name(dev));
     return ZX_ERR_NOT_SUPPORTED;
   }
   bp.ops->query(bp.ctx, &block_info, &block_op_size);
@@ -71,8 +71,8 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
 
   zx_status_t status = vpm->DdkAdd("fvm");
   if (status != ZX_OK) {
-    fprintf(stderr, "fvm: ERROR: block device '%s': failed to DdkAdd: %s\n", device_get_name(dev),
-            zx_status_get_string(status));
+    zxlogf(ERROR, "block device '%s': failed to DdkAdd: %s", device_get_name(dev),
+           zx_status_get_string(status));
     return status;
   }
   // The VPartitionManager object is owned by the DDK, now that it has been
@@ -87,8 +87,8 @@ void VPartitionManager::DdkInit(ddk::InitTxn txn) {
   // Read vpartition table asynchronously.
   int rc = thrd_create_with_name(&initialization_thread_, FvmLoadThread, this, "fvm-init");
   if (rc < 0) {
-    fprintf(stderr, "fvm: ERROR: block device '%s': Could not load initialization thread\n",
-            device_get_name(parent()));
+    zxlogf(ERROR, "block device '%s': Could not load initialization thread",
+           device_get_name(parent()));
     sync_completion_signal(&worker_completed_);
     // This will schedule the device to be unbound.
     return init_txn_->Reply(ZX_ERR_NO_MEMORY);
@@ -195,7 +195,7 @@ zx_status_t VPartitionManager::Load() {
       fbl::MakeAutoCall([this]() { sync_completion_signal(&worker_completed_); });
 
   auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    fprintf(stderr, "fvm: Aborting Driver Load\n");
+    zxlogf(ERROR, "Aborting Driver Load");
     // This will schedule the device to be unbound.
     init_txn_->Reply(ZX_ERR_INTERNAL);
   });
@@ -208,7 +208,7 @@ zx_status_t VPartitionManager::Load() {
 
   // Read the superblock first, to determine the slice sice
   if ((status = DoIoLocked(vmo.get(), 0, fvm::kBlockSize, BLOCK_OP_READ)) != ZX_OK) {
-    fprintf(stderr, "fvm: Failed to read first block from underlying device\n");
+    zxlogf(ERROR, "Failed to read first block from underlying device");
     return status;
   }
 
@@ -222,28 +222,29 @@ zx_status_t VPartitionManager::Load() {
 
   // Validate the superblock, confirm the slice size
   if ((format_info_.slice_size() * VSliceMax()) / VSliceMax() != format_info_.slice_size()) {
-    fprintf(stderr, "fvm: Slice Size, VSliceMax overflow block address space\n");
+    zxlogf(ERROR, "Slice Size (%zu), VSliceMax (%lu) overflow block address space",
+           format_info_.slice_size(), VSliceMax());
     return ZX_ERR_BAD_STATE;
   }
   if (info_.block_size == 0 || SliceSize() % info_.block_size) {
-    fprintf(stderr, "fvm: Bad block (%u) or slice size (%zu)\n", info_.block_size, SliceSize());
+    zxlogf(ERROR, "Bad block (%u) or slice size (%zu)", info_.block_size, SliceSize());
     return ZX_ERR_BAD_STATE;
   }
   if (sb.vpartition_table_size != kVPartTableLength) {
-    fprintf(stderr, "fvm: Bad vpartition table size %zu (expected %zu)\n", sb.vpartition_table_size,
-            kVPartTableLength);
+    zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu)", sb.vpartition_table_size,
+           kVPartTableLength);
     return ZX_ERR_BAD_STATE;
   }
   if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
-    fprintf(stderr, "fvm: Bad allocation table size %zu (expected at least %zu)\n",
-            sb.allocation_table_size, AllocTableLength(sb.fvm_partition_size, SliceSize()));
+    zxlogf(ERROR, "Bad allocation table size %zu (expected at least %zu)", sb.allocation_table_size,
+           AllocTableLength(sb.fvm_partition_size, SliceSize()));
     return ZX_ERR_BAD_STATE;
   }
   if (sb.fvm_partition_size > DiskSize()) {
-    fprintf(stderr,
-            "fvm: Block Device too small (fvm_partition_size is %zu and block_device_size is "
-            "%zu).\n",
-            sb.fvm_partition_size, DiskSize());
+    zxlogf(ERROR,
+           "Block Device too small (fvm_partition_size is %zu and block_device_size is "
+           "%zu).",
+           sb.fvm_partition_size, DiskSize());
     return ZX_ERR_BAD_STATE;
   }
 
@@ -271,13 +272,13 @@ zx_status_t VPartitionManager::Load() {
   fzl::OwnedVmoMapper mapper;
   if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kPrimary),
                                   &mapper)) != ZX_OK) {
-    fprintf(stderr, "fvm: Failed to load metadata vmo: %d\n", status);
+    zxlogf(ERROR, "Failed to load metadata vmo: %d", status);
     return status;
   }
   fzl::OwnedVmoMapper mapper_backup;
   if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kSecondary),
                                   &mapper_backup)) != ZX_OK) {
-    fprintf(stderr, "fvm: Failed to load backup metadata vmo: %d\n", status);
+    zxlogf(ERROR, "Failed to load backup metadata vmo: %d", status);
     return status;
   }
 
@@ -285,7 +286,7 @@ zx_status_t VPartitionManager::Load() {
   const void* metadata;
   if ((status = ValidateHeader(mapper.start(), mapper_backup.start(),
                                format_info_.metadata_allocated_size(), &metadata)) != ZX_OK) {
-    fprintf(stderr, "fvm: Header validation failure: %d\n", status);
+    zxlogf(ERROR, "Header validation failure: %d", status);
     return status;
   }
 
@@ -315,7 +316,7 @@ zx_status_t VPartitionManager::Load() {
 
     // Persist the growth.
     if ((status = WriteFvmLocked()) != ZX_OK) {
-      fprintf(stderr, "fvm: Persisting updated header failed.");
+      zxlogf(ERROR, "Persisting updated header failed.");
       return status;
     }
   }
@@ -336,7 +337,7 @@ zx_status_t VPartitionManager::Load() {
       continue;
     }
     if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
-      fprintf(stderr, "FVM: Failed to Create vpartition %zu\n", i);
+      zxlogf(ERROR, "Failed to Create vpartition %zu", i);
       return status;
     }
   }
@@ -367,7 +368,7 @@ zx_status_t VPartitionManager::Load() {
       continue;
     }
     if (GetAllocatedVPartEntry(i)->IsInactive()) {
-      fprintf(stderr, "FVM: Freeing inactive partition\n");
+      zxlogf(ERROR, "Freeing inactive partition");
       FreeSlices(vpartitions[i].get(), 0, VSliceMax());
       continue;
     }
@@ -390,7 +391,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
   status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(), format_info_.metadata_size(),
                       BLOCK_OP_WRITE);
   if (status != ZX_OK) {
-    fprintf(stderr, "FVM: Failed to write metadata\n");
+    zxlogf(ERROR, "Failed to write metadata");
     return status;
   }
 
@@ -451,10 +452,10 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
       size_t pslice;
       auto vslice = vslice_start + i;
       if (vp->SliceGetLocked(vslice, &pslice)) {
-        fprintf(stderr,
-                "FVM: VPartitionManager::AllocateSlicesLocked: "
-                "SliceGetLocked found no physical slice for vslice %zu\n",
-                vslice);
+        zxlogf(ERROR,
+               "VPartitionManager::AllocateSlicesLocked: "
+               "SliceGetLocked found no physical slice for vslice %zu",
+               vslice);
         status = ZX_ERR_INVALID_ARGS;
       }
 

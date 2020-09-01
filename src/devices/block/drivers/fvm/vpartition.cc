@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
@@ -288,7 +289,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
       mgr_->Queue(txn, completion_cb, cookie);
       return;
     default:
-      fprintf(stderr, "[FVM BlockQueue] Unsupported Command: %x\n", txn->command);
+      zxlogf(ERROR, "[BlockQueue] Unsupported Command: %x", txn->command);
       completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, txn);
       return;
   }
