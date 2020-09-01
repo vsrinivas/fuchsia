@@ -44,11 +44,10 @@ class EffectsStage : public ReadableStream {
   const EffectsProcessor& effects_processor() const { return *effects_processor_; }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override;
-  void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return source_->reference_clock(); }
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
+  void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
 
   void SetMinLeadTime(zx::duration lead_time) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
@@ -65,8 +64,12 @@ class EffectsStage : public ReadableStream {
 
   std::shared_ptr<ReadableStream> source_;
   std::unique_ptr<EffectsProcessor> effects_processor_;
-  std::optional<ReadableStream::Buffer> current_block_;
   VolumeCurve volume_curve_;
+
+  // The last buffer returned from ReadLock, saved to prevent recomputing frames on
+  // consecutive calls to ReadLock. This is reset to std::nullopt once the caller has
+  // unlocked the buffer, signifying that the buffer is no longer needed.
+  std::optional<ReadableStream::Buffer> current_block_;
 
   uint32_t ringout_frames_sent_ = 0;
   int64_t next_ringout_frame_ = 0;

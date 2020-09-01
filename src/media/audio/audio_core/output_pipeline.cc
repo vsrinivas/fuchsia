@@ -35,23 +35,23 @@ const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group) {
 OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
                                        const VolumeCurve& volume_curve,
                                        uint32_t max_block_size_frames,
-                                       TimelineFunction ref_clock_to_fractional_frame,
+                                       TimelineFunction ref_pts_to_fractional_frame,
                                        AudioClock& clock, Mixer::Resampler sampler)
     : OutputPipelineImpl(State(config, volume_curve, max_block_size_frames,
-                               ref_clock_to_fractional_frame, clock, sampler)) {}
+                               ref_pts_to_fractional_frame, clock, sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
 OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                  uint32_t max_block_size_frames,
-                                 TimelineFunction ref_clock_to_fractional_frame, AudioClock& clock,
+                                 TimelineFunction ref_pts_to_fractional_frame, AudioClock& clock,
                                  Mixer::Resampler sampler)
     : audio_clock(clock) {
   uint32_t usage_mask = 0;
   stream =
       CreateMixStage(config.root(), volume_curve, max_block_size_frames,
-                     fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame),
+                     fbl::MakeRefCounted<VersionedTimelineFunction>(ref_pts_to_fractional_frame),
                      clock, &usage_mask, sampler);
 }
 
@@ -89,12 +89,12 @@ fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
     uint32_t max_block_size_frames,
-    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, AudioClock& audio_clock,
+    fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame, AudioClock& audio_clock,
     uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
 
   auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
-                                          ref_clock_to_fractional_frame, audio_clock);
+                                          ref_pts_to_fractional_frame, audio_clock);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_DCHECK((*usage_mask & mask) == 0);
@@ -117,14 +117,20 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     FX_DCHECK(!loopback) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        root->format(), ref_clock_to_fractional_frame, audio_clock, ring_size);
+        root->format(), ref_pts_to_fractional_frame, audio_clock, ring_size, 0,
+        [ref_pts_to_fractional_frame, &audio_clock]() {
+          // The loopback capture has no presentation delay. Whatever frame is being presented "now"
+          // is the latest safe_write_frame;
+          auto pts = audio_clock.Read();
+          return Fixed::FromRaw(ref_pts_to_fractional_frame.get()->Apply(pts.get())).Floor();
+        });
     loopback = std::move(endpoints.reader);
     root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }
 
   mix_stages.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
   for (const auto& input : spec.inputs) {
-    auto [timeline_function, _] = ref_clock_to_fractional_frame->get();
+    auto [timeline_function, _] = ref_pts_to_fractional_frame->get();
     // Create a new timeline function to represent the ref_clock_to_frac_frame mapping for this
     // input.
     auto frac_fps = Fixed(input.output_rate).raw_value();

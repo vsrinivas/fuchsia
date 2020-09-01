@@ -82,7 +82,101 @@ sent to the device.
 
 There is no complex processing in AudioCapturers other than a simple mixer.
 
-## Inspecting final output from the system mixer
+## Streams, Frames, Clocks, and Timestamps
+
+We represent audio as PCM-encoded streams. Each stream is a sequence of frames
+with N samples per frame, where the audio has N channels. Within a stream,
+individual frames are identified by a _frame number_, which is a simple index
+into the stream. Each pipeline stage has zero or more source streams and
+destinations streams; in a pipeline graph, nodes are transformations and edges
+are streams.
+
+Each stream has a _reference clock_ which controls how the frame timeline
+advances relative to real time. An important question is how we translate
+between frame numbers and timestamps. At any given point in time, two kinds of
+frame numbers are important:
+
+*   The _presentation frame_ identifies the frame that is currently being played
+    at a speaker or captured at a microphone. If it were possible to hear an
+    individual frame, this would be the frame heard from the speaker at the
+    current time.
+
+*   In output pipelines, the _safe write frame_ identifies the frame that the
+    pipeline is about to push into the next stage of the pipeline (for example,
+    at the driver level, this is the next frame to be pushed into the hardware).
+    This is the streams' last chance to produce this frame; all frames before
+    this point have been pushed to the next pipeline stage. Once the frame
+    passes this point, there is a delay, known as the _presentation delay_,
+    before the frame is played at the speaker. To illustrate:
+
+    ```
+                       |<--- delay -->|<-- writable --> ...
+    frame timeline: +++++++++++++++++++++++++++++++++++
+                       ^              ^
+                   presentation   safe write
+                     frame          frame
+    ```
+
+    In the above diagram, each `+` is a frame; frame numbers increase from left
+    to right; the arrows (`^`) are pointers at a specific time; and the arrows
+    advance from left to right as time increases. Viewed another way, frames
+    move on a conveyor belt from right to left: a frame is first writable, then
+    moves to the delay phase after it passes the safe write pointer, then is
+    finally presented.
+
+*   In input pipelines, the _safe read frame_ serves a similar purpose: it
+    identifies the frame that the stream has just obtained from the prior stage
+    of the pipeline. As above, there may be a delay between when the frame is
+    captured at the microphone and when it becomes safe to read. To illustrate:
+
+    ```
+                    ... <-- readable -->|<--- delay -->|
+    frame timeline:     +++++++++++++++++++++++++++++++++++
+                                        ^              ^
+                                    safe read     presentation
+                                      frame          frame
+    ```
+
+    The above diagram uses the same format as the prior diagram: frame numbers
+    increase from left to right and the arrows advance left to right as time
+    increases; or, viewed another way, frames move on a conveyor belt from right
+    to left as time advances. Frames start "in the air", then are presented
+    (captured) at the microphone, then enter the delay phase, and finally become
+    readable. Note that frames are presented (captured) before they are safe to
+    read, while in output pipelines, frames must be written before they can be
+    presented (played at a speaker).
+
+We anchor frames to real time using presentation frames. For each stream, we
+define a translation function _ReferencePtsToFrame_ which translates between
+_presentation timestamps_ (PTS) and frame numbers:
+
+```
+ReferencePtsToFrame(pts) = presentation frame number at pts
+```
+
+PTS is relative to the stream's reference clock. Different streams may have
+different clocks, and clocks can drift, but between any two clocks there always
+exists a linear translation.
+
+Within Audio Core, pipeline stages communicate using frame numbers. When an
+output stream uses a different frame timeline than the stage's input streams, we
+can convert between the two frame timelines by hopping from input stream frame
+number, to input stream PTS (using an inverted ReferencePtsToFrame), to output
+stream PTS (using a clock-to-clock transformation), to output stream frame
+number (using ReferencePtsToFrame). When safe read/write frames are important,
+such as in drivers, we translate to and from presentation frames by adding the
+presentation delay, as illustrated in the timelines above.
+
+Outside of Audio Core, AudioRenderer clients may define both a "reference clock"
+and a "media timeline". Clients play audio by sending a stream of audio packets,
+where the "StreamPacket.pts" field gives the packet's PTS relative to the
+AudioRenderer's media timeline, and where the media timeline can be translated
+to the reference clock timline via the rate passed to SetPtsUnits and the
+offsets passed to Play.
+
+## Debugging Tips
+
+### Inspecting final output from the system mixer
 
 In development builds of the Fuchsia OS, the WavWriter can be used to examine
 the audio streams emitted by the system mixer (of course, this functionality is

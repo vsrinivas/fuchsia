@@ -23,10 +23,10 @@ namespace media::audio {
 namespace {
 
 TimelineFunction ReferenceClockToIntegralFrames(
-    TimelineFunction reference_clock_to_fractional_frames) {
+    TimelineFunction ref_time_to_frac_presentation_frame) {
   TimelineRate frames_per_fractional_frame = TimelineRate(1, Fixed(1).raw_value());
   return TimelineFunction::Compose(TimelineFunction(frames_per_fractional_frame),
-                                   reference_clock_to_fractional_frames);
+                                   ref_time_to_frac_presentation_frame);
 }
 
 zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
@@ -38,19 +38,19 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction reference_clock_to_fractional_frame, AudioClock& audio_clock)
+                   TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock)
     : MixStage(output_format, block_size,
-               fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame),
+               fbl::MakeRefCounted<VersionedTimelineFunction>(ref_time_to_frac_presentation_frame),
                audio_clock) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+                   fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                    AudioClock& audio_clock)
     : ReadableStream(output_format),
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
       output_ref_clock_(audio_clock),
-      output_ref_clock_to_fractional_frame_(reference_clock_to_fractional_frame) {}
+      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           std::optional<float> initial_dest_gain_db,
@@ -107,34 +107,33 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                         uint32_t frame_count) {
-  TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(int64_t dest_frame, size_t frame_count) {
+  TRACE_DURATION("audio", "MixStage::ReadLock", "frame", dest_frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  auto snapshot = ReferenceClockToFixed();
+  auto snapshot = ref_time_to_frac_presentation_frame();
 
   cur_mix_job_.buf = &output_buffer_[0];
   cur_mix_job_.buf_frames = std::min<uint32_t>(frame_count, output_buffer_frames_);
-  cur_mix_job_.start_pts_of = frame;
+  cur_mix_job_.dest_start_frame = dest_frame;
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // Fill the output buffer with silence.
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
-  ForEachSource(TaskType::Mix, dest_ref_time);
+  ForEachSource(TaskType::Mix, dest_frame);
 
   // Transfer output_buffer ownership to the read lock via this destructor.
   // TODO(fxbug.dev/50669): If this buffer is not fully consumed, we should save this buffer and
   // reuse it for the next call to ReadLock, rather than mixing new data.
   return std::make_optional<ReadableStream::Buffer>(
-      frame, cur_mix_job_.buf_frames, cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
-      cur_mix_job_.applied_gain_db);
+      Fixed(dest_frame), Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true,
+      cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db);
 }
 
-BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFixed() const {
-  TRACE_DURATION("audio", "MixStage::ReferenceClockToFixed");
+BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_frame() const {
+  TRACE_DURATION("audio", "MixStage::ref_time_to_frac_presentation_frame");
   auto [timeline_function, generation] = output_ref_clock_to_fractional_frame_->get();
   return {
       .timeline_function = timeline_function,
@@ -157,12 +156,12 @@ void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   }
 }
 
-void MixStage::Trim(zx::time dest_ref_time) {
-  TRACE_DURATION("audio", "MixStage::Trim");
-  ForEachSource(TaskType::Trim, dest_ref_time);
+void MixStage::Trim(int64_t dest_frame) {
+  TRACE_DURATION("audio", "MixStage::Trim", "frame", dest_frame);
+  ForEachSource(TaskType::Trim, dest_frame);
 }
 
-void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
+void MixStage::ForEachSource(TaskType task_type, int64_t dest_frame) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
   std::vector<StreamHolder> sources;
@@ -174,22 +173,23 @@ void MixStage::ForEachSource(TaskType task_type, zx::time dest_ref_time) {
   }
 
   for (auto& source : sources) {
-    auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
-    auto source_ref_time =
-        source.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
-
     if (task_type == TaskType::Mix) {
       auto& source_info = source.mixer->source_info();
       auto& bookkeeping = source.mixer->bookkeeping();
       ReconcileClocksAndSetStepSize(source_info, bookkeeping, *source.stream);
-      MixStream(*source.mixer, *source.stream, source_ref_time);
+      MixStream(*source.mixer, *source.stream);
     } else {
-      source.stream->Trim(source_ref_time);
+      auto dest_ref_time = RefTimeAtFracPresentationFrame(Fixed(dest_frame));
+      auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
+      auto source_ref_time =
+          source.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
+      auto source_frame = source.stream->FracPresentationFrameAtRefTime(source_ref_time).Floor();
+      source.stream->Trim(source_frame);
     }
   }
 }
 
-void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_ref_time) {
+void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
   TRACE_DURATION("audio", "MixStage::MixStream");
   auto& info = mixer.source_info();
   info.frames_produced = 0;
@@ -203,7 +203,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
   // Calculate the first sampling point for the initial job, in source sub-frames. Use timestamps
   // for the first and last dest frames we need, translated into the source (frac_frame) timeline.
   auto frac_source_for_first_mix_job_frame =
-      Fixed::FromRaw(info.dest_frames_to_frac_source_frames(cur_mix_job_.start_pts_of));
+      Fixed::FromRaw(info.dest_frames_to_frac_source_frames(cur_mix_job_.dest_start_frame));
 
   while (true) {
     // At this point we know we need to consume some source data, but we don't yet know how much.
@@ -220,8 +220,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
         mixer.pos_filter_width();
 
     // Try to grab the front of the packet queue (or ring buffer, if capturing).
-    auto stream_buffer = stream.ReadLock(
-        source_ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
+    auto stream_buffer =
+        stream.ReadLock(frac_source_for_first_mix_job_frame.Floor(), source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {
@@ -262,7 +262,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
   // If there was insufficient supply to meet our demand, we may not have mixed enough frames, but
   // we advance our destination frame count as if we did, because time rolls on. Same for source.
   auto& bookkeeping = mixer.bookkeeping();
-  info.AdvanceRunningPositionsTo(cur_mix_job_.start_pts_of + cur_mix_job_.buf_frames, bookkeeping);
+  info.AdvanceRunningPositionsTo(cur_mix_job_.dest_start_frame + cur_mix_job_.buf_frames,
+                                 bookkeeping);
   cur_mix_job_.accumulate = true;
 }
 
@@ -482,7 +483,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // UpdateSourceTrans
   //
   // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
-  auto snapshot = stream.ReferenceClockToFixed();
+  auto snapshot = stream.ref_time_to_frac_presentation_frame();
   info.source_ref_clock_to_frac_source_frames = snapshot.timeline_function;
 
   if (info.source_ref_clock_to_frac_source_frames.subject_delta() == 0) {
@@ -550,7 +551,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do this
   // even if clocks are same on both sides, as this allows us to perform an initial sync-up between
   // running position accounting and the initial clock transforms (even those with offsets).
-  auto curr_dest_frame = cur_mix_job_.start_pts_of;
+  auto curr_dest_frame = cur_mix_job_.dest_start_frame;
   if (info.next_dest_frame != curr_dest_frame || !info.running_pos_established) {
     info.running_pos_established = true;
 

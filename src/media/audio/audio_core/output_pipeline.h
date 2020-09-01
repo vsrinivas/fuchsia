@@ -67,7 +67,7 @@ class OutputPipelineImpl : public OutputPipeline {
   // mix stages together.
   OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
                      uint32_t max_block_size_frames,
-                     TimelineFunction reference_clock_to_fractional_frame, AudioClock& audio_clock,
+                     TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
 
@@ -82,21 +82,20 @@ class OutputPipelineImpl : public OutputPipeline {
       const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override {
     TRACE_DURATION("audio", "OutputPipeline::ReadLock");
     FX_DCHECK(state_.stream);
-    return state_.stream->ReadLock(dest_ref_time, frame, frame_count);
+    return state_.stream->ReadLock(dest_frame, frame_count);
   }
-  void Trim(zx::time dest_ref_time) override {
+  void Trim(int64_t dest_frame) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");
     FX_CHECK(state_.stream);
-    state_.stream->Trim(dest_ref_time);
+    state_.stream->Trim(dest_frame);
   }
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
-    TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFixed");
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
+    TRACE_DURATION("audio", "OutputPipeline::ref_time_to_frac_presentation_frame");
     FX_DCHECK(state_.stream);
-    return state_.stream->ReferenceClockToFixed();
+    return state_.stream->ref_time_to_frac_presentation_frame();
   }
   void SetMinLeadTime(zx::duration min_lead_time) override {
     ReadableStream::SetMinLeadTime(min_lead_time);

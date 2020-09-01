@@ -22,17 +22,16 @@ namespace media::audio {
 class MixStage : public ReadableStream {
  public:
   MixStage(const Format& output_format, uint32_t block_size,
-           TimelineFunction reference_clock_to_fractional_frame, AudioClock& ref_clock);
+           TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& ref_clock);
   MixStage(const Format& output_format, uint32_t block_size,
-           fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+           fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
            AudioClock& ref_clock);
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override;
-  void Trim(zx::time dest_ref_time) override;
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return output_ref_clock_; }
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
+  void Trim(int64_t dest_frame) override;
   void SetMinLeadTime(zx::duration min_lead_time) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
@@ -48,7 +47,7 @@ class MixStage : public ReadableStream {
     // TODO(13415): Integrate it into the Mixer class itself.
     float* buf;
     uint32_t buf_frames;
-    int64_t start_pts_of;  // start PTS, expressed in output frames.
+    int64_t dest_start_frame;
     TimelineFunction dest_ref_clock_to_frac_dest_frame;
     bool accumulate;
     StreamUsageMask usages_mixed;
@@ -61,11 +60,11 @@ class MixStage : public ReadableStream {
   };
 
   enum class TaskType { Mix, Trim };
-  void ForEachSource(TaskType task_type, zx::time dest_ref_time);
+  void ForEachSource(TaskType task_type, int64_t dest_frame);
   void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                      ReadableStream& stream);
 
-  void MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_ref_time);
+  void MixStream(Mixer& mixer, ReadableStream& stream);
   bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);
 
   std::mutex stream_lock_;

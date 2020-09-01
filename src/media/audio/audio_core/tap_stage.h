@@ -20,13 +20,12 @@ class TapStage : public ReadableStream {
   TapStage(std::shared_ptr<ReadableStream> input, std::shared_ptr<WritableStream> tap);
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override;
-  void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
-    return source_->ReferenceClockToFixed();
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
+    return source_->ref_time_to_frac_presentation_frame();
   }
   AudioClock& reference_clock() override { return source_->reference_clock(); }
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
+  void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
 
   void SetMinLeadTime(zx::duration min_lead_time) override;
 

@@ -28,7 +28,7 @@ class PacketQueue : public ReadableStream {
   // AudioClock rather than storing a reference to the caller's AudioClock.
   PacketQueue(Format format, AudioClock audio_clock);
   PacketQueue(Format format,
-              fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
+              fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
               AudioClock audio_clock);
   ~PacketQueue();
 
@@ -52,14 +52,13 @@ class PacketQueue : public ReadableStream {
   }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override;
-  void Trim(zx::time dest_ref_time) override;
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
+  AudioClock& reference_clock() override { return audio_clock_; }
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t frame, size_t frame_count) override;
+  void Trim(int64_t frame) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                        zx::duration underflow_duration) override;
   void ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) override;
-  AudioClock& reference_clock() override { return audio_clock_; }
 
  private:
   void ReadUnlock(bool fully_consumed);

@@ -153,13 +153,13 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
     ASSERT_TRUE(stream);
 
     {  // Expect a buffer.
-      auto buffer = stream->ReadLock(zx::time(0), 0, 0);
+      auto buffer = stream->ReadLock(0, 0);
       ASSERT_TRUE(buffer);
       EXPECT_FALSE(buffer->is_continuous());
       EXPECT_NE(nullptr, buffer->payload());
     }
     {  // No more buffers.
-      auto buffer = stream->ReadLock(zx::time(0), 0, 0);
+      auto buffer = stream->ReadLock(0, 0);
       ASSERT_FALSE(buffer);
     }
   }
@@ -195,7 +195,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   constexpr int64_t kPacketSizeFrames = 32;
   int64_t expected_packet_pts = 0;
   for (uint32_t i = 0; i < 3; ++i) {
-    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    auto buffer = stream->ReadLock(expected_packet_pts, kPacketSizeFrames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->is_continuous(), i != 0);
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
@@ -217,7 +217,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   RunLoopUntilIdle();
 
   {
-    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    auto buffer = stream->ReadLock(expected_packet_pts, kPacketSizeFrames);
     ASSERT_TRUE(buffer);
     // GT here as we are not continuous with the previous packet.
     EXPECT_GT(buffer->start().Floor(), expected_packet_pts);
@@ -228,7 +228,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   }
 
   for (uint32_t i = 0; i < 2; ++i) {
-    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    auto buffer = stream->ReadLock(expected_packet_pts, kPacketSizeFrames);
     ASSERT_TRUE(buffer);
     EXPECT_TRUE(buffer->is_continuous());
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
@@ -314,7 +314,7 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   ASSERT_TRUE(packet_queue);
 
   // Acquire a buffer.
-  auto buf = packet_queue->ReadLock(zx::time(0), 0, 32);
+  auto buf = packet_queue->ReadLock(0, 32);
   ASSERT_TRUE(buf);
   EXPECT_EQ(0u, buf->start().Floor());
   EXPECT_EQ(32u, buf->length().Floor());

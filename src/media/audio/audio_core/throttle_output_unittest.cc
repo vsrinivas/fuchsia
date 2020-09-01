@@ -16,6 +16,8 @@ class TestThrottleOutput : public ThrottleOutput {
   TestThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                      LinkMatrix* link_matrix)
       : ThrottleOutput(threading_model, registry, link_matrix) {}
+
+  using ThrottleOutput::driver_ptscts_ref_clock_to_fractional_frames;
   using ThrottleOutput::last_sched_time_mono;
   using ThrottleOutput::StartMixJob;
 };
@@ -48,6 +50,18 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
   throttle_output_->StartMixJob(future_ref_time);
   next_trim_mono_time = throttle_output_->last_sched_time_mono();
   EXPECT_EQ(next_trim_mono_time, future_mono_time + TRIM_PERIOD);
+}
+
+TEST_F(ThrottleOutputTest, ThrottleHasGoodClock) {
+  const auto want_frames_per_ns = throttle_output_->output_pipeline()->format().frames_per_ns();
+  const auto got_frac_frames_per_ns =
+      throttle_output_->driver_ptscts_ref_clock_to_fractional_frames().rate();
+
+  const auto want_frames_per_sec = want_frames_per_ns.Scale(zx::sec(1).get());
+  const auto got_frames_per_ns =
+      Fixed::FromRaw(got_frac_frames_per_ns.Scale(zx::sec(1).get())).Floor();
+
+  EXPECT_EQ(want_frames_per_sec, got_frames_per_ns);
 }
 
 }  // namespace

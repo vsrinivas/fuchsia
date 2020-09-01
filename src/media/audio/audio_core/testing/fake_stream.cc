@@ -18,14 +18,13 @@ FakeStream::FakeStream(const Format& format, size_t max_buffer_size) : ReadableS
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::optional<ReadableStream::Buffer> FakeStream::ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                           uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> FakeStream::ReadLock(int64_t frame, size_t frame_count) {
   FX_CHECK(frame_count * format().bytes_per_frame() < buffer_size_);
-  return std::make_optional<ReadableStream::Buffer>(frame, frame_count, buffer_.get(), true,
-                                                    usage_mask_, gain_db_);
+  return std::make_optional<ReadableStream::Buffer>(Fixed(frame), Fixed(frame_count), buffer_.get(),
+                                                    true, usage_mask_, gain_db_);
 }
 
-ReadableStream::TimelineFunctionSnapshot FakeStream::ReferenceClockToFixed() const {
+ReadableStream::TimelineFunctionSnapshot FakeStream::ref_time_to_frac_presentation_frame() const {
   auto [timeline_function, generation] = timeline_function_->get();
   return {
       .timeline_function = timeline_function,

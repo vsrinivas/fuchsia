@@ -196,13 +196,13 @@ std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
       });
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                             uint32_t frame_count) {
-  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
+std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(int64_t dest_frame,
+                                                             size_t frame_count) {
+  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame, "length", frame_count);
 
   // If we have a partially consumed block, return that here.
   if (current_block_) {
-    if (frame >= current_block_->start() && frame < current_block_->end()) {
+    if (dest_frame >= current_block_->start() && dest_frame < current_block_->end()) {
       return DupCurrentBlock();
     }
     // We have a current block that is non-overlapping with this request, so we can release it.
@@ -211,7 +211,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
 
   // New frames are requested. Block-align the start frame and length.
   auto [aligned_first_frame, aligned_frame_count] =
-      AlignBufferRequest(frame, frame_count, effects_processor_->block_size());
+      AlignBufferRequest(dest_frame, frame_count, effects_processor_->block_size());
 
   // Ensure we don't try to push more frames through our effects processor than supported.
   uint32_t max_batch_size = effects_processor_->max_batch_size();
@@ -219,7 +219,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  auto source_buffer = source_->ReadLock(dest_ref_time, aligned_first_frame, aligned_frame_count);
+  auto source_buffer = source_->ReadLock(aligned_first_frame, aligned_frame_count);
   if (source_buffer) {
     // We expect an integral buffer length.
     FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());
@@ -266,8 +266,9 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
     // TODO(fxbug.dev/50669): Should we clamp length to |frame_count|?
-    current_block_ = ReadableStream::Buffer(aligned_first_frame, ringout_.buffer_frames, buf_out,
-                                            is_continuous, StreamUsageMask(), 0.0);
+    current_block_ =
+        ReadableStream::Buffer(Fixed(aligned_first_frame), Fixed(ringout_.buffer_frames), buf_out,
+                               is_continuous, StreamUsageMask(), 0.0);
     ringout_frames_sent_ += ringout_.buffer_frames;
     next_ringout_frame_ = current_block_->end().Floor();
     return DupCurrentBlock();
@@ -277,8 +278,8 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
   return std::nullopt;
 }
 
-BaseStream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFixed() const {
-  auto snapshot = source_->ReferenceClockToFixed();
+BaseStream::TimelineFunctionSnapshot EffectsStage::ref_time_to_frac_presentation_frame() const {
+  auto snapshot = source_->ref_time_to_frac_presentation_frame();
 
   // Update our timeline function to include the latency introduced by these effects.
   //

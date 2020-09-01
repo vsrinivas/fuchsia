@@ -99,8 +99,7 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                            uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(int64_t frame, size_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
@@ -109,6 +108,7 @@ std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time dest_ref_ti
     return std::nullopt;
   }
 
+  // TODO(fxbug.dev/50669): Obey ReadLock API.
   processing_in_progress_ = true;
   auto& packet = pending_packet_queue_.front();
   bool is_continuous = !flushed_;
@@ -149,24 +149,20 @@ void PacketQueue::ReadUnlock(bool fully_consumed) {
   }
 }
 
-void PacketQueue::Trim(zx::time ref_time) {
+void PacketQueue::Trim(int64_t frame) {
   TRACE_DURATION("audio", "PacketQueue::Trim");
-  int64_t ref_now_ticks = (ref_time - zx::time(0)).to_nsecs();
-
-  auto frac_frame_to_trim = Fixed::FromRaw(timeline_function_->get().first(ref_now_ticks));
 
   std::lock_guard<std::mutex> locker(pending_mutex_);
   while (!pending_packet_queue_.empty()) {
     auto packet = pending_packet_queue_.front();
-
-    if (packet->end() > frac_frame_to_trim) {
+    if (packet->end() > frame) {
       return;
     }
     pending_packet_queue_.pop_front();
   }
 }
 
-BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFixed() const {
+BaseStream::TimelineFunctionSnapshot PacketQueue::ref_time_to_frac_presentation_frame() const {
   if (!timeline_function_) {
     return {
         .timeline_function = TimelineFunction(),

@@ -75,7 +75,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   {
     // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
     // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    auto buf = effects_stage->ReadLock(0, 480);
     ASSERT_TRUE(buf);
     ASSERT_EQ(0u, buf->start().Floor());
     ASSERT_EQ(480u, buf->length().Floor());
@@ -86,7 +86,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
   {
     // Read again. This should be null, because there are no more packets.
-    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    auto buf = effects_stage->ReadLock(0, 480);
     ASSERT_FALSE(buf);
   }
 }
@@ -114,35 +114,35 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 
   {
     // Ask for a single negative frame. We should recevie an entire block.
-    auto buffer = effects_stage->ReadLock(zx::time(0), -1, 1);
+    auto buffer = effects_stage->ReadLock(-1, 1);
     EXPECT_EQ(buffer->start().Floor(), -static_cast<int32_t>(kBlockSize));
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Ask for 1 frame; expect to get a full block.
-    auto buffer = effects_stage->ReadLock(zx::time(0), 0, 1);
+    auto buffer = effects_stage->ReadLock(0, 1);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Ask for subsequent frames; expect the same block still.
-    auto buffer = effects_stage->ReadLock(zx::time(0), kBlockSize / 2, kBlockSize / 2);
+    auto buffer = effects_stage->ReadLock(kBlockSize / 2, kBlockSize / 2);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Ask for the second block
-    auto buffer = effects_stage->ReadLock(zx::time(0), kBlockSize, kBlockSize);
+    auto buffer = effects_stage->ReadLock(kBlockSize, kBlockSize);
     EXPECT_EQ(buffer->start().Floor(), kBlockSize);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Check for a frame to verify we handle frame numbers > UINT32_MAX.
-    auto buffer = effects_stage->ReadLock(zx::time(0), 0x100000000, 1);
+    auto buffer = effects_stage->ReadLock(0x100000000, 1);
     EXPECT_EQ(buffer->start().Floor(), 0x100000000);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
@@ -170,7 +170,7 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
   {
-    auto buffer = effects_stage->ReadLock(zx::time(0), 0, 512);
+    auto buffer = effects_stage->ReadLock(0, 512);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     // Length is 2 full blocks since 3 blocks would be > 300 frames.
     EXPECT_EQ(buffer->length().Floor(), 256u);
@@ -205,7 +205,8 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
   // Conversely, output frame 0 was produced based on the source frame at time -13.
-  auto ref_clock_to_output_frac_frame = effects_stage->ReferenceClockToFixed().timeline_function;
+  auto ref_clock_to_output_frac_frame =
+      effects_stage->ref_time_to_frac_presentation_frame().timeline_function;
   EXPECT_EQ(Fixed::FromRaw(ref_clock_to_output_frac_frame.Apply(0)), Fixed(13));
 
   // Similarly, at the time we produce output frame 0, we had to draw upon the source frame from
@@ -288,7 +289,7 @@ TEST_F(EffectsStageTest, UpdateEffect) {
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
 
   // Read from the effects stage. Our effect sets each sample to the size of the config.
-  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+  auto buf = effects_stage->ReadLock(0, 480);
   ASSERT_TRUE(buf);
   ASSERT_EQ(0u, buf->start().Floor());
   ASSERT_EQ(480u, buf->length().Floor());
@@ -343,7 +344,7 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   {
     // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
     // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    auto buf = effects_stage->ReadLock(0, 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
     EXPECT_EQ(480u, buf->length().Floor());
@@ -391,7 +392,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
                                                  [&packet_released] { packet_released = true; }));
 
   // Acquire a buffer.
-  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+  auto buf = effects_stage->ReadLock(0, 480);
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
   EXPECT_EQ(0u, buf->start().Floor());
@@ -433,7 +434,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
                                                  [&packet_released] { packet_released = true; }));
 
   // Acquire a buffer.
-  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+  auto buf = effects_stage->ReadLock(0, 480);
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
   EXPECT_EQ(0u, buf->start().Floor());
@@ -448,7 +449,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
 
   // Now read another buffer. Since this does not overlap with the last buffer, this should release
   // that packet.
-  buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 480, 480);
+  buf = effects_stage->ReadLock(480, 480);
   RunLoopUntilIdle();
   EXPECT_FALSE(buf);
   EXPECT_TRUE(packet_released);
@@ -479,7 +480,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   // Read a buffer with no usages, unity gain.
   int64_t first_frame = 0;
   {
-    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    auto buf = effects_stage->ReadLock(first_frame, kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_TRUE(buf->usage_mask().is_empty());
     EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
@@ -496,7 +497,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   input->set_usage_mask(
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   {
-    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    auto buf = effects_stage->ReadLock(first_frame, kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(),
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
@@ -514,7 +515,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   input->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                                          StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
   {
-    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    auto buf = effects_stage->ReadLock(first_frame, kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(),
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
@@ -560,12 +561,8 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
   // Add 48 frames to our source.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(1)));
 
-  // Effects stage doesn't directly depend on this value, but is passed through to the source
-  // stream. Pick a value that is in the future of all the frames we need.
-  const zx::time kStreamTime = zx::time(0) + zx::msec(100);
-
   {  // Read the frames out.
-    auto buf = effects_stage->ReadLock(kStreamTime, 0, 480);
+    auto buf = effects_stage->ReadLock(0, 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
     EXPECT_EQ(48u, buf->length().Floor());
@@ -573,7 +570,7 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
 
   // Now we expect 3 buffers of ringout; Read the first.
   {
-    auto buf = effects_stage->ReadLock(kStreamTime, 1 * kBlockSize, kBlockSize);
+    auto buf = effects_stage->ReadLock(1 * kBlockSize, kBlockSize);
     ASSERT_TRUE(buf);
     EXPECT_EQ(kBlockSize, buf->start().Floor());
     EXPECT_EQ(kBlockSize, buf->length().Floor());
@@ -583,15 +580,15 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
   // data.
   //
   // The skipped buffer:
-  //     buf = effects_stage->ReadLock(kStreamTime, 2 * kBlockSize, kBlockSize);
+  //     buf = effects_stage->ReadLock(2 * kBlockSize, kBlockSize);
   {
-    auto buf = effects_stage->ReadLock(kStreamTime, 3 * kBlockSize, kBlockSize);
+    auto buf = effects_stage->ReadLock(3 * kBlockSize, kBlockSize);
     ASSERT_FALSE(buf);
   }
 
   // Now read the 4th packet. Since we had a previous discontinuous buffer, this is still silent.
   {
-    auto buf = effects_stage->ReadLock(kStreamTime, 4 * kBlockSize, kBlockSize);
+    auto buf = effects_stage->ReadLock(4 * kBlockSize, kBlockSize);
     ASSERT_FALSE(buf);
   }
 }
@@ -660,12 +657,8 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   // Add 48 frames to our source.
   stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
 
-  // Effects stage doesn't directly depend on this value, but is passed through to the source
-  // stream. Pick a value that is in the future of all the frames we need.
-  const zx::time kStreamTime = zx::time(0) + zx::msec(100);
-
   {  // Read the frames out.
-    auto buf = effects_stage->ReadLock(kStreamTime, 0, 480);
+    auto buf = effects_stage->ReadLock(0, 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
     EXPECT_EQ(48u, buf->length().Floor());
@@ -676,8 +669,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   uint32_t ringout_frames = 0;
   {
     while (ringout_frames < GetParam().effect_ring_out_frames) {
-      auto buf =
-          effects_stage->ReadLock(kStreamTime, start_frame, GetParam().effect_ring_out_frames);
+      auto buf = effects_stage->ReadLock(start_frame, GetParam().effect_ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
       EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
@@ -687,7 +679,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   }
 
   {
-    auto buf = effects_stage->ReadLock(kStreamTime, start_frame, 480);
+    auto buf = effects_stage->ReadLock(start_frame, 480);
     EXPECT_FALSE(buf);
   }
 
@@ -698,8 +690,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
 
   {  // Read the frames out.
-    zx::time buffer_time(stream_->format().frames_per_ns().Inverse().Scale(start_frame));
-    auto buf = effects_stage->ReadLock(buffer_time, start_frame, 48);
+    auto buf = effects_stage->ReadLock(start_frame, 48);
     ASSERT_TRUE(buf);
     EXPECT_EQ(start_frame, buf->start().Floor());
     EXPECT_EQ(48u, buf->length().Floor());
@@ -710,9 +701,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   ringout_frames = 0;
   {
     while (ringout_frames < GetParam().effect_ring_out_frames) {
-      zx::time buffer_time(stream_->format().frames_per_ns().Inverse().Scale(start_frame));
-      auto buf =
-          effects_stage->ReadLock(buffer_time, start_frame, GetParam().effect_ring_out_frames);
+      auto buf = effects_stage->ReadLock(start_frame, GetParam().effect_ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
       EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
@@ -722,7 +711,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   }
 
   {
-    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 48, 480);
+    auto buf = effects_stage->ReadLock(48, 480);
     EXPECT_FALSE(buf);
   }
 }

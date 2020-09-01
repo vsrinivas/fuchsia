@@ -15,6 +15,10 @@
 namespace media::audio {
 namespace {
 
+static constexpr size_t kFramesPerSecond = 48000;
+static const TimelineFunction kDriverRefPtsToFractionalFrames =
+    TimelineFunction(0, 0, Fixed(kFramesPerSecond).raw_value(), zx::sec(1).get());
+
 // An OutputPipeline that always returns std::nullopt from |ReadLock|.
 class TestOutputPipeline : public OutputPipeline {
  public:
@@ -25,8 +29,7 @@ class TestOutputPipeline : public OutputPipeline {
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
-                                                 uint32_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(int64_t frame, size_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
     }
@@ -34,11 +37,11 @@ class TestOutputPipeline : public OutputPipeline {
     buffers_.pop_front();
     return buffer;
   }
-  void Trim(zx::time dest_ref_time) override {}
-  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
+  void Trim(int64_t frame) override {}
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return TimelineFunctionSnapshot{
-        .timeline_function = TimelineFunction(),
-        .generation = kInvalidGenerationId,
+        .timeline_function = kDriverRefPtsToFractionalFrames,
+        .generation = 1,
     };
   }
   AudioClock& reference_clock() override { return audio_clock_; }
@@ -63,11 +66,34 @@ class TestOutputPipeline : public OutputPipeline {
   AudioClock audio_clock_;
 };
 
+class StubDriver : public AudioDriverV1 {
+ public:
+  static constexpr size_t kSafeWriteDelayFrames = 480;
+  static constexpr auto kSafeWriteDelayDuration = zx::msec(10);
+  static constexpr size_t kRingBufferFrames = 48000;
+
+  StubDriver(AudioDevice* owner) : AudioDriverV1(owner) {}
+
+  const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const override {
+    return kDriverRefPtsToFractionalFrames;
+  }
+  const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const override {
+    return safe_write_ref_clock_to_frames_;
+  }
+
+ private:
+  const TimelineFunction safe_write_ref_clock_to_frames_ =
+      TimelineFunction(kSafeWriteDelayFrames, 0, kFramesPerSecond, zx::sec(1).get());
+};
+
 class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
-      : AudioOutput("", threading_model, registry, link_matrix) {}
+      : AudioOutput("", threading_model, registry, link_matrix,
+                    std::make_unique<StubDriver>(this)) {
+    SetMinLeadTime(StubDriver::kSafeWriteDelayDuration);
+  }
 
   using AudioOutput::FrameSpan;
   using AudioOutput::SetNextSchedTimeMono;
@@ -132,12 +158,20 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
+  void SetupMixTask() {
+    audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), StubDriver::kRingBufferFrames,
+                                stub_driver()->ptscts_ref_clock_to_fractional_frames());
+  }
+
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
     float* floats = reinterpret_cast<float*>(buffer);
     for (size_t i = 0; i < num_samples; ++i) {
       ASSERT_FLOAT_EQ(expected_sample, floats[i]);
     }
   }
+
+  StubDriver* stub_driver() { return static_cast<StubDriver*>(audio_output_->driver()); }
+
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
       &threading_model(), &context().device_manager(), &context().link_matrix());
@@ -146,9 +180,7 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
                                                                           &context().link_matrix());
-  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  static DeviceConfig::OutputDeviceProfile profile = DeviceConfig::OutputDeviceProfile();
-  audio_output_->SetupMixTask(profile, zx::msec(1).to_msecs(), kOneFramePerMs);
+  SetupMixTask();
   context().link_matrix().LinkObjects(renderer, audio_output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
@@ -182,7 +214,8 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   // 5ms; all the audio from packet1 is consumed and it should be released. We should still have
   // packet2, however.
   RunLoopFor(zx::msec(1));
-  ASSERT_TRUE(packet1_released && !packet2_released);
+  ASSERT_TRUE(packet1_released);
+  ASSERT_FALSE(packet2_released);
 
   // After 9ms we should still be retaining packet2.
   RunLoopFor(zx::msec(4));
@@ -200,13 +233,11 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
                                    .frames_per_second = 48000,
                                })
                     .take_value();
+
   // Use an output pipeline that will always return nullopt from ReadLock.
   auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
-
-  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), zx::msec(1).to_msecs(),
-                              kOneFramePerMs);
+  SetupMixTask();
 
   // Return some valid, non-silent frame range from StartMixJob.
   audio_output_->set_start_mix_delegate([](zx::time now) {
@@ -240,14 +271,12 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
                          .frames_per_second = 48000,
                      })
           .take_value();
+
   // Use an output pipeline that will always return nullopt from ReadLock.
   auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
   auto pipeline = pipeline_owned.get();
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
-
-  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  audio_output_->SetupMixTask(DeviceConfig::OutputDeviceProfile(), zx::msec(1).to_msecs(),
-                              kOneFramePerMs);
+  SetupMixTask();
 
   const uint32_t kBufferFrames = 25;
   const uint32_t kBufferSamples = kBufferFrames * 2;
@@ -259,8 +288,9 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   }
   // Enqueue several buffers, each with the same payload buffer.
   for (size_t i = 0; i < kNumBuffers; ++i) {
-    pipeline->Enqueue(ReadableStream::Buffer(i * kBufferFrames, kBufferFrames, buffer.data(), true,
-                                             StreamUsageMask(), Gain::kUnityGainDb));
+    pipeline->Enqueue(ReadableStream::Buffer(Fixed(i * kBufferFrames), Fixed(kBufferFrames),
+                                             buffer.data(), true, StreamUsageMask(),
+                                             Gain::kUnityGainDb));
   }
 
   // Return some valid, non-silent frame range from StartMixJob.
@@ -327,23 +357,13 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   // Setup test.
   auto test_effects = testing::TestEffectsModule::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  const Format kDefaultFormat =
-      Format::Create(fuchsia::media::AudioStreamType{
-                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-                         .channels = 2,
-                         .frames_per_second = 48000,
-                     })
-          .take_value();
-  const TimelineFunction kDefaultTransform = TimelineFunction(
-      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   // Create OutputPipeline with no effects and verify output.
-  static DeviceConfig::OutputDeviceProfile default_profile = DeviceConfig::OutputDeviceProfile();
-  audio_output_->SetupMixTask(default_profile, 128, kDefaultTransform);
+  SetupMixTask();
   auto pipeline = audio_output_->output_pipeline();
 
   {
-    auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
+    auto buf = pipeline->ReadLock(0, 48);
 
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
@@ -385,10 +405,10 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
                       .effect_config = "",
                   },
               },
-          .output_rate = 48000,
+          .output_rate = kFramesPerSecond,
           .output_channels = 2,
       }},
-      .output_rate = 48000,
+      .output_rate = kFramesPerSecond,
       .output_channels = 2,
   };
   auto volume_curve = VolumeCurve::DefaultForMinGain(-10.);
@@ -406,7 +426,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   pipeline = audio_output_->output_pipeline();
 
   {
-    auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
+    auto buf = pipeline->ReadLock(0, 48);
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
     EXPECT_EQ(buf->length().Floor(), 48u);

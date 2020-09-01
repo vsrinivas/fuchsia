@@ -50,7 +50,9 @@ class MixStageTest : public testing::ThreadingModelFixture {
                                             device_clock_);
   }
 
-  zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
+  int64_t duration_to_frames(zx::duration delta) {
+    return kDefaultFormat.frames_per_ns().Scale(delta.to_nsecs());
+  }
 
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
@@ -135,30 +137,33 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
   packet_queue->PushPacket(packet_factory.CreatePacket(
       0.5, zx::msec(5), [&packet2_released] { packet2_released = true; }));
 
-  constexpr zx::duration kToleranceInterval = zx::sec(1) / kDefaultFrameRate;
+  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number (we
+  // might be off by half a frame), so we allow ourselves one frame of tolerance either direction.
+  constexpr int64_t kToleranceFrames = 1;
+
   // Before 5ms: packet1 is not yet entirely consumed; we should still retain both packets.
-  mix_stage_->Trim(time_until(zx::msec(5) - kToleranceInterval));
+  mix_stage_->Trim(duration_to_frames(zx::msec(5)) - kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_FALSE(packet1_released);
 
   // After 5ms: packet1 is consumed and should have been released. We should still retain packet2.
-  mix_stage_->Trim(time_until(zx::msec(5) + kToleranceInterval));
+  mix_stage_->Trim(duration_to_frames(zx::msec(5)) + kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_TRUE(packet1_released);
   EXPECT_FALSE(packet2_released);
 
   // Before 10ms: packet2 is not yet entirely consumed; we should still retain it.
-  mix_stage_->Trim(time_until(zx::msec(10) - kToleranceInterval));
+  mix_stage_->Trim(duration_to_frames(zx::msec(10)) - kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_FALSE(packet2_released);
 
   // After 10ms: packet2 is consumed and should have been released.
-  mix_stage_->Trim(time_until(zx::msec(10) + kToleranceInterval));
+  mix_stage_->Trim(duration_to_frames(zx::msec(10)) + kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_TRUE(packet2_released);
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
-  mix_stage_->Trim(zx::time::infinite());
+  mix_stage_->Trim(std::numeric_limits<int64_t>::max());
 }
 
 TEST_F(MixStageTest, Trim) { TestMixStageTrim(ClockMode::SAME); }
@@ -223,8 +228,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   int64_t output_frame_start = 0;
   uint32_t output_frame_count = 96;
   {  // Mix frames 0-2ms. Expect 1 ms of 0.8 values, then 1 ms of 0.9 values.
-    auto buf =
-        mix_stage_->ReadLock(time_until(zx::msec(2)), output_frame_start, output_frame_count);
+    auto buf = mix_stage_->ReadLock(output_frame_start, output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
@@ -241,8 +245,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   output_frame_start += output_frame_count;
   {  // Mix frames 2-4ms. Expect 1 ms of 0.9 samples, then 1 ms of 0.8 values.
-    auto buf =
-        mix_stage_->ReadLock(time_until(zx::msec(4)), output_frame_start, output_frame_count);
+    auto buf = mix_stage_->ReadLock(output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -259,8 +262,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   output_frame_start += output_frame_count;
   {  // Mix frames 4-6ms. Expect 1 ms of 0.8 values, then 1 ms of 0.6 values.
-    auto buf =
-        mix_stage_->ReadLock(time_until(zx::msec(6)), output_frame_start, output_frame_count);
+    auto buf = mix_stage_->ReadLock(output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -275,7 +277,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   }
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
-  mix_stage_->Trim(zx::time::infinite());
+  mix_stage_->Trim(std::numeric_limits<int64_t>::max());
 }
 
 TEST_F(MixStageTest, MixUniformFormats) { TestMixStageUniformFormats(ClockMode::SAME); }
@@ -295,10 +297,13 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // This test should be adjusted if SincSampler's filter width increases.
   constexpr uint32_t kRingSizeFrames = 64;
   constexpr uint32_t kRingSizeSamples = kRingSizeFrames * kDefaultNumChannels;
+  constexpr uint32_t kFramesPerMs = 48;
 
   // Create a new RingBuffer and add it to our mix stage.
+  int64_t safe_write_frame = 0;
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames);
+      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames, 0,
+      [&safe_write_frame] { return safe_write_frame; });
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
   mix_stage_->AddInput(ring_buffer_endpoints.reader, std::nullopt, Mixer::Resampler::WindowedSinc);
@@ -316,7 +321,8 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // Read the ring in two halves, each is assigned a different source value in the ring above.
   constexpr uint32_t kRequestedFrames = kRingSizeFrames / 2;
   {
-    auto buf = mix_stage_->ReadLock(time_until(zx::msec(1)), 0, kRequestedFrames);
+    safe_write_frame = 1 * kFramesPerMs;
+    auto buf = mix_stage_->ReadLock(0, kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), 0u);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
@@ -328,7 +334,8 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   }
 
   {
-    auto buf = mix_stage_->ReadLock(time_until(zx::msec(2)), kRequestedFrames, kRequestedFrames);
+    safe_write_frame = 2 * kFramesPerMs;
+    auto buf = mix_stage_->ReadLock(kRequestedFrames, kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
@@ -346,7 +353,7 @@ TEST_F(MixStageTest, MixNoInputs) {
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(0, kRequestedFrames);
 
   // With no inputs, we should have a muted buffer with no usages.
   ASSERT_TRUE(buf);
@@ -384,13 +391,13 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   packet_queue->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(5)));
 
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(0, kRequestedFrames);
   ASSERT_TRUE(buf);
   EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
   EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
-  mix_stage_->Trim(zx::time::infinite());
+  mix_stage_->Trim(std::numeric_limits<int64_t>::max());
   mix_stage_->RemoveInput(*packet_queue);
 }
 
@@ -420,7 +427,7 @@ TEST_F(MixStageTest, MixMultipleInputs) {
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   input2->set_gain_db(-15);
   {
-    auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(0, kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
@@ -456,7 +463,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   info.next_src_pos_modulo = 2;
   bookkeeping.src_pos_modulo = 4;
   bookkeeping.denominator = 2;
-  mix_stage_->ReadLock(time_until(zx::duration(0)), 0, dest_frames_per_mix);
+  mix_stage_->ReadLock(0, dest_frames_per_mix);
 
   // Long-running source position advances normally; src_pos_modulos are reset.
   EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix));
@@ -468,7 +475,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   // If denominator is not changing, src_pos_modulo will be unchanged.
   bookkeeping.src_pos_modulo = 4;
   zx_nanosleep(zx_deadline_after(kMixDuration.get()));
-  mix_stage_->ReadLock(time_until(kMixDuration), dest_frames_per_mix, dest_frames_per_mix);
+  mix_stage_->ReadLock(dest_frames_per_mix, dest_frames_per_mix);
 
   // Long-running source position advances normally, no change to src_pos_modulo.
   EXPECT_EQ(info.next_frac_source_frame, Fixed(dest_frames_per_mix * 2));
@@ -481,7 +488,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   bookkeeping.src_pos_modulo = 4;
   bookkeeping.denominator = 2;
   zx_nanosleep(zx_deadline_after(kMixDuration.get()));
-  mix_stage_->ReadLock(time_until(kMixDuration * 2), dest_frames_per_mix * 2, dest_frames_per_mix);
+  mix_stage_->ReadLock(dest_frames_per_mix * 2, dest_frames_per_mix);
 
   // Denominator changes from 2 to 1, so src_pos_modulo is scaled from 4 to 2. next_src_pos_modulo
   // is scaled from 2 to 1, then reduced (because denominator == 1), after which next_src_pos_modulo
@@ -581,8 +588,7 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
 
   for (auto mix_count = 0; mix_count < kTotalMixCount; ++mix_count) {
     zx_nanosleep(zx_deadline_after(kMixDuration.get()));
-    mix_stage_->ReadLock(time_until(kMixDuration * mix_count), dest_frames_per_mix * mix_count,
-                         dest_frames_per_mix);
+    mix_stage_->ReadLock(dest_frames_per_mix * mix_count, dest_frames_per_mix);
     EXPECT_EQ(info.next_dest_frame, dest_frames_per_mix * (mix_count + 1));
 
     // Track the worst-case position error, and track worst-case in the last ten mixes separately.

@@ -897,11 +897,19 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
     if (owner_->is_input()) {
       readable_ring_buffer_ = BaseRingBuffer::CreateReadableHardwareBuffer(
           *format, ref_clock_to_fractional_frames_, reference_clock(), std::move(rb_vmo),
-          resp.num_ring_buffer_frames, fifo_depth_frames());
+          resp.num_ring_buffer_frames, fifo_depth_frames(), [this]() {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+            auto t = audio_clock_.Read();
+            return safe_read_or_write_ref_clock_to_frames_.Apply(t.get());
+          });
     } else {
       writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
           *format, ref_clock_to_fractional_frames_, reference_clock(), std::move(rb_vmo),
-          resp.num_ring_buffer_frames, 0);
+          resp.num_ring_buffer_frames, 0, [this]() {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+            auto t = audio_clock_.Read();
+            return safe_read_or_write_ref_clock_to_frames_.Apply(t.get());
+          });
     }
     if (!readable_ring_buffer_ && !writable_ring_buffer_) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);

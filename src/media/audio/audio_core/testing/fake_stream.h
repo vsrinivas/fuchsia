@@ -26,10 +26,10 @@ class FakeStream : public ReadableStream {
   }
 
   // |media::audio::ReadableStream|
-  std::optional<Buffer> ReadLock(zx::time dest_ref_time, int64_t frame, uint32_t frame_count);
-  void Trim(zx::time dest_ref_time) {}
-  TimelineFunctionSnapshot ReferenceClockToFixed() const;
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const;
   AudioClock& reference_clock() { return audio_clock_; }
+  std::optional<Buffer> ReadLock(int64_t frame, size_t frame_count);
+  void Trim(int64_t frame) {}
 
  private:
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =

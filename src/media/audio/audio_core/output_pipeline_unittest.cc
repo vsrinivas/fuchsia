@@ -64,29 +64,32 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                     RenderUsage::INTERRUPTION,
                 },
             .effects = {},
-            .inputs = {{
-                           .name = "default",
-                           .input_streams =
-                               {
-                                   RenderUsage::MEDIA,
-                                   RenderUsage::SYSTEM_AGENT,
-                               },
-                           .effects = {},
-                           .loopback = false,
-                           .output_rate = 48000,
-                           .output_channels = 2,
-                       },
-                       {
-                           .name = "communications",
-                           .input_streams =
-                               {
-                                   RenderUsage::COMMUNICATION,
-                               },
-                           .effects = {},
-                           .loopback = false,
-                           .output_rate = 48000,
-                           .output_channels = 2,
-                       }},
+            .inputs =
+                {
+                    {
+                        .name = "default",
+                        .input_streams =
+                            {
+                                RenderUsage::MEDIA,
+                                RenderUsage::SYSTEM_AGENT,
+                            },
+                        .effects = {},
+                        .loopback = false,
+                        .output_rate = 48000,
+                        .output_channels = 2,
+                    },
+                    {
+                        .name = "communications",
+                        .input_streams =
+                            {
+                                RenderUsage::COMMUNICATION,
+                            },
+                        .effects = {},
+                        .loopback = false,
+                        .output_rate = 48000,
+                        .output_channels = 2,
+                    },
+                },
             .loopback = false,
             .output_rate = 48000,
             .output_channels = 2,
@@ -102,7 +105,9 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                                                 kDefaultTransform, device_clock_);
   }
 
-  zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
+  int64_t duration_to_frames(zx::duration delta) {
+    return kDefaultFormat.frames_per_ns().Scale(delta.to_nsecs());
+  }
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
   AudioClock CreateClientClock() {
@@ -210,28 +215,30 @@ void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
         1.0, zx::msec(5), [&packet_released] { packet_released[7] = true; }));
   }
 
-  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number (we
-  // might be off by half a frame), so we allow ourselves one frame of tolerance either direction.
-  constexpr zx::duration kToleranceInterval = zx::sec(1) / kDefaultFrameRate;
+  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number.
+  // We might be off by a half frame per MixStage and our mix tree has depth 3, therefore we allow
+  // ourselves three frames of tolerance in either direction.
+  // TODO(fxbug.dev/59165): this should be 1
+  constexpr int64_t kToleranceFrames = 3;
 
   // Before 5ms: no packet is entirely consumed; we should still retain all packets.
-  pipeline->Trim(time_until(zx::msec(5) - kToleranceInterval));
+  pipeline->Trim(duration_to_frames(zx::msec(5)) - kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(false)));
 
   // After 5ms: first packets are consumed and released. We should still retain the others.
-  pipeline->Trim(time_until(zx::msec(5) + kToleranceInterval));
+  pipeline->Trim(duration_to_frames(zx::msec(5)) + kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released,
               Pointwise(Eq(), {true, false, true, false, true, false, true, false}));
 
   // After 10ms we should have trimmed all the packets.
-  pipeline->Trim(time_until(zx::msec(10) + kToleranceInterval));
+  pipeline->Trim(duration_to_frames(zx::msec(10)) + kToleranceFrames);
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(true)));
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
-  pipeline->Trim(zx::time::infinite());
+  pipeline->Trim(std::numeric_limits<int64_t>::max());
 }
 
 TEST_F(OutputPipelineTest, Trim) { TestOutputPipelineTrim(ClockMode::SAME); }
@@ -286,23 +293,29 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
+  // Present frames 5ms from now to stay ahead of the safe_write_frame.
+  auto ref_start = device_clock_.Read() + zx::msec(5);
+  auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
+  auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
+
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
+  auto buf = pipeline->ReadLock(loopback_frame, 48);
   ASSERT_TRUE(buf);
-  ASSERT_EQ(buf->start().Floor(), 0u);
+  ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 48u);
   CheckBuffer(buf->payload(), 2.0, 96);
 
+  // Sleep 6ms to advance our safe_read_frame past the above mix, which includes 1ms of output
+  // and is presented at most 5ms from now. TODO(fxbug.dev/57377): Remove this sleep
+  usleep(6000);
+
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto transform = pipeline->loopback()->ReferenceClockToFixed();
-  auto loopback_frame =
-      Fixed::FromRaw(transform.timeline_function.Apply((zx::time(0)).get())).Floor();
-  auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
-  ASSERT_EQ(loopback_buf->start().Floor(), 0u);
+  ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
   CheckBuffer(loopback_buf->payload(), 1.0, 96);
 }
@@ -357,23 +370,29 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
+  // Present frames 5ms from now to stay ahead of the safe_write_frame.
+  auto ref_start = device_clock_.Read() + zx::msec(5);
+  auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
+  auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
+
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(zx::time(0), 0, 96);
+  auto buf = pipeline->ReadLock(loopback_frame, 96);
   ASSERT_TRUE(buf);
-  ASSERT_EQ(buf->start().Floor(), 0u);
+  ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 96u);
   CheckBuffer(buf->payload(), 2.0, 192);
 
+  // Sleep 6ms to advance our safe_read_frame past the above mix, which includes 1ms of output
+  // and is presented at most 5ms from now. TODO(fxbug.dev/57377): Remove this sleep
+  usleep(6000);
+
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto transform = pipeline->loopback()->ReferenceClockToFixed();
-  auto loopback_frame =
-      Fixed::FromRaw(transform.timeline_function.Apply((zx::time(0)).get())).Floor();
-  auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
-  ASSERT_EQ(loopback_buf->start().Floor(), 0u);
+  ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
   CheckBuffer(loopback_buf->payload(), 1.0, 96);
 }
@@ -425,7 +444,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that sets all samples to the size of the new config).
-  auto buf = pipeline->ReadLock(zx::time(0) + zx::msec(1), 0, 48);
+  auto buf = pipeline->ReadLock(0, 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -588,7 +607,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(zx::time(0), 0, 240);
+    auto buf = pipeline->ReadLock(0, 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -600,7 +619,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(time_until(zx::msec(10)), 240, 240);
+    auto buf = pipeline->ReadLock(240, 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);

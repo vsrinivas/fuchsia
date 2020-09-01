@@ -254,7 +254,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Maps from a presentation/capture time on the reference clock to fractional
   // frame number in the stream.  The presentation/capture time refers to the
   // time that the sound either exits the speaker or enters the microphone.
-  const TimelineFunction& driver_ptscts_ref_clock_to_fractional_frames() const
+  virtual const TimelineFunction& driver_ptscts_ref_clock_to_fractional_frames() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Maps from a time on the reference clock to the safe read/write frame number
@@ -265,7 +265,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // an output stream may have already moved data to be transmitted from RAM
   // into the hardware.  When consuming or producing audio from an input or
   // output stream, users must always stay ahead of this point.
-  const TimelineFunction& driver_safe_read_or_write_ref_clock_to_frames() const
+  virtual const TimelineFunction& driver_safe_read_or_write_ref_clock_to_frames() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }

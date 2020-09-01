@@ -63,7 +63,7 @@ void AudioOutput::Process() {
       auto mix_frames = StartMixJob(ref_now);
       // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
-        auto buf = pipeline_->ReadLock(ref_now, mix_frames->start, mix_frames->length);
+        auto buf = pipeline_->ReadLock(mix_frames->start, mix_frames->length);
         if (buf) {
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
@@ -91,7 +91,7 @@ void AudioOutput::Process() {
       } else {
         // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
         // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(ref_now);
+        pipeline_->Trim(driver_safe_read_or_write_ref_clock_to_frames().Apply(ref_now.get()));
         frames_remaining = 0;
       }
 
@@ -236,7 +236,7 @@ fit::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
     device_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
     set_config(device_config);
 
-    auto snapshot = pipeline_->ReferenceClockToFixed();
+    auto snapshot = pipeline_->ref_time_to_frac_presentation_frame();
     pipeline_ =
         CreateOutputPipeline(updated_profile.pipeline_config(), updated_profile.volume_curve(),
                              max_block_size_frames_, snapshot.timeline_function, reference_clock());
