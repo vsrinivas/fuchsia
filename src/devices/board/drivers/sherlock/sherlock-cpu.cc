@@ -25,9 +25,9 @@ constexpr pbus_mmio_t cpu_mmios[]{
 constexpr pbus_dev_t cpu_dev = []() {
   pbus_dev_t result = {};
   result.name = "aml-cpu";
-  result.vid = PDEV_VID_AMLOGIC;
-  result.pid = PDEV_PID_AMLOGIC_T931;
-  result.did = PDEV_DID_AMLOGIC_CPU;
+  result.vid = PDEV_VID_GOOGLE;
+  result.pid = PDEV_PID_SHERLOCK;
+  result.did = PDEV_DID_GOOGLE_AMLOGIC_CPU;
   result.mmio_list = cpu_mmios;
   result.mmio_count = countof(cpu_mmios);
   return result;

@@ -81,6 +81,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_GAUSS_I2C_TEST     0x03
 #define PDEV_DID_GAUSS_LED          0x04
 #define PDEV_DID_ASTRO_GOODIXTOUCH  0x05
+#define PDEV_DID_GOOGLE_AMLOGIC_CPU 0x06
 
 // Khadas
 #define PDEV_VID_KHADAS             0x04

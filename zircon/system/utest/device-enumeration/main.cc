@@ -262,7 +262,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "pwm-init",
 
       // CPU Device.
-      "sys/platform/05:03:1e",
+      "sys/platform/03:03:6",
       "class/cpu-ctrl/000",
       // LED.
       "class/light/000",
@@ -464,6 +464,11 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-secure-mem/aml-securemem",
       "pwm-init",
       "sys/platform/05:04:24/ram",
+
+      // CPU Device.
+      "sys/platform/03:05:6",
+      "class/cpu-ctrl/000",
+      "class/cpu-ctrl/001",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
