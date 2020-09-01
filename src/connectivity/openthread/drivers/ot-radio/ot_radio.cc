@@ -293,7 +293,7 @@ zx_status_t OtRadioDevice::ReadRadioPacket() {
 }
 
 zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t length) {
-  zxlogf(INFO, "ot-radio: received frame of len:%d", length);
+  zxlogf(DEBUG, "ot-radio: received frame of len:%d", length);
   if (power_status_ == OT_SPINEL_DEVICE_ON) {
     ::fidl::VectorView<uint8_t> data;
     data.set_count(length);
@@ -315,7 +315,7 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
 }
 
 zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) {
-  zxlogf(INFO, "ot-radio: RadioPacketTx");
+  zxlogf(DEBUG, "ot-radio: RadioPacketTx");
   zx_port_packet packet = {PORT_KEY_TX_TO_RADIO, ZX_PKT_TYPE_USER, ZX_OK, {}};
   if (!port_.is_valid()) {
     return ZX_ERR_BAD_STATE;
