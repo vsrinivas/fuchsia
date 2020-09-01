@@ -51,12 +51,31 @@ class BaseStream {
         ref_time_to_frac_presentation_frame().timeline_function.ApplyInverse(frame.raw_value()));
   }
 
-  virtual void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_.store(min_lead_time); }
-  zx::duration GetMinLeadTime() const { return min_lead_time_.load(); }
+  // The presentation delay is defined to be the absolute difference between a frame's
+  // presentation timestamp and the frame's safe read/write timestamp. This is always a
+  // positive number. Ideally this should be the exact delay, if known, and otherwise a
+  // true upper-bound of the delay, however in practice it is sometimes a best-effort
+  // estimate that can be either low or high.
+  //
+  // For render pipelines, this represents the delay between reading a frame with
+  // ReadLock and actually rendering the frame at an output device. This is also known as
+  // the "min lead time".
+  //
+  // For capture pipelines, this represents the delay between capturing a frame at
+  // an input device and reading that frame with ReadLock.
+  zx::duration GetPresentationDelay() const { return presentation_delay_.load(); }
+
+  // Presentation delays are propagated from destination streams to source streams. The
+  // delay passed to the source stream is typically external_delay + intrinsic_delay.
+  // The default implementation is sufficient for pipeline stages that do not introduce
+  // extra delay.
+  virtual void SetPresentationDelay(zx::duration external_delay) {
+    presentation_delay_.store(external_delay);
+  }
 
  private:
   Format format_;
-  std::atomic<zx::duration> min_lead_time_{zx::duration(0)};
+  std::atomic<zx::duration> presentation_delay_{zx::duration(0)};
 };
 
 // A read-only stream of audio data.

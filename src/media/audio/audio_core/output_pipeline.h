@@ -97,9 +97,9 @@ class OutputPipelineImpl : public OutputPipeline {
     FX_DCHECK(state_.stream);
     return state_.stream->ref_time_to_frac_presentation_frame();
   }
-  void SetMinLeadTime(zx::duration min_lead_time) override {
-    ReadableStream::SetMinLeadTime(min_lead_time);
-    state_.stream->SetMinLeadTime(min_lead_time);
+  void SetPresentationDelay(zx::duration external_delay) override {
+    ReadableStream::SetPresentationDelay(external_delay);
+    state_.stream->SetPresentationDelay(external_delay);
   }
   AudioClock& reference_clock() override { return state_.audio_clock; }
 

@@ -92,7 +92,7 @@ class TestAudioOutput : public AudioOutput {
                   LinkMatrix* link_matrix)
       : AudioOutput("", threading_model, registry, link_matrix,
                     std::make_unique<StubDriver>(this)) {
-    SetMinLeadTime(StubDriver::kSafeWriteDelayDuration);
+    SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }
 
   using AudioOutput::FrameSpan;

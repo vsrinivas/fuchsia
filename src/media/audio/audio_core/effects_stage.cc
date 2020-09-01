@@ -178,9 +178,9 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
       effects_processor_(std::move(effects_processor)),
       volume_curve_(std::move(volume_curve)),
       ringout_(RingoutBuffer::Create(source_->format(), *effects_processor_)) {
-  // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
-  // |SetMinLeadTime| override.
-  SetMinLeadTime(zx::duration(0));
+  // Initialize our lead time. Passing 0 here will resolve to our effect's lead time
+  // in our |SetPresentationDelay| override.
+  SetPresentationDelay(zx::duration(0));
 }
 
 std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
@@ -295,14 +295,14 @@ BaseStream::TimelineFunctionSnapshot EffectsStage::ref_time_to_frac_presentation
   return snapshot;
 }
 
-void EffectsStage::SetMinLeadTime(zx::duration external_lead_time) {
+void EffectsStage::SetPresentationDelay(zx::duration external_delay) {
   // Add in any additional lead time required by our effects.
   zx::duration intrinsic_lead_time = ComputeIntrinsicMinLeadTime();
-  zx::duration total_lead_time = external_lead_time + intrinsic_lead_time;
+  zx::duration total_delay = external_delay + intrinsic_lead_time;
 
   // Apply the total lead time to us and propagate that value to our source.
-  ReadableStream::SetMinLeadTime(total_lead_time);
-  source_->SetMinLeadTime(total_lead_time);
+  ReadableStream::SetPresentationDelay(total_delay);
+  source_->SetPresentationDelay(total_delay);
 }
 
 fit::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::UpdateEffect(

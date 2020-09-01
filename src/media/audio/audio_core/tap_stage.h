@@ -27,7 +27,7 @@ class TapStage : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
   void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
 
-  void SetMinLeadTime(zx::duration min_lead_time) override;
+  void SetPresentationDelay(zx::duration external_delay) override;
 
  private:
   const TimelineFunction& SourceFracFrameToTapFrame();

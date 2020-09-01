@@ -72,7 +72,7 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     mixer->bookkeeping().gain.SetDestGain(*initial_dest_gain_db);
   }
 
-  stream->SetMinLeadTime(GetMinLeadTime() + LeadTimeForMixer(stream->format(), *mixer));
+  stream->SetPresentationDelay(GetPresentationDelay() + LeadTimeForMixer(stream->format(), *mixer));
 
   FX_LOGS(DEBUG) << "AddInput " << (stream->reference_clock().is_adjustable() ? "" : "non-")
                  << "adjustable "
@@ -141,18 +141,18 @@ BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_fra
   };
 }
 
-void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
-  TRACE_DURATION("audio", "MixStage::SetMinLeadTime");
-  ReadableStream::SetMinLeadTime(min_lead_time);
+void MixStage::SetPresentationDelay(zx::duration external_delay) {
+  TRACE_DURATION("audio", "MixStage::SetPresentationDelay");
+  ReadableStream::SetPresentationDelay(external_delay);
 
-  // Propagate our lead time to our sources.
+  // Propagate time to our sources.
   std::lock_guard<std::mutex> lock(stream_lock_);
   for (const auto& holder : streams_) {
     FX_DCHECK(holder.stream);
     FX_DCHECK(holder.mixer);
 
     zx::duration mixer_lead_time = LeadTimeForMixer(holder.stream->format(), *holder.mixer);
-    holder.stream->SetMinLeadTime(min_lead_time + mixer_lead_time);
+    holder.stream->SetPresentationDelay(external_delay + mixer_lead_time);
   }
 }
 

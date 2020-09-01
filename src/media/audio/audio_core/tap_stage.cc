@@ -55,9 +55,10 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(int64_t dest_frame, siz
   return source_buffer;
 }
 
-void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
-  ReadableStream::SetMinLeadTime(min_lead_time);
-  source_->SetMinLeadTime(min_lead_time);
+void TapStage::SetPresentationDelay(zx::duration external_delay) {
+  // The tap does not introduce extra delay.
+  ReadableStream::SetPresentationDelay(external_delay);
+  source_->SetPresentationDelay(external_delay);
 }
 
 const TimelineFunction& TapStage::SourceFracFrameToTapFrame() {

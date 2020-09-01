@@ -245,12 +245,12 @@ TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time =
       zx::duration(zx::sec(13).to_nsecs() / k48k2ChanFloatFormat.frames_per_second());
-  EXPECT_EQ(effect_lead_time, effects_stage->GetMinLeadTime());
+  EXPECT_EQ(effect_lead_time, effects_stage->GetPresentationDelay());
 
   // Check that setting an external min lead time includes our internal lead time.
   const auto external_lead_time = zx::usec(100);
-  effects_stage->SetMinLeadTime(external_lead_time);
-  EXPECT_EQ(effect_lead_time + external_lead_time, effects_stage->GetMinLeadTime());
+  effects_stage->SetPresentationDelay(external_lead_time);
+  EXPECT_EQ(effect_lead_time + external_lead_time, effects_stage->GetPresentationDelay());
 }
 
 static const std::string kInstanceName = "instance_name";

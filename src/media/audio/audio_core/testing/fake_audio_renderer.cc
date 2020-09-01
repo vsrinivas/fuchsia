@@ -67,7 +67,7 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
   link_matrix_.ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
     if (link.object->is_output()) {
       const auto& output = static_cast<const AudioOutput&>(*link.object);
-      cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
+      cur_lead_time = std::max(cur_lead_time, output.presentation_delay());
     }
   });
 

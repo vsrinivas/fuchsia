@@ -469,9 +469,10 @@ void DriverOutput::OnDriverConfigComplete() {
     return;
   }
 
-  // Driver is configured, we have all the needed info to compute minimum lead time for this output.
-  SetMinLeadTime(driver()->external_delay() + driver()->fifo_depth_duration() +
-                 kDefaultHighWaterNsec);
+  // Driver is configured, we have all the needed info to compute the presentation
+  // delay for this output.
+  SetPresentationDelay(driver()->external_delay() + driver()->fifo_depth_duration() +
+                       kDefaultHighWaterNsec);
 
   // Fill our brand new ring buffer with silence
   FX_DCHECK(driver_writable_ring_buffer() != nullptr);

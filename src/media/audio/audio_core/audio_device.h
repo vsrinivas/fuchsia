@@ -86,8 +86,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   }
 
   // AudioObjects with Type::Output must override this; this version should never be called.
-  virtual zx::duration min_lead_time() const {
-    FX_CHECK(false) << "min_lead_time() not supported on AudioDevice";
+  virtual zx::duration presentation_delay() const {
+    FX_CHECK(false) << "presentation_delay() not supported on AudioDevice";
     return zx::nsec(0);
   }
 

@@ -32,7 +32,7 @@ class MixStage : public ReadableStream {
   AudioClock& reference_clock() override { return output_ref_clock_; }
   std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
   void Trim(int64_t dest_frame) override;
-  void SetMinLeadTime(zx::duration min_lead_time) override;
+  void SetPresentationDelay(zx::duration external_delay) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
                                   std::optional<float> initial_dest_gain_db = std::nullopt,

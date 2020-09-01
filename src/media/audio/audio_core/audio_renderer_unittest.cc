@@ -107,11 +107,12 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
   auto fake_output = testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
-  // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
-  fake_output->SetMinLeadTime(kMinLeadTime);
+  // We must set our output's delay, before linking it, before calling SetPcmStreamType().
+  fake_output->SetPresentationDelay(kMinLeadTime);
 
-  // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
-  // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
+  // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set
+  // our output's PresentationDelay, fully expecting this value to be reflected as-is to
+  // renderer+clients.
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDevice(fake_output.get());
 
@@ -209,7 +210,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   // will not be continuous with the previous packets.
   //
   // TODO(fxbug.dev/57377): Use a fake clock for unittests.
-  zx::nanosleep(zx::deadline_after(stream->GetMinLeadTime() + zx::msec(30)));
+  zx::nanosleep(zx::deadline_after(stream->GetPresentationDelay() + zx::msec(30)));
   packet.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));

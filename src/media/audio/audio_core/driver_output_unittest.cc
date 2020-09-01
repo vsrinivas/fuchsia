@@ -251,7 +251,7 @@ TEST_F(DriverOutputTest, RendererOutput) {
   const uint32_t kNonSilentFrame = 0x7fff7fff;
   const uint32_t kMixWindowFrames = 480;
   size_t first_non_silent_frame =
-      (kSupportedSampleRate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (kSupportedSampleRate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t first_silent_frame = first_non_silent_frame + kMixWindowFrames;
 
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_non_silent_frame), Each(Eq(kSilentFrame)));
@@ -296,7 +296,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   const uint32_t kNegativeOneSamples = 0x80008000;
   const uint32_t kMixWindowFrames = 480;
   size_t first_positive_one_frame =
-      (kSupportedSampleRate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (kSupportedSampleRate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t first_negative_one_frame = first_positive_one_frame + kMixWindowFrames;
   size_t first_silent_frame = first_negative_one_frame + kMixWindowFrames;
 
@@ -377,7 +377,7 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
   const uint32_t kSilentFrame = 0;
   const uint32_t kInitialFrame = UINT32_MAX;
   size_t first_silent_frame =
-      (kSupportedSampleRate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (kSupportedSampleRate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t num_silent_frames = kMixWindowFrames * 2;
 
   // Run loop to consume all the frames from the renderer.
@@ -393,10 +393,10 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
   // frames would have been played back.
   EXPECT_FALSE(packet1_released || packet2_released);
 
-  // Run the loop for |min_lead_time| to verify we release our packets. We add
+  // Run the loop for |presentation_delay| to verify we release our packets. We add
   // |kExpectedMixInterval| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead
   // time has elapsed.
-  RunLoopFor((output_->min_lead_time() + kExpectedMixInterval - zx::nsec(1)));
+  RunLoopFor((output_->presentation_delay() + kExpectedMixInterval - zx::nsec(1)));
   EXPECT_TRUE(packet1_released);
   EXPECT_TRUE(packet2_released);
 
@@ -585,7 +585,7 @@ TEST_F(DriverV2OutputTest, RendererOutput) {
   const uint32_t kNonSilentFrame = 0x7fff7fff;
   const uint32_t kMixWindowFrames = 480;
   size_t first_non_silent_frame =
-      (supportedSampleFormat.frame_rate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (supportedSampleFormat.frame_rate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t first_silent_frame = first_non_silent_frame + kMixWindowFrames;
 
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_non_silent_frame), Each(Eq(kSilentFrame)));
@@ -632,7 +632,7 @@ TEST_F(DriverV2OutputTest, MixAtExpectedInterval) {
   const uint32_t kNegativeOneSamples = 0x80008000;
   const uint32_t kMixWindowFrames = 480;
   size_t first_positive_one_frame =
-      (supportedSampleFormat.frame_rate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (supportedSampleFormat.frame_rate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t first_negative_one_frame = first_positive_one_frame + kMixWindowFrames;
   size_t first_silent_frame = first_negative_one_frame + kMixWindowFrames;
 
@@ -715,7 +715,7 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
   const uint32_t kSilentFrame = 0;
   const uint32_t kInitialFrame = UINT32_MAX;
   size_t first_silent_frame =
-      (supportedSampleFormat.frame_rate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+      (supportedSampleFormat.frame_rate * output_->presentation_delay().to_nsecs()) / 1'000'000'000;
   size_t num_silent_frames = kMixWindowFrames * 2;
 
   // Run loop to consume all the frames from the renderer.
@@ -731,10 +731,10 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
   // frames would have been played back.
   EXPECT_FALSE(packet1_released || packet2_released);
 
-  // Run the loop for |min_lead_time| to verify we release our packets. We add
+  // Run the loop for |presentation_delay| to verify we release our packets. We add
   // |kExpectedMixInterval| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead
   // time has elapsed.
-  RunLoopFor((output_->min_lead_time() + kExpectedMixInterval - zx::nsec(1)));
+  RunLoopFor((output_->presentation_delay() + kExpectedMixInterval - zx::nsec(1)));
   EXPECT_TRUE(packet1_released);
   EXPECT_TRUE(packet2_released);
 

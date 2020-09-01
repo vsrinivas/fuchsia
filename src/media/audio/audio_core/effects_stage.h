@@ -49,7 +49,7 @@ class EffectsStage : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
   void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
 
-  void SetMinLeadTime(zx::duration lead_time) override;
+  void SetPresentationDelay(zx::duration external_delay) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                        zx::duration underflow_duration) override {
     source_->ReportUnderflow(frac_source_start, frac_source_mix_point, underflow_duration);

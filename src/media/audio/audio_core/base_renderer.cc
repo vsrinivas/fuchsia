@@ -142,7 +142,7 @@ void BaseRenderer::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "BaseRenderer::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
   for (const auto& [_, packet_queue] : packet_queues_) {
-    cur_lead_time = std::max(cur_lead_time, packet_queue->GetMinLeadTime());
+    cur_lead_time = std::max(cur_lead_time, packet_queue->GetPresentationDelay());
   }
 
   if (min_lead_time_ != cur_lead_time) {

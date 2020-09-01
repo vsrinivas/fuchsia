@@ -455,7 +455,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
 // This test makes assumptions about the mixer's lead-time, so we explicitly specify the
 // SampleAndHold resampler. Because we compare actual duration to expected duration down to the
 // nanosec, the amount of delay in our test effects is carefully chosen and may be brittle.
-TEST_F(OutputPipelineTest, ReportMinLeadTime) {
+TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   constexpr int64_t kMixLeadTimeFrames = 1;
   constexpr int64_t kEffects1LeadTimeFrames = 300;
   constexpr int64_t kEffects2LeadTimeFrames = 900;
@@ -524,22 +524,22 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
 
   // The pipeline itself (the root, after any MixStages or EffectsStages) requires no lead time.
-  EXPECT_EQ(zx::duration(0), pipeline->GetMinLeadTime());
+  EXPECT_EQ(zx::duration(0), pipeline->GetPresentationDelay());
 
   // MEDIA streams require 302 frames of lead time. They run through an effect that introduces 300
   // frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize' MixStages each
   // add 1 frame of lead time.
-  const auto default_lead_time = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(
+  const auto default_delay = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(
       kMixLeadTimeFrames + kEffects1LeadTimeFrames + kMixLeadTimeFrames));
-  EXPECT_EQ(default_lead_time, default_stream->GetMinLeadTime());
+  EXPECT_EQ(default_delay, default_stream->GetPresentationDelay());
 
   // COMMUNICATION streams require 902 frames of lead time. They run through an effect that
   // introduces 900 frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize'
   // MixStages each add 1 frame of lead time.
-  const auto communications_lead_time = zx::duration(
+  const auto communications_delay = zx::duration(
       zx::sec(kMixLeadTimeFrames + kEffects2LeadTimeFrames + kMixLeadTimeFrames).to_nsecs() /
       kDefaultFormat.frames_per_second());
-  EXPECT_EQ(communications_lead_time, communications_stream->GetMinLeadTime());
+  EXPECT_EQ(communications_delay, communications_stream->GetPresentationDelay());
 }
 
 void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {

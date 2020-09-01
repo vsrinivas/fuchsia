@@ -182,7 +182,7 @@ std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
   auto pipeline =
       std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
                                            device_reference_clock_to_fractional_frame, ref_clock);
-  pipeline->SetMinLeadTime(min_lead_time_);
+  pipeline->SetPresentationDelay(presentation_delay_);
   return pipeline;
 }
 
