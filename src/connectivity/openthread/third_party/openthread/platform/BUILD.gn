@@ -9,6 +9,7 @@ source_set("platform") {
     "fuchsia_platform_alarm.cc",
     "logging.cc",
     "main.cc",
+    "misc.cc",
     "radio_spinel.cc",
     "settings.cc",
     "system.cc",

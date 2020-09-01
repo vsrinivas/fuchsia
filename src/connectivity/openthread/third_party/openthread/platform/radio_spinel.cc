@@ -101,3 +101,29 @@ extern "C" otError otPlatRadioEnergyScan(otInstance *a_instance, uint8_t a_scan_
 }
 
 extern "C" int8_t otPlatRadioGetReceiveSensitivity(otInstance *a_instance) { return 0; }
+
+extern "C" otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *a_instance,
+                                                          int8_t *a_threshold) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_threshold);
+  return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+extern "C" otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *a_instance,
+                                                          int8_t a_threshold) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_threshold);
+  return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+extern "C" otError otPlatRadioGetTransmitPower(otInstance *a_instance, int8_t *a_power) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_power);
+  return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+extern "C" otError otPlatRadioSetTransmitPower(otInstance *a_instance, int8_t a_power) {
+  OT_UNUSED_VARIABLE(a_power);
+  OT_UNUSED_VARIABLE(a_instance);
+  return OT_ERROR_NOT_IMPLEMENTED;
+}
