@@ -13,6 +13,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/phy.h>
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
 #include "dwc2-device.h"
@@ -21,13 +22,21 @@
 namespace aml_usb_phy {
 
 class AmlUsbPhy;
-using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::UnbindableDeprecated, ddk::Messageable>;
+using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::Initializable, ddk::UnbindableNew,
+                                  ddk::ChildPreReleaseable, ddk::Messageable>;
 
 // This is the main class for the platform bus driver.
 class AmlUsbPhy : public AmlUsbPhyType,
                   public ddk::UsbPhyProtocol<AmlUsbPhy, ddk::base_protocol>,
                   public llcpp::fuchsia::hardware::registers::Device::Interface {
  public:
+  // Public for testing.
+  enum class UsbMode {
+    UNKNOWN,
+    HOST,
+    PERIPHERAL,
+  };
+
   explicit AmlUsbPhy(zx_device_t* parent) : AmlUsbPhyType(parent), pdev_(parent) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -36,31 +45,36 @@ class AmlUsbPhy : public AmlUsbPhyType,
   void UsbPhyConnectStatusChanged(bool connected);
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated();
+  void DdkInit(ddk::InitTxn txn);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkChildPreRelease(void* child_ctx);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   void WriteRegister(uint64_t address, uint32_t value,
                      WriteRegisterCompleter::Sync completer) override;
 
- private:
-  enum class UsbMode {
-    UNKNOWN,
-    HOST,
-    PERIPHERAL,
-  };
+  // Public for testing.
+  UsbMode mode() {
+    fbl::AutoLock lock(&lock_);
+    return mode_;
+  }
 
+ private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlUsbPhy);
 
   void InitPll(ddk::MmioBuffer* mmio);
   zx_status_t InitPhy();
   zx_status_t InitOtg();
-  void SetMode(UsbMode mode) __TA_REQUIRES(lock_);
 
-  zx_status_t AddXhciDevice();
-  void RemoveXhciDevice();
-  zx_status_t AddDwc2Device();
-  void RemoveDwc2Device();
+  // Called when |SetMode| completes.
+  using SetModeCompletion = fit::callback<void(void)>;
+  void SetMode(UsbMode mode, SetModeCompletion completion) __TA_REQUIRES(lock_);
+
+  zx_status_t AddXhciDevice() __TA_REQUIRES(lock_);
+  void RemoveXhciDevice(SetModeCompletion completion) __TA_REQUIRES(lock_);
+  zx_status_t AddDwc2Device() __TA_REQUIRES(lock_);
+  void RemoveDwc2Device(SetModeCompletion completion) __TA_REQUIRES(lock_);
 
   zx_status_t Init();
   int IrqThread();
@@ -74,6 +88,7 @@ class AmlUsbPhy : public AmlUsbPhyType,
 
   zx::interrupt irq_;
   thrd_t irq_thread_;
+  std::atomic_bool irq_thread_started_ = false;
 
   fbl::Mutex lock_;
 
@@ -81,11 +96,15 @@ class AmlUsbPhy : public AmlUsbPhyType,
   uint32_t pll_settings_[8];
 
   // Device node for binding XHCI driver.
-  std::unique_ptr<XhciDevice> xhci_device_;
-  std::unique_ptr<Dwc2Device> dwc2_device_;
+  std::unique_ptr<XhciDevice> xhci_device_ __TA_GUARDED(lock_);
+  std::unique_ptr<Dwc2Device> dwc2_device_ __TA_GUARDED(lock_);
 
-  UsbMode mode_ = UsbMode::UNKNOWN;
+  UsbMode mode_ __TA_GUARDED(lock_) = UsbMode::UNKNOWN;
   bool dwc2_connected_ = false;
+
+  // If set, indicates that the device has a pending SetMode which
+  // will be completed once |DdkChildPreRelease| is called.
+  SetModeCompletion set_mode_completion_ __TA_GUARDED(lock_);
 };
 
 }  // namespace aml_usb_phy

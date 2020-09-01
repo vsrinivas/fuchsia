@@ -24,6 +24,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-g12-reset.h>
@@ -147,8 +148,16 @@ zx_status_t AmlUsbPhy::InitOtg() {
   return ZX_OK;
 }
 
-void AmlUsbPhy::SetMode(UsbMode mode) {
+void AmlUsbPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
   ZX_DEBUG_ASSERT(mode == UsbMode::HOST || mode == UsbMode::PERIPHERAL);
+  // Only the irq thread calls |SetMode|, and it should have waited for the
+  // previous call to |SetMode| to complete.
+  ZX_DEBUG_ASSERT(!set_mode_completion_);
+  auto ac = fbl::MakeAutoCall([&]() {
+    if (completion)
+      completion();
+  });
+
   if (mode == mode_)
     return;
 
@@ -194,10 +203,10 @@ void AmlUsbPhy::SetMode(UsbMode mode) {
 
   if (mode == UsbMode::HOST) {
     AddXhciDevice();
-    RemoveDwc2Device();
+    RemoveDwc2Device(std::move(completion));
   } else {
     AddDwc2Device();
-    RemoveXhciDevice();
+    RemoveXhciDevice(std::move(completion));
   }
 }
 
@@ -212,16 +221,20 @@ int AmlUsbPhy::IrqThread() {
   while (true) {
     auto r5 = USB_R5_V2::Get().ReadFrom(mmio);
 
+    // Since |SetMode| is asynchronous, we need to block until it completes.
+    sync_completion_t set_mode_sync;
+    auto completion = [&](void) { sync_completion_signal(&set_mode_sync); };
     // Read current host/device role.
     if (r5.iddig_curr() == 0) {
       zxlogf(INFO, "Entering USB Host Mode");
-      SetMode(UsbMode::HOST);
+      SetMode(UsbMode::HOST, std::move(completion));
     } else {
       zxlogf(INFO, "Entering USB Peripheral Mode");
-      SetMode(UsbMode::PERIPHERAL);
+      SetMode(UsbMode::PERIPHERAL, std::move(completion));
     }
 
     lock_.Release();
+    sync_completion_wait(&set_mode_sync, ZX_TIME_INFINITE);
     auto status = irq_.wait(nullptr);
     if (status == ZX_ERR_CANCELED) {
       return 0;
@@ -270,11 +283,15 @@ zx_status_t AmlUsbPhy::AddXhciDevice() {
       ddk::DeviceAddArgs("xhci").set_props(props).set_proto_id(ZX_PROTOCOL_USB_PHY));
 }
 
-void AmlUsbPhy::RemoveXhciDevice() {
+void AmlUsbPhy::RemoveXhciDevice(SetModeCompletion completion) {
+  auto ac = fbl::MakeAutoCall([&]() {
+    if (completion)
+      completion();
+  });
   if (xhci_device_) {
-    // devmgr will own the device until it is destroyed.
-    auto* dev = xhci_device_.release();
-    dev->DdkRemoveDeprecated();
+    // The callback will be run by the ChildPreRelease hook once the xhci device has been removed.
+    set_mode_completion_ = std::move(completion);
+    xhci_device_->DdkAsyncRemove();
   }
 }
 
@@ -316,11 +333,15 @@ zx_status_t AmlUsbPhy::AddDwc2Device() {
       ddk::DeviceAddArgs("dwc2").set_props(props).set_proto_id(ZX_PROTOCOL_USB_PHY));
 }
 
-void AmlUsbPhy::RemoveDwc2Device() {
+void AmlUsbPhy::RemoveDwc2Device(SetModeCompletion completion) {
+  auto ac = fbl::MakeAutoCall([&]() {
+    if (completion)
+      completion();
+  });
   if (dwc2_device_) {
-    // devmgr will own the device until it is destroyed.
-    auto* dev = dwc2_device_.release();
-    dev->DdkRemoveDeprecated();
+    // The callback will be run by the ChildPreRelease hook once the dwc2 device has been removed.
+    set_mode_completion_ = std::move(completion);
+    dwc2_device_->DdkAsyncRemove();
   }
 }
 
@@ -374,20 +395,19 @@ zx_status_t AmlUsbPhy::Init() {
     return status;
   }
 
-  status = DdkAdd("aml-usb-phy-v2", DEVICE_ADD_NON_BINDABLE);
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd("aml-usb-phy-v2", DEVICE_ADD_NON_BINDABLE);
+}
 
+void AmlUsbPhy::DdkInit(ddk::InitTxn txn) {
+  irq_thread_started_ = true;
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) -> int { return reinterpret_cast<AmlUsbPhy*>(arg)->IrqThread(); },
       reinterpret_cast<void*>(this), "amlogic-usb-thread");
   if (rc != thrd_success) {
-    DdkRemoveDeprecated();
-    return ZX_ERR_INTERNAL;
+    irq_thread_started_ = false;
+    return txn.Reply(ZX_ERR_INTERNAL);  // This will schedule the device to be unbound.
   }
-
-  return ZX_OK;
+  return txn.Reply(ZX_OK);
 }
 
 // PHY tuning based on connection state
@@ -409,13 +429,29 @@ void AmlUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
   dwc2_connected_ = connected;
 }
 
-void AmlUsbPhy::DdkUnbindDeprecated() {
+void AmlUsbPhy::DdkUnbindNew(ddk::UnbindTxn txn) {
   irq_.destroy();
-  thrd_join(irq_thread_, nullptr);
+  if (irq_thread_started_) {
+    thrd_join(irq_thread_, nullptr);
+  }
+  txn.Reply();
+}
 
-  RemoveXhciDevice();
-  RemoveDwc2Device();
-  DdkRemoveDeprecated();
+void AmlUsbPhy::DdkChildPreRelease(void* child_ctx) {
+  fbl::AutoLock lock(&lock_);
+  // devmgr will own the device until it is destroyed.
+  if (xhci_device_ && (child_ctx == xhci_device_.get())) {
+    __UNUSED auto* dev = xhci_device_.release();
+  } else if (dwc2_device_ && (child_ctx == dwc2_device_.get())) {
+    __UNUSED auto* dev = dwc2_device_.release();
+  } else {
+    zxlogf(ERROR, "AmlUsbPhy::DdkChildPreRelease unexpected child ctx %p", child_ctx);
+  }
+  if (set_mode_completion_) {
+    // If the mode is currently being set, the irq thread will be blocked
+    // until we call this completion.
+    set_mode_completion_();
+  }
 }
 
 void AmlUsbPhy::DdkRelease() { delete this; }
