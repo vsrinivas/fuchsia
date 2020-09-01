@@ -110,7 +110,7 @@ impl Deref for FatDevice {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use {
         super::*,
         fidl::endpoints::ServerEnd,
@@ -270,7 +270,7 @@ mod test {
         assert_eq!(result.expect("Find partition succeeds"), None);
     }
 
-    fn create_ramdisk() -> RamdiskClient {
+    pub fn create_ramdisk() -> RamdiskClient {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("Launching isolated driver manager succeeds");
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
@@ -282,7 +282,7 @@ mod test {
             .expect("Create ramdisk client succeeds")
     }
 
-    fn format(channel: zx::Channel) {
+    pub fn format(channel: zx::Channel) {
         // Create a filesystem on the ramdisk.
         let device = Box::new(
             remote_block_device::Cache::new(RemoteBlockDevice::new_sync(channel).unwrap()).unwrap(),
@@ -291,7 +291,7 @@ mod test {
             .expect("Format volume succeeds");
     }
 
-    fn setup_test_fs(channel: zx::Channel, name: &str) {
+    pub fn setup_test_fs(channel: zx::Channel, name: &str) {
         let device = Box::new(
             remote_block_device::Cache::new(RemoteBlockDevice::new_sync(channel).unwrap()).unwrap(),
         );
