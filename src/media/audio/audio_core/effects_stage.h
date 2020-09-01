@@ -46,8 +46,8 @@ class EffectsStage : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return source_->reference_clock(); }
-  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
-  void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, size_t frame_count) override;
+  void Trim(Fixed dest_frame) override { source_->Trim(dest_frame); }
 
   void SetPresentationDelay(zx::duration external_delay) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,

@@ -293,8 +293,8 @@ const TimelineFunction& AudioDevice::driver_ref_time_to_frac_presentation_frame(
   return driver()->ref_time_to_frac_presentation_frame();
 }
 
-const TimelineFunction& AudioDevice::driver_ref_time_to_safe_read_or_write_frame() const {
-  return driver()->ref_time_to_safe_read_or_write_frame();
+const TimelineFunction& AudioDevice::driver_ref_time_to_frac_safe_read_or_write_frame() const {
+  return driver()->ref_time_to_frac_safe_read_or_write_frame();
 }
 
 fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {

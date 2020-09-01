@@ -61,6 +61,14 @@ class DriverOutput : public AudioOutput {
     Shutdown,
   };
 
+  int64_t RefTimeToSafeWriteFrame(zx::time ref_time) const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  zx::time SafeWriteFrameToRefTime(int64_t frame) const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  TimelineRate FramesPerRefTick() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
   void ScheduleNextLowWaterWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Callbacks triggered by our driver object as it completes various

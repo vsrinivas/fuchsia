@@ -28,8 +28,8 @@ class FakeStream : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const;
   AudioClock& reference_clock() { return audio_clock_; }
-  std::optional<Buffer> ReadLock(int64_t frame, size_t frame_count);
-  void Trim(int64_t frame) {}
+  std::optional<Buffer> ReadLock(Fixed frame, size_t frame_count);
+  void Trim(Fixed frame) {}
 
  private:
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =

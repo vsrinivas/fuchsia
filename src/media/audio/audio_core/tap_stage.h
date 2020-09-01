@@ -24,19 +24,19 @@ class TapStage : public ReadableStream {
     return source_->ref_time_to_frac_presentation_frame();
   }
   AudioClock& reference_clock() override { return source_->reference_clock(); }
-  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
-  void Trim(int64_t dest_frame) override { source_->Trim(dest_frame); }
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, size_t frame_count) override;
+  void Trim(Fixed dest_frame) override { source_->Trim(dest_frame); }
 
   void SetPresentationDelay(zx::duration external_delay) override;
 
  private:
-  const TimelineFunction& SourceFracFrameToTapFrame();
+  const TimelineFunction& SourceFracFrameToTapFracFrame();
 
   std::shared_ptr<ReadableStream> source_;
   std::shared_ptr<WritableStream> tap_;
 
   // Track the mapping of source frames to tap frames.
-  TimelineFunction source_frac_frame_to_tap_frame_;
+  TimelineFunction source_frac_frame_to_tap_frac_frame_;
   uint32_t source_generation_ = kInvalidGenerationId;
   uint32_t tap_generation_ = kInvalidGenerationId;
 };

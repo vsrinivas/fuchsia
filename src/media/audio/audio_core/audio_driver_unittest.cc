@@ -155,8 +155,8 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
 
   const auto& ref_time_to_frac_presentation_frame =
       this->driver_->ref_time_to_frac_presentation_frame();
-  const auto& ref_time_to_safe_read_or_write_frame =
-      this->driver_->ref_time_to_safe_read_or_write_frame();
+  const auto& ref_time_to_frac_safe_read_or_write_frame =
+      this->driver_->ref_time_to_frac_safe_read_or_write_frame();
 
   // Get the driver's external delay and fifo depth expressed in frames.
   uint32_t fifo_depth_frames = this->driver_->fifo_depth_frames();
@@ -170,7 +170,8 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // At startup, the tx/rx position should be 0, and the safe read/write position
   // should be fifo_depth_frames ahead of this.
   zx::time ref_now = this->driver_->ref_start_time();
-  EXPECT_EQ(fifo_depth_frames, ref_time_to_safe_read_or_write_frame.Apply(ref_now.get()));
+  auto frac_frame = Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame.Apply(ref_now.get()));
+  EXPECT_EQ(fifo_depth_frames, frac_frame.Floor());
 
   // After |external_delay| has passed, we should be at frame zero in the
   // pts/cts timeline.
@@ -190,7 +191,8 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // the pts/ctx position.  Note, we need convert the fractional frames result
   // of the pts/cts position to integer frames, rounding down in the process, in
   // order to compare the two.
-  int64_t safe_read_write_pos = ref_time_to_safe_read_or_write_frame.Apply(ref_now.get());
+  int64_t safe_read_write_pos =
+      Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame.Apply(ref_now.get())).Floor();
   int64_t txrx_pos = safe_read_write_pos - fifo_depth_frames;
 
   ref_now += external_delay;

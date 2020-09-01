@@ -34,8 +34,8 @@ class ThrottleOutput : public AudioOutput {
     const auto fps = PipelineConfig::kDefaultMixGroupRate;
     ref_time_to_frac_presentation_frame_ =
         TimelineFunction(0, ref_now.get(), Fixed(fps).raw_value(), zx::sec(1).get());
-    ref_time_to_safe_read_or_write_frame_ =
-        TimelineFunction(0, ref_now.get(), fps, zx::sec(1).get());
+    ref_time_to_frac_safe_read_or_write_frame_ =
+        TimelineFunction(0, ref_now.get(), Fixed(fps).raw_value(), zx::sec(1).get());
 
     // This is just some placeholder format that we can use to instantiate a mix
     // stage for us. Since we never return a value from |StartMixJob|, we'll only
@@ -109,8 +109,8 @@ class ThrottleOutput : public AudioOutput {
   const TimelineFunction& driver_ref_time_to_frac_presentation_frame() const override {
     return ref_time_to_frac_presentation_frame_;
   }
-  const TimelineFunction& driver_ref_time_to_safe_read_or_write_frame() const override {
-    return ref_time_to_safe_read_or_write_frame_;
+  const TimelineFunction& driver_ref_time_to_frac_safe_read_or_write_frame() const override {
+    return ref_time_to_frac_safe_read_or_write_frame_;
   }
 
  private:
@@ -118,7 +118,7 @@ class ThrottleOutput : public AudioOutput {
 
   bool uninitialized_ = true;
   TimelineFunction ref_time_to_frac_presentation_frame_;
-  TimelineFunction ref_time_to_safe_read_or_write_frame_;
+  TimelineFunction ref_time_to_frac_safe_read_or_write_frame_;
 };
 
 }  // namespace media::audio

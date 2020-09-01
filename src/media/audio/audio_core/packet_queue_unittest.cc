@@ -114,7 +114,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
   //
   // Packet #0:
   {
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
@@ -131,7 +131,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
 
   // Packet #1
   {
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(20, buffer->start());
@@ -146,7 +146,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
 
   // ...and #2
   {
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(40, buffer->start());
@@ -173,7 +173,7 @@ TEST_F(PacketQueueTest, LockUnlockNotFullyConsumed) {
 
   // Pop but don't fully consume.
   {
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     buffer->set_is_fully_consumed(false);
@@ -184,7 +184,7 @@ TEST_F(PacketQueueTest, LockUnlockNotFullyConsumed) {
 
   // Pop again, this time consume it fully.
   {
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     buffer->set_is_fully_consumed(true);
@@ -207,7 +207,7 @@ TEST_F(PacketQueueTest, LockFlushUnlock) {
 
   {
     // Pop packet #0.
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
@@ -229,7 +229,7 @@ TEST_F(PacketQueueTest, LockFlushUnlock) {
 
   {
     // Pop the remaining packet.
-    auto buffer = packet_queue->ReadLock(0, 0);
+    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_EQ(80, buffer->start());
   }
@@ -245,7 +245,7 @@ TEST_F(PacketQueueTest, LockReturnsNullThenFlush) {
   EXPECT_EQ(std::vector<int64_t>(), released_packets());
 
   // Since the queue is empty, this should return null.
-  auto buffer = packet_queue->ReadLock(0, 10);
+  auto buffer = packet_queue->ReadLock(Fixed(0), 10);
   EXPECT_FALSE(buffer);
 
   // Push some packets, then flush them immediately
@@ -280,31 +280,31 @@ TEST_F(PacketQueueTest, Trim) {
 
   // The last frame in the first packet is frame 19.
   // Verify this trimming at that frame does not release the first packet.
-  packet_queue->Trim(19);
+  packet_queue->Trim(Fixed(19));
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   EXPECT_EQ(std::vector<int64_t>(), released_packets());
 
   // Trim again with the same limit just to verify Trim is idempotent.
-  packet_queue->Trim(19);
+  packet_queue->Trim(Fixed(19));
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   EXPECT_EQ(std::vector<int64_t>(), released_packets());
 
   // Now trim |packet0|
-  packet_queue->Trim(20);
+  packet_queue->Trim(Fixed(20));
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   EXPECT_EQ(std::vector<int64_t>({0}), released_packets());
 
   // Now trim |packet1| and |packet2| in one go (run until just before |packet3| should be released.
-  packet_queue->Trim(79);
+  packet_queue->Trim(Fixed(79));
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   EXPECT_EQ(std::vector<int64_t>({0, 1, 2}), released_packets());
 
   // Now trim past the end of all packets
-  packet_queue->Trim(1000);
+  packet_queue->Trim(Fixed(1000));
   RunLoopUntilIdle();
   ASSERT_TRUE(packet_queue->empty());
   EXPECT_EQ(std::vector<int64_t>({0, 1, 2, 3}), released_packets());

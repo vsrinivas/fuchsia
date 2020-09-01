@@ -63,7 +63,7 @@ void AudioOutput::Process() {
       auto mix_frames = StartMixJob(ref_now);
       // If we have frames to mix that are non-silent, we should do the mix now.
       if (mix_frames && !mix_frames->is_mute) {
-        auto buf = pipeline_->ReadLock(mix_frames->start, mix_frames->length);
+        auto buf = pipeline_->ReadLock(Fixed(mix_frames->start), mix_frames->length);
         if (buf) {
           // We have a buffer so call FinishMixJob on this region and perform another MixJob if
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
@@ -91,7 +91,8 @@ void AudioOutput::Process() {
       } else {
         // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
         // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(driver_ref_time_to_safe_read_or_write_frame().Apply(ref_now.get()));
+        pipeline_->Trim(Fixed::FromRaw(
+            driver_ref_time_to_frac_safe_read_or_write_frame().Apply(ref_now.get())));
         frames_remaining = 0;
       }
 

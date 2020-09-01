@@ -95,9 +95,9 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(int64_t frame, size_t frame_count) override;
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, size_t frame_count) override;
   // Since we have no buffers to free, Trim is a no-op.
-  void Trim(int64_t frame) override {}
+  void Trim(Fixed frame) override {}
 
  private:
   friend class BaseRingBuffer;
@@ -117,7 +117,7 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<WritableStream::Buffer> WriteLock(int64_t frame, size_t frame_count) override;
+  std::optional<WritableStream::Buffer> WriteLock(Fixed frame, size_t frame_count) override;
 
  private:
   friend class BaseRingBuffer;

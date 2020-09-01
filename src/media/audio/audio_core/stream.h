@@ -155,13 +155,13 @@ class ReadableStream : public BaseStream {
   //
   // TODO(fxbug.dev/50669): Implementations must return std::nullopt if they have no frames for the
   // requested range. This requirement is not enforced by all implementations (e.g., PacketQueue).
-  virtual std::optional<Buffer> ReadLock(int64_t dest_frame, size_t frame_count) = 0;
+  virtual std::optional<Buffer> ReadLock(Fixed dest_frame, size_t frame_count) = 0;
 
   // Trims the stream by releasing any frames before the given frame. When invoked,
   // the caller is making a promise that they will not try to ReadLock any frame before
   // dest_frame. If the stream has allocated buffers for the trimmed range, it can free
   // those buffers now.
-  virtual void Trim(int64_t dest_frame) = 0;
+  virtual void Trim(Fixed dest_frame) = 0;
 
   // Hooks to log [Partial] Underflow events.
   // TODO(fxbug.dev/58614): convert this to use PTS instead of frame numbers
@@ -221,9 +221,13 @@ class WritableStream : public BaseStream {
   // remain locked until it is destructed. It is illegal to call WriteLock again until the
   // lock has been released.
   //
+  // The |frame| parameter is passed as a fixed point number to preserve precision.
+  // When this call gets down to a level that must deal with integer frames, such as an
+  // output buffer, the target integer frame should be computed with frame.Floor().
+  //
   // TODO(fxbug.dev/50669): Need to validate that all callers are prepared to receive a
   // partial range.
-  virtual std::optional<Buffer> WriteLock(int64_t frame, size_t frame_count) = 0;
+  virtual std::optional<Buffer> WriteLock(Fixed frame, size_t frame_count) = 0;
 };
 
 }  // namespace media::audio

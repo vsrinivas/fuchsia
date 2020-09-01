@@ -29,7 +29,7 @@ class TestOutputPipeline : public OutputPipeline {
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(int64_t frame, size_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, size_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
     }
@@ -37,7 +37,7 @@ class TestOutputPipeline : public OutputPipeline {
     buffers_.pop_front();
     return buffer;
   }
-  void Trim(int64_t frame) override {}
+  void Trim(Fixed frame) override {}
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return TimelineFunctionSnapshot{
         .timeline_function = kDriverRefPtsToFractionalFrames,
@@ -77,13 +77,14 @@ class StubDriver : public AudioDriverV1 {
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return kDriverRefPtsToFractionalFrames;
   }
-  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
-    return safe_write_ref_clock_to_frames_;
+  const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
+    return ref_time_to_safe_read_or_write_frame_;
   }
 
  private:
-  const TimelineFunction safe_write_ref_clock_to_frames_ =
-      TimelineFunction(kSafeWriteDelayFrames, 0, kFramesPerSecond, zx::sec(1).get());
+  const TimelineFunction ref_time_to_safe_read_or_write_frame_ =
+      TimelineFunction(Fixed(kSafeWriteDelayFrames).raw_value(), 0,
+                       Fixed(kFramesPerSecond).raw_value(), zx::sec(1).get());
 };
 
 class TestAudioOutput : public AudioOutput {
@@ -210,6 +211,7 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   // After 4ms we should still be retaining packet1.
   RunLoopFor(zx::msec(4));
   ASSERT_FALSE(packet1_released);
+  ASSERT_FALSE(packet2_released);
 
   // 5ms; all the audio from packet1 is consumed and it should be released. We should still have
   // packet2, however.
@@ -363,7 +365,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   auto pipeline = audio_output_->output_pipeline();
 
   {
-    auto buf = pipeline->ReadLock(0, 48);
+    auto buf = pipeline->ReadLock(Fixed(0), 48);
 
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
@@ -426,7 +428,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   pipeline = audio_output_->output_pipeline();
 
   {
-    auto buf = pipeline->ReadLock(0, 48);
+    auto buf = pipeline->ReadLock(Fixed(0), 48);
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
     EXPECT_EQ(buf->length().Floor(), 48u);

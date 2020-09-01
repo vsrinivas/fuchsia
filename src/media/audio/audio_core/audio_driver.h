@@ -107,7 +107,7 @@ class AudioDriver {
   virtual const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
       FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
   virtual const TimelineFunction& ref_time_to_frac_presentation_frame() const = 0;
-  virtual const TimelineFunction& ref_time_to_safe_read_or_write_frame() const = 0;
+  virtual const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const = 0;
 
   virtual AudioClock& reference_clock() = 0;
 };
@@ -147,8 +147,8 @@ class AudioDriverV1 : public AudioDriver {
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return ref_time_to_frac_presentation_frame__;
   }
-  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
-    return ref_time_to_safe_read_or_write_frame_;
+  const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
+    return ref_time_to_frac_safe_read_or_write_frame_;
   }
 
   const audio_stream_unique_id_t& persistent_unique_id() const override {
@@ -329,7 +329,7 @@ class AudioDriverV1 : public AudioDriver {
   // the comments for the accessors in audio_device.h for detailed descriptions.
   TimelineFunction ref_time_to_frac_presentation_frame__
       FXL_GUARDED_BY(owner_->mix_domain().token());
-  TimelineFunction ref_time_to_safe_read_or_write_frame_
+  TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
 
   // Plug detection state.
@@ -381,8 +381,8 @@ class AudioDriverV2 : public AudioDriver {
   const TimelineFunction& ref_time_to_frac_presentation_frame() const override {
     return ref_time_to_frac_presentation_frame__;
   }
-  const TimelineFunction& ref_time_to_safe_read_or_write_frame() const override {
-    return ref_time_to_safe_read_or_write_frame_;
+  const TimelineFunction& ref_time_to_frac_safe_read_or_write_frame() const override {
+    return ref_time_to_frac_safe_read_or_write_frame_;
   }
 
   const audio_stream_unique_id_t& persistent_unique_id() const override {
@@ -518,7 +518,7 @@ class AudioDriverV2 : public AudioDriver {
   // the comments for the accessors in audio_device.h for detailed descriptions.
   TimelineFunction ref_time_to_frac_presentation_frame__
       FXL_GUARDED_BY(owner_->mix_domain().token());
-  TimelineFunction ref_time_to_safe_read_or_write_frame_
+  TimelineFunction ref_time_to_frac_safe_read_or_write_frame_
       FXL_GUARDED_BY(owner_->mix_domain().token());
 
   mutable std::mutex plugged_lock_;

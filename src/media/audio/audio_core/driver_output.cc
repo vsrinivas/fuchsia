@@ -63,6 +63,21 @@ const PipelineConfig& DriverOutput::pipeline_config() const {
              : config().default_output_device_profile().pipeline_config();
 }
 
+int64_t DriverOutput::RefTimeToSafeWriteFrame(zx::time ref_time) const {
+  auto& time_to_frac_frame = driver_ref_time_to_frac_safe_read_or_write_frame();
+  return Fixed::FromRaw(time_to_frac_frame.Apply(ref_time.get())).Floor();
+}
+
+zx::time DriverOutput::SafeWriteFrameToRefTime(int64_t frame) const {
+  auto& time_to_frac_frame = driver_ref_time_to_frac_safe_read_or_write_frame();
+  return zx::time(time_to_frac_frame.ApplyInverse(Fixed(frame).raw_value()));
+}
+
+TimelineRate DriverOutput::FramesPerRefTick() const {
+  auto frac_frame_per_tick = driver_ref_time_to_frac_safe_read_or_write_frame().rate();
+  return frac_frame_per_tick * TimelineRate(1, Fixed(1).raw_value());
+}
+
 zx_status_t DriverOutput::Init() {
   TRACE_DURATION("audio", "DriverOutput::Init");
   FX_DCHECK(state_ == State::Uninitialized);
@@ -130,8 +145,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   }
 
   FX_DCHECK(driver_writable_ring_buffer() != nullptr);
-  const auto& ref_clock_to_safe_wr_frame = driver_ref_time_to_safe_read_or_write_frame();
-  const auto& output_frames_per_reference_tick = ref_clock_to_safe_wr_frame.rate();
+  const auto& output_frames_per_reference_tick = FramesPerRefTick();
   const auto& rb = *driver_writable_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
 
@@ -142,7 +156,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   // frames which have made sound so far.  Once a frame has left the
   // interconnect, it still has the device's external_delay before it will
   // finally hit the speaker.
-  int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(ref_time.get());
+  int64_t output_frames_consumed = RefTimeToSafeWriteFrame(ref_time);
   int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
   auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time);
@@ -188,7 +202,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   // We want to fill up to be HighWaterNsec ahead of the current safe write
   // pointer position.  Add HighWaterNsec to our concept of "now" and run it
   // through our transformation to figure out what frame number this.
-  int64_t fill_target = ref_clock_to_safe_wr_frame.Apply((ref_time + kDefaultHighWaterNsec).get());
+  int64_t fill_target = RefTimeToSafeWriteFrame(ref_time + kDefaultHighWaterNsec);
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_mono_.get()) {
@@ -283,8 +297,7 @@ void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span, float* buffe
 
   if (VERBOSE_TIMING_DEBUG) {
     auto now = async::Now(mix_domain().dispatcher());
-    const auto& ref_clock_to_safe_wr_frame = driver_ref_time_to_safe_read_or_write_frame();
-    int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(now.get());
+    int64_t output_frames_consumed = RefTimeToSafeWriteFrame(now);
     int64_t playback_lead_end = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_start = playback_lead_end - span.length;
 
@@ -331,10 +344,8 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // pointer's reference clock <-> frame number function will tell us when it
   // will be time to wake up.
   int64_t low_water_frame_number = frames_sent_ - low_water_frames_;
-  int64_t low_water_ref_time =
-      driver_ref_time_to_safe_read_or_write_frame().ApplyInverse(low_water_frame_number);
-  auto low_water_mono_time =
-      reference_clock().MonotonicTimeFromReferenceTime(zx::time(low_water_ref_time));
+  auto low_water_ref_time = SafeWriteFrameToRefTime(low_water_frame_number);
+  auto low_water_mono_time = reference_clock().MonotonicTimeFromReferenceTime(low_water_ref_time);
 
   SetNextSchedTimeMono(low_water_mono_time);
 }
@@ -530,7 +541,7 @@ void DriverOutput::OnDriverStartComplete() {
   // frames ahead of the safe write position we ever want to be.  When we hit
   // the point where we are only this number of frames ahead of the safe write
   // position, we need to wake up and fill up to our high water mark.
-  const TimelineRate& rate = driver_ref_time_to_safe_read_or_write_frame().rate();
+  const TimelineRate rate = FramesPerRefTick();
   low_water_frames_ = rate.Scale(kDefaultLowWaterNsec.get());
 
   // We started with a buffer full of silence.  Set up our bookkeeping so we

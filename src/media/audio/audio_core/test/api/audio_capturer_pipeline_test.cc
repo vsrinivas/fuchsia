@@ -479,7 +479,8 @@ TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyRelea
   ASSERT_FALSE(ErrorOccurred());
   ASSERT_GT(count, 0u);
 
-  // There should be at least one overflow.
+  // Since we did not release any of the initial captured packets in a timely manner,
+  // there should be at least one overflow.
   ExpectInspectMetrics(capturer_, {
                                       .children =
                                           {

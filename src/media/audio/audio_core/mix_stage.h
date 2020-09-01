@@ -30,8 +30,8 @@ class MixStage : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return output_ref_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(int64_t dest_frame, size_t frame_count) override;
-  void Trim(int64_t dest_frame) override;
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, size_t frame_count) override;
+  void Trim(Fixed dest_frame) override;
   void SetPresentationDelay(zx::duration external_delay) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
@@ -60,7 +60,7 @@ class MixStage : public ReadableStream {
   };
 
   enum class TaskType { Mix, Trim };
-  void ForEachSource(TaskType task_type, int64_t dest_frame);
+  void ForEachSource(TaskType task_type, Fixed dest_frame);
   void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                      ReadableStream& stream);
 

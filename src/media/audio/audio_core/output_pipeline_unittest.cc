@@ -215,30 +215,28 @@ void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
         1.0, zx::msec(5), [&packet_released] { packet_released[7] = true; }));
   }
 
-  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number.
-  // We might be off by a half frame per MixStage and our mix tree has depth 3, therefore we allow
-  // ourselves three frames of tolerance in either direction.
-  // TODO(fxbug.dev/59165): this should be 1
-  constexpr int64_t kToleranceFrames = 3;
+  // Because of how we set up custom clocks, we can't reliably Trim to a specific frame number (we
+  // might be off by half a frame), so we allow ourselves one frame of tolerance either direction.
+  constexpr int64_t kToleranceFrames = 1;
 
   // Before 5ms: no packet is entirely consumed; we should still retain all packets.
-  pipeline->Trim(duration_to_frames(zx::msec(5)) - kToleranceFrames);
+  pipeline->Trim(Fixed(duration_to_frames(zx::msec(5)) - kToleranceFrames));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(false)));
 
   // After 5ms: first packets are consumed and released. We should still retain the others.
-  pipeline->Trim(duration_to_frames(zx::msec(5)) + kToleranceFrames);
+  pipeline->Trim(Fixed(duration_to_frames(zx::msec(5)) + kToleranceFrames));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released,
               Pointwise(Eq(), {true, false, true, false, true, false, true, false}));
 
   // After 10ms we should have trimmed all the packets.
-  pipeline->Trim(duration_to_frames(zx::msec(10)) + kToleranceFrames);
+  pipeline->Trim(Fixed(duration_to_frames(zx::msec(10)) + kToleranceFrames));
   RunLoopUntilIdle();
   EXPECT_THAT(packet_released, Each(Eq(true)));
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
-  pipeline->Trim(std::numeric_limits<int64_t>::max());
+  pipeline->Trim(Fixed::Max());
 }
 
 TEST_F(OutputPipelineTest, Trim) { TestOutputPipelineTrim(ClockMode::SAME); }
@@ -301,7 +299,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(loopback_frame, 48);
+  auto buf = pipeline->ReadLock(Fixed(loopback_frame), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -313,7 +311,7 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
@@ -378,7 +376,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(loopback_frame, 96);
+  auto buf = pipeline->ReadLock(Fixed(loopback_frame), 96);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 96u);
@@ -390,7 +388,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
@@ -444,7 +442,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that sets all samples to the size of the new config).
-  auto buf = pipeline->ReadLock(0, 48);
+  auto buf = pipeline->ReadLock(Fixed(0), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -607,7 +605,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(0, 240);
+    auto buf = pipeline->ReadLock(Fixed(0), 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -619,7 +617,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(240, 240);
+    auto buf = pipeline->ReadLock(Fixed(240), 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);

@@ -15,8 +15,8 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
   FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
 }
 
-std::optional<ReadableStream::Buffer> TapStage::ReadLock(int64_t dest_frame, size_t frame_count) {
-  TRACE_DURATION("audio", "TapStage::ReadLock", "frame", dest_frame, "length", frame_count);
+std::optional<ReadableStream::Buffer> TapStage::ReadLock(Fixed dest_frame, size_t frame_count) {
+  TRACE_DURATION("audio", "TapStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
 
   // The source and destination share the same frame timelines, therefore we have no
   // need to translate these parameters.
@@ -26,11 +26,11 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(int64_t dest_frame, siz
   }
 
   // The source and tap may have different frame timelines.
-  auto source_frac_frame_to_tap_frame = SourceFracFrameToTapFrame();
+  auto source_frac_frame_to_tap_frac_frame = SourceFracFrameToTapFracFrame();
 
   uint8_t* source_ptr = reinterpret_cast<uint8_t*>(source_buffer->payload());
-  int64_t tap_buffer_frame =
-      source_frac_frame_to_tap_frame.Apply(source_buffer->start().raw_value());
+  Fixed tap_buffer_frame =
+      Fixed::FromRaw(source_frac_frame_to_tap_frac_frame.Apply(source_buffer->start().raw_value()));
   uint32_t tap_frames_outstanding = source_buffer->length().Floor();
 
   // Write the entire source_buffer to the tap stream.
@@ -61,22 +61,20 @@ void TapStage::SetPresentationDelay(zx::duration external_delay) {
   source_->SetPresentationDelay(external_delay);
 }
 
-const TimelineFunction& TapStage::SourceFracFrameToTapFrame() {
+const TimelineFunction& TapStage::SourceFracFrameToTapFracFrame() {
   FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
 
   auto source_snapshot = source_->ref_time_to_frac_presentation_frame();
   auto tap_snapshot = tap_->ref_time_to_frac_presentation_frame();
   if (source_snapshot.generation != source_generation_ ||
       tap_snapshot.generation != tap_generation_) {
-    auto source_frac_frame_to_tap_frac_frame =
+    source_frac_frame_to_tap_frac_frame_ =
         tap_snapshot.timeline_function * source_snapshot.timeline_function.Inverse();
-    auto frac_frame_to_frame = TimelineRate(1, Fixed(1).raw_value());
-    source_frac_frame_to_tap_frame_ =
-        TimelineFunction(frac_frame_to_frame) * source_frac_frame_to_tap_frac_frame;
     source_generation_ = source_snapshot.generation;
     tap_generation_ = tap_snapshot.generation;
   }
-  return source_frac_frame_to_tap_frame_;
+
+  return source_frac_frame_to_tap_frac_frame_;
 }
 
 }  // namespace media::audio

@@ -79,9 +79,8 @@ static constexpr T RoundDown(T t, uint32_t alignment) {
   return fbl::round_down(static_cast<UnsignedType>(t), alignment);
 }
 
-std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
-                                                uint32_t alignment) {
-  return {RoundDown(frame, alignment), RoundUp(length, alignment)};
+std::pair<int64_t, uint32_t> AlignBufferRequest(Fixed frame, uint32_t length, uint32_t alignment) {
+  return {RoundDown(frame.Floor(), alignment), RoundUp(length, alignment)};
 }
 
 }  // namespace
@@ -196,9 +195,9 @@ std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
       });
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(int64_t dest_frame,
-                                                             size_t frame_count) {
-  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame, "length", frame_count);
+std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame, size_t frame_count) {
+  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame.Floor(), "length",
+                 frame_count);
 
   // If we have a partially consumed block, return that here.
   if (current_block_) {
@@ -219,7 +218,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(int64_t dest_frame,
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  auto source_buffer = source_->ReadLock(aligned_first_frame, aligned_frame_count);
+  auto source_buffer = source_->ReadLock(Fixed(aligned_first_frame), aligned_frame_count);
   if (source_buffer) {
     // We expect an integral buffer length.
     FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());

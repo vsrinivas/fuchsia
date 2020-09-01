@@ -90,7 +90,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
   template <size_t frame_count>
   void CheckStream(ReadableStream* stream, int64_t frame, float expected_sample,
                    bool release = true) {
-    auto buffer = stream->ReadLock(frame, frame_count);
+    auto buffer = stream->ReadLock(Fixed(frame), frame_count);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
     EXPECT_EQ(buffer->length(), Fixed(frame_count));
@@ -124,7 +124,7 @@ TEST_F(TapStageTest, TruncateToInputBuffer) {
 
   constexpr uint32_t frame_count = kDefaultPacketFrames;
   {  // Read from the tap, expect to get the same bytes from the packet.
-    auto buffer = tap().ReadLock(0, frame_count * 2);
+    auto buffer = tap().ReadLock(Fixed(0), frame_count * 2);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(0));
     EXPECT_EQ(buffer->length(), Fixed(frame_count));
@@ -184,7 +184,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     uint32_t requested_frames = kDefaultPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_1;
     int64_t frame = 2 * kDefaultPacketFrames;
-    auto buffer = ring_buffer().ReadLock(frame, requested_frames);
+    auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
     EXPECT_EQ(buffer->length(), Fixed(expected_frames));
@@ -196,7 +196,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     constexpr uint32_t requested_frames = kDefaultPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_2;
     int64_t frame = kRingBufferFrameCount;
-    auto buffer = ring_buffer().ReadLock(frame, requested_frames);
+    auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
     EXPECT_EQ(buffer->length(), Fixed(expected_frames));

@@ -262,7 +262,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // an output stream may have already moved data to be transmitted from RAM
   // into the hardware.  When consuming or producing audio from an input or
   // output stream, users must always stay ahead of this point.
-  virtual const TimelineFunction& driver_ref_time_to_safe_read_or_write_frame() const
+  virtual const TimelineFunction& driver_ref_time_to_frac_safe_read_or_write_frame() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Update the presentation delay for this device (defaults to zero).

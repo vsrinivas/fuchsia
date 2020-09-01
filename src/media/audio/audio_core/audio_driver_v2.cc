@@ -378,7 +378,8 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
                     auto t = audio_clock_.Read();
-                    return ref_time_to_safe_read_or_write_frame_.Apply(t.get());
+                    return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
+                        .Floor();
                   });
             } else {
               writable_ring_buffer_ = BaseRingBuffer::CreateWritableHardwareBuffer(
@@ -386,7 +387,8 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
                     auto t = audio_clock_.Read();
-                    return ref_time_to_safe_read_or_write_frame_.Apply(t.get());
+                    return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
+                        .Floor();
                   });
             }
             if (!readable_ring_buffer_ && !writable_ring_buffer_) {
@@ -498,7 +500,6 @@ zx_status_t AudioDriverV2::Start() {
 
     auto format = GetFormat();
     auto frac_fps = TimelineRate(Fixed(format->frames_per_second()).raw_value(), zx::sec(1).get());
-    auto fps = TimelineRate(format->frames_per_second(), zx::sec(1).get());
 
     if (owner_->is_output()) {
       // Abstractly, we can think of the hardware buffer as an infinitely
@@ -519,7 +520,7 @@ zx_status_t AudioDriverV2::Start() {
       // locate W and P at a given time T:
       //
       //   ref_pts_to_frame(T) = P
-      //   ref_time_to_safe_read_or_write_frame(T) = W
+      //   ref_time_to_frac_safe_read_or_write_frame(T) = W
       //
       // W is the lowest-numbered frame that may be written to the hardware buffer,
       // aka the "first safe" write position.
@@ -528,10 +529,10 @@ zx_status_t AudioDriverV2::Start() {
           (ref_start_time_ + external_delay_).get(),  // first frame presented after external delay
           frac_fps                                    // fps in fractional frames
       );
-      ref_time_to_safe_read_or_write_frame_ = TimelineFunction(
-          fifo_depth_frames_,     // first safe frame is one FIFO depth after the start time
-          ref_start_time_.get(),  // start time
-          fps                     // fps in integer frames
+      ref_time_to_frac_safe_read_or_write_frame_ = TimelineFunction(
+          Fixed(fifo_depth_frames_).raw_value(),  // first safe frame is one FIFO depth after start
+          ref_start_time_.get(),                  // start time
+          frac_fps                                // fps in fractional frames
       );
     } else {
       // The capture buffer works in a similar way, with three analogous pointers:
@@ -549,7 +550,7 @@ zx_status_t AudioDriverV2::Start() {
       // as time advances, and we define functions to locate C and R:
       //
       //   ref_pts_to_frame(T) = C
-      //   ref_time_to_safe_read_or_write_frame(T) = R
+      //   ref_time_to_frac_safe_read_or_write_frame(T) = R
       //
       // R is the highest-numbered frame that may be read from the hardware buffer,
       // aka the "last safe" read position.
@@ -558,11 +559,10 @@ zx_status_t AudioDriverV2::Start() {
           (ref_start_time_ - external_delay_).get(),  // first frame presented external delay ago
           frac_fps                                    // fps in fractional frames
       );
-      ref_time_to_safe_read_or_write_frame_ = TimelineFunction(
-          -static_cast<int64_t>(
-              fifo_depth_frames_),  // first safe frame is one FIFO depth before the start time
-          ref_start_time_.get(),    // start time
-          fps                       // fps in integer frames
+      ref_time_to_frac_safe_read_or_write_frame_ = TimelineFunction(
+          -Fixed(fifo_depth_frames_).raw_value(),  // first safe frame is one FIFO before start
+          ref_start_time_.get(),                   // start time
+          frac_fps                                 // fps in fractional frames
       );
     }
 
