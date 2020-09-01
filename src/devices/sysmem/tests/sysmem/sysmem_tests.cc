@@ -2728,4 +2728,135 @@ TEST(Sysmem, TooManyFormats) {
   VerifyServerAlive(allocator_client);
 }
 
-// TODO(dustingreen): Add tests to cover more failure cases.
+bool BasicAllocationSucceeds(
+    fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints) {
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ZX_ASSERT(status == ZX_OK);
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ZX_ASSERT(status == ZX_OK);
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ZX_ASSERT(status == ZX_OK);
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ZX_ASSERT(status == ZX_OK);
+
+  ZX_ASSERT(token_client.get() != ZX_HANDLE_INVALID);
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator_client.get(), token_client.release(), collection_server.release());
+  ZX_ASSERT(status == ZX_OK);
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count_for_camping = 3;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      // This min_size_bytes is intentionally too small to hold the min_coded_width and
+      // min_coded_height in NV12
+      // format.
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  constraints->image_format_constraints_count = 1;
+  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+      constraints->image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
+      .type = fuchsia_sysmem_ColorSpaceType_REC709,
+  };
+  // The min dimensions intentionally imply a min size that's larger than
+  // buffer_memory_constraints.min_size_bytes.
+  image_constraints.min_coded_width = 256;
+  image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_coded_height = 256;
+  image_constraints.max_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_bytes_per_row = 256;
+  image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+  image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.layers = 1;
+  image_constraints.coded_width_divisor = 2;
+  image_constraints.coded_height_divisor = 2;
+  image_constraints.bytes_per_row_divisor = 2;
+  image_constraints.start_offset_divisor = 2;
+  image_constraints.display_width_divisor = 1;
+  image_constraints.display_height_divisor = 1;
+
+  modify_constraints(constraints);
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ZX_ASSERT(status == ZX_OK);
+
+  zx_status_t allocation_status = ZX_OK;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  if (status != ZX_OK || allocation_status != ZX_OK) {
+    printf("WaitForBuffersAllocated failed - status: %d allocation_status: %d\n", status,
+           allocation_status);
+  }
+  return status == ZX_OK && allocation_status == ZX_OK;
+}
+
+TEST(Sysmem, BasicAllocationSucceeds) {
+  EXPECT_TRUE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify_nop) {}));
+}
+
+TEST(Sysmem, ZeroMinSizeBytesFails) {
+  EXPECT_FALSE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify) {
+    // Disable image_format_constraints so that the client is not specifying any min size via
+    // implied by image_format_constraints.
+    to_modify->image_format_constraints_count = 0;
+    // Also set 0 min_size_bytes, so that implied minimum overall size is 0.
+    to_modify->buffer_memory_constraints.min_size_bytes = 0;
+  }));
+}
+
+TEST(Sysmem, ZeroMaxBufferCount_SucceedsOnlyForNow) {
+  // With sysmem2 this will be expected to fail.  With sysmem(1), this succeeds because 0 is
+  // interpreted as replace with default.
+  EXPECT_TRUE(BasicAllocationSucceeds(
+      [](BufferCollectionConstraints& to_modify) { to_modify->max_buffer_count = 0; }));
+}
+
+TEST(Sysmem, ZeroRequiredMinCodedWidth_SucceedsOnlyForNow) {
+  // With sysmem2 this will be expected to fail.  With sysmem(1), this succeeds because 0 is
+  // interpreted as replace with default.
+  EXPECT_TRUE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify) {
+    to_modify->image_format_constraints[0].required_min_coded_width = 0;
+  }));
+}
+
+TEST(Sysmem, ZeroRequiredMinCodedHeight_SucceedsOnlyForNow) {
+  // With sysmem2 this will be expected to fail.  With sysmem(1), this succeeds because 0 is
+  // interpreted as replace with default.
+  EXPECT_TRUE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify) {
+    to_modify->image_format_constraints[0].required_min_coded_height = 0;
+  }));
+}
+
+TEST(Sysmem, ZeroRequiredMinBytesPerRow_SucceedsOnlyForNow) {
+  // With sysmem2 this will be expected to fail.  With sysmem(1), this succeeds because 0 is
+  // interpreted as replace with default.
+  EXPECT_TRUE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify) {
+    to_modify->image_format_constraints[0].required_min_bytes_per_row = 0;
+  }));
+}

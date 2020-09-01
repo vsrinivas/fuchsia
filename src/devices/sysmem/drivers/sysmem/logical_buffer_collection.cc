@@ -932,6 +932,10 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     LOG(ERROR, "CheckSanitizeBufferUsage() failed");
     return false;
   }
+  if (constraints->max_buffer_count() == 0) {
+    LogError("max_buffer_count == 0");
+    return false;
+  }
   if (constraints->min_buffer_count() > constraints->max_buffer_count()) {
     LogError("min_buffer_count > max_buffer_count");
     return false;
@@ -1123,6 +1127,10 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     }
   }
 
+  if (constraints->required_min_coded_width() == 0) {
+    LogError("required_min_coded_width == 0");
+    return false;
+  }
   ZX_DEBUG_ASSERT(constraints->required_min_coded_width() != 0);
   if (constraints->required_min_coded_width() < constraints->min_coded_width()) {
     LogError("required_min_coded_width < min_coded_width");
@@ -1132,6 +1140,10 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     LogError("required_max_coded_width > max_coded_width");
     return false;
   }
+  if (constraints->required_min_coded_height() == 0) {
+    LogError("required_min_coded_height == 0");
+    return false;
+  }
   ZX_DEBUG_ASSERT(constraints->required_min_coded_height() != 0);
   if (constraints->required_min_coded_height() < constraints->min_coded_height()) {
     LogError("required_min_coded_height < min_coded_height");
@@ -1139,6 +1151,10 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
   }
   if (constraints->required_max_coded_height() > constraints->max_coded_height()) {
     LogError("required_max_coded_height > max_coded_height");
+    return false;
+  }
+  if (constraints->required_min_bytes_per_row() == 0) {
+    LogError("required_min_bytes_per_row == 0");
     return false;
   }
   ZX_DEBUG_ASSERT(constraints->required_min_bytes_per_row() != 0);
@@ -1771,11 +1787,11 @@ LogicalBufferCollection::Allocate() {
   }
 
   // Currently redundant with earlier checks, but just in case...
-  ZX_DEBUG_ASSERT(min_size_bytes != 0);
   if (min_size_bytes == 0) {
     LogError("min_size_bytes == 0");
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
+  ZX_DEBUG_ASSERT(min_size_bytes != 0);
 
   // For purposes of enforcing max_size_bytes, we intentionally don't care that a VMO can only be a
   // multiple of page size.
