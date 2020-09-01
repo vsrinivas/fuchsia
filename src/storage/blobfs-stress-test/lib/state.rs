@@ -22,21 +22,6 @@ enum BlobfsOperation {
     VerifyBlobs,
 }
 
-impl BlobfsOperation {
-    fn random(rng: &mut SmallRng) -> BlobfsOperation {
-        match rng.gen_range(0, 8) {
-            0 => BlobfsOperation::CreateReasonableBlobs,
-            1 => BlobfsOperation::DeleteSomeBlobs,
-            2 => BlobfsOperation::FillDiskWithSmallBlobs,
-            3 => BlobfsOperation::DeleteAllBlobs,
-            4 => BlobfsOperation::NewHandles,
-            5 => BlobfsOperation::CloseAllHandles,
-            6 => BlobfsOperation::ReadFromAllHandles,
-            _ => BlobfsOperation::VerifyBlobs,
-        }
-    }
-}
-
 // In-memory state of blobfs. Stores information about blobs expected to exist on disk.
 pub struct BlobfsState {
     // The path to the blobfs root
@@ -239,8 +224,36 @@ impl BlobfsState {
         }
     }
 
+    // Returns a list of operations that are valid to perform,
+    // given the current state of the filesystem.
+    fn get_operation_list(&mut self) -> Vec<BlobfsOperation> {
+        // It is always valid to do the following operations
+        let mut operations = vec![
+            BlobfsOperation::VerifyBlobs,
+            BlobfsOperation::CreateReasonableBlobs,
+            BlobfsOperation::FillDiskWithSmallBlobs,
+        ];
+
+        if self.blobs.len() > 0 {
+            operations.push(BlobfsOperation::DeleteAllBlobs);
+            operations.push(BlobfsOperation::DeleteSomeBlobs);
+            operations.push(BlobfsOperation::NewHandles);
+        }
+
+        let handles_exist = self.blobs.iter().any(|blob| blob.num_handles() > 0);
+        if handles_exist {
+            operations.push(BlobfsOperation::CloseAllHandles);
+            operations.push(BlobfsOperation::ReadFromAllHandles);
+        }
+
+        operations
+    }
+
     pub async fn do_random_operation(&mut self) {
-        let operation = BlobfsOperation::random(&mut self.rng);
+        let operations = self.get_operation_list();
+        debug!("Operations = {:?}", operations);
+
+        let operation = operations.choose(&mut self.rng).unwrap();
         debug!("-------> [OPERATION] {:?}", operation);
         debug!("Number of blobs = {}", self.num_blobs());
         match operation {
