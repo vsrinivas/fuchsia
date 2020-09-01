@@ -30,5 +30,5 @@ ot_radio_driver("luis") {
 ot_radio_driver("luis-mfg") {
   board = "luis"
   firmware_type = "development"
-  firmware_config = "rcp"
+  firmware_config = "ncp"
 }
