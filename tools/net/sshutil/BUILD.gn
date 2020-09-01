@@ -7,12 +7,17 @@ import("//build/go/go_test.gni")
 
 go_library("sshutil") {
   deps = [
+    ":constants",
     "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/logger",
     "//tools/lib/retry",
     "//tools/net/netutil",
   ]
+}
+
+go_library("constants") {
+  source_dir = "constants"
 }
 
 go_test("sshutil_tests") {

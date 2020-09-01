@@ -268,10 +268,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			defer cancel()
 			r.stopTargets(ctx, targets)
 		}()
-		if err := r.runAgainstTarget(ctx, t0, args, socketPath); err != nil {
-			return fmt.Errorf("command %v failed: %w", args, err)
-		}
-		return nil
+		return r.runAgainstTarget(ctx, t0, args, socketPath)
 	})
 
 	return eg.Wait()
@@ -414,9 +411,11 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 
 	err := runner.Run(ctx, args, os.Stdout, os.Stderr)
 	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("command timed out after %v", r.timeout)
+		return fmt.Errorf("command %v timed out after %v", args, r.timeout)
+	} else if err != nil {
+		return fmt.Errorf("command %v failed: %w", args, err)
 	}
-	return err
+	return nil
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

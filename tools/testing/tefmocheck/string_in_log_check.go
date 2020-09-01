@@ -13,6 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
+	sshutilconstants "go.fuchsia.dev/fuchsia/tools/net/sshutil/constants"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
@@ -168,6 +169,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/56494.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
+	// For fxbug.dev/59237.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg), Type: swarmingOutputType})
 	// For fxbug.dev/56651.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
 	// For fxbug.dev/52719.
