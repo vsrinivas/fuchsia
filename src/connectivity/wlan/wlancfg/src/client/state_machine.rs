@@ -590,7 +590,7 @@ mod tests {
         super::*,
         crate::{
             config_management::network_config::{self, FailureReason},
-            util::{listener, logger::set_logger_for_test},
+            util::{cobalt::create_mock_cobalt_sender, listener, logger::set_logger_for_test},
         },
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
         futures::{stream::StreamFuture, task::Poll, Future},
@@ -1104,7 +1104,10 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks_manager = Arc::new(
             exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id, path, tmp_path,
+                stash_id,
+                path,
+                tmp_path,
+                create_mock_cobalt_sender(),
             ))
             .expect("Failed to create saved networks manager"),
         );
@@ -1224,7 +1227,10 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks_manager = Arc::new(
             exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id, path, tmp_path,
+                stash_id,
+                path,
+                tmp_path,
+                create_mock_cobalt_sender(),
             ))
             .expect("Failed to create saved networks manager"),
         );

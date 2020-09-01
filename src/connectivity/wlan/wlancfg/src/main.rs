@@ -35,7 +35,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{
-        self, channel::mpsc, future::try_join3, lock::Mutex, prelude::*, select, TryFutureExt,
+        self, channel::mpsc, future::try_join5, lock::Mutex, prelude::*, select, TryFutureExt,
     },
     log::{error, info},
     pin_utils::pin_mut,
@@ -213,18 +213,25 @@ async fn serve_fidl(
     }
 }
 
+/// Calls the metric recording function immediately and every 24 hours.
+async fn saved_networks_manager_metrics_loop(saved_networks: Arc<SavedNetworksManager>) {
+    loop {
+        saved_networks.record_periodic_metrics().await;
+        fasync::Timer::new(24.hours().after_now()).await;
+    }
+}
+
 fn main() -> Result<(), Error> {
     util::logger::init();
 
     let mut executor = fasync::Executor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
-
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
-    let _cobalt_task = fasync::Task::spawn(cobalt_fut);
 
-    let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
+    let saved_networks =
+        Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
     let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api));
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let configurator =
@@ -275,6 +282,12 @@ fn main() -> Result<(), Error> {
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
     executor
-        .run_singlethreaded(try_join3(fidl_fut, dev_watcher_fut, iface_manager_service))
-        .map(|_: (Void, (), Void)| ())
+        .run_singlethreaded(try_join5(
+            fidl_fut,
+            dev_watcher_fut,
+            iface_manager_service,
+            cobalt_fut.map(|()| Ok(())),
+            saved_networks_manager_metrics_loop(saved_networks.clone()).map(|()| Ok(())),
+        ))
+        .map(|_: (Void, (), Void, (), ())| ())
 }

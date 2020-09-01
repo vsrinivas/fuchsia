@@ -13,6 +13,7 @@ use {
     crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
     fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
     log::{error, info},
     std::{
@@ -20,6 +21,11 @@ use {
         collections::{hash_map::Entry, HashMap},
         fs, io,
         path::Path,
+    },
+    wlan_metrics_registry::{
+        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations,
+        SavedNetworksMetricDimensionSavedNetworks,
+        SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, SAVED_NETWORKS_METRIC_ID,
     },
     wlan_stash::policy::{PolicyStash as Stash, POLICY_STASH_ID},
 };
@@ -33,6 +39,7 @@ pub struct SavedNetworksManager {
     saved_networks: Mutex<NetworkConfigMap>,
     stash: Mutex<Stash>,
     legacy_store: KnownEssStore,
+    cobalt_api: Mutex<CobaltSender>,
 }
 
 /// Save multiple network configs per SSID in able to store multiple connections with different
@@ -47,10 +54,16 @@ impl SavedNetworksManager {
     /// (stash) or from a legacy storage file (from KnownEssStore) if stash is empty. In either
     /// case it initializes in-memory storage and persistent storage with stash to remember
     /// networks.
-    pub async fn new() -> Result<Self, anyhow::Error> {
+    pub async fn new(cobalt_api: CobaltSender) -> Result<Self, anyhow::Error> {
         let path = known_ess_store::KNOWN_NETWORKS_PATH;
         let tmp_path = known_ess_store::TMP_KNOWN_NETWORKS_PATH;
-        Self::new_with_stash_or_paths(POLICY_STASH_ID, Path::new(path), Path::new(tmp_path)).await
+        Self::new_with_stash_or_paths(
+            POLICY_STASH_ID,
+            Path::new(path),
+            Path::new(tmp_path),
+            cobalt_api,
+        )
+        .await
     }
 
     /// Load from persistent data from 1 of 2 places: stash or the file created by KnownEssStore.
@@ -63,6 +76,7 @@ impl SavedNetworksManager {
         stash_id: impl AsRef<str>,
         legacy_path: impl AsRef<Path>,
         legacy_tmp_path: impl AsRef<Path>,
+        cobalt_api: CobaltSender,
     ) -> Result<Self, anyhow::Error> {
         let mut stash = Stash::new_with_id(stash_id.as_ref())?;
         let stashed_networks = stash.load().await?;
@@ -101,17 +115,26 @@ impl SavedNetworksManager {
             saved_networks: Mutex::new(saved_networks),
             stash: Mutex::new(stash),
             legacy_store,
+            cobalt_api: Mutex::new(cobalt_api),
         })
     }
 
     /// Creates a new config at a random path, ensuring a clean environment for an individual test
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
+        use crate::util::cobalt::create_mock_cobalt_sender;
         use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
         let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         let path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         let tmp_path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
-        Self::new_with_stash_or_paths(stash_id, Path::new(&path), Path::new(&tmp_path)).await
+        Self::new_with_stash_or_paths(
+            stash_id,
+            Path::new(&path),
+            Path::new(&tmp_path),
+            create_mock_cobalt_sender(),
+        )
+        .await
     }
 
     /// Creates a new SavedNetworksManager and hands back the other end of the stash proxy used.
@@ -122,7 +145,9 @@ impl SavedNetworksManager {
         legacy_path: impl AsRef<Path>,
         legacy_tmp_path: impl AsRef<Path>,
     ) -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
+        use crate::util::cobalt::create_mock_cobalt_sender;
         use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
         let id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         use fidl::endpoints::create_proxy;
         let (store_client, _stash_server) = create_proxy::<fidl_fuchsia_stash::StoreMarker>()
@@ -142,6 +167,7 @@ impl SavedNetworksManager {
                 saved_networks: Mutex::new(NetworkConfigMap::new()),
                 stash: Mutex::new(stash),
                 legacy_store,
+                cobalt_api: Mutex::new(create_mock_cobalt_sender()),
             },
             accessor_server.into_stream().expect("failed to create stash request stream"),
         )
@@ -385,6 +411,12 @@ impl SavedNetworksManager {
         );
     }
 
+    pub async fn record_periodic_metrics(&self) {
+        let saved_networks = self.saved_networks.lock().await;
+        let mut cobalt_api = self.cobalt_api.lock().await;
+        log_cobalt_metrics(&*saved_networks, &mut cobalt_api);
+    }
+
     // Return a list of every network config that has been saved.
     pub async fn get_networks(&self) -> Vec<NetworkConfig> {
         self.saved_networks
@@ -423,12 +455,49 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
     configs.remove(0);
 }
 
+/// Record Cobalt metrics related to Saved Networks
+fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut CobaltSender) {
+    // Count the total number of saved networks
+    let num_networks = match saved_networks.len() {
+        0 => SavedNetworksMetricDimensionSavedNetworks::Zero,
+        1 => SavedNetworksMetricDimensionSavedNetworks::One,
+        2..=4 => SavedNetworksMetricDimensionSavedNetworks::TwoToFour,
+        5..=40 => SavedNetworksMetricDimensionSavedNetworks::FiveToForty,
+        41..=500 => SavedNetworksMetricDimensionSavedNetworks::FortyToFiveHundred,
+        501..=usize::MAX => SavedNetworksMetricDimensionSavedNetworks::FiveHundredAndOneOrMore,
+        _ => unreachable!(),
+    };
+    cobalt_api.log_event(SAVED_NETWORKS_METRIC_ID, num_networks);
+
+    // Count the number of configs for each saved network
+    for saved_network in saved_networks {
+        let configs = saved_network.1;
+        use SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations as ConfigCountDimension;
+        let num_configs = match configs.len() {
+            0 => ConfigCountDimension::Zero,
+            1 => ConfigCountDimension::One,
+            2..=4 => ConfigCountDimension::TwoToFour,
+            5..=40 => ConfigCountDimension::FiveToForty,
+            41..=500 => ConfigCountDimension::FortyToFiveHundred,
+            501..=usize::MAX => ConfigCountDimension::FiveHundredAndOneOrMore,
+            _ => unreachable!(),
+        };
+        cobalt_api.log_event(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, num_configs);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::config_management::PerformanceStats,
+        crate::{
+            config_management::PerformanceStats,
+            util::cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
+        },
+        cobalt_client::traits::AsEventCode,
+        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
@@ -490,10 +559,14 @@ mod tests {
         assert_eq!(2, saved_networks.known_network_count().await);
 
         // Saved networks should persist when we create a saved networks manager with the same ID.
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
         assert_eq!(
             vec![network_config("foo", "12345678")],
             saved_networks.lookup(network_id_foo.clone()).await
@@ -608,10 +681,14 @@ mod tests {
         );
 
         // Check that removal persists.
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("Failed to create SavedNetworksManager");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("Failed to create SavedNetworksManager");
         assert_eq!(0, saved_networks.known_network_count().await);
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
     }
@@ -820,10 +897,14 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Load store from stash to verify it is also gone from persistent storage
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks manager");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks manager");
 
         assert_eq!(0, saved_networks.known_network_count().await);
     }
@@ -841,10 +922,14 @@ mod tests {
         // Constructing a saved network config store should still succeed,
         // but the invalid file should be gone now
         let stash_id = "ignore_legacy_file_bad_format";
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
         // KnownEssStore deletes the file if it can't read it, as in this case.
         assert!(!path.exists());
         // Writing an entry should not create the file yet because networks configs don't persist.
@@ -875,10 +960,14 @@ mod tests {
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = "read_network_from_legacy_storage";
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // We should not delete the file while creating SavedNetworksManager.
         assert!(path.exists());
@@ -915,10 +1004,14 @@ mod tests {
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = "do_not_migrate_networks_twice";
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // We should not have deleted the file while creating SavedNetworksManager.
         assert!(path.exists());
@@ -949,10 +1042,14 @@ mod tests {
         assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Recreate the SavedNetworksManager again, as would happen when the device restasts
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // We should not have deleted the file while creating SavedNetworksManager the first time.
         assert!(path.exists());
@@ -974,10 +1071,14 @@ mod tests {
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = "ignore_legacy_if_stash_exists";
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // We should not delete the file while creating SavedNetworksManager.
         assert!(path.exists());
@@ -1013,10 +1114,14 @@ mod tests {
         file.flush().expect("failed to flush contents of file");
 
         // Recreate the SavedNetworksManager again, as would happen when the device restasts
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // We should ignore the legacy file since there is something in the stash.
         assert_eq!(1, saved_networks.known_network_count().await);
@@ -1042,10 +1147,14 @@ mod tests {
         saved_networks.stash.lock().await.clear().await.expect("failed to clear the stash");
 
         // Create the saved networks manager again to trigger reading from persistent storage
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, tmp_path)
-                .await
-                .expect("failed to create saved networks store");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("failed to create saved networks store");
 
         // Verify that the network was read in from legacy store.
         let net_config = NetworkConfig::new(
@@ -1092,10 +1201,14 @@ mod tests {
         path: impl AsRef<Path>,
         tmp_path: impl AsRef<Path>,
     ) -> SavedNetworksManager {
-        let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
-                .await
-                .expect("Failed to create SavedNetworksManager");
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("Failed to create SavedNetworksManager");
         saved_networks.clear().await.expect("Failed to clear new SavedNetworksManager");
         saved_networks
     }
@@ -1117,5 +1230,153 @@ mod tests {
 
     fn rand_string() -> String {
         thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn record_metrics_when_called_on_class() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+
+        let saved_networks =
+            SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, &tmp_path, cobalt_api)
+                .await
+                .unwrap();
+        let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+
+        assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
+        assert_eq!(0, saved_networks.known_network_count().await);
+
+        // Store a network and verify it was stored.
+        saved_networks
+            .store(network_id_foo.clone(), Credential::Password(b"qwertyuio".to_vec()))
+            .await
+            .expect("storing 'foo' failed");
+        assert_eq!(1, saved_networks.known_network_count().await);
+
+        // Store another network and verify.
+        saved_networks
+            .store(network_id_baz.clone(), Credential::Psk(vec![1; 32]))
+            .await
+            .expect("storing 'baz' with PSK failed");
+        assert_eq!(2, saved_networks.known_network_count().await);
+
+        // Record metrics
+        saved_networks.record_periodic_metrics().await;
+
+        // Two saved networks
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
+                    .with_event_code(
+                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+
+        // One config for each network
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                    .with_event_code(
+                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
+                            .as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                    .with_event_code(
+                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
+                            .as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+
+        // No more metrics
+        assert!(cobalt_events.try_next().is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn metrics_count_configs() {
+        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+
+        let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+
+        let networks: NetworkConfigMap = [
+            (network_id_foo, vec![]),
+            (
+                network_id_baz.clone(),
+                vec![
+                    NetworkConfig::new(
+                        network_id_baz.clone(),
+                        Credential::Password(b"qwertyuio".to_vec()),
+                        false,
+                        false,
+                    )
+                    .unwrap(),
+                    NetworkConfig::new(
+                        network_id_baz,
+                        Credential::Password(b"asdfasdfasdf".to_vec()),
+                        false,
+                        false,
+                    )
+                    .unwrap(),
+                ],
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        log_cobalt_metrics(&networks, &mut cobalt_api);
+
+        // Two saved networks
+        assert_eq!(
+            cobalt_events.try_next().unwrap(),
+            Some(
+                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
+                    .with_event_code(
+                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
+                    )
+                    .as_event()
+            )
+        );
+
+        // Extract the next two events, their order is not guaranteed
+        let cobalt_metrics = vec![
+            cobalt_events.try_next().unwrap().unwrap(),
+            cobalt_events.try_next().unwrap().unwrap(),
+        ];
+        // Zero configs for one network
+        assert!(cobalt_metrics.iter().any(|metric| metric
+            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                .with_event_code(
+                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::Zero
+                        .as_event_code()
+                )
+                .as_event()));
+        // Two configs for the other network
+        assert!(cobalt_metrics.iter().any(|metric| metric
+            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                .with_event_code(
+                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::TwoToFour
+                        .as_event_code()
+                )
+                .as_event()));
+
+        // No more metrics
+        assert!(cobalt_events.try_next().is_err());
     }
 }

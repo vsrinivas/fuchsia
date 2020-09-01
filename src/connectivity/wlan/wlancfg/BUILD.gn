@@ -95,6 +95,7 @@ rustc_binary("bin") {
     "src/mode_management/mod.rs",
     "src/mode_management/phy_manager.rs",
     "src/regulatory_manager.rs",
+    "src/util/cobalt.rs",
     "src/util/fuse_pending.rs",
     "src/util/future_with_metadata.rs",
     "src/util/listener/access_point.rs",

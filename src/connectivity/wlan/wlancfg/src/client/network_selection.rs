@@ -229,10 +229,17 @@ fn record_metrics_on_scan(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::util::logger::set_logger_for_test, cobalt_client::traits::AsEventCode,
-        fidl_fuchsia_cobalt::CobaltEvent, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async as fasync, fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
-        futures::channel::mpsc, rand::Rng, std::sync::Arc,
+        super::*,
+        crate::util::{
+            cobalt::create_mock_cobalt_sender_and_receiver, logger::set_logger_for_test,
+        },
+        cobalt_client::traits::AsEventCode,
+        fidl_fuchsia_cobalt::CobaltEvent,
+        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+        fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
+        futures::channel::mpsc,
+        rand::Rng,
+        std::sync::Arc,
     };
 
     struct TestValues {
@@ -245,19 +252,12 @@ mod tests {
         set_logger_for_test();
 
         // setup modules
-        let (cobalt_api, cobalt_events) = make_fake_cobalt_connection();
+        let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let network_selector =
             Arc::new(NetworkSelector::new(Arc::clone(&saved_network_manager), cobalt_api));
 
         TestValues { network_selector, saved_network_manager, cobalt_events }
-    }
-
-    fn make_fake_cobalt_connection() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
-        const MAX_METRICS_PER_QUERY: usize = 5;
-        const MAX_QUERIES: usize = 2;
-        let (sender, receiver) = mpsc::channel(MAX_METRICS_PER_QUERY * MAX_QUERIES);
-        (CobaltSender::new(sender), receiver)
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -954,7 +954,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn recorded_metrics_on_scan() {
-        let (mut cobalt_api, mut cobalt_events) = make_fake_cobalt_connection();
+        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         // create some identifiers
         let test_id_1 = types::NetworkIdentifier {
@@ -1078,7 +1078,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn recorded_metrics_on_scan_no_saved_networks() {
-        let (mut cobalt_api, mut cobalt_events) = make_fake_cobalt_connection();
+        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         let mock_scan_results = vec![
             generate_random_scan_result(),
