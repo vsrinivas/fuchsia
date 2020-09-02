@@ -583,10 +583,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
   if (result != VK_SUCCESS)
     return result;
 
-  LayerData* my_data = GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
-  my_data->instance = *pInstance;
-  my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
-  layer_init_instance_dispatch_table(*pInstance, my_data->instance_dispatch_table,
+  LayerData* instance_layer_data = GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
+  instance_layer_data->instance = *pInstance;
+  instance_layer_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+  layer_init_instance_dispatch_table(*pInstance, instance_layer_data->instance_dispatch_table,
                                      fpGetInstanceProcAddr);
 
   return result;
@@ -594,29 +594,32 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
 
 VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance,
                                            const VkAllocationCallbacks* pAllocator) {
-  dispatch_key key = get_dispatch_key(instance);
-  LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
+  dispatch_key instance_key = get_dispatch_key(instance);
+  LayerData* my_data = GetLayerDataPtr(instance_key, layer_data_map);
 
   my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
   delete my_data->instance_dispatch_table;
-  layer_data_map.erase(key);
+
+  // Remove from |layer_data_map| and free LayerData struct.
+  FreeLayerDataPtr(instance_key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                                             const VkDeviceCreateInfo* pCreateInfo,
                                             const VkAllocationCallbacks* pAllocator,
                                             VkDevice* pDevice) {
-  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(gpu), layer_data_map);
+  void* gpu_key = get_dispatch_key(gpu);
+  LayerData* gpu_layer_data = GetLayerDataPtr(gpu_key, layer_data_map);
 
   bool external_memory_extension_available = false;
   bool external_semaphore_extension_available = false;
   bool fuchsia_buffer_collection_extension_available = false;
   uint32_t device_extension_count;
-  VkResult result = layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+  VkResult result = gpu_layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
       gpu, nullptr, &device_extension_count, nullptr);
   if (result == VK_SUCCESS && device_extension_count > 0) {
     std::vector<VkExtensionProperties> device_extensions(device_extension_count);
-    result = layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+    result = gpu_layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
         gpu, nullptr, &device_extension_count, device_extensions.data());
     if (result == VK_SUCCESS) {
       for (uint32_t i = 0; i < device_extension_count; i++) {
@@ -668,7 +671,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
       chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
   PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
   PFN_vkCreateDevice fpCreateDevice =
-      (PFN_vkCreateDevice)fpGetInstanceProcAddr(layer_data->instance, "vkCreateDevice");
+      (PFN_vkCreateDevice)fpGetInstanceProcAddr(gpu_layer_data->instance, "vkCreateDevice");
   if (fpCreateDevice == NULL) {
     return VK_ERROR_INITIALIZATION_FAILED;
   }
@@ -681,22 +684,24 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
     return result;
   }
 
-  LayerData* my_device_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
+  LayerData* device_layer_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
 
   // Setup device dispatch table
-  my_device_data->device_dispatch_table = new VkLayerDispatchTable;
-  my_device_data->instance = layer_data->instance;
-  layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table,
+  device_layer_data->device_dispatch_table = new VkLayerDispatchTable;
+  device_layer_data->instance = gpu_layer_data->instance;
+  layer_init_device_dispatch_table(*pDevice, device_layer_data->device_dispatch_table,
                                    fpGetDeviceProcAddr);
 
   return result;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator) {
-  dispatch_key key = get_dispatch_key(device);
-  LayerData* dev_data = GetLayerDataPtr(key, layer_data_map);
-  dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
-  layer_data_map.erase(key);
+  dispatch_key device_key = get_dispatch_key(device);
+  LayerData* device_data = GetLayerDataPtr(device_key, layer_data_map);
+  device_data->device_dispatch_table->DestroyDevice(device, pAllocator);
+
+  // Remove from |layer_data_map| and free LayerData struct.
+  FreeLayerDataPtr(device_key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t* pCount,
