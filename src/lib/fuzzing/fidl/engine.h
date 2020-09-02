@@ -22,6 +22,7 @@
 namespace fuzzing {
 namespace {
 
+using ::fuchsia::fuzzer::Engine;
 using ::fuchsia::fuzzer::LlvmFuzzerPtr;
 
 }  // namespace
@@ -29,23 +30,41 @@ using ::fuchsia::fuzzer::LlvmFuzzerPtr;
 // This class integrates the Coverage, DataProvider, and LlvmFuzzer FIDL services into a single
 // object that can perform fuzzing iterations. See also libfuzzer.cc, which integrates the
 // libFuzzer compiler runtime with this class.
-class Engine {
+class EngineImpl : public Engine {
  public:
-  Engine();
-  virtual ~Engine();
+  // Singleton. Tests can avoid the engine starting a dispatch loop by calling this with
+  // |autoconnect| set to false before any other calls, preferably by using |UseContext| below.
+  static EngineImpl *GetInstance(bool autoconnect = true);
+  virtual ~EngineImpl();
 
+  // Helper for getting a test instance of Engine that uses the test's |context| and |dispatcher|.
+  static void UseContext(std::unique_ptr<sys::ComponentContext> context) {
+    GetInstance(false)->UseContextImpl(std::move(context));
+  }
+
+  // Accessors
   AggregatedCoverage &coverage() { return coverage_; }
   DataProviderImpl &data_provider() { return data_provider_; }
 
-  // Performs one fuzzing iteration.
-  int RunOne(const uint8_t *data, size_t size);
+  // Sets the LlvmFuzzer service this engine is connected to. Used for testing (autoconnect=false).
+  zx_status_t SetLlvmFuzzer(LlvmFuzzerPtr fuzzer);
 
- protected:
-  // Test constructor
-  explicit Engine(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t *dispatcher);
-  friend class EngineTest;
+  // FIDL methods
+  void Start(std::vector<std::string> options, StartCallback callback) override;
+
+  // LLVM C ABI functions
+  // See https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
+  int Initialize(int *argc, char ***argv);
+  int TestOneInput(const uint8_t *data, size_t size);
+
+  // Stops the engine and invokes the callback passed to |Start|.
+  void Stop(zx_status_t status);
 
  private:
+  explicit EngineImpl(bool autoconnect);
+
+  void UseContextImpl(std::unique_ptr<sys::ComponentContext> context);
+
   // FIDL dispatcher loop. Null when testing.
   std::unique_ptr<async::Loop> loop_;
 
@@ -56,11 +75,18 @@ class Engine {
   DataProviderImpl data_provider_;
   LlvmFuzzerPtr llvm_fuzzer_;
 
-  // Used to wait for a fuzzing iteration to complete, and then return the result.
-  sync_completion_t sync_;
-  int result_;
+  // LibFuzzer options and a command line used for passing them to libFuzzer.
+  // See https://llvm.org/docs/LibFuzzer.html#options
+  std::vector<std::string> options_;
+  std::vector<char *> argv_;
 
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Engine);
+  // Blocks |Initialize| and |TestOneInput|| until |Start| has been called.
+  sync_completion_t sync_;
+
+  // Callback used to return status when the engine stops.
+  StartCallback callback_;
+
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(EngineImpl);
 };
 
 }  // namespace fuzzing

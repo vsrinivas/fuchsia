@@ -4,7 +4,12 @@
 
 #include "data-provider.h"
 
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
+
 #include <algorithm>
+
+#include <fbl/string_piece.h>
 
 namespace fuzzing {
 
@@ -14,35 +19,31 @@ DataProviderImpl::DataProviderImpl() : max_label_length_(0) {}
 
 DataProviderImpl::~DataProviderImpl() {}
 
-LlvmFuzzerHandle DataProviderImpl::TakeFuzzer() {
-  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
+zx_status_t DataProviderImpl::Initialize(zx::vmo *out) {
   std::lock_guard<std::mutex> lock(lock_);
-  return std::move(llvm_fuzzer_);
+  if (inputs_.find("") != inputs_.end()) {
+    FX_LOGS(ERROR) << "Initialize() called more than once";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  TestInput *input = &inputs_[""];
+  zx_status_t status;
+  if ((status = input->Create()) != ZX_OK || (status = input->Share(out)) != ZX_OK ||
+      (status = input->vmo().signal(kInIteration, kBetweenIterations)) != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to create the shared test input memory: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  return ZX_OK;
 }
 
-void DataProviderImpl::Configure(LlvmFuzzerHandle llvm_fuzzer, zx::vmo vmo,
-                                 fidl::VectorPtr<std::string> labels, ConfigureCallback callback) {
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    if (inputs_.size() != 0) {
-      return;
-    }
-    llvm_fuzzer_ = std::move(llvm_fuzzer);
-    TestInput *input = &inputs_[""];
-    input->Link(vmo);
-    input->vmo().signal(kInIteration, kBetweenIterations);
-    if (labels.has_value()) {
-      for (const std::string &label : labels.value()) {
-        size_t len = label.size();
-        if (max_label_length_ < len) {
-          max_label_length_ = len;
-        }
-        inputs_[label];
-      }
-    }
-  }
-  sync_completion_signal(&sync_);
-  callback();
+void DataProviderImpl::AddConsumerLabel(std::string label) {
+  std::lock_guard<std::mutex> lock(lock_);
+  max_label_length_ = std::max(max_label_length_, label.size());
+
+  // Default construct a TestInput for the given label.
+  inputs_[label];
 }
 
 void DataProviderImpl::AddConsumer(std::string label, zx::vmo vmo, AddConsumerCallback callback) {
@@ -60,8 +61,11 @@ void DataProviderImpl::AddConsumer(std::string label, zx::vmo vmo, AddConsumerCa
 }
 
 zx_status_t DataProviderImpl::PartitionTestInput(const void *data, size_t size) {
-  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
   std::lock_guard<std::mutex> lock(lock_);
+  if (inputs_.size() == 0) {
+    FX_LOGS(ERROR) << "not initialized";
+    return ZX_ERR_BAD_STATE;
+  }
   for (auto &i : inputs_) {
     i.second.Clear();
   }

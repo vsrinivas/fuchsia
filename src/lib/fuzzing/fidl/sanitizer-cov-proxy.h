@@ -86,7 +86,7 @@ class SanitizerCovProxy {
   // Creates a mapped VMO, records the original and mapped pointers in a region, and returns the VMO
   // as a sharable fuchsia.mem.Buffer.
   //
-  // TODO(aarongreen): Currently, using this approach for the inline 8-bit counters and PC tables
+  // TODO(fxb/45346): Currently, using this approach for the inline 8-bit counters and PC tables
   // requires the proxy to copy data between the memory region specified by sanitizer_common and the
   // mapped VMO. Ideally, this would instead use the writable VMO already created for the BSS
   // section, see //src/lib/process_builder/src/elf_load.rs. Unfortunately, the process doesn't

@@ -5,46 +5,15 @@
 #include "llvm-fuzzer.h"
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <stddef.h>
 #include <stdint.h>
 
-#include <thread>
+#include <gtest/gtest.h>
 
-#include "test/test-data-provider.h"
-
-namespace fuzzing {
+#include "data-provider.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test fixture
-
-class LlvmFuzzerTest : public gtest::TestLoopFixture {
- public:
-  void SetUp() override {
-    TestLoopFixture::SetUp();
-    context_ = provider_.TakeContext();
-    context_->outgoing()->AddPublicService(data_provider_impl_.GetHandler());
-    provider_.ConnectToPublicService(data_provider_ptr_.NewRequest());
-  }
-
- protected:
-  TestDataProvider data_provider_impl_;
-  DataProviderPtr data_provider_ptr_;
-  LlvmFuzzerImpl llvm_fuzzer_;
-
- private:
-  sys::testing::ComponentContextProvider provider_;
-  std::unique_ptr<sys::ComponentContext> context_;
-};
-
-// Provide implementations of required symbols. These are typically auto-generated or provided by
-// the fuzzer author.
-
-std::vector<std::string> LlvmFuzzerImpl::GetDataConsumerLabels() {
-  return std::vector<std::string>{"foo", "bar"};
-}
-
-}  // namespace fuzzing
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   int total = 0;
@@ -59,35 +28,78 @@ namespace fuzzing {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Unit test
 
-TEST_F(LlvmFuzzerTest, Configure) {
-  // Unbound interface ptr
-  DataProviderPtr data_provider;
-  EXPECT_EQ(llvm_fuzzer_.Configure(std::move(data_provider)), ZX_ERR_INVALID_ARGS);
+TEST(LlvmFuzzerTest, Initialize) {
+  LlvmFuzzerImpl llvm_fuzzer;
+  TestInput input;
+  EXPECT_EQ(input.Create(), ZX_OK);
 
-  // Valid
-  EXPECT_EQ(llvm_fuzzer_.Configure(std::move(data_provider_ptr_)), ZX_OK);
-  RunLoopUntilIdle();
+  // Bad test input.
+  zx::vmo vmo;
+  std::vector<std::string> options;
+  std::vector<std::string> modified;
+  zx_status_t status = ZX_OK;
+  llvm_fuzzer.Initialize(std::move(vmo), std::vector<std::string>(options),
+                         [&status, &modified](zx_status_t rc, std::vector<std::string> results) {
+                           status = rc;
+                           modified = std::move(results);
+                         });
+  EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
 
-  EXPECT_TRUE(data_provider_impl_.HasLabel(""));
-  EXPECT_TRUE(data_provider_impl_.IsMapped(""));
+  // Valid, options empty.
+  EXPECT_EQ(input.Share(&vmo), ZX_OK);
+  llvm_fuzzer.Initialize(std::move(vmo), std::vector<std::string>(options),
+                         [&status, &modified](zx_status_t rc, std::vector<std::string> results) {
+                           status = rc;
+                           modified = std::move(results);
+                         });
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(modified, options);
+
+  // Already initialized.
+  EXPECT_EQ(input.Share(&vmo), ZX_OK);
+  llvm_fuzzer.Initialize(std::move(vmo), std::vector<std::string>(options),
+                         [&status, &modified](zx_status_t rc, std::vector<std::string> results) {
+                           status = rc;
+                           modified = std::move(results);
+                         });
+  EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+
+  // Valid, options non-empty.
+  llvm_fuzzer.Reset();
+  options.push_back("-seed=1337");
+  options.push_back("-runs=1000");
+  EXPECT_EQ(input.Share(&vmo), ZX_OK);
+  llvm_fuzzer.Initialize(std::move(vmo), std::vector<std::string>(options),
+                         [&status, &modified](zx_status_t rc, std::vector<std::string> results) {
+                           status = rc;
+                           modified = std::move(results);
+                         });
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(modified, options);
 }
 
-TEST_F(LlvmFuzzerTest, TestOneInput) {
-  EXPECT_EQ(llvm_fuzzer_.Configure(std::move(data_provider_ptr_)), ZX_OK);
-  RunLoopUntilIdle();
+TEST(LlvmFuzzerTest, TestOneInput) {
+  DataProviderImpl data_provider;
+  LlvmFuzzerImpl llvm_fuzzer;
+
+  zx::vmo vmo;
+  EXPECT_EQ(data_provider.Initialize(&vmo), ZX_OK);
+  llvm_fuzzer.Initialize(std::move(vmo), std::vector<std::string>(),
+                         [](zx_status_t rc, std::vector<std::string> results) {});
 
   // TestOneInput works without data.
   std::string data;
-  data_provider_impl_.PartitionTestInput(data.c_str(), data.size());
-  int actual = -1;
-  llvm_fuzzer_.TestOneInput([&actual](int result) { actual = result; });
-  EXPECT_EQ(actual, 0);
+  EXPECT_EQ(data_provider.PartitionTestInput(data.c_str(), data.size()), ZX_OK);
+
+  int result = -1;
+  llvm_fuzzer.TestOneInput([&result](int rc) { result = rc; });
+  EXPECT_EQ(result, 0);
 
   // TestOneInput works with data
   data = "ABCD";
-  data_provider_impl_.PartitionTestInput(data.c_str(), data.size());
-  llvm_fuzzer_.TestOneInput([&actual](int result) { actual = result; });
-  EXPECT_EQ(actual, 266 /* 0x41 + 0x42 + 0x43 + 0x44*/);
+  EXPECT_EQ(data_provider.PartitionTestInput(data.c_str(), data.size()), ZX_OK);
+  llvm_fuzzer.TestOneInput([&result](int rc) { result = rc; });
+  EXPECT_EQ(result, 266 /* 0x41 + 0x42 + 0x43 + 0x44*/);
 }
 
 }  // namespace fuzzing

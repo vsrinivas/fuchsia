@@ -4,14 +4,10 @@
 
 #include "data-provider.h"
 
-#include <lib/sys/cpp/testing/component_context_provider.h>
-
 #include <memory>
 #include <thread>
 
 #include <gtest/gtest.h>
-
-#include "test/test-data-provider.h"
 
 namespace fuzzing {
 
@@ -30,62 +26,70 @@ class DataProviderTest : public ::testing::Test {
 
  protected:
   TestInput fuzzer_input_;
-  TestDataProvider data_provider_;
+  DataProviderImpl data_provider_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Unit tests
 
-TEST_F(DataProviderTest, Configure) {
+TEST_F(DataProviderTest, Initialize) {
   // Nothing is mapped initially.
   EXPECT_FALSE(data_provider_.HasLabel(""));
   EXPECT_FALSE(data_provider_.IsMapped(""));
 
-  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
-  EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
-  EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
-
-  std::vector<std::string> labels{"foo", "bar", "baz"};
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
 
   EXPECT_TRUE(data_provider_.HasLabel(""));
   EXPECT_TRUE(data_provider_.IsMapped(""));
+  EXPECT_TRUE(vmo.is_valid());
 
+  // Should fail on second call.
+  vmo.reset();
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(vmo.is_valid());
+}
+
+TEST_F(DataProviderTest, AddConsumerLabel) {
+  std::vector<std::string> labels{"foo", "bar", "baz"};
+  for (const std::string &label : labels) {
+    EXPECT_FALSE(data_provider_.HasLabel(label));
+    data_provider_.AddConsumerLabel(label);
+  }
+  // Labels should all be recognized, but unmapped.
   for (const std::string &label : labels) {
     EXPECT_TRUE(data_provider_.HasLabel(label));
     EXPECT_FALSE(data_provider_.IsMapped(label));
   }
-
   EXPECT_FALSE(data_provider_.HasLabel("qux"));
 }
 
 TEST_F(DataProviderTest, AddConsumer) {
-  LlvmFuzzerHandle ignored;
-  zx::vmo vmo;
-  EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
-  EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
-
-  // Labels are unregnozied without a call to |Configure".
   std::vector<std::string> labels{"foo", "bar", "baz"};
   std::map<std::string, TestInput> inputs;
   zx_status_t status;
   for (const std::string &label : labels) {
+    zx::vmo vmo;
     TestInput *input = &inputs[label];
     EXPECT_EQ(input->Create(), ZX_OK);
     EXPECT_EQ(input->Share(&vmo), ZX_OK);
+
+    // Labels are unrecognized until added.
     data_provider_.AddConsumer(label, std::move(vmo), [&status](zx_status_t res) { status = res; });
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  }
-  for (const std::string &label : labels) {
+
     EXPECT_FALSE(data_provider_.HasLabel(label));
+    data_provider_.AddConsumerLabel(label);
+    EXPECT_TRUE(data_provider_.HasLabel(label));
     EXPECT_FALSE(data_provider_.IsMapped(label));
   }
 
   // Valid
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
+  zx::vmo vmo;
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
   for (auto &[label, input] : inputs) {
     EXPECT_EQ(input.Share(&vmo), ZX_OK);
+    data_provider_.AddConsumerLabel(label);
     data_provider_.AddConsumer(label, std::move(vmo), [&status](zx_status_t res) { status = res; });
     EXPECT_EQ(status, ZX_OK);
   }
@@ -96,29 +100,28 @@ TEST_F(DataProviderTest, AddConsumer) {
 }
 
 TEST_F(DataProviderTest, PartitionTestInput) {
-  LlvmFuzzerHandle ignored;
-  zx::vmo vmo;
-  EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
-  EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
-
-  std::vector<std::string> labels;
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
+  // Called before Initialize
+  std::string data = "AB#[foo]CD#[bar]EF";
+  EXPECT_EQ(data_provider_.PartitionTestInput(data.c_str(), data.size()), ZX_ERR_BAD_STATE);
 
   // No labels provided
-  std::string data = "AB#[foo]CD#[bar]EF";
+  zx::vmo vmo;
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
+  EXPECT_EQ(fuzzer_input_.Link(vmo), ZX_OK);
   EXPECT_EQ(data_provider_.PartitionTestInput(data.c_str(), data.size()), ZX_OK);
   EXPECT_EQ(fuzzer_input_.size(), data.size());
   EXPECT_STREQ(as_str(fuzzer_input_), data.c_str());
 
   // One of each label
-  std::map<std::string, TestInput> inputs;
-  labels.push_back("foo");
-  labels.push_back("bar");
-
-  fuzzer_input_.Share(&vmo);
+  std::vector<std::string> labels = {"foo", "bar"};
   data_provider_.Reset();
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
+  for (const std::string &label : labels) {
+    data_provider_.AddConsumerLabel(label);
+  }
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
+  EXPECT_EQ(fuzzer_input_.Link(vmo), ZX_OK);
 
+  std::map<std::string, TestInput> inputs;
   zx_status_t status;
   for (const std::string &label : labels) {
     EXPECT_EQ(inputs[label].Create(), ZX_OK);
@@ -224,37 +227,32 @@ TEST_F(DataProviderTest, PartitionTestInput) {
 }
 
 TEST_F(DataProviderTest, CompleteIteration) {
-  LlvmFuzzerHandle ignored;
   zx::vmo vmo;
-  EXPECT_EQ(fuzzer_input_.Create(), ZX_OK);
-  EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
-
-  std::vector<std::string> labels;
-  labels.push_back("foo");
-  labels.push_back("bar");
+  data_provider_.AddConsumerLabel("foo");
+  data_provider_.AddConsumerLabel("bar");
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
+  EXPECT_EQ(fuzzer_input_.Link(vmo), ZX_OK);
 
   std::string data = "ABEF";
-  zx_status_t status = ZX_ERR_STOP;  // Not used by |PartitionTestInput|.
-  std::thread t1([this, &data, &status]() {
-    // Blocks until the call to |Configure|.
-    status = data_provider_.PartitionTestInput(data.c_str(), data.size());
-  });
+  EXPECT_EQ(data_provider_.PartitionTestInput(data.c_str(), data.size()), ZX_OK);
 
-  EXPECT_EQ(status, ZX_ERR_STOP);
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
-  t1.join();
-  EXPECT_EQ(status, ZX_OK);
   zx_signals_t observed = 0;
   EXPECT_EQ(fuzzer_input_.vmo().wait_one(kInIteration, zx::time(0), &observed), ZX_OK);
   EXPECT_EQ(observed & kBetweenIterations, 0u);
 
   // Configure again without a call to |PartitionTestInput|; this should leave the fuzzer input
   // between iterations.
-  EXPECT_EQ(fuzzer_input_.Share(&vmo), ZX_OK);
   data_provider_.Reset();
-  data_provider_.Configure(std::move(ignored), std::move(vmo), labels, []() {});
+  EXPECT_EQ(data_provider_.Initialize(&vmo), ZX_OK);
+  EXPECT_EQ(fuzzer_input_.Link(vmo), ZX_OK);
   EXPECT_EQ(fuzzer_input_.vmo().wait_one(kBetweenIterations, zx::time(0), &observed), ZX_OK);
   EXPECT_EQ(observed & kInIteration, 0u);
+
+  std::vector<std::string> labels{"foo", "bar"};
+  for (const std::string &label : labels) {
+    data_provider_.AddConsumerLabel(label);
+  }
+
   EXPECT_EQ(data_provider_.PartitionTestInput(data.c_str(), data.size()), ZX_OK);
   EXPECT_EQ(fuzzer_input_.vmo().wait_one(kInIteration, zx::time(0), &observed), ZX_OK);
   EXPECT_EQ(observed & kBetweenIterations, 0u);
@@ -265,6 +263,7 @@ TEST_F(DataProviderTest, CompleteIteration) {
     TestInput *input = &inputs[label];
     EXPECT_EQ(input->Create(), ZX_OK);
     EXPECT_EQ(input->Share(&vmo), ZX_OK);
+    zx_status_t status = ZX_ERR_BAD_STATE;
     data_provider_.AddConsumer(label, std::move(vmo), [&status](zx_status_t res) { status = res; });
     EXPECT_EQ(status, ZX_OK);
 

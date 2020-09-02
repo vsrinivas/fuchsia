@@ -39,17 +39,14 @@ using ::fuchsia::fuzzer::LlvmFuzzerHandle;
 // It is also designed to facilitate handcrafting corpus elements for sending data to multiple
 // consumers, using Rust-style attributes,
 //
-// On startup, the fuchsia.fuzzer.LlvmFuzzer implementation must call |Configure| to provide this
-// service with a VMO it can use to provide test inputs from libFuzzer. It also provides a list of
-// labels designating other consumers. Providing them upon startup initialization allows the
-// provider to partition the input even before other services have started in response to FIDL
-// requests made by the fuzzer.
+// On startup, the FIDL fuzzing framework must provide the engine with a list of labels designating
+// other consumers. Providing them upon startup initialization allows the provider to partition the
+// input even before other services have started in response to FIDL requests made by the fuzzer.
 //
 // Labels may contain any characters except '#', '[', and ']'.
 //
 // On starting up, the other consumers should discover the DataProvider and call |AddConsumer| with
-// a label matching one provided by the fuzzer and a VMO to hold the test input. These consumers
-// will be notified when data is available with the "OnDataAvailable" event.
+// a label matching one provided by the fuzzer and a VMO to hold the test input.
 //
 // The test input is partitioned using the following rules, where "LABEL" corresponds to one of the
 // previously provided labels.
@@ -76,16 +73,22 @@ class DataProviderImpl : public DataProvider {
   DataProviderImpl();
   virtual ~DataProviderImpl();
 
-  fidl::InterfaceRequestHandler<DataProvider> GetHandler() { return bindings_.GetHandler(this); }
-
-  // Takes ownership of the LlvmFuzzer handle set by Configure.
-  LlvmFuzzerHandle TakeFuzzer() FXL_LOCKS_EXCLUDED(lock_);
+  // Accessors for testing.
+  bool HasLabel(const std::string &label) FXL_LOCKS_EXCLUDED(lock_);
+  bool IsMapped(const std::string &label) FXL_LOCKS_EXCLUDED(lock_);
 
   // FIDL methods
-  void Configure(LlvmFuzzerHandle llvm_fuzzer, zx::vmo vmo, fidl::VectorPtr<std::string> labels,
-                 ConfigureCallback callback) override FXL_LOCKS_EXCLUDED(lock_);
   void AddConsumer(std::string label, zx::vmo vmo, AddConsumerCallback callback) override
       FXL_LOCKS_EXCLUDED(lock_);
+
+  // Engine-callable methods
+  fidl::InterfaceRequestHandler<DataProvider> GetHandler() { return bindings_.GetHandler(this); }
+
+  // Sets up the data provider and returns the VMO that the client will use to get test input data.
+  zx_status_t Initialize(zx::vmo *out) FXL_LOCKS_EXCLUDED(lock_);
+
+  // Register the given label as a potential data consumer.
+  void AddConsumerLabel(std::string label) FXL_LOCKS_EXCLUDED(lock_);
 
   // Partitions the test input according to the class description above. Returns an error if it is
   // unable to signal consumers that data is ready, which is fatal.
@@ -99,11 +102,6 @@ class DataProviderImpl : public DataProvider {
   // Returns the object to an initial state, i.e. ready for |Configure| to be called again.
   void Reset();
 
- protected:
-  // Accessors for testing.
-  virtual bool HasLabel(const std::string &label) FXL_LOCKS_EXCLUDED(lock_);
-  virtual bool IsMapped(const std::string &label) FXL_LOCKS_EXCLUDED(lock_);
-
  private:
   // Bindings for connected clients.
   fidl::BindingSet<DataProvider> bindings_;
@@ -111,17 +109,11 @@ class DataProviderImpl : public DataProvider {
   // Lock to synchronize calls from engine and dispatcher threads.
   std::mutex lock_;
 
-  // Interface handle to the LlvmFuzzer. Set by |Configure| and taken by the engine.
-  LlvmFuzzerHandle llvm_fuzzer_ FXL_GUARDED_BY(lock_);
-
   // Shared memory regions into which test input data is partitioned.
   std::map<std::string, TestInput, std::less<>> inputs_ FXL_GUARDED_BY(lock_);
 
   // Label length bounds, to speed up scanning test input when partitioning.
   size_t max_label_length_ FXL_GUARDED_BY(lock_);
-
-  // Blocks |PartitionTestInput| until |Configure| has completed.
-  sync_completion_t sync_;
 };
 
 }  // namespace fuzzing

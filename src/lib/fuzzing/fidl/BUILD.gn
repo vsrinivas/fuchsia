@@ -75,8 +75,8 @@ source_set("engine_lib") {
 # This test links a fake implementation of LLVMFuzzerTestOneInput.
 test("fidl_fuzzer_engine_unittests") {
   sources = [
-    # "coverage-unittest.cc",
-    # "data-provider-unittest.cc",
+    "coverage-unittest.cc",
+    "data-provider-unittest.cc",
     "engine-unittest.cc",
   ]
   deps = [
@@ -98,6 +98,15 @@ source_set("client_lib") {
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
+source_set("client_main") {
+  sources = [ "llvm-fuzzer-main.cc" ]
+  deps = [
+    ":client_lib",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -165,10 +174,16 @@ test_package("fidl-fuzzer-tests") {
       environments = [ emu_env ]
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "fidl_fuzzer_client_unittests"
       environments = [ emu_env ]
     },
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "fidl_fuzzer_engine_unittests"
       environments = [ emu_env ]
     },

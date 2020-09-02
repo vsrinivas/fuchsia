@@ -72,6 +72,9 @@ class AggregatedCoverage final {
   // their coverage data is updated.
   zx_status_t CompleteIteration();
 
+  // Returns this instance to its original state.
+  void Reset();
+
  protected:
   friend class CoverageImpl;
 
@@ -82,9 +85,15 @@ class AggregatedCoverage final {
   void Close(CoverageImpl *coverage, zx_status_t epitaph);
 
  private:
+  // Starts processing coverage.
+  void Start();
+
   // Manage the shared VMOs' signals and process the data from the proxies accordingly.
   void ProcessAll();
   void ProcessTraces(Instruction *traces, uint64_t distinguisher);
+
+  // Stops processing coverage.
+  void Stop();
 
   // Binding set that owns the Coverage objects.
   fidl::BindingSet<Coverage, std::unique_ptr<Coverage>> bindings_;

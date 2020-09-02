@@ -83,22 +83,9 @@ bool IsValidItem(zx_wait_item_t *item) {
 
 // Public methods
 
-AggregatedCoverage::AggregatedCoverage() : num_items_(0), num_distinguishers_(0) {
-  memset(items_, 0, sizeof(items_));
-  memset(traces_, 0, sizeof(traces_));
-  memset(distinguishers_, 0, sizeof(distinguishers_));
-  ZX_ASSERT(zx::event::create(0, &controller_) == ZX_OK);
-  ZX_ASSERT(controller_.signal(0, kInIteration) == ZX_OK);
-  items_[0].handle = controller_.get();
-  items_[0].waitfor = kItemAdded | kInIteration | kBetweenIterations | kShutdown;
-  num_items_.fetch_add(1);
-  processor_ = std::thread([this]() { ProcessAll(); });
-}
+AggregatedCoverage::AggregatedCoverage() { Start(); }
 
-AggregatedCoverage::~AggregatedCoverage() {
-  controller_.signal(0, kShutdown);
-  processor_.join();
-}
+AggregatedCoverage::~AggregatedCoverage() { Stop(); }
 
 fidl::InterfaceRequestHandler<Coverage> AggregatedCoverage::GetHandler() {
   return [this](fidl::InterfaceRequest<Coverage> request) {
@@ -143,7 +130,32 @@ void AggregatedCoverage::Close(CoverageImpl *coverage, zx_status_t epitaph) {
   bindings_.CloseBinding(coverage, epitaph);
 }
 
+void AggregatedCoverage::Reset() {
+  Stop();
+  Start();
+}
+
 // Private methods
+
+void AggregatedCoverage::Start() {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  memset(items_, 0, sizeof(items_));
+  num_items_.store(0);
+
+  memset(traces_, 0, sizeof(traces_));
+
+  memset(distinguishers_, 0, sizeof(distinguishers_));
+  num_distinguishers_ = 0;
+
+  ZX_ASSERT(zx::event::create(0, &controller_) == ZX_OK);
+  ZX_ASSERT(controller_.signal(0, kInIteration) == ZX_OK);
+  items_[0].handle = controller_.get();
+  items_[0].waitfor = kItemAdded | kInIteration | kBetweenIterations | kShutdown;
+  num_items_.fetch_add(1);
+
+  processor_ = std::thread([this]() { ProcessAll(); });
+}
 
 void AggregatedCoverage::ProcessAll() {
   bool in_iteration = true;
@@ -302,6 +314,17 @@ void AggregatedCoverage::ProcessTraces(Instruction *traces, uint64_t distinguish
         FX_NOTREACHED();
     }
   }
+}
+
+void AggregatedCoverage::Stop() {
+  std::lock_guard<std::mutex> lock(lock_);
+  controller_.signal(0, kShutdown);
+  ZX_ASSERT(processor_.joinable());
+  processor_.join();
+  controller_.reset();
+  sync_completion_signal(&sync_);
+  bindings_.CloseAll();
+  pending_.store(0);
 }
 
 // Private methods

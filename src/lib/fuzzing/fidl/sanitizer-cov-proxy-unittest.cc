@@ -163,9 +163,7 @@ TEST_F(SanitizerCovProxyTest, AddTrace) {
   uintptr_t pc = 0x1000;
 
   LLVMFuzzerSetRemoteCallerPC(++pc);
-  FX_LOGS(INFO);
   __sanitizer_cov_trace_pc_indir(~pc);
-  FX_LOGS(INFO);
   Instruction *trace = coverage_.traces();
 
   EXPECT_EQ(trace->type, Instruction::kPcIndir);
