@@ -8,6 +8,7 @@ use crate::message::base::{Address, MessageAction, MessageType, Payload};
 use crate::message::beacon::BeaconBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
+use fuchsia_zircon::Duration;
 
 /// MessageBuilder allows constructing a message or reply with optional signals.
 #[derive(Clone)]
@@ -16,6 +17,7 @@ pub struct MessageBuilder<P: Payload + 'static, A: Address + 'static> {
     message_type: MessageType<P, A>,
     messenger: Messenger<P, A>,
     forwarder: Option<ActionFuseHandle>,
+    timeout: Option<Duration>,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
@@ -31,6 +33,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
             message_type: message_type,
             messenger: messenger,
             forwarder: None,
+            timeout: None,
         }
     }
 
@@ -44,9 +47,15 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
         self
     }
 
+    pub fn set_timeout(mut self, duration: Option<Duration>) -> MessageBuilder<P, A> {
+        self.timeout = duration;
+        self
+    }
+
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
     pub fn send(self) -> Receptor<P, A> {
-        let (beacon, receptor) = BeaconBuilder::new(self.messenger.clone()).build();
+        let (beacon, receptor) =
+            BeaconBuilder::new(self.messenger.clone()).set_timeout(self.timeout).build();
         self.messenger
             .transmit(MessageAction::Send(self.payload, self.message_type, now()), Some(beacon));
 

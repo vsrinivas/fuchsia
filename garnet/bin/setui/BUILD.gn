@@ -73,7 +73,10 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pin-utils",
+  ]
 
   # TODO(56138): Fix the leaks and remove this.
   test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]

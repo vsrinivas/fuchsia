@@ -7,12 +7,14 @@ use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Address, Audience, MessageEvent, MessengerType, Payload, Status};
 use crate::message::message_client::MessageClient;
 use crate::message::receptor::Receptor;
+use fuchsia_zircon::DurationNum;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
+use std::task::Poll;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum TestMessage {
@@ -264,6 +266,60 @@ async fn test_observe_addressable() {
         panic!("A receptor should have been assigned")
     }
     verify_payload(REPLY, &mut reply_receptor, None).await;
+}
+
+/// Validates that timeout status is reached when there is no response
+#[test]
+fn test_timeout() {
+    let mut executor =
+        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+    let timeout_ms = 1000;
+
+    let fut = async move {
+        let messenger_factory = test::message::create_hub();
+        let (messenger_client_1, _) = messenger_factory
+            .create(MessengerType::Addressable(TestAddress::Foo(1)))
+            .await
+            .unwrap();
+        let (_, mut receptor_2) = messenger_factory
+            .create(MessengerType::Addressable(TestAddress::Foo(2)))
+            .await
+            .unwrap();
+
+        let mut reply_receptor = messenger_client_1
+            .message(ORIGINAL, Audience::Address(TestAddress::Foo(2)))
+            .set_timeout(Some(timeout_ms.millis()))
+            .send();
+
+        verify_payload(
+            ORIGINAL,
+            &mut receptor_2,
+            Some(Box::new(|_| -> BoxFuture<'_, ()> {
+                Box::pin(async move {
+                    // Do not respond.
+                })
+            })),
+        )
+        .await;
+
+        verify_result(Status::Timeout, &mut reply_receptor).await;
+    };
+
+    pin_utils::pin_mut!(fut);
+    let _result = loop {
+        executor.wake_main_future();
+        let new_time = fuchsia_async::Time::from_nanos(
+            executor.now().into_nanos()
+                + fuchsia_zircon::Duration::from_millis(timeout_ms).into_nanos(),
+        );
+        match executor.run_one_step(&mut fut) {
+            Some(Poll::Ready(x)) => break x,
+            None => panic!("Executor stalled"),
+            Some(Poll::Pending) => {
+                executor.set_fake_time(new_time);
+            }
+        }
+    };
 }
 
 /// Tests the broadcast functionality. Ensures all non-sending, addressable

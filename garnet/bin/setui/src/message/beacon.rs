@@ -10,8 +10,11 @@ use crate::message::message_client::MessageClient;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
 use anyhow::{format_err, Error};
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_zircon::Duration;
 use futures::channel::mpsc::UnboundedSender;
+use futures::future::TryFutureExt;
+use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -19,11 +22,12 @@ use std::sync::Arc;
 pub struct BeaconBuilder<P: Payload + 'static, A: Address + 'static> {
     messenger: Messenger<P, A>,
     chained_fuses: Vec<ActionFuseHandle>,
+    timeout: Option<Duration>,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> BeaconBuilder<P, A> {
     pub fn new(messenger: Messenger<P, A>) -> Self {
-        Self { messenger: messenger, chained_fuses: vec![] }
+        Self { messenger: messenger, chained_fuses: vec![], timeout: None }
     }
 
     pub fn add_fuse(mut self, fuse: ActionFuseHandle) -> Self {
@@ -31,8 +35,13 @@ impl<P: Payload + 'static, A: Address + 'static> BeaconBuilder<P, A> {
         self
     }
 
+    pub fn set_timeout(mut self, duration: Option<Duration>) -> Self {
+        self.timeout = duration;
+        self
+    }
+
     pub fn build(self) -> (Beacon<P, A>, Receptor<P, A>) {
-        Beacon::create(self.messenger, self.chained_fuses)
+        Beacon::create(self.messenger, self.chained_fuses, self.timeout)
     }
 }
 
@@ -55,6 +64,8 @@ pub struct Beacon<P: Payload + 'static, A: Address + 'static> {
     event_sender: UnboundedSender<MessageEvent<P, A>>,
     /// Sentinel for secondary ActionFuses
     sentinel: Arc<Mutex<Sentinel>>,
+    /// Timeout for firing if a response payload is not delivered in time.
+    timeout_abort_client: AbortHandle,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
@@ -63,11 +74,17 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
     fn create(
         messenger: Messenger<P, A>,
         fuses: Vec<ActionFuseHandle>,
+        timeout: Option<Duration>,
     ) -> (Beacon<P, A>, Receptor<P, A>) {
         let sentinel = Arc::new(Mutex::new(Sentinel::new()));
         let (event_tx, event_rx) = futures::channel::mpsc::unbounded::<MessageEvent<P, A>>();
-        let beacon =
-            Beacon { messenger: messenger, event_sender: event_tx, sentinel: sentinel.clone() };
+        let (timeout_abort_client, timeout_abort_server) = AbortHandle::new_pair();
+        let beacon = Beacon {
+            messenger,
+            event_sender: event_tx.clone(),
+            sentinel: sentinel.clone(),
+            timeout_abort_client: timeout_abort_client.clone(),
+        };
 
         // pass fuse to receptor to hold and set when it goes out of scope.
         let receptor = Receptor::new(
@@ -75,7 +92,9 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
             ActionFuseBuilder::new()
                 .add_action(Box::new(move || {
                     let sentinel = sentinel.clone();
+                    let timeout_abort_client = timeout_abort_client.clone();
                     fasync::Task::spawn(async move {
+                        timeout_abort_client.abort();
                         sentinel.lock().await.trigger().await;
                     })
                     .detach();
@@ -84,6 +103,17 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
                 .build(),
         );
 
+        if let Some(duration) = timeout {
+            let abortable_timeout = Abortable::new(
+                async move {
+                    fuchsia_async::Timer::new(duration.after_now()).await;
+                    event_tx.unbounded_send(MessageEvent::Status(Status::Timeout)).ok();
+                },
+                timeout_abort_server,
+            );
+
+            fasync::Task::spawn(abortable_timeout.unwrap_or_else(|_| ())).detach();
+        }
         (beacon, receptor)
     }
 
@@ -103,6 +133,7 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
         message: Message<P, A>,
         client_id: MessageClientId,
     ) -> Result<(), Error> {
+        self.timeout_abort_client.abort();
         if self
             .event_sender
             .unbounded_send(MessageEvent::Message(

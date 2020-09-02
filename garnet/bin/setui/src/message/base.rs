@@ -56,6 +56,7 @@ pub enum Status {
     Undeliverable,
     // Acknowledged by a recipient.
     Acknowledged,
+    Timeout,
 }
 
 /// The intended recipients for a message.
