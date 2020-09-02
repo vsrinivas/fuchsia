@@ -111,8 +111,8 @@ class OSImpl : public OS, public TaskEnumerator {
       cb_;
 };
 
-const std::vector<std::string> Capture::kDefaultRootedVmoNames = {"SysmemContiguousPool",
-                                                                  "SysmemAmlogicProtectedPool"};
+const std::vector<std::string> Capture::kDefaultRootedVmoNames = {
+    "SysmemContiguousPool", "SysmemAmlogicProtectedPool", "Sysmem-core"};
 // static.
 zx_status_t Capture::GetCaptureState(CaptureState* state) {
   OSImpl osImpl;

@@ -568,17 +568,20 @@ TEST_F(SummaryUnitTest, Pools) {
                    {.koid = 2, .name = "ContiguousChild", .size_bytes = 300, .parent_koid = 1},
                    {.koid = 3, .name = "ContiguousGrandchild", .size_bytes = 100, .parent_koid = 2},
                    {.koid = 4, .name = "ContiguousGrandchild", .size_bytes = 50, .parent_koid = 2},
+                   {.koid = 5, .name = "Sysmem-core", .committed_bytes = 50},
+                   {.koid = 6, .name = "CoreChild", .size_bytes = 50, .parent_koid = 5},
                },
            .processes =
                {
-                   {.koid = 10, .name = "p1", .vmos = {1, 2}},
+                   {.koid = 10, .name = "p1", .vmos = {1, 2, 5}},
                    {.koid = 20, .name = "p2", .vmos = {3}},
                    {.koid = 30, .name = "p3", .vmos = {4}},
+                   {.koid = 40, .name = "p4", .vmos = {6}},
                },
            .rooted_vmo_names = Capture::kDefaultRootedVmoNames});
   Summary s(c, Summary::kNameMatches);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
-  ASSERT_EQ(4U, process_summaries.size());
+  ASSERT_EQ(5U, process_summaries.size());
 
   // Skip kernel summary.
   // SysmemContiguousPool will be left with 100 bytes, shared by all three processes.
@@ -642,6 +645,18 @@ TEST_F(SummaryUnitTest, Pools) {
   EXPECT_EQ(150U, sizes.total_bytes);
 
   sizes = ps.GetSizes("ContiguousGrandchild");
+  EXPECT_EQ(50U, sizes.private_bytes);
+  EXPECT_EQ(50U, sizes.scaled_bytes);
+  EXPECT_EQ(50U, sizes.total_bytes);
+
+  ps = process_summaries.at(4);
+  EXPECT_EQ(40U, ps.koid());
+  sizes = ps.sizes();
+  EXPECT_EQ(50U, sizes.private_bytes);
+  EXPECT_EQ(50U, sizes.scaled_bytes);
+  EXPECT_EQ(50U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("CoreChild");
   EXPECT_EQ(50U, sizes.private_bytes);
   EXPECT_EQ(50U, sizes.scaled_bytes);
   EXPECT_EQ(50U, sizes.total_bytes);
