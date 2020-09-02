@@ -84,7 +84,7 @@ protocol Controller {
     /// + request `neighbor` IP address of the neighbor.
     /// + request `mac` MAC address of the neighbor.
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
-    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     AddEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor, fuchsia.net.MacAddress mac)
         -> () error zx.status;
@@ -96,7 +96,7 @@ protocol Controller {
     /// + request `neighbor` IP address of the entry to be deleted.
     /// * error `ZX_ERR_NOT_FOUND` if no entries match `interface` and
     ///   `neighbor`.
-    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     RemoveEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor)
         -> () error zx.status;
@@ -106,7 +106,7 @@ protocol Controller {
     /// + request `interface` identifier for the interface associated with the
     ///     entries to be deleted.
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
-    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
     ClearEntries(fuchsia.net.interface_id interface) -> () error zx.status;
 
