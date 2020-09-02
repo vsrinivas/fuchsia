@@ -35,6 +35,7 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_OPENTHREAD_SYSTEM_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_OPENTHREAD_SYSTEM_H_
 
+#include <lib/ot-stack/ot-stack-callback.h>
 #include <setjmp.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,6 +52,7 @@ extern "C" {
  */
 typedef struct otPlatformConfig {
   uint32_t m_speed_up_factor;  ///< Speed up factor.
+  OtStackCallBack *callback_ptr;
 } otPlatformConfig;
 
 /**
@@ -73,6 +75,10 @@ otInstance *otSysInit(otPlatformConfig *a_platform_config);
 typedef struct otSysMainloopContext {
   struct timeval m_timeout;  ///< The timeout.
 } otSysMainloopContext;
+
+typedef struct otRadioSpinelContext {
+  uint8_t none;
+} otRadioSpinelContext;
 
 }  // end of extern "C"
 
