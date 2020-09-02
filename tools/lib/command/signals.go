@@ -14,15 +14,15 @@ import (
 // are received, assuming those signals can be handled by the current process.
 func CancelOnSignals(ctx context.Context, sigs ...os.Signal) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
-	signals := make(chan os.Signal)
-	signal.Notify(signals, sigs...)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, sigs...)
 	go func() {
+		defer signal.Stop(c)
 		select {
-		case s := <-signals:
-			if s != nil {
-				cancel()
-				close(signals)
-			}
+		case <-ctx.Done():
+			return
+		case <-c:
+			cancel()
 		}
 	}()
 	return ctx
