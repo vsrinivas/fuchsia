@@ -44,6 +44,8 @@ class Keyboard : public Device {
 
   // The ordered, unique list of key values.
   std::set<::llcpp::fuchsia::ui::input2::Key> key_values_;
+  // The ordered, unique list of key values.
+  std::set<::llcpp::fuchsia::input::Key> key_3_values_;
 
   // Fields for the output reports.
   std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS> led_fields_;

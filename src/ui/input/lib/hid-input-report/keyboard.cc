@@ -31,12 +31,24 @@ void InsertFuchsiaKey(uint32_t hid_usage, uint32_t hid_key,
   }
 }
 
+void InsertFuchsiaKey3(uint32_t hid_usage, uint32_t hid_key,
+                       std::set<::llcpp::fuchsia::input::Key>* key_values) {
+  std::optional<fuchsia::input::Key> fuchsia_key3 =
+      key_util::hid_key_to_fuchsia_key3(hid::USAGE(hid_usage, hid_key));
+  if (fuchsia_key3) {
+    // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be
+    // equivalent.
+    key_values->insert(static_cast<llcpp::fuchsia::input::Key>(*fuchsia_key3));
+  }
+}
+
 }  // namespace
 
 ParseResult Keyboard::ParseInputReportDescriptor(
     const hid::ReportDescriptor& hid_report_descriptor) {
   // Use a set to make it easy to create a list of sorted and unique keys.
   std::set<::llcpp::fuchsia::ui::input2::Key> key_values;
+  std::set<::llcpp::fuchsia::input::Key> key_3_values;
   std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields;
   size_t num_key_fields = 0;
 
@@ -48,9 +60,11 @@ ParseResult Keyboard::ParseInputReportDescriptor(
         for (uint8_t key = static_cast<uint8_t>(field.attr.logc_mm.min);
              key < static_cast<uint8_t>(field.attr.logc_mm.max); key++) {
           InsertFuchsiaKey(field.attr.usage.page, key, &key_values);
+          InsertFuchsiaKey3(field.attr.usage.page, key, &key_3_values);
         }
       } else {
         InsertFuchsiaKey(field.attr.usage.page, field.attr.usage.usage, &key_values);
+        InsertFuchsiaKey3(field.attr.usage.page, field.attr.usage.usage, &key_3_values);
       }
 
       key_fields[num_key_fields++] = field;
@@ -66,6 +80,7 @@ ParseResult Keyboard::ParseInputReportDescriptor(
 
   // No error, write to class members.
   key_values_ = std::move(key_values);
+  key_3_values_ = std::move(key_3_values);
 
   num_key_fields_ = num_key_fields;
   key_fields_ = key_fields;
@@ -128,9 +143,16 @@ ParseResult Keyboard::CreateDescriptor(
     for (auto& key : key_values_) {
       keys[keys_index++] = key;
     }
+    size_t keys_3_index = 0;
+    auto keys_3 = allocator->make<::llcpp::fuchsia::input::Key[]>(key_3_values_.size());
+    for (auto& key : key_3_values_) {
+      keys_3[keys_3_index++] = key;
+    }
 
     keyboard_input.set_keys(allocator->make<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
         std::move(keys), key_values_.size()));
+    keyboard_input.set_keys3(allocator->make<fidl::VectorView<::llcpp::fuchsia::input::Key>>(
+        std::move(keys_3), key_3_values_.size()));
     keyboard.set_input(
         allocator->make<fuchsia_input_report::KeyboardInputDescriptor>(keyboard_input.build()));
   }
@@ -172,8 +194,11 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::Al
       allocator->make<fuchsia_input_report::KeyboardInputReport::Frame>());
 
   size_t num_pressed_keys = 0;
+  size_t num_pressed_keys_3 = 0;
   std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
+  std::array<::llcpp::fuchsia::input::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
+      pressed_keys_3;
   for (hid::ReportField& field : fbl::Span(key_fields_.data(), num_key_fields_)) {
     double val_out_double;
     if (!ExtractAsUnitType(data, len, field.attr, &val_out_double)) {
@@ -203,6 +228,12 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::Al
       // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
       pressed_keys[num_pressed_keys++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
     }
+    auto fuchsia_key_3 =
+        key_util::hid_key_to_fuchsia_key3(hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_key));
+    if (fuchsia_key_3) {
+      pressed_keys_3[num_pressed_keys_3++] =
+          static_cast<llcpp::fuchsia::input::Key>(*fuchsia_key_3);
+    }
   }
 
   auto fidl_pressed_keys = allocator->make<::llcpp::fuchsia::ui::input2::Key[]>(num_pressed_keys);
@@ -210,9 +241,16 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::Al
     fidl_pressed_keys[i] = pressed_keys[i];
   }
 
+  auto fidl_pressed_keys_3 = allocator->make<::llcpp::fuchsia::input::Key[]>(num_pressed_keys_3);
+  for (size_t i = 0; i < num_pressed_keys_3; i++) {
+    fidl_pressed_keys_3[i] = pressed_keys_3[i];
+  }
+
   keyboard_report.set_pressed_keys(
       allocator->make<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
           std::move(fidl_pressed_keys), num_pressed_keys));
+  keyboard_report.set_pressed_keys3(allocator->make<fidl::VectorView<::llcpp::fuchsia::input::Key>>(
+      std::move(fidl_pressed_keys_3), num_pressed_keys_3));
 
   report->set_keyboard(
       allocator->make<fuchsia_input_report::KeyboardInputReport>(keyboard_report.build()));

@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/key_util/key_util.h"
 
+#include <iostream>
+
 #include "hid-parser/usages.h"
 #include "hid/usages.h"
 
@@ -186,6 +188,24 @@ std::optional<fuchsia::ui::input2::Key> hid_key_to_fuchsia_key(hid::Usage usage)
       if (std::get<0>(mapping) == usage.usage) {
         return std::get<1>(mapping);
       }
+    }
+  }
+  return {};
+}
+
+std::optional<fuchsia::input::Key> hid_key_to_fuchsia_key3(hid::Usage usage) {
+  if (usage.page == hid::usage::Page::kKeyboardKeypad) {
+    auto code = (((uint8_t)(hid::usage::Page::kKeyboardKeypad)) & 0xFF) << 16 | (usage.usage);
+    if (code == ((uint32_t)fuchsia::input::Key::KEYPAD_EQUALS) ||
+        code == ((uint32_t)fuchsia::input::Key::MENU) ||
+        (code >= ((uint32_t)fuchsia::input::Key::A) &&
+         code <= ((uint32_t)fuchsia::input::Key::NON_US_BACKSLASH)) ||
+        (code >= ((uint32_t)fuchsia::input::Key::LEFT_CTRL) &&
+         (code <= ((uint32_t)fuchsia::input::Key::RIGHT_META)))) {
+      return static_cast<fuchsia::input::Key>(code);
+    } else {
+      std::cout << "hid_key_to_fuchsia_key3 miss: " << std::hex << code << "\n";
+      return {};
     }
   }
   return {};

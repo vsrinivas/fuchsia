@@ -525,9 +525,13 @@ TEST_F(HidDevTest, KeyboardTest) {
   const auto& keyboard = report.keyboard();
   ASSERT_TRUE(keyboard.has_pressed_keys());
   ASSERT_EQ(3, keyboard.pressed_keys().count());
+  ASSERT_EQ(3, keyboard.pressed_keys3().count());
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, keyboard.pressed_keys()[0]);
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::UP, keyboard.pressed_keys()[1]);
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::B, keyboard.pressed_keys()[2]);
+  EXPECT_EQ(llcpp::fuchsia::input::Key::A, keyboard.pressed_keys3()[0]);
+  EXPECT_EQ(llcpp::fuchsia::input::Key::UP, keyboard.pressed_keys3()[1]);
+  EXPECT_EQ(llcpp::fuchsia::input::Key::B, keyboard.pressed_keys3()[2]);
 }
 
 TEST_F(HidDevTest, KeyboardOutputReportTest) {

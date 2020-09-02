@@ -16,6 +16,7 @@ source_set("hid-input-report") {
     "touch.cc",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.ui.input2",
     "//src/ui/lib/key_util",
@@ -42,6 +43,7 @@ test("lib-hid-input-report-test") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.ui.input2",
     "//src/lib/ddk",

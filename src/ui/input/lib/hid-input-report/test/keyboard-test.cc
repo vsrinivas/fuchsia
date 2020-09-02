@@ -4,6 +4,7 @@
 
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
 
+#include <fuchsia/input/cpp/fidl.h>
 #include <fuchsia/ui/input2/cpp/fidl.h>
 
 #include <variant>
@@ -116,6 +117,7 @@ TEST(KeyboardTest, BootKeyboard) {
   EXPECT_TRUE(descriptor.keyboard().has_input());
   EXPECT_TRUE(descriptor.keyboard().input().has_keys());
   EXPECT_EQ(105, descriptor.keyboard().input().keys().count());
+  EXPECT_EQ(105, descriptor.keyboard().input().keys3().count());
 
   // Test a report parses correctly.
   hid_boot_kbd_report kbd_report = {};
@@ -141,6 +143,13 @@ TEST(KeyboardTest, BootKeyboard) {
   EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
             llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
+
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], llcpp::fuchsia::input::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], llcpp::fuchsia::input::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3],
+            llcpp::fuchsia::input::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::Key::UP);
 }
 
 TEST(KeyboardTest, OutputDescriptor) {
@@ -248,6 +257,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
 
   EXPECT_EQ(descriptor.keyboard().input().keys().count(), 107);
+  EXPECT_EQ(descriptor.keyboard().input().keys3().count(), 107);
 
   // Test a report parses correctly.
   hid_boot_kbd_report kbd_report = {};
@@ -271,6 +281,14 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
             llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
+
+  ASSERT_EQ(input_report.keyboard().pressed_keys3().count(), 5U);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[0], llcpp::fuchsia::input::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[1], llcpp::fuchsia::input::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[2], llcpp::fuchsia::input::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[3],
+            llcpp::fuchsia::input::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys3()[4], llcpp::fuchsia::input::Key::UP);
 }
 
 TEST(KeyboardTest, DeviceType) {
