@@ -48,6 +48,10 @@ def _is_arm64():
     return re.search(r"aarch64", _get_architecture())
 
 
+def _is_riscv64():
+    """Return True if we're on an aarch64 platform."""
+    return re.search(r"riscv:rv64", _get_architecture())
+
 # The default is 2 seconds which is too low.
 # But don't override something the user set.
 # [If the user set it to the default, too bad. :-)]
@@ -869,7 +873,7 @@ class KASLRBootWatchpoint(KASLRBreakpoint):
         if _is_x86_64():
             # x86_64 uses the physical address
             self._relocated_base_offset -= base_address
-        elif _is_arm64():
+        elif _is_arm64() or _is_riscv64():
             # Search from pc to find BOOT tag
             found = False
             for addr in range(pc, pc + 0x10000000, 0x10000):
@@ -1004,7 +1008,7 @@ def _KASLR_stop_event(event):
     x = None
 
     # ARM64 map _start at random place in memory, directly use the watchpoint
-    if _is_arm64():
+    if _is_arm64() or _is_riscv64():
         x = KASLRBootWatchpoint(pc)
     else:
         x = KASLRStartBreakpoint()
@@ -1034,7 +1038,7 @@ def _install():
             "Zircon extensions installed for {}".format(
                 current_objfile.filename))
 
-    if not _is_x86_64() and not _is_arm64():
+    if not _is_x86_64() and not _is_arm64() and not _is_riscv64():
         print(
             "Warning: Unsupported architecture, KASLR support will be experimental"
         )
