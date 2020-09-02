@@ -12,7 +12,6 @@ VBMETA_A_PARTITION=
 VBMETA_B_PARTITION=
 VBMETA_R_PARTITION=
 ACTIVE_PARTITION=
-SIGNED_IMAGE=
 PRODUCT=
 PRE_ERASE_FLASH=
 FASTBOOT_PATH=
@@ -65,10 +64,6 @@ case $i in
     ACTIVE_PARTITION="${i#*=}"
     shift
     ;;
-    --signed=*)
-    SIGNED_IMAGE="${i#*=}"
-    shift
-    ;;
     --product=*)
     PRODUCT="${i#*=}"
     shift
@@ -88,11 +83,7 @@ case $i in
 esac
 done
 
-VBMETA_IMAGE="${ZIRCON_IMAGE%.*}.vbmeta"
-
-if [[ "${SIGNED_IMAGE}" == "true" ]]; then
-  ZIRCON_IMAGE="${ZIRCON_IMAGE}.signed"
-fi
+VBMETA_IMAGE="${ZIRCON_IMAGE%%.*}.vbmeta"
 
 cat > "${OUTPUT}" << EOF
 #!/bin/sh

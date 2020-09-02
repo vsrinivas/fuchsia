@@ -1474,7 +1474,13 @@ action("flash_script") {
 
   script = "//build/images/generate_flash_script.sh"
   outputs = [ "$root_out_dir/flash.sh" ]
-  image = "$root_out_dir/zedboot.zbi"
+
+  if (custom_signing_script != "") {
+    image = "$root_out_dir/zedboot.zbi.signed"
+  } else {
+    image = "$root_out_dir/zedboot.zbi"
+  }
+
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   args = [
     "--image=" + rebase_path(image, root_build_dir),
@@ -1490,9 +1496,6 @@ action("flash_script") {
     "--pre-erase-flash=${pre_erase_flash}",
     "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
   ]
-  if (custom_signing_script != "") {
-    args += ["--signed=true"]
-  }
   deps = [ ":fastboot-copy" ]
 
   foreach(info, firmware_info) {
@@ -1517,9 +1520,15 @@ default_image_deps += [ recovery_label ]
 action("flash_script_archive") {
   script = "//build/images/generate_flash_script.sh"
   outputs = [ "$root_out_dir/flash-archive.sh" ]
-  image = "$root_out_dir/zircon-r.zbi"
+
+  if (custom_signing_script != "") {
+    image = "zircon-r.signed.zbi.signed"
+  } else {
+    image = "zircon-r.zbi"
+  }
+
   args = [
-    "--image=" + rebase_path(image, root_build_dir),
+    "--image=${image}",
     "--output=" + rebase_path(outputs[0], root_build_dir),
     "--zircon-a=${zircon_a_partition}",
     "--zircon-b=${zircon_b_partition}",
@@ -1532,9 +1541,6 @@ action("flash_script_archive") {
     "--pre-erase-flash=${pre_erase_flash}",
     "--fastboot-path=fastboot.exe.$host_platform",
   ]
-  if (custom_signing_script != "") {
-    args += ["--signed=true"]
-  }
 
   foreach(info, firmware_info) {
     args += [ "--firmware=${info.partition}:${info.out_path}" ]
