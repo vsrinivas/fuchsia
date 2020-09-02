@@ -65,6 +65,9 @@ fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& messa
     lock.release();  // Avoid crashing on death tests.
     ZX_PANIC("Repeated or unexpected Reply.");
   }
+  // At this point we are either replying or calling InternalError, so no need for
+  // further replies.
+  needs_to_reply_ = false;
   if (!message.ok()) {
     transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message.status()});
     return fidl::Result(message.status(), message.error());
@@ -73,7 +76,6 @@ fidl::Result CompleterBase::SendReply(const ::fidl::internal::FidlMessage& messa
       BytePart(message.bytes().data(), message.bytes().capacity(), message.bytes().actual()),
       HandlePart(message.handles().data(), message.handles().capacity(),
                  message.handles().actual())));
-  needs_to_reply_ = false;
   if (status != ZX_OK) {
     transaction_->InternalError({UnbindInfo::kChannelError, status});
     return fidl::Result(status, ::fidl::kErrorWriteFailed);

@@ -4,8 +4,13 @@
 
 library fidl.test.coding;
 
+enum TestEnum : uint32 {
+    ONE = 1;
+};
+
 protocol Llcpp {
     Action() -> (int32 v);
+    EnumAction() -> (TestEnum v);
 };
 
 protocol Example {
