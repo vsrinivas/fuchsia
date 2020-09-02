@@ -66,7 +66,7 @@ class AudioCapturerPipelineTest : public HermeticAudioTest {
   AudioCapturerShim<ASF::SIGNED_16>* capturer_ = nullptr;
 };
 
-TEST_F(AudioCapturerPipelineTest, DISABLED_CaptureWithPts) {
+TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
   constexpr auto num_packets = 1;
   constexpr auto num_frames = num_packets * kPacketFrames;
   constexpr int16_t first_sample = 1;
@@ -93,14 +93,14 @@ TEST_F(AudioCapturerPipelineTest, DISABLED_CaptureWithPts) {
 
   capturer_->capturer()->StartAsyncCapture(kPacketFrames);
 
-  // Write data to the input ring_buffer which should be readable at start_time.
-  // Ensure the start_time is at least 10ms from now to allow time to setup the ring buffer.
-  auto min_start_time = zx::clock::get_monotonic() + zx::msec(10);
-  auto start_time = input_->NextSynchronizedTimestamp(min_start_time);
+  // Write data to the input ring_buffer which should be readable 100ms from now.
+  // This gives us plenty of time to start the capturer before the data will be read.
+  auto start_time = zx::clock::get_monotonic() + zx::msec(100);
+  auto input_frame = input_->RingBufferFrameAtTimestamp(start_time);
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, first_sample);
-  input_->WriteRingBufferAt(0, AudioBufferSlice(&input_buffer));
+  input_->WriteRingBufferAt(input_frame, AudioBufferSlice(&input_buffer));
 
-  // Wait until the packet is capture_buffer.
+  // Wait until the last input packet has been captured.
   auto end_time = start_time + zx::msec(num_packets * RendererShimImpl::kPacketMs);
   RunLoopUntil([&last_capture_pts, end_time]() {
     return last_capture_pts && last_capture_pts > end_time.get();

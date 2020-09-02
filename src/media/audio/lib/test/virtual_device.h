@@ -18,6 +18,7 @@
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio::test {
 
@@ -58,6 +59,11 @@ class VirtualDevice {
   // means waiting for more than one round trip through the ring buffer.
   zx::time NextSynchronizedTimestamp(zx::time min_time = zx::time(0)) const;
 
+  // Returns the absolute ring buffer frame number corresponding to the given time. The
+  // "absolute" frame number starts at zero and increases monotonically. The actual ring
+  // buffer offset is given by absolute_frame_number % ring_buffer_size.
+  int64_t RingBufferFrameAtTimestamp(zx::time ref_time) const;
+
   // For validating properties exported by inspect.
   size_t inspect_id() const { return inspect_id_; }
 
@@ -82,6 +88,7 @@ class VirtualDevice {
   bool received_stop_ = false;
   zx::time start_time_;
   zx::time stop_time_;
+  TimelineFunction running_pos_to_ref_time_;
   uint64_t stop_pos_ = 0;
   uint64_t ring_pos_ = 0;
   uint64_t running_ring_pos_ = 0;
@@ -113,7 +120,7 @@ class VirtualInput : public VirtualInputImpl {
  public:
   using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
 
-  // Write a slice to the ring buffer at the given position.
+  // Write a slice to the ring buffer at the given absolute frame number.
   void WriteRingBufferAt(size_t ring_pos_in_frames, AudioBufferSlice<SampleFormat> slice) {
     rb_.WriteAt<SampleFormat>(ring_pos_in_frames, slice);
   }

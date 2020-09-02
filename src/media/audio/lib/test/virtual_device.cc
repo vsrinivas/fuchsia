@@ -112,6 +112,10 @@ void VirtualDevice<Iface>::WatchEvents() {
     ASSERT_TRUE(rb_vmo_.is_valid());
     received_start_ = true;
     start_time_ = zx::time(start_time);
+    // Compute a function to translate from ring buffer position to device time.
+    auto ns_per_byte =
+        format_.frames_per_ns().Inverse() * TimelineRate(1, format_.bytes_per_frame());
+    running_pos_to_ref_time_ = TimelineFunction(start_time_.get(), 0, ns_per_byte);
     AUDIO_LOG(DEBUG) << "OnStart callback: " << start_time;
   };
 
@@ -136,20 +140,22 @@ void VirtualDevice<Iface>::WatchEvents() {
 
 template <class Iface>
 zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(zx::time min_time) const {
-  // Compute a function to translate from ring buffer position to device time.
-  auto ns_per_byte = format_.frames_per_ns().Inverse() * TimelineRate(1, format_.bytes_per_frame());
-  auto running_pos_to_ref_time = TimelineFunction(start_time_.get(), 0, ns_per_byte);
-
   // Compute the next synchronized position, then iterate until we find a synchronized
   // position at min_time or later.
   int64_t running_pos_sync = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();
   while (true) {
-    zx::time sync_time = zx::time(running_pos_to_ref_time.Apply(running_pos_sync));
+    zx::time sync_time = zx::time(running_pos_to_ref_time_.Apply(running_pos_sync));
     if (sync_time >= min_time) {
       return sync_time;
     }
     running_pos_sync += rb_.SizeBytes();
   }
+}
+
+template <class Iface>
+int64_t VirtualDevice<Iface>::RingBufferFrameAtTimestamp(zx::time ref_time) const {
+  int64_t running_pos = running_pos_to_ref_time_.ApplyInverse(ref_time.get());
+  return running_pos / format_.bytes_per_frame();
 }
 
 // Only two instantiations are needed.

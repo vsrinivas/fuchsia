@@ -97,14 +97,22 @@ class VmoBackedBuffer {
   // Seek to the given offset of the buffer, relative to the start of the buffer.
   void Seek(size_t offset) { append_offset_frames_ = offset; }
 
-  // Write a slice to the given absolute offset.
+  // Write a slice to the given absolute frame number. The actual buffer index
+  // is given by start_frame % buffer_size and the write can wrap-around the end
+  // of the buffer, however the slice must fit within the buffer.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  void WriteAt(size_t pos_in_frames, AudioBufferSlice<SampleFormat> slice) {
-    FX_CHECK(pos_in_frames + slice.NumFrames() <= frame_count_);
+  void WriteAt(size_t frame_number, AudioBufferSlice<SampleFormat> slice) {
+    FX_CHECK(slice.NumFrames() <= frame_count_);
 
-    auto dst = BufferStart() + pos_in_frames * format_.bytes_per_frame();
-    auto src = &slice.buf()->samples()[slice.SampleIndex(0, 0)];
-    memmove(dst, src, slice.NumBytes());
+    // First batch.
+    auto start_index = frame_number % frame_count_;
+    auto num_frames = std::min(frame_count_ - start_index, slice.NumFrames());
+    CopyToBuffer(start_index, AudioBufferSlice(slice.buf(), 0, num_frames));
+
+    // Optional second batch (wrap-around).
+    if (num_frames < slice.NumFrames()) {
+      CopyToBuffer(0, AudioBufferSlice(slice.buf(), num_frames, slice.NumFrames()));
+    }
   }
 
   // Set every sample to the given value.
@@ -119,6 +127,16 @@ class VmoBackedBuffer {
 
  private:
   uint8_t* BufferStart() const { return reinterpret_cast<uint8_t*>(vmo_mapper_.start()); }
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  void CopyToBuffer(size_t dst_frame_index, AudioBufferSlice<SampleFormat> slice) {
+    FX_CHECK(dst_frame_index < frame_count_);
+    FX_CHECK(dst_frame_index + slice.NumFrames() <= frame_count_);
+
+    auto dst = BufferStart() + dst_frame_index * format_.bytes_per_frame();
+    auto src = &slice.buf()->samples()[slice.SampleIndex(0, 0)];
+    memmove(dst, src, slice.NumBytes());
+  }
 
   const Format format_;
   const size_t frame_count_;
