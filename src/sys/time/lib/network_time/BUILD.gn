@@ -26,16 +26,11 @@ source_set("lib") {
   sources = [
     "roughtime_server.cc",
     "roughtime_server.h",
-    "system_time_updater.cc",
-    "system_time_updater.h",
     "time_server_config.cc",
     "time_server_config.h",
   ]
 
   deps = [
-    ":time_util_lib",
-    "//sdk/fidl/fuchsia.hardware.rtc",
-    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
@@ -47,15 +42,6 @@ source_set("lib") {
     # TODO(57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
-}
-
-static_library("time_util_lib") {
-  output_name = "time_util_lib"
-  sources = [
-    "time_util.cc",
-    "time_util.h",
-  ]
-  deps = [ "//sdk/fidl/fuchsia.hardware.rtc" ]
 }
 
 executable("network_time_unittests") {

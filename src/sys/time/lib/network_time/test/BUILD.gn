@@ -9,8 +9,6 @@ source_set("roughtime_test_lib") {
   testonly = true
   sources = [
     "common.h",
-    "fake_rtc_device.cc",
-    "fake_rtc_device.h",
     "local_roughtime_server.cc",
     "local_roughtime_server.h",
     "settable_time_source.cc",
@@ -18,7 +16,6 @@ source_set("roughtime_test_lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.rtc",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -29,7 +26,6 @@ source_set("roughtime_test_lib") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/time/lib/network_time:lib",
-    "//src/sys/time/lib/network_time:time_util_lib",
     "//third_party/boringssl",
     "//third_party/googletest:gmock",
     "//third_party/roughtime:client_lib",

@@ -1,8 +1,4 @@
 Network Time
 ============
 
-This service uses roughtime service to set the time of the machine at
-startup. (Specifically, `network_time` is launched at startup by `sysmgr`. See
-`//src/sys/sysmgr/config/network.config: "apps"`.)
-
-It tries to get and update system, sleeping briefly between re-tries, and exits.
+This library uses the roughtime service to estimate the current time.

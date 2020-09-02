@@ -3,9 +3,6 @@
         "binary": "bin/network_time_service"
     },
     "sandbox": {
-        "dev": [
-            "class/rtc/000"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
