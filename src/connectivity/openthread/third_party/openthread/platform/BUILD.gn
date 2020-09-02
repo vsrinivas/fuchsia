@@ -5,6 +5,7 @@
 source_set("platform") {
   sources = [
     "alarm.cc",
+    "alarm.h",
     "entropy.cc",
     "fuchsia_platform_alarm.cc",
     "logging.cc",
@@ -19,6 +20,7 @@ source_set("platform") {
     "spinel_fidl_interface.h",
     "system.cc",
     "thread_config_manager.cc",
+    "time.cc",
   ]
 
   include_dirs = [

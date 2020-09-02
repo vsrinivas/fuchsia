@@ -9,23 +9,39 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/ot-stack/ot-stack-callback.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
 
+#include <list>
 #include <thread>
 
+#include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
+
+#include "ncp_fidl.h"
 
 namespace otstack {
 
 namespace fidl_spinel = llcpp::fuchsia::lowpan::spinel;
 
+constexpr uint32_t kOutboundAllowanceInit = 4;
+constexpr uint32_t kOutboundAllowanceInc = 2;
+constexpr uint32_t kInboundAllowanceInit = 4;
+constexpr uint32_t kInboundAllowanceInc = 2;
+constexpr uint32_t kMaxFrameSize = 1300;
+
 enum {
-  kPortPktChannelRead = 1,
-  kPortPktTerminate,
+  kPortRadioChannelRead = 1,
+  kPortSendClientEvent,
+  kPortTerminate,
 };
+
+typedef enum {
+  kInbound = 1,
+  kOutbound,
+} packet_direction_e;
 
 class OtStackApp {
  public:
@@ -35,6 +51,10 @@ class OtStackApp {
   async::Loop* loop() { return &loop_; }
 
   void AddFidlRequestHandler(const char* service_name, zx_handle_t service_request);
+  void EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data);
+  void HandleRadioOnReadyForSendFrame(uint32_t allowance);
+  void HandleClientReadyToReceiveFrames(uint32_t allowance);
+  void PushFrameToOtLib();
 
  private:
   zx_status_t SetupFidlService();
@@ -43,6 +63,15 @@ class OtStackApp {
   zx_status_t SetDeviceSetupClientInIsolatedDevmgr(const std::string& path);
   zx_status_t SetupOtRadioDev();
   zx_status_t ConnectServiceByName(const char name[], zx::channel* out);
+
+  void ClientAllowanceInit();
+  void RadioAllowanceInit();
+  void UpdateRadioOutboundAllowance();
+  void UpdateRadioInboundAllowance();
+  void UpdateClientOutboundAllowance();
+  void UpdateClientInboundAllowance();
+  void SendOneFrameToClient();
+  void AlarmTask();
   void HandleEvents();
   void EventThread();
   void TerminateEventThread();
@@ -67,6 +96,23 @@ class OtStackApp {
     OtStackApp& app_;
   };
 
+  class OtStackCallBackImpl : public OtStackCallBack {
+   public:
+    OtStackCallBackImpl(OtStackApp& ot_stack_app);
+    ~OtStackCallBackImpl(){};
+
+    void SendOneFrameToRadio(uint8_t* buffer, uint32_t size);
+    std::vector<uint8_t> WaitForFrameFromRadio(uint64_t timeout_us);
+    std::vector<uint8_t> Process();
+    void SendOneFrameToClient(uint8_t* buffer, uint32_t size);
+    void PostNcpFidlInboundTask();
+    void PostOtLibTaskletProcessTask();
+    void PostDelayedAlarmTask(zx::duration delay);
+
+   private:
+    OtStackApp& app_;
+  };
+
   zx::port port_;
   std::thread event_thread_;
 
@@ -81,6 +127,24 @@ class OtStackApp {
 
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 
+  sync_completion_t radio_rx_complete_;
+  std::unique_ptr<OtStackCallBackImpl> lowpan_spinel_ptr_ = 0;
+  uint32_t radio_inbound_allowance_ = 0;
+  uint32_t radio_inbound_cnt = 0;
+  uint32_t radio_outbound_allowance_ = 0;
+  uint32_t radio_outbound_cnt = 0;
+  uint32_t client_inbound_allowance_ = 0;
+  uint32_t client_inbound_cnt = 0;
+  uint32_t client_outbound_allowance_ = 0;
+  uint32_t client_outbound_cnt = 0;
+
+  fbl::Mutex radio_q_mtx_;
+
+  std::list<std::vector<uint8_t>> radio_inbound_queue_ __TA_GUARDED(radio_q_mtx_);
+  std::list<std::vector<uint8_t>> client_outbound_queue_;
+  std::list<std::vector<uint8_t>> client_inbound_queue_;
+
+  std::optional<void*> ot_instance_ptr_ = nullptr;
   bool is_test_env_;
   zx::channel isolated_devfs_;
 };

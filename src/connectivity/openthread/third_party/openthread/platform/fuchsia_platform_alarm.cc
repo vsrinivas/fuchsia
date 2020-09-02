@@ -103,3 +103,9 @@ uint32_t FuchsiaPlatformAlarm::MilliToMicroSec(uint32_t time_ms) {
 uint32_t FuchsiaPlatformAlarm::MicroToMilliSec(uint32_t time_us) {
   return (time_us / kMicroSecondsPerMilliSecond);
 }
+
+void FuchsiaPlatformAlarm::SetOtStackCallBackPtr(OtStackCallBack* callback_ptr) {
+  ot_stack_callback_ptr_ = callback_ptr;
+}
+
+OtStackCallBack* FuchsiaPlatformAlarm::GetOtStackCallBackPtr() { return ot_stack_callback_ptr_; }

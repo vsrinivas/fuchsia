@@ -9,16 +9,17 @@ source_set("app") {
   sources = [
     "src/app.cc",
     "src/app.h",
+    "src/main.cc",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fdio",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -26,12 +27,33 @@ source_set("app") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
+
+  include_dirs = [
+    "//third_party/openthread/src/core",
+    "//third_party/openthread/src/core/common",
+    "//third_party/openthread/src/core/radio",
+    "//third_party/openthread/include",
+    "//third_party/openthread/src",
+    "//third_party/openthread/src/ncp",
+    "//third_party/openthread/src/lib/spinel",
+    "//third_party/openthread/third_party/mbedtls",
+    "//third_party/openthread/third_party/mbedtls/repo/include",
+    "//src/connectivity/openthread/third_party/openthread/platform",
+  ]
+
+  defines = [
+    "MBEDTLS_CONFIG_FILE=\"mbedtls-config.h\"",
+    "OPENTHREAD_FTD=1",
+    "SPINEL_PLATFORM_HEADER=\"spinel_platform.h\"",
+    "OPENTHREAD_CONFIG_FILE=<openthread-config-android.h>",
+    "OPENTHREAD_SPINEL_CONFIG_OPENTHREAD_MESSAGE_ENABLE=1",
+    "PACKAGE_NAME=\"OPENTHREAD-CORE\"",
+    "PACKAGE_VERSION=\"1.0.0\"",
+  ]
 }
 
 executable("bin") {
   output_name = "ot-stack"
-
-  sources = [ "src/main.cc" ]
 
   deps = [ ":app" ]
 }
