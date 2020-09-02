@@ -308,12 +308,8 @@ bool GMBusI2c::I2cFinish() {
 
 bool GMBusI2c::I2cWaitForHwReady() {
   auto gmbus2 = registers::GMBus2::Get().FromValue(0);
-  if (!WAIT_ON_MS(
-          {
-            gmbus2.ReadFrom(mmio_space_);
-            gmbus2.nack() || gmbus2.hw_ready();
-          },
-          50)) {
+  if (!WAIT_ON_MS((gmbus2.ReadFrom(mmio_space_),
+                   gmbus2.nack() || gmbus2.hw_ready()), 50)) {
     LOG_TRACE("hdmi: GMBus i2c wait for hwready timeout\n");
     return false;
   }
