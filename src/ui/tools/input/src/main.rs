@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{env, time::Duration};
-
-use fuchsia_async as fasync;
-
-use input_synthesis;
-
-use structopt::StructOpt;
+use {
+    fuchsia_async as fasync, input_synthesis,
+    std::{env, time::Duration},
+    structopt::StructOpt,
+};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "input")]
@@ -158,45 +156,37 @@ fn parse_bool(src: &str) -> Result<bool, String> {
     }
 }
 
-macro_rules! run {
-    ( $executor:expr, $command:ident, [ $( $args:expr ),* $( , )? ] ) => {
-        $executor.run(
-            input_synthesis::$command(
-                $($args),*
-            ),
-            1,
-        ).expect("failed to run command");
-    }
-}
-
-fn main() {
+#[fasync::run_singlethreaded]
+async fn main() {
     // TODO: Remove this workaround once topaz tests have been updated.
     let (mut args, options): (Vec<_>, Vec<_>) = env::args_os().partition(|s| match s.to_str() {
         Some(s) => s.get(0..2) != Some("--"),
         _ => false,
     });
-
     args.extend(options);
 
     let opt = Opt::from_iter(args.into_iter());
-    let mut executor = fasync::Executor::new().expect("failed to create executor");
-
     match opt.command {
         Command::Text { input, duration } => {
-            run!(executor, text_command, [input, Duration::from_millis(duration as u64),])
+            input_synthesis::text_command(input, Duration::from_millis(duration as u64)).await
         }
         Command::KeyboardEvent { usage, duration } => {
-            run!(executor, keyboard_event_command, [usage, Duration::from_millis(duration as u64),])
+            input_synthesis::keyboard_event_command(usage, Duration::from_millis(duration as u64))
+                .await
         }
-        Command::Tap { width, height, tap_event_count, duration, x, y } => run!(
-            executor,
-            tap_event_command,
-            [x, y, width, height, tap_event_count, Duration::from_millis(duration as u64),]
-        ),
-        Command::Swipe { width, height, move_event_count, duration, x0, y0, x1, y1 } => run!(
-            executor,
-            swipe_command,
-            [
+        Command::Tap { width, height, tap_event_count, duration, x, y } => {
+            input_synthesis::tap_event_command(
+                x,
+                y,
+                width,
+                height,
+                tap_event_count,
+                Duration::from_millis(duration as u64),
+            )
+            .await
+        }
+        Command::Swipe { width, height, move_event_count, duration, x0, y0, x1, y1 } => {
+            input_synthesis::swipe_command(
                 x0,
                 y0,
                 x1,
@@ -205,12 +195,19 @@ fn main() {
                 height,
                 move_event_count,
                 Duration::from_millis(duration as u64),
-            ]
-        ),
-        Command::MediaButton { mic_mute, volume_up, volume_down, reset, pause } => run!(
-            executor,
-            media_button_event_command,
-            [mic_mute, volume_up, volume_down, reset, pause]
-        ),
-    };
+            )
+            .await
+        }
+        Command::MediaButton { mic_mute, volume_up, volume_down, reset, pause } => {
+            input_synthesis::media_button_event_command(
+                mic_mute,
+                volume_up,
+                volume_down,
+                reset,
+                pause,
+            )
+            .await
+        }
+    }
+    .expect("failed to run command");
 }
