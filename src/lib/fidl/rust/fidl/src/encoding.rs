@@ -1015,18 +1015,18 @@ unsafe fn encode_array<T: Encodable>(
     recursion_depth: usize,
 ) -> Result<()> {
     let stride = encoder.inline_size_of::<T>();
+    let len = slice.len();
     if T::supports_simple_copy() {
         if slice.is_empty() {
             return Ok(());
         }
-        let len = slice.len();
         // Safety: index 0 is in bounds due to early return when slice.is_empty().
         let src = slice.get_unchecked(0) as *const T as *const u8;
         let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
-        for (i, item) in slice.iter_mut().enumerate() {
-            item.unsafe_encode(encoder, offset + i * stride, recursion_depth)?;
+        for i in 0..len {
+            slice[i].unsafe_encode(encoder, offset + i * stride, recursion_depth)?;
         }
     }
     Ok(())
@@ -1039,11 +1039,11 @@ unsafe fn decode_array<T: Decodable>(
     offset: usize,
 ) -> Result<()> {
     let stride = decoder.inline_size_of::<T>();
+    let len = slice.len();
     if T::supports_simple_copy() {
         if slice.is_empty() {
             return Ok(());
         }
-        let len = slice.len();
         // Safety: offset is guaranteed to be within the buffer because of the same
         // property as unsafe_decode -- the offset is always within an inline object
         // in the buffer.
@@ -1051,8 +1051,8 @@ unsafe fn decode_array<T: Decodable>(
         let dst = slice.get_unchecked_mut(0) as *mut T as *mut u8;
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
-        for (i, item) in slice.iter_mut().enumerate() {
-            item.unsafe_decode(decoder, offset + i * stride)?;
+        for i in 0..len {
+            slice[i].unsafe_decode(decoder, offset + i * stride)?;
         }
     }
     Ok(())
@@ -1523,9 +1523,12 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
-                -> ::std::result::Result<(), $crate::Error>
-            {
+            fn encode(
+                &mut self,
+                encoder: &mut $crate::encoding::Encoder<'_>,
+                offset: usize,
+                recursion_depth: usize,
+            ) -> ::std::result::Result<(), $crate::Error> {
                 $crate::fidl_encode!(&mut self.bits, encoder, offset, recursion_depth)
             }
         }
@@ -1536,16 +1539,18 @@ macro_rules! fidl_bits {
                 Self::empty()
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
-                -> ::std::result::Result<(), $crate::Error>
-            {
+            fn decode(
+                &mut self,
+                decoder: &mut $crate::encoding::Decoder<'_>,
+                offset: usize,
+            ) -> ::std::result::Result<(), $crate::Error> {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
                 *self = Self::from_bits(prim).ok_or($crate::Error::Invalid)?;
                 Ok(())
             }
         }
-    }
+    };
 }
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for an enum
@@ -2183,21 +2188,36 @@ macro_rules! fidl_empty_struct {
     ($name:ident) => {
         impl $crate::encoding::Layout for $name {
             #[inline(always)]
-            fn inline_align(_context: &$crate::encoding::Context) -> usize { 1 }
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
+                1
+            }
             #[inline(always)]
-            fn inline_size(_context: &$crate::encoding::Context) -> usize { 1 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize {
+                1
+            }
         }
 
         impl $crate::encoding::Encodable for $name {
-          unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
-              $crate::fidl_unsafe_encode!(&mut 0u8, encoder, offset, recursion_depth)
-          }
+            unsafe fn unsafe_encode(
+                &mut self,
+                encoder: &mut $crate::encoding::Encoder<'_>,
+                offset: usize,
+                recursion_depth: usize,
+            ) -> $crate::Result<()> {
+                $crate::fidl_unsafe_encode!(&mut 0u8, encoder, offset, recursion_depth)
+            }
         }
 
         impl $crate::encoding::Decodable for $name {
             #[inline(always)]
-            fn new_empty() -> Self { $name }
-            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+            fn new_empty() -> Self {
+                $name
+            }
+            unsafe fn unsafe_decode(
+                &mut self,
+                decoder: &mut $crate::encoding::Decoder<'_>,
+                offset: usize,
+            ) -> $crate::Result<()> {
                 let mut x = 0u8;
                 $crate::fidl_unsafe_decode!(&mut x, decoder, offset)?;
                 if x == 0 {
