@@ -414,7 +414,8 @@ impl LogManager {
 
         let mut inner = self.inner.lock().await;
 
-        listener.backfill(inner.log_msg_buffer.iter()).await;
+        let cached = inner.log_msg_buffer.collect().await;
+        listener.backfill(cached).await;
 
         if !listener.is_healthy() {
             warn!("listener dropped before we finished");
@@ -441,7 +442,7 @@ impl LogManager {
         // messages in tests.
         inner.stats.record_log(&log_msg, source);
         inner.listeners.send(&log_msg).await;
-        inner.log_msg_buffer.push(log_msg);
+        inner.log_msg_buffer.push(log_msg).await;
     }
 
     /// Initializes internal log forwarders.

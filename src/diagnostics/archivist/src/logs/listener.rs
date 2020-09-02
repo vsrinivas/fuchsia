@@ -7,6 +7,7 @@ use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
 };
 use log::error;
+use std::sync::Arc;
 use thiserror::Error;
 
 mod asbestos;
@@ -53,14 +54,13 @@ impl Listener {
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    pub async fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a Message>) {
-        let mut messages: Vec<_> = messages.collect();
-        messages.sort_by_key(|m| m.0.metadata.timestamp);
+    pub async fn backfill<'a>(&mut self, mut messages: Vec<Arc<Message>>) {
+        messages.sort_by_key(|m| m.metadata.timestamp);
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
         for msg in messages {
             let size = msg.bytes_used();
-            if self.filter.should_send(msg) {
+            if self.filter.should_send(&msg) {
                 if batch_size + size > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     self.send_filtered_logs(&mut filtered_batch).await;
                     if !self.is_healthy() {
