@@ -63,7 +63,8 @@ void MemoryWatchdog::EvictionTrigger() {
   // This runs from a timer interrupt context, as such we do not want to be performing synchronous
   // eviction and blocking some random thread. Therefore we use the asynchronous eviction trigger
   // that will cause the scanner thread to perform the actual eviction work.
-  scanner_trigger_evict(min_free_target_, free_mem_target_, scanner::EvictionLevel::OnlyOldest);
+  scanner_trigger_evict(min_free_target_, free_mem_target_, scanner::EvictionLevel::OnlyOldest,
+                        scanner::Output::Print);
 }
 
 // Helper called by the memory pressure thread when OOM state is entered.
@@ -140,15 +141,19 @@ void MemoryWatchdog::WorkerThread() {
   while (true) {
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
     if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
-      printf("memory-pressure: trying to prevent OOM by evicting pages...\n");
       list_node_t free_pages;
       list_initialize(&free_pages);
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
       // in the out of memory state.
-      while (mem_event_idx_ == PressureLevel::kOutOfMemory &&
-             scanner_evict_pager_backed(MB * 10 / PAGE_SIZE, scanner::EvictionLevel::IncludeNewest,
-                                        &free_pages) > 0) {
+      while (mem_event_idx_ == PressureLevel::kOutOfMemory) {
+        uint64_t evicted_pages = scanner_evict_pager_backed(
+            MB * 10 / PAGE_SIZE, scanner::EvictionLevel::IncludeNewest, &free_pages);
+        if (evicted_pages == 0) {
+          break;
+        }
         pmm_free(&free_pages);
+        printf("memory-pressure: evicted %zu user pager backed pages to prevent OOM\n",
+               evicted_pages);
       }
     }
 
