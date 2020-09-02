@@ -34,13 +34,29 @@ enum {
 };
 
 constexpr uint8_t kNcpResetEvent[] = {0x80, 0x06, 0x0, 0x70};
-constexpr uint8_t kNcpVerRequest[] = {0x02, 0x02};
-constexpr uint8_t kNcpSoftResetRequest[] = {0x01};
+constexpr uint8_t kCmdLoc = 0x01;
+constexpr uint8_t kNcpSoftResetRequest = 0x01;
+constexpr uint8_t kPropValueGet = 0x02;
+constexpr uint8_t kPropValueSet = 0x03;
+constexpr uint8_t kPropValueIs = 0x06;
+constexpr uint8_t kNcpVer = 0x02;
+constexpr uint8_t kProtocolVer = 0x01;
+constexpr uint8_t kPropCaps = 0x5;
+constexpr uint8_t kPropHwAddr = 0x8;
+constexpr uint8_t kPhyRxSensitivity = 0x27;
+constexpr uint8_t kPropGetRadioCap[] = {0x8b, 0x24};
+
 constexpr uint8_t kNcpVerReply[] = {
     0x80, 0x06, 0x02, 0x4F, 0x50, 0x45, 0x4E, 0x54, 0x48, 0x52, 0x45, 0x41, 0x44, 0x2F, 0x31,
     0x2E, 0x30, 0x64, 0x37, 0x32, 0x35, 0x3B, 0x20, 0x52, 0x43, 0x50, 0x2D, 0x4E, 0x65, 0x77,
     0x6D, 0x61, 0x6E, 0x31, 0x3B, 0x20, 0x46, 0x65, 0x62, 0x20, 0x32, 0x34, 0x20, 0x32, 0x30,
     0x31, 0x39, 0x20, 0x31, 0x33, 0x3A, 0x33, 0x38, 0x3A, 0x32, 0x32, 0x00};
+constexpr uint8_t kProtocolVerReply[] = {0x80, 0x6, 0x1, 0x4, 0x3};
+constexpr uint8_t kPropCapsReply[] = {0x80, 0x6, 0x5, 0x5, 0xc, 0xd, 0x18, 0x22, 0x81, 0x4};
+constexpr uint8_t kPropHwAddrReply[] = {0x80, 0x6,  0x8,  0x64, 0x16, 0x66,
+                                        0x0,  0x47, 0x34, 0xaf, 0x1a};
+constexpr uint8_t kPhyRxSensitivityReply[] = {0x80, 0x6, 0x27, 0x9c};
+constexpr uint8_t kPropGetRadioCapReply[] = {0x80, 0x6, 0x8b, 0x24, 0xd};
 
 constexpr uint8_t kSpinelFrameHeader = 0x80;
 constexpr uint8_t kSpinelHeaderInvalid = 0xFF;
@@ -51,10 +67,10 @@ FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(
 
 zx_status_t FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher,
                                                                 zx::channel channel) {
-  fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnbindInfo, zx::channel) {
-        server->ot_radio_obj_.fidl_impl_obj_.release();
-      };
+  fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound = [](LowpanSpinelDeviceFidlImpl* server,
+                                                                fidl::UnbindInfo, zx::channel) {
+    server->ot_radio_obj_.fidl_impl_obj_.release();
+  };
   auto res = fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
   if (res.is_error())
     return res.error();
@@ -227,12 +243,44 @@ void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
     return;
   }
 
-  if (memcmp(data.cbegin() + 1, kNcpSoftResetRequest, sizeof(kNcpSoftResetRequest)) == 0) {
+  if (data.data()[kCmdLoc] == kNcpSoftResetRequest) {
     async::PostTask(loop_.dispatcher(), [this]() { this->Reset(); });
-  } else if (memcmp(data.cbegin() + 1, kNcpVerRequest, sizeof(kNcpVerRequest)) == 0) {
+  } else if (data.data()[kCmdLoc] == kPropValueGet) {
+    // Handle prop value get
     std::vector<uint8_t> reply;
-    reply.assign(std::begin(kNcpVerReply), std::end(kNcpVerReply));
+    switch (data.data()[kCmdLoc + 1]) {
+      case kNcpVer:
+        reply.assign(std::begin(kNcpVerReply), std::end(kNcpVerReply));
+        break;
+      case kProtocolVer:
+        reply.assign(std::begin(kProtocolVerReply), std::end(kProtocolVerReply));
+        break;
+      case kPropCaps:
+        reply.assign(std::begin(kPropCapsReply), std::end(kPropCapsReply));
+        break;
+      case kPropHwAddr:
+        reply.assign(std::begin(kPropHwAddrReply), std::end(kPropHwAddrReply));
+        break;
+      case kPhyRxSensitivity:
+        reply.assign(std::begin(kPhyRxSensitivityReply), std::end(kPhyRxSensitivityReply));
+        break;
+      default:
+        if (memcmp(kPropGetRadioCap, &data.data()[kCmdLoc + 1], sizeof(kPropGetRadioCap)) == 0) {
+          reply.assign(std::begin(kPropGetRadioCapReply), std::end(kPropGetRadioCapReply));
+        } else {
+          zxlogf(ERROR, "fake-ot-radio: not supported prop value get cmd");
+        }
+        break;
+    }
     reply.data()[0] |= tid;
+    PostSendInboundFrameTask(std::move(reply));
+  } else if (data.data()[kCmdLoc] == kPropValueSet) {
+    // Handle prop value set
+    // now we just reply what is being set
+    // TODO (jiamingw): make rcp stateful
+    std::vector<uint8_t> reply;
+    reply.assign(data.cbegin(), data.cend());
+    reply.data()[1] = kPropValueIs;
     PostSendInboundFrameTask(std::move(reply));
   } else {
     // TODO (jiamingw): Send back response for invalid request.
