@@ -248,6 +248,12 @@ class ViewTree {
   // Post: child.parent set to ZX_KOID_INVALID
   void DisconnectFromParent(zx_koid_t child);
 
+  // Invalidate the add_annotation_view_holder callback associated with koid.
+  // Pre: koid exists in nodes_ map
+  // Post: if koid is a valid RefNode, koid.add_annotation_view_holder is nullptr
+  // NOTE: Scene connectivity is not required.
+  void InvalidateAnnotationViewHolder(zx_koid_t koid);
+
   // To be called after a batch of ViewTree updates have been applied.
   void PostProcessUpdates() { UpdateInstalledRefs(); }
 

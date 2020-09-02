@@ -66,6 +66,10 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // NOTE: Modifications are handled exclusively by SceneGraph, for correct dispatch of FIDL events.
   const ViewTree& view_tree() const { return view_tree_; }
 
+  // Invalidate the add_annotation_view_holder callback associated with koid.
+  // Post: if koid is a valid RefNode, koid.add_annotation_view_holder is nullptr
+  void InvalidateAnnotationViewHolder(zx_koid_t koid);
+
   // Tree topology: Enqueue transactional updates to the view tree, but do not apply them yet.
   // Invariant: view_tree_ not modified
   // Post: view_tree_updates_ grows by one

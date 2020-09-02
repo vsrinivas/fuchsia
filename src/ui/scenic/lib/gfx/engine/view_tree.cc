@@ -179,7 +179,13 @@ zx_status_t ViewTree::AddAnnotationViewHolder(zx_koid_t koid, ViewHolderPtr anno
   if (!IsRefNode(koid)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  std::get_if<RefNode>(&nodes_.at(koid))->add_annotation_view_holder(std::move(annotation));
+
+  auto node = std::get_if<RefNode>(&nodes_.at(koid));
+  if (!node->add_annotation_view_holder) {
+    return ZX_ERR_PEER_CLOSED;
+  }
+  node->add_annotation_view_holder(std::move(annotation));
+
   return ZX_OK;
 }
 
@@ -569,6 +575,15 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
     }
   }
   FX_NOTREACHED() << "invariant: child/parent types are known and correct";
+}
+
+void ViewTree::InvalidateAnnotationViewHolder(zx_koid_t koid) {
+  if (!IsTracked(koid)) {
+    return;
+  }
+
+  auto node = std::get_if<RefNode>(&nodes_.at(koid));
+  node->add_annotation_view_holder = nullptr;
 }
 
 std::string ViewTree::ToString() const {

@@ -64,6 +64,10 @@ Session::Session(SessionId id, SessionContext session_context,
 }
 
 Session::~Session() {
+  if (root_view_ && session_context_.scene_graph) {
+    session_context_.scene_graph->InvalidateAnnotationViewHolder(root_view_->view_ref_koid());
+  }
+
   resources_.Clear();
   scheduled_updates_ = {};
   FX_CHECK(resource_count_ == 0) << "Session::~Session(): " << resource_count_

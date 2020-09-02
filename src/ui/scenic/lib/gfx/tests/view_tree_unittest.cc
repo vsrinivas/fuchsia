@@ -562,13 +562,44 @@ TEST(ViewTreePrimitive, AddAnnotationHolder) {
   {
     scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
     zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
-
     bool is_called = false;
+
     auto new_node = ViewTreeNewRefNodeTemplate(std::move(view_pair.view_ref), kOne);
     new_node.add_annotation_view_holder = [&is_called](auto) { is_called = true; };
+
     tree.NewRefNode(std::move(new_node));
     EXPECT_EQ(ZX_OK, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
     EXPECT_TRUE(is_called);
+
+    is_called = false;
+    tree.DeleteNode(view_koid);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+    EXPECT_FALSE(is_called);
+  }
+
+  {
+    scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+    scenic::ViewRefPair view_pair_invalid = scenic::ViewRefPair::New();
+    zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
+    zx_koid_t view_koid_invalid = ExtractKoid(view_pair_invalid.view_ref);
+    bool is_called = false;
+
+    auto new_node = ViewTreeNewRefNodeTemplate(std::move(view_pair.view_ref), kOne);
+    new_node.add_annotation_view_holder = [&is_called](auto) { is_called = true; };
+
+    tree.NewRefNode(std::move(new_node));
+    EXPECT_EQ(ZX_OK, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+    EXPECT_TRUE(is_called);
+
+    is_called = false;
+    tree.InvalidateAnnotationViewHolder(view_koid_invalid);
+    EXPECT_EQ(ZX_OK, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+    EXPECT_TRUE(is_called);
+
+    is_called = false;
+    tree.InvalidateAnnotationViewHolder(view_koid);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+    EXPECT_FALSE(is_called);
   }
 
   {
@@ -583,6 +614,8 @@ TEST(ViewTreePrimitive, AddAnnotationHolder) {
     zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
     EXPECT_EQ(ZX_ERR_NOT_FOUND, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
   }
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, tree.AddAnnotationViewHolder(ZX_KOID_INVALID, ViewHolderPtr()));
 }
 
 TEST(ViewTreePrimitive, MayReceiveFocus) {

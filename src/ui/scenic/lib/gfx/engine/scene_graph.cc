@@ -62,6 +62,10 @@ void SceneGraph::RemoveCompositor(const CompositorWeakPtr& compositor) {
   compositors_.erase(it);
 }
 
+void SceneGraph::InvalidateAnnotationViewHolder(zx_koid_t koid) {
+  view_tree_.InvalidateAnnotationViewHolder(koid);
+}
+
 void SceneGraph::StageViewTreeUpdates(ViewTreeUpdates updates) {
   for (auto& update : updates) {
     view_tree_updates_.push_back(std::move(update));
