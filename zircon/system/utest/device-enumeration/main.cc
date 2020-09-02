@@ -498,9 +498,23 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "class/temperature/000",
       "class/temperature/001",
       "class/temperature/002",
-      // Power Device.
+
+      // Power Device Bucks.
       "0p8_ee_buck",
       "cpu_a_buck",
+
+      // Power Implementation Device / Children.
+      "aml-power-impl-composite",
+      "composite-pd-big-core",
+      "composite-pd-big-core/power-0",
+      "composite-pd-little-core",
+      "composite-pd-little-core/power-1",
+
+      // CPU Device.
+      "sys/platform/03:0c:6",
+      "class/cpu-ctrl/000",
+      "class/cpu-ctrl/001",
+
       // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxb/58584 is
       // fixed.
       "dwc2/dwc2/usb-peripheral/function-000",

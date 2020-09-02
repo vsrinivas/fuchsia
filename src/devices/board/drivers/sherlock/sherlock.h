@@ -118,6 +118,8 @@ class Sherlock : public SherlockType {
   zx_status_t PwmInit();
   zx_status_t RamCtlInit();
   zx_status_t CpuInit();
+  zx_status_t LuisCpuInit();
+  zx_status_t SherlockCpuInit();
   zx_status_t ThermistorInit();
   zx_status_t PowerInit();
   zx_status_t LuisPowerInit();

@@ -228,6 +228,15 @@ zx_status_t Sherlock::PowerInit() {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Sherlock::CpuInit() {
+  if (pid_ == PDEV_PID_LUIS) {
+    return LuisCpuInit();
+  } else if (pid_ == PDEV_PID_SHERLOCK) {
+    return SherlockCpuInit();
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Sherlock::Start() {
   int rc = thrd_create_with_name(
       &thread_, [](void* arg) -> int { return reinterpret_cast<Sherlock*>(arg)->Thread(); }, this,

@@ -16,6 +16,7 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/pwm.h>
+#include <ddktl/protocol/vreg.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-s905d2/s905d2-power.h>
 #include <soc/aml-s905d3/s905d3-power.h>
@@ -31,18 +32,49 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
   static constexpr int kInvalidIndex = -1;
 
  public:
-  explicit AmlPower(zx_device_t* parent, std::optional<ddk::PwmProtocolClient> big_cluster_pwm,
-                    std::optional<ddk::PwmProtocolClient> little_cluster_pwm,
+
+  // Constructor for Astro.
+  AmlPower(zx_device_t* parent, ddk::PwmProtocolClient big_cluster_pwm,
                     const std::vector<aml_voltage_table_t> voltage_table,
                     voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(big_cluster_pwm),
+        big_cluster_vreg_(std::nullopt),
+        little_cluster_pwm_(std::nullopt),
+        current_big_cluster_voltage_index_(kInvalidIndex),
+        current_little_cluster_voltage_index_(kInvalidIndex),
+        voltage_table_(voltage_table),
+        pwm_period_(pwm_period),
+        num_domains_(1) {}
+
+  // Constructor for Sherlock.
+  AmlPower(zx_device_t* parent, ddk::PwmProtocolClient big_cluster_pwm,
+                    ddk::PwmProtocolClient little_cluster_pwm,
+                    const std::vector<aml_voltage_table_t> voltage_table,
+                    voltage_pwm_period_ns_t pwm_period)
+      : AmlPowerType(parent),
+        big_cluster_pwm_(big_cluster_pwm),
+        big_cluster_vreg_(std::nullopt),
         little_cluster_pwm_(little_cluster_pwm),
         current_big_cluster_voltage_index_(kInvalidIndex),
         current_little_cluster_voltage_index_(kInvalidIndex),
         voltage_table_(voltage_table),
         pwm_period_(pwm_period),
-        num_domains_(little_cluster_pwm ? 2 : 1) {}
+        num_domains_(2) {}
+
+  AmlPower(zx_device_t* parent, ddk::VregProtocolClient big_cluster_vreg,
+                    ddk::PwmProtocolClient little_cluster_pwm,
+                    const std::vector<aml_voltage_table_t> voltage_table,
+                    voltage_pwm_period_ns_t pwm_period)
+      : AmlPowerType(parent),
+        big_cluster_pwm_(std::nullopt),
+        big_cluster_vreg_(big_cluster_vreg),
+        little_cluster_pwm_(little_cluster_pwm),
+        current_big_cluster_voltage_index_(kInvalidIndex),
+        current_little_cluster_voltage_index_(kInvalidIndex),
+        voltage_table_(voltage_table),
+        pwm_period_(pwm_period),
+        num_domains_(2) {}
 
   AmlPower(const AmlPower&) = delete;
   AmlPower(AmlPower&&) = delete;
@@ -77,8 +109,10 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
  private:
   zx_status_t RequestVoltage(const ddk::PwmProtocolClient& pwm, uint32_t u_volts,
                              int* current_voltage_idx);
+  zx_status_t SetBigClusterVoltage(uint32_t voltage, uint32_t* actual);
 
   std::optional<ddk::PwmProtocolClient> big_cluster_pwm_;
+  std::optional<ddk::VregProtocolClient> big_cluster_vreg_;
   std::optional<ddk::PwmProtocolClient> little_cluster_pwm_;
 
   int current_big_cluster_voltage_index_;

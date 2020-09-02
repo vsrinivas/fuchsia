@@ -22,8 +22,12 @@ namespace power {
 namespace {
 
 constexpr size_t kFragmentPdev = 0;
-constexpr size_t kFragmentPwmBigCluster = 1;
-constexpr size_t kFragmentPwmLittleCluster = 2;
+constexpr size_t kFragmentFirstClusterPwm = 1;
+
+// Note: Board driver will either pass a vreg or a pwm depending on which board
+//       is loaded.
+constexpr size_t kFragmentSecondClusterPwm = 2;
+constexpr size_t kFragmentSecondClusterVreg = 2;
 constexpr size_t kFragmentCount = 3;
 
 // Sleep for 200 microseconds inorder to let the voltage change
@@ -196,6 +200,18 @@ zx_status_t AmlPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  if (big_cluster_vreg_ && index == kBigClusterDomain) {
+    vreg_params_t params;
+    big_cluster_vreg_->GetRegulatorParams(&params);
+
+    *min_voltage = params.min_uv;
+    *max_voltage = params.min_uv + params.num_steps * params.step_size_uv;
+
+    zxlogf(DEBUG, "%s: Getting Big Cluster VReg Range max = %u, min = %u", __func__, *max_voltage, *min_voltage);
+
+    return ZX_OK;
+  }
+
   // Voltage table is sorted in descending order so the minimum voltage is the last element and the
   // maximum voltage is the first element.
   *min_voltage = voltage_table_.back().microvolt;
@@ -275,6 +291,39 @@ zx_status_t AmlPower::RequestVoltage(const ddk::PwmProtocolClient& pwm, uint32_t
   return ZX_OK;
 }
 
+zx_status_t AmlPower::SetBigClusterVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+  if (big_cluster_pwm_) {
+    zx_status_t st =
+        RequestVoltage(big_cluster_pwm_.value(), voltage, &current_big_cluster_voltage_index_);
+    if (st == ZX_OK) {
+      *actual_voltage = voltage_table_[current_big_cluster_voltage_index_].microvolt;
+    }
+    return st;
+  } else if (big_cluster_vreg_) {
+    vreg_params_t params;
+    big_cluster_vreg_->GetRegulatorParams(&params);
+    const uint32_t min_voltage_uv = params.min_uv;
+    const uint32_t max_voltage_uv = params.min_uv + (params.step_size_uv * params.num_steps);
+    // Find the step value that achieves the requested voltage.
+    if (voltage < min_voltage_uv || voltage > max_voltage_uv) {
+      zxlogf(ERROR, "%s: Voltage must be between %u and %u microvolts", __func__, min_voltage_uv, max_voltage_uv);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    uint32_t target_step = (voltage - min_voltage_uv) / params.step_size_uv;
+    ZX_ASSERT(target_step <= params.num_steps);
+
+    zx_status_t st = big_cluster_vreg_->SetVoltageStep(target_step);
+    if (st == ZX_OK) {
+      *actual_voltage = min_voltage_uv + target_step * params.step_size_uv;
+    }
+
+    return st;
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
 zx_status_t AmlPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                               uint32_t* actual_voltage) {
   if (index >= num_domains_) {
@@ -285,10 +334,7 @@ zx_status_t AmlPower::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
 
   zx_status_t st = ZX_ERR_OUT_OF_RANGE;
   if (index == kBigClusterDomain) {
-    st = RequestVoltage(big_cluster_pwm_.value(), voltage, &current_big_cluster_voltage_index_);
-    if (st == ZX_OK) {
-      *actual_voltage = voltage_table_[current_big_cluster_voltage_index_].microvolt;
-    }
+    return SetBigClusterVoltage(voltage, actual_voltage);
   } else if (index == kLittleClusterDomain) {
     st = RequestVoltage(little_cluster_pwm_.value(), voltage,
                         &current_little_cluster_voltage_index_);
@@ -376,34 +422,61 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
     return st;
   }
 
-  std::optional<ddk::PwmProtocolClient> big_cluster_pwm;
-  if (actual > kFragmentPwmBigCluster) {
+  std::optional<ddk::PwmProtocolClient> first_cluster_pwm;
+  if (actual > kFragmentFirstClusterPwm) {
     ddk::PwmProtocolClient client;
-    st = InitPwmProtocolClient(fragments[kFragmentPwmBigCluster], &client);
+    st = InitPwmProtocolClient(fragments[kFragmentFirstClusterPwm], &client);
     if (st != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to initialize Big Cluster PWM Client, st = %d", __func__, st);
       return st;
     }
-    big_cluster_pwm = client;
+    first_cluster_pwm = client;
   } else {
     zxlogf(ERROR, "%s: Failed to get big cluster pwm", __func__);
     return ZX_ERR_INTERNAL;
   }
 
-  std::optional<ddk::PwmProtocolClient> little_cluster_pwm;
-  if (actual > kFragmentPwmLittleCluster) {
+  std::optional<ddk::PwmProtocolClient> second_cluster_pwm = std::nullopt;
+  std::optional<ddk::VregProtocolClient> second_cluster_vreg = std::nullopt;
+  if (device_info.pid == PDEV_PID_LUIS) {
+    ddk::VregProtocolClient client(fragments[kFragmentSecondClusterVreg]);
+    if (!client.is_valid()) {
+      zxlogf(ERROR, "%s: failed to get vreg fragment\n", __func__);
+      return ZX_ERR_INTERNAL;
+    }
+
+    second_cluster_vreg = client;
+  } else if (device_info.pid == PDEV_PID_SHERLOCK) {
     ddk::PwmProtocolClient client;
-    st = InitPwmProtocolClient(fragments[kFragmentPwmLittleCluster], &client);
+    st = InitPwmProtocolClient(fragments[kFragmentSecondClusterPwm], &client);
     if (st != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to initialize Little Cluster PWM Client, st = %d", __func__, st);
       return st;
     }
-    little_cluster_pwm = client;
+    second_cluster_pwm = client;
   }
 
-  auto power_impl_device =
-      std::make_unique<AmlPower>(parent, std::move(big_cluster_pwm), std::move(little_cluster_pwm),
-                                 std::move(voltage_table), pwm_period);
+  std::unique_ptr<AmlPower> power_impl_device;
+
+  switch (device_info.pid) {
+    case PDEV_PID_ASTRO:
+      power_impl_device.reset(new AmlPower(parent, std::move(*first_cluster_pwm),
+                                           std::move(voltage_table), pwm_period));
+      break;
+    case PDEV_PID_LUIS:
+      power_impl_device.reset(new AmlPower(parent, std::move(*second_cluster_vreg),
+                                           std::move(*first_cluster_pwm), std::move(voltage_table),
+                                           pwm_period));
+      break;
+    case PDEV_PID_SHERLOCK:
+      power_impl_device.reset(new AmlPower(parent, std::move(*second_cluster_pwm),
+                                           std::move(*first_cluster_pwm), std::move(voltage_table),
+                                           pwm_period));
+      break;
+    default:
+      zxlogf(ERROR, "Unsupported device pid = %u", device_info.pid);
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 
   st = power_impl_device->DdkAdd("power-impl", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (st != ZX_OK) {
@@ -427,15 +500,14 @@ static constexpr zx_driver_ops_t aml_power_driver_ops = []() {
 }  // namespace power
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_power, power::aml_power_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(aml_power, power::aml_power_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_POWER),
 
     // The following are supported SoCs
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    // TODO(gkalsi): Support the following two AMLogic SoCs
-    // BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    // BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
+    // BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
 ZIRCON_DRIVER_END(aml_power)
 //clang-format on

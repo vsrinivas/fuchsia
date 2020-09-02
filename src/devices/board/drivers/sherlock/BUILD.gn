@@ -40,6 +40,7 @@ template("sherlock_driver") {
     }
 
     sources = [
+      "luis-cpu.cc",
       "luis-power.cc",
       "luis-thermal.cc",
       "sherlock-audio.cc",

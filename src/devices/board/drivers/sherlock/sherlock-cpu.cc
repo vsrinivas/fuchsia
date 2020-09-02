@@ -54,7 +54,7 @@ constexpr device_fragment_t fragments[] = {
 
 namespace sherlock {
 
-zx_status_t Sherlock::CpuInit() {
+zx_status_t Sherlock::SherlockCpuInit() {
   zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
 
   if (result != ZX_OK) {
