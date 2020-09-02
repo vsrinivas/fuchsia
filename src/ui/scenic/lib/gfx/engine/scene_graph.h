@@ -68,6 +68,7 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
 
   // Invalidate the add_annotation_view_holder callback associated with koid.
   // Post: if koid is a valid RefNode, koid.add_annotation_view_holder is nullptr
+  // TODO(fxb/59407): Disentangle the annotation logic from ViewTree.
   void InvalidateAnnotationViewHolder(zx_koid_t koid);
 
   // Tree topology: Enqueue transactional updates to the view tree, but do not apply them yet.
