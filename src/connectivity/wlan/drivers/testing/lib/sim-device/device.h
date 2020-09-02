@@ -82,6 +82,8 @@ class FakeDevMgr {
   void DeviceAsyncRemove(zx_device_t* device);
   std::optional<wlan_sim_dev_info_t> FindFirst(const Predicate& pred);
   std::optional<wlan_sim_dev_info_t> FindFirstByProtocolId(uint32_t proto_id);
+  std::optional<DeviceId> FindFirstDev(const Predicate& pred);
+  std::optional<DeviceId> FindFirstDevByProtocolId(uint32_t proto_id);
   std::optional<wlan_sim_dev_info_t> GetDevice(zx_device_t* device);
   size_t DeviceCount();
   zx_device_t* GetRootDevice();

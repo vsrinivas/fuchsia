@@ -328,6 +328,20 @@ executable("bad_entropy_test") {
   ]
 }
 
+executable("call_after_del_iface_test") {
+  output_name = "call_after_del_iface_test"
+  testonly = true
+  sources = [ "call_after_del_iface_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+
 executable("disassoc_test") {
   output_name = "disassoc_test"
   testonly = true
@@ -421,6 +435,7 @@ unittest_package("brcmfmac_sim_test") {
     ":auth_test",
     ":bad_entropy_test",
     ":beacon_lost_test",
+    ":call_after_del_iface_test",
     ":cc_test",
     ":channel_switch_test",
     ":create_softap_test",
@@ -497,6 +512,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "phy_query_test"
+      environments = basic_envs
+    },
+    {
+      name = "call_after_del_iface_test"
       environments = basic_envs
     },
     {

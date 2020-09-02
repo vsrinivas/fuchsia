@@ -204,9 +204,8 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       if (client_interface_ == nullptr) {
         return ZX_ERR_NOT_FOUND;
       }
-      client_interface_->BeginShuttingDown();
-      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, client_interface_->wdev())) !=
-          ZX_OK) {
+      wireless_dev* wdev = client_interface_->take_wdev();
+      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s",
                   zx_status_get_string(status));
         return status;
@@ -219,7 +218,8 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       if (ap_interface_ == nullptr) {
         return ZX_ERR_NOT_FOUND;
       }
-      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, ap_interface_->wdev())) != ZX_OK) {
+      wireless_dev* wdev = ap_interface_->take_wdev();
+      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s",
                   zx_status_get_string(status));
         return status;

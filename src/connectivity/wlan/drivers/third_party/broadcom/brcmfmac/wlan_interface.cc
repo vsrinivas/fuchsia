@@ -13,6 +13,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <cstdio>
@@ -145,6 +146,7 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
     delete interface.release();
     return status;
   }
+  std::lock_guard<std::shared_mutex> guard(interface->lock_);
   interface->device_ = device;
   interface->wdev_ = wdev;
   *out_interface = interface.get();
@@ -159,9 +161,12 @@ zx_device_t* WlanInterface::zxdev() { return zx_device_; }
 
 const zx_device_t* WlanInterface::zxdev() const { return zx_device_; }
 
-wireless_dev* WlanInterface::wdev() { return wdev_; }
-
-const wireless_dev* WlanInterface::wdev() const { return wdev_; }
+wireless_dev* WlanInterface::take_wdev() {
+  std::lock_guard<std::shared_mutex> guard(lock_);
+  wireless_dev* wdev = wdev_;
+  wdev_ = nullptr;
+  return wdev;
+}
 
 void WlanInterface::DdkAsyncRemove() {
   zx_device_t* const device = zx_device_;
@@ -173,8 +178,6 @@ void WlanInterface::DdkAsyncRemove() {
 }
 
 void WlanInterface::DdkRelease() { delete this; }
-
-void WlanInterface::BeginShuttingDown() { shutting_down_ = true; }
 
 // static
 wlan_info_mac_role_t WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
@@ -346,87 +349,167 @@ zx_status_t WlanInterface::ClearCountry(brcmf_pub* drvr) { return brcmf_clear_co
 
 zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,
                                  zx_handle_t* out_sme_channel) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
   return brcmf_if_start(wdev_->netdev, ifc, out_sme_channel);
 }
 
-void WlanInterface::Stop() { brcmf_if_stop(wdev_->netdev); }
+void WlanInterface::Stop() {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_stop(wdev_->netdev);
+  }
+}
 
-void WlanInterface::Query(wlanif_query_info_t* info) { brcmf_if_query(wdev_->netdev, info); }
+void WlanInterface::Query(wlanif_query_info_t* info) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_query(wdev_->netdev, info);
+  }
+}
 
 void WlanInterface::StartScan(const wlanif_scan_req_t* req) {
-  // TODO(58783): We sometimes see these requests after DdkAsyncRemove is called, which can cause
-  // issues in the driver.
-  if (!shutting_down_) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
     brcmf_if_start_scan(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::JoinReq(const wlanif_join_req_t* req) { brcmf_if_join_req(wdev_->netdev, req); }
+void WlanInterface::JoinReq(const wlanif_join_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_join_req(wdev_->netdev, req);
+  }
+}
 
-void WlanInterface::AuthReq(const wlanif_auth_req_t* req) { brcmf_if_auth_req(wdev_->netdev, req); }
+void WlanInterface::AuthReq(const wlanif_auth_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_auth_req(wdev_->netdev, req);
+  }
+}
 
 void WlanInterface::AuthResp(const wlanif_auth_resp_t* resp) {
-  brcmf_if_auth_resp(wdev_->netdev, resp);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_auth_resp(wdev_->netdev, resp);
+  }
 }
 
 void WlanInterface::DeauthReq(const wlanif_deauth_req_t* req) {
-  brcmf_if_deauth_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_deauth_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::AssocReq(const wlanif_assoc_req_t* req) {
-  brcmf_if_assoc_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_assoc_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::AssocResp(const wlanif_assoc_resp_t* resp) {
-  brcmf_if_assoc_resp(wdev_->netdev, resp);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_assoc_resp(wdev_->netdev, resp);
+  }
 }
 
 void WlanInterface::DisassocReq(const wlanif_disassoc_req_t* req) {
-  brcmf_if_disassoc_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_disassoc_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::ResetReq(const wlanif_reset_req_t* req) {
-  brcmf_if_reset_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_reset_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::StartReq(const wlanif_start_req_t* req) {
-  brcmf_if_start_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_start_req(wdev_->netdev, req);
+  }
 }
 
-void WlanInterface::StopReq(const wlanif_stop_req_t* req) { brcmf_if_stop_req(wdev_->netdev, req); }
+void WlanInterface::StopReq(const wlanif_stop_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_stop_req(wdev_->netdev, req);
+  }
+}
 
 void WlanInterface::SetKeysReq(const wlanif_set_keys_req_t* req) {
-  brcmf_if_set_keys_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_set_keys_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::DelKeysReq(const wlanif_del_keys_req_t* req) {
-  brcmf_if_del_keys_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_del_keys_req(wdev_->netdev, req);
+  }
 }
 
 void WlanInterface::EapolReq(const wlanif_eapol_req_t* req) {
-  brcmf_if_eapol_req(wdev_->netdev, req);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_eapol_req(wdev_->netdev, req);
+  }
 }
 
-void WlanInterface::StatsQueryReq() { brcmf_if_stats_query_req(wdev_->netdev); }
+void WlanInterface::StatsQueryReq() {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_stats_query_req(wdev_->netdev);
+  }
+}
 
 void WlanInterface::StartCaptureFrames(const wlanif_start_capture_frames_req_t* req,
                                        wlanif_start_capture_frames_resp_t* resp) {
-  brcmf_if_start_capture_frames(wdev_->netdev, req, resp);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_start_capture_frames(wdev_->netdev, req, resp);
+  }
 }
 
-void WlanInterface::StopCaptureFrames() { brcmf_if_stop_capture_frames(wdev_->netdev); }
+void WlanInterface::StopCaptureFrames() {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_stop_capture_frames(wdev_->netdev);
+  }
+}
 
 zx_status_t WlanInterface::SetMulticastPromisc(bool enable) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
   return brcmf_if_set_multicast_promisc(wdev_->netdev, enable);
 }
 
 void WlanInterface::DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                                 ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  brcmf_if_data_queue_tx(wdev_->netdev, options, netbuf, completion_cb, cookie);
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_data_queue_tx(wdev_->netdev, options, netbuf, completion_cb, cookie);
+  } else {
+    // We must fire the completion callback even if the device is being torn down.
+    completion_cb(cookie, ZX_ERR_BAD_STATE, netbuf);
+  }
 }
 
-WlanInterface::WlanInterface()
-    : zx_device_(nullptr), wdev_(nullptr), device_(nullptr), shutting_down_(false) {}
+WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
 
 WlanInterface::~WlanInterface() {}
 

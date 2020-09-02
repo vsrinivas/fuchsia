@@ -58,7 +58,7 @@ FakeDevMgr::~FakeDevMgr() {
 
 zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
   // We use refcounting to maintain the fake device tree, and do not invoke the unbind hook.
-  if (args->ops) {
+  if (args && args->ops) {
     ZX_ASSERT(args->ops->unbind == nullptr);
   }
   wlan_sim_dev_info_t dev_info = {
@@ -139,6 +139,22 @@ std::optional<wlan_sim_dev_info_t> FakeDevMgr::FindFirst(const Predicate& pred) 
 
 std::optional<wlan_sim_dev_info_t> FakeDevMgr::FindFirstByProtocolId(uint32_t proto_id) {
   return FindFirst(
+      [proto_id](auto _dev, auto& dev_info) { return proto_id == dev_info.dev_args.proto_id; });
+}
+
+std::optional<DeviceId> FakeDevMgr::FindFirstDev(const Predicate& pred) {
+  auto iter = std::find_if(begin(), end(), [pred](auto& entry) -> bool {
+    auto& [dev, dev_info] = entry;
+    return pred(dev, dev_info);
+  });
+  if (iter == end()) {
+    return {};
+  }
+  return {iter->first};
+}
+
+std::optional<DeviceId> FakeDevMgr::FindFirstDevByProtocolId(uint32_t proto_id) {
+  return FindFirstDev(
       [proto_id](auto _dev, auto& dev_info) { return proto_id == dev_info.dev_args.proto_id; });
 }
 

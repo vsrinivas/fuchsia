@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <shared_mutex>
 
 #include <ddk/device.h>
 
@@ -36,15 +37,12 @@ class WlanInterface {
                             WlanInterface** out_interface);
 
   // Accessors.
-  zx_device_t* zxdev();
-  const zx_device_t* zxdev() const;
-  wireless_dev* wdev();
-  const wireless_dev* wdev() const;
+
+  wireless_dev* take_wdev();
 
   // Device operations.
   void DdkAsyncRemove();
   void DdkRelease();
-  void BeginShuttingDown();
 
   static wlan_info_mac_role_t GetMacRoles(struct brcmf_pub* drvr);
   static bool IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_type_t phy_type);
@@ -87,10 +85,14 @@ class WlanInterface {
  private:
   WlanInterface();
   ~WlanInterface();
+
+  zx_device_t* zxdev();
+  const zx_device_t* zxdev() const;
+
   zx_device_t* zx_device_;
-  wireless_dev* wdev_;
+  std::shared_mutex lock_;
+  wireless_dev* wdev_;  // lock_ is used as a RW lock on wdev_
   Device* device_;
-  bool shutting_down_;
 };
 }  // namespace brcmfmac
 }  // namespace wlan
