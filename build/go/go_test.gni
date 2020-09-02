@@ -22,11 +22,6 @@ import("//build/testing/test_spec.gni")
 #     Only applies to host tests.
 #     Type: list of strings.
 #
-#   disabled
-#     Optional: whether the test is disabled.
-#     Type: bool
-#     Default: false
-#
 #   environments
 #     Optional: what environments this test should target. Only applies to host
 #     host tests. See //build/testing/test_spec.gni for more details.
@@ -60,8 +55,6 @@ template("go_test") {
     }
     _output_path = "${root_out_dir}/${_output_name}"
 
-    _is_disabled = defined(invoker.disabled) && invoker.disabled
-
     _is_host = is_linux || is_mac
 
     assert(
@@ -69,10 +62,9 @@ template("go_test") {
                          !defined(invoker.timeout)),
         "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
 
-    # We only include test metadata for non-disabled, linux/mac tests; metadata
+    # We only include test metadata for host tests; metadata
     # for fuchsia tests is aggregated in the package template.
-    _include_test_metadata = !_is_disabled && _is_host
-    if (_include_test_metadata) {
+    if (_is_host) {
       test_spec(_test_spec_target_name) {
         target = ":$_main_target_name"
         path = _output_path
@@ -105,14 +97,9 @@ template("go_test") {
 
     go_build(_main_target_name) {
       test = true
-      forward_variables_from(invoker,
-                             "*",
-                             [
-                               "disabled",
-                               "environments",
-                             ])
+      forward_variables_from(invoker, "*", [ "environments" ])
 
-      if (_include_test_metadata) {
+      if (_is_host) {
         if (!defined(invoker.non_go_deps)) {
           non_go_deps = []
         }
