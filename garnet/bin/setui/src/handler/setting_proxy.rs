@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::{Command, SettingHandlerFactory, State};
+use crate::handler::base::{Command, SettingHandlerFactory, SettingHandlerResult, State};
 use crate::handler::setting_handler::ControllerError;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -28,6 +28,7 @@ struct ActiveRequest {
     request: SettingRequest,
     client: core::message::Client,
     attempts: u64,
+    last_result: Option<SettingHandlerResult>,
 }
 
 #[derive(Clone, Debug)]
@@ -37,13 +38,10 @@ enum ActiveControllerRequest {
     /// Executes the next active request, recreating the handler if the
     /// argument is set to true.
     Execute(bool),
+    /// Processes the result to a request.
+    HandleResult(u64, SettingHandlerResult),
     /// Request to remove an active request from a ControllerState.
-    ///
-    /// In addition to the request id, a `Result` is provided to specify a
-    /// `SettingEvent` to return in the success case or an empty Error to
-    /// represent the that request has irrocoverably failed, resulting in
-    /// `ControllerError::IrrecoverableError` being returned.
-    RemoveActive(u64, Result<SettingEvent, ()>),
+    RemoveActive(u64),
     /// Requests resources be torn down. Called when there are no more requests
     /// to process.
     Teardown,
@@ -164,14 +162,17 @@ impl SettingProxy {
                                 ActiveControllerRequest::Execute(recreate_handler) => {
                                     proxy.execute_next_request(recreate_handler).await;
                                 }
-                                ActiveControllerRequest::RemoveActive(id, result) => {
-                                    proxy.remove_active_request(id, result);
+                                ActiveControllerRequest::RemoveActive(id) => {
+                                    proxy.remove_active_request(id);
                                 }
                                 ActiveControllerRequest::Teardown => {
                                     proxy.teardown_if_needed().await
                                 }
                                 ActiveControllerRequest::Retry(id) => {
                                     proxy.retry(id);
+                                }
+                                ActiveControllerRequest::HandleResult(id, result) => {
+                                    proxy.handle_result(id, result);
                                 }
                             }
                         }
@@ -309,6 +310,7 @@ impl SettingProxy {
                     request: request.clone(),
                     client: client.clone(),
                     attempts: 0,
+                    last_result: None,
                 };
                 self.request(ActiveControllerRequest::AddActive(active_request));
             }
@@ -331,34 +333,48 @@ impl SettingProxy {
         self.active_controller_sender.unbounded_send(request).ok();
     }
 
+    fn handle_result(&mut self, id: u64, mut result: SettingHandlerResult) {
+        let request_index = self.active_requests.iter().position(|r| r.id == id);
+        let request = self
+            .active_requests
+            .get_mut(request_index.expect("request ID not found"))
+            .expect("request should be present");
+
+        let mut retry = false;
+
+        if matches!(result, Err(ControllerError::ExternalFailure(..))) {
+            result = Err(ControllerError::IrrecoverableError);
+            retry = true;
+        }
+
+        request.last_result = Some(result);
+
+        if retry {
+            self.request(ActiveControllerRequest::Retry(id));
+        } else {
+            self.request(ActiveControllerRequest::RemoveActive(id));
+        }
+    }
+
     /// Removes an active request from the request queue for this setting.
     ///
     /// Should only be called once a request is finished processing.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    fn remove_active_request(&mut self, id: u64, result: Result<SettingEvent, ()>) {
+    fn remove_active_request(&mut self, id: u64) {
         let request_index = self.active_requests.iter().position(|r| r.id == id);
-        let removed_request = self
+        let mut removed_request = self
             .active_requests
             .remove(request_index.expect("request ID not found"))
             .expect("request should be present");
 
-        // Send result back to original caller. If the result was an Error, then
-        // send back `IrrecoverableError` to indicate an external failure. Other
-        // errors outside this condition should be handed back as a
-        // SettingEvent.
-        removed_request
-            .client
-            .reply(core::Payload::Event(result.unwrap_or_else(|_| {
-                self.event_publisher.send_event(Event::Handler(
-                    event::handler::Event::AttemptsExceeded(
-                        self.setting_type,
-                        removed_request.request.clone(),
-                    ),
-                ));
-                SettingEvent::Response(id, Err(ControllerError::IrrecoverableError))
-            })))
-            .send();
+        // Send result back to original caller if present.
+        if let Some(result) = removed_request.last_result.take() {
+            removed_request
+                .client
+                .reply(core::Payload::Event(SettingEvent::Response(removed_request.id, result)))
+                .send();
+        }
 
         // If there are still requests to process, then request for the next to
         // be processed. Otherwise request teardown.
@@ -397,7 +413,10 @@ impl SettingProxy {
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
         if current_attempts > self.max_attempts {
-            self.request(ActiveControllerRequest::RemoveActive(id, Err(())));
+            self.event_publisher.send_event(Event::Handler(
+                event::handler::Event::AttemptsExceeded(self.setting_type, request),
+            ));
+            self.request(ActiveControllerRequest::RemoveActive(id));
             return;
         }
 
@@ -422,17 +441,10 @@ impl SettingProxy {
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
                 let handler_result = match message_event {
-                    MessageEvent::Message(handler::Payload::Result(result), _) => {
-                        if let Err(ControllerError::ExternalFailure(..)) = result {
-                            active_controller_sender_clone
-                                .unbounded_send(ActiveControllerRequest::Retry(id))
-                                .ok();
-                            return;
-                        }
-
-                        Some(Ok(SettingEvent::Response(id, result)))
+                    MessageEvent::Message(handler::Payload::Result(result), _) => Some(result),
+                    MessageEvent::Status(Status::Undeliverable) => {
+                        Some(Err(ControllerError::IrrecoverableError))
                     }
-                    MessageEvent::Status(Status::Undeliverable) => Some(Err(())),
                     _ => None,
                 };
 
@@ -440,7 +452,7 @@ impl SettingProxy {
                     // Mark the request as having been handled after retries have been
                     // attempted and the client has been notified.
                     active_controller_sender_clone
-                        .unbounded_send(ActiveControllerRequest::RemoveActive(id, result))
+                        .unbounded_send(ActiveControllerRequest::HandleResult(id, result))
                         .ok();
                     return;
                 }
