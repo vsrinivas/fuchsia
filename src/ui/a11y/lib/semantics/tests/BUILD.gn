@@ -22,6 +22,7 @@ executable("semantics_tests") {
   output_name = "semantics_tests"
   testonly = true
   sources = [
+    "a11y_semantics_event_manager_test.cc",
     "semantic_tree_parser.cc",
     "semantic_tree_parser.h",
     "semantic_tree_parser_test.cc",

@@ -9,8 +9,9 @@
 
 #include <optional>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/semantics/semantics_event.h"
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/semantics/semantics_event_listener.h"
 
 namespace a11y {
 

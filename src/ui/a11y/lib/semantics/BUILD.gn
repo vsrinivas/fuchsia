@@ -4,6 +4,8 @@
 
 source_set("semantics") {
   sources = [
+    "a11y_semantics_event_manager.cc",
+    "a11y_semantics_event_manager.h",
     "semantic_tree.cc",
     "semantic_tree.h",
     "semantic_tree_service.cc",
