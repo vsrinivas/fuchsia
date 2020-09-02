@@ -7,6 +7,7 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/device/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -61,6 +62,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::WriteOnlyLog::Name_,
     fuchsia::camera2::Manager::Name_,
     fuchsia::device::NameProvider::Name_,
+    fuchsia::diagnostics::ArchiveAccessor::Name_,
     fuchsia::hardware::pty::Device::Name_,
     fuchsia::kernel::Counter::Name_,
     fuchsia::kernel::Stats::Name_,
