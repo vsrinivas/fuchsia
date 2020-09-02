@@ -9,3 +9,4 @@ digit@google.com
 per-file BUILD.gn=bryanhenry@google.com
 per-file BUILD.gn=zarvox@google.com
 per-file BUILD.gn=shayba@google.com
+per-file package.gni=shayba@google.com
