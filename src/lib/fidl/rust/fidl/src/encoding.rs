@@ -615,6 +615,7 @@ pub trait Encodable: LayoutObject {
     /// Implementations that encode out-of-line objects should pass
     /// `recursion_depth` to `Encoder::write_out_of_line`, or manually call
     /// `Encoder::check_recursion_depth(recursion_depth + 1)`.
+    #[inline(always)]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_>,
@@ -668,6 +669,7 @@ pub trait Decodable: Layout + Sized {
 
     /// Decodes an object of this type from the provided buffer and list of handles.
     /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
+    #[inline(always)]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         assert!(offset + decoder.inline_size_of::<Self>() <= decoder.buf.len());
         unsafe { self.unsafe_decode(decoder, offset) }
