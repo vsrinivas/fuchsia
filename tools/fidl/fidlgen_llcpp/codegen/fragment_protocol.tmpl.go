@@ -713,8 +713,6 @@ class {{ .Name }} final {
         {{- range .DocComments }}
   //{{ . }}
         {{- end }}
-  // Messages are encoded in-place.
-  static zx_status_t {{ template "SendEventInPlaceMethodSignature" . }};
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -822,10 +820,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
       {{- if .Response }}
 {{ "" }}
         {{- template "SendEventCallerAllocateMethodDefinition" . }}
-      {{- end }}
-      {{- if .Response }}
-{{ "" }}
-        {{- template "SendEventInPlaceMethodDefinition" . }}
       {{- end }}
 {{ "" }}
     {{- else }}

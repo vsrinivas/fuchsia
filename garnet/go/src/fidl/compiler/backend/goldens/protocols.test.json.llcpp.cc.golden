@@ -371,41 +371,18 @@ bool Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
   return CompleterBase::SendReply(_response.GetFidlMessage());
 }
 
-zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
+zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                          int64_t x) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventResponse)];
-  auto& _response = *new (_response_buffer) EventResponse{x};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<EventResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    return _encode_result.status;
-  }
-  return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_encode_result.message));
+  EventOwnedResponse _response{x};
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
-zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _chan,
+zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                          ::fidl::BytePart _buffer, int64_t x) {
-  if (_buffer.capacity() < EventResponse::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) EventResponse{x};
-  _buffer.set_actual(sizeof(EventResponse));
-  return ::fidl::Write(
-      ::zx::unowned_channel(_chan),
-      ::fidl::DecodedMessage<EventResponse>(std::move(_buffer)));
-}
-
-zx_status_t Transitional::SendEventEvent(
-    ::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventResponse> params) {
-  ZX_ASSERT(params.message()->_hdr.magic_number ==
-            kFidlWireFormatMagicNumberInitial);
-  ZX_ASSERT(params.message()->_hdr.ordinal == kTransitional_Event_Ordinal);
-  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
+  EventUnownedResponse _response(_buffer.data(), _buffer.capacity(), x);
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
 void Transitional::RequestRequest::_InitHeader(zx_txid_t _txid) {
@@ -898,43 +875,19 @@ bool ChannelProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan,
+zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
                                              int64_t a, int64_t b) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventAResponse)];
-  auto& _response = *new (_response_buffer) EventAResponse{a, b};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<EventAResponse>(&_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    return _encode_result.status;
-  }
-  return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_encode_result.message));
+  EventAOwnedResponse _response{a, b};
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
-zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan,
+zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
                                              ::fidl::BytePart _buffer,
                                              int64_t a, int64_t b) {
-  if (_buffer.capacity() < EventAResponse::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  new (_buffer.data()) EventAResponse{a, b};
-  _buffer.set_actual(sizeof(EventAResponse));
-  return ::fidl::Write(
-      ::zx::unowned_channel(_chan),
-      ::fidl::DecodedMessage<EventAResponse>(std::move(_buffer)));
-}
-
-zx_status_t ChannelProtocol::SendEventAEvent(
-    ::zx::unowned_channel _chan,
-    ::fidl::DecodedMessage<EventAResponse> params) {
-  ZX_ASSERT(params.message()->_hdr.magic_number ==
-            kFidlWireFormatMagicNumberInitial);
-  ZX_ASSERT(params.message()->_hdr.ordinal == kChannelProtocol_EventA_Ordinal);
-  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
+  EventAUnownedResponse _response(_buffer.data(), _buffer.capacity(), a, b);
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
@@ -1861,62 +1814,26 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
-    ::zx::unowned_channel _chan) {
-  // Destructors can't be called because it will lead to handle double close
-  // (here and in fidl::Encode).
-  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEmptyResponseResponse)];
-  auto& _response = *new (_response_buffer) OnEmptyResponseResponse{};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<OnEmptyResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    return _encode_result.status;
-  }
-  return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_encode_result.message));
+    ::zx::unowned_channel _channel) {
+  OnEmptyResponseOwnedResponse _response{};
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
-    ::zx::unowned_channel _chan, ::fidl::StringView ret) {
-  OnWithResponseResponse _response{ret};
-
-  auto _encoded =
-      ::fidl::internal::LinearizedAndEncoded<OnWithResponseResponse>(
-          &_response);
-  auto& _encode_result = _encoded.result();
-  if (_encode_result.status != ZX_OK) {
-    return _encode_result.status;
-  }
-  return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_encode_result.message));
+    ::zx::unowned_channel _channel, ::fidl::StringView ret) {
+  OnWithResponseOwnedResponse _response{ret};
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
-    ::zx::unowned_channel _chan, ::fidl::BytePart _buffer,
+    ::zx::unowned_channel _channel, ::fidl::BytePart _buffer,
     ::fidl::StringView ret) {
-  if (_buffer.capacity() < OnWithResponseResponse::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  OnWithResponseResponse _response{ret};
-  auto _encode_result = ::fidl::LinearizeAndEncode<OnWithResponseResponse>(
-      &_response, std::move(_buffer));
-  if (_encode_result.status != ZX_OK) {
-    return _encode_result.status;
-  }
-  return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_encode_result.message));
-}
-
-zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
-    ::zx::unowned_channel _chan,
-    ::fidl::DecodedMessage<OnWithResponseResponse> params) {
-  ZX_ASSERT(params.message()->_hdr.magic_number ==
-            kFidlWireFormatMagicNumberInitial);
-  ZX_ASSERT(params.message()->_hdr.ordinal ==
-            kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
-  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
+  OnWithResponseUnownedResponse _response(_buffer.data(), _buffer.capacity(),
+                                          ret);
+  _response.Write(_channel->get());
+  return _response.status();
 }
 
 void WithAndWithoutRequestResponse::NoRequestNoResponseRequest::_InitHeader(

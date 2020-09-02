@@ -654,18 +654,13 @@ class EmptyProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendReceiveEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendReceiveEvent(::zx::unowned_channel _channel,
                                       ::llcpp::fidl::test::json::Empty e);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendReceiveEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendReceiveEvent(::zx::unowned_channel _channel,
                                       ::fidl::BytePart _buffer,
                                       ::llcpp::fidl::test::json::Empty e);
-
-  // Messages are encoded in-place.
-  static zx_status_t SendReceiveEvent(
-      ::zx::unowned_channel _chan,
-      ::fidl::DecodedMessage<ReceiveResponse> params);
 
   class EventSender;
 };

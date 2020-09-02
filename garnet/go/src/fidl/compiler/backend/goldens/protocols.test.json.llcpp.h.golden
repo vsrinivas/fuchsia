@@ -1060,16 +1060,11 @@ class Transitional final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendEventEvent(::zx::unowned_channel _chan, int64_t x);
+  static zx_status_t SendEventEvent(::zx::unowned_channel _channel, int64_t x);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendEventEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendEventEvent(::zx::unowned_channel _channel,
                                     ::fidl::BytePart _buffer, int64_t x);
-
-  // Messages are encoded in-place.
-  static zx_status_t SendEventEvent(
-      ::zx::unowned_channel _chan,
-      ::fidl::DecodedMessage<EventResponse> params);
 
   class EventSender;
 };
@@ -1947,18 +1942,13 @@ class ChannelProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a,
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _channel, int64_t a,
                                      int64_t b);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _channel,
                                      ::fidl::BytePart _buffer, int64_t a,
                                      int64_t b);
-
-  // Messages are encoded in-place.
-  static zx_status_t SendEventAEvent(
-      ::zx::unowned_channel _chan,
-      ::fidl::DecodedMessage<EventAResponse> params);
 
   class EventSender;
 };
@@ -3647,20 +3637,15 @@ class WithAndWithoutRequestResponse final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendOnEmptyResponseEvent(::zx::unowned_channel _chan);
+  static zx_status_t SendOnEmptyResponseEvent(::zx::unowned_channel _channel);
 
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _channel,
                                              ::fidl::StringView ret);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan,
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _channel,
                                              ::fidl::BytePart _buffer,
                                              ::fidl::StringView ret);
-
-  // Messages are encoded in-place.
-  static zx_status_t SendOnWithResponseEvent(
-      ::zx::unowned_channel _chan,
-      ::fidl::DecodedMessage<OnWithResponseResponse> params);
 
   class EventSender;
 };

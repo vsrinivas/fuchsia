@@ -85,7 +85,6 @@ func NewGenerator() *Generator {
 		fragmentReplyCallerAllocateTmpl,
 		fragmentSendEventCFlavorTmpl,
 		fragmentSendEventCallerAllocateTmpl,
-		fragmentSendEventInPlaceTmpl,
 		fragmentServiceTmpl,
 		fragmentStructTmpl,
 		fragmentSyncEventHandlerTmpl,
