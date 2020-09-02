@@ -29,6 +29,7 @@ library_sources = [
   "src/lib.rs",
   "src/metrics.rs",
   "src/metrics/fetch.rs",
+  "src/metrics/variable.rs",
   "src/plugins.rs",
   "src/plugins/crashes.rs",
   "src/plugins/sandbox_errors.rs",
@@ -41,6 +42,7 @@ rustc_library("triage") {
   version = "0.0.1"
 
   deps = lib_deps
+
   sources = library_sources
 }
 

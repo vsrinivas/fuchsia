@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::{Expression, Function, MetricValue},
+    crate::metrics::{variable::VariableName, Expression, Function, MetricValue},
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
@@ -103,14 +103,14 @@ fn simple_name<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str
 // Metric-type Expression holding the namespaced name.
 fn name_with_namespace<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     map(separated_pair(simple_name, tag("::"), simple_name), move |(s1, s2)| {
-        Expression::Metric(format!("{}::{}", s1, s2))
+        Expression::Variable(VariableName::new(format!("{}::{}", s1, s2)))
     })(i)
 }
 
 // Parses a simple name with no namespace and returns a Metric-type Expression
 // holding the simple name.
 fn name_no_namespace<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    map(simple_name, move |s: &str| Expression::Metric(s.to_string()))(i)
+    map(simple_name, move |s: &str| Expression::Variable(VariableName::new(s.to_string())))(i)
 }
 
 // Parses either a simple or namespaced name and returns a Metric-type Expression
@@ -426,7 +426,10 @@ pub fn parse_expression(i: &str) -> Result<Expression, Error> {
 mod test {
     use {
         super::*,
-        crate::{assert_missing, metrics::MetricState},
+        crate::{
+            assert_missing,
+            metrics::{Expression, MetricState},
+        },
     };
 
     // Res, simplify_fn, and get_parse are necessary because IResult can't be compared and can't
@@ -627,33 +630,33 @@ mod test {
         );
     }
 
+    macro_rules! variable_expression {
+        ($name:expr) => {
+            Expression::Variable(VariableName::new($name.to_owned()))
+        };
+    }
+
     #[test]
     fn parse_names_no_namespace() {
-        assert_eq!(
-            get_parse!(name_no_namespace, "abc"),
-            Res::Ok("", Expression::Metric("abc".to_owned()))
-        );
-        assert_eq!(
-            get_parse!(name_no_namespace, "bc."),
-            Res::Ok(".", Expression::Metric("bc".to_owned()))
-        );
+        assert_eq!(get_parse!(name_no_namespace, "abc"), Res::Ok("", variable_expression!("abc")));
+        assert_eq!(get_parse!(name_no_namespace, "bc."), Res::Ok(".", variable_expression!("bc")));
         // Names can contain digits and _ but can't start with digits
         assert_eq!(
             get_parse!(name_no_namespace, "bc42."),
-            Res::Ok(".", Expression::Metric("bc42".to_owned()))
+            Res::Ok(".", variable_expression!("bc42"))
         );
         assert!(get_parse!(name_no_namespace, "42bc.").is_err());
         assert_eq!(
             get_parse!(name_no_namespace, "_bc42_"),
-            Res::Ok("", Expression::Metric("_bc42_".to_owned()))
+            Res::Ok("", variable_expression!("_bc42_"))
         );
         assert_eq!(
             get_parse!(name_no_namespace, "_bc42_::abc"),
-            Res::Ok("::abc", Expression::Metric("_bc42_".to_owned()))
+            Res::Ok("::abc", variable_expression!("_bc42_"))
         );
         assert_eq!(
             get_parse!(name_no_namespace, "_bc42_:abc"),
-            Res::Ok(":abc", Expression::Metric("_bc42_".to_owned()))
+            Res::Ok(":abc", variable_expression!("_bc42_"))
         );
     }
 
@@ -661,11 +664,11 @@ mod test {
     fn parse_names_with_namespace() {
         assert_eq!(
             get_parse!(name_with_namespace, "_bc42_::abc"),
-            Res::Ok("", Expression::Metric("_bc42_::abc".to_owned()))
+            Res::Ok("", variable_expression!("_bc42_::abc"))
         );
         assert_eq!(
             get_parse!(name_with_namespace, "_bc42_::abc::def"),
-            Res::Ok("::def", Expression::Metric("_bc42_::abc".to_owned()))
+            Res::Ok("::def", variable_expression!("_bc42_::abc"))
         );
         assert!(get_parse!(name_with_namespace, "_bc42_:abc::def").is_err());
     }
@@ -674,15 +677,15 @@ mod test {
     fn parse_names() {
         assert_eq!(
             get_parse!(name, "_bc42_::abc"),
-            Res::Ok("", Expression::Metric("_bc42_::abc".to_owned()))
+            Res::Ok("", variable_expression!("_bc42_::abc"))
         );
         assert_eq!(
             get_parse!(name, "_bc42_:abc::def"),
-            Res::Ok(":abc::def", Expression::Metric("_bc42_".to_owned()))
+            Res::Ok(":abc::def", variable_expression!("_bc42_"))
         );
         assert_eq!(
             get_parse!(name, "_bc42_::abc::def"),
-            Res::Ok("::def", Expression::Metric("_bc42_::abc".to_owned()))
+            Res::Ok("::def", variable_expression!("_bc42_::abc"))
         );
     }
 

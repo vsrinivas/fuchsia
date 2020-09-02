@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod fetch;
+pub mod variable;
 
 use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
@@ -12,6 +13,7 @@ use {
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
     std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
+    variable::VariableName,
 };
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
@@ -370,13 +372,13 @@ impl Lambda {
             Expression::Vector(parameters) => parameters
                 .iter()
                 .map(|param| match param {
-                    Expression::Metric(name) => {
-                        if name.contains(':') {
+                    Expression::Variable(name) => {
+                        if name.includes_namespace() {
                             Err(MetricValue::Missing(
                                 "Namespaces not allowed in function params".to_string(),
                             ))
                         } else {
-                            Ok(name.clone())
+                            Ok(name.original_name().to_string())
                         }
                     }
                     _ => Err(MetricValue::Missing(
@@ -486,7 +488,7 @@ pub enum Expression {
     // TODO(cphoenix): Check on load that all operators have a legal number of operands.
     Function(Function, Vec<Expression>),
     Vector(Vec<Expression>),
-    Metric(String),
+    Variable(VariableName),
     Value(MetricValue),
 }
 
@@ -536,12 +538,13 @@ impl<'a> MetricState<'a> {
         &self,
         fetcher: &TrialDataFetcher<'_>,
         namespace: &str,
-        name: &String,
+        variable: &VariableName,
     ) -> MetricValue {
+        let name = variable.original_name();
         if fetcher.has_entry(name) {
             return fetcher.fetch(name);
         }
-        if name.contains("::") {
+        if variable.includes_namespace() {
             return MetricValue::Missing(format!(
                 "Name {} not in test values and refers outside the file",
                 name
@@ -561,7 +564,7 @@ impl<'a> MetricState<'a> {
                         "Selector {} can't be used in tests; please supply a value",
                         name
                     )),
-                    Metric::Eval(expression) => self.eval_value(namespace, &expression),
+                    Metric::Eval(expression) => self.evaluate_value(namespace, &expression),
                 },
             },
         }
@@ -573,43 +576,33 @@ impl<'a> MetricState<'a> {
         &self,
         fetcher: &FileDataFetcher<'_>,
         namespace: &str,
-        name: &String,
+        name: &VariableName,
     ) -> MetricValue {
-        let name_parts = name.split("::").collect::<Vec<_>>();
-        let real_namespace: &str;
-        let real_name: &str;
-        match name_parts.len() {
-            1 => {
-                real_namespace = namespace;
-                real_name = name;
-            }
-            2 => {
-                real_namespace = name_parts[0];
-                real_name = name_parts[1];
-            }
-            _ => {
-                return MetricValue::Missing(format!("Bad name '{}': too many '::'", name));
-            }
-        }
-        match self.metrics.get(real_namespace) {
-            None => return MetricValue::Missing(format!("Bad namespace '{}'", real_namespace)),
-            Some(metric_map) => match metric_map.get(real_name) {
-                None => {
-                    return MetricValue::Missing(format!(
-                        "Metric '{}' Not Found in '{}'",
-                        real_name, real_namespace
-                    ))
-                }
-                Some(metric) => match metric {
-                    Metric::Selector(selector) => fetcher.fetch(selector),
-                    Metric::Eval(expression) => self.eval_value(real_namespace, &expression),
+        if let Some((real_namespace, real_name)) = name.name_parts(namespace) {
+            match self.metrics.get(real_namespace) {
+                None => return MetricValue::Missing(format!("Bad namespace '{}'", real_namespace)),
+                Some(metric_map) => match metric_map.get(real_name) {
+                    None => {
+                        return MetricValue::Missing(format!(
+                            "Metric '{}' Not Found in '{}'",
+                            real_name, real_namespace
+                        ))
+                    }
+                    Some(metric) => match metric {
+                        Metric::Selector(selector) => fetcher.fetch(selector),
+                        Metric::Eval(expression) => {
+                            self.evaluate_value(real_namespace, &expression)
+                        }
+                    },
                 },
-            },
+            }
+        } else {
+            return MetricValue::Missing(format!("Bad name '{}'", name.original_name()));
         }
     }
 
     /// Calculate the value of a Metric specified by name and namespace.
-    fn metric_value_by_name(&self, namespace: &str, name: &String) -> MetricValue {
+    fn evaluate_variable(&self, namespace: &str, name: &VariableName) -> MetricValue {
         // TODO(cphoenix): When historical metrics are added, change semantics to refresh()
         // TODO(cphoenix): cache values
         // TODO(cphoenix): Detect infinite cycles/depth.
@@ -627,11 +620,13 @@ impl<'a> MetricState<'a> {
             Metric::Selector(_) => {
                 MetricValue::Missing("Selectors aren't allowed in action triggers".to_owned())
             }
-            Metric::Eval(string) => unwrap_for_math(&self.eval_value(namespace, string)).clone(),
+            Metric::Eval(string) => {
+                unwrap_for_math(&self.evaluate_value(namespace, string)).clone()
+            }
         }
     }
 
-    fn eval_value(&self, namespace: &str, expression: &str) -> MetricValue {
+    fn evaluate_value(&self, namespace: &str, expression: &str) -> MetricValue {
         match config::parse::parse_expression(expression) {
             Ok(expr) => self.evaluate(namespace, &expr),
             Err(e) => MetricValue::Missing(format!("Expression parse error\n{}", e)),
@@ -705,10 +700,13 @@ impl<'a> MetricState<'a> {
                 Expression::Vector(expressions) => {
                     Expression::Vector(substitute_all(expressions, bindings))
                 }
-                Expression::Metric(name) => match bindings.get(name) {
-                    None => Expression::Metric(name.to_string()),
-                    Some(value) => Expression::Value(value.clone().clone()),
-                },
+                Expression::Variable(name) => {
+                    if let Some(value) = bindings.get(name.original_name()) {
+                        Expression::Value((*value).clone())
+                    } else {
+                        Expression::Variable(name.clone())
+                    }
+                }
                 Expression::Value(value) => Expression::Value(value.clone()),
             }
         }
@@ -861,7 +859,7 @@ impl<'a> MetricState<'a> {
     fn evaluate(&self, namespace: &str, e: &Expression) -> MetricValue {
         match e {
             Expression::Function(f, operands) => self.evaluate_function(namespace, f, operands),
-            Expression::Metric(name) => self.metric_value_by_name(namespace, name),
+            Expression::Variable(name) => self.evaluate_variable(namespace, name),
             Expression::Value(value) => value.clone(),
             Expression::Vector(values) => {
                 MetricValue::Vector(map_vec(values, |value| self.evaluate(namespace, value)))
@@ -1308,6 +1306,12 @@ pub(crate) mod test {
         );
     }
 
+    macro_rules! variable {
+        ($name:expr) => {
+            &VariableName::new($name.to_string())
+        };
+    }
+
     #[test]
     fn test_eval_with_file() {
         let mut file_map = HashMap::new();
@@ -1321,39 +1325,39 @@ pub(crate) mod test {
         metrics.insert("other_file".to_owned(), other_file_map);
         let file_state = MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()));
         assert_eq!(
-            file_state.metric_value_by_name("bar_file", &"bar_plus_one".to_owned()),
+            file_state.evaluate_variable("bar_file", variable!("bar_plus_one")),
             MetricValue::Int(100)
         );
         require_missing(
-            file_state.metric_value_by_name("bar_file", &"oops_plus_one".to_owned()),
+            file_state.evaluate_variable("bar_file", variable!("oops_plus_one")),
             "File found nonexistent name",
         );
         assert_eq!(
-            file_state.metric_value_by_name("bar_file", &"bar".to_owned()),
+            file_state.evaluate_variable("bar_file", variable!("bar")),
             MetricValue::Vector(vec![MetricValue::Int(99)])
         );
         assert_eq!(
-            file_state.metric_value_by_name("other_file", &"bar".to_owned()),
+            file_state.evaluate_variable("other_file", variable!("bar")),
             MetricValue::Int(42)
         );
         assert_eq!(
-            file_state.metric_value_by_name("other_file", &"other_file::bar".to_owned()),
+            file_state.evaluate_variable("other_file", variable!("other_file::bar")),
             MetricValue::Int(42)
         );
         assert_eq!(
-            file_state.metric_value_by_name("other_file", &"bar_file::bar".to_owned()),
+            file_state.evaluate_variable("other_file", variable!("bar_file::bar")),
             MetricValue::Vector(vec![MetricValue::Int(99)])
         );
         require_missing(
-            file_state.metric_value_by_name("other_file", &"bar_plus_one".to_owned()),
+            file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
             "Shouldn't have found bar_plus_one in other_file",
         );
         require_missing(
-            file_state.metric_value_by_name("missing_file", &"bar_plus_one".to_owned()),
+            file_state.evaluate_variable("missing_file", variable!("bar_plus_one")),
             "Shouldn't have found bar_plus_one in missing_file",
         );
         require_missing(
-            file_state.metric_value_by_name("bar_file", &"other_file::bar_plus_one".to_owned()),
+            file_state.evaluate_variable("bar_file", variable!("other_file::bar_plus_one")),
             "Shouldn't have found other_file::bar_plus_one",
         );
     }
@@ -1379,29 +1383,29 @@ pub(crate) mod test {
             MetricState::new(&metrics, Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()));
         // foo from values shadows foo selector.
         assert_eq!(
-            trial_state.metric_value_by_name("foo_file", &"foo".to_owned()),
+            trial_state.evaluate_variable("foo_file", variable!("foo")),
             MetricValue::Int(42)
         );
         // Value shadowing also works in expressions.
         assert_eq!(
-            trial_state.metric_value_by_name("foo_file", &"foo_plus_one".to_owned()),
+            trial_state.evaluate_variable("foo_file", variable!("foo_plus_one")),
             MetricValue::Int(43)
         );
         // foo can shadow eval as well as selector.
-        assert_eq!(trial_state.metric_value_by_name("a", &"foo".to_owned()), MetricValue::Int(42));
+        assert_eq!(trial_state.evaluate_variable("a", variable!("foo")), MetricValue::Int(42));
         // A value that's not there should be "Missing" (e.g. not crash)
         require_missing(
-            trial_state.metric_value_by_name("foo_file", &"oops_plus_one".to_owned()),
+            trial_state.evaluate_variable("foo_file", variable!("oops_plus_one")),
             "Trial found nonexistent name",
         );
         // a::b ignores the "b" in file "a" and uses "a::b" from values.
         assert_eq!(
-            trial_state.metric_value_by_name("foo_file", &"ab_plus_one".to_owned()),
+            trial_state.evaluate_variable("foo_file", variable!("ab_plus_one")),
             MetricValue::Int(8)
         );
         // a::c should return Missing, not look up c in file a.
         require_missing(
-            trial_state.metric_value_by_name("foo_file", &"ac_plus_one".to_owned()),
+            trial_state.evaluate_variable("foo_file", variable!("ac_plus_one")),
             "Trial should not have read c from file a",
         );
     }
@@ -1418,29 +1422,38 @@ pub(crate) mod test {
         let mut data = vec![klog, syslog, bootlog];
         let fetcher = FileDataFetcher::new(&data);
         let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
-        assert_eq!(state.eval_value("", r#"KlogHas("lin")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"KlogHas("l.ne")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"KlogHas("fi.*ne")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"KlogHas("fi.*sec")"#), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("", r#"KlogHas("first line")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("lin")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("l.ne")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("fi.*ne")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("fi.*sec")"#), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("first line")"#), MetricValue::Bool(true));
         // Full regex; even capture groups are allowed but the values can't be extracted.
-        assert_eq!(state.eval_value("", r#"KlogHas("f(.)rst \bline")"#), MetricValue::Bool(true));
+        assert_eq!(
+            state.evaluate_value("", r#"KlogHas("f(.)rst \bline")"#),
+            MetricValue::Bool(true)
+        );
         // Backreferences don't work; this is regex, not fancy_regex.
-        assert_eq!(state.eval_value("", r#"KlogHas("f(.)rst \bl\1ne")"#), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("", r#"KlogHas("second line")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", "KlogHas(\"second line\n\")"), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("", r#"KlogHas("klog")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"KlogHas("line 2")"#), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("", r#"SyslogHas("line 2")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
+        assert_eq!(
+            state.evaluate_value("", r#"KlogHas("f(.)rst \bl\1ne")"#),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(state.evaluate_value("", r#"KlogHas("second line")"#), MetricValue::Bool(true));
+        assert_eq!(
+            state.evaluate_value("", "KlogHas(\"second line\n\")"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(state.evaluate_value("", r#"KlogHas("klog")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"KlogHas("line 2")"#), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("", r#"SyslogHas("line 2")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
         data.pop();
         let fetcher = FileDataFetcher::new(&data);
         let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
-        assert_eq!(state.eval_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
         Ok(())
     }
 
@@ -1454,20 +1467,20 @@ pub(crate) mod test {
         let fetcher = FileDataFetcher::new(&data);
         let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
         assert_eq!(
-            state.eval_value("", "Annotation('build.board')"),
+            state.evaluate_value("", "Annotation('build.board')"),
             MetricValue::String("chromebook-x64".to_string())
         );
-        assert_eq!(state.eval_value("", "Annotation('answer')"), MetricValue::Int(42));
+        assert_eq!(state.evaluate_value("", "Annotation('answer')"), MetricValue::Int(42));
         assert_missing!(
-            state.eval_value("", "Annotation('bogus')"),
+            state.evaluate_value("", "Annotation('bogus')"),
             "Key 'bogus' not found in annotations"
         );
         assert_missing!(
-            state.eval_value("", "Annotation('bogus', 'Double bogus')"),
+            state.evaluate_value("", "Annotation('bogus', 'Double bogus')"),
             "Annotation() needs 1 string argument"
         );
         assert_missing!(
-            state.eval_value("", "Annotation(42)"),
+            state.evaluate_value("", "Annotation(42)"),
             "Annotation() needs a string argument"
         );
         Ok(())
@@ -1500,82 +1513,97 @@ pub(crate) mod test {
         let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()));
 
         // Can read a value.
-        assert_eq!(state.eval_value("root", "is42"), MetricValue::Int(42));
+        assert_eq!(state.evaluate_value("root", "is42"), MetricValue::Int(42));
 
         // Basic arithmetic
-        assert_eq!(state.eval_value("root", "is42 + 1"), MetricValue::Int(43));
-        assert_eq!(state.eval_value("root", "is42 - 1"), MetricValue::Int(41));
-        assert_eq!(state.eval_value("root", "is42 * 2"), MetricValue::Int(84));
+        assert_eq!(state.evaluate_value("root", "is42 + 1"), MetricValue::Int(43));
+        assert_eq!(state.evaluate_value("root", "is42 - 1"), MetricValue::Int(41));
+        assert_eq!(state.evaluate_value("root", "is42 * 2"), MetricValue::Int(84));
         // Automatic float conversion and truncating divide.
-        assert_eq!(state.eval_value("root", "is42 / 4"), MetricValue::Float(10.5));
-        assert_eq!(state.eval_value("root", "is42 // 4"), MetricValue::Int(10));
+        assert_eq!(state.evaluate_value("root", "is42 / 4"), MetricValue::Float(10.5));
+        assert_eq!(state.evaluate_value("root", "is42 // 4"), MetricValue::Int(10));
 
         // Order of operations
-        assert_eq!(state.eval_value("root", "is42 + 10 / 2 * 10 - 2 "), MetricValue::Float(90.0));
-        assert_eq!(state.eval_value("root", "is42 + 10 // 2 * 10 - 2 "), MetricValue::Int(90));
+        assert_eq!(
+            state.evaluate_value("root", "is42 + 10 / 2 * 10 - 2 "),
+            MetricValue::Float(90.0)
+        );
+        assert_eq!(state.evaluate_value("root", "is42 + 10 // 2 * 10 - 2 "), MetricValue::Int(90));
 
         // Boolean
         assert_eq!(
-            state.eval_value("root", "And(is42 == 42, is42 < 100)"),
+            state.evaluate_value("root", "And(is42 == 42, is42 < 100)"),
             MetricValue::Bool(true)
         );
         assert_eq!(
-            state.eval_value("root", "And(is42 == 42, is42 > 100)"),
+            state.evaluate_value("root", "And(is42 == 42, is42 > 100)"),
             MetricValue::Bool(false)
         );
-        assert_eq!(state.eval_value("root", "Or(is42 == 42, is42 > 100)"), MetricValue::Bool(true));
-        assert_eq!(state.eval_value("root", "Or(is42 != 42, is42 < 100)"), MetricValue::Bool(true));
         assert_eq!(
-            state.eval_value("root", "Or(is42 != 42, is42 > 100)"),
+            state.evaluate_value("root", "Or(is42 == 42, is42 > 100)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "Or(is42 != 42, is42 < 100)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "Or(is42 != 42, is42 > 100)"),
             MetricValue::Bool(false)
         );
-        assert_eq!(state.eval_value("root", "Not(is42 == 42)"), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("root", "Not(is42 == 42)"), MetricValue::Bool(false));
 
         // Read strings
-        assert_eq!(state.eval_value("root", "isOk"), MetricValue::String("OK".to_string()));
+        assert_eq!(state.evaluate_value("root", "isOk"), MetricValue::String("OK".to_string()));
 
         // Missing value
         assert_missing!(
-            state.eval_value("root", "missing"),
+            state.evaluate_value("root", "missing"),
             "Metric 'missing' Not Found in 'root'"
         );
 
         // Booleans short circuit
         assert_missing!(
-            state.eval_value("root", "Or(is42 != 42, missing)"),
+            state.evaluate_value("root", "Or(is42 != 42, missing)"),
             "Metric 'missing' Not Found in 'root'"
         );
-        assert_eq!(state.eval_value("root", "Or(is42 == 42, missing)"), MetricValue::Bool(true));
+        assert_eq!(
+            state.evaluate_value("root", "Or(is42 == 42, missing)"),
+            MetricValue::Bool(true)
+        );
         assert_missing!(
-            state.eval_value("root", "And(is42 == 42, missing)"),
+            state.evaluate_value("root", "And(is42 == 42, missing)"),
             "Metric 'missing' Not Found in 'root'"
         );
 
-        assert_eq!(state.eval_value("root", "And(is42 != 42, missing)"), MetricValue::Bool(false));
+        assert_eq!(
+            state.evaluate_value("root", "And(is42 != 42, missing)"),
+            MetricValue::Bool(false)
+        );
 
         // Missing checks
-        assert_eq!(state.eval_value("root", "Missing(is42)"), MetricValue::Bool(false));
-        assert_eq!(state.eval_value("root", "Missing(missing)"), MetricValue::Bool(true));
+        assert_eq!(state.evaluate_value("root", "Missing(is42)"), MetricValue::Bool(false));
+        assert_eq!(state.evaluate_value("root", "Missing(missing)"), MetricValue::Bool(true));
         assert_eq!(
-            state.eval_value("root", "And(Not(Missing(is42)), is42 == 42)"),
+            state.evaluate_value("root", "And(Not(Missing(is42)), is42 == 42)"),
             MetricValue::Bool(true)
         );
         assert_eq!(
-            state.eval_value("root", "And(Not(Missing(missing)), missing == 'Hello')"),
+            state.evaluate_value("root", "And(Not(Missing(missing)), missing == 'Hello')"),
             MetricValue::Bool(false)
         );
         assert_eq!(
-            state.eval_value("root", "Or(Missing(is42), is42 < 42)"),
+            state.evaluate_value("root", "Or(Missing(is42), is42 < 42)"),
             MetricValue::Bool(false)
         );
         assert_eq!(
-            state.eval_value("root", "Or(Missing(missing), missing == 'Hello')"),
+            state.evaluate_value("root", "Or(Missing(missing), missing == 'Hello')"),
             MetricValue::Bool(true)
         );
 
         // Ensure evaluation for action converts vector values.
         assert_eq!(
-            state.eval_value("root", "[0==0]"),
+            state.evaluate_value("root", "[0==0]"),
             MetricValue::Vector(vec![MetricValue::Bool(true)])
         );
         assert_eq!(
@@ -1584,7 +1612,7 @@ pub(crate) mod test {
         );
 
         assert_eq!(
-            state.eval_value("root", "[0==0, 0==0]"),
+            state.evaluate_value("root", "[0==0, 0==0]"),
             MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
         );
         assert_eq!(
