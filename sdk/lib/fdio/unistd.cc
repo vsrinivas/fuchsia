@@ -2268,12 +2268,19 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual, &out_code);
     if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
         !nonblocking) {
-      switch (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr)) {
+      uint32_t pending;
+      switch (fdio_wait(io, FDIO_EVT_READABLE, deadline, &pending)) {
         case ZX_ERR_BAD_HANDLE:
           status = ZX_ERR_BAD_HANDLE;
           break;
         case ZX_ERR_TIMED_OUT:
           break;
+        case ZX_OK:
+          if (pending & POLLHUP) {
+            status = ZX_ERR_CONNECTION_RESET;
+            break;
+          }
+          __FALLTHROUGH;
         default:
           continue;
       }

@@ -1860,6 +1860,81 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   }
 }
 
+enum class dir {
+  SEND,
+  RECV,
+};
+
+class SendRecvTest : public ::testing::TestWithParam<enum dir> {};
+
+// ResetBlockedSendRecv tests for a blocked socket write/read to fail with an
+// expected error code on receiving a TCP RST from the peer.
+TEST_P(SendRecvTest, ResetBlockedSendRecv) {
+  auto const& dir = GetParam();
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  struct sockaddr_in addr = {
+    .sin_family = AF_INET,
+    .sin_addr.s_addr = htonl(INADDR_ANY),
+  };
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+
+  fbl::unique_fd client;
+  ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(client.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  fbl::unique_fd server;
+  ASSERT_TRUE(server = fbl::unique_fd(accept(listener.get(), nullptr, nullptr))) << strerror(errno);
+
+  // Setting SO_LINGER to 0 and `close`ing the server socket should
+  // immediately send a TCP Reset.
+  struct linger opt = {
+    .l_onoff = 1,
+    .l_linger = 0,
+  };
+  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+      << strerror(errno);
+
+  std::latch fut_started(1);
+  // Asynchronously block on reading from the test client socket.
+  const auto fut = std::async(std::launch::async, [&]() {
+    char c;
+    switch (dir) {
+      case dir::SEND:
+        // Fill the send buffer of the client socket to cause write to block.
+        fill_stream_send_buf(client.get(), server.get());
+        fut_started.count_down();
+        EXPECT_EQ(write(client.get(), &c, sizeof(c)), -1);
+        break;
+      case dir::RECV:
+        fut_started.count_down();
+        EXPECT_EQ(read(client.get(), &c, sizeof(c)), -1);
+        break;
+    }
+    EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+  });
+  fut_started.wait();
+  // Wait for the task to be blocked on write/read.
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+
+  // Close the server to trigger a TCP Reset now that linger is 0.
+  EXPECT_EQ(close(server.release()), 0) << strerror(errno);
+
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, SendRecvTest,
+                         ::testing::Values(dir::SEND, dir::RECV));
+
 // ReadBeforeConnect tests the application behavior when we start to
 // read from a stream socket that is not yet connected.
 TEST(NetStreamTest, ReadBeforeConnect) {
@@ -2152,7 +2227,7 @@ class NetStreamSocketsTest : public ::testing::Test {
 };
 
 TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
-  // Fill the send buffer of the server socket to trigger write to wait.
+  // Fill the receive buffer of the client socket.
   fill_stream_send_buf(server.get(), client.get());
 
   // Setting SO_LINGER to 0 and `close`ing the server socket should
@@ -2349,7 +2424,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   }
 
-  // Fill the send buffer of the client socket to trigger write to wait.
+  // Fill the send buffer of the client socket to cause write to block.
   fill_stream_send_buf(client.get(), server.get());
 
   // In the process of writing to the socket, close its peer socket with outstanding data to read,
