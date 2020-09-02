@@ -2,15 +2,17 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "File systems"
+- title: "Filesystem architecture"
   path: /docs/concepts/filesystems/filesystems.md
-- title: "'dot dot' considered harmful"
-  path: /docs/concepts/filesystems/dotdot.md
-- title: "Blobfs"
-  path: /docs/concepts/filesystems/blobfs.md
-- title: "Minfs"
+- title: "MinFS"
   path: /docs/concepts/filesystems/minfs.md
-- title: "Zxcrypt"
-  path: /docs/concepts/filesystems/zxcrypt.md
-- title: "Random Access Compression"
+- title: "BlobFS"
+  path: /docs/concepts/filesystems/blobfs.md
+- title: "Random access compression in BlobFS"
   path: /docs/concepts/filesystems/random-access-compression.md
+- title: "\"dot dot\" (..) considered harmful"
+  path: /docs/concepts/filesystems/dotdot.md
+- title: "Block devices"
+  path: /docs/concepts/filesystems/block_devices.md
+- title: "zxcrypt"
+  path: /docs/concepts/filesystems/zxcrypt.md

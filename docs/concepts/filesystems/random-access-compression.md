@@ -1,20 +1,20 @@
-# Random access compression in blobfs
+# Random access compression in BlobFS
 
-The blobfs filesystem in Fuchsia transparently compresses files in order to save
-disk space. Blobfs supports a number of different compression strategies, with
+The BlobFS filesystem in Fuchsia transparently compresses files in order to save
+disk space. BlobFS supports a number of different compression strategies, with
 [zstd](https://facebook.github.io/zstd/) being the default.
 
 One downside of file compression is that it can prevent *random access* into
 files. For most compression algorithms, the entire contents must be read from
 disk and decompressed to access a single byte.
 
-For blobfs, this is a particular challenge when files are demand paged. Demand
+For BlobFS, this is a particular challenge when files are demand paged. Demand
 paging allows a file to be partially loaded into memory, which saves system
 memory. Full-file compression prevents a file from being partially loaded.
 
 The [chunked-compression](/src/lib/chunked-compression/) format and library in
 Fuchsia breaks compressed files up into frames which can be independently
-decompressed. This allows blobfs to implement demand paging of compressed files,
+decompressed. This allows BlobFS to implement demand paging of compressed files,
 since the file can be partially loaded and decompressed.
 
 This document describes the design of the chunked-compression format and
@@ -31,7 +31,7 @@ format and library:
 *   **Flexible decompression API**. The library was designed to give clients
     control over the seek table, so clients have fine grained control over which
     frames they decompress. This supports use cases like demand paging, where
-    the client (blobfs) has more information about access patterns and can
+    the client (BlobFS) has more information about access patterns and can
     control read-ahead and prefetch precisely by decompressing specific frames.
 
     This is in contrast to a more managed API which hides the details of which
@@ -49,7 +49,7 @@ format and library:
     or larger frames.
 
 *   **Comparable compression ratio to [zstd](https://facebook.github.io/zstd)**.
-    Since zstd was the current default compression algorithm for blobfs at the
+    Since zstd was the current default compression algorithm for BlobFS at the
     time of this document's writing, zstd's compression ratio is the baseline
     which the chunked-compression library is benchmarked against. The overhead
     due to framing and additional metadata must be minimal.
@@ -61,7 +61,7 @@ format and library:
     chunked compression archives must be usable both on Fuchsia and on the
     compilation host (e.g. Linux), to enable the use of the library in the build
     toolchain. This is necessary to compress files at build-time, for example
-    when generating a base blobfs image.
+    when generating a base BlobFS image.
 
 The following are non-goals:
 
@@ -224,23 +224,23 @@ Decompressed Space            Compressed Space
 +-------+
 ```
 
-## Use in blobfs
+## Use in BlobFS
 
-In blobfs, files are compressed using the chunked compression library to
+In BlobFS, files are compressed using the chunked compression library to
 facilitate random access and demand paging.
 
 Currently, random access is only used when demand paging is enabled. With demand
-paging disabled, blobfs will load and decompress the entire file on first
+paging disabled, BlobFS will load and decompress the entire file on first
 access, buffering the file in memory while there are handles to the file.
 
-With demand paging enabled, blobfs lazily loads in portions of files as they are
-accessed. Blobfs registers itself as the
+With demand paging enabled, BlobFS lazily loads in portions of files as they are
+accessed. BlobFS registers itself as the
 [pager](/docs/reference/kernel_objects/pager.md) for the VMO using the
 [zx_pager_create](/docs/reference/syscalls/pager_create.md) syscall. When a
-non-present page is accessed in the VMO, a page fault occurs, which blobfs
+non-present page is accessed in the VMO, a page fault occurs, which BlobFS
 handles.
 
-Blobfs looks up the decompressed frames containing the target page(s), and
+BlobFS looks up the decompressed frames containing the target page(s), and
 decompresses each frame. After decompressing each frame, the data is verified,
 and committed to the pager-backed VMO through the
 [zx_pager_supply_pages](/docs/reference/syscalls/pager_supply_pages.md) syscall.

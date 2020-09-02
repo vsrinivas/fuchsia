@@ -1,10 +1,10 @@
-# Blobfs
+# BlobFS
 
-**Blobfs** is a content-addressable filesystem optimized for write-once,
-read-often files, such as binaries and libraries. On Fuchsia, Blobfs is the
+**BlobFS** is a content-addressable filesystem optimized for write-once,
+read-often files, such as binaries and libraries. On Fuchsia, BlobFS is the
 storage system used for all software packages.
 
-When mounted, Blobfs presents a single logical directory containing all files
+When mounted, BlobFS presents a single logical directory containing all files
 (a.k.a., blobs):
 
 ```
@@ -15,7 +15,7 @@ blob/
  └── 01bad8536a7aee498ffd323f53e06232b8a81edd507ac2a95bd0e819c4983138
 ```
 
-Files in Blobfs are:
+Files in BlobFS are:
 
 *   **Immutable**: Once created, a blob cannot be modified (except removal).
 *   **Content-Addressable**: Blob names are deterministically derived from their
@@ -23,20 +23,20 @@ Files in Blobfs are:
 *   **Verified**: Cryptographic checksums are used to ensure integrity of blob
     data.
 
-These properties of blobs make Blobfs a key component of Fuchsia's security
+These properties of blobs make BlobfS a key component of Fuchsia's security
 posture, ensuring that software packages' contents can be verified before they
 are executed.
 
-## Design and implementation of Blobfs
+## Design and implementation of BlobFS
 
 ### On-disk format
 
-Blobfs stores each blob in a linked list of non-adjacent extents (a contiguous
+BlobFS stores each blob in a linked list of non-adjacent extents (a contiguous
 range of data blocks). Each blob has an associated Inode, which describes where
 the block's data starts on disk and which contains some other metadata about the
 blob.
 
-Blobfs divides a disk (or a partition thereof) into five chunks:
+BlobFS divides a disk (or a partition thereof) into five chunks:
 
 *   The **Superblock** storing filesystem-wide metadata,
 *   The **Block Map**, a bitmap used to keep track of free and allocated data
@@ -50,28 +50,28 @@ Blobfs divides a disk (or a partition thereof) into five chunks:
 *   The **Data Blocks**, where blob contents and their verification metadata are
     stored in a series of extents.
 
-![Blobfs' disk layout](images/blobfs-disk-format.svg "disk_format")
+![BlobFS disk layout](images/blobfs-disk-format.svg "disk_format")
 
-Figure 1: Blobfs' disk layout
+Figure 1: BlobFS disk layout
 
 #### Superblock
 
-The superblock is the first block in a Blobfs-formatted partition. It describes
+The superblock is the first block in a BlobFS-formatted partition. It describes
 the location and size of the other chunks of the filesystem, as well as other
 filesystem-level metadata.
 
-When a Blobfs-formatted filesystem is mounted, this block is mapped into memory
+When a BlobFS-formatted filesystem is mounted, this block is mapped into memory
 and parsed to determine where the rest of the filesystem lives. The block is
-modified whenever a new blob is created, and (for FVM-managed Blobfs instances)
-whenever the size of the Blobfs filesystem shrinks or grows.
+modified whenever a new blob is created, and (for FVM-managed BlobFS instances)
+whenever the size of the BlobFS filesystem shrinks or grows.
 
-![Blobfs superblock](images/blobfs-superblock-layout.svg "superblock_layout")
+![BlobFS superblock](images/blobfs-superblock-layout.svg "superblock_layout")
 
-Figure 2: Blobfs superblock
+Figure 2: BlobFS superblock
 
-When Blobfs is managed by FVM, the superblock contains some additional metadata
-describing the FVM slices which contain the Blobfs filesystem. These fields
-(yellow in the above diagram) are ignored for non-FVM, fixed-size Blobfs images.
+When BlobFS is managed by FVM, the superblock contains some additional metadata
+describing the FVM slices which contain the BlobFS filesystem. These fields
+(yellow in the above diagram) are ignored for non-FVM, fixed-size BlobFS images.
 
 #### Block map
 
@@ -83,7 +83,7 @@ blocks, known as _extents_, to store blob contents in.
 
 Figure 3: An example block-map with several free extents of varying size.
 
-When a Blobfs image is mounted, the block map is mapped into memory where it can
+When a BlobFS image is mounted, the block map is mapped into memory where it can
 be read by the block allocator. The block map is written back to disk whenever a
 block is allocated (during blob creation) or deallocated (during blob deletion).
 
@@ -106,16 +106,16 @@ fragmentation of the array.
 Each blob in the filesystem has a corresponding Inode, which describes where the
 blob's data starts and some other metadata about the blob.
 
-![Layout of a Blobfs Inode](images/blobfs-inode-layout.svg "inode_layout")
+![Layout of a BlobFS Inode](images/blobfs-inode-layout.svg "inode_layout")
 
-Figure 4: Layout of a Blobfs Inode.
+Figure 4: Layout of a BlobFS Inode.
 
 For small blobs, the Inode may be the only node necessary to describe where the
 blob is on disk. In this case `extent_count` is one, `next_node` must not be
 used, and `inline_extent` describes the blob's single extent.
 
 Larger blobs will likely occupy multiple extents, especially on a fragmented
-Blobfs image. In this case, the first extent of the blob is stored in
+BlobFS image. In this case, the first extent of the blob is stored in
 `inline_extent`, and all subsequent extents are stored in a linked list of
 ExtentContainers starting at `next_node.`
 
@@ -125,7 +125,7 @@ Figure 5: Format of an Extent (occupying 64 bits). This format is used both in
 Inodes and ExtentContainers.
 
 Note that this representation of extents implies that an extent can have at most
-2**16 blocks in it (the maximum value of Extent Size).
+2\*\*16 blocks in it (the maximum value of Extent Size).
 
 ##### ExtentContainers
 
@@ -136,9 +136,9 @@ The extents in an ExtentContainer are logically contiguous (i.e. the logical
 addressable chunk of the blob stored in extents[0] is before extents[1]) and are
 filled in order. If `next_node` is set, then the ExtentContainer must be full.
 
-![Layout of a Blobfs ExtentContainer](images/blobfs-extentcontainer-layout.svg "extentcontainer_layout")
+![Layout of a BlobFS ExtentContainer](images/blobfs-extentcontainer-layout.svg "extentcontainer_layout")
 
-Figure 6: Layout of a Blobfs ExtentContainer.
+Figure 6: Layout of a BlobFS ExtentContainer.
 
 ##### Properties of the node linked-list
 
@@ -188,7 +188,7 @@ extents may be scattered throughout the disk.
 
 ##### Blob fragmentation
 
-A newly created Blobfs image has all of its data blocks free. Extents of
+A newly created BlobFS image has all of its data blocks free. Extents of
 arbitrary size can easily be found, and blobs tend to be stored in a single
 large extent (or a few large extents).
 
@@ -213,7 +213,7 @@ Fragmentation is undesirable for several reasons:
     are a finite number of nodes in the Node Map, which can be exhausted,
     preventing blobs from being created.
 
-Currently Blobfs does not perform defragmentation.
+Currently BlobFS does not perform defragmentation.
 
 #### Journal
 
@@ -222,7 +222,7 @@ TODO
 #### Data blocks
 
 Finally, the actual contents of the blobs must be stored somewhere. The
-remaining storage blocks in the Blobfs image are designated for this purpose.
+remaining storage blocks in the BlobFS image are designated for this purpose.
 
 Each blob is allocated enough extents to contain all of its data, as well as a
 number of data blocks reserved for storing verification metadata of the blob.
@@ -251,10 +251,12 @@ information is included in each hash value (such as the block offset and
 length), and each non-leaf node is significantly wider (in particular, each
 non-leaf node can contain up to 8192 / 32 == 256 children).
 
-### Implementation of Blobfs
+### Implementation of BlobFS
 
-Like other Fuchsia filesystems, Blobfs is implemented as a userspace process
+Like other Fuchsia filesystems, BlobFS is implemented as a userspace process
 that serves clients through a FIDL interface.
+
+<!--
 
 #### Startup and initialization
 
@@ -270,7 +272,10 @@ TODO
 
 TODO
 
-## Blobfs and Fuchsia
+## BlobFS and Fuchsia
 
 TODO: Finish this section describing Blobfs' role in the Fuchsia system and its
 relationship to other components, such as pkgfs.
+
+-->
+

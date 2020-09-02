@@ -67,9 +67,6 @@ toc:
 - title: "Source code"
   section:
   - include: /docs/concepts/source_code/_toc.yaml
-- title: "Storage"
-  section:
-  - include: /docs/concepts/storage/_toc.yaml
 - title: "System"
   section:
   - include: /docs/concepts/system/_toc.yaml

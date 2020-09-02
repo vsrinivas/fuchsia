@@ -171,7 +171,7 @@ filesystem (referred to as the “mount point” channel -- the “mounting” e
 this channel is saved as a field named “remote” in the parent Vnode, the other
 end will be connected to the root directory of the new filesystem), and
 (optionally) another to contact the underlying
-[block device](/docs/concepts/storage/block_devices.md).
+[block device](/docs/concepts/filesystems/block_devices.md).
 Once a filesystem has been initialized (reading initial state off the block
 device, finding the root vnode, etc) it flags a signal (`ZX_USER_SIGNAL0`) on
 the mount point channel. This informs the parent (mounting) system that the
