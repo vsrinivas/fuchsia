@@ -75,8 +75,13 @@ void InputReportsReader::SendReportsToWaitingRead() {
     reports_data_.pop();
   }
 
-  waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::InputReport>(
-      fidl::unowned_ptr(reports.data()), num_reports));
+  fidl::Result result =
+      waiting_read_->ReplySuccess(fidl::VectorView<fuchsia_input_report::InputReport>(
+          fidl::unowned_ptr(reports.data()), num_reports));
+  if (result.status() != ZX_OK) {
+    zxlogf(ERROR, "SendReport: Failed to send reports (%s): %s\n", result.status_string(),
+           result.error());
+  }
   waiting_read_.reset();
 
   // We have sent the reports so reset the allocator.

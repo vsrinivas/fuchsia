@@ -123,7 +123,11 @@ void InputReport::GetDescriptor(GetDescriptorCompleter::Sync completer) {
     device->CreateDescriptor(&descriptor_allocator, &descriptor_builder);
   }
 
-  completer.Reply(descriptor_builder.build());
+  fidl::Result result = completer.Reply(descriptor_builder.build());
+  if (result.status() != ZX_OK) {
+    zxlogf(ERROR, "GetDescriptor: Failed to send descriptor (%s): %s\n", result.status_string(),
+           result.error());
+  }
 }
 
 void InputReport::SendOutputReport(fuchsia_input_report::OutputReport report,
