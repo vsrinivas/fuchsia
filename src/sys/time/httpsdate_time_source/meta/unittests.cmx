@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/httpsdate_time_source_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

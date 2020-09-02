@@ -1,0 +1,58 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "httpsdate_time_source"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/watch_handler",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+  ]
+
+  sources = [
+    "src/main.rs",
+    "src/push_source.rs",
+  ]
+
+  # TODO(56138): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
+}
+
+fuchsia_component("service") {
+  component_name = "httpsdate_time_source"
+  manifest = "meta/service.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_unittest_package("httpsdate-time-source-tests") {
+  manifest = "meta/unittests.cmx"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_package("httpsdate-time-source") {
+  deps = [ ":service" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":httpsdate-time-source-tests" ]
+}
