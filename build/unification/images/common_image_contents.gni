@@ -81,7 +81,6 @@ _common_image_deps += [
   "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
-  "//src/devices/thermal/drivers/astro-thermistor",
   "//src/devices/usb/drivers/usb-peripheral-test",
   "//src/diagnostics/dlog",
   "//src/power/shutdown-shim:bootfs",
