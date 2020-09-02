@@ -739,7 +739,7 @@ const RingOutTestParameters kLargeRingOutNoBlockSize{
     .effect_block_size = 1,
     .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
     // Matches |kTargetRingoutBufferFrames| in effects_stage.cc
-    .ring_out_block_frames = 240,
+    .ring_out_block_frames = 480,
 };
 
 const RingOutTestParameters kMaxFramesPerBufferLowerThanRingOutFrames{

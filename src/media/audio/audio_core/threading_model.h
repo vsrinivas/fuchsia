@@ -112,22 +112,14 @@ enum class MixStrategy {
 
 class ThreadingModel {
  public:
-  // Parameters which control the deadline profile used for mixing threads.  These parameters end up
-  // directly leading to the high and low water mixing levels, and in combination with a device's
-  // external delay and fifo depth, the total best-case pipeline latency.
+  // Parameters which control the deadline profile used for mixing threads.
   //
-  // The current selected numbers imply the following.
-  // Our deadline is 5 mSec, therefore our low water mark (FIFO depth distance from the HW RD/WR
-  // pointer) is also 5 mSec.  Our capacity is 2 mSec, meaning that we need to get all of our mixing
-  // work done in 2 mSec, and we are functionally reserving (worst case) up to 40% of a core for
-  // overhead and for mixing.  Finally, our period _must_ be >= our deadline, and so it is also
-  // 5mSec.  This implies that our high water mark needs to be exactly 2x our low water mark and is
-  // 10mSec.
-  //
-  // So, a pipeline's total latency is currently going to be 10mSec + fifo depth + external delay.
-  static constexpr zx::duration kMixProfileCapacity = zx::usec(2200);
-  static constexpr zx::duration kMixProfileDeadline = zx::usec(5000);
-  static constexpr zx::duration kMixProfilePeriod = zx::usec(5000);
+  // Our deadline and period is 10 mSec and our capacity is 4.4 mSec. This means that we will
+  // receive 4.4 mSec of CPU time every 10mSec, and that 4.4 mSec may be scheduled at any point
+  // during that 10 mSec window.
+  static constexpr zx::duration kMixProfileCapacity = zx::usec(4'400);
+  static constexpr zx::duration kMixProfileDeadline = zx::usec(10'000);
+  static constexpr zx::duration kMixProfilePeriod = zx::usec(10'000);
 
   // Creates a |ThreadingModel| with a provided |MixStrategy|, which configures the behavior of
   // |AcquireMixDomain|.

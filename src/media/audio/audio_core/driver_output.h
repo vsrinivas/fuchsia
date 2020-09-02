@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace media::audio {
@@ -22,7 +23,8 @@ class DriverOutput : public AudioOutput {
   // TODO(13550): Revert these to 20/30 instead of 50/60. In the long term, get these into the
   // range of 5/10.
   static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
-  static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
+  static constexpr zx::duration kDefaultHighWaterNsec =
+      kDefaultLowWaterNsec + ThreadingModel::kMixProfilePeriod;
 
   DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                zx::channel initial_stream_channel, LinkMatrix* link_matrix,
