@@ -42,4 +42,5 @@ data_files = [
     { src = "src/render/shaders/motioncopy-srgb.comp.spv", dst = "data/shaders/motioncopy-srgb.comp.spv"},
     { src = "examples/static/lenna.png", dst = "data/static/lenna.png"},
     { src = "examples/static/baboon.png", dst = "data/static/baboon.png"},
+    { src = "examples/static/cross.png", dst = "data/static/cross.png"},
 ]

@@ -493,6 +493,7 @@ package("png-rs") {
   images = [
     "lenna.png",
     "baboon.png",
+    "cross.png",
   ]
 
   foreach(image, images) {

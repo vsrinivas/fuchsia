@@ -15,6 +15,7 @@ use std::{
     rc::Rc,
 };
 
+use anyhow::Error;
 use euclid::default::{Rect, Size2D};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
@@ -725,7 +726,7 @@ impl Context<Spinel> for SpinelContext {
     fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
-    ) -> Result<SpinelImage, png::DecodingError> {
+    ) -> Result<SpinelImage, Error> {
         let vulkan = &self.vulkan;
         let image = SpinelImage(self.images.len());
         self.images.push(VulkanImage::from_png(

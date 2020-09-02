@@ -10,6 +10,7 @@ use std::{
     u32,
 };
 
+use anyhow::Error;
 use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
@@ -112,7 +113,7 @@ pub trait Context<B: Backend> {
     fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
-    ) -> Result<B::Image, png::DecodingError>;
+    ) -> Result<B::Image, Error>;
     /// Returns the image at `image_index`.
     fn get_image(&mut self, image_index: u32) -> B::Image;
     /// Returns the `context`'s current image.

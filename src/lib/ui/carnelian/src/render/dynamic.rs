@@ -6,6 +6,7 @@ use crate::{
     },
     Point, ViewAssistantContext,
 };
+use anyhow::Error;
 use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fuchsia_framebuffer::PixelFormat;
 use std::{
@@ -125,7 +126,7 @@ impl Context {
     pub fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
-    ) -> Result<Image, png::DecodingError> {
+    ) -> Result<Image, Error> {
         Ok(Image {
             inner: match &mut self.inner {
                 ContextInner::Mold(ref mut context) => {

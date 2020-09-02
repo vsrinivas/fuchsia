@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{bail, ensure, Error};
 use std::{
     cell::Cell, ffi::c_void, io::Read, marker::PhantomPinned, ops::Deref, pin::Pin, ptr, slice,
     time::Duration,
@@ -307,11 +308,15 @@ impl VulkanImage {
         format: vk::Format,
         reader: &mut png::Reader<R>,
         id: SpinelImage,
-    ) -> Result<Self, png::DecodingError> {
+    ) -> Result<Self, Error> {
         let info = reader.info();
-        assert!(info.color_type == png::ColorType::RGBA);
+        let color_type = info.color_type;
+        ensure!(
+            color_type == png::ColorType::RGBA || color_type == png::ColorType::RGB,
+            "unsupported color type {:#?}",
+            color_type
+        );
         let (width, height) = info.size();
-        //let stride = width as usize * mem::size_of::<u32>();
         let vk = device_pointers(vk_i, device);
         let image = unsafe {
             let info =
@@ -322,7 +327,7 @@ impl VulkanImage {
         let mem_reqs = unsafe { init(|ptr| vk.GetImageMemoryRequirements(device, image, ptr)) };
 
         let mem_type_bits = mem_reqs.memoryTypeBits;
-        assert_ne!(mem_type_bits, 0);
+        ensure!(mem_type_bits != 0, "unsupported memory type bits: {}", mem_type_bits);
         let mem_type_index = mem_type_bits.trailing_zeros();
 
         let memory = unsafe {
@@ -359,15 +364,28 @@ impl VulkanImage {
             let src_row = reader.next_row()?.unwrap();
             match format {
                 vk::FORMAT_R8G8B8A8_UNORM | vk::FORMAT_R8G8B8A8_SRGB => {
-                    dst_row.copy_from_slice(src_row);
-                }
-                vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_B8G8R8A8_SRGB => {
-                    // Transfer row and convert to BGRA.
-                    for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
-                        dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+                    if color_type == png::ColorType::RGB {
+                        // Transfer row and convert to BGRA.
+                        for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
+                            dst.copy_from_slice(&[src[0], src[1], src[2], 0xff]);
+                        }
+                    } else {
+                        dst_row.copy_from_slice(src_row);
                     }
                 }
-                _ => panic!("Unsupported image format {}", format),
+                vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_B8G8R8A8_SRGB => {
+                    if color_type == png::ColorType::RGB {
+                        // Transfer row and convert to BGRA.
+                        for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
+                            dst.copy_from_slice(&[src[2], src[1], src[0], 0xff]);
+                        }
+                    } else {
+                        for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
+                            dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+                        }
+                    }
+                }
+                _ => bail!("Unsupported image format {}", format),
             }
         }
 

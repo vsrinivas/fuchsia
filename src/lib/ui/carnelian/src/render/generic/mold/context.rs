@@ -4,6 +4,7 @@
 
 use std::{cell::RefCell, collections::HashMap, io::Read, mem, ptr, u32};
 
+use anyhow::Error;
 use euclid::default::{Rect, Size2D, Vector2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_sysmem::{
@@ -276,7 +277,7 @@ impl Context<Mold> for MoldContext {
     fn new_image_from_png<R: Read>(
         &mut self,
         reader: &mut png::Reader<R>,
-    ) -> Result<MoldImage, png::DecodingError> {
+    ) -> Result<MoldImage, Error> {
         let image = MoldImage(self.images.len());
         self.images.push(RefCell::new(VmoImage::from_png(reader)?));
 
