@@ -63,9 +63,8 @@ zx::vmo ExtractBootfs(const zx::debuglog& log, const zx::vmar& vmar_self, const 
 
 zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
                          const zx::vmo& zbi_vmo) {
-  zx::vmo vmo;
-  check(log, zbi_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo), "cannot duplicate ZBI VMO\n");
-  zbitl::PermissiveView<zx::vmo> zbi(std::move(vmo));
+  zbitl::PermissiveView<zbitl::MapUnownedVmo> zbi(
+      zbitl::MapUnownedVmo{zx::unowned_vmo{zbi_vmo}, zx::unowned_vmar{vmar_self}});
 
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
     auto [header, payload] = *it;
