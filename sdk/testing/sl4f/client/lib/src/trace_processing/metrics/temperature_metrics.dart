@@ -22,15 +22,15 @@ const _aggregateMetricsOnly = 'aggregateMetricsOnly';
 List<TestCaseResults> temperatureMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   final duration = getTotalTraceDuration(model);
-  if (duration < TimeDelta.fromMilliseconds(10100)) {
+  if (duration < TimeDelta.fromMilliseconds(1100)) {
     _log.info(
         'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide temperature information');
     return [];
   }
   final temperatureReadings = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
-              category: 'system_metrics', name: 'temperature'),
-          'temperature')
+              category: 'power_manager', name: 'ThermalPolicy raw_temperature'),
+          'raw_temperature')
       .map((t) => t.toDouble());
 
   _log.info(
