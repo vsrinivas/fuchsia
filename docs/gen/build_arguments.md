@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:82
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,7 +24,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:89
+From //build/images/args.gni:88
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -47,7 +47,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:101
+From //build/images/args.gni:100
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -307,7 +307,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:131
+From //build/images/args.gni:130
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -493,7 +493,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:95
+From //build/images/args.gni:94
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -534,7 +534,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:98
+From //build/images/args.gni:97
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -595,13 +595,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/45ca490687af63766240e5a113f231b0e14473d7/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c4acae9f961a1b4b5ca6bba4dbfc8ffbce035470/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/45ca490687af63766240e5a113f231b0e14473d7/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c4acae9f961a1b4b5ca6bba4dbfc8ffbce035470/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -657,7 +657,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:59
+From //build/images/args.gni:58
 
 ### debian_guest_earlycon
 
@@ -744,7 +744,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:64
+From //build/images/args.gni:63
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -756,19 +756,7 @@ written to disk. Other teams and CQ do not need to worry about this flag.
 
 **Current value (from the default):** `false`
 
-From //src/ui/lib/escher/build_args.gni:26
-
-### escher_use_null_vulkan_config_on_host
-Using Vulkan on host (i.e. Linux) is an involved affair that involves
-downloading the Vulkan SDK, setting environment variables, and so forth...
-all things that are difficult to achieve in a CQ environment.  Therefore,
-by default we use a stub implementation of Vulkan which fails to create a
-VkInstance.  This allows everything to build, and also allows running Escher
-unit tests which don't require Vulkan.
-
-**Current value (from the default):** `true`
-
-From //src/ui/lib/escher/build_args.gni:12
+From //src/ui/lib/escher/build_args.gni:18
 
 ### escher_use_runtime_glsl
 Determines whether or not escher will build with the glslang and shaderc
@@ -778,7 +766,7 @@ runtime. Precompiled spirv code will be loaded into memory from disk instead.
 
 **Current value (from the default):** `false`
 
-From //src/ui/lib/escher/build_args.gni:18
+From //src/ui/lib/escher/build_args.gni:10
 
 ### exclude_testonly_syscalls
 If true, excludes syscalls with the [testonly] attribute.
@@ -828,7 +816,7 @@ From //build/config/BUILDCONFIG.gn:841
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:78
+From //build/images/args.gni:77
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -841,25 +829,24 @@ From //build/fidl/args.gni:8
 ### firmware_prebuilts
 List of prebuilt firmware blobs to include in update packages.
 
-Each entry in the list is a scope defining `path` and `type`. A build can
-only have a single firmware blob of each `type`.
-
-Note that `firmware_prebuilts_path_suffix` will be automatically appended to
-all `path` variables, so do not include the suffix here.
+Each entry in the list is a scope containing:
+ * `path`: path to the image (see also `firmware_prebuilts_path_suffix`)
+ * `type`: firmware type, a device-specific unique identifier
+ * `partition` (optional): if specified, the `fastboot flash` partition
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:44
+From //build/images/args.gni:43
 
 ### firmware_prebuilts_path_suffix
-Suffix to append to all `firmware_prebuilts` paths.
+Suffix to append to all `firmware_prebuilts` `path` variables.
 
 Typically this indicates the hardware revision, and is made available so
 that users can easily switch revisions using a single arg.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:50
+From //build/images/args.gni:49
 
 ### flutter_default_app
 
@@ -1008,7 +995,7 @@ Typically useful for initially flashing a device from zero-state.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:55
+From //build/images/args.gni:54
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
@@ -1150,7 +1137,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:108
+From //build/images/args.gni:107
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1618,7 +1605,7 @@ From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:67
+From //build/images/args.gni:66
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
@@ -1626,7 +1613,7 @@ From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:67
+From //build/images/args.gni:66
 
 ### minfs_maximum_bytes
 
@@ -1738,7 +1725,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:120
+From //build/images/args.gni:119
 
 ### persist_logs
 
@@ -1750,7 +1737,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:104
 
 ### platform_enable_user_pci
 
@@ -1762,7 +1749,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:79
+From //build/images/args.gni:78
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -1853,7 +1840,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:117
+From //build/images/args.gni:116
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2133,12 +2120,6 @@ Enables logging directly out to the terminal
 **Current value (from the default):** `false`
 
 From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#20)
-
-### signed_image
-
-**Current value (from the default):** `false`
-
-From //build/images/args.gni:77
 
 ### size_checker_input
 The input to the size checker.
@@ -2461,6 +2442,19 @@ to true to avoid build failures. See that flag's documentation for details.
 
 From //src/connectivity/network/BUILD.gn:10
 
+### use_null_vulkan_on_host
+
+Global arguments for whether we use a "null" Vulkan implementation on
+host vulkan_executables and vulkan_tests, so that any attempt to create a
+VkInstances or VkDevice will fail.
+
+This argument will affect all vulkan_{executable/test} build targets.
+
+
+**Current value (from the default):** `false`
+
+From //src/lib/vulkan/build/config.gni:31
+
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
 //src/media/lib/ffmpeg/README.md for details.  This is ignored when
@@ -2484,6 +2478,19 @@ memory allocator.
 **Current value (from the default):** `false`
 
 From //build/config/scudo/scudo.gni:10
+
+### use_swiftshader_vulkan_icd_on_host
+
+Global arguments for whether we use the SwiftShader Vulkan ICD on host
+vulkan_executables and vulkan_tests.
+
+This argument will affect all vulkan_{executable/test} build targets and
+it only works when use_null_vulkan_on_host is set to false.
+
+
+**Current value (from the default):** `true`
+
+From //src/lib/vulkan/build/config.gni:40
 
 ### use_thinlto
 Use ThinLTO variant of LTO if use_lto = true.
@@ -2546,6 +2553,27 @@ Enable verbose logging in virtmagma-related code
 **Current value (from the default):** `false`
 
 From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
+
+### vulkan_host_runtime_dir
+
+|vulkan_host_runtime_dir| is the path to Vulkan runtime libraries, which
+contains prebuilt Vulkan loader, Vulkan layers, SwiftShader Vulkan ICD,
+and descriptor files required to load the libraries.
+
+
+**Current value (from the default):** `"//prebuilt/third_party/vulkan_runtime/linux-x64"`
+
+From //src/lib/vulkan/build/config.gni:18
+
+### vulkan_host_sdk_dir
+
+|vulkan_host_sdk_dir| is the path to Vulkan SDK, which contains Vulkan
+headers and sources to Vulkan loader, layers and tools.
+
+
+**Current value (from the default):** `"//prebuilt/third_party/vulkansdk/linux/x86_64"`
+
+From //src/lib/vulkan/build/config.gni:11
 
 ### vulkan_sdk
 
@@ -2642,7 +2670,8 @@ List of arguments to populate /boot/config/devmgr in the Zedboot image.
 From //build/images/zedboot/zedboot_args.gni:18
 
 ### zircon_a_partition
-arguments to fx flash script
+Arguments to fx flash script (along with any `firmware_prebuilts` which
+specify a partition).
 
 **Current value (from the default):** `""`
 
