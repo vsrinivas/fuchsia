@@ -21,6 +21,7 @@
 namespace thermal {
 
 static constexpr uint32_t kMaxNtcChannels = 4;
+static constexpr uint32_t kMaxAdcChannels = 4;
 
 zx_status_t AstroThermistor::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
@@ -142,6 +143,11 @@ void AstroThermistor::DdkInit(ddk::InitTxn txn) {
       txn.Reply(status);
       return;
     }
+  }
+
+  // Expose all the adc channels via adc protocol
+  //  this includes channels which may not have a thermistor.
+  for (uint32_t i = 0; i < kMaxAdcChannels; i++) {
     status = AddRawChannel(i);
     if (status != ZX_OK) {
       txn.Reply(status);

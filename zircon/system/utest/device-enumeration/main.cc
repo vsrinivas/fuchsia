@@ -273,6 +273,16 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "aml-power-impl-composite",
       "composite-pd-armcore",
       "composite-pd-armcore/power-0",
+
+      // Thermistor/ADC
+      "class/adc/000",
+      "class/adc/001",
+      "class/adc/002",
+      "class/adc/003",
+      "class/temperature/000",
+      "class/temperature/001",
+      "class/temperature/002",
+      "class/temperature/003",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -484,6 +494,7 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "class/adc/000",
       "class/adc/001",
       "class/adc/002",
+      "class/adc/003",
       "class/temperature/000",
       "class/temperature/001",
       "class/temperature/002",
