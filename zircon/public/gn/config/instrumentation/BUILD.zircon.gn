@@ -2,48 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/clang.gni")
-
-declare_args() {
-  # Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
-  # options (before the `ASAN_OPTIONS` environment variable is read at
-  # runtime).  This can be set as a build argument to affect most "asan"
-  # variants in $variants (which see), or overridden in $toolchain_args in
-  # one of those variants.  Note that setting this nonempty may conflict
-  # with programs that define their own `__asan_default_options` C
-  # function.
-  asan_default_options = ""
-
-  # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
-  # options (before the `UBSAN_OPTIONS` environment variable is read at
-  # runtime).  This can be set as a build argument to affect most "ubsan"
-  # variants in $variants (which see), or overridden in $toolchain_args in
-  # one of those variants.  Note that setting this nonempty may conflict
-  # with programs that define their own `__ubsan_default_options` C
-  # function.
-  ubsan_default_options = "print_stacktrace=1:halt_on_error=1"
-}
-
-# TODO(45047): Temporary while leaks are plugged.
-# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
-# and then add:
-# ```
-#   # TODO(nnnnn): Fix the leaks and remove this.
-#   deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
-# ```
-# to the target that builds the leaky code.  When all leaky tests have been
-# marked that way, the asan_default_options default above will be removed.
-source_set("suppress-lsan.DO-NOT-USE-THIS") {
-  if (toolchain.tags + [ "asan" ] - [ "asan" ] != toolchain.tags) {
-    # See asan_default_options.c comments.
-    deps = [ ":asan_default_options" ]
-    if (current_os == "mac") {
-      ldflags = [ "-Wl,-defsym,_FUCHSIA_SUPPRESS_LSAN=1" ]
-    } else {
-      libs = [ "./suppress-lsan.ld" ]
-    }
-  }
-}
+import("$zx/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
 config("asan") {
   compiler_flags = [ "-fsanitize=address" ]
@@ -55,16 +14,26 @@ config("asan") {
   }
 }
 
-source_set("asan_default_options") {
-  if (!is_kernel) {
-    sources = [ "asan_default_options.c" ]
-    defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+sanitizer_default_options("asan_default_options") {
+  # asan options take precedence but ubsan options are used too.
+  deps = [ ":ubsan_default_options" ]
+}
 
-    # On Fuchsia, the ASan runtime is dynamically linked and needs to have
-    # the __asan_default_options symbol exported.  On systems where the
-    # ASan runtime is statically linked, it doesn't matter either way.
-    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
-  }
+# TODO(45047): Temporary while leaks are plugged.
+# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
+# and then add:
+# ```
+#   # TODO(nnnnn): Fix the leaks and remove this.
+#   deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+# ```
+# to the target that builds the leaky code.  When all leaky tests have been
+# marked that way, the asan_default_options default above will be removed.
+sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
+  visibility = [
+    "*",  # TODO(45047): constrain this and give each a TODO(nnnnn) comment
+  ]
+  args = [ "detect_leaks=0" ]
+  tags = [ "lsan" ]
 }
 
 config("ubsan") {
@@ -74,16 +43,7 @@ config("ubsan") {
   ldflags = compiler_flags
 }
 
-source_set("ubsan_default_options") {
-  if (ubsan_default_options != "") {
-    sources = [ "ubsan_default_options.c" ]
-    defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
-
-    # On Fuchsia, the Ubsan runtime is dynamically linked and needs to have
-    # the __ubsan_default_options symbol exported.  On systems where the
-    # ASan runtime is statically linked, it doesn't matter either way.
-    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
-  }
+sanitizer_default_options("ubsan_default_options") {
 }
 
 # ubsan-trap is pure instrumentation with no runtime.

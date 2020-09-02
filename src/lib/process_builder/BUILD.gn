@@ -137,13 +137,12 @@ config("static-pie-config") {
 executable("static_pie_test_util") {
   testonly = true
   sources = [ "test/static_pie_test_util.c" ]
-  configs += [ ":static-pie-config" ]
+  configs += [
+    ":static-pie-config",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
 
-  # Profiling instrumentation needs to be disabled too, but
-  # is not covered by `-fno-sanitize=all`.
-  if (toolchain_variant.name == "profile") {
-    configs -= [ "//build/config/profile" ]
-  }
+  exclude_toolchain_tags = [ "instrumented" ]
 }
 
 test_package("process_builder_tests") {

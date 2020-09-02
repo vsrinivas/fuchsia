@@ -651,8 +651,9 @@ _asan_variant = {
   }
   tags = [
     "asan",
-    "instrumented",
     "instrumentation-runtime",
+    "instrumented",
+    "lsan",
   ]
 }
 

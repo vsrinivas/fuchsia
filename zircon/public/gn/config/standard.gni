@@ -231,6 +231,17 @@ standard_sanitizer_variants = [
         "$zx/public/gn/config:frame_pointers",
         "$zx/public/gn/config/instrumentation:asan",
       ]
+      toolchain_vars = {
+        # This enables sanitizer_extra_options() targets.
+        sanitizer_default_options =
+            "$zx/public/gn/config/instrumentation:asan_default_options"
+
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # must be used in preference to ubsan when both are enabled.
+        runtime_deps_cflags = [ "-fsanitize=address" ]
+      }
       implicit_deps = [
         {
           types = [
@@ -238,20 +249,14 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+          add = [ toolchain_vars.sanitizer_default_options ]
         },
       ]
-      toolchain_vars = {
-        # This is the key for toolchain_runtime_deps() to find the right
-        # shared library dependencies for the instrumentation.  Note that
-        # the asan runtime includes ubsan but not vice versa, so this set
-        # must be used in preference to ubsan when both are enabled.
-        runtime_deps_cflags = [ "-fsanitize=address" ]
-      }
       tags = [
         "asan",
         "instrumentation-runtime",
         "instrumented",
+        "lsan",
         "useronly",
       ]
     }
@@ -260,6 +265,17 @@ standard_sanitizer_variants = [
     variant = {
       name = "ubsan"
       configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+      toolchain_vars = {
+        # This enables sanitizer_extra_options() targets.
+        sanitizer_default_options =
+            "$zx/public/gn/config/instrumentation:ubsan_default_options"
+
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # should be ignored and the asan set used instead.
+        runtime_deps_cflags = [ "-fsanitize=undefined" ]
+      }
       implicit_deps = [
         {
           types = [
@@ -267,16 +283,13 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:ubsan_default_options" ]
+          add = [ toolchain_vars.sanitizer_default_options ]
+
+          # The asan runtime trumps the standalone ubsan runtime and the
+          # `__ubsan_default_options()` would go unused.
+          unless_configs = [ "$zx/public/gn/config/instrumentation:asan" ]
         },
       ]
-      toolchain_vars = {
-        # This is the key for toolchain_runtime_deps() to find the right
-        # shared library dependencies for the instrumentation.  Note that
-        # the asan runtime includes ubsan but not vice versa, so this set
-        # should be ignored and the asan set used instead.
-        runtime_deps_cflags = [ "-fsanitize=undefined" ]
-      }
       tags = [
         "instrumentation-runtime",
         "instrumented",
@@ -334,6 +347,17 @@ standard_variants += [
 
         "$zx/public/gn/config/instrumentation:asan",
       ]
+      toolchain_vars = {
+        # This enables sanitizer_extra_options() targets.
+        sanitizer_default_options =
+            "$zx/public/gn/config/instrumentation:asan_default_options"
+
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # must be used in preference to ubsan when both are enabled.
+        runtime_deps_cflags = [ "-fsanitize=address" ]
+      }
       implicit_deps = [
         {
           types = [
@@ -341,16 +365,9 @@ standard_variants += [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+          add = [ toolchain_vars.sanitizer_default_options ]
         },
       ]
-      toolchain_vars = {
-        # This is the key for toolchain_runtime_deps() to find the right
-        # shared library dependencies for the instrumentation.  Note that
-        # the asan runtime includes ubsan but not vice versa, so this set
-        # must be used in preference to ubsan when both are enabled.
-        runtime_deps_cflags = [ "-fsanitize=address" ]
-      }
       tags = [
         "instrumentation-runtime",
         "instrumented",

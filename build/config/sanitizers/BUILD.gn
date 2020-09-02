@@ -4,52 +4,8 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/toolchain/variant.gni")
-
-declare_args() {
-  # Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
-  # options (before the `ASAN_OPTIONS` environment variable is read at
-  # runtime).  This can be set as a build argument to affect most "asan"
-  # variants in `known_variants` (which see), or overridden in
-  # toolchain_args in one of those variants.
-  #
-  # The default is ":" which doesn't affect any ASan behavior, but ensures that
-  # the ASan initializers run for all executable targets, including those that
-  # do not link C/C++ code. Note that this may conflict with programs that
-  # define their own `__asan_default_options` C function. Set this option to
-  # the empty string to support this.
-  asan_default_options = ":"
-
-  # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
-  # options (before the `UBSAN_OPTIONS` environment variable is read at
-  # runtime).  This can be set as a build argument to affect most "ubsan"
-  # variants in `known_variants` (which see), or overridden in
-  # toolchain_args in one of those variants.  Note that setting this
-  # nonempty may conflict with programs that define their own
-  # `__ubsan_default_options` C function.
-  ubsan_default_options = "print_stacktrace=1:halt_on_error=1"
-}
-
-# TODO(45047): Temporary while leaks are plugged.
-# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
-# and then add:
-# ```
-#   # TODO(nnnnn): Fix the leaks and remove this.
-#   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-# ```
-# to the target that builds the leaky code.  When all leaky tests have been
-# marked that way, the asan_default_options default above will be removed.
-source_set("suppress-lsan.DO-NOT-USE-THIS") {
-  if (configs + [ "//build/config/sanitizers:asan" ] -
-      [ "//build/config/sanitizers:asan" ] != configs) {
-    # See asan_default_options.c comments.
-    deps = [ ":asan_default_options" ]
-    if (current_os == "mac") {
-      ldflags = [ "-Wl,-defsym,_FUCHSIA_SUPPRESS_LSAN=1" ]
-    } else {
-      libs = [ "./suppress-lsan.ld" ]
-    }
-  }
-}
+import(
+    "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
 variant("asan") {
   common_flags = [ "-fsanitize=address" ]
@@ -81,25 +37,31 @@ variant("asan") {
   # on allocations and such, not just on errors.
   configs = [ "//build/config:frame_pointers" ]
 
-  if (asan_default_options != "") {
-    deps = [ ":asan_default_options" ]
-  }
+  deps = [ ":asan_default_options" ]
 }
 
-source_set("asan_default_options") {
-  visibility = [ ":*" ]
-  sources = [ "asan_default_options.c" ]
-  defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+sanitizer_default_options("asan_default_options") {
+  # asan options take precedence but ubsan options are used too.
+  deps = [ ":ubsan_default_options" ]
+}
 
-  # On Fuchsia, the ASan runtime is dynamically linked and needs to have
-  # the __asan_default_options symbol exported.  On systems where the
-  # ASan runtime is statically linked, it doesn't matter either way.
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
-
-  # This is the default on Fuchsia but not on all host platforms.
-  # It's necessary to link into Rust binaries, which are PIE even
-  # on platforms where C binaries are not PIE by default.
-  cflags = [ "-fPIE" ]
+# TODO(45047): Temporary while leaks are plugged.
+# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
+# and then add:
+# ```
+#   # TODO(nnnnn): Fix the leaks and remove this.
+#   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+# ```
+# to the target that builds the leaky code.  When all leaky tests have been
+# marked that way, the asan_default_options default above will be removed.
+sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
+  visibility = [
+    # TODO(45047): Constrain this and give each a TODO(nnnnn) comment.
+    # Then rename without the scare caps.
+    "*",
+  ]
+  args = [ "detect_leaks=0" ]
+  tags = [ "lsan" ]
 }
 
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
@@ -137,22 +99,14 @@ variant("ubsan") {
     rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
   }
 
-  if (ubsan_default_options != "") {
+  # If asan is also in use, it handles ubsan_default_options indirectly.
+  if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] ==
+      toolchain_variant.tags) {
     deps = [ ":ubsan_default_options" ]
   }
 }
 
-if (ubsan_default_options != "") {
-  source_set("ubsan_default_options") {
-    visibility = [ ":*" ]
-    sources = [ "ubsan_default_options.c" ]
-    defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
-
-    # On Fuchsia, the UBSan runtime is dynamically linked and needs to have
-    # the __ubsan_default_options symbol exported.  On systems where the
-    # UBSan runtime is statically linked, it doesn't matter either way.
-    configs -= [ "//build/config:symbol_visibility_hidden" ]
-  }
+sanitizer_default_options("ubsan_default_options") {
 }
 
 variant("fuzzer") {

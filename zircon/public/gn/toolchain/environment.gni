@@ -795,6 +795,13 @@ template("environment") {
                   remove += [ get_label_info(label, "label_no_toolchain") ]
                 }
               }
+              unless_configs = []
+              if (defined(dep.unless_configs)) {
+                foreach(label, dep.unless_configs) {
+                  unless_configs +=
+                      [ get_label_info(label, "label_no_toolchain") ]
+                }
+              }
               assert(add != [] || remove != [], "useless $dep")
             },
           ]

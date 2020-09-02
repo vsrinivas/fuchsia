@@ -13,6 +13,8 @@ import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
+import(
+    "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
 # TODO(fxb/32978): This is temporary until the kernel build is unified or
 # kernel PCI is removed.
@@ -160,37 +162,53 @@ declare_args() {
 # The Zircon GN is completely a puppet of this build.  This gen runs that gen.
 # See also :zircon below.
 if (current_toolchain == default_toolchain) {
-  # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
-  # the first thing that happens at all and it's synchronous so after this
-  # point we can read in files written by this gen step.
-  gn_cmd = [
-    "gen",
-    "-q",
-    "--root=" + rebase_path("//zircon", root_build_dir),
-    "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
-        "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
-        "# zircon_extra_args = { ... } to override settings below.$0x0a" +
-        "forward_variables_from($zircon_args, \"*\")",
-    "--export-compile-commands=$zircon_compdb_filter",
-    rebase_path(zircon_root_build_dir, root_build_dir),
-  ]
+  # The template scope makes invoker[build_argument] available.
+  template("_run_zircon_gn") {
+    assert(target_name == "zircon")
 
-  if (zircon_tracelog != "") {
-    gn_cmd += [ "--tracelog=" + rebase_path(zircon_tracelog, root_build_dir) ]
+    # Stuff in sanitizer_default_options arguments separately.  These can't be
+    # included in zircon_args via forward_variables_from() because GN diagnoses
+    # setting the same name in the scope object as "clobbering" a nonempty list
+    # variable in the global scope.
+    sanitizer_args = ""
+    foreach(arg, sanitizer_default_options_args) {
+      sanitizer_args += "$arg = ${invoker[arg]} "
+    }
+
+    # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
+    # the first thing that happens at all and it's synchronous so after this
+    # point we can read in files written by this gen step.
+    gn_cmd = [
+      "gen",
+      "-q",
+      "--root=" + rebase_path("//zircon", root_build_dir),
+      "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
+          "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
+          "# zircon_extra_args = { ... } to override settings below.$0x0a" +
+          sanitizer_args + "forward_variables_from($zircon_args, \"*\")",
+      "--export-compile-commands=$zircon_compdb_filter",
+      rebase_path(zircon_root_build_dir, root_build_dir),
+    ]
+
+    if (zircon_tracelog != "") {
+      gn_cmd += [ "--tracelog=" + rebase_path(zircon_tracelog, root_build_dir) ]
+    }
+
+    exec_script("//prebuilt/third_party/gn/${host_platform}/gn", gn_cmd)
+
+    exec_script("//build/zircon/populate_zircon_public.py",
+                [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
+                "",
+                [
+                  "$zircon_root_build_dir/legacy_dirs.json",
+                  "//build/unification/zircon_library_forward.gn",
+                  "//build/unification/zircon_library_mappings.json",
+                  "//build/zircon/lib_template.gn",
+                  "//build/zircon/tool_template.gn",
+                ])
   }
-
-  exec_script("//prebuilt/third_party/gn/${host_platform}/gn", gn_cmd)
-
-  exec_script("//build/zircon/populate_zircon_public.py",
-              [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
-              "",
-              [
-                "$zircon_root_build_dir/legacy_dirs.json",
-                "//build/unification/zircon_library_forward.gn",
-                "//build/unification/zircon_library_mappings.json",
-                "//build/zircon/lib_template.gn",
-                "//build/zircon/tool_template.gn",
-              ])
+  _run_zircon_gn("zircon") {
+  }
 }
 
 ###

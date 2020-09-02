@@ -29,6 +29,9 @@ all_variant_tags = [
   # as well.
   "asan",
 
+  # The `lsan` tag is used for variants that implement leak checking.
+  "lsan",
+
   # The `fuzzer` tag is used for variants that implement fuzzers only.
   "fuzzer",
 

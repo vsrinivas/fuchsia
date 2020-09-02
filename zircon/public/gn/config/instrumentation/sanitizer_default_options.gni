@@ -1,0 +1,267 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
+  # options (before the `ASAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "asan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  This can be a list of strings or a single string.
+  #
+  # Note that even if this is empty, programs in this build **cannot** define
+  # their own `__asan_default_options` C function.  Instead, they can use a
+  # sanitizer_extra_options() target in their `deps` and then any options
+  # injected that way can override that option's setting in this list.
+  asan_default_options = []
+
+  # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+  # options (before the `UBSAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "ubsan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  This can be a list of strings or a single string.
+  #
+  # Note that even if this is empty, programs in this build **cannot** define
+  # their own `__ubsan_default_options` C function.  Instead, they can use a
+  # sanitizer_extra_options() target in their `deps` and then any options
+  # injected that way can override that option's setting in this list.
+  ubsan_default_options = [
+    "print_stacktrace=1",
+    "halt_on_error=1",
+  ]
+}
+
+# This lists the GN build arguments declared above.
+# sanitizer_default_options() targets must have one of these names.
+sanitizer_default_options_args = [
+  "asan_default_options",
+  "ubsan_default_options",
+]
+
+# Adapt to being used in the Fuchsia GN build or in the Zircon build.
+if ("$zx/" == "//") {
+  _hidden_config = "$zx/public/gn/config:visibility_hidden"
+  _is_kernel = is_kernel
+
+  _tags = toolchain.tags
+
+  if (defined(toolchain.sanitizer_default_options)) {
+    _sanitizer_default_options = toolchain.sanitizer_default_options
+  }
+} else {
+  _hidden_config = "//build/config:symbol_visibility_hidden"
+  _is_kernel = false
+
+  if (defined(toolchain_variant.tags)) {
+    _tags = toolchain_variant.tags
+  } else {
+    _tags = []
+  }
+
+  if (_tags + [ "asan" ] - [ "asan" ] != _tags) {
+    _sanitizer_default_options =
+        "//build/config/sanitizers:asan_default_options"
+  } else if (_tags + [ "ubsan" ] - [ "ubsan" ] != _tags) {
+    _sanitizer_default_options =
+        "//build/config/sanitizers:ubsan_default_options"
+  } else if (_tags + [ "lsan" ] - [ "lsan" ] != _tags) {
+    _sanitizer_default_options =
+        "//build/config/sanitizers:lsan_default_options"
+  }
+}
+
+# Subroutine of the templates below.  A source_set() using the same source
+# file is defined, with differing defines depending on the invoker.
+template("_sanitizer_default_options_target") {
+  string = string_join(":", invoker.args)
+  nonempty = (string != "" || invoker.default) && !_is_kernel
+  if (invoker.default) {
+    # This is directly in the deps of each executable() target, so it will
+    # always be linked in directly.
+    type = "source_set"
+  } else if (nonempty) {
+    # This might only be in the executable() target's deps transitively via a
+    # static_library() or rust_library() target.  In that case, a source_set()
+    # would not have its object files propagated to the final executable()
+    # link.  So we play some shenanigans below to make sure the object file
+    # here never goes into a library but always goes into the final link.
+    type = "static_library"
+  } else {
+    type = "group"
+  }
+
+  target(type, target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                             "testonly",
+                           ])
+
+    if (nonempty) {
+      # On Fuchsia, the ASan runtime is dynamically linked and needs to have
+      # the __asan_default_options symbol exported.  In situations where the
+      # runtime is statically linked, it doesn't matter either way.
+      configs -= [ _hidden_config ]
+
+      # This is the default on Fuchsia but not on all host platforms.
+      # It's necessary to link into Rust binaries, which are PIE even
+      # on platforms where C binaries are not PIE by default.
+      cflags = [ "-fPIE" ]
+
+      defines = [
+        "DEFINE_SANITIZER_DEFAULT_OPTIONS=${invoker.default}",
+        "SANITIZER_DEFAULT_OPTIONS_NAME=${invoker.output_name}",
+        "SANITIZER_DEFAULT_OPTIONS_STRING=\"${string}\"",
+      ]
+
+      this_dir = "$zx/public/gn/config/instrumentation"
+      sources = [ "$this_dir/sanitizer_default_options.c" ]
+
+      if (type == "static_library") {
+        # The library archive is in the link, but there's no symbol reference
+        # that would bring the object into the link from that archive.  So we
+        # hijack the dependency on the library just to ensure that the object
+        # gets built, and then stuff it directly into the link with `libs`.
+        output_prefix_override = true
+        libs = process_file_template(
+                sources,
+                [ "{{source_out_dir}}/$target_name.{{source_file_part}}.o" ])
+      }
+    } else {
+      not_needed(invoker, [ "output_name" ])
+    }
+  }
+}
+
+# Provide the `*san_default_options` target for a sanitizer variant.
+#
+# This defines a source_set() target, whose $target_name is the same as the
+# name of a GN build argument in scope.  The template can't do declare_args()
+# itself because the actual source location of the declare_args() block
+# (rather than the template invocation) has to supply the documentation
+# string via a comment preceding the variable definition.  See the
+# `asan_default_options` documentation string for an example that explains
+# the semantics completely as each documentation string should.
+#
+# The sanitizer variant should set `toolchain_vars.sanitizer_default_options`
+# to this label, and also include it in `implicit_deps` for executable-like
+# targets.  The C function signature `const char* __$target_name(void)` is
+# defined by this target.
+#
+# Note this **always** links the `__$target_name` function into executables,
+# even if it just returns the empty string.  This means it always conflicts
+# with program source defining that function itself.  This could be avoided,
+# since any sanitizer_extra_options() could depend on source_set() like this
+# directly even if it were not directly in ${toolchain.implicit_deps}.
+# However, it has two benefits in return:
+#   1. Any code defining `__$target_name` breaks the (variant) build uniformly
+#      regardless of the `*_default_options` build argument settings used.
+#   2. This serves as a dummy C module linked into each program in the variant.
+#      This ensures the compiler-generated references that get the sanitizer
+#      runtime linked in and initialized at program startup are in each program
+#      that has no other C/C++ modules linked in.  This matters to e.g. a Rust
+#      link in an asan or lsan variant so it uses the sanitizer allocator even
+#      though the Rust-generated code itself doesn't call into the runtime.
+#      (This could be separated from the options callback function by just
+#      adding a dummy translation unit.  Since we need both we just use this.)
+#
+# Parameters
+#
+#   * deps
+#     - Optional: List of sanitizer_default_options() targets for other
+#       runtimes subsumed by this one.  If this is set, then the $target_name
+#       function will fold in the option strings from each of the other build
+#       arguments represented in `deps` as well.  Each option set in these
+#       other build arguments will be overridden by any setting for the same
+#       option in $target_name.
+#     - Type: list(label_no_toolchain)
+#
+template("sanitizer_default_options") {
+  assert(
+      sanitizer_default_options_args + [ target_name ] - [ target_name ] !=
+          sanitizer_default_options_args,
+      "sanitizer_default_options() target name must be listed in " +
+          "`sanitizer_default_options_args`: $sanitizer_default_options_args")
+  _sanitizer_default_options_target(target_name) {
+    # Fetch the build argument's value.  The invoker scope inherited it from
+    # the global scope after the declare_args() block defined it there, making
+    # it accessible programmatically here.
+    args = invoker[target_name]
+
+    # Handle a single-string argument for flexible build argument input.
+    if (args == "$args") {
+      args = [ args ]
+    }
+
+    # This always adds $args to the single default-options function that this
+    # toolchain actually uses.  If that's not the one named by this target,
+    # then this acts like a sanitizer_extra_options() to just add more
+    # options into the default set rather than defining the function itself.
+    if (defined(_sanitizer_default_options)) {
+      output_name = get_label_info(_sanitizer_default_options, "name")
+      default = get_label_info(":$target_name", "label_no_toolchain") ==
+                _sanitizer_default_options
+    } else {
+      # This will be an empty target in an unaffected toolchain.
+      args = []
+      output_name = ""
+      default = false
+    }
+
+    if (default) {
+      forward_variables_from(invoker, [ "deps" ])
+    } else {
+      not_needed(invoker, [ "deps" ])
+    }
+  }
+}
+
+# Provide additional defaults for sanitizer runtime options.
+#
+# This defines a source_set() target.  If the toolchain matches $tags, then
+# this contributes $args to the built-in default sanitizer runtime options in
+# programs that depend on this target.  This target can then be used in
+# `deps` of an executable or static library target to get $args into the
+# runtime options list.  Note that it does no good for a shared library
+# target to have this target in `deps`, and this won't be detected by GN.
+#
+# Parameters
+#
+#   * args
+#     - Required: List of "option=value" strings for the sanitizer runtime.
+#     - Type: list(string)
+#
+#   * tags
+#     - Required: The target defined is a no-op target in toolchains where
+#       $tags are not found in ${toolchain.tags}.  This makes it convenient
+#       to depend on this unconditionally.
+#     - Type: list(string)
+#
+template("sanitizer_extra_options") {
+  assert(defined(invoker.args),
+         "sanitizer_extra_options() requires `args` (a list of strings)")
+  assert(defined(invoker.tags),
+         "sanitizer_extra_options() requires `tags` (a list of strings)")
+  if (_tags + invoker.tags - invoker.tags == _tags) {
+    source_set(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+      not_needed(invoker, [ "args" ])
+    }
+  } else {
+    _sanitizer_default_options_target(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "args",
+                               "visibility",
+                               "testonly",
+                             ])
+      output_name = get_label_info(_sanitizer_default_options, "name")
+      default = false
+    }
+  }
+}
