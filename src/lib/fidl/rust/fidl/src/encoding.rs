@@ -391,14 +391,33 @@ impl<'a> Decoder<'a> {
             if decoder.next_handle < decoder.handles.len() {
                 return Err(Error::ExtraHandles);
             }
-            for i in padding_start..padding_end {
-                if decoder.buf[i] != 0 {
-                    return Err(Error::NonZeroPadding {
-                        padding_start: padding_start,
-                        non_zero_pos: i,
-                    });
+
+            let padding = padding_end - padding_start;
+            if padding > 0 {
+                // # Safety:
+                // padding_end = next_out_of_line <= decoder.buf.len() based on if statement above.
+                let last_u64 = unsafe {
+                    let last_u64_ptr = decoder.buf.get_unchecked(padding_end - 8);
+                    std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
+                };
+                // padding == 0 => mask == 0x0000000000000000
+                // padding == 1 => mask == 0xff00000000000000
+                // padding == 2 => mask == 0xffff000000000000
+                // ...
+                let mask = !(!0u64 >> padding * 8);
+                if last_u64 & mask != 0 {
+                    for i in padding_start..padding_end {
+                        if decoder.buf[i] != 0 {
+                            return Err(Error::NonZeroPadding {
+                                padding_start: padding_start,
+                                non_zero_pos: i,
+                            });
+                        }
+                    }
+                    panic!("padding bytes detected by mask {:x} but not found", mask);
                 }
             }
+
             Ok(())
         }
 
