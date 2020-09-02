@@ -448,8 +448,12 @@ pub(crate) async fn connect_to_best_network(
         let connect_req =
             client_fsm::ConnectRequest { network: network_id, credential: credential };
 
-        if let Err(e) = iface_manager.connect(connect_req).await {
-            warn!("failed to reconnect iface: {:?}", e);
+        match iface_manager.connect(connect_req).await {
+            Ok(receiver) => match receiver.await {
+                Ok(()) => {}
+                Err(e) => warn!("failed to reconnect iface: {:?}", e),
+            },
+            Err(e) => warn!("could not reconnect iface: {:?}", e),
         }
     } else {
         info!("No saved networks available to connect");

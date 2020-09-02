@@ -9,17 +9,20 @@ use {
         config_management::SavedNetworksManager,
         mode_management::iface_manager_types::*,
         mode_management::phy_manager::PhyManagerApi,
-        util::listener,
+        util::{future_with_metadata, listener},
     },
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async,
+    fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
     futures::{
         channel::{mpsc, oneshot},
+        future::{ready, BoxFuture},
         lock::Mutex,
-        select, StreamExt,
+        select,
+        stream::FuturesUnordered,
+        FutureExt, StreamExt,
     },
-    log::error,
+    log::{error, info},
     std::sync::Arc,
     void::Void,
 };
@@ -42,6 +45,12 @@ pub(crate) struct ApIfaceContainer {
     pub ap_state_machine: Box<dyn AccessPointApi + Send + Sync>,
 }
 
+#[derive(Clone, Debug)]
+pub struct StateMachineMetadata {
+    pub iface_id: u16,
+    pub role: fidl_fuchsia_wlan_device::MacRole,
+}
+
 /// Accounts for WLAN interfaces that are present and utilizes them to service requests that are
 /// made of the policy layer.
 pub(crate) struct IfaceManagerService {
@@ -53,6 +62,8 @@ pub(crate) struct IfaceManagerService {
     aps: Vec<ApIfaceContainer>,
     saved_networks: Arc<SavedNetworksManager>,
     client_event_sender: mpsc::Sender<client_fsm::ClientStateMachineNotification>,
+    fsm_futures:
+        FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
 }
 
 impl IfaceManagerService {
@@ -73,6 +84,7 @@ impl IfaceManagerService {
             aps: Vec::new(),
             saved_networks: saved_networks,
             client_event_sender,
+            fsm_futures: FuturesUnordered::new(),
         }
     }
 
@@ -132,10 +144,16 @@ impl IfaceManagerService {
             self.client_update_sender.clone(),
             self.client_event_sender.clone(),
             self.saved_networks.clone(),
-        );
+        )
+        .boxed();
 
-        // TODO(fxb/53749): Return this future and allow the policy service to monitor it.
-        fuchsia_async::Task::spawn(fut).detach();
+        // Begin running and monitoring the client state machine future.
+        let metadata = StateMachineMetadata {
+            iface_id: iface_id,
+            role: fidl_fuchsia_wlan_device::MacRole::Client,
+        };
+        let fut = future_with_metadata::FutureWithMetadata::new(metadata, fut);
+        self.fsm_futures.push(fut);
 
         Ok(ClientIfaceContainer {
             iface_id: iface_id,
@@ -193,8 +211,16 @@ impl IfaceManagerService {
             receiver,
             self.ap_update_sender.clone(),
             state_machine_start_sender,
-        );
-        fuchsia_async::Task::spawn(state_machine_fut).detach();
+        )
+        .boxed();
+
+        // Begin running and monitoring the AP state machine future.
+        let metadata = StateMachineMetadata {
+            iface_id: iface_id,
+            role: fidl_fuchsia_wlan_device::MacRole::Ap,
+        };
+        let fut = future_with_metadata::FutureWithMetadata::new(metadata, state_machine_fut);
+        self.fsm_futures.push(fut);
 
         Ok(ApIfaceContainer {
             iface_id: iface_id,
@@ -217,31 +243,51 @@ impl IfaceManagerService {
 
         Ok(())
     }
-    async fn disconnect(&mut self, network_id: ap_types::NetworkIdentifier) -> Result<(), Error> {
+    fn disconnect(
+        &mut self,
+        network_id: ap_types::NetworkIdentifier,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         // Find the client interface associated with the given network config and disconnect from
         // the network.
-        let client_count = self.clients.len();
-        for i in 0..client_count {
-            if self.clients[i].config.as_ref() == Some(&network_id) {
-                let (responder, receiver) = oneshot::channel();
-                match self.clients[i].client_state_machine.disconnect(responder) {
-                    Ok(()) => {}
-                    Err(e) => return Err(format_err!("failed to send disconnect: {:?}", e)),
-                }
-                self.clients[i].config = None;
+        let mut fsm_ack_receiver = None;
+        let mut iface_id = None;
 
-                match receiver.await {
-                    Ok(()) => return Ok(()),
-                    error => {
-                        error!("failed to disconnect client iface: {}", self.clients[i].iface_id);
-                        self.clients.remove(i);
-                        error?
+        for client in self.clients.iter_mut() {
+            if client.config.as_ref() == Some(&network_id) {
+                let (responder, receiver) = oneshot::channel();
+                match client.client_state_machine.disconnect(responder) {
+                    Ok(()) => {}
+                    Err(e) => {
+                        return Box::pin(async move {
+                            return Err(format_err!("failed to send disconnect: {:?}", e));
+                        });
                     }
                 }
+                client.config = None;
+                fsm_ack_receiver = Some(receiver);
+                iface_id = Some(client.iface_id);
+                break;
             }
         }
 
-        Ok(())
+        let receiver = match fsm_ack_receiver {
+            Some(receiver) => receiver,
+            None => return ready(Ok(())).boxed(),
+        };
+        let iface_id = match iface_id {
+            Some(iface_id) => iface_id,
+            None => return ready(Ok(())).boxed(),
+        };
+
+        let fut = async move {
+            match receiver.await {
+                Ok(()) => return Ok(()),
+                error => {
+                    Err(format_err!("failed to disconnect client iface {}: {:?}", iface_id, error))
+                }
+            }
+        };
+        return fut.boxed();
     }
 
     async fn connect(
@@ -347,47 +393,54 @@ impl IfaceManagerService {
         }
     }
 
-    async fn stop_client_connections(&mut self) -> Result<(), Error> {
-        // Disconnect and discard all of the configured client ifaces.
-        for client_iface in self.clients.drain(..) {
-            let mut client = client_iface.client_state_machine;
-            let (responder, receiver) = oneshot::channel();
-            match client.disconnect(responder) {
-                Ok(()) => {}
-                Err(e) => error!("failed to issue disconnect: {:?}", e),
-            }
-            match receiver.await {
-                Ok(()) => {}
-                Err(e) => error!("failed to disconnect: {:?}", e),
+    fn stop_client_connections(&mut self) -> BoxFuture<'static, Result<(), Error>> {
+        let client_ifaces: Vec<ClientIfaceContainer> = self.clients.drain(..).collect();
+        let phy_manager = self.phy_manager.clone();
+        let update_sender = self.client_update_sender.clone();
+
+        let fut = async move {
+            // Disconnect and discard all of the configured client ifaces.
+            for client_iface in client_ifaces {
+                let mut client = client_iface.client_state_machine;
+                let (responder, receiver) = oneshot::channel();
+                match client.disconnect(responder) {
+                    Ok(()) => {}
+                    Err(e) => error!("failed to issue disconnect: {:?}", e),
+                }
+                match receiver.await {
+                    Ok(()) => {}
+                    Err(e) => error!("failed to disconnect: {:?}", e),
+                }
+
+                let (responder, receiver) = oneshot::channel();
+                match client.exit(responder) {
+                    Ok(()) => {}
+                    Err(e) => error!("failed to issue exit: {:?}", e),
+                }
+                match receiver.await {
+                    Ok(()) => {}
+                    Err(e) => error!("failed to exit: {:?}", e),
+                }
             }
 
-            let (responder, receiver) = oneshot::channel();
-            match client.exit(responder) {
-                Ok(()) => {}
-                Err(e) => error!("failed to issue exit: {:?}", e),
-            }
-            match receiver.await {
-                Ok(()) => {}
-                Err(e) => error!("failed to exit: {:?}", e),
-            }
-        }
+            // Signal to the update listener that client connections have been disabled.
+            let update = listener::ClientStateUpdate {
+                state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+                networks: vec![],
+            };
+            if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
+            {
+                error!("Failed to send state update: {:?}", e)
+            };
 
-        // Signal to the update listener that client connections have been disabled.
-        let update = listener::ClientStateUpdate {
-            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
-            networks: vec![],
+            // Tell the PhyManager to stop all client connections.
+            let mut phy_manager = phy_manager.lock().await;
+            phy_manager.destroy_all_client_ifaces().await?;
+
+            Ok(())
         };
-        if let Err(e) =
-            self.client_update_sender.unbounded_send(listener::Message::NotifyListeners(update))
-        {
-            error!("Failed to send state update: {:?}", e)
-        };
 
-        // Tell the PhyManager to stop all client connections.
-        let mut phy_manager = self.phy_manager.lock().await;
-        phy_manager.destroy_all_client_ifaces().await?;
-
-        Ok(())
+        fut.boxed()
     }
 
     async fn start_client_connections(&mut self) -> Result<(), Error> {
@@ -437,54 +490,73 @@ impl IfaceManagerService {
         Ok(receiver)
     }
 
-    async fn stop_ap(&mut self, ssid: Vec<u8>, credential: Vec<u8>) -> Result<(), Error> {
+    fn stop_ap(
+        &mut self,
+        ssid: Vec<u8>,
+        credential: Vec<u8>,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         if let Some(removal_index) =
             self.aps.iter().position(|ap_container| match ap_container.config.as_ref() {
                 Some(config) => config.id.ssid == ssid && config.credential == credential,
                 None => false,
             })
         {
+            let phy_manager = self.phy_manager.clone();
             let ap_container = self.aps.remove(removal_index);
-            let stop_result =
-                Self::stop_and_exit_ap_state_machine(ap_container.ap_state_machine).await;
 
-            let mut phy_manager = self.phy_manager.lock().await;
-            phy_manager.destroy_ap_iface(ap_container.iface_id).await?;
+            let fut = async move {
+                let stop_result =
+                    Self::stop_and_exit_ap_state_machine(ap_container.ap_state_machine).await;
 
-            stop_result?;
+                let mut phy_manager = phy_manager.lock().await;
+                phy_manager.destroy_ap_iface(ap_container.iface_id).await?;
+
+                stop_result?;
+                Ok(())
+            };
+
+            return fut.boxed();
         }
 
-        Ok(())
+        return ready(Ok(())).boxed();
     }
 
     // Stop all APs, exit all of the state machines, and destroy all AP ifaces.
-    async fn stop_all_aps(&mut self) -> Result<(), Error> {
-        let mut failed_iface_deletions: u8 = 0;
+    fn stop_all_aps(&mut self) -> BoxFuture<'static, Result<(), Error>> {
+        let mut aps: Vec<ApIfaceContainer> = self.aps.drain(..).collect();
+        let phy_manager = self.phy_manager.clone();
 
-        for iface in self.aps.drain(..) {
-            match Self::stop_and_exit_ap_state_machine(iface.ap_state_machine).await {
-                Ok(()) => {}
-                Err(e) => {
-                    failed_iface_deletions += 1;
-                    error!("failed to stop AP: {}", e);
+        let fut = async move {
+            let mut failed_iface_deletions: u8 = 0;
+            for iface in aps.drain(..) {
+                match IfaceManagerService::stop_and_exit_ap_state_machine(iface.ap_state_machine)
+                    .await
+                {
+                    Ok(()) => {}
+                    Err(e) => {
+                        failed_iface_deletions += 1;
+                        error!("failed to stop AP: {}", e);
+                    }
+                }
+
+                let mut phy_manager = phy_manager.lock().await;
+                match phy_manager.destroy_ap_iface(iface.iface_id).await {
+                    Ok(()) => {}
+                    Err(e) => {
+                        failed_iface_deletions += 1;
+                        error!("failed to delete AP {}: {}", iface.iface_id, e);
+                    }
                 }
             }
 
-            let mut phy_manager = self.phy_manager.lock().await;
-            match phy_manager.destroy_ap_iface(iface.iface_id).await {
-                Ok(()) => {}
-                Err(e) => {
-                    failed_iface_deletions += 1;
-                    error!("failed to delete AP {}: {}", iface.iface_id, e);
-                }
+            if failed_iface_deletions == 0 {
+                return Ok(());
+            } else {
+                return Err(format_err!("failed to delete {} ifaces", failed_iface_deletions));
             }
-        }
+        };
 
-        if failed_iface_deletions == 0 {
-            return Ok(());
-        } else {
-            return Err(format_err!("failed to delete {} ifaces", failed_iface_deletions));
-        }
+        fut.boxed()
     }
 }
 
@@ -492,14 +564,30 @@ pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     mut requests: mpsc::Receiver<IfaceManagerRequest>,
 ) -> Result<Void, Error> {
+    // Client and AP state machines need to be allowed to run in order for several operations to
+    // complete.  In such cases, futures can be added to this list to progress them once the state
+    // machines have the opportunity to run.
+    let mut operation_futures = FuturesUnordered::new();
+
     loop {
         select! {
+            terminated_fsm = iface_manager.fsm_futures.select_next_some() => {
+                info!("state machine exited: {:?}", terminated_fsm.1);
+
+                // TODO(57140): The client state machine will be modified to exit on idle.  The
+                // reconnect process should be initiated here.
+            },
+            operation_result = operation_futures.select_next_some() => {},
             req = requests.select_next_some() => {
                 match req {
                     IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder }) => {
-                        if responder.send(iface_manager.disconnect(network_id).await).is_err() {
-                            error!("could not respond to DisconnectRequest");
-                        }
+                        let fut = iface_manager.disconnect(network_id);
+                        let disconnect_fut = async move {
+                            if responder.send(fut.await).is_err() {
+                                error!("could not respond to DisconnectRequest");
+                            }
+                        };
+                        operation_futures.push(disconnect_fut.boxed());
                     }
                     IfaceManagerRequest::Connect(ConnectRequest { request, responder }) => {
                         if responder.send(iface_manager.connect(request).await).is_err() {
@@ -532,9 +620,13 @@ pub(crate) async fn serve_iface_manager_requests(
                         }
                     }
                     IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest { responder }) => {
-                        if responder.send(iface_manager.stop_client_connections().await).is_err() {
-                            error!("could not respond to StopClientConnectionsRequest");
-                        }
+                        let fut = iface_manager.stop_client_connections();
+                        let stop_client_connections_fut = async move {
+                            if responder.send(fut.await).is_err() {
+                                error!("could not respond to StopClientConnectionsRequest");
+                            }
+                        };
+                        operation_futures.push(stop_client_connections_fut.boxed());
                     }
                     IfaceManagerRequest::StartClientConnections(StartClientConnectionsRequest { responder }) => {
                         if responder.send(iface_manager.start_client_connections().await).is_err() {
@@ -547,14 +639,22 @@ pub(crate) async fn serve_iface_manager_requests(
                         }
                     }
                     IfaceManagerRequest::StopAp(StopApRequest { ssid, password, responder }) => {
-                        if responder.send(iface_manager.stop_ap(ssid, password).await).is_err() {
-                            error!("could not respond to StopApRequest");
-                        }
+                        let stop_ap_fut = iface_manager.stop_ap(ssid, password);
+                        let stop_ap_fut = async move {
+                            if responder.send(stop_ap_fut.await).is_err() {
+                                error!("could not respond to StopApRequest");
+                            }
+                        };
+                        operation_futures.push(stop_ap_fut.boxed());
                     }
                     IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder }) => {
-                        if responder.send(iface_manager.stop_all_aps().await).is_err() {
-                            error!("could not respond to StopAllApsRequest");
-                        }
+                        let stop_all_aps_fut = iface_manager.stop_all_aps();
+                        let stop_all_aps_fut = async move {
+                            if responder.send(stop_all_aps_fut.await).is_err() {
+                                error!("could not respond to StopAllApsRequest");
+                            }
+                        };
+                        operation_futures.push(stop_all_aps_fut.boxed());
                     }
                 };
             }

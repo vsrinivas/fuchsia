@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use void::Void;
-
-use futures::{
-    future::{Future, FutureExt, FutureObj},
-    ready,
-    task::{Context, Poll},
+use {
+    futures::{
+        future::{Future, FutureExt, FutureObj},
+        ready,
+        task::{Context, Poll},
+    },
+    std::{marker::Unpin, pin::Pin},
+    void::Void,
 };
-use std::{marker::Unpin, pin::Pin};
 
 #[derive(Debug)]
 pub struct ExitReason(pub Result<(), anyhow::Error>);
