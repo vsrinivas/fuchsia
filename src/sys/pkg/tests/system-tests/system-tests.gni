@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/test_spec.gni")
+import("//build/testing/host_test.gni")
 
 # The service account that allows the test to download build artifacts.
 _environment_service_account =
@@ -76,21 +76,20 @@ template("system_test_upgrade_suite") {
     _test_name = get_label_info(test, "name")
     _test_binary = "$root_out_dir/$_test_name"
 
-    _spec_target_name = "${target_name}_${_test_name}_spec"
-    _deps += [ ":${_spec_target_name}" ]
+    _host_test_target_name = "${target_name}_${_test_name}"
+    _deps += [ ":${_host_test_target_name}" ]
 
-    _command = []
-    _command = [ rebase_path(_test_binary, root_build_dir) ]
+    _args = [ "-test.v" ]  # Print test detailed case status
 
     if (defined(invoker.release_builder)) {
-      _command += [
+      _args += [
         "-downgrade-builder-name",
         invoker.release_builder,
       ]
     }
 
     if (defined(invoker.release_build_id)) {
-      _command += [
+      _args += [
         "-downgrade-build-id",
         invoker.release_build_id,
       ]
@@ -99,14 +98,14 @@ template("system_test_upgrade_suite") {
     _service_account = _environment_service_account
     if (defined(invoker.service_account)) {
       assert(invoker.service_account != "",
-             "'${_spec_target_name}' cannot have an empty service_account")
+             "'${_host_test_target_name}' cannot have an empty service_account")
       _service_account = invoker.service_account
     }
 
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
-             "'${_spec_target_name}' cannot have an empty timeout")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty timeout")
+      _args += [
         "-test.timeout",
         invoker.timeout,
       ]
@@ -114,8 +113,8 @@ template("system_test_upgrade_suite") {
 
     if (defined(invoker.pave_timeout)) {
       assert(invoker.pave_timeout != "",
-             "'${_spec_target_name}' cannot have an empty pave timeout")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty pave timeout")
+      _args += [
         "-pave-timeout",
         invoker.pave_timeout,
       ]
@@ -123,8 +122,8 @@ template("system_test_upgrade_suite") {
 
     if (defined(invoker.cycle_timeout)) {
       assert(invoker.cycle_timeout != "",
-             "'${_spec_target_name}' cannot have an empty cycle timeout")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty cycle timeout")
+      _args += [
         "-cycle-timeout",
         invoker.cycle_timeout,
       ]
@@ -132,30 +131,29 @@ template("system_test_upgrade_suite") {
 
     if (defined(invoker.cycle_count)) {
       assert(invoker.cycle_count != "",
-             "'${_spec_target_name}' cannot have an empty cycle count")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty cycle count")
+      _args += [
         "-cycle-count",
         invoker.cycle_count,
       ]
     }
 
     if (defined(invoker.ota_to_recovery) && invoker.ota_to_recovery) {
-      _command += [ "-ota-to-recovery" ]
+      _args += [ "-ota-to-recovery" ]
     }
 
     if (defined(invoker.installer)) {
       assert(invoker.installer != "",
-             "'${_spec_target_name}' cannot have an empty installer")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty installer")
+      _args += [
         "-installer",
         invoker.installer,
       ]
     }
 
-    test_spec(_spec_target_name) {
-      target = ":${invoker.target_name}"
-      path = _test_binary
-      command = _command
+    host_test(_host_test_target_name) {
+      binary_path = _test_binary
+      args = _args
       deps = [ test ]
 
       environments = []
@@ -209,16 +207,15 @@ template("system_test_reboot_suite") {
     _test_name = get_label_info(test, "name")
     _test_binary = "$root_out_dir/$_test_name"
 
-    _spec_target_name = "${target_name}_${_test_name}_spec"
-    _deps += [ ":${_spec_target_name}" ]
+    _host_test_target_name = "${target_name}_${_test_name}"
+    _deps += [ ":${_host_test_target_name}" ]
 
-    _command = []
-    _command = [ rebase_path(_test_binary, root_build_dir) ]
+    _args = [ "-test.v" ]  # Print test detailed case status
 
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
-             "'${_spec_target_name}' cannot have an empty timeout")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty timeout")
+      _args += [
         "-test.timeout",
         invoker.timeout,
       ]
@@ -226,8 +223,8 @@ template("system_test_reboot_suite") {
 
     if (defined(invoker.cycle_timeout)) {
       assert(invoker.cycle_timeout != "",
-             "'${_spec_target_name}' cannot have an empty cycle timeout")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty cycle timeout")
+      _args += [
         "-cycle-timeout",
         invoker.cycle_timeout,
       ]
@@ -235,17 +232,16 @@ template("system_test_reboot_suite") {
 
     if (defined(invoker.cycle_count)) {
       assert(invoker.cycle_count != "",
-             "'${_spec_target_name}' cannot have an empty cycle count")
-      _command += [
+             "'${_host_test_target_name}' cannot have an empty cycle count")
+      _args += [
         "-cycle-count",
         invoker.cycle_count,
       ]
     }
 
-    test_spec(_spec_target_name) {
-      target = ":${invoker.target_name}"
-      path = _test_binary
-      command = _command
+    host_test(_host_test_target_name) {
+      binary_path = _test_binary
+      args = _args
       deps = [ test ]
       environments = invoker.environments
     }
