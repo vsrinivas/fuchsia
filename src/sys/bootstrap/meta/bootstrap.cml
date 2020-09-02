@@ -190,6 +190,12 @@
             dependency: "weak_for_migration",
         },
         {
+            directory: "/factory",
+            from: "#fshost",
+            to: [ "#driver_manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
             directory: "/tmp",
             from: "#fshost",
             to: [ "#driver_manager" ],

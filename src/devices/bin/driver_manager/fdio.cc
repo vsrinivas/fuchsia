@@ -61,6 +61,7 @@ const static struct {
     //{ "/hub",       "hub",       FS_HUB,      FdioAction::CloneDir },
     { "/install",   "install",   FS_INSTALL,  FdioAction::CloneDir },
     { "/durable",   "durable",   FS_DURABLE,  FdioAction::CloneDir },
+    { "/factory",   "factory",   FS_FACTORY,  FdioAction::CloneDir },
     { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::CloneDir },
     { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
     { "/system",    "system",    FS_SYSTEM,   FdioAction::CloneDir },
