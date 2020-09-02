@@ -30,6 +30,7 @@
 #define FS_TMP      0x0400
 #define FS_HUB      0x0800
 #define FS_BIN      0x1000
+#define FS_DURABLE  0x2000
 #define FS_ALL      0xFFFF
 
 // clang-format on

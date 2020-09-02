@@ -52,6 +52,10 @@
             directory: "/install",
             rights: [ "rw*" ],
         },
+        {
+            directory: "/durable",
+            rights: [ "rw*" ],
+        },
 
         // TODO: this volume directory is only used by the paver lib in netsvc under
         // driver_manager. The paver lib could create its own memfs instead, so
