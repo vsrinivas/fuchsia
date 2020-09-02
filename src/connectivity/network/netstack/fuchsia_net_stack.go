@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync/atomic"
 	"syscall/zx/fidl"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -501,11 +502,22 @@ func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServ
 }
 
 type logImpl struct {
-	logger *syslog.Logger
+	logger     *syslog.Logger
+	logPackets *uint32
 }
 
 func (li *logImpl) SetLogLevel(_ fidl.Context, level logger.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
 	li.logger.SetSeverity(syslog.LogLevel(level))
-	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetSyslogLevel: %s", level)
+	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetLogLevel: %s", level)
 	return stack.LogSetLogLevelResultWithResponse(stack.LogSetLogLevelResponse{}), nil
+}
+
+func (li *logImpl) SetLogPackets(_ fidl.Context, enabled bool) error {
+	var val uint32
+	if enabled {
+		val = 1
+	}
+	atomic.StoreUint32(li.logPackets, val)
+	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetLogPackets: %t", enabled)
+	return nil
 }

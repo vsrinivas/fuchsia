@@ -230,5 +230,12 @@ protocol Stack {
 [Discoverable]
 protocol Log {
     /// Dynamically set a syslog level.
+    // TODO(fxbug.dev/54198): replace by responding to the system wide
+    // fuchsia.logger.LogSink.OnInterestChanged event.
     SetLogLevel(fuchsia.logger.LogLevelFilter level) -> () error Error;
+
+    /// Dynamically set packet logging.
+    // TODO(fxbug.dev/42432): replace with optional packet captures in Inspect
+    // output.
+    SetLogPackets(bool enabled) -> ();
 };

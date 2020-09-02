@@ -426,7 +426,10 @@ func Main() {
 	}
 
 	{
-		stub := stack.LogWithCtxStub{Impl: &logImpl{logger: l}}
+		stub := stack.LogWithCtxStub{Impl: &logImpl{
+			logger:     l,
+			logPackets: &sniffer.LogPackets,
+		}}
 		appCtx.OutgoingService.AddService(
 			stack.LogName,
 			func(ctx fidl.Context, c zx.Channel) error {

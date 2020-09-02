@@ -404,6 +404,10 @@ async fn do_log(cmd: opts::LogEnum, log: LogProxy) -> Result<(), Error> {
             let () = stack_fidl!(log.set_log_level(log_level.into()), "error setting log level")?;
             info!("log level set to {:?}", log_level);
         }
+        LogEnum::SetPackets(LogSetPackets { enabled }) => {
+            let () = log.set_log_packets(enabled).await.context("error setting log packets")?;
+            info!("log packets set to {:?}", enabled);
+        }
     }
     Ok(())
 }

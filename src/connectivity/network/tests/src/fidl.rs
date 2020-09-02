@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
+use fidl::endpoints::create_endpoints;
+use fidl_fuchsia_logger;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 use fuchsia_async::TimeoutExt as _;
-use futures::{FutureExt as _, TryStreamExt as _};
+use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, std_ip};
 use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_macros::variants_test;
@@ -314,6 +316,64 @@ async fn add_remove_interface_address_errors() -> Result {
             message: "prefix length exceeds address length".to_string(),
         },
     );
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_log_packets() -> Result {
+    let name = "test_log_packets";
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack_log) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::LogMarker, _>(name)
+        .context("failed to create environment")?;
+    let log = env
+        .connect_to_service::<fidl_fuchsia_logger::LogMarker>()
+        .context("failed to connect to log")?;
+    let (client_end, server_end) = create_endpoints::<fidl_fuchsia_logger::LogListenerSafeMarker>()
+        .context("failed to create log listener endpoints")?;
+
+    stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
+
+    let localhost_unspecified =
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), 0);
+    let sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, localhost_unspecified)
+        .await
+        .context("failed to create socket")?;
+
+    let _: usize = sock.send_to(&[1u8, 2, 3, 4], localhost_unspecified).await?;
+    log.listen_safe(client_end, None).context("failed to call listen_safe")?;
+
+    let udp_send_pattern = format!("send udp {}", std::net::Ipv4Addr::LOCALHOST);
+    server_end
+        .into_stream()?
+        .map_err(anyhow::Error::new)
+        .inspect(|request| {
+            println!("received LogListenerSafeRequest: {:#?}", request);
+        })
+        .map(|request| match request {
+            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::LogMany { log, responder }) => {
+                let () = responder.send().context("failed to acknowledge log request")?;
+                Ok(log)
+            }
+            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::Log { log, responder }) => {
+                let () = responder.send().context("failed to acknowledge log request")?;
+                Ok(vec![log])
+            }
+            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::Done { control_handle: _ }) => {
+                Ok(Vec::new())
+            }
+            Err(err) => Err(err),
+        })
+        .try_filter(|logs| {
+            futures::future::ready(logs.iter().any(|log| log.msg.contains(&udp_send_pattern)))
+        })
+        .try_next()
+        .await?
+        .ok_or(anyhow::anyhow!(
+            "got no logs containing \"{}\" in response to fuchsia.logger.Log.ListenSafe",
+            udp_send_pattern
+        ))?;
 
     Ok(())
 }

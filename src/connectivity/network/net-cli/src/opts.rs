@@ -323,6 +323,7 @@ pub struct Log {
 #[argh(subcommand)]
 pub enum LogEnum {
     SetLevel(LogSetLevel),
+    SetPackets(LogSetPackets),
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -332,6 +333,15 @@ pub struct LogSetLevel {
     #[argh(positional, from_str_fn(parse_log_level_str))]
     /// log level
     pub log_level: logger::LogLevelFilter,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set-packets")]
+/// log packets to stdout
+pub struct LogSetPackets {
+    #[argh(switch)]
+    /// log level
+    pub enabled: bool,
 }
 
 #[derive(FromArgs, Clone, Debug)]
