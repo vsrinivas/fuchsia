@@ -37,16 +37,9 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 }
 
+using wlan::testing::IWL_TRANS_GET_TRANS_SIM;
 using wlan::testing::SimMvm;
-
-// The struct to store the internal state of the simulated firmware.
-struct trans_sim_priv {
-  SimMvm* fw;
-};
-
-static struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* trans) {
-  return (struct trans_sim_priv*)trans->trans_specific;
-}
+using wlan::testing::trans_sim_priv;
 
 // Notify the mvm->notif_wait to unblock the waiting.
 static void unblock_notif_wait(struct iwl_trans* trans) {
@@ -181,7 +174,7 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
     .suspend = iwl_trans_sim_suspend,
     .resume = iwl_trans_sim_resume,
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     void (*d3_suspend)(struct iwl_trans* trans, bool test, bool reset);
     int (*d3_resume)(struct iwl_trans* trans, enum iwl_d3_status* status, bool test, bool reset);
 
@@ -305,10 +298,7 @@ zx_status_t TransportSim::Init() {
   return transport_sim_bind(this, fake_ddk::kFakeParent, &iwl_trans_);
 }
 
-void TransportSim::Release() {
-  transport_sim_release(iwl_trans_);
-}
-
+void TransportSim::Release() { transport_sim_release(iwl_trans_); }
 
 }  // namespace testing
 }  // namespace wlan

@@ -19,6 +19,19 @@
 namespace wlan {
 namespace testing {
 
+// The struct to store the internal state of the simulated firmware.
+struct trans_sim_priv {
+  SimMvm* fw;
+
+  // The pointer pointing back to a Test case for mock functions.  This must be initialized before
+  // mock functions are called.
+  void* test;
+};
+
+static inline struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* trans) {
+  return (struct trans_sim_priv*)trans->trans_specific;
+}
+
 class TransportSim : public SimMvm {
  public:
   explicit TransportSim(::wlan::simulation::Environment* env) : SimMvm(env), iwl_trans_(nullptr) {}
