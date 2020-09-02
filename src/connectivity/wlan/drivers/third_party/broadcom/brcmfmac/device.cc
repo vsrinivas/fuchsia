@@ -107,10 +107,10 @@ zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
-  const char* role = req->role == WLAN_INFO_MAC_ROLE_CLIENT ? "client" :
-                     req->role == WLAN_INFO_MAC_ROLE_AP ? "ap" :
-                     req->role == WLAN_INFO_MAC_ROLE_MESH ? "mesh" :
-                     "unknown type";
+  const char* role = req->role == WLAN_INFO_MAC_ROLE_CLIENT ? "client"
+                     : req->role == WLAN_INFO_MAC_ROLE_AP   ? "ap"
+                     : req->role == WLAN_INFO_MAC_ROLE_MESH ? "mesh"
+                                                            : "unknown type";
 
   if (req->has_init_mac_addr) {
     BRCMF_DBG(WLANPHY, "Creating %s interface (mac: %02x:%02x:%02x:%02x:%02x:%02x)", role,
@@ -146,9 +146,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       }
 
       WlanInterface* interface = nullptr;
-      if ((status = WlanInterface::Create(this, kClientInterfaceName,
-                                          &brcmf_pub_->iflist[kClientInterfaceId]->vif->wdev,
-                                          &interface)) != ZX_OK) {
+      if ((status = WlanInterface::Create(this, kClientInterfaceName, wdev, &interface)) != ZX_OK) {
         return status;
       }
 

@@ -24,6 +24,8 @@ constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kFakeMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x02});
+const char kFakeClientName[] = "fake-client-iface";
+const char kFakeApName[] = "fake-ap-iface";
 
 class DynamicIfTest : public SimTest {
  public:
@@ -58,6 +60,8 @@ class DynamicIfTest : public SimTest {
  protected:
   SimInterface client_ifc_;
   SimInterface softap_ifc_;
+  void CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const char iface_name[],
+                               SimInterface& ifc);
 };
 
 void DynamicIfTest::PhyQuery(wlanphy_impl_info_t* out_info) {
@@ -176,6 +180,41 @@ TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   DeleteInterface(client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const char iface_name[],
+                                            SimInterface& ifc) {
+  brcmf_simdev* sim = device_->GetSim();
+  wireless_dev* wdev = nullptr;
+
+  EXPECT_EQ(ZX_OK, ifc.Init(env_, role));
+  wlanphy_impl_create_iface_req_t req = {
+      .role = role,
+      .sme_channel = ifc.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, iface_name, nullptr, &req, &wdev));
+  EXPECT_NE(nullptr, wdev);
+  EXPECT_NE(nullptr, wdev->netdev);
+  EXPECT_EQ(wdev->iftype, role);
+
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// This test verifies brcmf_cfg80211_add_iface() behavior with respect to
+// the wdev_out argument and the client role.
+TEST_F(DynamicIfTest, CreateClientWritesWdev) {
+  Init();
+  CheckAddIfaceWritesWdev(WLAN_INFO_MAC_ROLE_CLIENT, kFakeClientName, client_ifc_);
+}
+
+// This test verifies brcmf_cfg80211_add_iface() behavior with respect to
+// the wdev_out argument and the AP role.
+TEST_F(DynamicIfTest, CreateApWritesWdev) {
+  Init();
+  CheckAddIfaceWritesWdev(WLAN_INFO_MAC_ROLE_AP, kFakeApName, softap_ifc_);
 }
 
 TEST_F(DynamicIfTest, DualInterfaces) {

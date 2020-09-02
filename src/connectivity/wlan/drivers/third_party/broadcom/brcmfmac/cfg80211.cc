@@ -581,6 +581,11 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
             return err;
           }
         }
+
+        if (wdev_out != nullptr) {
+          *wdev_out = wdev;
+        }
+
         return ZX_OK;
       } else {
         return ZX_ERR_NO_MEMORY;
