@@ -68,6 +68,16 @@ declare_args() {
 
   # For build/images:fvm.blob.sparse.blk, use this argument.
   blob_blobfs_maximum_bytes = ""
+
+  # Specifying these variables will generate a NAND FVM image suitable for
+  # directly flashing via fastboot. The NAND characteristics are required
+  # in order to properly initialize the FTL metadata in the OOB area.
+  # `max_fvm_size` should also be nonzero or else minfs will not have any
+  # room to initialize on boot.
+  fvm_ftl_nand_page_size = ""
+  fvm_ftl_nand_oob_size = ""
+  fvm_ftl_nand_pages_per_block = ""
+  fvm_ftl_nand_block_count = ""
 }
 
 # Build an FVM partition
@@ -114,31 +124,33 @@ template("generate_fvm") {
     if (defined(invoker.with_empty_minfs) && invoker.with_empty_minfs) {
       args += [ "--with-empty-minfs" ]
     }
-    foreach(part, invoker.partitions) {
-      args += [ "--${part.type}" ]
-      deps += [ part.dep ]
-      dep_outputs = []  # Reset after last iteration.
-      dep_outputs = get_target_outputs(part.dep)
-      sources += [ dep_outputs[0] ]
-      args += [ rebase_path(dep_outputs[0], root_build_dir) ]
-      if (defined(part.minimum_inodes) && "${part.minimum_inodes}" != "") {
-        args += [
-          "--minimum-inodes",
-          "${part.minimum_inodes}",
-        ]
-      }
-      if (defined(part.minimum_data_bytes) &&
-          "${part.minimum_data_bytes}" != "") {
-        args += [
-          "--minimum-data-bytes",
-          "${part.minimum_data_bytes}",
-        ]
-      }
-      if (defined(part.maximum_bytes) && "${part.maximum_bytes}" != "") {
-        args += [
-          "--maximum-bytes",
-          "${part.maximum_bytes}",
-        ]
+    if (defined(invoker.partitions)) {
+      foreach(part, invoker.partitions) {
+        args += [ "--${part.type}" ]
+        deps += [ part.dep ]
+        dep_outputs = []  # Reset after last iteration.
+        dep_outputs = get_target_outputs(part.dep)
+        sources += [ dep_outputs[0] ]
+        args += [ rebase_path(dep_outputs[0], root_build_dir) ]
+        if (defined(part.minimum_inodes) && "${part.minimum_inodes}" != "") {
+          args += [
+            "--minimum-inodes",
+            "${part.minimum_inodes}",
+          ]
+        }
+        if (defined(part.minimum_data_bytes) &&
+            "${part.minimum_data_bytes}" != "") {
+          args += [
+            "--minimum-data-bytes",
+            "${part.minimum_data_bytes}",
+          ]
+        }
+        if (defined(part.maximum_bytes) && "${part.maximum_bytes}" != "") {
+          args += [
+            "--maximum-bytes",
+            "${part.maximum_bytes}",
+          ]
+        }
       }
     }
   }
