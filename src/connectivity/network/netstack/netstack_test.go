@@ -347,7 +347,8 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 
 	// Give a generous timeout for the closed channel to be detected.
-	timeout := time.After(5 * time.Second)
+	timeout := make(chan struct{})
+	time.AfterFunc(5*time.Second, func() { close(timeout) })
 	for _, ch := range channels {
 		select {
 		case <-ch.ch:

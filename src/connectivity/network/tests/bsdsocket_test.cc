@@ -457,7 +457,7 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect = static_cast<uint8_t>(set);
   if (IsTCP()
-#if defined(__linux__)
+#if !defined(__Fuchsia__)
       // gvisor-netstack`s implemention of setsockopt(..IPV6_TCLASS..)
       // clears the ECN bits from the TCLASS value. This keeps gvisor
       // in parity with the Linux test-hosts that run a custom kernel.
@@ -1326,9 +1326,10 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
 
   // Wait for the connection to close.
   {
-    struct pollfd pfd = {};
-    pfd.fd = client.get();
-    pfd.events = POLLIN;
+    struct pollfd pfd = {
+        .fd = client.get(),
+        .events = POLLIN,
+    };
 
     int n = poll(&pfd, 1, kTimeout);
     ASSERT_GE(n, 0) << strerror(errno);
@@ -1345,7 +1346,7 @@ TEST(NetStreamTest, CloseDuringConnect) {
 }
 
 TEST(NetStreamTest, ShutdownDuringConnect) {
-#if !defined(__linux__)
+#if defined(__Fuchsia__)
   GTEST_SKIP() << "TODO(fxbug.dev/35594): shutdown doesn't work on listeners";
 #endif
   TestHangupDuringConnect([](fbl::unique_fd* listener) {
@@ -1438,20 +1439,21 @@ TEST(NetStreamTest, PeerClosedPOLLOUT) {
 
   EXPECT_EQ(close(clientfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {};
-  pfd.fd = connfd;
-  pfd.events = POLLOUT;
+  struct pollfd pfd = {
+      .fd = connfd,
+      .events = POLLOUT,
+  };
   int n = poll(&pfd, 1, kTimeout);
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
-#if defined(__linux__)
-  EXPECT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
-#else
+#if defined(__Fuchsia__)
   // TODO(crbug.com/1005300): we should check that revents is exactly
   // OUT|ERR|HUP. Currently, this is a bit racey, and we might see OUT and HUP
   // but not ERR due to the hack in socket_server.go which references this same
   // bug.
   EXPECT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
+#else
+  EXPECT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
 #endif
 
   EXPECT_EQ(close(connfd), 0) << strerror(errno);
@@ -1536,16 +1538,16 @@ TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
   // TODO(eyalsoha): Decide if we want to match Linux's behaviour.  It writes to
   // only the first optlen bytes of the timeval.
   EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, &actual_tv, &optlen),
-#if defined(__linux__)
+#if defined(__Fuchsia__)
+            -1);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
+#else
             0)
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv) - 7);
   struct timeval linux_expected_tv = expected_tv;
   memset(((char*)&linux_expected_tv) + optlen, 0, sizeof(linux_expected_tv) - optlen);
   EXPECT_EQ(memcmp(&actual_tv, &linux_expected_tv, sizeof(actual_tv)), 0);
-#else
-            -1);
-  EXPECT_EQ(errno, EINVAL) << strerror(errno);
 #endif
 
   // Setting it without enough space should fail gracefully.
@@ -1887,7 +1889,7 @@ TEST(NetStreamTest, ReadBeforeConnect) {
   //     accept queue after handshake completion.
   // (2) a test client that keeps trying to establish connection with
   //     server, but remains in SYN-SENT.
-#if defined(__linux__)
+#if !defined(__Fuchsia__)
   // TODO(gvisor.dev/issue/3153): Unlike Linux, gVisor does not complete
   // handshake for a connection when listen backlog is zero. Hence, we
   // do not maintain the precursor client connection on Fuchsia.
@@ -1956,7 +1958,7 @@ TEST(NetStreamTest, ReadBeforeConnect) {
   // Wait for the task to be blocked on read.
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
 
-#if defined(__linux__)
+#if !defined(__Fuchsia__)
   // Accept the precursor connection to make room for the test client
   // connection to complete.
   fbl::unique_fd precursor_accept;
@@ -2103,9 +2105,10 @@ TEST(NetStreamTest, Shutdown) {
 
   EXPECT_EQ(shutdown(inbound, SHUT_WR), 0) << strerror(errno);
 
-  struct pollfd pfd = {};
-  pfd.fd = outbound;
-  pfd.events = POLLRDHUP;
+  struct pollfd pfd = {
+      .fd = outbound,
+      .events = POLLRDHUP,
+  };
   int n = poll(&pfd, 1, kTimeout);
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
@@ -2153,7 +2156,7 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   fill_stream_send_buf(server.get(), client.get());
 
   // Setting SO_LINGER to 0 and `close`ing the server socket should
-  // immediately send a TCP Reset.
+  // immediately send a TCP RST.
   struct linger opt = {
       .l_onoff = 1,
       .l_linger = 0,
@@ -2161,21 +2164,22 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
       << strerror(errno);
 
-  // Close the server to trigger a TCP Reset now that linger is 0.
+  // Close the server to trigger a TCP RST now that linger is 0.
   EXPECT_EQ(close(server.release()), 0) << strerror(errno);
 
-  // Shutdown the client side to unblock the client receive loop.
-#if defined(__linux__)
-  // For Linux, the server side close will put the client end into a not
-  // connected state, so the shutdown call will cause an ENOTCONN.
-  EXPECT_EQ(shutdown(client.get(), SHUT_RD), -1) << strerror(errno);
+  // Wait for the RST.
+  struct pollfd pfd = {
+      .fd = client.get(),
+      .events = POLLHUP,
+  };
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+  EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
+
+  // The socket is no longer connected.
+  EXPECT_EQ(shutdown(client.get(), SHUT_RD), -1);
   EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
-#else
-  // Fuchsia `zxwait`s on the client handle before the server close affects
-  // the read loop, so the `shutdown` should not return an error and the loop
-  // will be unblocked.
-  EXPECT_EQ(shutdown(client.get(), SHUT_RD), 0) << strerror(errno);
-#endif
 
   // Create another socket to ensure that the networking stack hasn't panicked.
   fbl::unique_fd test_sock;
@@ -2230,8 +2234,6 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
       .fd = client.get(),
       .events = POLLHUP,
   };
-  pfd.fd = client.get();
-  pfd.events = POLLHUP;
   int n = poll(&pfd, 1, kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
@@ -2391,10 +2393,10 @@ TEST_P(SendSocketTest, CloseWhileSending) {
       case closeSocket::CLIENT: {
         // On Linux, the pending I/O call is allowed to complete in spite of its argument having
         // been closed. See below for more detail.
-#if defined(__linux__)
-        EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
-#else
+#if defined(__Fuchsia__)
         EXPECT_EQ(errno, EBADF) << strerror(errno);
+#else
+        EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
 #endif
         break;
       }
@@ -2409,7 +2411,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
     // do not. We only expect this during the second attempt, so we remove the default signal
     // handler, make our attempt, and then restore it.
     {
-#if defined(__linux__)
+#if !defined(__Fuchsia__)
       struct sigaction act = {};
       act.sa_handler = SIG_IGN;
 
@@ -2446,7 +2448,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
       //
       // In Fuchsia, fdio will eagerly clean up all the resources associated with the file
       // descriptor.
-#if defined(__linux__)
+#if !defined(__Fuchsia__)
       EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
 #else
       break;

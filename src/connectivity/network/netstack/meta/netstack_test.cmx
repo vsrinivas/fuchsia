@@ -1,5 +1,9 @@
 {
     "program": {
+        "args": [
+            "--test.timeout",
+            "2m"
+        ],
         "binary": "test/netstack_test"
     },
     "sandbox": {

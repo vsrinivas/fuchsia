@@ -915,7 +915,16 @@ static fdio_ops_t fdio_stream_socket_ops = {
           }
           *out_code = 0;
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          return fdio_zx_socket_shutdown(sio->pipe.socket, how);
+          zx_signals_t observed;
+          zx_status_t status = sio->pipe.socket.wait_one(ZX_SOCKET_PEER_CLOSED,
+                                                         zx::time::infinite_past(), &observed);
+          if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
+            if (observed & ZX_SOCKET_PEER_CLOSED) {
+              return ZX_ERR_NOT_CONNECTED;
+            }
+            return fdio_zx_socket_shutdown(sio->pipe.socket, how);
+          }
+          return status;
         },
 };
 

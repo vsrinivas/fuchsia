@@ -19,6 +19,7 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -65,16 +66,32 @@ type endpoint struct {
 
 	mu struct {
 		sync.Mutex
+		refcount         uint32
 		sockOptTimestamp bool
 	}
-
-	// wg tracks the running handler goroutines.
-	wg sync.WaitGroup
 
 	transProto tcpip.TransportProtocolNumber
 	netProto   tcpip.NetworkProtocolNumber
 
 	ns *Netstack
+}
+
+func (ep *endpoint) incRef() {
+	ep.mu.Lock()
+	ep.mu.refcount++
+	ep.mu.Unlock()
+}
+
+func (ep *endpoint) decRef() bool {
+	ep.mu.Lock()
+	doubleClose := ep.mu.refcount == 0
+	ep.mu.refcount--
+	doClose := ep.mu.refcount == 0
+	ep.mu.Unlock()
+	if doubleClose {
+		panic(fmt.Sprintf("%p: double close", ep))
+	}
+	return doClose
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
@@ -365,6 +382,9 @@ type endpointWithSocket struct {
 	// resources once - the first time it was closed.
 	closeOnce uint32
 
+	// Used to unblock waiting to write when SO_LINGER is enabled.
+	linger chan struct{}
+
 	// entry is used to register callback for error and closing events.
 	entry waiter.Entry
 }
@@ -395,6 +415,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		loopWriteDone: make(chan struct{}),
 		loopPollDone:  make(chan struct{}),
 		closing:       make(chan struct{}),
+		linger:        make(chan struct{}),
 	}
 
 	// Register a callback for error and closing events from gVisor to
@@ -732,13 +753,17 @@ func (eps *endpointWithSocket) loopWrite() {
 				if eps.transProto != tcp.ProtocolNumber {
 					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
 				}
-
 				// NB: we can't select on closing here because the client may have
 				// written some data into the buffer and then immediately closed the
-				// socket. We don't have a choice but to wait around until we get the
-				// data out or the connection fails.
-				<-notifyCh
-				continue
+				// socket.
+				//
+				// We must wait until the linger timeout.
+				select {
+				case <-eps.linger:
+					return
+				case <-notifyCh:
+					continue
+				}
 			case tcpip.ErrClosedForSend:
 				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
 					panic(err)
@@ -973,9 +998,34 @@ type datagramSocketImpl struct {
 
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 
-func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
+func (s *datagramSocketImpl) close() {
+	if s.endpoint.decRef() {
+		s.wq.EventUnregister(&s.entry)
+
+		// Copy the handle before closing below; (*zx.Handle).Close sets the
+		// receiver to zx.HandleInvalid.
+		key := s.local
+
+		if err := s.local.Close(); err != nil {
+			panic(fmt.Sprintf("local.Close() = %s", err))
+		}
+
+		if err := s.peer.Close(); err != nil {
+			panic(fmt.Sprintf("peer.Close() = %s", err))
+		}
+
+		s.ns.onRemoveEndpoint(key)
+
+		s.ep.Close()
+
+		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
+	}
 	s.cancel()
+}
+
+func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithEvent)
+	s.close()
 	return int32(zx.ErrOk), nil
 }
 
@@ -985,15 +1035,19 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtx
 		s := &sCopy
 
 		s.ns.stats.SocketCount.Increment()
-		s.wg.Add(1)
+		s.endpoint.incRef()
 		go func() {
-			defer s.wg.Done()
 			defer s.ns.stats.SocketCount.Decrement()
 
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
 			s.cancel = cancel
+			defer func() {
+				// Avoid double close when the peer calls Close and then hangs up.
+				if ctx.Err() == nil {
+					s.close()
+				}
+			}()
+
 			stub := socket.DatagramSocketWithCtxStub{Impl: s}
 			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
 				// NB: this protocol is not discoverable, so the bindings do not include its name.
@@ -1160,22 +1214,50 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 		endpointWithSocket: eps,
 	}
 	s.addConnection(context.Background(), io.NodeWithCtxInterfaceRequest{Channel: localC})
-	go func() {
-		s.wg.Wait()
-
-		s.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
-
-		if err := eps.peer.Close(); err != nil {
-			panic(err)
-		}
-	}()
 	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
-func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
+func (s *streamSocketImpl) close() {
+	if s.endpoint.decRef() {
+		var v tcpip.LingerOption
+		if err := s.ep.GetSockOpt(&v); err != nil {
+			panic(fmt.Sprintf("GetSockOpt(%T): %s", v, err))
+		}
+
+		// From the gospel of `man 7 socket`:
+		//
+		//  When enabled, a close(2) or shutdown(2) will not return until all
+		//  queued messages for the socket have been successfully sent or the
+		//  linger timeout has been reached.  Otherwise, the call returns
+		//  immediately and the closing is done in the background.  When the socket
+		//  is closed as part of exit(2), it always lingers in the background.
+		//
+		// Thus we must allow linger-amount-of-time for pending writes to flush,
+		// and do so synchronously if linger is enabled.
+		time.AfterFunc(v.Timeout, func() { close(s.linger) })
+
+		doClose := func() {
+			s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
+
+			if err := s.peer.Close(); err != nil {
+				panic(err)
+			}
+		}
+
+		if v.Enabled {
+			doClose()
+		} else {
+			go doClose()
+		}
+	}
+
 	s.cancel()
+}
+
+func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithSocket)
+	s.close()
 	return int32(zx.ErrOk), nil
 }
 
@@ -1185,15 +1267,19 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxIn
 		s := &sCopy
 
 		s.ns.stats.SocketCount.Increment()
-		s.wg.Add(1)
+		s.endpoint.incRef()
 		go func() {
-			defer s.wg.Done()
 			defer s.ns.stats.SocketCount.Decrement()
 
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
 			s.cancel = cancel
+			defer func() {
+				// Avoid double close when the peer calls Close and then hangs up.
+				if ctx.Err() == nil {
+					s.close()
+				}
+			}()
+
 			stub := socket.StreamSocketWithCtxStub{Impl: s}
 			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
 				// NB: this protocol is not discoverable, so the bindings do not include its name.
@@ -1373,29 +1459,6 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	s.wq.EventRegister(&s.entry, waiter.EventIn)
 
 	s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
-	go func() {
-		s.wg.Wait()
-
-		s.wq.EventUnregister(&s.entry)
-
-		// Copy the handle before closing below; (*zx.Handle).Close sets the
-		// receiver to zx.HandleInvalid.
-		key := s.local
-
-		if err := s.local.Close(); err != nil {
-			panic(fmt.Sprintf("local.Close() = %s", err))
-		}
-
-		if err := s.peer.Close(); err != nil {
-			panic(fmt.Sprintf("peer.Close() = %s", err))
-		}
-
-		s.ns.onRemoveEndpoint(key)
-
-		s.ep.Close()
-
-		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
-	}()
 	syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
 	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
