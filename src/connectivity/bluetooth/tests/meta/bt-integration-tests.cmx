@@ -9,7 +9,7 @@
                 "fuchsia.bluetooth.sys.Access": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
                 "fuchsia.bluetooth.sys.Bootstrap": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
                 "fuchsia.bluetooth.sys.HostWatcher": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
                 "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"
             }
         }

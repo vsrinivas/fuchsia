@@ -1395,7 +1395,7 @@ Look at how the integration test is setup:
            "fuchsia.test": {
                "injected-services": {
                    "fuchsia.diagnostics.ArchiveAccessor":
-                       "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+                       "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
                }
            }
        },
@@ -1418,8 +1418,8 @@ Look at how the integration test is setup:
   - *Injected services*:
     The `fuchsia.test` facet includes configuration for tests.
     In this file, the `fuchsia.diagnostics.ArchiveAccessor` service is injected
-    and points to a component called `observer.cmx`. The observer collects
-    information from all components in your test environment and provides
+    and points to a component called `archivist-for-embedding.cmx`. The Archivist
+    collects information from all components in your test environment and provides
     a reading interface. You can use this information to look at your
     Inspect output.
 

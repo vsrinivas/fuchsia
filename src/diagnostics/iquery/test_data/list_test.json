@@ -1,5 +1,5 @@
 [
+  "archivist-for-embedding.cmx",
   "list-test/basic_component.cmx",
-  "list-test2/basic_component.cmx",
-  "observer.cmx"
+  "list-test2/basic_component.cmx"
 ]

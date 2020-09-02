@@ -170,8 +170,8 @@ fuchsia_component("observer-v1") {
   ]
 }
 
-fuchsia_component("observer-v2") {
-  component_name = "observer"
+fuchsia_component("archivist-for-embedding-v2") {
+  component_name = "archivist-for-embedding"
   manifest = "meta/archivist-for-embedding.cml"
   deps = [
     ":bin",
@@ -184,21 +184,16 @@ fuchsia_package("archivist") {
     ":archivist-v1",
     ":archivist-v2",
 
-    # TODO(fxbug.dev/56386) remove
-    ":archivist-for-embedding-v1",
-
     # TODO(fxbug.dev/58074) remove
     ":observer-v1",
   ]
 }
 
 fuchsia_package("archivist-for-embedding") {
-  deps = [ ":archivist-for-embedding-v1" ]
-}
-
-# TODO(fxbug.dev/58074) delete this package
-fuchsia_package("observer") {
-  deps = [ ":observer-v2" ]
+  deps = [
+    ":archivist-for-embedding-v1",
+    ":archivist-for-embedding-v2",
+  ]
 }
 
 config_data("archivist_config") {
@@ -217,7 +212,6 @@ group("with_default_config") {
   deps = [
     ":archivist",
     ":archivist_config",
-    ":observer",
   ]
 }
 

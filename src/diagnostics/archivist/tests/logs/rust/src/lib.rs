@@ -139,7 +139,8 @@ async fn embedding_stop_api() {
     // launch archivist
     let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            .to_owned(),
         Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )
@@ -208,7 +209,8 @@ async fn same_log_sink_simultaneously() {
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
     let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            .to_owned(),
         Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )
@@ -329,7 +331,8 @@ async fn same_log_sink_simultaneously_via_connector() {
     options.set_additional_services(vec![LogConnectorMarker::NAME.to_string()], dir_client);
     let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            .to_owned(),
         None,
         options,
     )
@@ -404,7 +407,8 @@ async fn timestamp_sorting_for_batches() {
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
     let mut archivist = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx".to_owned(),
+        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            .to_owned(),
         Some(vec!["--disable-log-connector".to_owned()]),
         LaunchOptions::new(),
     )

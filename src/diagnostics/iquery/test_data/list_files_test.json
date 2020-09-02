@@ -1,6 +1,6 @@
 [
-  "/hub/c/observer.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
-  "/hub/c/observer.cmx/INSTANCE_ID/system_diagnostics/fuchsia.inspect.Tree",
+  "/hub/c/archivist-for-embedding.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
+  "/hub/c/archivist-for-embedding.cmx/INSTANCE_ID/system_diagnostics/fuchsia.inspect.Tree",
   "/hub/r/list-file-test-2/INSTANCE_ID/c/basic_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
   "/hub/r/list-file-test-3/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
   "/hub/r/list-file-test-3/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.deprecated.Inspect",

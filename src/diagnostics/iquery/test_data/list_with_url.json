@@ -1,14 +1,14 @@
 [
   {
+    "moniker": "archivist-for-embedding.cmx",
+    "component_url": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+  },
+  {
     "moniker": "list-url-test/basic_component.cmx",
     "component_url": "fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx"
   },
   {
     "moniker": "list-url-test2/test_component.cmx",
     "component_url": "fuchsia-pkg://fuchsia.com/iquery_tests#meta/test_component.cmx"
-  },
-  {
-    "moniker": "observer.cmx",
-    "component_url": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
   }
 ]

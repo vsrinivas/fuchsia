@@ -182,7 +182,7 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
 TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto svcs = CreateServices();
   fuchsia::sys::LaunchInfo linfo;
-  linfo.url = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
+  linfo.url = "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
   fuchsia::sys::LaunchInfo linfo_dup;
   ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
   svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);

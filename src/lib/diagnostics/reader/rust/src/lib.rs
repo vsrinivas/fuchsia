@@ -80,7 +80,7 @@ impl ToSelectorArguments for ComponentSelector {
     }
 }
 
-/// Utility for reading inspect data of a running component using the injected observer.cmx Archive
+/// Utility for reading inspect data of a running component using the injected Archive
 /// Reader service.
 #[derive(Clone)]
 pub struct ArchiveReader {

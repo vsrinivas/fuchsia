@@ -29,7 +29,7 @@ test_package("hello-world-integration-test") {
   deps = [
     ":bin",
     "..:hello_world_bin",
-    "//src/diagnostics/archivist:observer",
+    "//src/diagnostics/archivist:archivist-for-embedding",
   ]
   v2_tests = [
     {

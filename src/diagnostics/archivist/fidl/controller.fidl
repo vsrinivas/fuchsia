@@ -4,7 +4,7 @@
 
 library fuchsia.diagnostics.test;
 
-/// Controller to control observer.cmx.
+/// Controller for an embedded Archivist.
 /// This is only to be used from tests.
 [Discoverable]
 protocol Controller {

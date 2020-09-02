@@ -1,6 +1,6 @@
+archivist-for-embedding.cmx:
+  fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx
 list-url-test/basic_component.cmx:
   fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx
 list-url-test2/test_component.cmx:
   fuchsia-pkg://fuchsia.com/iquery_tests#meta/test_component.cmx
-observer.cmx:
-  fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx

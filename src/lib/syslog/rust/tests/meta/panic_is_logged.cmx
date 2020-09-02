@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
-                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
             }
         }
     },

@@ -23,7 +23,8 @@ use {
 
 const CHILD_WITH_LOGS_URL: &str =
     "fuchsia-pkg://fuchsia.com/appmgr_log_integration_tests#meta/log_emitter_for_test.cmx";
-const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist-for-embedding.cmx";
+const ARCHIVIST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
 
 #[fasync::run(2)]
 async fn main() {

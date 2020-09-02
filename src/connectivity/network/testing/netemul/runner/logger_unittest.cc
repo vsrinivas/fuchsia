@@ -16,7 +16,8 @@
 namespace netemul {
 namespace testing {
 
-constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
+constexpr const char* kLoggerUrl =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
 
 class LoggerTest : public sys::testing::TestWithEnvironment {
  protected:

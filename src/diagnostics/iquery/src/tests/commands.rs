@@ -95,7 +95,7 @@ async fn list_files() {
         command: "list-files",
         golden_basename: list_files_test,
         args: [
-            "/hub/c/observer.cmx/",
+            "/hub/c/archivist-for-embedding.cmx/",
             "/hub/r/list-file-test-*/*/c/*/*/out/diagnostics/"
         ]
     );

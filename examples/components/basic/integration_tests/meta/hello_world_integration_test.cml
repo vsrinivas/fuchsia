@@ -1,8 +1,8 @@
 {
     children: [
         {
-            name: "observer",
-            url: "fuchsia-pkg://fuchsia.com/observer#meta/observer.cm",
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cm",
         },
         {
             name: "driver",
@@ -15,7 +15,7 @@
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",
             ],
-            from: "#observer",
+            from: "#archivist",
             to: [ "#driver" ],
         },
     ],
