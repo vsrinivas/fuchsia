@@ -47,6 +47,7 @@ use fidl_fuchsia_lowpan_spinel::{
     DeviceSetupProxy as SpinelDeviceSetupProxy,
 };
 use fuchsia_component::client::connect_to_service_at;
+use fuchsia_component::client::{launch, launcher, App};
 use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_factory};
 
 /// This struct contains the arguments decoded from the command
@@ -61,8 +62,8 @@ struct DriverArgs {
     )]
     pub service_prefix: String,
 
-    #[argh(option, long = "spinelprefix", description = "spinel namespace prefix (ex: '/svc')")]
-    pub spinel_prefix: Option<String>,
+    #[argh(switch, long = "otstack", description = "launch and connect to ot-stack")]
+    pub use_ot_stack: bool,
 
     #[argh(
         option,
@@ -130,7 +131,7 @@ where
     Ok(())
 }
 
-async fn connect_to_spinel_device_proxy_hack() -> Result<SpinelDeviceProxy, Error> {
+async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
     use {std::fs::File, std::path::Path};
     const OT_PROTOCOL_PATH: &str = "/dev/class/ot-radio";
 
@@ -164,13 +165,19 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<SpinelDeviceProxy, Erro
         .await?
         .map_err(|x| format_err!("spinel_device_setup.set_channel() returned error {}", x))?;
 
-    Ok(client_side.into_proxy()?)
+    Ok((None, client_side.into_proxy()?))
 }
 
 #[allow(unused)]
-fn connect_to_spinel_device_proxy(_prefix: &str) -> Result<SpinelDeviceProxy, Error> {
-    connect_to_service_at::<SpinelDeviceMarker>(_prefix)
-        .context("Failed to connect to Spinel device")
+fn connect_to_spinel_device_proxy() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
+    let server_url = "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx".to_string();
+    let arg = Some(vec!["/dev/class/ot-radio/000".to_string()]);
+    let launcher = launcher().expect("Failed to open launcher service");
+    let app = launch(&launcher, server_url, arg).expect("Failed to launch ot-stack service");
+    let ot_stack_proxy = app
+        .connect_to_service::<SpinelDeviceMarker>()
+        .expect("Failed to connect to ot-stack service");
+    Ok((Some(app), ot_stack_proxy))
 }
 
 #[fasync::run_singlethreaded]
@@ -179,8 +186,8 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
 
-    let spinel_device = if let Some(spinel_prefix) = args.spinel_prefix.as_ref() {
-        connect_to_spinel_device_proxy(spinel_prefix.as_str())?
+    let (_app, spinel_device) = if args.use_ot_stack {
+        connect_to_spinel_device_proxy()?
     } else {
         connect_to_spinel_device_proxy_hack().await?
     };

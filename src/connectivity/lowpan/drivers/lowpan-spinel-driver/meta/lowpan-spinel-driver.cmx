@@ -6,11 +6,15 @@
         "dev": [
             "class/ot-radio"
         ],
+        "pkgfs": [
+            "packages"
+        ],
         "services": [
             "fuchsia.factory.lowpan.FactoryRegister",
             "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Register",
-            "fuchsia.lowpan.spinel.Device"
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.sys.Launcher"
         ]
     }
 }
