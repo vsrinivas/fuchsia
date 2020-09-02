@@ -288,7 +288,7 @@ Example usage:
 When the FIDL toolchain generates a new `struct` or `enum` for a FIDL type, it
 attempts to `derive` as many traits from a predefined list of useful traits as
 it can, including `Debug`, `Copy`, `Clone`, etc. The complete list of default
-derived traits can be found in the [compiler source](/tools/fidl/fidlgen_rust/ir/ir.go#880).
+derived traits can be found in the [compiler source](/tools/fidl/fidlgen_rust/codegen/ir.go#880).
 
 For aggregate types, such as structs, unions, and tables, the set of derives is
 determined by starting with the list of all possible derives and then removing
@@ -298,7 +298,7 @@ types that contain a `handle` do not derive `Copy` and `Clone`. Additionally,
 arrays larger than 32 have no derives. When in doubt, refer to the generated
 code to check which traits are derived by a specific type. The complete set of
 rules can be found in
-[`fillDerivesForSource`](/tools/fidl/fidlgen_rust/ir/ir.go#1188).
+[`fillDerivesForSource`](/tools/fidl/fidlgen_rust/codegen/ir.go#1188).
 
 ## Protocols {#protocols}
 

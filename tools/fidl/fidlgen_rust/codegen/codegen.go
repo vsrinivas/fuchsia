@@ -12,8 +12,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/templates"
 )
 
 type Generator struct {
@@ -22,28 +20,28 @@ type Generator struct {
 
 func NewGenerator() *Generator {
 	tmpls := template.New("RustTemplates")
-	template.Must(tmpls.Parse(templates.SourceFile))
-	template.Must(tmpls.Parse(templates.Bits))
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Protocol))
-	template.Must(tmpls.Parse(templates.Service))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Union))
-	template.Must(tmpls.Parse(templates.Table))
-	template.Must(tmpls.Parse(templates.Result))
-	template.Must(tmpls.Parse(templates.Bits))
+	template.Must(tmpls.Parse(sourceFileTmpl))
+	template.Must(tmpls.Parse(bitsTmpl))
+	template.Must(tmpls.Parse(constTmpl))
+	template.Must(tmpls.Parse(enumTmpl))
+	template.Must(tmpls.Parse(protocolTmpl))
+	template.Must(tmpls.Parse(serviceTmpl))
+	template.Must(tmpls.Parse(structTmpl))
+	template.Must(tmpls.Parse(unionTmpl))
+	template.Must(tmpls.Parse(tableTmpl))
+	template.Must(tmpls.Parse(resultTmpl))
+	template.Must(tmpls.Parse(bitsTmpl))
 	return &Generator{
 		tmpls: tmpls,
 	}
 }
 
-func (gen *Generator) GenerateImpl(wr io.Writer, tree ir.Root) error {
+func (gen *Generator) GenerateImpl(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
 }
 
 func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename, rustfmtPath, rustfmtConfigPath string) error {
-	tree := ir.Compile(fidl)
+	tree := Compile(fidl)
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}

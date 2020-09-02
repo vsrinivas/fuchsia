@@ -13,7 +13,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/ir"
 )
 
 type flagsDef struct {
@@ -63,7 +62,7 @@ func main() {
 	}
 
 	generator := codegen.NewGenerator()
-	tree := ir.Compile(root)
+	tree := codegen.Compile(root)
 
 	if outputImplPath := *flags.outputImplPath; outputImplPath != "" {
 		if err := generator.GenerateImplFile(tree, outputImplPath); err != nil {

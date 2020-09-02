@@ -11,8 +11,6 @@ import (
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/templates/files"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/templates/fragments"
 )
 
 type Generator struct {
@@ -75,29 +73,29 @@ func NewGenerator() *Generator {
 		},
 	})
 	templates := []string{
-		fragments.Bits,
-		fragments.Client,
-		fragments.ClientAsyncMethods,
-		fragments.ClientSyncMethods,
-		fragments.Const,
-		fragments.Enum,
-		fragments.EventSender,
-		fragments.Protocol,
-		fragments.ReplyCFlavor,
-		fragments.ReplyCallerAllocate,
-		fragments.SendEventCFlavor,
-		fragments.SendEventCallerAllocate,
-		fragments.SendEventInPlace,
-		fragments.Service,
-		fragments.Struct,
-		fragments.SyncEventHandler,
-		fragments.SyncRequestManaged,
-		fragments.SyncRequestCallerAllocate,
-		fragments.SyncServer,
-		fragments.Table,
-		fragments.Union,
-		files.Header,
-		files.Source,
+		fragmentBitsTmpl,
+		fragmentClientTmpl,
+		fragmentClientAsyncMethodsTmpl,
+		fragmentClientSyncMethodsTmpl,
+		fragmentConstTmpl,
+		fragmentEnumTmpl,
+		fragmentEventSenderTmpl,
+		fragmentProtocolTmpl,
+		fragmentReplyCFlavorTmpl,
+		fragmentReplyCallerAllocateTmpl,
+		fragmentSendEventCFlavorTmpl,
+		fragmentSendEventCallerAllocateTmpl,
+		fragmentSendEventInPlaceTmpl,
+		fragmentServiceTmpl,
+		fragmentStructTmpl,
+		fragmentSyncEventHandlerTmpl,
+		fragmentSyncRequestManagedTmpl,
+		fragmentSyncRequestCallerAllocateTmpl,
+		fragmentSyncServerTmpl,
+		fragmentTableTmpl,
+		fragmentUnionTmpl,
+		fileHeaderTmpl,
+		fileSourceTmpl,
 	}
 	for _, t := range templates {
 		template.Must(tmpls.Parse(t))

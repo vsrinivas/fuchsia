@@ -9,19 +9,17 @@ import (
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/ir"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/templates"
 )
 
 var syzDotTxtTmpl = func() *template.Template {
 	tmpls := template.New("SyzkallerTemplates")
-	template.Must(tmpls.Parse(templates.SyscallDescription))
-	template.Must(tmpls.Parse(templates.Protocol))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Union))
+	template.Must(tmpls.Parse(syscallDescriptionTmpl))
+	template.Must(tmpls.Parse(protocolTmpl))
+	template.Must(tmpls.Parse(structTmpl))
+	template.Must(tmpls.Parse(unionTmpl))
 	return tmpls.Lookup("GenerateSyscallDescription")
 }()
 
 func Compile(w io.Writer, root types.Root) error {
-	return syzDotTxtTmpl.Execute(w, ir.Compile(root))
+	return syzDotTxtTmpl.Execute(w, compile(root))
 }

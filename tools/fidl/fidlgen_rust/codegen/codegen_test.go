@@ -14,7 +14,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/ir"
 )
 
 // hostPlatform reproduces the same format os-arch variant as cipd does.
@@ -46,7 +45,7 @@ func (bb *closeableBytesBuffer) Close() error {
 func TestCodegen(t *testing.T) {
 	for _, filename := range typestest.AllExamples(*testDataFlag) {
 		t.Run(filename, func(t *testing.T) {
-			tree := ir.Compile(typestest.GetExample(*testDataFlag, filename))
+			tree := Compile(typestest.GetExample(*testDataFlag, filename))
 			want := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.rs.golden", filename))
 			buf := closeableBytesBuffer{}
 			formatter := common.NewFormatter(filepath.Join(*rustFmtFlag, "rustfmt"), "--config-path", *rustFmtConfigFlag)
