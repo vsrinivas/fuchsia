@@ -25,6 +25,10 @@ namespace camera {
 // No-op function.
 static void nop() {}
 
+static void check_stream_valid(zx_koid_t koid, fit::function<void(bool)> callback) {
+  callback(true);
+}
+
 static void nop_stream_requested(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
@@ -118,13 +122,14 @@ class DeviceTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(DeviceTest, CreateStreamNullConnection) {
-  StreamImpl stream(fake_properties_, fake_legacy_config_, nullptr, nop_stream_requested, nop);
+  StreamImpl stream(fake_properties_, fake_legacy_config_, nullptr, check_stream_valid,
+                    nop_stream_requested, nop);
 }
 
 TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
   StreamImpl stream_impl(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
          fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -158,7 +163,7 @@ TEST_F(DeviceTest, GetFrames) {
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -171,9 +176,9 @@ TEST_F(DeviceTest, GetFrames) {
       },
       nop);
 
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  stream->SetBufferCollection(std::move(token));
+  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
   bool buffer_collection_returned = false;
   stream->WatchBufferCollection(
@@ -279,7 +284,7 @@ TEST_F(DeviceTest, GetFramesInvalidCall) {
   });
   std::unique_ptr<FakeLegacyStream> fake_legacy_stream;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -457,9 +462,7 @@ TEST_F(DeviceTest, StreamClientDisconnect) {
     fuchsia::sysmem::BufferCollectionTokenPtr token;
     SetFailOnError(token, "Token");
     allocator_->AllocateSharedCollection(token.NewRequest());
-    token->Sync([&, token = std::move(token)]() mutable {
-      stream2->SetBufferCollection(std::move(token));
-    });
+    token->Sync([&] { stream2->SetBufferCollection(std::move(token)); });
     // Call a returning API to verify the connection status.
     stream2->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
       EXPECT_EQ(token.BindSync()->Close(), ZX_OK);
@@ -914,7 +917,7 @@ TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   constexpr uint32_t kMaxCampingBuffers = 1;
   std::array<std::unique_ptr<FakeLegacyStream>, kCycleCount> legacy_stream_fakes;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -928,8 +931,9 @@ TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
 
   std::vector<fuchsia::camera3::FrameInfo> frames(kCycleCount);
   for (cycle = 0; cycle < kCycleCount; ++cycle) {
-    fuchsia::sysmem::BufferCollectionTokenHandle token;
+    fuchsia::sysmem::BufferCollectionTokenPtr token;
     allocator_->AllocateSharedCollection(token.NewRequest());
+    token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
     stream->SetBufferCollection(std::move(token));
     bool frame_received = false;
     stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
@@ -992,6 +996,69 @@ TEST_F(DeviceTest, FrameWaiterTest) {
     client.reset();
     RunLoopUntilFailureOr(signaled);
   }
+}
+
+TEST_F(DeviceTest, BadToken) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  bool stream_disconnected = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+    stream_disconnected = true;
+  });
+  device->ConnectToStream(0, stream.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  // Create and close the server endpoint of the token.
+  token.NewRequest().TakeChannel().reset();
+  stream->SetBufferCollection(std::move(token));
+  stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+    ADD_FAILURE() << "Watch should not return when given an invalid token.";
+  });
+  RunLoopUntilFailureOr(stream_disconnected);
+}
+
+TEST_F(DeviceTest, StuckToken) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  bool stream_disconnected = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+    stream_disconnected = true;
+  });
+  device->ConnectToStream(0, stream.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  // Create the server endpoint of the token but do not close it or pass it to sysmem.
+  auto request = token.NewRequest();
+  stream->SetBufferCollection(std::move(token));
+  stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+    ADD_FAILURE() << "Watch should not return when given a token not visible to sysmem.";
+  });
+  RunLoopUntilFailureOr(stream_disconnected);
+}
+
+TEST_F(DeviceTest, GoodTokenWithSync) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  auto request = token.NewRequest();
+  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  bool watch_returned = false;
+  stream->WatchBufferCollection([&](fuchsia::sysmem::BufferCollectionTokenHandle token) {
+    token.BindSync()->Close();
+    watch_returned = true;
+  });
+  auto kDelay = zx::msec(250);
+  async::PostDelayedTask(
+      dispatcher(), [&] { allocator_->AllocateSharedCollection(std::move(request)); }, kDelay);
+  RunLoopUntilFailureOr(watch_returned);
 }
 
 }  // namespace camera

@@ -26,13 +26,22 @@
 // camera3.Stream protocol.
 class StreamImpl {
  public:
+  // Called by the stream on its thread when it needs to connect to its associated legacy stream.
   using StreamRequestedCallback = fit::function<void(
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
       fidl::InterfaceRequest<fuchsia::camera2::Stream>, fit::function<void(uint32_t)>, uint32_t)>;
+
+  // Called by the stream on its thread when it receives a new BufferCollectionToken, passing the
+  // server-side koid of the token and a callback function that receives the token validity. The
+  // parent should check the token validity and invoke the callback to inform the client. The
+  // callback may be invoked from any thread.
+  using CheckTokenCallback = fit::function<void(zx_koid_t, fit::function<void(bool)>)>;
+
   StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-             StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
+             CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
+             fit::closure on_no_clients);
   ~StreamImpl();
 
   void PostSetMuteState(MuteState mute_state, fit::closure completed);
@@ -137,6 +146,7 @@ class StreamImpl {
   uint32_t legacy_stream_format_index_ = 0;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
+  CheckTokenCallback check_token_;
   StreamRequestedCallback on_stream_requested_;
   fit::closure on_no_clients_;
   uint32_t max_camping_buffers_ = 0;

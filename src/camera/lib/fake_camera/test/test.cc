@@ -103,14 +103,15 @@ TEST_F(FakeCameraTest, SetBufferCollectionInvokesCallback) {
   fuchsia::camera3::StreamPtr stream_protocol;
   SetFailOnError(stream_protocol, "Stream");
   camera->GetHandler()(device_protocol.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  SetFailOnError(token, "Token");
   device_protocol->GetConfigurations(
       [&](std::vector<fuchsia::camera3::Configuration> configurations) {
         ASSERT_FALSE(configurations.empty());
         ASSERT_FALSE(configurations[0].streams.empty());
         device_protocol->ConnectToStream(0, stream_protocol.NewRequest());
-        fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
         allocator_->AllocateSharedCollection(token.NewRequest());
-        stream_protocol->SetBufferCollection(std::move(token));
+        token->Sync([&] { stream_protocol->SetBufferCollection(std::move(token)); });
       });
   RunLoopUntil([&]() { return HasFailure() || callback_invoked; });
 }

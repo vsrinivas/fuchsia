@@ -240,6 +240,15 @@ void DeviceImpl::ConnectToStream(uint32_t index,
     return;
   }
 
+  auto check_token = [this](zx_koid_t token_server_koid, fit::function<void(bool)> callback) {
+    async::PostTask(loop_.dispatcher(),
+                    [this, token_server_koid, callback = std::move(callback)]() mutable {
+                      allocator_->ValidateBufferCollectionToken(
+                          token_server_koid,
+                          [callback = std::move(callback)](bool is_known) { callback(is_known); });
+                    });
+  };
+
   // Once the necessary token is received, post a task to send the request to the controller.
   auto on_stream_requested =
       [this, index](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
@@ -266,7 +275,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   streams_[index] = std::make_unique<StreamImpl>(
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
-      std::move(on_stream_requested), std::move(on_no_clients));
+      std::move(check_token), std::move(on_stream_requested), std::move(on_no_clients));
 }
 
 // Returns when the provided allocator will likely succeed in allocating a collection with the given

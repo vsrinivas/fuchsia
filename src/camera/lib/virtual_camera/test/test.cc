@@ -65,9 +65,9 @@ TEST_F(VirtualCameraTest, FramesReceived) {
   SetFailOnError(stream, "Stream");
   camera->ConnectToStream(0, stream.NewRequest());
 
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
-  stream->SetBufferCollection(std::move(token));
+  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;
   bool token_received = false;
   stream->WatchBufferCollection(

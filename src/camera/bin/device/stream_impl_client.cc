@@ -68,14 +68,7 @@ void StreamImpl::Client::PostReceiveBufferCollection(
       async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token), nonce]() mutable {
         TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveBufferCollection.task");
         TRACE_FLOW_END("camera", "post_receive_buffer_collection", nonce);
-        fuchsia::sysmem::BufferCollectionTokenPtr token;
-        zx_status_t status = token.Bind(std::move(token_handle));
-        if (status != ZX_OK) {
-          ZX_ASSERT(status == ZX_ERR_CANCELED);
-          // Thread is shutting down.
-          return;
-        }
-        token->Sync([this, token = std::move(token)]() mutable { buffers_.Set(std::move(token)); });
+        buffers_.Set(std::move(token_handle));
       }) == ZX_OK);
 }
 

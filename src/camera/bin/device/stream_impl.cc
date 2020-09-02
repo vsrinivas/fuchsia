@@ -16,6 +16,7 @@
 
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
   ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
@@ -27,10 +28,12 @@ static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) 
 StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-                       StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
+                       CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
+                       fit::closure on_no_clients)
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       properties_(properties),
       legacy_config_(legacy_config),
+      check_token_(std::move(check_token)),
       on_stream_requested_(std::move(on_stream_requested)),
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
@@ -199,34 +202,48 @@ void StreamImpl::PostSetBufferCollection(
       client->Participant() = false;
       return;
     }
-
     client->Participant() = true;
 
-    // Bind and duplicate the token for each participating client.
-    fuchsia::sysmem::BufferCollectionTokenPtr token;
-    zx_status_t status = token.Bind(std::move(token_handle), loop_.dispatcher());
-    if (status != ZX_OK) {
-      ZX_ASSERT(status == ZX_ERR_CANCELED);
-      // Thread is shutting down.
-      return;
-    }
-    for (auto& client : clients_) {
-      if (client.second->Participant()) {
-        fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;
-        token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_token.NewRequest());
-        client.second->PostReceiveBufferCollection(std::move(client_token));
+    // Validate the token.
+    fsl::GetRelatedKoid(token_handle.channel().get());
+    check_token_(fsl::GetRelatedKoid(token_handle.channel().get()), [this, it,
+                                                                     token_handle =
+                                                                         std::move(token_handle)](
+                                                                        bool valid) mutable {
+      if (!valid) {
+        FX_LOGS(INFO) << "Client provided an invalid BufferCollectionToken.";
+        it->second->PostCloseConnection(ZX_ERR_BAD_STATE);
+        return;
       }
-    }
-
-    // Synchronize and pass the final token to the device for constraints application.
-    token->Sync([this, token = std::move(token)]() mutable {
-      ZX_ASSERT(on_stream_requested_);
-      frame_waiters_.clear();
-      on_stream_requested_(
-          std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
-          [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
-          legacy_stream_format_index_);
-      legacy_stream_->Start();
+      async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token_handle)]() mutable {
+        // Duplicate and send each client a token.
+        fuchsia::sysmem::BufferCollectionTokenPtr token;
+        token.Bind(std::move(token_handle), loop_.dispatcher());
+        std::map<uint32_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
+        for (auto& client : clients_) {
+          if (client.second->Participant()) {
+            token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_tokens[client.first].NewRequest());
+          }
+        }
+        token->Sync([this, token = std::move(token),
+                     client_tokens = std::move(client_tokens)]() mutable {
+          for (auto& [id, token] : client_tokens) {
+            auto it = clients_.find(id);
+            if (it == clients_.end()) {
+              token.BindSync()->Close();
+            } else {
+              it->second->PostReceiveBufferCollection(std::move(token));
+            }
+          }
+          // Send the last token to the device for constraints application.
+          frame_waiters_.clear();
+          on_stream_requested_(
+              std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
+              [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
+              legacy_stream_format_index_);
+          legacy_stream_->Start();
+        });
+      });
     });
   });
 }
