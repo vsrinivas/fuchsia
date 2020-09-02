@@ -1,0 +1,84 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package fint;
+
+option go_package = "proto";
+
+// Static contains all of the non-dynamic configuration values for building
+// Fuchsia. These values are "static" in the sense that they don't vary
+// depending on things like git history or local environment, so they can be
+// checked into version control.
+message Static {
+  enum Optimize {
+    // If new values are added to an enum, a client using an old version of the
+    // protobuf definition will have all new values mapped to the enum's zero
+    // value. So it's important that the zero value be "special" rather than a
+    // regular value so the client can easily detect that something is wrong.
+    // See http://go/totw-4 for more info.
+    // TODO(olivernewman): Link to a public explanation if and when it becomes
+    // available.
+    OPTIMIZE_UNSPECIFIED = 0;
+    DEBUG = 1;
+    RELEASE = 2;
+  }
+
+  // The optimization level for the build.
+  Optimize optimize = 1;
+
+  // The board to build.
+  string board = 2;
+
+  // The product file to build.
+  string product = 3;
+
+  // Whether to skip building the basic images needed to boot and test on
+  // Fuchsia.
+  bool exclude_images = 4;
+
+  // Extra args to pass to gn gen.
+  repeated string gn_args = 5;
+
+  // Extra targets to pass to Ninja.
+  repeated string ninja_targets = 6;
+
+  // Fuchsia packages to build and include in the base set.
+  repeated string base_packages = 7;
+
+  // Fuchsia packages to build and include in the cache set.
+  repeated string cache_packages = 8;
+
+  // Fuchsia packages to build and include in the universe set.
+  repeated string universe_packages = 9;
+
+  // Whether to build host tests.
+  bool include_host_tests = 10;
+
+  enum Arch {
+    ARCH_UNSPECIFIED = 0;  // See OPTIMIZE_UNSPECIFIED for rationale.
+    ARM64 = 1;
+    X64 = 2;
+  }
+
+  // The target CPU architecture.
+  Arch target_arch = 11;
+
+  // Values of select_variant GN argument.
+  repeated string variants = 12;
+
+  // Whether to enforce build size limits.
+  bool enforce_size_limits = 13;
+
+  // Whether to collect build metrics.
+  bool collect_metrics = 14;
+
+  // Whether to include archives in the build.
+  bool include_archives = 15;
+
+  // Whether to skip the ninja build if we're running in CQ and none of the
+  // changed files affect the build.
+  bool skip_if_unaffected = 16;
+}
