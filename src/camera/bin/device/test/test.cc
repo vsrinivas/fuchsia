@@ -906,7 +906,7 @@ TEST_F(DeviceTest, BindFailureOk) {
   loop.Shutdown();
 }
 
-TEST_F(DeviceTest, SetBufferCollectionAgainWhileFramesHeld) {
+TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   constexpr uint32_t kCycleCount = 10;
   uint32_t cycle = 0;
 
