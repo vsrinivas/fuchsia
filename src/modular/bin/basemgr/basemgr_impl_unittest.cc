@@ -75,28 +75,28 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment,
     return R"config(
       {
       "basemgr": {
-        "enable_cobalt":true,
-        "use_session_shell_for_story_shell_factory":false,
+        "enable_cobalt": false,
+        "use_session_shell_for_story_shell_factory": false,
         "base_shell": {
-          "url":"fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login":false,
-          "args":[]
+          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
+          "keep_alive_after_login": false,
+          "args": []
         },
         "session_shells": [
           {
-            "name":"fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "url":"fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "args":[]
+            "name": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
+            "url": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
+            "args": []
           }
         ]
       },
       "sessionmgr": {
-        "enable_cobalt":true,
-        "startup_agents":[],
-        "session_agents":[],
-        "restart_session_on_agent_crash":[],
-        "component_args":[],
-        "agent_service_index":[]
+        "enable_cobalt": false,
+        "startup_agents": [],
+        "session_agents": [],
+        "restart_session_on_agent_crash": [],
+        "component_args": [],
+        "agent_service_index": []
       }
     }
     )config";
