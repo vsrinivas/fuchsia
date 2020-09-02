@@ -126,7 +126,7 @@ zx_status_t AmlG12TdmStream::InitHW() {
     // mclk rate for 48kHz = 768MHz/10 = 76.8MHz
     // Note: absmax mclk frequency is 500MHz per AmLogic
     ZX_ASSERT(!(metadata_.mClockDivFactor % 2));  // mClock div factor must be divisable by 2.
-    uint32_t mdiv = metadata_.mClockDivFactor / ((dai_formats_[0].frame_rate == 96000) ? 2 : 1);
+    uint32_t mdiv = metadata_.mClockDivFactor / ((frame_rate_ == 96000) ? 2 : 1);
     status = aml_audio_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
@@ -174,9 +174,10 @@ zx_status_t AmlG12TdmStream::InitHW() {
 }
 
 void AmlG12TdmStream::InitDaiFormats() {
+  frame_rate_ = kMinSampleRate;
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     dai_formats_[i].sample_format = SAMPLE_FORMAT_PCM_SIGNED;
-    dai_formats_[i].frame_rate = kMinSampleRate;
+    dai_formats_[i].frame_rate = frame_rate_;
     dai_formats_[i].bits_per_sample = 16;
     dai_formats_[i].bits_per_channel = 32;
     dai_formats_[i].number_of_channels =
@@ -499,8 +500,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       break;
     }
   }
-  if (req.frames_per_second != dai_formats_[0].frame_rate ||
-      req.channels_to_use_bitmask != channels_to_use_) {
+  if (req.frames_per_second != frame_rate_ || req.channels_to_use_bitmask != channels_to_use_) {
     for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
       // Put codecs in safe state for rate change
       auto status = codecs_[i].Stop();
@@ -511,8 +511,9 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       }
     }
 
+    frame_rate_ = req.frames_per_second;
     for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
-      dai_formats_[i].frame_rate = req.frames_per_second;
+      dai_formats_[i].frame_rate = frame_rate_;
     }
     channels_to_use_ = req.channels_to_use_bitmask;
     auto status = InitHW();
@@ -590,9 +591,8 @@ zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
 
   uint32_t notifs = LoadNotificationsPerRing();
   if (notifs) {
-    us_per_notification_ =
-        static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
-                              (frame_size_ * dai_formats_[0].frame_rate / 1000 * notifs));
+    us_per_notification_ = static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
+                                                 (frame_size_ * frame_rate_ / 1000 * notifs));
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;

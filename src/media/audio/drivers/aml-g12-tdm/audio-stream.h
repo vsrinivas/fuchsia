@@ -68,6 +68,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
 
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
+  uint32_t frame_rate_ = 0;
 
   async::TaskClosureMethod<AmlG12TdmStream, &AmlG12TdmStream::ProcessRingNotification> notify_timer_
       __TA_GUARDED(domain_token()){this};
