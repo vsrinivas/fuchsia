@@ -233,6 +233,10 @@ impl BiosParameterBlock {
             return Err(Error::new(ErrorKind::Other, FatfsError::InvalidSectorsPerFat));
         }
 
+        if self.sectors_per_fat() >= std::u32::MAX / (self.fats as u32) {
+            return Err(Error::new(ErrorKind::Other, FatfsError::InvalidSectorsPerFat));
+        }
+
         if self.fs_version != 0 {
             return Err(Error::new(ErrorKind::Other, FatfsError::UnknownVersion));
         }
@@ -260,7 +264,8 @@ impl BiosParameterBlock {
 
         let bits_per_fat_entry = fat_type.bits_per_fat_entry();
         let total_fat_entries =
-            self.sectors_per_fat() * self.bytes_per_sector as u32 * 8 / bits_per_fat_entry as u32;
+            ((self.sectors_per_fat() as u64) * (self.bytes_per_sector as u64) * 8
+                / bits_per_fat_entry as u64) as u32;
         if total_fat_entries - RESERVED_FAT_ENTRIES < total_clusters {
             warn!("FAT is too small compared to total number of clusters");
         }
