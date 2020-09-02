@@ -1446,15 +1446,7 @@ TEST(NetStreamTest, PeerClosedPOLLOUT) {
   int n = poll(&pfd, 1, kTimeout);
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
-#if defined(__Fuchsia__)
-  // TODO(crbug.com/1005300): we should check that revents is exactly
-  // OUT|ERR|HUP. Currently, this is a bit racey, and we might see OUT and HUP
-  // but not ERR due to the hack in socket_server.go which references this same
-  // bug.
-  EXPECT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
-#else
   EXPECT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
-#endif
 
   EXPECT_EQ(close(connfd), 0) << strerror(errno);
 }
