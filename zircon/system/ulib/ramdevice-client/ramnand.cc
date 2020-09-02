@@ -195,15 +195,11 @@ RamNand::~RamNand() {
       fprintf(stderr, "Could not get service handle when unbinding ram_nand, %d\n", status);
       return;
     }
-    zx_status_t call_status = ZX_OK;
     auto resp =
         ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(dev.get()));
     status = resp.status();
-    if (resp->result.is_err()) {
-      call_status = resp->result.err();
-    }
-    if (status == ZX_OK) {
-      status = call_status;
+    if (status == ZX_OK && resp->result.is_err()) {
+      status = resp->result.err();
     }
     if (status != ZX_OK) {
       fprintf(stderr, "Could not unbind ram_nand, %d\n", status);
