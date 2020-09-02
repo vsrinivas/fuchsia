@@ -157,6 +157,11 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
 
   inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 2 * 1024 * 1024});
 
+  auto stats_node = inspector.GetRoot().CreateChild("@inspect");
+  auto size = stats_node.CreateUint("current_size", 0);
+  auto max_size = stats_node.CreateUint("maximum_size", 0);
+  auto dynamic_links = stats_node.CreateUint("dynamic_links", 0);
+
   struct WorkEntry {
     const char* name;
     const Task* task;
@@ -193,10 +198,6 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
 
   // Include stats about the Inspector that is being exposed.
   // This data can be used to determine if the measurement inspector is full.
-  auto stats_node = inspector.GetRoot().CreateChild("@inspect");
-  auto size = stats_node.CreateUint("current_size", 0);
-  auto max_size = stats_node.CreateUint("maximum_size", 0);
-  auto dynamic_links = stats_node.CreateUint("dynamic_links", 0);
   auto stats = inspector.GetStats();
   size.Set(stats.size);
   max_size.Set(stats.maximum_size);

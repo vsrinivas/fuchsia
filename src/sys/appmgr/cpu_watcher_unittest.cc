@@ -50,6 +50,15 @@ int64_t PropertyIntValueOr(const inspect::Hierarchy* hierarchy, const std::strin
   return prop->value();
 }
 
+uint64_t PropertyUintValueOr(const inspect::Hierarchy* hierarchy, const std::string& name,
+                             uint64_t default_value) {
+  const auto* prop = hierarchy->node().get_property<inspect::UintPropertyValue>(name);
+  if (!prop) {
+    return default_value;
+  }
+  return prop->value();
+}
+
 TEST(CpuWatcher, BadTask) {
   zx::job self;
   zx_info_handle_basic_t basic;
@@ -297,6 +306,35 @@ TEST(CpuWatcher, TotalCpuIncludesEndedJobs) {
   EXPECT_LT(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
   EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
   EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
+}
+
+// This test generates enough measurements to fill the output VMO.
+// Note that it will need to be updated if the output size is increased of
+// if future optimizations make Inspect space usage more efficient.
+TEST(CpuWatcher, StressSize) {
+  inspect::Inspector inspector;
+  CpuWatcher watcher(inspector.GetRoot().CreateChild("test"), zx::job());
+
+  // Make 1k tasks.
+  for (size_t i = 0; i < 1000; i++) {
+    zx::job self;
+    ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self));
+    watcher.AddTask({"test_entries", std::to_string(i)}, std::move(self));
+  }
+
+  // Sample 60 times
+  for (size_t i = 0; i < 60; i++) {
+    watcher.Measure();
+  }
+
+  // Get the hierarchy and confirm it is out of measurement space.
+  auto hierarchy = GetHierarchy(inspector);
+  const auto* node = hierarchy.GetByPath({"test", "measurements", "@inspect"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_NE(0u, PropertyUintValueOr(node, "maximum_size", 0));
+  // Give a 100 byte margin of error on filling up the buffer.
+  EXPECT_GT(PropertyUintValueOr(node, "current_size", 0),
+            PropertyUintValueOr(node, "maximum_size", 0) - 100);
 }
 
 }  // namespace
