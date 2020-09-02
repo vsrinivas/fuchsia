@@ -43,6 +43,9 @@ copy("copy_configs") {
     "test_data/config/map_fold.triage",
     "test_data/config/other.triage",
     "test_data/config/sample.triage",
+    "test_data/config/sample_bundle.json",
+    "test_data/config/sample_bundle_file_type_error.json",
+    "test_data/config/sample_bundle_files_error.json",
     "test_data/config/sample_tags.triage",
   ]
 

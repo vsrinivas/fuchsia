@@ -1,0 +1,7 @@
+{
+  "files": {
+    "file_1": "{eval: {var: \"10\"}}",
+    "file_2": "{eval: {var: \"12\"}}",
+    "together": "{act: { gauge: {type: \"Gauge\", value: \"file_1::var * file_2::var\"}}}"
+  }
+}

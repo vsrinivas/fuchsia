@@ -4,6 +4,7 @@
 
 use {
     anyhow::{bail, Error},
+    serde_json,
     std::{collections::HashMap, fs, path::Path},
     triage::{ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
@@ -48,16 +49,48 @@ pub fn config_from_files(
     config_files: &Vec<String>,
     action_tag_directive_from_tags: &ActionTagDirective,
 ) -> Result<ParseResult, Error> {
-    let mut config_file_map = HashMap::new();
+    let mut config_file_map: HashMap<String, String> = HashMap::new();
     for file_name in config_files {
-        let namespace = base_name(&file_name)?;
         let file_data = match fs::read_to_string(file_name.clone()) {
             Ok(data) => data,
             Err(e) => {
                 bail!("Couldn't read config file '{}' to string, {}", file_name, e);
             }
         };
-        config_file_map.insert(namespace, file_data);
+
+        match serde_json::from_str::<serde_json::Value>(&file_data) {
+            // This file looks like a bundle.
+            // Bundles are JSON with a "files" key containing name => content
+            // mappings.
+            Ok(serde_json::Value::Object(file_object)) if file_object.contains_key("files") => {
+                match file_object.get("files").unwrap() {
+                    serde_json::Value::Object(files) => {
+                        for (name, content) in files {
+                            match content {
+                                serde_json::Value::String(content) => {
+                                    config_file_map.insert(name.to_string(), content.to_string());
+                                }
+                                _ => {
+                                    bail!("File {} looks like a bundle, but key {} must contain a string.", file_name, name);
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        bail!(
+                            "File {} looks like a bundle, but key 'files' is not an object.",
+                            file_name
+                        );
+                    }
+                }
+            }
+            // The file does not look like a bundle.
+            // Get the base name of the file as the namesapce, and add it to the config file set.
+            _ => {
+                let namespace = base_name(&file_name)?;
+                config_file_map.insert(namespace, file_data);
+            }
+        }
     }
 
     ParseResult::new(&config_file_map, &action_tag_directive_from_tags)

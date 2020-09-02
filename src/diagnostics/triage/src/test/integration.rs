@@ -338,3 +338,23 @@ integration_test!(
 );
 
 integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");
+
+integration_test!(bundle_test, vec!["sample_bundle.json"], vec![], vec![], 0, "gauge: 120");
+
+integration_test!(
+    bundle_files_error_test,
+    vec!["sample_bundle_files_error.json"],
+    vec![],
+    vec![],
+    1,
+    "looks like a bundle, but key 'files' is not an object"
+);
+
+integration_test!(
+    bundle_file_type_error_test,
+    vec!["sample_bundle_file_type_error.json"],
+    vec![],
+    vec![],
+    1,
+    "looks like a bundle, but key file2 must contain a string"
+);
