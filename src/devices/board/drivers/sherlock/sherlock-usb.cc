@@ -290,7 +290,7 @@ zx_status_t Sherlock::UsbInit() {
   }
 #else
   {
-    constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
+    constexpr size_t config_size = sizeof(UsbConfig) + 1 * sizeof(FunctionDescriptor);
     UsbConfig* config =
         reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
     if (!config) {
@@ -304,9 +304,6 @@ zx_status_t Sherlock::UsbInit() {
     config->functions[0].interface_class = USB_CLASS_COMM;
     config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
     config->functions[0].interface_protocol = 0;
-    config->functions[1].interface_class = USB_CLASS_VENDOR;
-    config->functions[1].interface_subclass = 0;
-    config->functions[1].interface_protocol = 0;
     usb_metadata[0].data_size = config_size;
     usb_metadata[0].data_buffer = config;
 
