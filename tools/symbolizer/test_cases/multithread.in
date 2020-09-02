@@ -1,0 +1,164 @@
+# Triggered by running bin/backtrace_request in fuchsia-pkg://fuchsia.com/debug_agent_tests.
+# Captured by `fx log --raw`.
+[00169.289073][1][2][klog] INFO: <== BACKTRACE REQUEST: process foo[41906] thread initial-thread[41908]
+...
+[00169.290257][1][2][klog] INFO: {{{reset}}}
+[00169.290429][1][2][klog] INFO: {{{module:0:libunwind.so.1:elf:7b0d4cebd9c3618d}}}
+[00169.290438][1][2][klog] INFO: {{{mmap:0x18f8b1e1000:0x3000:load:0:r:0}}}
+[00169.290441][1][2][klog] INFO: {{{mmap:0x18f8b1e4000:0x5000:load:0:rx:0x3000}}}
+[00169.290444][1][2][klog] INFO: {{{mmap:0x18f8b1e9000:0x1000:load:0:rw:0x8000}}}
+[00169.290452][1][2][klog] INFO: {{{mmap:0x18f8b1ea000:0x1000:load:0:rw:0x9000}}}
+[00169.290497][1][2][klog] INFO: {{{module:0x1:libc++.so.2:elf:7cb4c1ab4a2c73b2}}}
+[00169.290502][1][2][klog] INFO: {{{mmap:0x22f033e8000:0x4e000:load:0x1:r:0}}}
+[00169.290506][1][2][klog] INFO: {{{mmap:0x22f03436000:0x67000:load:0x1:rx:0x4e000}}}
+[00169.290512][1][2][klog] INFO: {{{mmap:0x22f0349d000:0x6000:load:0x1:rw:0xb5000}}}
+[00169.290516][1][2][klog] INFO: {{{mmap:0x22f034a3000:0x7000:load:0x1:rw:0xbb000}}}
+[00169.290555][1][2][klog] INFO: {{{module:0x2:libc++abi.so.1:elf:1820e427d1a18a0b}}}
+[00169.290559][1][2][klog] INFO: {{{mmap:0x284e89ba000:0x10000:load:0x2:r:0}}}
+[00169.290563][1][2][klog] INFO: {{{mmap:0x284e89ca000:0x1a000:load:0x2:rx:0x10000}}}
+[00169.290571][1][2][klog] INFO: {{{mmap:0x284e89e4000:0x4000:load:0x2:rw:0x2a000}}}
+[00169.290575][1][2][klog] INFO: {{{mmap:0x284e89e8000:0x1000:load:0x2:rw:0x2e000}}}
+[00169.290653][1][2][klog] INFO: {{{module:0x3:libfdio.so:elf:f60992baff92044c}}}
+[00169.290657][1][2][klog] INFO: {{{mmap:0x2adad843000:0xd000:load:0x3:r:0}}}
+[00169.290664][1][2][klog] INFO: {{{mmap:0x2adad850000:0x22000:load:0x3:rx:0xd000}}}
+[00169.290668][1][2][klog] INFO: {{{mmap:0x2adad872000:0x4000:load:0x3:rw:0x2f000}}}
+[00169.290672][1][2][klog] INFO: {{{mmap:0x2adad876000:0x4000:load:0x3:rw:0x33000}}}
+[00169.290695][1][2][klog] INFO: {{{module:0x4:<VMO#41864=backtrace_request>:elf:6a4390753b1e5930}}}
+[00169.290699][1][2][klog] INFO: {{{mmap:0x35ff4da6000:0x1000:load:0x4:r:0}}}
+[00169.290702][1][2][klog] INFO: {{{mmap:0x35ff4da7000:0x1000:load:0x4:rx:0x1000}}}
+[00169.290705][1][2][klog] INFO: {{{mmap:0x35ff4da8000:0x1000:load:0x4:rw:0x2000}}}
+[00169.290756][1][2][klog] INFO: {{{module:0x5:libc.so:elf:8ce60b04bdfd0610}}}
+[00169.290759][1][2][klog] INFO: {{{mmap:0x800edd4b4000:0x4c000:load:0x5:r:0}}}
+[00169.290762][1][2][klog] INFO: {{{mmap:0x800edd500000:0x56000:load:0x5:rx:0x4c000}}}
+[00169.290765][1][2][klog] INFO: {{{mmap:0x800edd556000:0x2000:load:0x5:rw:0xa2000}}}
+[00169.290777][1][2][klog] INFO: {{{mmap:0x800edd558000:0x3000:load:0x5:rw:0xa4000}}}
+[00169.290803][1][2][klog] INFO: {{{module:0x6:libzircon.so:elf:b60aa30791277c5b}}}
+[00169.290808][1][2][klog] INFO: {{{mmap:0x839a11850000:0x7000:load:0x6:r:0}}}
+[00169.290812][1][2][klog] INFO: {{{mmap:0x839a11857000:0x2000:load:0x6:rx:0x7000}}}
+[00169.291005][1][2][klog] INFO: {{{bt:1:0x35ff4da72e4:sp 0x98f7876e00}}}
+[00169.291169][1][2][klog] INFO: {{{bt:2:0x800edd510dfc:sp 0x98f7876e90}}}
+[00169.291493][1][2][klog] INFO: {{{bt:3:0x800edd51100c:sp 0x98f7877000}}}
+[00169.291735][1][2][klog] INFO: {{{bt:4:0x35ff4da7014:sp 0x802bf21ceff0}}}
+[00169.291920][1][2][klog] INFO: <== process foo[41906] thread pthread_t:0x120d6b36000[41975]
+...
+[00169.293261][1][2][klog] INFO: {{{reset}}}
+[00169.293417][1][2][klog] INFO: {{{module:0:libunwind.so.1:elf:7b0d4cebd9c3618d}}}
+[00169.293424][1][2][klog] INFO: {{{mmap:0x18f8b1e1000:0x3000:load:0:r:0}}}
+[00169.293427][1][2][klog] INFO: {{{mmap:0x18f8b1e4000:0x5000:load:0:rx:0x3000}}}
+[00169.293432][1][2][klog] INFO: {{{mmap:0x18f8b1e9000:0x1000:load:0:rw:0x8000}}}
+[00169.293439][1][2][klog] INFO: {{{mmap:0x18f8b1ea000:0x1000:load:0:rw:0x9000}}}
+[00169.293483][1][2][klog] INFO: {{{module:0x1:libc++.so.2:elf:7cb4c1ab4a2c73b2}}}
+[00169.293489][1][2][klog] INFO: {{{mmap:0x22f033e8000:0x4e000:load:0x1:r:0}}}
+[00169.293496][1][2][klog] INFO: {{{mmap:0x22f03436000:0x67000:load:0x1:rx:0x4e000}}}
+[00169.293501][1][2][klog] INFO: {{{mmap:0x22f0349d000:0x6000:load:0x1:rw:0xb5000}}}
+[00169.293503][1][2][klog] INFO: {{{mmap:0x22f034a3000:0x7000:load:0x1:rw:0xbb000}}}
+[00169.293541][1][2][klog] INFO: {{{module:0x2:libc++abi.so.1:elf:1820e427d1a18a0b}}}
+[00169.293545][1][2][klog] INFO: {{{mmap:0x284e89ba000:0x10000:load:0x2:r:0}}}
+[00169.293548][1][2][klog] INFO: {{{mmap:0x284e89ca000:0x1a000:load:0x2:rx:0x10000}}}
+[00169.293553][1][2][klog] INFO: {{{mmap:0x284e89e4000:0x4000:load:0x2:rw:0x2a000}}}
+[00169.293556][1][2][klog] INFO: {{{mmap:0x284e89e8000:0x1000:load:0x2:rw:0x2e000}}}
+[00169.293599][1][2][klog] INFO: {{{module:0x3:libfdio.so:elf:f60992baff92044c}}}
+[00169.293603][1][2][klog] INFO: {{{mmap:0x2adad843000:0xd000:load:0x3:r:0}}}
+[00169.293609][1][2][klog] INFO: {{{mmap:0x2adad850000:0x22000:load:0x3:rx:0xd000}}}
+[00169.293616][1][2][klog] INFO: {{{mmap:0x2adad872000:0x4000:load:0x3:rw:0x2f000}}}
+[00169.293619][1][2][klog] INFO: {{{mmap:0x2adad876000:0x4000:load:0x3:rw:0x33000}}}
+[00169.293635][1][2][klog] INFO: {{{module:0x4:<VMO#41864=backtrace_request>:elf:6a4390753b1e5930}}}
+[00169.293639][1][2][klog] INFO: {{{mmap:0x35ff4da6000:0x1000:load:0x4:r:0}}}
+[00169.293644][1][2][klog] INFO: {{{mmap:0x35ff4da7000:0x1000:load:0x4:rx:0x1000}}}
+[00169.293648][1][2][klog] INFO: {{{mmap:0x35ff4da8000:0x1000:load:0x4:rw:0x2000}}}
+[00169.293683][1][2][klog] INFO: {{{module:0x5:libc.so:elf:8ce60b04bdfd0610}}}
+[00169.293687][1][2][klog] INFO: {{{mmap:0x800edd4b4000:0x4c000:load:0x5:r:0}}}
+[00169.293690][1][2][klog] INFO: {{{mmap:0x800edd500000:0x56000:load:0x5:rx:0x4c000}}}
+[00169.293700][1][2][klog] INFO: {{{mmap:0x800edd556000:0x2000:load:0x5:rw:0xa2000}}}
+[00169.293707][1][2][klog] INFO: {{{mmap:0x800edd558000:0x3000:load:0x5:rw:0xa4000}}}
+[00169.293727][1][2][klog] INFO: {{{module:0x6:libzircon.so:elf:b60aa30791277c5b}}}
+[00169.293730][1][2][klog] INFO: {{{mmap:0x839a11850000:0x7000:load:0x6:r:0}}}
+[00169.293733][1][2][klog] INFO: {{{mmap:0x839a11857000:0x2000:load:0x6:rx:0x7000}}}
+[00169.293921][1][2][klog] INFO: {{{bt:1:0x839a11858120:sp 0x1643828ff70}}}
+[00169.294059][1][2][klog] INFO: {{{bt:2:0x839a118570ec:sp 0x1643828ff70}}}
+[00169.294176][1][2][klog] INFO: {{{bt:3:0x35ff4da7414:sp 0x1643828ffa0}}}
+[00169.294289][1][2][klog] INFO: {{{bt:4:0x35ff4da7460:sp 0x1643828ffc0}}}
+[00169.294373][1][2][klog] INFO: {{{bt:5:0x800edd50cbe0:sp 0x1643828ffd0}}}
+[00169.294645][1][2][klog] INFO: {{{bt:6:0x800edd550710:sp 0x1643828ffe0}}}
+[00169.294932][1][2][klog] INFO: <== process foo[41906] thread pthread_t:0x14cd5c9e000[41981]
+...
+[00169.296255][1][2][klog] INFO: {{{reset}}}
+[00169.296407][1][2][klog] INFO: {{{module:0:libunwind.so.1:elf:7b0d4cebd9c3618d}}}
+[00169.296413][1][2][klog] INFO: {{{mmap:0x18f8b1e1000:0x3000:load:0:r:0}}}
+[00169.296417][1][2][klog] INFO: {{{mmap:0x18f8b1e4000:0x5000:load:0:rx:0x3000}}}
+[00169.296420][1][2][klog] INFO: {{{mmap:0x18f8b1e9000:0x1000:load:0:rw:0x8000}}}
+[00169.296423][1][2][klog] INFO: {{{mmap:0x18f8b1ea000:0x1000:load:0:rw:0x9000}}}
+[00169.296468][1][2][klog] INFO: {{{module:0x1:libc++.so.2:elf:7cb4c1ab4a2c73b2}}}
+[00169.296474][1][2][klog] INFO: {{{mmap:0x22f033e8000:0x4e000:load:0x1:r:0}}}
+[00169.296478][1][2][klog] INFO: {{{mmap:0x22f03436000:0x67000:load:0x1:rx:0x4e000}}}
+[00169.296480][1][2][klog] INFO: {{{mmap:0x22f0349d000:0x6000:load:0x1:rw:0xb5000}}}
+[00169.296483][1][2][klog] INFO: {{{mmap:0x22f034a3000:0x7000:load:0x1:rw:0xbb000}}}
+[00169.296526][1][2][klog] INFO: {{{module:0x2:libc++abi.so.1:elf:1820e427d1a18a0b}}}
+[00169.296533][1][2][klog] INFO: {{{mmap:0x284e89ba000:0x10000:load:0x2:r:0}}}
+[00169.296536][1][2][klog] INFO: {{{mmap:0x284e89ca000:0x1a000:load:0x2:rx:0x10000}}}
+[00169.296540][1][2][klog] INFO: {{{mmap:0x284e89e4000:0x4000:load:0x2:rw:0x2a000}}}
+[00169.296542][1][2][klog] INFO: {{{mmap:0x284e89e8000:0x1000:load:0x2:rw:0x2e000}}}
+[00169.296587][1][2][klog] INFO: {{{module:0x3:libfdio.so:elf:f60992baff92044c}}}
+[00169.296590][1][2][klog] INFO: {{{mmap:0x2adad843000:0xd000:load:0x3:r:0}}}
+[00169.296593][1][2][klog] INFO: {{{mmap:0x2adad850000:0x22000:load:0x3:rx:0xd000}}}
+[00169.296598][1][2][klog] INFO: {{{mmap:0x2adad872000:0x4000:load:0x3:rw:0x2f000}}}
+[00169.296607][1][2][klog] INFO: {{{mmap:0x2adad876000:0x4000:load:0x3:rw:0x33000}}}
+[00169.296624][1][2][klog] INFO: {{{module:0x4:<VMO#41864=backtrace_request>:elf:6a4390753b1e5930}}}
+[00169.296627][1][2][klog] INFO: {{{mmap:0x35ff4da6000:0x1000:load:0x4:r:0}}}
+[00169.296634][1][2][klog] INFO: {{{mmap:0x35ff4da7000:0x1000:load:0x4:rx:0x1000}}}
+[00169.296638][1][2][klog] INFO: {{{mmap:0x35ff4da8000:0x1000:load:0x4:rw:0x2000}}}
+[00169.296677][1][2][klog] INFO: {{{module:0x5:libc.so:elf:8ce60b04bdfd0610}}}
+[00169.296680][1][2][klog] INFO: {{{mmap:0x800edd4b4000:0x4c000:load:0x5:r:0}}}
+[00169.296683][1][2][klog] INFO: {{{mmap:0x800edd500000:0x56000:load:0x5:rx:0x4c000}}}
+[00169.296686][1][2][klog] INFO: {{{mmap:0x800edd556000:0x2000:load:0x5:rw:0xa2000}}}
+[00169.296694][1][2][klog] INFO: {{{mmap:0x800edd558000:0x3000:load:0x5:rw:0xa4000}}}
+[00169.296710][1][2][klog] INFO: {{{module:0x6:libzircon.so:elf:b60aa30791277c5b}}}
+[00169.296714][1][2][klog] INFO: {{{mmap:0x839a11850000:0x7000:load:0x6:r:0}}}
+[00169.296722][1][2][klog] INFO: {{{mmap:0x839a11857000:0x2000:load:0x6:rx:0x7000}}}
+[00169.296906][1][2][klog] INFO: {{{bt:1:0x839a11858120:sp 0x57cd9ebf70}}}
+[00169.297040][1][2][klog] INFO: {{{bt:2:0x839a118570ec:sp 0x57cd9ebf70}}}
+[00169.297152][1][2][klog] INFO: {{{bt:3:0x35ff4da7414:sp 0x57cd9ebfa0}}}
+[00169.297264][1][2][klog] INFO: {{{bt:4:0x35ff4da7460:sp 0x57cd9ebfc0}}}
+[00169.297349][1][2][klog] INFO: {{{bt:5:0x800edd50cbe0:sp 0x57cd9ebfd0}}}
+[00169.297621][1][2][klog] INFO: {{{bt:6:0x800edd550710:sp 0x57cd9ebfe0}}}
+[00169.297911][1][2][klog] INFO: <== process foo[41906] thread pthread_t:0x2075d277000[41987]
+...
+[00169.299218][1][2][klog] INFO: {{{reset}}}
+[00169.299389][1][2][klog] INFO: {{{module:0:libunwind.so.1:elf:7b0d4cebd9c3618d}}}
+[00169.299395][1][2][klog] INFO: {{{mmap:0x18f8b1e1000:0x3000:load:0:r:0}}}
+[00169.299404][1][2][klog] INFO: {{{mmap:0x18f8b1e4000:0x5000:load:0:rx:0x3000}}}
+[00169.299408][1][2][klog] INFO: {{{mmap:0x18f8b1e9000:0x1000:load:0:rw:0x8000}}}
+[00169.299414][1][2][klog] INFO: {{{mmap:0x18f8b1ea000:0x1000:load:0:rw:0x9000}}}
+[00169.299466][1][2][klog] INFO: {{{module:0x1:libc++.so.2:elf:7cb4c1ab4a2c73b2}}}
+[00169.299471][1][2][klog] INFO: {{{mmap:0x22f033e8000:0x4e000:load:0x1:r:0}}}
+[00169.299474][1][2][klog] INFO: {{{mmap:0x22f03436000:0x67000:load:0x1:rx:0x4e000}}}
+[00169.299478][1][2][klog] INFO: {{{mmap:0x22f0349d000:0x6000:load:0x1:rw:0xb5000}}}
+[00169.299481][1][2][klog] INFO: {{{mmap:0x22f034a3000:0x7000:load:0x1:rw:0xbb000}}}
+[00169.299515][1][2][klog] INFO: {{{module:0x2:libc++abi.so.1:elf:1820e427d1a18a0b}}}
+[00169.299520][1][2][klog] INFO: {{{mmap:0x284e89ba000:0x10000:load:0x2:r:0}}}
+[00169.299524][1][2][klog] INFO: {{{mmap:0x284e89ca000:0x1a000:load:0x2:rx:0x10000}}}
+[00169.299527][1][2][klog] INFO: {{{mmap:0x284e89e4000:0x4000:load:0x2:rw:0x2a000}}}
+[00169.299531][1][2][klog] INFO: {{{mmap:0x284e89e8000:0x1000:load:0x2:rw:0x2e000}}}
+[00169.299574][1][2][klog] INFO: {{{module:0x3:libfdio.so:elf:f60992baff92044c}}}
+[00169.299579][1][2][klog] INFO: {{{mmap:0x2adad843000:0xd000:load:0x3:r:0}}}
+[00169.299582][1][2][klog] INFO: {{{mmap:0x2adad850000:0x22000:load:0x3:rx:0xd000}}}
+[00169.299585][1][2][klog] INFO: {{{mmap:0x2adad872000:0x4000:load:0x3:rw:0x2f000}}}
+[00169.299589][1][2][klog] INFO: {{{mmap:0x2adad876000:0x4000:load:0x3:rw:0x33000}}}
+[00169.299610][1][2][klog] INFO: {{{module:0x4:<VMO#41864=backtrace_request>:elf:6a4390753b1e5930}}}
+[00169.299613][1][2][klog] INFO: {{{mmap:0x35ff4da6000:0x1000:load:0x4:r:0}}}
+[00169.299618][1][2][klog] INFO: {{{mmap:0x35ff4da7000:0x1000:load:0x4:rx:0x1000}}}
+[00169.299622][1][2][klog] INFO: {{{mmap:0x35ff4da8000:0x1000:load:0x4:rw:0x2000}}}
+[00169.299657][1][2][klog] INFO: {{{module:0x5:libc.so:elf:8ce60b04bdfd0610}}}
+[00169.299660][1][2][klog] INFO: {{{mmap:0x800edd4b4000:0x4c000:load:0x5:r:0}}}
+[00169.299663][1][2][klog] INFO: {{{mmap:0x800edd500000:0x56000:load:0x5:rx:0x4c000}}}
+[00169.299665][1][2][klog] INFO: {{{mmap:0x800edd556000:0x2000:load:0x5:rw:0xa2000}}}
+[00169.299668][1][2][klog] INFO: {{{mmap:0x800edd558000:0x3000:load:0x5:rw:0xa4000}}}
+[00169.299685][1][2][klog] INFO: {{{module:0x6:libzircon.so:elf:b60aa30791277c5b}}}
+[00169.299690][1][2][klog] INFO: {{{mmap:0x839a11850000:0x7000:load:0x6:r:0}}}
+[00169.299700][1][2][klog] INFO: {{{mmap:0x839a11857000:0x2000:load:0x6:rx:0x7000}}}
+[00169.299888][1][2][klog] INFO: {{{bt:1:0x839a11858120:sp 0x19dc512af70}}}
+[00169.300019][1][2][klog] INFO: {{{bt:2:0x839a118570ec:sp 0x19dc512af70}}}
+[00169.300136][1][2][klog] INFO: {{{bt:3:0x35ff4da7414:sp 0x19dc512afa0}}}
+[00169.300248][1][2][klog] INFO: {{{bt:4:0x35ff4da7460:sp 0x19dc512afc0}}}
+[00169.300333][1][2][klog] INFO: {{{bt:5:0x800edd50cbe0:sp 0x19dc512afd0}}}
+[00169.300605][1][2][klog] INFO: {{{bt:6:0x800edd550710:sp 0x19dc512afe0}}}

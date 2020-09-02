@@ -1,0 +1,29 @@
+# Triggered by `run fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cmx` and obtained by
+# `fx log --raw`.
+[01394.269968][1][2][klog] INFO: [[[ELF module #0x0 "<VMO#42041=rust_crasher.cmx>" BuildID=e1c9115da8f4a732 0x75701d1000]]]
+[01394.269968][1][2][klog] INFO: [[[ELF module #0x1 "libfdio.so" BuildID=f60992baff92044c 0x260ea9cc000]]]
+[01394.269968][1][2][klog] INFO: [[[ELF module #0x2 "<VMO#42088=blob-c>" BuildID=69f7458ba652c884 0x34db40f8000]]]
+[01394.269968][1][2][klog] INFO: [[[ELF module #0x3 "libc.so" BuildID=8ce60b04bdfd0610 0x80e2c31bb000]]]
+[01394.269968][1][2][klog] INFO: [[[ELF module #0x4 "libzircon.so" BuildID=b60aa30791277c5b 0x82377173f000]]]
+[01394.269968][1][2][klog] INFO:    #1    0x000080e2c3208b68 in getpagesize ./../../zircon/third_party/ulib/scudo/fuchsia.cc:32 <libc.so>+0x4db68 sp 0x332db22d00
+[01394.270198][1][2][klog] INFO:    #2    0x0000034db41c3920 in panic_abort::__rust_start_panic::abort::hb5584658f86d91da /b/s/w/ir/k/rust/library/panic_abort/src/lib.rs:46 <<VMO#42088=blob-c>>+0xcb920 sp 0x332db22d00
+[01394.270362][1][2][klog] INFO:    #3    0x0000034db41c3910 in __rust_start_panic /b/s/w/ir/k/rust/library/panic_abort/src/lib.rs:41 <<VMO#42088=blob-c>>+0xcb910 sp 0x332db22d10
+[01394.270459][1][2][klog] INFO:    #4    0x0000034db41b02fc in rust_panic /b/s/w/ir/k/rust/library/std/src/panicking.rs:618 <<VMO#42088=blob-c>>+0xb82fc sp 0x332db22d20
+[01394.270557][1][2][klog] INFO:    #5    0x0000034db41b0260 in std::panicking::rust_panic_with_hook::hee32525199e75870 /b/s/w/ir/k/rust/library/std/src/panicking.rs:588 <<VMO#42088=blob-c>>+0xb8260 sp 0x332db22d80
+[01394.270672][1][2][klog] INFO:    #6    0x00000075701d2070 in std::panicking::begin_panic::_$u7b$$u7b$closure$u7d$$u7d$::hcc31b0c7b680e444 /b/s/w/ir/k/rust/library/std/src/panicking.rs:498 <<VMO#42041=rust_crasher.cmx>>+0x1070 sp 0x332db22df0
+[01394.270775][1][2][klog] INFO:    #7    0x00000075701d2034 in std::sys_common::backtrace::__rust_end_short_backtrace::h2885602c4e958804 /b/s/w/ir/k/rust/library/std/src/sys_common/backtrace.rs:153 <<VMO#42041=rust_crasher.cmx>>+0x1034 sp 0x332db22e10
+[01394.270851][1][2][klog] INFO:    #8    0x00000075701d20a4 in std::panicking::begin_panic::heddc549901fc51d7 /b/s/w/ir/k/rust/library/std/src/panicking.rs:497 <<VMO#42041=rust_crasher.cmx>>+0x10a4 sp 0x332db22e40
+[01394.270935][1][2][klog] INFO:    #9    0x00000075701d2150 in rust_crasher::main::h6515cf7cdc079f14 ../../out/default/../../src/developer/forensics/crasher/rust/src/main.rs:6 <<VMO#42041=rust_crasher.cmx>>+0x1150 sp 0x332db22e80
+[01394.271010][1][2][klog] INFO:    #10.1 0x00000075701d2040 in core::ops::function::FnOnce::call_once::hf577e384fdfc8896 /b/s/w/ir/k/rust/library/core/src/ops/function.rs:233 <<VMO#42041=rust_crasher.cmx>>+0x1040 sp 0x332db22e90
+[01394.271010][1][2][klog] INFO:    #10   0x00000075701d2040 in std::sys_common::backtrace::__rust_begin_short_backtrace::hce2acd1669be01c8 /b/s/w/ir/k/rust/library/std/src/sys_common/backtrace.rs:137 <<VMO#42041=rust_crasher.cmx>>+0x1040 sp 0x332db22e90
+[01394.271085][1][2][klog] INFO:    #11   0x00000075701d21b0 in core::ops::function::FnOnce::call_once$u7b$$u7b$vtable.shim$u7d$$u7d$::h34dcf1cadf9d7e44 /b/s/w/ir/k/rust/library/std/src/rt.rs:66 <<VMO#42041=rust_crasher.cmx>>+0x11b0 sp 0x332db22ea0
+[01394.271157][1][2][klog] INFO:    #12.4 0x0000034db41b03d8 in core::ops::function::impls::_$LT$impl$u20$core..ops..function..FnOnce$LT$A$GT$$u20$for$u20$$RF$F$GT$::call_once::hed906a234dca0b2b /b/s/w/ir/k/rust/library/core/src/ops/function.rs:265 <<VMO#42088=blob-c>>+0xb83d8 sp 0x332db22eb0
+[01394.271157][1][2][klog] INFO:    #12.3 0x0000034db41b03d8 in std::panicking::try::do_call::h08f79c40e7b5347b /b/s/w/ir/k/rust/library/std/src/panicking.rs:373 <<VMO#42088=blob-c>>+0xb83d8 sp 0x332db22eb0
+[01394.271157][1][2][klog] INFO:    #12.2 0x0000034db41b03d8 in std::panicking::try::h9aac6e36d1de9c09 /b/s/w/ir/k/rust/library/std/src/panicking.rs:337 <<VMO#42088=blob-c>>+0xb83d8 sp 0x332db22eb0
+[01394.271157][1][2][klog] INFO:    #12.1 0x0000034db41b03d8 in std::panic::catch_unwind::hb0a78f8656f4a865 /b/s/w/ir/k/rust/library/std/src/panic.rs:394 <<VMO#42088=blob-c>>+0xb83d8 sp 0x332db22eb0
+[01394.271157][1][2][klog] INFO:    #12   0x0000034db41b03d8 in std::rt::lang_start_internal::h430cbc0446518112 /b/s/w/ir/k/rust/library/std/src/rt.rs:51 <<VMO#42088=blob-c>>+0xb83d8 sp 0x332db22eb0
+[01394.271303][1][2][klog] INFO:    #13   0x00000075701d219c in std::rt::lang_start::hc7f4af8a581c5b3c /b/s/w/ir/k/rust/library/std/src/rt.rs:65 <<VMO#42041=rust_crasher.cmx>>+0x119c sp 0x332db22f20
+[01394.271398][1][2][klog] INFO:    #14   0x00000075701d2174 in main <<VMO#42041=rust_crasher.cmx>>+0x1174 sp 0x332db22f30
+[01394.271484][1][2][klog] INFO:    #15   0x000080e2c3217dfc in start_main ./../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:112 <libc.so>+0x5cdfc sp 0x332db22f40
+[01394.271637][1][2][klog] INFO:    #16   0x000080e2c321800c in __libc_start_main ./../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:164 <libc.so>+0x5d00c sp 0x332db23000
+[01394.271755][1][2][klog] INFO:    #17   0x00000075701d2014 in _start ./../../zircon/system/ulib/c/Scrt1.cc:7 <<VMO#42041=rust_crasher.cmx>>+0x1014 sp 0x80ba4a8a5ff0

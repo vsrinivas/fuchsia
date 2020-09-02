@@ -1,0 +1,41 @@
+# Triggered by `run fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cmx` and captured by
+# `fx log --raw`.
+[01040.462][1][2][klog] INFO: {{{reset}}}
+[01040.46][1][2][klog] INFO: {{{module:0:<VMO#49750=cpp_crasher.cmx>:elf:ce7229dde1121514}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0xbb57d35000:0x2000:load:0:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0xbb57d37000:0x1000:load:0:rx:0x2000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0xbb57d38000:0x1000:load:0:rw:0x3000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0xbb57d39000:0x1000:load:0:rw:0x4000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x1:libc++abi.so.1:elf:1820e427d1a18a0b}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2219fb1b000:0x10000:load:0x1:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2219fb2b000:0x1a000:load:0x1:rx:0x10000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2219fb45000:0x4000:load:0x1:rw:0x2a000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2219fb49000:0x1000:load:0x1:rw:0x2e000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x2:libc++.so.2:elf:7cb4c1ab4a2c73b2}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2478bd42000:0x4e000:load:0x2:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2478bd90000:0x67000:load:0x2:rx:0x4e000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2478bdf7000:0x6000:load:0x2:rw:0xb5000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2478bdfd000:0x7000:load:0x2:rw:0xbb000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x3:libfdio.so:elf:f60992baff92044c}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2b4c5549000:0xd000:load:0x3:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2b4c5556000:0x22000:load:0x3:rx:0xd000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2b4c5578000:0x4000:load:0x3:rw:0x2f000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x2b4c557c000:0x4000:load:0x3:rw:0x33000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x4:libunwind.so.1:elf:7b0d4cebd9c3618d}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x3d160f5e000:0x3000:load:0x4:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x3d160f61000:0x5000:load:0x4:rx:0x3000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x3d160f66000:0x1000:load:0x4:rw:0x8000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x3d160f67000:0x1000:load:0x4:rw:0x9000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x5:libc.so:elf:8ce60b04bdfd0610}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x811986aae000:0x4c000:load:0x5:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x811986afa000:0x56000:load:0x5:rx:0x4c000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x811986b50000:0x2000:load:0x5:rw:0xa2000}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x811986b52000:0x3000:load:0x5:rw:0xa4000}}}
+[01040.46][1][2][klog] INFO: {{{module:0x6:libzircon.so:elf:b60aa30791277c5b}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x8303db976000:0x7000:load:0x6:r:0}}}
+[01040.46][1][2][klog] INFO: {{{mmap:0x8303db97d000:0x2000:load:0x6:rx:0x7000}}}
+[01040.46][1][2][klog] INFO: {{{bt:1:0xbb57d370b0:sp 0x3f540e65ef0}}}
+[01040.46][1][2][klog] INFO: {{{bt:2:0xbb57d37c68:sp 0x3f540e65f10}}}
+[01040.462][1][2][klog] INFO: {{{bt:3:0x811986b0adfc:sp 0x3f540e65f40}}}
+[01040.46][1][2][klog] INFO: {{{bt:4:0x811986b0b00c:sp 0x3f540e66000}}}
+[01040.46][1][2][klog] INFO: {{{bt:5:0xbb57d37014:sp 0x83dc91e4dff0}}}

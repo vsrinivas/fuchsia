@@ -1,0 +1,42 @@
+# Triggered by `run fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cmx` and obtained by
+# `fx log --raw`.
+[01394.269382][1][2][klog] INFO: {{{reset}}}
+[01394.269482][1][2][klog] INFO: {{{module:0:<VMO#42041=rust_crasher.cmx>:elf:e1c9115da8f4a732}}}
+[01394.269489][1][2][klog] INFO: {{{mmap:0x75701d1000:0x1000:load:0:r:0}}}
+[01394.269492][1][2][klog] INFO: {{{mmap:0x75701d2000:0x1000:load:0:rx:0x1000}}}
+[01394.269497][1][2][klog] INFO: {{{mmap:0x75701d3000:0x1000:load:0:rw:0x2000}}}
+[01394.269515][1][2][klog] INFO: {{{module:0x1:libfdio.so:elf:f60992baff92044c}}}
+[01394.269519][1][2][klog] INFO: {{{mmap:0x260ea9cc000:0xd000:load:0x1:r:0}}}
+[01394.269522][1][2][klog] INFO: {{{mmap:0x260ea9d9000:0x22000:load:0x1:rx:0xd000}}}
+[01394.269525][1][2][klog] INFO: {{{mmap:0x260ea9fb000:0x4000:load:0x1:rw:0x2f000}}}
+[01394.269528][1][2][klog] INFO: {{{mmap:0x260ea9ff000:0x4000:load:0x1:rw:0x33000}}}
+[01394.269543][1][2][klog] INFO: {{{module:0x2:<VMO#42088=blob-c>:elf:69f7458ba652c884}}}
+[01394.269547][1][2][klog] INFO: {{{mmap:0x34db40f8000:0x89000:load:0x2:r:0}}}
+[01394.269550][1][2][klog] INFO: {{{mmap:0x34db4181000:0xb3000:load:0x2:rx:0x89000}}}
+[01394.269554][1][2][klog] INFO: {{{mmap:0x34db4234000:0xa000:load:0x2:rw:0x13c000}}}
+[01394.269557][1][2][klog] INFO: {{{mmap:0x34db423e000:0x1000:load:0x2:rw:0x146000}}}
+[01394.269573][1][2][klog] INFO: {{{module:0x3:libc.so:elf:8ce60b04bdfd0610}}}
+[01394.269576][1][2][klog] INFO: {{{mmap:0x80e2c31bb000:0x4c000:load:0x3:r:0}}}
+[01394.269580][1][2][klog] INFO: {{{mmap:0x80e2c3207000:0x56000:load:0x3:rx:0x4c000}}}
+[01394.269583][1][2][klog] INFO: {{{mmap:0x80e2c325d000:0x2000:load:0x3:rw:0xa2000}}}
+[01394.269586][1][2][klog] INFO: {{{mmap:0x80e2c325f000:0x3000:load:0x3:rw:0xa4000}}}
+[01394.269601][1][2][klog] INFO: {{{module:0x4:libzircon.so:elf:b60aa30791277c5b}}}
+[01394.269605][1][2][klog] INFO: {{{mmap:0x82377173f000:0x7000:load:0x4:r:0}}}
+[01394.269609][1][2][klog] INFO: {{{mmap:0x823771746000:0x2000:load:0x4:rx:0x7000}}}
+[01394.269968][1][2][klog] INFO: {{{bt:1:0x80e2c3208b68:sp 0x332db22d00}}}
+[01394.270198][1][2][klog] INFO: {{{bt:2:0x34db41c3920:sp 0x332db22d00}}}
+[01394.270362][1][2][klog] INFO: {{{bt:3:0x34db41c3910:sp 0x332db22d10}}}
+[01394.270459][1][2][klog] INFO: {{{bt:4:0x34db41b02fc:sp 0x332db22d20}}}
+[01394.270557][1][2][klog] INFO: {{{bt:5:0x34db41b0260:sp 0x332db22d80}}}
+[01394.270672][1][2][klog] INFO: {{{bt:6:0x75701d2070:sp 0x332db22df0}}}
+[01394.270775][1][2][klog] INFO: {{{bt:7:0x75701d2034:sp 0x332db22e10}}}
+[01394.270851][1][2][klog] INFO: {{{bt:8:0x75701d20a4:sp 0x332db22e40}}}
+[01394.270935][1][2][klog] INFO: {{{bt:9:0x75701d2150:sp 0x332db22e80}}}
+[01394.271010][1][2][klog] INFO: {{{bt:10:0x75701d2040:sp 0x332db22e90}}}
+[01394.271085][1][2][klog] INFO: {{{bt:11:0x75701d21b0:sp 0x332db22ea0}}}
+[01394.271157][1][2][klog] INFO: {{{bt:12:0x34db41b03d8:sp 0x332db22eb0}}}
+[01394.271303][1][2][klog] INFO: {{{bt:13:0x75701d219c:sp 0x332db22f20}}}
+[01394.271398][1][2][klog] INFO: {{{bt:14:0x75701d2174:sp 0x332db22f30}}}
+[01394.271484][1][2][klog] INFO: {{{bt:15:0x80e2c3217dfc:sp 0x332db22f40}}}
+[01394.271637][1][2][klog] INFO: {{{bt:16:0x80e2c321800c:sp 0x332db23000}}}
+[01394.271755][1][2][klog] INFO: {{{bt:17:0x75701d2014:sp 0x80ba4a8a5ff0}}}

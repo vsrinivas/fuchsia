@@ -1,0 +1,14 @@
+# Triggered by `run fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cmx` and obtained by
+# `fx klog --raw`.
+[1040.461] 01885.02639> [[[ELF module #0x0 "<VMO#49750=cpp_crasher.cmx>" BuildID=ce7229dde1121514 0xbb57d35000]]]
+[1040.461] 01885.02639> [[[ELF module #0x1 "libc++abi.so.1" BuildID=1820e427d1a18a0b 0x2219fb1b000]]]
+[1040.461] 01885.02639> [[[ELF module #0x2 "libc++.so.2" BuildID=7cb4c1ab4a2c73b2 0x2478bd42000]]]
+[1040.461] 01885.02639> [[[ELF module #0x3 "libfdio.so" BuildID=f60992baff92044c 0x2b4c5549000]]]
+[1040.461] 01885.02639> [[[ELF module #0x4 "libunwind.so.1" BuildID=7b0d4cebd9c3618d 0x3d160f5e000]]]
+[1040.461] 01885.02639> [[[ELF module #0x5 "libc.so" BuildID=8ce60b04bdfd0610 0x811986aae000]]]
+[1040.461] 01885.02639> [[[ELF module #0x6 "libzircon.so" BuildID=b60aa30791277c5b 0x8303db976000]]]
+[1040.461] 01885.02639>    #1    0x000000bb57d370b0 in blind_write ./../../src/developer/forensics/crasher/cpp/crasher.c:0 <<VMO#49750=cpp_crasher.cmx>>+0x20b0 sp 0x3f540e65ef0
+[1040.461] 01885.02639>    #2    0x000000bb57d37c68 in main ./../../src/developer/forensics/crasher/cpp/crasher.c:282 <<VMO#49750=cpp_crasher.cmx>>+0x2c68 sp 0x3f540e65f10
+[1040.461] 01885.02639>    #3    0x0000811986b0adfc in start_main ./../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:112 <libc.so>+0x5cdfc sp 0x3f540e65f40
+[1040.461] 01885.02639>    #4    0x0000811986b0b00c in __libc_start_main ./../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:164 <libc.so>+0x5d00c sp 0x3f540e66000
+[1040.462] 01885.02639>    #5    0x000000bb57d37014 in _start ./../../zircon/system/ulib/c/Scrt1.cc:7 <<VMO#49750=cpp_crasher.cmx>>+0x2014 sp 0x83dc91e4dff0

@@ -1,0 +1,67 @@
+# This log is printed by the last_reboot during Fuchsia startup when the last reboot is caused by
+# a kernel panic. It can be triggered by `k crash` in Fuchsia shell and the log is obtained through
+# `fx log --raw`. The content is also dumped into the serial logs pre-reboot.
+UPTIME (ms)
+65658
+
+VERSION
+arch: aarch64
+build_id: git-3bb27b5f560622a654dae107410993f26dccbfd9-dirty
+dso: id=5901d7a3998302f6 base=0xffffffff10000000 name=zircon.elf
+
+{{{reset}}}
+{{{module:0:kernel:elf:5901d7a3998302f6}}}
+{{{mmap:0xffffffff10000000:0x149cf8:load:0:rx:0xffffffff00000000}}}
+{{{mmap:0xffffffff10150000:0x60000:load:0:r:0xffffffff00150000}}}
+{{{mmap:0xffffffff101b0000:0x1118:load:0:rw:0xffffffff001b0000}}}
+{{{mmap:0xffffffff101c0000:0x90000:load:0:rw:0xffffffff001c0000}}}
+REGISTERS
+  x0: 0xffffffff10182045
+  x1: 0xffff00002e503800
+  x2:                  0
+  x3:                  0
+  x4:         0x6d757478
+  x5: 0xffff00854f45fd49
+  x6:         0x73617263
+  x7:         0x68736172
+  x8:                0x1
+  x9:                  0
+ x10:                  0
+ x11:                  0
+ x12:                0x1
+ x13:                0x2
+ x14: 0xffff00002e503a80
+ x15: 0xffffffff10221100
+ x16:             0x1a60
+ x17:               0x20
+ x18: 0xffff00854f462028
+ x19: 0xffffffff1019c360
+ x20: 0xffffffff101a08a0
+ x21: 0xffffffff101a0f60
+ x22: 0xffff00002e503800
+ x23: 0xffffffff101c8000
+ x24: 0xffff00002e503a90
+ x25:               0x28
+ x26: 0xffff00002e503a90
+ x27:                  0
+ x28:                0x1
+ x29: 0xffff00854f45fc30
+  lr: 0xffffffff10005188
+ usp:      0x37b559bdd00
+ elr: 0xffffffff1000387c
+spsr:         0x80000345
+ esr:         0x96000045
+ far:                0x1
+
+BACKTRACE (up to 16 calls)
+{{{bt:0:0xffffffff10044514}}}
+{{{bt:1:0xffffffff10145514}}}
+{{{bt:2:0xffffffff100b9d38}}}
+{{{bt:3:0xffffffff100b9c60}}}
+{{{bt:4:0xffffffff100b8278}}}
+{{{bt:5:0xffffffff10005188}}}
+{{{bt:6:0xffffffff100048dc}}}
+{{{bt:7:0xffffffff100f5abc}}}
+{{{bt:8:0xffffffff10107c98}}}
+{{{bt:9:0xffffffff100b8a28}}}
+

@@ -1,0 +1,44 @@
+# This is the stdout of `fx shell run fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cmx`
+thread 'main' panicked at 'I HAVE PANICKED', ../../src/developer/forensics/crasher/rust/src/main.rs:6:5
+stack backtrace:
+{{{reset}}}
+{{{module:0x0::elf:e1c9115da8f4a732}}}
+{{{mmap:0x75701d1000:0x90c:load:0x0:r:0x0}}}
+{{{mmap:0x75701d2000:0x250:load:0x0:rx:0x1000}}}
+{{{mmap:0x75701d3000:0xe8:load:0x0:rw:0x2000}}}
+{{{module:0x1:libfdio.so:elf:f60992baff92044c}}}
+{{{mmap:0x260ea9cc000:0xc804:load:0x1:r:0x0}}}
+{{{mmap:0x260ea9d9000:0x214d0:load:0x1:rx:0xd000}}}
+{{{mmap:0x260ea9fb000:0x33d8:load:0x1:rw:0x2f000}}}
+{{{mmap:0x260ea9ff000:0x3388:load:0x1:rw:0x33000}}}
+{{{module:0x2:libstd-771befcd97ac0955.so:elf:69f7458ba652c884}}}
+{{{mmap:0x34db40f8000:0x88bd4:load:0x2:r:0x0}}}
+{{{mmap:0x34db4181000:0xb2b50:load:0x2:rx:0x89000}}}
+{{{mmap:0x34db4234000:0x9cb0:load:0x2:rw:0x13c000}}}
+{{{mmap:0x34db423e000:0xaad:load:0x2:rw:0x146000}}}
+{{{module:0x3:<vDSO>:elf:b60aa30791277c5b}}}
+{{{mmap:0x82377173f000:0x68ec:load:0x3:r:0x0}}}
+{{{mmap:0x823771746000:0x2000:load:0x3:rx:0x7000}}}
+{{{module:0x4:libc.so:elf:8ce60b04bdfd0610}}}
+{{{mmap:0x80e2c31bb000:0x4b16c:load:0x4:r:0x0}}}
+{{{mmap:0x80e2c3207000:0x551a0:load:0x4:rx:0x4c000}}}
+{{{mmap:0x80e2c325d000:0x1468:load:0x4:rw:0xa2000}}}
+{{{mmap:0x80e2c325f000:0x25a0:load:0x4:rw:0xa4000}}}
+{{{bt:0:0x34db41abba4}}}
+{{{bt:1:0x34db4213d30}}}
+{{{bt:2:0x34db419e690}}}
+{{{bt:3:0x34db41afa1c}}}
+{{{bt:4:0x34db41af738}}}
+{{{bt:5:0x34db41b01d8}}}
+{{{bt:6:0x75701d2070}}}
+{{{bt:7:0x75701d2034}}}
+{{{bt:8:0x75701d20a4}}}
+{{{bt:9:0x75701d2150}}}
+{{{bt:10:0x75701d2040}}}
+{{{bt:11:0x75701d21b0}}}
+{{{bt:12:0x34db41b03d8}}}
+{{{bt:13:0x75701d219c}}}
+{{{bt:14:0x75701d2174}}}
+{{{bt:15:0x80e2c3217dfc}}}
+{{{bt:16:0x80e2c321800c}}}
+{{{bt:17:0x75701d2014}}}
