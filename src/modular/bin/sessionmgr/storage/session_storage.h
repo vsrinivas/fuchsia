@@ -12,15 +12,30 @@
 #include <optional>
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
+#include "src/modular/bin/sessionmgr/storage/watcher_list.h"
 #include "src/modular/lib/async/cpp/future.h"
 
-using OnStoryDeletedCallback = fit::function<void(std::string story_id)>;
-using OnStoryUpdatedCallback =
-    fit::function<void(std::string story_id, fuchsia::modular::internal::StoryData story_data)>;
+namespace modular {
+
+// A callback passed to |SessionStorage.SubscribeStoryDeleted| that is called when the story
+// |story_id| has been deleted.
+//
+// Returns a |WatchInterest| value that signals whether the callback should be deleted or
+// kept after it has been called.
+using StoryDeletedCallback = fit::function<WatchInterest(std::string story_id)>;
+
+// A callback passed to |SessionStorage.SubscribeStoryUpdated| that is called when the story
+// |story_id| has been updated.
+//
+// Returns a |WatchInterest| value that signals whether the callback should be deleted or
+// kept after it has been called.
+using StoryUpdatedCallback = fit::function<WatchInterest(
+    std::string story_id, const fuchsia::modular::internal::StoryData& story_data)>;
+
+// A callback passed to |SessionStorage.add_on_annotations_updated_once| that is called when the
+// annotations for story |story_id| have been updated to the new value, |annotations|.
 using OnAnnotationsUpdatedCallback = fit::function<void(
     std::string story_id, std::vector<fuchsia::modular::Annotation> annotations)>;
-
-namespace modular {
 
 // This class has the following responsibilities:
 //
@@ -28,15 +43,15 @@ namespace modular {
 class SessionStorage {
  public:
   // Constructs a new SessionStorage with internal storage.
-  SessionStorage();
+  SessionStorage() = default;
 
   // |callback| is notified whenever a story has been deleted. This
   // notification is either the result of:
   //
   // a) The story being deleted on another device.
   // b) The story having been deleted locally with DeleteStory().
-  void set_on_story_deleted(OnStoryDeletedCallback callback) {
-    on_story_deleted_ = std::move(callback);
+  void SubscribeStoryDeleted(StoryDeletedCallback callback) {
+    story_deleted_watchers_.Add(std::move(callback));
   }
 
   // |callback| is notified whenever a story has been added or updated.
@@ -45,8 +60,8 @@ class SessionStorage {
   //
   // The update could be the result of a local modification (ie, through
   // Update*()) or a modification on another device.
-  void set_on_story_updated(OnStoryUpdatedCallback callback) {
-    on_story_updated_ = std::move(callback);
+  void SubscribeStoryUpdated(StoryUpdatedCallback callback) {
+    story_updated_watchers_.Add(std::move(callback));
   }
 
   // |callback| is notified once |story_id|'s annotations are updated, then the callback is removed.
@@ -57,7 +72,7 @@ class SessionStorage {
   void add_on_annotations_updated_once(std::string story_id,
                                        OnAnnotationsUpdatedCallback callback) {
     auto [it, inserted] = on_annotations_updated_callbacks_.try_emplace(
-        story_id, std::vector<OnAnnotationsUpdatedCallback>{});
+        std::move(story_id), std::vector<OnAnnotationsUpdatedCallback>{});
     it->second.push_back(std::move(callback));
   }
 
@@ -94,6 +109,16 @@ class SessionStorage {
   std::shared_ptr<StoryStorage> GetStoryStorage(std::string story_id);
 
  private:
+  // Invokes callbacks in |story_updated_watchers_| for |story_id| to notify
+  // listeners that the story's data was updated.
+  //
+  // The story must exist in |story_data_backing_store_|.
+  void NotifyStoryUpdated(std::string story_id);
+
+  // Invokes callbacks in |story_deleted_watchers_| listeners that the story |story_id|
+  // was deleted.
+  void NotifyStoryDeleted(std::string story_id);
+
   // Invokes callbacks in |on_annotations_updated_callbacks_| for |story_id| to notify
   // listeners that annotations for the story have the new value |annotations|,
   // then removes all callbacks for the story.
@@ -102,19 +127,17 @@ class SessionStorage {
   void NotifyAndRemoveOnAnnotationsUpdated(
       std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations);
 
-  OnStoryDeletedCallback on_story_deleted_;
-  OnStoryUpdatedCallback on_story_updated_;
+  WatcherList<StoryDeletedCallback> story_deleted_watchers_;
+  WatcherList<StoryUpdatedCallback> story_updated_watchers_;
 
   // Map of story_id to a callback invoked when that story's annotations are updated.
   std::map<std::string, std::vector<OnAnnotationsUpdatedCallback>>
       on_annotations_updated_callbacks_;
 
-  // In-memory map from story_id to the corresponding StoryData.  This was
-  // previously stored in the ledger.
+  // In-memory map from story_id to the corresponding StoryData.
   std::map<std::string, fuchsia::modular::internal::StoryData> story_data_backing_store_;
 
-  // In-memory map from story_id to the corresponding StoryData.  This was
-  // previously stored in the ledger.
+  // In-memory map from story_id to the corresponding StoryStorage.
   std::map<std::string, std::shared_ptr<StoryStorage>> story_storage_backing_store_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);

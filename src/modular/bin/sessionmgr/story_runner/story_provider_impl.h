@@ -142,7 +142,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // Called by *session_storage_.
   void OnStoryStorageDeleted(std::string story_id);
   void OnStoryStorageUpdated(std::string story_id,
-                             fuchsia::modular::internal::StoryData story_data);
+                             const fuchsia::modular::internal::StoryData& story_data);
 
   void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
                            fuchsia::modular::StoryState story_state);

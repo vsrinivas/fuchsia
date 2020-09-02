@@ -10,6 +10,7 @@ hermetic_tests_package("storage_unittests") {
     ":encode_module_path_unittest",
     ":session_storage_unittest",
     ":story_storage_unittest",
+    ":watcher_list_unittest",
   ]
   environments = basic_envs
 }
@@ -61,6 +62,7 @@ source_set("session_storage") {
   ]
 
   deps = [
+    ":watcher_list",
     "//src/modular/bin/sessionmgr/storage:encode_module_path",
     "//src/modular/lib/fidl:clone",
   ]
@@ -110,6 +112,15 @@ source_set("story_storage") {
   public_deps = [ "//sdk/fidl/fuchsia.modular.internal" ]
 }
 
+source_set("watcher_list") {
+  sources = [ "watcher_list.h" ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
 executable("story_storage_unittest") {
   testonly = true
 
@@ -125,5 +136,18 @@ executable("story_storage_unittest") {
     "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("watcher_list_unittest") {
+  testonly = true
+
+  sources = [ "watcher_list_unittest.cc" ]
+
+  deps = [
+    ":watcher_list",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 }

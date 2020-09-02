@@ -211,18 +211,22 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
       presentation_provider_(presentation_provider),
       session_inspect_node_(root_node),
       weak_factory_(this) {
-  session_storage_->set_on_story_deleted(
+  session_storage_->SubscribeStoryDeleted(
       [weak_ptr = weak_factory_.GetWeakPtr()](std::string story_id) {
-        if (!weak_ptr)
-          return;
+        if (!weak_ptr) {
+          return WatchInterest::kStop;
+        }
         weak_ptr->OnStoryStorageDeleted(std::move(story_id));
+        return WatchInterest::kContinue;
       });
-  session_storage_->set_on_story_updated(
-      [weak_ptr = weak_factory_.GetWeakPtr()](std::string story_id,
-                                              fuchsia::modular::internal::StoryData story_data) {
-        if (!weak_ptr)
-          return;
-        weak_ptr->OnStoryStorageUpdated(std::move(story_id), std::move(story_data));
+  session_storage_->SubscribeStoryUpdated(
+      [weak_ptr = weak_factory_.GetWeakPtr()](
+          std::string story_id, const fuchsia::modular::internal::StoryData& story_data) {
+        if (!weak_ptr) {
+          return WatchInterest::kStop;
+        }
+        weak_ptr->OnStoryStorageUpdated(std::move(story_id), story_data);
+        return WatchInterest::kContinue;
       });
 }
 
@@ -462,8 +466,8 @@ void StoryProviderImpl::GetStories2(
       }));
 }
 
-void StoryProviderImpl::OnStoryStorageUpdated(std::string story_id,
-                                              fuchsia::modular::internal::StoryData story_data) {
+void StoryProviderImpl::OnStoryStorageUpdated(
+    std::string story_id, const fuchsia::modular::internal::StoryData& story_data) {
   // If we have a StoryRuntimeContainer for this story id, update our cached
   // StoryData and get runtime state available from it.
   //

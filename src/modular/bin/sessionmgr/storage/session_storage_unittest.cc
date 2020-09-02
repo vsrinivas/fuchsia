@@ -170,21 +170,23 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
 TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
   auto storage = CreateStorage();
 
-  bool updated{};
+  bool updated{false};
   std::string updated_story_name;
   fuchsia::modular::internal::StoryData updated_story_data;
-  storage->set_on_story_updated(
-      [&](std::string story_name, fuchsia::modular::internal::StoryData story_data) {
+  storage->SubscribeStoryUpdated(
+      [&](std::string story_name, const fuchsia::modular::internal::StoryData& story_data) {
         updated_story_name = std::move(story_name);
-        updated_story_data = std::move(story_data);
+        updated_story_data = fidl::Clone(story_data);
         updated = true;
+        return WatchInterest::kContinue;
       });
 
-  bool deleted{};
+  bool deleted{false};
   std::string deleted_story_name;
-  storage->set_on_story_deleted([&](std::string story_name) {
+  storage->SubscribeStoryDeleted([&](std::string story_name) {
     deleted_story_name = std::move(story_name);
     deleted = true;
+    return WatchInterest::kContinue;
   });
 
   auto created_story_name = storage->CreateStory("story", {});

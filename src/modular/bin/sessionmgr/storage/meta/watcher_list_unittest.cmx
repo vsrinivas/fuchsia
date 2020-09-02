@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/watcher_list_unittest"
+    }
+}

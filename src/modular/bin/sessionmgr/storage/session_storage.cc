@@ -15,8 +15,6 @@
 
 namespace modular {
 
-SessionStorage::SessionStorage() {}
-
 std::string SessionStorage::CreateStory(std::string story_name,
                                         std::vector<fuchsia::modular::Annotation> annotations) {
   // Check if the story already exists.  If it does, this whole function should
@@ -29,13 +27,9 @@ std::string SessionStorage::CreateStory(std::string story_name,
     story_data.mutable_story_info()->set_last_focus_time(0);
     story_data.mutable_story_info()->set_annotations(std::move(annotations));
 
-    fuchsia::modular::internal::StoryData callback_data;
-    story_data.Clone(&callback_data);
     story_data_backing_store_[story_name] = std::move(story_data);
 
-    if (on_story_updated_) {
-      on_story_updated_(story_name, std::move(callback_data));
-    }
+    NotifyStoryUpdated(story_name);
   }
 
   return story_name;
@@ -51,9 +45,7 @@ void SessionStorage::DeleteStory(std::string story_name) {
   story_storage_backing_store_.erase(story_name);
   on_annotations_updated_callbacks_.erase(story_name);
 
-  if (on_story_deleted_) {
-    on_story_deleted_(story_name);
-  }
+  NotifyStoryDeleted(std::move(story_name));
 }
 
 fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(std::string story_name) {
@@ -114,11 +106,7 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
   // No need to write story data back to map because we modify it in place.
   story_data.mutable_story_info()->set_annotations(std::move(new_annotations));
 
-  if (on_story_updated_) {
-    fuchsia::modular::internal::StoryData story_data_copy;
-    story_data.Clone(&story_data_copy);
-    on_story_updated_(std::move(story_name), std::move(story_data_copy));
-  }
+  NotifyStoryUpdated(story_name);
 
   // The merge was successful.
   return std::nullopt;
@@ -137,6 +125,19 @@ std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(std::string story_
     value = story_storage_backing_store_[story_name];
   }
   return value;
+}
+
+void SessionStorage::NotifyStoryUpdated(std::string story_id) {
+  auto it = story_data_backing_store_.find(story_id);
+  FX_DCHECK(it != story_data_backing_store_.end());
+
+  const auto& story_data = it->second;
+
+  story_updated_watchers_.Notify(std::move(story_id), story_data);
+}
+
+void SessionStorage::NotifyStoryDeleted(std::string story_id) {
+  story_deleted_watchers_.Notify(std::move(story_id));
 }
 
 void SessionStorage::NotifyAndRemoveOnAnnotationsUpdated(
