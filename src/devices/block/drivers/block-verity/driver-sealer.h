@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DRIVER_SEALER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DRIVER_SEALER_H_
 
-#include "device-info.h"
-#include "sealer.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
+#include "src/devices/block/drivers/block-verity/sealer.h"
 
 namespace block_verity {
 

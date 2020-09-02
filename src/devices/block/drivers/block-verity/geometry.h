@@ -14,9 +14,9 @@ namespace block_verity {
 // * integrity section
 // * data section
 //
-// The amount of space allocated to each section varies by block size (in
+// The amount of space allocated to each section varies by virtual block size (in
 // bytes), hash function output length (in bytes), and block device size (in
-// blocks).
+// virtual blocks).
 
 struct IntegrityShape {
   uint64_t integrity_block_count;
@@ -52,7 +52,7 @@ typedef uint32_t HashIndex;
 // A representation of where, within the integrity section, the hash of a
 // particular block can be found.
 struct HashLocation {
-  // The index into the integrity section of the block we are consulting
+  // The index (in virtual blocks) into the integrity section of the block we are consulting.
   IntegrityBlockIndex integrity_block;
 
   // The index of the hash within that block.  To get a byte offset, multiply hash_in_block by
@@ -79,10 +79,10 @@ class Geometry {
   HashLocation NextIntegrityBlockUp(uint32_t distance_from_leaf,
                                     IntegrityBlockIndex integrity_block_index) const;
 
-  // Returns the device block offset for the `index`th integrity block.
+  // Returns the device block offset (in virtual blocks) for the `index`th integrity block.
   uint64_t AbsoluteLocationForIntegrity(IntegrityBlockIndex index) const;
 
-  // Returns the device block offset for the `index`th data block.
+  // Returns the device block offset (in virtual blocks) for the `index`th data block.
   uint64_t AbsoluteLocationForData(DataBlockIndex index) const;
 
   uint64_t total_blocks_;

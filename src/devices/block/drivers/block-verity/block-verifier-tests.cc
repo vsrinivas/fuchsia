@@ -9,8 +9,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "block-verifier.h"
-#include "constants.h"
+#include "src/devices/block/drivers/block-verity/block-verifier.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
 
 namespace {
 

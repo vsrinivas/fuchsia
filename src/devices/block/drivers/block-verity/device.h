@@ -12,7 +12,7 @@
 #include <ddktl/protocol/block.h>
 #include <fbl/mutex.h>
 
-#include "device-info.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
 
 namespace block_verity {
 

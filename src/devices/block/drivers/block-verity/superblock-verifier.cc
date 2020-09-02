@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "superblock-verifier.h"
+#include "src/devices/block/drivers/block-verity/superblock-verifier.h"
 
 #include <endian.h>
 #include <zircon/status.h>
@@ -12,8 +12,8 @@
 #include <ddk/debug.h>
 #include <digest/digest.h>
 
-#include "constants.h"
-#include "superblock.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/superblock.h"
 
 namespace block_verity {
 namespace {
@@ -47,7 +47,7 @@ zx_status_t SuperblockVerifier::StartVerifying(void* cookie, SuperblockVerifierC
 
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_READ;
-  block_op->rw.length = 1;
+  block_op->rw.length = info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_dev = 0;  // Superblock is always block 0
   block_op->rw.offset_vmo = 0;  // Write to start of VMO
   block_op->rw.vmo = block_op_vmo_.get();

@@ -16,9 +16,9 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-#include "driver-sealer.h"
-#include "superblock-verifier.h"
-#include "superblock.h"
+#include "src/devices/block/drivers/block-verity/driver-sealer.h"
+#include "src/devices/block/drivers/block-verity/superblock-verifier.h"
+#include "src/devices/block/drivers/block-verity/superblock.h"
 
 namespace block_verity {
 
@@ -35,7 +35,7 @@ using DeviceManagerType =
 // device.
 class DeviceManager final
     : public DeviceManagerType,
-      public ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Interface {
+      public llcpp::fuchsia::hardware::block::verified::DeviceManager::Interface {
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),
@@ -66,12 +66,12 @@ class DeviceManager final
   void DdkChildPreRelease(void* child_ctx);
 
   // implement `DeviceManager::Interface`
-  void OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Config config,
+  void OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
                     OpenForWriteCompleter::Sync completer) override __TA_EXCLUDES(mtx_);
   void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync completer) override
       __TA_EXCLUDES(mtx_);
-  void OpenForVerifiedRead(::llcpp::fuchsia::hardware::block::verified::Config config,
-                           ::llcpp::fuchsia::hardware::block::verified::Seal seal,
+  void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
+                           llcpp::fuchsia::hardware::block::verified::Seal seal,
                            OpenForVerifiedReadCompleter::Sync completer) override
       __TA_EXCLUDES(mtx_);
   void Close(CloseCompleter::Sync completer) override __TA_EXCLUDES(mtx_);

@@ -12,6 +12,7 @@ namespace block_verity {
 typedef void (*BlockLoaderCallback)(void* cookie, zx_status_t status);
 
 // Interface for requesting reads of blocks from some I/O provider implementation.
+// Blocks here are expressed in terms of virtual blocks, not backing storage blocks.
 class BlockLoaderInterface {
  public:
   // Requests blocks `start_block` through `start_block + block_count - 1`

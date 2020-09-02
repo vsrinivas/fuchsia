@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/devices/block/drivers/block-verity/device.h"
 
 #include <zircon/status.h>
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
-#include "device-info.h"
-#include "extra.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
+#include "src/devices/block/drivers/block-verity/extra.h"
 
 namespace block_verity {
 
@@ -19,11 +20,11 @@ namespace block_verity {
 // in the underlying device, based on the block allocation.
 Device::Device(zx_device_t* parent, DeviceInfo&& info)
     : DeviceType(parent), info_(std::move(info)) {
-  zxlogf(INFO, "mutable constructor\n");
+  zxlogf(INFO, "mutable constructor");
 }
 
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
-  zxlogf(INFO, "mutable DdkGetProtocol\n");
+  zxlogf(INFO, "mutable DdkGetProtocol");
   auto* proto = static_cast<ddk::AnyProtocol*>(out);
   proto->ctx = this;
   switch (proto_id) {
@@ -41,7 +42,7 @@ zx_off_t Device::DdkGetSize() {
   zx_off_t data_size;
   if (mul_overflow(info_.geometry.block_size_, info_.geometry.allocation_.data_block_count,
                    &data_size)) {
-    zxlogf(ERROR, "overflowed when computing device size\n");
+    zxlogf(ERROR, "overflowed when computing device size");
     return 0;
   }
 
@@ -49,17 +50,17 @@ zx_off_t Device::DdkGetSize() {
 }
 
 void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "mutable DdkUnbindNew\n");
+  zxlogf(INFO, "mutable DdkUnbindNew");
   txn.Reply();
 }
 
 void Device::DdkRelease() {
-  zxlogf(INFO, "mutable DdkRelease\n");
+  zxlogf(INFO, "mutable DdkRelease");
   delete this;
 }
 
 void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
-  zxlogf(INFO, "mutable BlockImplQuery\n");
+  zxlogf(INFO, "mutable BlockImplQuery");
 
   info_.block_protocol.Query(out_info, out_op_size);
   // Overwrite block_count with just the number of blocks we're exposing as data
@@ -67,6 +68,7 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
   // Besides block count and the op size, we're happy to pass through all values
   // from the underlying block device here.
   out_info->block_count = info_.geometry.allocation_.data_block_count;
+  out_info->block_size = kBlockSize;
   *out_op_size = info_.op_size;
 }
 
@@ -74,9 +76,10 @@ void Device::BlockImplQueue(block_op_t* block_op, block_impl_queue_callback comp
                             void* cookie) {
   fbl::AutoLock lock(&mtx_);
   extra_op_t* extra = BlockToExtra(block_op, info_.op_size);
-  // Save original values in extra, and adjust block_op's block offset.
+  // Save original values in extra, and adjust block_op's block/vmo offsets.
   uint64_t data_start_offset = info_.geometry.AbsoluteLocationForData(0);
-  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, data_start_offset);
+  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, info_.hw_blocks_per_virtual_block,
+                               data_start_offset);
   if (rc != ZX_OK) {
     zxlogf(ERROR, "failed to initialize extra info: %s", zx_status_get_string(rc));
     BlockComplete(block_op, rc);

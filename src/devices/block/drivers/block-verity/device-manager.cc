@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device-manager.h"
+#include "src/devices/block/drivers/block-verity/device-manager.h"
 
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
 #include <threads.h>
@@ -23,10 +23,10 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 
-#include "config.h"
-#include "device.h"
-#include "superblock-verifier.h"
-#include "verified-device.h"
+#include "src/devices/block/drivers/block-verity/config.h"
+#include "src/devices/block/drivers/block-verity/device.h"
+#include "src/devices/block/drivers/block-verity/superblock-verifier.h"
+#include "src/devices/block/drivers/block-verity/verified-device.h"
 
 namespace block_verity {
 namespace {
@@ -51,12 +51,12 @@ zx_status_t DeviceManager::Create(void* ctx, zx_device_t* parent) {
 
   auto manager = fbl::make_unique_checked<DeviceManager>(&ac, parent);
   if (!ac.check()) {
-    zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(DeviceManager));
+    zxlogf(ERROR, "failed to allocate %zu bytes", sizeof(DeviceManager));
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((rc = manager->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "failed to bind: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to bind: %s", zx_status_get_string(rc));
     return rc;
   }
 
@@ -71,7 +71,7 @@ zx_status_t DeviceManager::Bind() {
   fbl::AutoLock lock(&mtx_);
 
   if ((rc = DdkAdd("verity")) != ZX_OK) {
-    zxlogf(ERROR, "failed to add verity device: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to add verity device: %s", zx_status_get_string(rc));
     state_ = kRemoved;
     return rc;
   }
@@ -161,7 +161,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   }
 }
 
-void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Config config,
+void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
                                  OpenForWriteCompleter::Sync completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
@@ -196,7 +196,7 @@ void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Co
 
   auto device = fbl::make_unique_checked<block_verity::Device>(&ac, zxdev(), std::move(info));
   if (!ac.check()) {
-    zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(Device));
+    zxlogf(ERROR, "failed to allocate %zu bytes", sizeof(Device));
     async_completer.ReplyError(ZX_ERR_NO_MEMORY);
     return;
   }
@@ -219,7 +219,7 @@ void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Co
 void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
-  ::llcpp::fuchsia::hardware::block::verified::Seal seal;
+  llcpp::fuchsia::hardware::block::verified::Seal seal;
   if (state_ != kAuthoring) {
     async_completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
@@ -243,13 +243,13 @@ void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf,
 
   if (status == ZX_OK) {
     // Assemble the result struct and reply with success
-    ::llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256;
+    llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256;
     memcpy(sha256.superblock_hash.begin(), seal_buf, seal_len);
 
-    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+    fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
         std::move(sha256);
     seal_completer_->ReplySuccess(
-        ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned)));
+        llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned)));
   } else {
     zxlogf(WARNING, "Sealer returned failure: %s", zx_status_get_string(status));
     seal_completer_->ReplyError(status);
@@ -291,7 +291,7 @@ void DeviceManager::OnSuperblockVerificationCompleted(zx_status_t status,
   auto device = fbl::make_unique_checked<block_verity::VerifiedDevice>(
       &ac, zxdev(), std::move(info), integrity_root_hash);
   if (!ac.check()) {
-    zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(Device));
+    zxlogf(ERROR, "failed to allocate %zu bytes", sizeof(Device));
     CompleteOpenForVerifiedRead(ZX_ERR_NO_MEMORY);
     return;
   }
@@ -329,8 +329,8 @@ void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
   superblock_verifier_.reset();
 }
 
-void DeviceManager::OpenForVerifiedRead(::llcpp::fuchsia::hardware::block::verified::Config config,
-                                        ::llcpp::fuchsia::hardware::block::verified::Seal seal,
+void DeviceManager::OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
+                                        llcpp::fuchsia::hardware::block::verified::Seal seal,
                                         OpenForVerifiedReadCompleter::Sync completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "verified-volume-client.h"
+#include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
@@ -22,7 +22,7 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 
 zx_status_t BindVerityDriver(zx::unowned_channel block_dev_chan) {
   zx_status_t rc;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  auto resp = llcpp::fuchsia::device::Controller::Call::Bind(
       std::move(block_dev_chan), ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
   rc = resp.status();
   if (rc == ZX_OK) {
@@ -41,7 +41,7 @@ zx_status_t RelativeTopologicalPath(zx::unowned_channel channel, fbl::String* ou
   path.Resize(path.capacity());
   size_t path_len;
   auto resp =
-      ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(channel));
+      llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(channel));
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {
@@ -142,18 +142,18 @@ zx_status_t VerifiedVolumeClient::CreateFromBlockDevice(
 zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
                                                    fbl::unique_fd& mutable_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_hash_function(fidl::unowned_ptr(&hash_function))
                     .set_block_size(fidl::unowned_ptr(&block_size))
                     .build();
 
   // Request the device be opened for writes
-  auto open_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForWrite(
+  auto open_resp = llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForWrite(
       zx::unowned_channel(verity_chan_), std::move(config));
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();
@@ -200,7 +200,7 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
 
 zx_status_t VerifiedVolumeClient::Close() {
   // Close the device cleanly
-  auto close_resp = ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::Close(
+  auto close_resp = llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::Close(
       zx::unowned_channel(verity_chan_));
   if (close_resp.status() != ZX_OK) {
     return close_resp.status();
@@ -216,13 +216,13 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
     fidl::Buffer<
         llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>*
         seal_response_buffer,
-    ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
+    llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out) {
   // We use the caller-provided buffer FIDL call style because the caller
   // needs to do something with the seal returned, so we need to keep the
   // response object alive so that the caller can interact with it after this
   // function returns.
   auto seal_resp =
-      ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::CloseAndGenerateSeal(
+      llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::CloseAndGenerateSeal(
           zx::unowned_channel(verity_chan_), seal_response_buffer->view());
   if (seal_resp.status() != ZX_OK) {
     return seal_resp.status();
@@ -239,27 +239,27 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
                                                       const zx::duration& timeout,
                                                       fbl::unique_fd& verified_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_hash_function(fidl::unowned_ptr(&hash_function))
                     .set_block_size(fidl::unowned_ptr(&block_size))
                     .build();
 
   // Make a copy of the seal to send.
-  ::llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;
+  llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256_seal;
   expected_seal.CopyTo(sha256_seal.superblock_hash.begin(), sha256_seal.superblock_hash.size());
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
       std::move(sha256_seal);
   auto seal_to_send =
-      ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned));
+      llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned));
 
   // Request the device be opened for verified read
   auto open_resp =
-      ::llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForVerifiedRead(
+      llcpp::fuchsia::hardware::block::verified::DeviceManager::Call::OpenForVerifiedRead(
           zx::unowned_channel(verity_chan_), std::move(config), std::move(seal_to_send));
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();

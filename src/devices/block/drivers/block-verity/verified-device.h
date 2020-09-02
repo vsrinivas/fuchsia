@@ -17,9 +17,9 @@
 #include <ddktl/protocol/block.h>
 #include <fbl/mutex.h>
 
-#include "block-loader-interface.h"
-#include "block-verifier.h"
-#include "device-info.h"
+#include "src/devices/block/drivers/block-verity/block-loader-interface.h"
+#include "src/devices/block/drivers/block-verity/block-verifier.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
 
 namespace block_verity {
 

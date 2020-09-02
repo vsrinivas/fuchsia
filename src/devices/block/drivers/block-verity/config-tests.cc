@@ -6,17 +6,17 @@
 
 #include <zxtest/zxtest.h>
 
-#include "config.h"
+#include "src/devices/block/drivers/block-verity/config.h"
 
 namespace {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_hash_function(fidl::unowned_ptr(&hash_function))
                     .set_block_size(fidl::unowned_ptr(&block_size))
                     .build();
@@ -27,11 +27,28 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
   EXPECT_OK(block_verity::CheckConfig(config, blk));
 }
 
+TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+                    .set_hash_function(fidl::unowned_ptr(&hash_function))
+                    .set_block_size(fidl::unowned_ptr(&block_size))
+                    .build();
+
+  block_info_t blk;
+  blk.block_size = 512;
+
+  EXPECT_OK(block_verity::CheckConfig(config, blk));
+}
+
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_block_size(fidl::unowned_ptr(&block_size))
                     .build();
 
@@ -42,10 +59,10 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_hash_function(fidl::unowned_ptr(&hash_function))
                     .build();
 
@@ -55,20 +72,22 @@ TEST(ConfigCheckTest, RejectsMissingBlockSize) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
 }
 
-TEST(ConfigCheckTest, RejectsIfBlockSizeMismatch) {
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
-      ::llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
-  fidl::aligned<::llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
-      ::llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
-  auto config = ::llcpp::fuchsia::hardware::block::verified::Config::Builder(
-                    std::make_unique<::llcpp::fuchsia::hardware::block::verified::Config::Frame>())
+TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::HashFunction> hash_function =
+      llcpp::fuchsia::hardware::block::verified::HashFunction::SHA256;
+  fidl::aligned<llcpp::fuchsia::hardware::block::verified::BlockSize> block_size =
+      llcpp::fuchsia::hardware::block::verified::BlockSize::SIZE_4096;
+  auto config = llcpp::fuchsia::hardware::block::verified::Config::Builder(
+                    std::make_unique<llcpp::fuchsia::hardware::block::verified::Config::Frame>())
                     .set_hash_function(fidl::unowned_ptr(&hash_function))
                     .set_block_size(fidl::unowned_ptr(&block_size))
                     .build();
 
   block_info_t blk;
-  blk.block_size = 512;
-
+  // not a divisor of 4k
+  blk.block_size = 640;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
+  blk.block_size = 8192;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
 }
 

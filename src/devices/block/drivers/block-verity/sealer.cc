@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sealer.h"
+#include "src/devices/block/drivers/block-verity/sealer.h"
 
 #include <endian.h>
 #include <zircon/assert.h>
 
-#include "hash-block-accumulator.h"
-#include "superblock.h"
+#include "src/devices/block/drivers/block-verity/hash-block-accumulator.h"
+#include "src/devices/block/drivers/block-verity/superblock.h"
 
 namespace block_verity {
 
@@ -82,7 +82,7 @@ zx_status_t Sealer::StartSealing(void* cookie, sealer_callback callback) {
 void Sealer::ScheduleNextWorkUnit() {
   switch (state_) {
     case Initial:
-      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Initial\n");
+      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Initial");
       return;
     case ReadLoop:
       // See if we have read everything.  If not, dispatch a read.
@@ -116,10 +116,10 @@ void Sealer::ScheduleNextWorkUnit() {
       return;
     }
     case Done:
-      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Done\n");
+      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Done");
       return;
     case Failed:
-      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Failed\n");
+      ZX_ASSERT_MSG(false, "ScheduleNextWorkUnit called while state was Failed");
       return;
   }
 }

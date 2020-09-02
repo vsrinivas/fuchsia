@@ -12,9 +12,9 @@
 
 #include <digest/digest.h>
 
-#include "constants.h"
-#include "geometry.h"
-#include "hash-block-accumulator.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/geometry.h"
+#include "src/devices/block/drivers/block-verity/hash-block-accumulator.h"
 
 namespace block_verity {
 

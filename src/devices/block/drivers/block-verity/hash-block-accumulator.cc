@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hash-block-accumulator.h"
+#include "src/devices/block/drivers/block-verity/hash-block-accumulator.h"
 
 #include <zircon/assert.h>
 

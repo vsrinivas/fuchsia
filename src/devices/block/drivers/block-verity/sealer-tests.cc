@@ -9,8 +9,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "constants.h"
-#include "sealer.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/sealer.h"
 
 namespace {
 

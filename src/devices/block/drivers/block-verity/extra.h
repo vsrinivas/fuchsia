@@ -12,7 +12,7 @@
 
 #include <ddk/protocol/block.h>
 
-#include "block-loader-interface.h"
+#include "src/devices/block/drivers/block-verity/block-loader-interface.h"
 
 namespace block_verity {
 
@@ -37,7 +37,7 @@ struct extra_op_t {
 
   // Resets this structure to an initial state.
   zx_status_t Init(block_op_t* block, block_impl_queue_callback completion_cb, void* cookie,
-                   size_t reserved_blocks);
+                   size_t hw_blocks_per_logical_block, size_t data_start_offset_logical_blocks);
 };
 
 // Translates `block_op_t`s to `extra_op_t`s and vice versa.

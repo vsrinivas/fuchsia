@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "verified-device.h"
+#include "src/devices/block/drivers/block-verity/verified-device.h"
 
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -11,9 +11,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "constants.h"
-#include "device-info.h"
-#include "extra.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
+#include "src/devices/block/drivers/block-verity/extra.h"
 
 namespace block_verity {
 namespace {
@@ -87,7 +87,7 @@ zx_off_t VerifiedDevice::DdkGetSize() {
   zx_off_t data_size;
   if (mul_overflow(info_.geometry.block_size_, info_.geometry.allocation_.data_block_count,
                    &data_size)) {
-    zxlogf(ERROR, "overflowed when computing device size\n");
+    zxlogf(ERROR, "overflowed when computing device size");
     return 0;
   }
 
@@ -118,6 +118,7 @@ void VerifiedDevice::BlockImplQuery(block_info_t* out_info, size_t* out_op_size)
   // Besides block count and the op size, we're happy to pass through all values
   // from the underlying block device here.
   out_info->block_count = info_.geometry.allocation_.data_block_count;
+  out_info->block_size = kBlockSize;
   *out_op_size = info_.op_size;
 }
 
@@ -126,9 +127,10 @@ void VerifiedDevice::BlockImplQueue(block_op_t* block_op, block_impl_queue_callb
   fbl::AutoLock lock(&mtx_);
 
   extra_op_t* extra = BlockToExtra(block_op, info_.op_size);
-  // Save original values in extra, and adjust block_op's block offset.
+  // Save original values in extra, and adjust block_op's block/vmo offsets.
   uint64_t data_start_offset = info_.geometry.AbsoluteLocationForData(0);
-  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, data_start_offset);
+  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, info_.hw_blocks_per_virtual_block,
+                               data_start_offset);
   if (rc != ZX_OK) {
     zxlogf(ERROR, "failed to initialize extra info: %s", zx_status_get_string(rc));
     BlockComplete(block_op, rc);
@@ -160,8 +162,8 @@ void VerifiedDevice::RequestBlocks(uint64_t start_block, uint64_t block_count, z
   fbl::AutoLock lock(&mtx_);
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_READ;
-  block_op->rw.length = block_count;
-  block_op->rw.offset_dev = start_block;
+  block_op->rw.length = block_count * info_.hw_blocks_per_virtual_block;
+  block_op->rw.offset_dev = start_block * info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_vmo = 0;
   block_op->rw.vmo = vmo.get();
 
@@ -188,8 +190,9 @@ void VerifiedDevice::ForwardTranslatedBlockOp(block_op_t* block_op) {
   switch (block_op->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
       // Bounds check.  Don't forward reads that would go past the end of the
-      // device.
-      if ((block_op->rw.offset_dev + block_op->rw.length) > info_.geometry.total_blocks_) {
+      // device.  The translated request is in physical blocks.
+      if ((block_op->rw.offset_dev + block_op->rw.length) >
+          (info_.geometry.total_blocks_ * info_.hw_blocks_per_virtual_block)) {
         BlockComplete(block_op, ZX_ERR_INVALID_ARGS);
         return;
       }

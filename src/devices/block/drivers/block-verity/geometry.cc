@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "geometry.h"
+#include "src/devices/block/drivers/block-verity/geometry.h"
 
 #include <zircon/assert.h>
 

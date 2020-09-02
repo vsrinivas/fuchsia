@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_HASH_BLOCK_ACCUMULATOR_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_HASH_BLOCK_ACCUMULATOR_H_
 
-#include "constants.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
 
 namespace block_verity {
 

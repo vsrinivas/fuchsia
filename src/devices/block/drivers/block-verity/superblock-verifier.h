@@ -10,9 +10,9 @@
 #include <array>
 #include <memory>
 
-#include "constants.h"
-#include "device-info.h"
-#include "superblock.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/device-info.h"
+#include "src/devices/block/drivers/block-verity/superblock.h"
 
 namespace block_verity {
 

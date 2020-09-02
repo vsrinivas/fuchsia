@@ -4,7 +4,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "geometry.h"
+#include "src/devices/block/drivers/block-verity/geometry.h"
 
 namespace {
 

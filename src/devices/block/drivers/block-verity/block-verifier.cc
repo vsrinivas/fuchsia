@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "block-verifier.h"
+#include "src/devices/block/drivers/block-verity/block-verifier.h"
 
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
@@ -12,9 +12,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "block-loader-interface.h"
-#include "constants.h"
-#include "geometry.h"
+#include "src/devices/block/drivers/block-verity/block-loader-interface.h"
+#include "src/devices/block/drivers/block-verity/constants.h"
+#include "src/devices/block/drivers/block-verity/geometry.h"
 
 namespace block_verity {
 namespace {

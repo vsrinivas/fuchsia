@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver-sealer.h"
+#include "src/devices/block/drivers/block-verity/driver-sealer.h"
 
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -63,12 +63,12 @@ zx_status_t DriverSealer::StartSealing(void* cookie, sealer_callback callback) {
 }
 
 void DriverSealer::RequestRead(uint64_t block) {
-  // For now, we'll just read one block, though we could move to larger batches
-  // ~trivially with a larger block_op_vmo_ buffer.
+  // For now, we'll just read one logical block, though we could move to larger
+  // batches ~trivially with a larger block_op_vmo_ buffer.
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_READ;
-  block_op->rw.length = 1;
-  block_op->rw.offset_dev = block;
+  block_op->rw.length = info_.hw_blocks_per_virtual_block;
+  block_op->rw.offset_dev = block * info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_vmo = 0;
   block_op->rw.vmo = block_op_vmo_.get();
 
@@ -107,8 +107,8 @@ void DriverSealer::WriteIntegrityBlock(HashBlockAccumulator& hba, uint64_t block
   // prepare write block op
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_WRITE;
-  block_op->rw.length = 1;
-  block_op->rw.offset_dev = block;
+  block_op->rw.length = info_.hw_blocks_per_virtual_block;
+  block_op->rw.offset_dev = block * info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_vmo = 0;
   block_op->rw.vmo = block_op_vmo_.get();
 
@@ -145,7 +145,7 @@ void DriverSealer::WriteSuperblock() {
   // prepare write block op
   block_op_t* block_op = reinterpret_cast<block_op_t*>(block_op_buf_.get());
   block_op->rw.command = BLOCK_OP_WRITE;
-  block_op->rw.length = 1;
+  block_op->rw.length = info_.hw_blocks_per_virtual_block;
   block_op->rw.offset_dev = 0;  // Superblock is block 0
   block_op->rw.offset_vmo = 0;
   block_op->rw.vmo = block_op_vmo_.get();

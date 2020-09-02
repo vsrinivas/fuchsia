@@ -56,7 +56,7 @@ class VerifiedVolumeClient {
       fidl::Buffer<
           llcpp::fuchsia::hardware::block::verified::DeviceManager::CloseAndGenerateSealResponse>*
           seal_response_buffer,
-      ::llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out);
+      llcpp::fuchsia::hardware::block::verified::DeviceManager_CloseAndGenerateSeal_Result* out);
 
   // Requests that the volume be opened for verified reads, with the expectation
   // that the volume superblock matches the seal provided.  If successful,
