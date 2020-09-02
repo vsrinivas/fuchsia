@@ -188,11 +188,7 @@ mod tests {
 
     #[test]
     fn date_encode_decode() {
-        let d = Date {
-            year: 2055,
-            month: 7,
-            day: 23
-        };
+        let d = Date { year: 2055, month: 7, day: 23 };
         let x = d.encode();
         assert_eq!(x, 38647);
         assert_eq!(d, Date::decode(x));
@@ -200,20 +196,9 @@ mod tests {
 
     #[test]
     fn time_encode_decode() {
-        let t1 = Time {
-            hour: 15,
-            min: 3,
-            sec: 29,
-            millis: 990,
-        };
-        let t2 = Time {
-            sec: 18,
-            .. t1
-        };
-        let t3 = Time {
-            millis: 40,
-            .. t1
-        };
+        let t1 = Time { hour: 15, min: 3, sec: 29, millis: 990 };
+        let t2 = Time { sec: 18, ..t1 };
+        let t3 = Time { millis: 40, ..t1 };
         let (x1, y1) = t1.encode();
         let (x2, y2) = t2.encode();
         let (x3, y3) = t3.encode();

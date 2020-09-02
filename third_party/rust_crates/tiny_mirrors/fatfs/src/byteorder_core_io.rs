@@ -1,5 +1,5 @@
-use core::slice;
 use crate::io::{self, Result};
+use core::slice;
 
 use byteorder::ByteOrder;
 
