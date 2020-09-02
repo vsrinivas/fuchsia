@@ -161,6 +161,12 @@ impl AppAssistant for DisplayPngAppAssistant {
                 info.width,
                 info.height
             );
+            let color_type = info.color_type;
+            ensure!(
+                color_type == png::ColorType::RGBA || color_type == png::ColorType::RGB,
+                "unsupported color type {:#?}. Only RGB and RGBA are supported.",
+                color_type
+            );
 
             self.png_source = Some(PngSourceInfo {
                 png_reader: Some(png_reader),
