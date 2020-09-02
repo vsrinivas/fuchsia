@@ -1077,6 +1077,22 @@ const (
 	// note: ensure any new flags don't outnumber the number of bits in `derives`
 )
 
+// note: keep this list in the same order as the derives definitions
+var derivesNames = []string{
+	// [START default_derived_traits]
+	"Debug",
+	"Copy",
+	"Clone",
+	"Eq",
+	"PartialEq",
+	"Ord",
+	"PartialOrd",
+	"Hash",
+	"zerocopy::AsBytes",
+	"zerocopy::FromBytes",
+	// [END default_derived_traits]
+}
+
 func newDerives(values ...derives) derives {
 	var v derives
 	for i := 0; i < len(values); i++ {
@@ -1114,22 +1130,10 @@ func (v derives) contains(other derives) bool {
 }
 
 func (v derives) String() string {
-	deriveToName := map[derives]string{
-		derivesDebug:      "Debug",
-		derivesCopy:       "Copy",
-		derivesClone:      "Clone",
-		derivesEq:         "Eq",
-		derivesPartialEq:  "PartialEq",
-		derivesOrd:        "Ord",
-		derivesPartialOrd: "PartialOrd",
-		derivesHash:       "Hash",
-		derivesAsBytes:    "zerocopy::AsBytes",
-		derivesFromBytes:  "zerocopy::FromBytes",
-	}
 	var parts []string
-	for bit := derives(1); bit&derivesAll != 0; bit <<= 1 {
+	for i, bit := 0, derives(1); bit&derivesAll != 0; i, bit = i+1, bit<<1 {
 		if v.contains(bit) {
-			parts = append(parts, deriveToName[bit])
+			parts = append(parts, derivesNames[i])
 		}
 	}
 	if len(parts) == 0 {
@@ -1158,9 +1162,11 @@ type derivesCompiler struct {
 	root                       *Root
 }
 
+// [START fill_derives]
 // Calculates what traits should be derived for each output type,
 // filling in all `*derives` in the IR.
 func (c *compiler) fillDerives(ir *Root) {
+	// [END fill_derives]
 	dc := &derivesCompiler{
 		compiler:                   c,
 		topMostCall:                true,

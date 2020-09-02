@@ -11,6 +11,24 @@ import (
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 )
 
+func TestDerivesToString(t *testing.T) {
+	cases := []struct {
+		input    derives
+		expected string
+	}{
+		{0, ""},
+		{derivesDebug, "#[derive(Debug)]"},
+		{derivesPartialOrd, "#[derive(PartialOrd)]"},
+		{derivesHash | derivesAsBytes, "#[derive(Hash, zerocopy::AsBytes)]"},
+	}
+	for _, ex := range cases {
+		actual := ex.input.String()
+		if actual != ex.expected {
+			t.Errorf("%d: expected '%s', actual '%s'", ex.input, ex.expected, actual)
+		}
+	}
+}
+
 func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 	type testCase struct {
 		name string
