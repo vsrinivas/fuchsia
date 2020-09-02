@@ -487,19 +487,16 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   mtx_lock(&mvm->mutex);
 
   // Find the first empty mvmvif slot.
-  uint16_t id;
-  for (id = 0; id < MAX_NUM_MVMVIF; id++) {
-    if (!mvm->mvmvif[id]) {
-      break;
-    }
-  }
-  if (id >= MAX_NUM_MVMVIF) {
+  int idx;
+  ret = iwl_mvm_find_free_mvmvif_slot(mvm, &idx);
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "cannot find an empty slot for new MAC interface\n");
-    ret = ZX_ERR_NO_RESOURCES;
     goto unlock;
   }
 
   // Allocate a MAC context. This will be initialized once iwl_mvm_mac_add_interface() is called.
+  // Note that once the 'mvmvif' is saved in the device ctx by device_add() below, it will live
+  // as long as the device instance, and will be freed in mac_release().
   struct iwl_mvm_vif* mvmvif = calloc(1, sizeof(struct iwl_mvm_vif));
   if (!mvmvif) {
     ret = ZX_ERR_NO_MEMORY;
@@ -526,8 +523,13 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
     mvmvif->mvm = mvm;
     mvmvif->mac_role = req->role;
     mvmvif->sme_channel = req->sme_channel;
-    mvm->mvmvif[id] = mvmvif;
-    *out_iface_id = id;
+    ret = iwl_mvm_bind_mvmvif(mvm, idx, mvmvif);
+    if (ret != ZX_OK) {
+      IWL_ERR(ctx, "Cannot assign the new mvmvif to MVM: %s\n", zx_status_get_string(ret));
+      // The allocated mvmvif instance will be freed at mac_release().
+      goto unlock;
+    }
+    *out_iface_id = idx;
 
     // Only start FW MVM for the first device. The 'vif_count' will be increased in
     // iwl_mvm_mac_add_interface().
@@ -535,6 +537,10 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
       ret = __iwl_mvm_mac_start(mvm);
       if (ret != ZX_OK) {
         IWL_ERR(ctx, "Cannot start MVM MAC: %s\n", zx_status_get_string(ret));
+
+        // If we fail to start the FW MVM, we shall unbind the mvmvif from the mvm. For the mvmvif
+        // instance, it will be released in mac_release().
+        iwl_mvm_unbind_mvmvif(mvm, idx);
         goto unlock;
       }
     }
@@ -580,7 +586,7 @@ static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
 
   // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
   // and the memory of 'mvmvif' will be freed in mac_release().
-  mvm->mvmvif[id] = NULL;
+  iwl_mvm_unbind_mvmvif(mvm, id);
 
   // the last MAC interface. stop the MVM to save power. 'vif_count' had been decreased in
   // iwl_mvm_mac_remove_interface().

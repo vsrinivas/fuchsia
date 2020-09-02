@@ -14,6 +14,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+#include "zircon/system/ulib/fbl/include/fbl/auto_lock.h"
 
 namespace wlan::testing {
 namespace {
@@ -130,6 +131,73 @@ TEST_F(Mac80211Test, ChanCtxMultiple) {
   ASSERT_EQ(ZX_OK, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_2));
   ASSERT_EQ(ZX_OK, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_1));
   ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_0));  // removed above
+}
+
+// Test the normal usage.
+//
+TEST_F(Mac80211Test, MvmSlotNormalCase) {
+  fbl::AutoLock auto_lock(&mvm_->mutex);
+  int index;
+  struct iwl_mvm_vif mvmvif = {};  // an instance to bind
+  zx_status_t ret;
+
+  // Fill up all mvmvif slots and expect okay
+  for (size_t i = 0; i < MAX_NUM_MVMVIF; i++) {
+    ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
+    ASSERT_EQ(ret, ZX_OK);
+    ASSERT_EQ(i, index);
+
+    // First bind is okay
+    ret = iwl_mvm_bind_mvmvif(mvm_, index, &mvmvif);
+    ASSERT_EQ(ret, ZX_OK);
+
+    // A second bind is prohibited.
+    ret = iwl_mvm_bind_mvmvif(mvm_, index, &mvmvif);
+    ASSERT_EQ(ret, ZX_ERR_ALREADY_EXISTS);
+  }
+
+  // One more is not accepted.
+  ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
+  ASSERT_EQ(ret, ZX_ERR_NO_RESOURCES);
+}
+
+// Bind / unbind test.
+//
+TEST_F(Mac80211Test, MvmSlotBindUnbind) {
+  fbl::AutoLock auto_lock(&mvm_->mutex);
+  int index;
+  struct iwl_mvm_vif mvmvif = {};  // an instance to bind
+  zx_status_t ret;
+
+  // re-consider the test case if the slot number is changed.
+  ASSERT_EQ(MAX_NUM_MVMVIF, 4);
+
+  // First occupy the index 0, 1, 3.
+  ret = iwl_mvm_bind_mvmvif(mvm_, 0, &mvmvif);
+  ASSERT_EQ(ret, ZX_OK);
+  ret = iwl_mvm_bind_mvmvif(mvm_, 1, &mvmvif);
+  ASSERT_EQ(ret, ZX_OK);
+  ret = iwl_mvm_bind_mvmvif(mvm_, 3, &mvmvif);
+  ASSERT_EQ(ret, ZX_OK);
+
+  // Expect the free one is 2.
+  ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
+  ASSERT_EQ(ret, ZX_OK);
+  ASSERT_EQ(index, 2);
+  ret = iwl_mvm_bind_mvmvif(mvm_, 2, &mvmvif);
+  ASSERT_EQ(ret, ZX_OK);
+
+  // No more space.
+  ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
+  ASSERT_EQ(ret, ZX_ERR_NO_RESOURCES);
+
+  // Release the slot 1
+  iwl_mvm_unbind_mvmvif(mvm_, 1);
+
+  // The available slot should be slot 1
+  ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
+  ASSERT_EQ(ret, ZX_OK);
+  ASSERT_EQ(index, 1);
 }
 
 }  // namespace

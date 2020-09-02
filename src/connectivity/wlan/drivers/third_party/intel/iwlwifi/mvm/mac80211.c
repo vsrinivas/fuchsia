@@ -1227,6 +1227,43 @@ static void iwl_mvm_update_ctx_tx_power_limit(struct iwl_mvm* mvm, struct ieee80
 #endif
 #endif  // NEEDS_PORTING
 
+zx_status_t iwl_mvm_find_free_mvmvif_slot(struct iwl_mvm* mvm, int* ret_idx) {
+  int idx;
+
+  ZX_ASSERT(ret_idx);
+
+  iwl_assert_lock_held(&mvm->mutex);
+
+  for (idx = 0; idx < MAX_NUM_MVMVIF; idx++) {
+    if (!mvm->mvmvif[idx]) {
+      *ret_idx = idx;
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_NO_RESOURCES;
+}
+
+// This function doesn't take the ownership of the mvmvif after binding. It just adds a reference
+// from mvm to the mvmvif instance.
+zx_status_t iwl_mvm_bind_mvmvif(struct iwl_mvm* mvm, int idx, struct iwl_mvm_vif* mvmvif) {
+  iwl_assert_lock_held(&mvm->mutex);
+
+  ZX_ASSERT(mvmvif);
+
+  if (mvm->mvmvif[idx]) {
+    IWL_ERR(mvm, "mvm->mvmvif[%d] has been binded.\n", idx);
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+
+  mvm->mvmvif[idx] = mvmvif;
+  return ZX_OK;
+}
+
+void iwl_mvm_unbind_mvmvif(struct iwl_mvm* mvm, int idx) {
+  iwl_assert_lock_held(&mvm->mutex);
+  mvm->mvmvif[idx] = NULL;
+}
+
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   mvmvif->probe_resp_data = NULL;

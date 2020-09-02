@@ -2132,6 +2132,9 @@ wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num);
 //
 // Interfaces for mac80211.c
 //
+zx_status_t iwl_mvm_find_free_mvmvif_slot(struct iwl_mvm* mvm, int* ret_idx);
+zx_status_t iwl_mvm_bind_mvmvif(struct iwl_mvm* mvm, int idx, struct iwl_mvm_vif* mvmvif);
+void iwl_mvm_unbind_mvmvif(struct iwl_mvm* mvm, int idx);
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
