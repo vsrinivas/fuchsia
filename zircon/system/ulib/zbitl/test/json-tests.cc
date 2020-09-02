@@ -41,4 +41,12 @@ TEST(ZbitlJsonTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiTy
 
 TEST(ZbitlJsonTests, OneItemZbi) { ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kOneItem)); }
 
+TEST(ZbitlJsonTests, MultipleSmallItemsZbi) {
+  ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kMultipleSmallItems));
+}
+
+TEST(ZbitlJsonTests, SecondItemOnPageBoundaryZbi) {
+  ASSERT_NO_FATAL_FAILURES(TestJson(TestDataZbiType::kSecondItemOnPageBoundary));
+}
+
 }  // namespace

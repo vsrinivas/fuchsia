@@ -25,7 +25,7 @@
                 result_.error_value().zbi_error.data());                  \
   } while (0)
 
-constexpr size_t kMaxZbiSize = 1024;
+constexpr size_t kMaxZbiSize = 4192;
 
 constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
 
@@ -33,6 +33,8 @@ enum class TestDataZbiType {
   kEmpty,
   kOneItem,
   kBadCrcItem,
+  kMultipleSmallItems,
+  kSecondItemOnPageBoundary,
 };
 
 size_t GetExpectedNumberOfItems(TestDataZbiType type);
@@ -146,7 +148,11 @@ inline void TestIteration(TestDataZbiType type) {
                                       zbitl::Checking::kPermissive, BadCrcZbi,                 \
                                       TestDataZbiType::kBadCrcItem)                            \
   TEST_ITERATION_BY_CHECKING_AND_TYPE(suite_name, StorageIo, Strict, zbitl::Checking::kStrict, \
-                                      BadCrcZbi, TestDataZbiType::kBadCrcItem)
+                                      BadCrcZbi, TestDataZbiType::kBadCrcItem)                 \
+  TEST_ITERATIONS_BY_TYPE(suite_name, StorageIo, MultipleSmallItemsZbi,                        \
+                          TestDataZbiType::kMultipleSmallItems)                                \
+  TEST_ITERATIONS_BY_TYPE(suite_name, StorageIo, SecondItemOnPageBoundaryZbi,                  \
+                          TestDataZbiType::kSecondItemOnPageBoundary)
 
 template <typename StorageIo>
 void TestCrcCheckFailure() {
@@ -249,8 +255,12 @@ void TestMutation(TestDataZbiType type) {
 #define TEST_MUTATION_BY_TYPE(suite_name, StorageIo, type_name, type) \
   TEST(suite_name, type_name##Mutation) { ASSERT_NO_FATAL_FAILURES(TestMutation<StorageIo>(type)); }
 
-#define TEST_MUTATIONS(suite_name, StorageIo)                                         \
-  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, OneItemZbi, TestDataZbiType::kOneItem) \
-  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, BadCrcItemZbi, TestDataZbiType::kBadCrcItem)
+#define TEST_MUTATIONS(suite_name, StorageIo)                                               \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, OneItemZbi, TestDataZbiType::kOneItem)       \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, BadCrcItemZbi, TestDataZbiType::kBadCrcItem) \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, MultipleSmallItemsZbi,                       \
+                        TestDataZbiType::kMultipleSmallItems)                               \
+  TEST_MUTATION_BY_TYPE(suite_name, StorageIo, SecondItemOnPageBoundaryZbi,                 \
+                        TestDataZbiType::kSecondItemOnPageBoundary)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

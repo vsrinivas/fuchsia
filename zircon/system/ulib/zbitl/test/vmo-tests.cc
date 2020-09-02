@@ -46,6 +46,33 @@ struct UnownedVmoIo : private VmoIo {
   zx::vmo vmo_;
 };
 
+struct MapUnownedVmoIo : protected VmoIo {
+  using storage_type = zbitl::MapUnownedVmo;
+
+  void Create(fbl::unique_fd fd, size_t size, zbitl::MapUnownedVmo* zbi) {
+    ASSERT_FALSE(vmo_, "StorageIo reused for multiple tests");
+    VmoIo::Create(std::move(fd), size, &vmo_);
+    *zbi = zbitl::MapUnownedVmo(zx::unowned_vmo{vmo_});
+  }
+
+  void ReadPayload(zbitl::MapUnownedVmo& zbi, const zbi_header_t& header, uint64_t payload,
+                   std::string* string) {
+    VmoIo::ReadPayload(zbi.vmo(), header, payload, string);
+  }
+
+  zx::vmo vmo_;
+};
+
+struct MapOwnedVmoIo : public MapUnownedVmoIo {
+  using storage_type = zbitl::MapOwnedVmo;
+
+  void Create(fbl::unique_fd fd, size_t size, zbitl::MapOwnedVmo* zbi) {
+    zx::vmo vmo;
+    VmoIo::Create(std::move(fd), size, &vmo);
+    *zbi = zbitl::MapOwnedVmo(std::move(vmo));
+  }
+};
+
 TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<VmoIo>(true));
 }
@@ -67,5 +94,32 @@ TEST(ZbitlViewUnownedVmoTests, CrcCheckFailure) {
 TEST_ITERATIONS(ZbitlViewUnownedVmoTests, UnownedVmoIo)
 
 TEST_MUTATIONS(ZbitlViewUnownedVmoTests, UnownedVmoIo)
+
+TEST(ZbitlViewMapUnownedVmoTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<MapUnownedVmoIo>(true));
+}
+
+TEST(ZbitlViewMapUnownedVmoTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<MapUnownedVmoIo>());
+}
+
+// Note that the iterations over many-small-items.zbi and
+// second-item-on-page-boundary.zbi with CRC32 checking will cover the cases of
+// mapping window re-use and replacement, respectively.
+TEST_ITERATIONS(ZbitlViewMapUnownedVmoTests, MapUnownedVmoIo)
+
+TEST_MUTATIONS(ZbitlViewMapUnownedVmoTests, MapUnownedVmoIo)
+
+TEST(ZbitlViewMapOwnedVmoTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURES(TestDefaultConstructedView<MapOwnedVmoIo>(true));
+}
+
+TEST(ZbitlViewMapOwnedVmoTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURES(TestCrcCheckFailure<MapOwnedVmoIo>());
+}
+
+TEST_ITERATIONS(ZbitlViewMapOwnedVmoTests, MapOwnedVmoIo)
+
+TEST_MUTATIONS(ZbitlViewMapOwnedVmoTests, MapOwnedVmoIo)
 
 }  // namespace

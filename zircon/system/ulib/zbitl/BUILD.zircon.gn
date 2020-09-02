@@ -49,10 +49,14 @@ library("zbitl") {
 
     if (is_fuchsia) {
       sources += [
+        "mapvmo.cc",
         "vmo-read.cc",
         "vmo.cc",
       ]
-      deps += [ "$zx/system/ulib/zx" ]
+      deps += [
+        "$zx/system/ulib/zircon-internal",
+        "$zx/system/ulib/zx",
+      ]
       public_deps += [
         # <lib/zbitl/vmo.h> has #include <lib/zx/vmo.h>.
         "$zx/system/ulib/zx:headers",
