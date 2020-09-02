@@ -29,6 +29,7 @@ the kernel images and ensures that `vbmeta` must be written after the kernel ima
 ## Content of the update package
 
 The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks like:
+
 *   `/board`
     The board name. The updater verifies the contents and does an update if they match
     the previous board name to prevent accidentally attempting to update a device to an
