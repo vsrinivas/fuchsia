@@ -19,10 +19,14 @@ bool BlobfsIsActiveVmo(const Vmo& vmo) {
   return true;
 }
 
+// VMOs are bucketed into the first matching entry.
 const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", ".*", "uncompressed-bootfs"},
-    {"Graphics", ".*", "magma_create_buffer|Mali .*"},
+    // Memory used with the GPU or display hardware.
+    {"Graphics", ".*", "magma_create_buffer|Mali .*|Magma.*|ImagePipe2Surface.*"},
+    // Unused protected pool memory.
     {"ProtectedPool", "driver_host:sys", "SysmemAmlogicProtectedPool"},
+    // Unused contiguous pool memory.
     {"ContiguousPool", "driver_host:sys", "SysmemContiguousPool"},
     {"Fshost", "fshost.cm", ".*"},
     {"Minfs", ".*minfs", ".*"},
