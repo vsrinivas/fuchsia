@@ -135,12 +135,13 @@ executable("cgpt") {
     ]
   }
   deps = [ "//third_party/boringssl:crypto" ]
-  configs += [
-    ":internal_config",
+  configs += [ ":internal_config" ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(47057): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # The upstream makefile actually generates this source, but for simplicities
@@ -188,12 +189,13 @@ executable("futility") {
     ]
   }
   deps += [ "//third_party/boringssl:crypto" ]
-  configs += [
-    ":internal_config",
+  configs += [ ":internal_config" ]
 
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(47057): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config("internal_config") {

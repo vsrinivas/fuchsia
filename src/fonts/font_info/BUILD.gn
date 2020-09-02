@@ -45,11 +45,15 @@ rustc_test("font_info_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
+  non_rust_deps = []
   if (is_host) {
-    non_rust_deps = [ ":test_data" ]
+    non_rust_deps += [ ":test_data" ]
   }
 
   sources = [ "tests/tests.rs" ]
+
+  # TODO(38228): Fix leak in font_info_test.
+  non_rust_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # Needed for testing on Fuchsia

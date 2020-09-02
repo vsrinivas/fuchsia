@@ -797,14 +797,6 @@ declare_args() {
       forward_variables_from(_asan_variant, "*")
       configs += [ "//build/config/sanitizers:sancov" ]
     },
-    {
-      name = "asan_no_detect_leaks"
-      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
-      toolchain_args = {
-        forward_variables_from(_asan_variant.toolchain_args, "*")
-        asan_default_options = "detect_leaks=0"
-      }
-    },
 
     # Fuzzer variants for various sanitizers.
     {
@@ -890,21 +882,6 @@ declare_args() {
       name = "host_asan"
       select_variant = []
       select_variant = [
-        {
-          variant = "asan_no_detect_leaks"
-          host = true
-          dir = [
-            # TODO(TO-565): The yasm host tools have leaks.
-            "//third_party/yasm",
-
-            # TODO(TO-666): replace futility & cgpt with 1p tools
-            "//third_party/vboot_reference",
-            "//tools/vboot_reference",
-
-            # TODO(38228): Fix leak in font_info_test.
-            "//src/fonts/font_info",
-          ]
-        },
         {
           variant = "asan"
           host = true
