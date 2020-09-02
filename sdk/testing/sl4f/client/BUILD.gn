@@ -125,11 +125,3 @@ group("tests") {
 
   deps = [ ":sl4f_client_tests($host_toolchain)" ]
 }
-
-dart_tool("process_trace") {
-  main_dart = "bin/process_trace.dart"
-  source_dir = "bin"
-  package_root = "bin"
-
-  deps = [ ":client" ]
-}
