@@ -58,6 +58,10 @@ source_set("ftl-image") {
     "//src/storage/volume_image/utils:block-utils",
     "//zircon/public/lib/fbl",
   ]
+  configs += [
+    # TODO(fxb/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("ftl-test") {
