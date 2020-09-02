@@ -5,15 +5,16 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/codegen"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/ir"
 )
 
 type flagsDef struct {
@@ -56,13 +57,15 @@ func main() {
 
 	root, err := types.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to read JSON: %v", err)
 	}
 
-	generator := codegen.NewGenerator()
-	tree := ir.Compile(root)
+	var buf bytes.Buffer
+	if err := codegen.Compile(&buf, root); err != nil {
+		log.Fatalf("Failed to compile syzkaller description: %v", err)
+	}
 
-	if err := generator.GenerateSyzDotTxt(tree, *flags.outputPath); err != nil {
-		log.Fatalf("Error syz.txt file: %v", err)
+	if err := ioutil.WriteFile(*flags.outputPath, buf.Bytes(), 0666); err != nil {
+		log.Fatalf("Failed to write output file: %v", err)
 	}
 }

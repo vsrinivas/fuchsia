@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package codegen
+package codegen_test
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/codegen"
 )
 
 var testDataFlag = flag.String("test_data_dir", "../../../../garnet/go/src/fidl/compiler/backend/goldens", "Path to golden; only used in GN build")
@@ -21,13 +22,14 @@ func TestCodegenImplDotSyzkaller(t *testing.T) {
 			if filename == "struct_default_value_enum_library_reference.test.json" {
 				t.Skip("TODO(fxb/45007): Syzkaller does not support enum member references in struct defaults")
 			}
-			tree := ir.Compile(typestest.GetExample(*testDataFlag, filename))
-			want := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.syz.txt.golden", filename))
-			got, err := NewGenerator().generate(tree)
-			if err != nil {
-				t.Fatalf("unexpected error while generating impl.syz.txt: %s", err)
+			root := typestest.GetExample(*testDataFlag, filename)
+			golden := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.syz.txt.golden", filename))
+
+			var buf bytes.Buffer
+			if err := codegen.Compile(&buf, root); err != nil {
+				t.Fatalf("error compiling example: %v", err)
 			}
-			typestest.AssertCodegenCmp(t, want, got)
+			typestest.AssertCodegenCmp(t, golden, buf.Bytes())
 		})
 	}
 }
