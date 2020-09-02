@@ -473,6 +473,12 @@ TEST_F(ThreadStackManagerTest, GetThreadDeviceType) {
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadDeviceType(), ThreadDeviceType::kThreadDeviceType_Router);
 }
 
+TEST_F(ThreadStackManagerTest, ClearProvisionWithDeviceNotBound) {
+  // Create a new delegate with an unbound device.
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+  // ClearThreadProvision should not crash when called with an unbound device.
+  ThreadStackMgrImpl()._ClearThreadProvision();
+}
 
 }  // namespace testing
 }  // namespace Internal

@@ -319,6 +319,11 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
 }
 
 void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
+  // TODO(fxbug.dev/59029): When thread stack mgr is initialized, this workaround will be removed.
+  if (!device_.is_bound()) {
+    FX_LOGS(INFO) << "Skipping ClearThreadProvision as device is not bound";
+    return;
+  }
   zx_status_t status = device_->LeaveNetwork();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not clear LoWPAN provision: " << zx_status_get_string(status);
