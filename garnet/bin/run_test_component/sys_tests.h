@@ -19,11 +19,14 @@ constexpr char kAppmgrHubTestsUrl[] =
 // System test that needs access to the system time zone service.
 constexpr char kTimezoneTestUrl[] =
     "fuchsia-pkg://fuchsia.com/timezone-test#meta/timezone_bin_test.cmx";
+constexpr char kDevicePropertySmokeTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/device-property-smoke-test#meta/device_property_smoke_test.cmx";
 
 const std::unordered_set<std::string> kUrlSet({
     {kLoggerTestsUrl},
     {kAppmgrHubTestsUrl},
     {kTimezoneTestUrl},
+    {kDevicePropertySmokeTestUrl},
 });
 
 // Returns true if this test should be executed in 'sys' environment.
