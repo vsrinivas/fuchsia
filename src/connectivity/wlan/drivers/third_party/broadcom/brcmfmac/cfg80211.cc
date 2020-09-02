@@ -495,8 +495,10 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
   int32_t bsscfgidx;
 
   BRCMF_DBG(TRACE, "enter: %s type %d", name, req->role);
-  if (wdev_out) {
-    *wdev_out = NULL;
+
+  if (wdev_out == nullptr) {
+    BRCMF_ERR("cannot write wdev to nullptr");
+    return ZX_ERR_INVALID_ARGS;
   }
 
   err = brcmf_vif_add_validate(drvr->config, req->role);
@@ -505,92 +507,89 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
     return err;
   }
 
+  bcme_status_t fw_err = BCME_OK;
+  struct brcmf_if* ifp;
+
   switch (req->role) {
     case WLAN_INFO_MAC_ROLE_AP:
       if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, true)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
-      err = brcmf_ap_add_vif(drvr->config, name, wdev_out);
-      if (err == ZX_OK) {
-        brcmf_cfg80211_update_proto_addr_mode(*wdev_out);
-        if (wdev_out) {
-          ndev = (*wdev_out)->netdev;
-          (*wdev_out)->iftype = req->role;
-          if (ndev)
-            ndev->sme_channel = zx::channel(req->sme_channel);
-          if (req->has_init_mac_addr) {
-            err = brcmf_set_iface_macaddr(true, ndev, req->init_mac_addr);
-            if (err != ZX_OK) {
-              return err;
-            }
-          }
-        }
-        return ZX_OK;
-      } else {
+      err = brcmf_ap_add_vif(drvr->config, name, &wdev);
+      if (err != ZX_OK) {
         BRCMF_ERR("add iface %s type %d failed: err=%d", name, req->role, err);
         return err;
       }
-      break;
+
+      brcmf_cfg80211_update_proto_addr_mode(wdev);
+      ndev = wdev->netdev;
+      wdev->iftype = req->role;
+      ndev->sme_channel = zx::channel(req->sme_channel);
+
+      if (req->has_init_mac_addr) {
+        const uint8_t* mac_addr = req->init_mac_addr;
+        err = brcmf_set_iface_macaddr(true, ndev, mac_addr);
+        if (err != ZX_OK) {
+          return err;
+        }
+      }
+
+      *wdev_out = wdev;
+      return ZX_OK;
     case WLAN_INFO_MAC_ROLE_CLIENT:
       if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, false)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
       bsscfgidx = brcmf_get_prealloced_bsscfgidx(drvr);
-      if (bsscfgidx >= 0) {
-        bcme_status_t fw_err = BCME_OK;
-        ndev = drvr->iflist[bsscfgidx]->ndev;
-        struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
-
-        // Since a single IF is shared when operating with manufacturing FW, ensure
-        // AP mode is turned off when setting it up as Client (just in case it was
-        // previously operaating as an AP.
-        if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
-          err =
-              brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT, NULL);
-          if (err != ZX_OK) {
-            BRCMF_ERR("Unable to change iface to client");
-            return err;
-          }
-          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
-          if (err != ZX_OK) {
-            BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(err),
-                      brcmf_fil_get_errstr(fw_err));
-            return err;
-          }
-          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
-          if (err != ZX_OK) {
-            BRCMF_INFO(
-                "Cannot shut down AP: %s, fw err %s. AP may not have been started. Moving on",
-                zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
-          }
-
-          err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-          if (err != ZX_OK) {
-            BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(err),
-                      brcmf_fil_get_errstr(fw_err));
-            return err;
-          }
-        }
-        wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
-        wdev->iftype = req->role;
-        ndev->sme_channel = zx::channel(req->sme_channel);
-        ndev->needs_free_net_device = false;
-        if (req->has_init_mac_addr) {
-          err = brcmf_set_iface_macaddr(false, ndev, req->init_mac_addr);
-          if (err != ZX_OK) {
-            return err;
-          }
-        }
-
-        if (wdev_out != nullptr) {
-          *wdev_out = wdev;
-        }
-
-        return ZX_OK;
-      } else {
+      if (bsscfgidx < 0) {
         return ZX_ERR_NO_MEMORY;
       }
-      break;
+
+      ndev = drvr->iflist[bsscfgidx]->ndev;
+      ifp = brcmf_get_ifp(drvr, 0);
+
+      // Since a single IF is shared when operating with manufacturing FW, ensure
+      // AP mode is turned off when setting it up as Client (just in case it was
+      // previously operating as an AP.
+      if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+        err = brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT, NULL);
+        if (err != ZX_OK) {
+          BRCMF_ERR("Unable to change iface to client");
+          return err;
+        }
+        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+        if (err != ZX_OK) {
+          BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(err),
+                    brcmf_fil_get_errstr(fw_err));
+          return err;
+        }
+        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
+        if (err != ZX_OK) {
+          BRCMF_INFO("Cannot shut down AP: %s, fw err %s. AP may not have been started. Moving on",
+                     zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
+        }
+
+        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+        if (err != ZX_OK) {
+          BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(err),
+                    brcmf_fil_get_errstr(fw_err));
+          return err;
+        }
+      }
+
+      wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
+      wdev->iftype = req->role;
+      ndev->sme_channel = zx::channel(req->sme_channel);
+      ndev->needs_free_net_device = false;
+      if (req->has_init_mac_addr) {
+        err = brcmf_set_iface_macaddr(false, ndev, req->init_mac_addr);
+        if (err != ZX_OK) {
+          return err;
+        }
+      }
+
+      *wdev_out = wdev;
+      return ZX_OK;
     default:
       return ZX_ERR_INVALID_ARGS;
   }

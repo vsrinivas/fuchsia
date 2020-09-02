@@ -182,6 +182,25 @@ TEST_F(DynamicIfTest, CreateClientwithPreAllocMac) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
+// This test verifies brcmf_cfg80211_add_iface() returns ZX_ERR_INVALID_ARGS if the wdev_out
+// argument is nullptr.
+TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+
+  wlan_info_mac_role_t client_role = WLAN_INFO_MAC_ROLE_CLIENT;
+  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
+  wlanphy_impl_create_iface_req_t req = {
+      .role = client_role,
+      .sme_channel = client_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, nullptr));
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
 void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const char iface_name[],
                                             SimInterface& ifc) {
   brcmf_simdev* sim = device_->GetSim();
