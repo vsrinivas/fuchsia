@@ -918,6 +918,35 @@ non-SDK buildroots.
 
 From //build/fuchsia/sdk.gni:17
 
+### fvm_ftl_nand_block_count
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:80
+
+### fvm_ftl_nand_oob_size
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:78
+
+### fvm_ftl_nand_page_size
+Specifying these variables will generate a NAND FVM image suitable for
+directly flashing via fastboot. The NAND characteristics are required
+in order to properly initialize the FTL metadata in the OOB area.
+`max_fvm_size` should also be nonzero or else minfs will not have any
+room to initialize on boot.
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:77
+
+### fvm_ftl_nand_pages_per_block
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:79
+
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
 computed to be just large enough to fit the blob and data images. The
