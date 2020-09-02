@@ -103,6 +103,7 @@ source_set("story_storage") {
   ]
 
   deps = [
+    ":watcher_list",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/storage:encode_module_path",

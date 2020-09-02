@@ -16,17 +16,13 @@
 
 namespace modular {
 
-namespace {}  // namespace
-
-StoryStorage::StoryStorage() {}
-
 void StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path());
   auto key = EncodeModulePath(module_path);
   auto saved = CloneOptional(module_data);
   module_data_backing_storage_[key] = std::move(*saved);
 
-  DispatchWatchers(module_data);
+  module_data_updated_watchers_.Notify(module_data);
 }
 
 bool StoryStorage::MarkModuleAsDeleted(const std::vector<std::string>& module_path) {
@@ -38,7 +34,7 @@ bool StoryStorage::MarkModuleAsDeleted(const std::vector<std::string>& module_pa
   }
   if (!it->second.has_module_deleted() || !it->second.module_deleted()) {
     it->second.set_module_deleted(true);
-    DispatchWatchers(it->second);
+    module_data_updated_watchers_.Notify(it->second);
   }
   return true;
 }
@@ -56,26 +52,12 @@ ModuleDataPtr StoryStorage::ReadModuleData(const std::vector<std::string>& modul
 std::vector<ModuleData> StoryStorage::ReadAllModuleData() {
   std::vector<ModuleData> vec;
   vec.reserve(module_data_backing_storage_.size());
-  for (auto it = module_data_backing_storage_.begin(); it != module_data_backing_storage_.end();
-       ++it) {
+  for (auto& it : module_data_backing_storage_) {
     ModuleData elem;
-    it->second.Clone(&elem);
+    it.second.Clone(&elem);
     vec.push_back(std::move(elem));
   }
   return vec;
-}
-
-void StoryStorage::DispatchWatchers(ModuleData& module_data) {
-  auto callbacks = std::move(module_data_updated_watchers_);
-  module_data_updated_watchers_.clear();
-  for (size_t i = 0; i < callbacks.size(); i++) {
-    auto callback_data = CloneOptional(module_data);
-    auto callback = std::move(callbacks[i]);
-    auto notification_interest = callback(std::move(*callback_data));
-    if (notification_interest == NotificationInterest::CONTINUE) {
-      module_data_updated_watchers_.push_back(std::move(callback));
-    }
-  }
 }
 
 }  // namespace modular

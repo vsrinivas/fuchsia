@@ -53,18 +53,20 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
 
   int notification_count_all_changes{0};
   int notification_count_one_change{0};
-  storage->SubscribeModuleDataUpdated([&](ModuleData) {
-    notification_count_all_changes++;
-    // Continue receiving notifications
-    return StoryStorage::NotificationInterest::CONTINUE;
-  });
+  storage->SubscribeModuleDataUpdated(
+      [&notification_count_all_changes](const ModuleData& /* unused */) {
+        notification_count_all_changes++;
+        // Continue receiving notifications
+        return WatchInterest::kContinue;
+      });
 
-  storage->SubscribeModuleDataUpdated([&](ModuleData) {
-    notification_count_one_change++;
-    EXPECT_EQ(1, notification_count_one_change);
-    // Stop receiving notifications
-    return StoryStorage::NotificationInterest::STOP;
-  });
+  storage->SubscribeModuleDataUpdated(
+      [&notification_count_one_change](const ModuleData& /* unused */) {
+        notification_count_one_change++;
+        EXPECT_EQ(1, notification_count_one_change);
+        // Stop receiving notifications
+        return WatchInterest::kStop;
+      });
 
   ModuleData module_data1;
   module_data1.set_module_url("url1");
@@ -103,18 +105,18 @@ TEST_F(StoryStorageTest, MarkModuleAsDeleted) {
 
   // Try to make a non-existent module as deleted.
   EXPECT_FALSE(storage->MarkModuleAsDeleted({"a"}));
-  
+
   ModuleData module_data;
   module_data.set_module_url("url1");
   module_data.mutable_module_path()->push_back("a");
   storage->WriteModuleData(Clone(module_data));
-  
+
   int notification_count = 0;
   ModuleData notified_data;
-  storage->SubscribeModuleDataUpdated([&](ModuleData data) {
+  storage->SubscribeModuleDataUpdated([&](const ModuleData& module_data) {
     ++notification_count;
-    notified_data = std::move(data);
-    return StoryStorage::NotificationInterest::CONTINUE;
+    notified_data = fidl::Clone(module_data);
+    return WatchInterest::kContinue;
   });
 
   EXPECT_TRUE(storage->MarkModuleAsDeleted(module_data.module_path()));

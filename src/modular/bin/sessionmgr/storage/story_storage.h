@@ -7,16 +7,24 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 
 #include <map>
 
+#include "src/modular/bin/sessionmgr/storage/watcher_list.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 using fuchsia::modular::ModuleData;
 using fuchsia::modular::ModuleDataPtr;
 
 namespace modular {
+
+// A callback passed to |StoryStorage.SubscribeModuleDataUpdated| that is called when the
+// ModuleData was added or updated.
+//
+// Returns a |WatchInterest| value that signals whether the callback should be deleted or
+// kept after it has been called.
+using ModuleDataUpdatedCallback = fit::function<WatchInterest(const ModuleData& module_data)>;
 
 // This class has the following responsibilities:
 //
@@ -25,7 +33,7 @@ namespace modular {
 class StoryStorage {
  public:
   // Constructs a new StoryStorage with self-contained storage.
-  StoryStorage();
+  StoryStorage() = default;
 
   enum class Status {
     OK = 0,
@@ -40,22 +48,12 @@ class StoryStorage {
     INVALID_ENTITY_COOKIE = 4,
   };
 
-  enum class NotificationInterest {
-    // Indicates the returning function wishes to be removed from the set of
-    // module data change watchers, should not be called again, and that
-    // StoryStorage should release its reference to the function.
-    STOP = 0,
-    // Indicates the returning function wishes to continue receiving module data
-    // change notifications.
-    CONTINUE = 1,
-  };
-
   // Adds a callback to be called whenever ModuleData is added or updated in the
   // underlying storage.  When the provided callback is triggered, the return
   // value is used to express whether the callback wishes to be unsubscribed
   // from future notifications or not.
-  void SubscribeModuleDataUpdated(fit::function<NotificationInterest(ModuleData)> callback) {
-    module_data_updated_watchers_.push_back(std::move(callback));
+  void SubscribeModuleDataUpdated(ModuleDataUpdatedCallback callback) {
+    module_data_updated_watchers_.Add(std::move(callback));
   }
 
   // =========================================================================
@@ -78,16 +76,11 @@ class StoryStorage {
   std::vector<ModuleData> ReadAllModuleData();
 
  private:
-  void DispatchWatchers(ModuleData& module_data);
-
   // The actual module data, indexed by a key derived from module_data.module_path() values.
   std::map<std::string, ModuleData> module_data_backing_storage_;
 
   // List of watchers to call when ModuleData is created.
-  // Each watcher will be called for each ModuleData change until it returns
-  // true, indicating satisfaction, at which point StoryStorage will remove
-  // the callback from the watch list.
-  std::vector<fit::function<NotificationInterest(ModuleData)>> module_data_updated_watchers_;
+  WatcherList<ModuleDataUpdatedCallback> module_data_updated_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryStorage);
 };

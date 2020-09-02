@@ -743,25 +743,26 @@ StoryControllerImpl::StoryControllerImpl(std::string story_id,
                                          StoryStorage* const story_storage,
                                          StoryProviderImpl* const story_provider_impl,
                                          inspect::Node* story_inspect_node)
-    : story_id_(story_id),
+    : story_id_(std::move(story_id)),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
       story_inspect_node_(story_inspect_node),
       story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
-  story_storage_->SubscribeModuleDataUpdated([this](fuchsia::modular::ModuleData module_data) {
-    auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
-    if (running_mod_info) {
-      if (module_data.has_annotations()) {
-        fidl::Clone(module_data.annotations(),
-                    running_mod_info->module_data->mutable_annotations());
-      }
-      running_mod_info->UpdateInspectProperties();
-    }
-    OnModuleDataUpdated(std::move(module_data));
-    return StoryStorage::NotificationInterest::CONTINUE;
-  });
+  story_storage_->SubscribeModuleDataUpdated(
+      [this](const fuchsia::modular::ModuleData& module_data) {
+        auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
+        if (running_mod_info) {
+          if (module_data.has_annotations()) {
+            fidl::Clone(module_data.annotations(),
+                        running_mod_info->module_data->mutable_annotations());
+          }
+          running_mod_info->UpdateInspectProperties();
+        }
+        OnModuleDataUpdated(fidl::Clone(module_data));
+        return WatchInterest::kContinue;
+      });
 }
 
 StoryControllerImpl::~StoryControllerImpl() = default;
