@@ -1026,7 +1026,7 @@ unsafe fn encode_array<T: Encodable>(
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
         for (i, item) in slice.iter_mut().enumerate() {
-            item.encode(encoder, offset + i * stride, recursion_depth)?;
+            item.unsafe_encode(encoder, offset + i * stride, recursion_depth)?;
         }
     }
     Ok(())
@@ -1052,7 +1052,7 @@ unsafe fn decode_array<T: Decodable>(
         std::ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
         for (i, item) in slice.iter_mut().enumerate() {
-            item.decode(decoder, offset + i * stride)?;
+            item.unsafe_decode(decoder, offset + i * stride)?;
         }
     }
     Ok(())
