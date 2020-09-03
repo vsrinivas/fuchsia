@@ -27,7 +27,16 @@ rustc_library("lib") {
 }
 
 group("fastboot") {
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+
+    # This target copies the prebuilt fastboot into the build directory - as if
+    # it were a normally built tool - and defines metadata depended upon by the
+    # flashing workflow. When this fastboot implementation is ready, flashing
+    # logic should be replaced by the new tool - and this depedency may safely
+    # be removed.
+    "//build/images:fastboot",
+  ]
 }
 
 group("tests") {

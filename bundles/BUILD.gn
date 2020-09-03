@@ -21,6 +21,7 @@ group("tools") {
     "//src/connectivity/bluetooth/tools",
     "//src/connectivity/bluetooth/tools/bt-snoop",
     "//src/developer/debug/zxdb:zxdb_host",
+    "//src/developer/fastboot",
     "//src/developer/ffx:ffx_tool",
     "//src/developer/ffx:runtime",
     "//src/developer/forensics/exceptions/limbo_client:limbo-client",

@@ -1496,7 +1496,10 @@ action("flash_script") {
     "--pre-erase-flash=${pre_erase_flash}",
     "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
   ]
-  deps = [ ":fastboot-copy" ]
+  if (custom_signing_script != "") {
+    args += ["--signed=true"]
+  }
+  deps = [ ":fastboot" ]
 
   foreach(info, firmware_info) {
     args += [ "--firmware=${info.partition}:${info.out_path}" ]
@@ -2221,19 +2224,27 @@ group("bootserver") {
   }
 }
 
-copy("fastboot-copy") {
+copy("fastboot") {
   sources = [ "//prebuilt/third_party/fastboot/fastboot" ]
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   outputs = [ "$host_out_dir/fastboot" ]
-}
 
-group("fastboot") {
   metadata = {
+    tool_paths = [
+      {
+        cpu = host_cpu
+        label = get_label_info(":fastboot", "label_with_toolchain")
+        name = "fastboot"
+        os = host_os
+        path = rebase_path(outputs[0], root_build_dir)
+      },
+    ]
+
     images = [
       {
         archive = true
         name = "fastboot"
-        path = rebase_path("//prebuilt/third_party/fastboot/fastboot")
+        path = rebase_path(sources[0])
         type = "exe.$host_platform"
       },
     ]
