@@ -693,6 +693,15 @@ mod tests {
             .await
             .is_ok()
         {}
+
+        // Sometimes the FIFO will start rejecting requests before FIFO is actually closed, so we
+        // get false-positives from is_connected.
+        while remote_block_device.is_connected() {
+            // Sleep for a bit to minimise lock contention.
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(500))).await;
+        }
+
+        // But once is_connected goes negative, it should stay negative.
         assert_eq!(remote_block_device.is_connected(), false);
         let _ = remote_block_device.detach_vmo(vmo_id).await;
     }
