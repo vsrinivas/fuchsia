@@ -64,6 +64,25 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   tags = [ "lsan" ]
 }
 
+# TODO(59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
+# are found, file a bug #nnnnn for the buggy test/component, and then add:
+# ```
+#   # TODO(nnnnn): Fix the bugs and remove this.
+#   deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
+# ```
+sanitizer_extra_options("suppress-asan-stack-use-after-return") {
+  visibility = [
+    # TODO(59214): allow only necessary third-party or TODO(bug-filed) cases
+
+    # TODO(59214): These are constrained indirectly via the target of the same
+    # name in $zx/public/gn/config/instrumentation.
+    "//zircon/public/lib/*",
+  ]
+
+  args = [ "detect_stack_use_after_return=0" ]
+  tags = [ "asan" ]
+}
+
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
 # TODO(45102): This is technically wrong; it will use clang's ASan.
 # rustc is built from a different fork of LLVM and should use a matching ASan.

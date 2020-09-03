@@ -36,6 +36,24 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   tags = [ "lsan" ]
 }
 
+# TODO(59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
+# are found, file a bug #nnnnn for the buggy test/component, and then add:
+# ```
+#   # TODO(nnnnn): Fix the bugs and remove this.
+#   deps += [ "$zx/public/gn/instrumentation:suppress-asan-stack-use-after-return" ]
+# ```
+sanitizer_extra_options("suppress-asan-stack-use-after-return") {
+  visibility = [
+    # TODO(59214): Allow only necessary third-party or TODO(bug-filed) cases.
+    # Playbook for suppression is to file bug #nnnnn for specific code
+    # reporting a violation, and add it to this visibility list with a comment
+    # at the end of the line: `# TODO(nnnnn): remove when fixed`.
+  ]
+
+  args = [ "detect_stack_use_after_return=0" ]
+  tags = [ "asan" ]
+}
+
 config("ubsan") {
   compiler_flags = [ "-fsanitize=undefined" ]
   asmflags = compiler_flags
