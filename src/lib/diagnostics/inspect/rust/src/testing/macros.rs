@@ -9,12 +9,14 @@ use {
         ExponentialHistogramParams, Inspector, LinearHistogramParams,
     },
     anyhow::{bail, format_err, Error},
+    difference::{Changeset, Difference},
     fuchsia_inspect_node_hierarchy::{ArrayContent, ArrayFormat, Bucket, NodeHierarchy, Property},
     futures,
     num_traits::One,
     std::{
         borrow::Cow,
-        collections::HashSet,
+        collections::BTreeSet,
+        fmt::{Debug, Display, Formatter, Result as FmtResult},
         ops::{Add, AddAssign, MulAssign},
     },
 };
@@ -267,15 +269,44 @@ impl NodeHierarchyGetter for Inspector {
     }
 }
 
+struct Diff(Changeset);
+
+impl Diff {
+    fn new(expected: &dyn Debug, actual: &dyn Debug) -> Self {
+        let expected = format!("{:#?}", expected);
+        let actual = format!("{:#?}", actual);
+        Diff(Changeset::new(&expected, &actual, "\n"))
+    }
+}
+
+impl Display for Diff {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        writeln!(f, "(-) Expected vs. (+) Actual:")?;
+        for diff in &self.0.diffs {
+            let (prefix, contents) = match diff {
+                Difference::Same(same) => ("  ", same),
+                Difference::Add(added) => ("+ ", added),
+                Difference::Rem(removed) => ("- ", removed),
+            };
+            for line in contents.split("\n") {
+                writeln!(f, "{}{}", prefix, line)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 macro_rules! eq_or_bail {
     ($expected:expr, $actual:expr) => {{
         if $expected != $actual {
-            return Err(format_err!("\n Expected: {:?}\n      Got: {:?}", $expected, $actual));
+            let changes = Diff::new(&$expected, &$actual);
+            return Err(format_err!("\n {}", changes));
         }
     }};
     ($expected:expr, $actual:expr, $($args:tt)+) => {{
         if $expected != $actual {
-            return Err(format_err!("{}:\n Expected: {:?}\n      Got: {:?}", format!($($args)+), $expected, $actual));
+            let changes = Diff::new(&$expected, &$actual);
+            return Err(format_err!("{}:\n {}", format!($($args)+), changes));
         }
     }}
 }
@@ -328,11 +359,11 @@ impl TreeAssertion {
         if self.exact_match {
             let properties_names = self.properties.iter().map(|p| p.0.clone());
             let children_names = self.children.iter().map(|c| c.name.clone());
-            let keys: HashSet<String> = properties_names.chain(children_names).collect();
+            let keys: BTreeSet<String> = properties_names.chain(children_names).collect();
 
             let actual_props = actual.properties.iter().map(|p| p.name().to_string());
             let actual_children = actual.children.iter().map(|c| c.name.clone());
-            let actual_keys: HashSet<String> = actual_props.chain(actual_children).collect();
+            let actual_keys: BTreeSet<String> = actual_props.chain(actual_children).collect();
             eq_or_bail!(keys, actual_keys, "node `{}` - expected keys != actual", self.path);
         }
 
