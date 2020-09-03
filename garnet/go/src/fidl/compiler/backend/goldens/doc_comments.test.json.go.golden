@@ -29,6 +29,22 @@ func (_ MyEnum) I_EnumValues() []MyEnum {
 		MyEnumBar,
 	}
 }
+
+func (_ MyEnum) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x MyEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x MyEnum) String() string {
 	switch x {
 	case 1:

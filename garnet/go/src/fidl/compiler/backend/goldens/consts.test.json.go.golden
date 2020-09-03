@@ -36,6 +36,22 @@ func (_ EnumType) I_EnumValues() []EnumType {
 		EnumTypeTrue,
 	}
 }
+
+func (_ EnumType) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x EnumType) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x EnumType) String() string {
 	switch x {
 	case 1:

@@ -20,6 +20,22 @@ func (_ ObjType) I_EnumValues() []ObjType {
 		ObjTypeSocket,
 	}
 }
+
+func (_ ObjType) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x ObjType) IsUnknown() bool {
+	switch x {
+	case 0:
+		return true
+	case 14:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x ObjType) String() string {
 	switch x {
 	case 0:
@@ -43,6 +59,22 @@ func (_ ErrorEnun) I_EnumValues() []ErrorEnun {
 		ErrorEnunErrBar,
 	}
 }
+
+func (_ ErrorEnun) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x ErrorEnun) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x ErrorEnun) String() string {
 	switch x {
 	case 1:

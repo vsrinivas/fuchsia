@@ -10,11 +10,18 @@ const enumTmpl = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} {{ .Type }}
+
 const (
 	{{- range .Members }}
 	{{ $.Name }}{{ .Name }} {{ $.Name }} = {{ .Value }}
 	{{- end }}
+
+{{ if .IsFlexible }}
+	// {{ .Name }}_Unknown is the default unknown placeholder.
+	{{ .Name }}_Unknown {{ .Name }} = {{ .UnknownValueForTmpl | printf "%#x" }}
+{{ end }}
 )
+
 func (_ {{.Name}}) I_EnumValues() []{{.Name}} {
 	return []{{.Name}}{
 		{{- range .Members }}
@@ -22,6 +29,24 @@ func (_ {{.Name}}) I_EnumValues() []{{.Name}} {
 		{{- end }}
 	}
 }
+
+func (_ {{.Name}}) I_EnumIsStrict() bool {
+	return {{ .IsStrict }}
+}
+
+func (x {{.Name}}) IsUnknown() bool {
+	switch x {
+		{{- range .Members }}
+		{{- if not .IsUnknown }}
+		case {{ .Value }}:
+			return true
+		{{- end }}
+		{{- end }}
+		default:
+			return false
+		}
+}
+
 func (x {{.Name}}) String() string {
 	switch x {
 	{{- range .Members }}

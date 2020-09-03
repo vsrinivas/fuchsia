@@ -22,6 +22,20 @@ func (_ ExampleEnum) I_EnumValues() []ExampleEnum {
 		ExampleEnumMember,
 	}
 }
+
+func (_ ExampleEnum) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x ExampleEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x ExampleEnum) String() string {
 	switch x {
 	case 1:

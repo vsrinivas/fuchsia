@@ -95,7 +95,7 @@ type BitsMember struct {
 //    ...
 // )
 type Enum struct {
-	types.Attributes
+	types.Enum
 
 	// Name is the name of the enum type alias.
 	Name string
@@ -110,7 +110,7 @@ type Enum struct {
 
 // EnumMember represents a single enum variant. See Enum for more details.
 type EnumMember struct {
-	types.Attributes
+	types.EnumMember
 
 	// Name is the name of the enum variant without any prefix.
 	Name string
@@ -386,6 +386,10 @@ type Root struct {
 	// PackageName is the name of the golang package as other Go programs would
 	// import it.
 	PackageName string
+
+	// BindingsAlias is the alias name of the golang package of the FIDL
+	// bindings.
+	BindingsAlias string
 
 	// Bits represents a list of FIDL bits represented as Go bits.
 	Bits []Bits
@@ -769,7 +773,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Attributes: val.Attributes,
+		EnumMember: val,
 		Name:       c.compileIdentifier(val.Name, true, ""),
 		Value:      c.compileConstant(val.Value),
 	}
@@ -777,9 +781,9 @@ func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Type:       c.compilePrimitiveSubtype(val.Type),
+		Enum: val,
+		Name: c.compileCompoundIdentifier(val.Name, true, ""),
+		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileEnumMember(v))
@@ -1025,8 +1029,9 @@ func Compile(fidlData types.Root) Root {
 
 	// Compile fidlData into r.
 	r := Root{
-		Name:        string(libraryName[len(libraryName)-1]),
-		PackageName: libraryPath,
+		Name:          string(libraryName[len(libraryName)-1]),
+		PackageName:   libraryPath,
+		BindingsAlias: BindingsAlias,
 	}
 	for _, v := range fidlData.Bits {
 		r.Bits = append(r.Bits, c.compileBits(v))
@@ -1053,7 +1058,8 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	if len(fidlData.Structs) != 0 || len(fidlData.Protocols) != 0 {
+	// TODO(fxb/59077): Uncomment to support type assertion once I1102f244aa5ab4545fab21218c1da90be08604ec has landed.
+	if len(fidlData.Structs) != 0 /*|| len(fidlData.Enums) != 0*/ || len(fidlData.Protocols) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Protocols {

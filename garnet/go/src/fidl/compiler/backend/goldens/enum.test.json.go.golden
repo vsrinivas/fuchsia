@@ -15,6 +15,22 @@ func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
 		MyStrictEnumBar,
 	}
 }
+
+func (_ MyStrictEnum) I_EnumIsStrict() bool {
+	return true
+}
+
+func (x MyStrictEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x MyStrictEnum) String() string {
 	switch x {
 	case 1:
@@ -30,6 +46,9 @@ type MyFlexibleEnum uint32
 const (
 	MyFlexibleEnumFoo MyFlexibleEnum = 1
 	MyFlexibleEnumBar MyFlexibleEnum = 2
+
+	// MyFlexibleEnum_Unknown is the default unknown placeholder.
+	MyFlexibleEnum_Unknown MyFlexibleEnum = 0xffffffff
 )
 
 func (_ MyFlexibleEnum) I_EnumValues() []MyFlexibleEnum {
@@ -38,6 +57,22 @@ func (_ MyFlexibleEnum) I_EnumValues() []MyFlexibleEnum {
 		MyFlexibleEnumBar,
 	}
 }
+
+func (_ MyFlexibleEnum) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x MyFlexibleEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x MyFlexibleEnum) String() string {
 	switch x {
 	case 1:
@@ -54,6 +89,9 @@ const (
 	MyFlexibleEnumWithCustomUnknownFoo           MyFlexibleEnumWithCustomUnknown = 1
 	MyFlexibleEnumWithCustomUnknownBar           MyFlexibleEnumWithCustomUnknown = 2
 	MyFlexibleEnumWithCustomUnknownCustomUnknown MyFlexibleEnumWithCustomUnknown = 3
+
+	// MyFlexibleEnumWithCustomUnknown_Unknown is the default unknown placeholder.
+	MyFlexibleEnumWithCustomUnknown_Unknown MyFlexibleEnumWithCustomUnknown = 0x3
 )
 
 func (_ MyFlexibleEnumWithCustomUnknown) I_EnumValues() []MyFlexibleEnumWithCustomUnknown {
@@ -63,6 +101,22 @@ func (_ MyFlexibleEnumWithCustomUnknown) I_EnumValues() []MyFlexibleEnumWithCust
 		MyFlexibleEnumWithCustomUnknownCustomUnknown,
 	}
 }
+
+func (_ MyFlexibleEnumWithCustomUnknown) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x MyFlexibleEnumWithCustomUnknown) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
 func (x MyFlexibleEnumWithCustomUnknown) String() string {
 	switch x {
 	case 1:
