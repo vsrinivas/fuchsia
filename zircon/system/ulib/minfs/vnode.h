@@ -251,7 +251,7 @@ class VnodeMinfs : public fs::Vnode,
   // Must only be called on Vnodes which
   // - Have no open fds
   // - Are fully unlinked (link count == 0)
-  void Purge(Transaction* transaction);
+  [[nodiscard]] zx_status_t Purge(Transaction* transaction);
 
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,

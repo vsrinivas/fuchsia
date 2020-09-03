@@ -82,11 +82,11 @@ class JournalWriter {
   // This method is thread-safe.
   [[nodiscard]] bool IsJournalingEnabled() const { return entries_length_ != 0; }
 
- private:
   // Returns true if all writeback is "off", and no further data will be written to the
   // device.
   [[nodiscard]] bool IsWritebackEnabled() const { return transaction_handler_; }
 
+ private:
   // Deactivates all writeback, calling all subsequent write operations to fail.
   void DisableWriteback() { transaction_handler_ = nullptr; }
 

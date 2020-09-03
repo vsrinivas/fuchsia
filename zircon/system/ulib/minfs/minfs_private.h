@@ -137,8 +137,9 @@ class TransactionalFs {
 #endif
 
   // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
-  virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                       std::unique_ptr<Transaction>* transaction_out) = 0;
+  [[nodiscard]] virtual zx_status_t BeginTransaction(
+      size_t reserve_inodes, size_t reserve_blocks,
+      std::unique_ptr<Transaction>* transaction_out) = 0;
 
   // Enqueues a metadata transaction by persisting its contents to disk.
   virtual void CommitTransaction(std::unique_ptr<Transaction> transaction) = 0;
@@ -187,28 +188,29 @@ class Minfs :
   // Destroys a "minfs" object, but take back ownership of the bcache object.
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
 
-  static zx_status_t Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
-                            std::unique_ptr<Minfs>* out);
+  [[nodiscard]] static zx_status_t Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
+                                          std::unique_ptr<Minfs>* out);
 
 #ifdef __Fuchsia__
   // Initializes the Minfs journal and writeback queue and resolves any pending disk state (e.g.,
   // resolving unlinked nodes and existing journal entries).
-  zx_status_t InitializeJournal(fs::JournalSuperblock journal_superblock);
+  [[nodiscard]] zx_status_t InitializeJournal(fs::JournalSuperblock journal_superblock);
 
   // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving
   // unlinked nodes and existing journal entries). Does not enable the journal.
-  zx_status_t InitializeUnjournalledWriteback();
+  [[nodiscard]] zx_status_t InitializeUnjournalledWriteback();
 
   // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
-  zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
+  [[nodiscard]] zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
 #endif
 
   // instantiate a vnode from an inode
   // the inode must exist in the file system
-  zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
+  [[nodiscard]] zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
 
   // instantiate a vnode with a new inode
-  zx_status_t VnodeNew(Transaction* transaction, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
+  [[nodiscard]] zx_status_t VnodeNew(Transaction* transaction, fbl::RefPtr<VnodeMinfs>* out,
+                                     uint32_t type);
 
   // Insert, lookup, and remove vnode from hash map.
   void VnodeInsert(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
@@ -226,7 +228,7 @@ class Minfs :
   void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
 
   // Free ino in inode bitmap, release all blocks held by inode.
-  zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);
+  [[nodiscard]] zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);
 
   // Mark |vn| to be unlinked.
   void AddUnlinked(PendingWork* transaction, VnodeMinfs* vn);
@@ -235,7 +237,7 @@ class Minfs :
   void RemoveUnlinked(PendingWork* transaction, VnodeMinfs* vn);
 
   // Free resources of all vnodes marked unlinked.
-  zx_status_t PurgeUnlinked();
+  [[nodiscard]] zx_status_t PurgeUnlinked();
 
   // Writes back an inode into the inode table on persistent storage.
   // Does not modify inode bitmap.
@@ -251,9 +253,8 @@ class Minfs :
     ZX_DEBUG_ASSERT(bno < Info().block_count);
   }
 
-  zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               std::unique_ptr<Transaction>* transaction) final
-      __WARN_UNUSED_RESULT;
+  [[nodiscard]] zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
+                                             std::unique_ptr<Transaction>* transaction) final;
 
 #ifdef __Fuchsia__
   void EnqueueCallback(SyncCallback callback) final;
@@ -293,7 +294,7 @@ class Minfs :
   // |data| is an out parameter that must be a block in size, provided by the caller
   // These functions are single-block and synchronous. On Fuchsia, using the batched read
   // functions is preferred.
-  zx_status_t ReadDat(blk_t bno, void* data);
+  [[nodiscard]] zx_status_t ReadDat(blk_t bno, void* data);
 
   void SetMetrics(bool enable) {
 #ifdef __Fuchsia__
@@ -329,7 +330,7 @@ class Minfs :
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
-  zx_status_t GetMetrics(::llcpp::fuchsia::minfs::Metrics* out) const {
+  [[nodiscard]] zx_status_t GetMetrics(::llcpp::fuchsia::minfs::Metrics* out) const {
     if (metrics_.Enabled()) {
       metrics_.CopyToFidl(out);
       return ZX_OK;
@@ -367,7 +368,7 @@ class Minfs :
   BlockOffsets GetBlockOffsets() const final { return offsets_; }
 #endif
 
-  zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
+  [[nodiscard]] zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
 
   const TransactionLimits& Limits() const { return limits_; }
 
@@ -413,23 +414,25 @@ class Minfs :
   void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);
 
   // Find an unallocated and unreserved block in the block bitmap starting from block |start|
-  zx_status_t FindBlock(size_t start, size_t* blkno_out);
+  [[nodiscard]] zx_status_t FindBlock(size_t start, size_t* blkno_out);
 
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".
-  static zx_status_t CreateFsId(uint64_t* out);
+  [[nodiscard]] static zx_status_t CreateFsId(uint64_t* out);
 
   // Reads blocks from disk. Only to be called during "construction".
-  static zx_status_t ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
-                                       std::unique_ptr<SuperblockManager> sb,
-                                       const MountOptions& mount_options,
-                                       std::unique_ptr<Minfs>* out_minfs);
+  [[nodiscard]] static zx_status_t ReadInitialBlocks(const Superblock& info,
+                                                     std::unique_ptr<Bcache> bc,
+                                                     std::unique_ptr<SuperblockManager> sb,
+                                                     const MountOptions& mount_options,
+                                                     std::unique_ptr<Minfs>* out_minfs);
 
   // Updates the clean bit and oldest revision in the super block.
-  zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
+  [[nodiscard]] zx_status_t UpdateCleanBitAndOldestRevision(bool is_clean);
 
 #ifndef __Fuchsia__
-  zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data) const;
+  [[nodiscard]] zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max,
+                                    void* data) const;
 #endif
 
   // Global information about the filesystem.
@@ -468,7 +471,8 @@ class Minfs :
 
 #ifdef __Fuchsia__
 // Replay the minfs journal, given the sizes provided within the superblock.
-zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out);
+[[nodiscard]] zx_status_t ReplayJournal(Bcache* bc, const Superblock& info,
+                                        fs::JournalSuperblock* out);
 #endif
 
 // write the inode data of this vnode to disk (default does not update time values)
@@ -480,8 +484,8 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
-                  fbl::RefPtr<VnodeMinfs>* root_out);
+[[nodiscard]] zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
+                                fbl::RefPtr<VnodeMinfs>* root_out);
 }  // namespace minfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_MINFS_MINFS_PRIVATE_H_

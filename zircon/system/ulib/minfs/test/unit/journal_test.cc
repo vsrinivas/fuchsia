@@ -89,9 +89,11 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
 
     RecordWriteCount(fs);
 
-    ASSERT_OK(foo->Close());
-    ASSERT_OK(bar->Close());
-    ASSERT_OK(baz->Close());
+    // This should succeed on the first pass when measuring, but will fail on the second pass when
+    // the fake device starts to fail writes.
+    foo->Close();
+    bar->Close();
+    baz->Close();
   }
 };
 

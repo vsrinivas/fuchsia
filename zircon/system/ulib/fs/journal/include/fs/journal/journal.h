@@ -127,6 +127,10 @@ class Journal final : public fit::executor {
     write_metadata_callback_ = std::move(callback);
   }
 
+  // Returns true if all writeback is "off", and no further data will be written to the
+  // device.
+  bool IsWritebackEnabled() const { return writer_.IsWritebackEnabled(); }
+
  private:
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer_;
   std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer_;

@@ -510,6 +510,10 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     return ZX_ERR_BAD_STATE;
   }
 
+  if (!journal_->IsWritebackEnabled()) {
+    return ZX_ERR_IO_REFUSED;
+  }
+
   // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
   ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
@@ -828,8 +832,8 @@ void Minfs::StopWriteback() {
   }
 
   if (IsReadonly() == false) {
-    // TODO(fxbug.dev/51588): Maybe check the status here?
-    UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
+    // Ignore errors here since there is nothing we can do.
+    [[maybe_unused]] zx_status_t status = UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
   }
 
   journal_ = nullptr;
@@ -1626,7 +1630,8 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
 #ifdef __Fuchsia__
   fvm_cleanup.cancel();
 #endif
-  return ZX_OK;
+
+  return bc->Sync();
 }
 
 zx_status_t Minfs::ReadDat(blk_t bno, void* data) {

@@ -548,21 +548,16 @@ TEST_P(MinfsTest, UnlinkFail) {
   // fail, sync will also fail.
   ASSERT_LT(syncfs(fd.get()), 0);
 
-  // Close all open fds. These will appear to succeed, although all pending transactions will fail.
+  // Close all open fds.
   for (unsigned i = first_fd + 2; i < last_fd; i++) {
     if (i != mid_fd) {
-      ASSERT_EQ(close(fds[i].release()), 0);
+      ASSERT_EQ(close(fds[i].release()), -1);
     }
   }
 
   // Sync Minfs to ensure all close operations complete. Since Minfs is in a read-only state and
   // some requests have not been successfully persisted to disk, the sync is expected to fail.
   ASSERT_LT(syncfs(fd.get()), 0);
-
-  // Writeback should have failed.
-  // However, the in-memory state has been updated correctly.
-  ASSERT_NO_FATAL_FAILURE(GetFreeBlocks(fs(), &current_blocks));
-  ASSERT_EQ(current_blocks, original_blocks);
 
   // Remount Minfs, which should cause leftover unlinked files to be removed.
   ASSERT_EQ(fs().GetRamDisk()->Wake().status_value(), ZX_OK);

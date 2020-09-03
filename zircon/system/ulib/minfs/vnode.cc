@@ -266,7 +266,10 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
 
   if (IsUnlinked()) {
     if (fd_count_ == 0) {
-      Purge(transaction);
+      zx_status_t status = Purge(transaction);
+      if (status != ZX_OK) {
+        return status;
+      }
     } else {
       fs_->AddUnlinked(transaction, this);
       if (IsDirectory()) {
@@ -342,11 +345,11 @@ zx_status_t VnodeMinfs::Open([[maybe_unused]] ValidatedOptions options,
   return ZX_OK;
 }
 
-void VnodeMinfs::Purge(Transaction* transaction) {
+zx_status_t VnodeMinfs::Purge(Transaction* transaction) {
   ZX_DEBUG_ASSERT(fd_count_ == 0);
   ZX_DEBUG_ASSERT(IsUnlinked());
   fs_->VnodeRelease(this);
-  fs_->InoFree(transaction, this);
+  return fs_->InoFree(transaction, this);
 }
 
 zx_status_t VnodeMinfs::Close() {
@@ -363,7 +366,9 @@ zx_status_t VnodeMinfs::Close() {
       return status;
     }
     fs_->RemoveUnlinked(transaction.get(), this);
-    Purge(transaction.get());
+    if ((status = Purge(transaction.get())) != ZX_OK) {
+      return status;
+    }
     fs_->CommitTransaction(std::move(transaction));
   }
   return ZX_OK;
