@@ -107,4 +107,7 @@ graphics_compute_unittests_package("graphics-compute-vk-unittests") {
     "tests/common/spinel_vk:unittests",
   ]
   needs_vulkan = true
+
+  # TODO(fxb/58615): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

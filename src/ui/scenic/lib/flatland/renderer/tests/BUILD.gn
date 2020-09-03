@@ -34,4 +34,7 @@ executable("unittests") {
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland/renderer",
   ]
+
+  # TODO(fxb/58615): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
