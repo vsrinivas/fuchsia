@@ -51,7 +51,9 @@ flutter_test_list = [
 
   # fxb/56644
   # "clockface_flutter_benchmarks_test",
-  "scroll_flutter_benchmarks_test",
+
+  # fxb/59483
+  # "scroll_flutter_benchmarks_test",
 ]
 foreach(target_name, flutter_test_list) {
   dart_test(target_name) {
