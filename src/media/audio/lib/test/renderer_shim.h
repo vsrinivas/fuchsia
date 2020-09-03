@@ -24,11 +24,6 @@ namespace media::audio::test {
 template <class Interface>
 class VirtualDevice;
 
-namespace internal {
-// These IDs are scoped to the lifetime of this process.
-extern size_t renderer_shim_next_inspect_id;
-}  // namespace internal
-
 // This class is thread hostile: none of its methods can be called concurrently.
 class RendererShimImpl {
  public:
@@ -96,10 +91,10 @@ class RendererShimImpl {
   size_t inspect_id() const { return inspect_id_; }
 
  protected:
-  RendererShimImpl(Format format, size_t payload_frame_count)
+  RendererShimImpl(Format format, size_t payload_frame_count, size_t inspect_id)
       : format_(format),
         payload_frame_count_(payload_frame_count),
-        inspect_id_(internal::renderer_shim_next_inspect_id++),
+        inspect_id_(inspect_id),
         payload_buffer_(format, payload_frame_count) {}
 
   void ResetEvents();
@@ -130,8 +125,9 @@ class AudioRendererShim : public RendererShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateAudioRenderer so the object is
   // appropriately bound into the test environment.
   AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format format,
-                    size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage)
-      : RendererShimImpl(format, payload_frame_count) {
+                    size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
+                    size_t inspect_id)
+      : RendererShimImpl(format, payload_frame_count, inspect_id) {
     audio_core->CreateAudioRenderer(renderer_.NewRequest());
     fixture->AddErrorHandler(renderer_, "AudioRenderer");
     WatchEvents();
@@ -163,8 +159,8 @@ class UltrasoundRendererShim : public RendererShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundRenderer so the object is
   // appropriately bound into the test environment.
   UltrasoundRendererShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
-                         Format format, size_t payload_frame_count)
-      : RendererShimImpl(format, payload_frame_count), fixture_(fixture) {
+                         Format format, size_t payload_frame_count, size_t inspect_id)
+      : RendererShimImpl(format, payload_frame_count, inspect_id), fixture_(fixture) {
     ultrasound_factory->CreateRenderer(
         renderer_.NewRequest(), [this](auto ref_clock, auto stream_type) {
           created_ = true;

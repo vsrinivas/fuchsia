@@ -22,12 +22,6 @@
 
 namespace media::audio::test {
 
-namespace internal {
-// These IDs are scoped to the lifetime of this process.
-extern size_t virtual_output_next_inspect_id;
-extern size_t virtual_input_next_inspect_id;
-}  // namespace internal
-
 struct DevicePlugProperties {
   zx::time plug_change_time;
   bool plugged;
@@ -110,9 +104,9 @@ class VirtualOutput : public VirtualOutputImpl {
   // appropriately bound into the test environment.
   VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
-                DevicePlugProperties* plug_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count,
-                      internal::virtual_output_next_inspect_id++, plug_properties) {}
+                size_t inspect_id, DevicePlugProperties* plug_properties)
+      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
+                      plug_properties) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -129,9 +123,9 @@ class VirtualInput : public VirtualInputImpl {
   // appropriately bound into the test environment.
   VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
-               DevicePlugProperties* plug_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count,
-                      internal::virtual_input_next_inspect_id++, plug_properties) {}
+               size_t inspect_id, DevicePlugProperties* plug_properties)
+      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
+                      plug_properties) {}
 };
 
 }  // namespace media::audio::test

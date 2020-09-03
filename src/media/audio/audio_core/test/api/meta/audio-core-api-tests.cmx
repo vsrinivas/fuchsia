@@ -1,9 +1,6 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.media.AudioTestDevmgr": "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-test-devmgr.cmx"
-            },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.tracing.provider.Registry"

@@ -105,6 +105,8 @@ class HermeticAudioTest : public TestFixture {
 
   // Initializes the HermeticAudioEnvironment for each test instance during `SetUp()`.
   void SetUpEnvironment();
+  // Tears down the HermeticAudioEnvironment for each test instance during `TearDown()`.
+  void TearDownEnvironment();
 
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
@@ -128,6 +130,11 @@ class HermeticAudioTest : public TestFixture {
   std::unique_ptr<HermeticAudioEnvironment> environment_;
   fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
+
+  size_t capturer_shim_next_inspect_id_ = 1;
+  size_t renderer_shim_next_inspect_id_ = 1;
+  size_t virtual_output_next_inspect_id_ = 0;
+  size_t virtual_input_next_inspect_id_ = 0;
 };
 
 }  // namespace media::audio::test

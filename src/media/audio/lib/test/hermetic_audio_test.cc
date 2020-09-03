@@ -34,11 +34,13 @@ void HermeticAudioTest::SetUpEnvironment() {
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
   environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
   virtual_audio_control_sync_->Enable();
+}
 
-  // Reset inspect ID counters. We start a new audio_core each test, but use a global virtual
-  // driver across all test suites, so we don't reset the virtual device IDs here.
-  internal::capturer_shim_next_inspect_id = 1;
-  internal::renderer_shim_next_inspect_id = 1;
+void HermeticAudioTest::TearDownEnvironment() {
+  if (virtual_audio_control_sync_.is_bound()) {
+    virtual_audio_control_sync_->Disable();
+  }
+  environment_ = nullptr;
 }
 
 void HermeticAudioTest::SetUp() {
@@ -70,6 +72,7 @@ void HermeticAudioTest::TearDown() {
   }
 
   TestFixture::TearDown();
+  TearDownEnvironment();
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -80,9 +83,9 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
-  auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(static_cast<TestFixture*>(this),
-                                                           environment_.get(), device_id, format,
-                                                           frame_count, plug_properties);
+  auto ptr = std::make_unique<VirtualOutput<SampleFormat>>(
+      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
+      virtual_output_next_inspect_id_++, plug_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].output = std::move(ptr);
@@ -120,9 +123,9 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
 
-  auto ptr = std::make_unique<VirtualInput<SampleFormat>>(static_cast<TestFixture*>(this),
-                                                          environment_.get(), device_id, format,
-                                                          frame_count, plug_properties);
+  auto ptr = std::make_unique<VirtualInput<SampleFormat>>(
+      static_cast<TestFixture*>(this), environment_.get(), device_id, format, frame_count,
+      virtual_input_next_inspect_id_++, plug_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
   devices_[id].input = std::move(ptr);
@@ -136,7 +139,8 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
     TypedFormat<SampleFormat> format, size_t frame_count, fuchsia::media::AudioRenderUsage usage) {
   auto ptr = std::make_unique<AudioRendererShim<SampleFormat>>(
-      static_cast<TestFixture*>(this), audio_core_, format, frame_count, usage);
+      static_cast<TestFixture*>(this), audio_core_, format, frame_count, usage,
+      renderer_shim_next_inspect_id_++);
   auto out = ptr.get();
   renderers_.push_back(std::move(ptr));
 
@@ -150,7 +154,8 @@ AudioCapturerShim<SampleFormat>* HermeticAudioTest::CreateAudioCapturer(
     TypedFormat<SampleFormat> format, size_t frame_count,
     fuchsia::media::AudioCapturerConfiguration config) {
   auto ptr = std::make_unique<AudioCapturerShim<SampleFormat>>(
-      static_cast<TestFixture*>(this), audio_core_, format, frame_count, std::move(config));
+      static_cast<TestFixture*>(this), audio_core_, format, frame_count, std::move(config),
+      capturer_shim_next_inspect_id_++);
   auto out = ptr.get();
   capturers_.push_back(std::move(ptr));
   return out;
@@ -160,7 +165,8 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundRendererShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundRenderer(
     TypedFormat<SampleFormat> format, size_t frame_count, bool wait_for_creation) {
   auto ptr = std::make_unique<UltrasoundRendererShim<SampleFormat>>(
-      static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
+      static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count,
+      renderer_shim_next_inspect_id_++);
   auto out = ptr.get();
   renderers_.push_back(std::move(ptr));
 
@@ -174,7 +180,8 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapturer(
     TypedFormat<SampleFormat> format, size_t frame_count, bool wait_for_creation) {
   auto ptr = std::make_unique<UltrasoundCapturerShim<SampleFormat>>(
-      static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
+      static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count,
+      capturer_shim_next_inspect_id_++);
   auto out = ptr.get();
   capturers_.push_back(std::move(ptr));
   if (wait_for_creation) {

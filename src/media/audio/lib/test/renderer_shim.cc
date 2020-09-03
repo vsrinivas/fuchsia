@@ -13,10 +13,6 @@
 
 namespace media::audio::test {
 
-namespace internal {
-size_t renderer_shim_next_inspect_id = 1;  // ids start at 1
-}  // namespace internal
-
 RendererShimImpl::~RendererShimImpl() { ResetEvents(); }
 
 void RendererShimImpl::ResetEvents() {

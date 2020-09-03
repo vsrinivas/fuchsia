@@ -73,6 +73,8 @@ class HermeticAudioEnvironment {
   // This field must be locked during the constructor and StartEnvThread, but after the constructor
   // is complete, the field is read only and can be accessed without locking.
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  std::shared_ptr<sys::ServiceDirectory> devmgr_services_;
 
   // Locking not needed to access these fields: they are initialized during single-threaded
   // setup code within the constructor.

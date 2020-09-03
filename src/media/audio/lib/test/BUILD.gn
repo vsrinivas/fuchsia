@@ -46,7 +46,6 @@ source_set("hermetic_audio_test") {
   testonly = true
 
   sources = [
-    "capturer_shim.cc",
     "capturer_shim.h",
     "comparators.cc",
     "comparators.h",

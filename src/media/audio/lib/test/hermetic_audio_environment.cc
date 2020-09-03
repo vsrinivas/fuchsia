@@ -115,7 +115,7 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(o
   // because some test fixtures override these methods and include some asserts that will not
   // be valid when this is run.
   fuchsia::io::DirectorySyncPtr devfs_dir;
-  ConnectToService(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
+  devmgr_services_->Connect(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
   fuchsia::io::NodeInfo info;
   zx_status_t status = devfs_dir->Describe(&info);
   FX_CHECK(status == ZX_OK);
@@ -126,6 +126,18 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   loop_ = loop;
   auto real_services = sys::ServiceDirectory::CreateFromNamespace();
   auto real_env = real_services->Connect<fuchsia::sys::Environment>();
+
+  fuchsia::sys::LaunchInfo devmgr_launch_info;
+  // This URL should be made more flexible for future tests.
+  devmgr_launch_info.url =
+      "fuchsia-pkg://fuchsia.com/audio-core-api-tests#meta/audio-test-devmgr.cmx";
+  devmgr_services_ =
+      sys::ServiceDirectory::CreateWithRequest(&devmgr_launch_info.directory_request);
+
+  // Launch AudioTestDevmgr per-environment.
+  fuchsia::sys::LauncherPtr launcher;
+  real_env->GetLauncher(launcher.NewRequest());
+  launcher->CreateComponent(std::move(devmgr_launch_info), controller_.NewRequest());
 
   // The '_nodevfs' cmx files are needed to allow us to map in our isolated devmgr under /dev for
   // each component, otherwise these components would still be provided the shared/global devmgr.
@@ -153,13 +165,13 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
       {
           .type = kAudioComponent,
           .url = audio_url,
-          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_url, real_services),
+          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_url, devmgr_services_),
           .service_names = {fuchsia::media::Audio::Name_},
       },
       {
           .type = kAudioCoreComponent,
           .url = audio_core_url,
-          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_core_url, real_services,
+          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_core_url, devmgr_services_,
                                                             options_.audio_core_config_data_path,
                                                             options_.audio_core_arguments),
           .service_names =
@@ -177,7 +189,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
       {
           .type = kVirtualAudioComponent,
           .url = virtual_audio_url,
-          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(virtual_audio_url, real_services),
+          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(virtual_audio_url, devmgr_services_),
           .service_names =
               {
                   fuchsia::virtualaudio::Control::Name_,
@@ -197,7 +209,6 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   services->AllowParentService("fuchsia.logger.LogSink");
   services->AllowParentService("fuchsia.tracing.provider.Registry");
   services->AllowParentService(fuchsia::scheduler::ProfileProvider::Name_);
-  services->AllowParentService(kIsolatedDevmgrServiceName);
 
   std::unique_lock<std::mutex> lock(mutex_);
   hermetic_environment_ = sys::testing::EnclosingEnvironment::Create(

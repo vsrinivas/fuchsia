@@ -10,11 +10,6 @@
 
 namespace media::audio::test {
 
-namespace internal {
-size_t virtual_output_next_inspect_id = 0;  // ids start at 0
-size_t virtual_input_next_inspect_id = 0;   // ids start at 0
-}  // namespace internal
-
 template <class Iface>
 VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                                     const audio_stream_unique_id_t& device_id, Format format,

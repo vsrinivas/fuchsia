@@ -18,11 +18,6 @@
 
 namespace media::audio::test {
 
-namespace internal {
-// These IDs are scoped to the lifetime of this process.
-extern size_t capturer_shim_next_inspect_id;
-}  // namespace internal
-
 // This class is thread hostile: none of its methods can be called concurrently.
 class CapturerShimImpl {
  public:
@@ -41,10 +36,10 @@ class CapturerShimImpl {
   size_t inspect_id() const { return inspect_id_; }
 
  protected:
-  CapturerShimImpl(Format format, size_t payload_frame_count)
+  CapturerShimImpl(Format format, size_t payload_frame_count, size_t inspect_id)
       : format_(format),
         payload_frame_count_(payload_frame_count),
-        inspect_id_(internal::capturer_shim_next_inspect_id++),
+        inspect_id_(inspect_id),
         payload_buffer_(format, payload_frame_count) {}
 
   void CreatePayloadBuffer();
@@ -71,8 +66,9 @@ class AudioCapturerShim : public CapturerShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateAudioCapturer so the object is
   // appropriately bound into the test environment.
   AudioCapturerShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format format,
-                    size_t payload_frame_count, fuchsia::media::AudioCapturerConfiguration config)
-      : CapturerShimImpl(format, payload_frame_count) {
+                    size_t payload_frame_count, fuchsia::media::AudioCapturerConfiguration config,
+                    size_t inspect_id)
+      : CapturerShimImpl(format, payload_frame_count, inspect_id) {
     audio_core->CreateAudioCapturerWithConfiguration(format.stream_type(), std::move(config),
                                                      capturer_.NewRequest());
     fixture->AddErrorHandler(capturer_, "AudioCapturer");
@@ -100,8 +96,8 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundCapturer so the object is
   // appropriately bound into the test environment.
   UltrasoundCapturerShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
-                         Format format, size_t payload_frame_count)
-      : CapturerShimImpl(format, payload_frame_count), fixture_(fixture) {
+                         Format format, size_t payload_frame_count, size_t inspect_id)
+      : CapturerShimImpl(format, payload_frame_count, inspect_id), fixture_(fixture) {
     auto vmo = payload_buffer_.CreateAndMapVmo(true);
     ultrasound_factory->CreateCapturer(
         capturer_.NewRequest(),
