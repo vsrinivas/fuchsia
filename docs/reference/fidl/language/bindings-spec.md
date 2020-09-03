@@ -177,13 +177,29 @@ Examples of this exist for the
 #### Flexible unions
 
 The bindings MUST succeed when decoding a flexible union with an unknown
-variant. These unknown unions MAY provide ways for the user to read the
-underlying raw bytes and handles of the payload or the unknown ordinal.
-Additionally, it is OPTIONAL for the bindings to support re-encoding the raw
-bytes and handles when sending a flexible union with an unknown variant.
+variant. The behavior of such a union can vary. Bindings MAY provide ways for
+the user to read the underlying raw bytes and handles of the payload, as well as
+the unknown ordinal. Bindings SHOULD either provide access to both bytes and
+handles, or neither.
 
-Generated code for unions MAY allow the user to read the underlying raw ordinal
-of the message.
+For bindings that support storing accessing the unknown bytes, handles, and
+ordinals:
+
+* Bindings MAY provide a constructor to create a union with an unknown variant
+  with specified ordinal, bytes, and handles.
+  * Such a constructor is useful not just for testing the bindings, but also for
+    end-developer testing needs (e.g. to check that unknown data is handled
+    correctly in a proxy).
+  * Having a constructor also prevents end-developers from constructing unions
+    with unknown variants in roundabout ways, such as by manually decoding raw
+    bytes.
+  * Usage of this constructor is discouraged in production code.
+* Bindings SHOULD support re-encoding the union, writing the unknown ordinal,
+  bytes, and handles back onto the wire.
+
+For bindings that do not store the unknown bytes, handles, and ordinal:
+
+* Bindings SHOULD fail to encode rather than send a message with missing data.
 
 ### Table support
 
