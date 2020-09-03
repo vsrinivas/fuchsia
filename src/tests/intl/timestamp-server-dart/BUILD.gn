@@ -14,7 +14,7 @@ dart_app("timestamp-server-dart") {
     },
   ]
 
-  sources = []
+  sources = [ "main.dart" ]
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//third_party/dart-pkg/pub/intl",

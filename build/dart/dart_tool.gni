@@ -156,7 +156,6 @@ template("dart_tool") {
     package_name = package_name
     package_root = package_root
     source_dir = source_dir
-    sources_required = false
 
     sources = []
     if (defined(invoker.sources)) {

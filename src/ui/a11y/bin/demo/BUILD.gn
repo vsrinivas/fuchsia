@@ -16,7 +16,7 @@ flutter_app("a11y-demo") {
     },
   ]
 
-  sources = []
+  sources = [ "main.dart" ]
 
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }

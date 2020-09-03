@@ -85,7 +85,6 @@ template("dart_test") {
     }
 
     infer_package_name = true
-    sources_required = false
   }
 
   # Create a single, grouped test file, as snapshot files correspond to a single

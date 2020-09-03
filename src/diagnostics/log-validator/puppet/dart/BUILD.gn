@@ -13,7 +13,7 @@ dart_app("log-validator-dart-puppet") {
       component_type = "dart"
       main_dart = "lib/main.dart"
       package_root = "."
-      sources = []
+      sources = [ "main.dart" ]
       deps = [
         "//sdk/fidl/fuchsia.diagnostics.stream",
         "//sdk/fidl/fuchsia.mem",
