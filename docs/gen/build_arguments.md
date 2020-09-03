@@ -1096,7 +1096,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:33
+From //products/bringup.gni:34
 
 **Overridden from the default:** `[]`
 
@@ -1104,7 +1104,7 @@ From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:33
+From //products/bringup.gni:34
 
 **Overridden from the default:** `[]`
 
@@ -1252,7 +1252,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:14
 
@@ -1260,7 +1260,7 @@ From //products/core.gni:14
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:14
 
@@ -1794,7 +1794,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:19
+From //products/bringup.gni:20
 
 **Overridden from the default:** `[]`
 
@@ -1802,7 +1802,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:19
+From //products/bringup.gni:20
 
 **Overridden from the default:** `[]`
 
@@ -1823,7 +1823,7 @@ product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:21
+From //products/bringup.gni:22
 
 **Overridden from the default:** `[]`
 
@@ -1831,7 +1831,7 @@ From //build/product.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:21
+From //products/bringup.gni:22
 
 **Overridden from the default:** `[]`
 
