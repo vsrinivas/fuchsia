@@ -6,7 +6,6 @@
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_CODED_AST_H_
 
 #include <stdint.h>
-#include <zircon/assert.h>
 
 #include <cassert>
 #include <limits>
@@ -218,8 +217,8 @@ struct StructType : public Type {
       : Type(Kind::kStruct, std::move(name), size, true, false),
         elements(std::move(elements)),
         qname(std::move(qname)) {
-    ZX_ASSERT_MSG(elements.size() <= std::numeric_limits<uint16_t>::max(),
-                  "coding table stores element_count in uint16_t");
+    assert(elements.size() <= std::numeric_limits<uint16_t>::max() &&
+           "coding table stores element_count in uint16_t");
   }
 
   std::vector<StructElement> elements;
@@ -295,8 +294,8 @@ struct ArrayType : public Type {
       : Type(Kind::kArray, std::move(name), array_size, true, element_type->is_noop),
         element_type(element_type),
         element_size(element_size) {
-    ZX_ASSERT_MSG(element_size <= std::numeric_limits<uint16_t>::max(),
-                  "coding table stores element_size in uint16_t");
+    assert(element_size <= std::numeric_limits<uint16_t>::max() &&
+           "coding table stores element_size in uint16_t");
   }
 
   const Type* const element_type;
