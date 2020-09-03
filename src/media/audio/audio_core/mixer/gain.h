@@ -128,7 +128,7 @@ class Gain {
     }
   }
 
-  float GetGainDb() { return CombineGains(current_src_gain_db_, current_dest_gain_db_); }
+  float GetGainDb() { return ScaleToDb(GetGainScale()); }
 
   // Calculate the stream's gain-scale, from cached source and dest values.
   AScale GetGainScale() { return GetGainScale(target_src_gain_db_, target_dest_gain_db_); }

@@ -416,6 +416,7 @@ TEST_F(ScaleArrayTest, CompleteSourceRamp) {
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_EQ(target_gain_db, gain_.GetGainDb());
   EXPECT_EQ(target_gain_scale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(target_gain_db, gain_.GetGainDb());
 
   // Without a ramp, scale_arr should be constant even after Advance.
   gain_.Advance(10, rate_1khz_output_);
