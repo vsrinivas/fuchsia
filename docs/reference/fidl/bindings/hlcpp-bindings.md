@@ -298,7 +298,7 @@ The FIDL toolchain generates a `User` class with the following methods:
   set.
 * `const uint8_t& age() const` and `const std::string& name() const`: Read-only
   field accessor methods. These fail if the field is not set.
-* `uint8_t* mutable_age()` and `std::string* mutable_age()`: Mutable field
+* `uint8_t* mutable_age()` and `std::string* mutable_name()`: Mutable field
   accessor methods. If the field is not set, a default one will be constructed,
   set, and returned.
 * `User& set_age(uint8_t)` and `User& set_name(std::string)`: Field setters.
