@@ -19,7 +19,7 @@ class MockSemanticsEventListener : public a11y::SemanticsEventListener {
   MockSemanticsEventListener()
       : listener_factory_(
             std::make_unique<fxl::WeakPtrFactory<a11y::SemanticsEventListener>>(this)) {}
-  ~MockSemanticsEventListener() { listener_factory_->InvalidateWeakPtrs(); }
+  ~MockSemanticsEventListener() override { listener_factory_->InvalidateWeakPtrs(); }
 
   // |SemanticsEventListener|
   void OnEvent(a11y::EventInfo event_info) { events_received_.push_back(event_info); }

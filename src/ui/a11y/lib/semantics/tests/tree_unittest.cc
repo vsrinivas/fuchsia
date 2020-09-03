@@ -111,8 +111,34 @@ TEST_F(SemanticTreeTest, ClearsTheTree) {
 
   EXPECT_TRUE(tree_.Update(std::move(updates)));
   EXPECT_EQ(tree_.Size(), 3u);
+
+  // Set event callback to verify that callback was called with the correct
+  // event type.
+  bool semantics_event_callback_called = false;
+  tree_.set_semantics_event_callback(
+      [&semantics_event_callback_called](a11y::SemanticsEventType event_type) {
+        semantics_event_callback_called = true;
+        EXPECT_EQ(event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
+      });
+
   tree_.Clear();
   EXPECT_EQ(tree_.Size(), 0u);
+  EXPECT_TRUE(semantics_event_callback_called);
+}
+
+TEST_F(SemanticTreeTest, SemanticsEventCallbackInvokedOnSuccessfulUpdate) {
+  // Set event callback to verify that callback was called with the correct
+  // event type.
+  bool semantics_event_callback_called = false;
+  tree_.set_semantics_event_callback(
+      [&semantics_event_callback_called](a11y::SemanticsEventType event_type) {
+        semantics_event_callback_called = true;
+        EXPECT_EQ(event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
+      });
+
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+  EXPECT_TRUE(semantics_event_callback_called);
 }
 
 TEST_F(SemanticTreeTest, ReceivesTreeInOneSingleUpdate) {

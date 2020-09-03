@@ -14,6 +14,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/ui/a11y/lib/semantics/semantics_event.h"
+
 namespace a11y {
 
 // A Semantic Tree represents the relationship of elements on an UI in the form of Semantic Nodes,
@@ -62,6 +64,8 @@ class SemanticTree {
       fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback)>;
 
+  using SemanticsEventCallback = fit::function<void(SemanticsEventType event_type)>;
+
   // A SemanticTree object is normally maintained by a semantics provider while
   // being consumed by a semantics consumer (such as a screen reader).
   SemanticTree();
@@ -73,6 +77,11 @@ class SemanticTree {
   }
   void set_hit_testing_handler(HitTestingHandlerCallback hit_testing_handler) {
     hit_testing_handler_ = std::move(hit_testing_handler);
+  }
+
+  // Sets callback invoked on semantics events.
+  void set_semantics_event_callback(SemanticsEventCallback semantics_event_callback) {
+    semantics_event_callback_ = std::move(semantics_event_callback);
   }
 
   // Returns the node with |node_id|, nullptr otherwise.
@@ -174,6 +183,9 @@ class SemanticTree {
 
   // Handler responsible for answering calls to PerformHitTesting().
   HitTestingHandlerCallback hit_testing_handler_;
+
+  // Callback invoked on semantics events.
+  SemanticsEventCallback semantics_event_callback_;
 };
 
 }  // namespace a11y
