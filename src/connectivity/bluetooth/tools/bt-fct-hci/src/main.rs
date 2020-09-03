@@ -14,6 +14,7 @@ use {
     futures::StreamExt,
     hci::CommandChannel,
     hex::FromHex,
+    types::*,
 };
 
 #[derive(Debug, FromArgs)]
@@ -32,11 +33,12 @@ struct Args {
 enum HciSubcommand {
     Raw(RawSubcommand),
     Reset(ResetSubcommand),
+    BrEdrScan(BrEdrScanSubcommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "raw")]
-/// send raw HCI command
+/// Send raw HCI command
 struct RawSubcommand {
     #[argh(switch, short = 'c')]
     /// continue listening for events.
@@ -49,16 +51,34 @@ struct RawSubcommand {
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "reset")]
-/// send HCI reset command
+/// Send HCI reset command
 struct ResetSubcommand {}
 
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "scan")]
+/// Perform an BrEdr scan command
+struct BrEdrScanSubcommand {
+    #[argh(option, default = "30", short = 't')]
+    /// maximum time to scan in seconds (max 62)
+    timeout: u8,
+
+    #[argh(option, short = 'f')]
+    /// filter address prefix.
+    filter: Option<String>,
+
+    #[argh(option, default = "255", short = 'm')]
+    /// max number of results (max 255).
+    max_results: u8,
+}
+
 /// Parses the repeating payload passed in as args to the tool. Attempts to
-/// parse all args as hex values. Supports comma seperated and space seperated
-/// bytes. Also supports bytes prefixed with "0x".
+/// parse all args as hex values. Supports comma, colon, and space seperated
+/// bytes and any bytes prefixed with "0x".
 fn parse_payload(payload: &[&str]) -> Result<Vec<u8>, String> {
     let payload = payload
         .join(" ")
         .replace(",", " ")
+        .replace(":", " ")
         .split(" ")
         .map(|s| s.trim_start_matches("0x"))
         .map(|s| s.trim_start_matches("0X"))
@@ -78,8 +98,10 @@ async fn print_response_loop(
     // read each packet until we get a response to the opcode we sent
     loop {
         if let Some(packet) = command_channel.next().await {
-            let (pretty_string, in_opcode) = packet.decode()?;
+            let in_opcode = packet.opcode();
+
             if verbose {
+                let pretty_string = packet.decode();
                 // pretty print every packet in verbose mode.
                 println!("{}", pretty_string);
             } else if in_opcode.is_some() && match_opcode == in_opcode.unwrap() {
@@ -150,7 +172,7 @@ async fn raw_command(
 }
 
 /// Handles a simple HCI command target from the front end. Typically used for simple commands
-// (like vendor test commands) with one command and one event response expected.
+/// (like vendor test commands) with one command and one event response expected.
 async fn basic_command(
     verbose: bool,
     payload: &[u8],
@@ -179,6 +201,85 @@ async fn basic_command(
     Ok(())
 }
 
+/// Compares partial filter bt_addr to a full bt_addr.
+/// Returns true if there is a partial match.
+fn match_filter(addr: &[u8], filter: &[u8]) -> bool {
+    assert!(addr.len() == 6);
+    assert!(filter.len() <= 6);
+
+    for (a, b) in filter.iter().zip(addr) {
+        if a != b {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Processes inquiry result events from the controller.
+async fn scan_command(
+    verbose: bool,
+    filter: Option<String>,
+    command_channel: CommandChannel,
+) -> Result<(), Error> {
+    pin_utils::pin_mut!(command_channel);
+
+    let mac = match filter {
+        Some(filter) => match parse_payload(&[&filter]) {
+            Ok(filter) => {
+                if filter.len() > 6 {
+                    eprintln!("invalid mac address: {:?}", filter);
+                    return Ok(());
+                }
+                Some(filter)
+            }
+            Err(error) => {
+                eprintln!("Error parsing filter mac: {}", error);
+                return Ok(());
+            }
+        },
+        None => None,
+    };
+
+    loop {
+        if let Some(packet) = command_channel.next().await {
+            if verbose {
+                let pretty_string = packet.decode();
+                // pretty print every packet in verbose mode.
+                println!("{}", pretty_string);
+            }
+
+            match &packet {
+                hci::EventPacket::InquiryResult { results, .. } => {
+                    for result in results {
+                        if mac.is_some() && !match_filter(&result.br_addr, mac.as_ref().unwrap()) {
+                            continue;
+                        }
+                        println!(
+                            "Found {:X}:{:X}:{:X}:{:X}:{:X}:{:X} Payload {}",
+                            result.br_addr[0],
+                            result.br_addr[1],
+                            result.br_addr[2],
+                            result.br_addr[3],
+                            result.br_addr[4],
+                            result.br_addr[5],
+                            packet
+                        );
+                    }
+                }
+                hci::EventPacket::InquiryComplete { status_code, .. } => {
+                    println!("Scan Complete: {}", status_code.name());
+                    break;
+                }
+                _ => {}
+            }
+        } else {
+            break;
+        }
+    }
+    Ok(())
+}
+
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -192,7 +293,13 @@ async fn main() -> Result<(), Error> {
     match args.subcommand {
         HciSubcommand::Raw(rawcmd) => raw_command(args.verbose, rawcmd, command_channel).await,
         HciSubcommand::Reset(_) => {
-            basic_command(args.verbose, &[0x03, 0x0c, 0x00], command_channel).await
+            let payload = ResetCommand::new().encode();
+            basic_command(args.verbose, &payload[..], command_channel).await
+        }
+        HciSubcommand::BrEdrScan(scan) => {
+            let payload = InquiryCommand::new(scan.timeout, scan.max_results).encode();
+            command_channel.send_command_packet(&payload[..]).context("Error sending inquiry")?;
+            scan_command(args.verbose, scan.filter, command_channel).await
         }
     }
 }
@@ -219,5 +326,15 @@ mod tests {
     #[test]
     fn test_raw_packet_parsing_04() {
         assert_eq!(parse_payload(&["0xaa", "0xaa", "0x1234"]), Ok(vec![0xaa, 0xaa, 0x12, 0x34]));
+    }
+
+    #[test]
+    fn test_match_filter() {
+        assert!(match_filter(&[0, 1, 2, 3, 4, 5], &[0]));
+        assert!(match_filter(&[0, 1, 2, 3, 4, 5], &[0, 1]));
+        assert!(!match_filter(&[0, 1, 2, 3, 4, 5], &[1]));
+        assert!(!match_filter(&[0, 1, 2, 3, 4, 5], &[0, 2]));
+        assert!(match_filter(&[0, 1, 2, 3, 4, 5], &[0, 1, 2, 3, 4, 5]));
+        assert!(!match_filter(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff], &[0, 1, 2, 3, 4, 5]));
     }
 }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::types::{decode_opcode, StatusCode},
     anyhow::Error,
     fidl_fuchsia_hardware_bluetooth::HciProxy,
     fuchsia_async as fasync,
@@ -20,14 +19,13 @@ use {
     },
 };
 
+use crate::types::{
+    decode_opcode, parse_inquiry_result, EventPacketType, InquiryResult, StatusCode,
+};
+
 /// Default HCI device on the system.
 /// TODO: consider supporting more than one HCI device.
 const DEFAULT_DEVICE: &str = "/dev/class/bt-hci/000";
-
-/// Command completed event.
-const HCI_COMMAND_COMPLETE: u8 = 0x0E;
-/// Command status event.
-const HCI_COMMAND_STATUS: u8 = 0x0F;
 
 /// A CommandChannel provides a `Stream` associated with the control channel for a single HCI device.
 /// This stream can be polled for `EventPacket`s coming off the channel.
@@ -67,7 +65,7 @@ impl Stream for CommandChannel {
                 if buf.bytes().is_empty() {
                     Poll::Ready(None)
                 } else {
-                    Poll::Ready(Some(EventPacket { payload: buf.bytes().to_vec() }))
+                    Poll::Ready(Some(EventPacket::new(buf.bytes())))
                 }
             }
             Poll::Pending => Poll::Pending,
@@ -75,52 +73,108 @@ impl Stream for CommandChannel {
     }
 }
 
+/// Event packets from the HCI device.
 #[derive(Debug)]
-pub struct EventPacket {
-    /// Payload sent over the HCI.
-    pub payload: Vec<u8>,
+pub enum EventPacket {
+    CommandComplete { opcode: u16, payload: Vec<u8> },
+    CommandStatus { opcode: u16, status_code: StatusCode, payload: Vec<u8> },
+    InquiryResult { results: Vec<InquiryResult>, payload: Vec<u8> },
+    InquiryComplete { status_code: StatusCode, payload: Vec<u8> },
+    Unknown { payload: Vec<u8> },
 }
 
-impl EventPacket {
-    /// Decode the event packet. Returns a tuple of a human readable representation and
-    /// the associated op code if available from a Complete or Status event packet.
-    pub fn decode(&self) -> Result<(String, Option<u16>), Error> {
-        if self.payload.is_empty() {
-            return Err(Error::msg("Packet contains no payload"));
-        }
+const HCI_COMMAND_COMPLETE_MIN: usize = 5;
+const HCI_COMMAND_STATUS_MIN: usize = 6;
+const HCI_INQUIRY_RESULT_MIN: usize = 3;
+const HCI_INQUIRY_COMPLETE_MIN: usize = 3;
 
-        if self.payload[0] == HCI_COMMAND_COMPLETE {
-            if self.payload.len() < 5 {
-                return Err(Error::msg("Incomplete Complete Packet"));
+impl EventPacket {
+    pub fn new(payload: &[u8]) -> EventPacket {
+        assert!(!payload.is_empty(), "HCI Packet is empty");
+
+        let payload = payload.to_vec();
+        match EventPacketType::try_from(payload[0]) {
+            Ok(EventPacketType::CommandComplete) => {
+                if payload.len() < HCI_COMMAND_COMPLETE_MIN {
+                    return EventPacket::Unknown { payload };
+                }
+                let opcode = decode_opcode(&payload[3..=4]);
+                EventPacket::CommandComplete { opcode, payload }
             }
-            let opcode = decode_opcode(&self.payload[3..=4]);
-            return Ok((
-                format!("Event: 0x0e (HCI_COMMAND_COMPLETE) Opcode: {} Payload: {}", opcode, self),
-                Some(opcode),
-            ));
-        } else if self.payload[0] == HCI_COMMAND_STATUS {
-            if self.payload.len() < 6 {
-                return Err(Error::msg("Incomplete Status Packet"));
+            Ok(EventPacketType::CommandStatus) => {
+                if payload.len() < HCI_COMMAND_STATUS_MIN {
+                    return EventPacket::Unknown { payload };
+                }
+                let opcode = decode_opcode(&payload[4..=5]);
+                let status_code =
+                    StatusCode::try_from(payload[2]).unwrap_or(StatusCode::UnknownCommand);
+                EventPacket::CommandStatus { opcode, status_code, payload }
             }
-            let opcode = decode_opcode(&self.payload[4..=5]);
-            let status_code = StatusCode::try_from(self.payload[3]).map_err(|e| Error::from(e))?;
-            return Ok((
-                format!(
-                    "Event: 0x0f (HCI_COMMAND_STATUS) Opcode: {} Status: {} Payload: {}",
-                    opcode,
-                    status_code.name(),
-                    self
-                ),
-                Some(opcode),
-            ));
+            Ok(EventPacketType::InquiryResult) => {
+                if payload.len() < HCI_INQUIRY_RESULT_MIN {
+                    return EventPacket::Unknown { payload };
+                }
+                let results = parse_inquiry_result(&payload[..]);
+                EventPacket::InquiryResult { results, payload }
+            }
+            Ok(EventPacketType::InquiryComplete) => {
+                if payload.len() < HCI_INQUIRY_COMPLETE_MIN {
+                    return EventPacket::Unknown { payload };
+                }
+                let status_code =
+                    StatusCode::try_from(payload[2]).unwrap_or(StatusCode::UnknownCommand);
+                EventPacket::InquiryComplete { status_code, payload }
+            }
+            Err(_) => EventPacket::Unknown { payload },
         }
-        Ok((format!("Event: 0x{} Payload: {}", hex::encode(&[self.payload[0]]), self), None))
+    }
+
+    /// Returns a human readable representation of the event.
+    pub fn decode(&self) -> String {
+        match self {
+            EventPacket::CommandComplete { opcode, .. } => {
+                format!("HCI_Command_Complete Opcode: {} Payload: {}", opcode, self)
+            }
+            EventPacket::CommandStatus { opcode, status_code, .. } => format!(
+                "HCI_Command_Status Opcode: {} Status: {} Payload: {}",
+                opcode,
+                status_code.name(),
+                self
+            ),
+            EventPacket::InquiryResult { results, .. } => {
+                format!("HCI_Inquiry_Result results: {:?}", results)
+            }
+            EventPacket::InquiryComplete { status_code, .. } => {
+                format!("HCI_Inquiry_Complete Status: {}", status_code.name())
+            }
+            EventPacket::Unknown { payload } => {
+                format!("Unknown Event: 0x{} Payload: {}", hex::encode(&[payload[0]]), self)
+            }
+        }
+    }
+
+    pub fn payload(&self) -> &Vec<u8> {
+        match self {
+            EventPacket::CommandComplete { payload, .. } => payload,
+            EventPacket::CommandStatus { payload, .. } => payload,
+            EventPacket::InquiryResult { payload, .. } => payload,
+            EventPacket::InquiryComplete { payload, .. } => payload,
+            EventPacket::Unknown { payload, .. } => payload,
+        }
+    }
+
+    pub fn opcode(&self) -> Option<u16> {
+        match self {
+            EventPacket::CommandComplete { opcode, .. } => Some(*opcode),
+            EventPacket::CommandStatus { opcode, .. } => Some(*opcode),
+            _ => None,
+        }
     }
 }
 
 impl fmt::Display for EventPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.payload))
+        write!(f, "{}", hex::encode(self.payload()))
     }
 }
 
@@ -173,15 +227,15 @@ mod tests {
             Poll::Ready(packet) => {
                 let pkt = packet.expect("no packet");
                 assert_eq!(
-                    pkt.payload,
-                    vec![
+                    pkt.payload(),
+                    &vec![
                         0x0e, // HCI_COMMAND_COMPLETE
                         0x04, 0x01, //
                         0x03, 0x0c, // opcode (little endian)
                         0x00  // payload len
                     ]
                 );
-                let (_pretty_string, opcode) = pkt.decode().expect("unable to decode");
+                let opcode = pkt.opcode();
                 assert_eq!(opcode, Some(0x0c03));
             }
             _ => panic!("failed to decode packets from stream"),
@@ -192,27 +246,64 @@ mod tests {
     }
 
     #[test]
-    fn test_event_packet_decode() {
-        let pkt = EventPacket {
-            payload: vec![
-                0x0e, // HCI_COMMAND_COMPLETE
-                0x04, 0x01, //
-                0x03, 0x0c, // opcode (little endian)
-                0x00, // payload len
-            ],
-        };
-        let (pretty_string, opcode) = pkt.decode().expect("unable to decode");
+    fn test_event_packet_decode_cmd_complete() {
+        let pkt = EventPacket::new(&[
+            0x0e, 0x04, // HCI_Command_Complete
+            0x01, //
+            0x03, 0x0c, // opcode (little endian)
+            0x00, // payload len
+        ]);
+        let opcode = pkt.opcode();
         assert_eq!(opcode, Some(0x0c03));
+        let pretty_string = pkt.decode();
         assert_eq!(
             pretty_string,
-            "Event: 0x0e (HCI_COMMAND_COMPLETE) Opcode: 3075 Payload: 0e0401030c00".to_string()
+            "HCI_Command_Complete Opcode: 3075 Payload: 0e0401030c00".to_string()
         );
     }
 
     #[test]
-    fn test_event_packet_decode_failure() {
-        let pkt = EventPacket { payload: vec![0x0e] };
-        let e = pkt.decode().expect_err("unable to decode");
-        assert_eq!(format!("{}", e), "Incomplete Complete Packet".to_string());
+    fn test_event_packet_decode_inquiry() {
+        let pkt = EventPacket::new(&[
+            0x02, 0x0f, // HCI_Inquiry_Result
+            0x01, // results count
+            0x7c, 0x48, 0xc6, 0x8b, 0x42, 0x74, // br_addr
+            0x01, // page_scan_repetition_mode:
+            0x00, 0x00, // reserved
+            0x0c, 0x02, 0x7a, // class of device
+            0x45, 0x25, // clock offset
+        ]);
+        match pkt {
+            EventPacket::InquiryResult { results, .. } => {
+                assert!(results.len() == 1);
+                let result = &results[0];
+                assert_eq!(&result.br_addr, &[0x7c, 0x48, 0xc6, 0x8b, 0x42, 0x74]);
+                assert_eq!(result.page_scan_repetition_mode, 1);
+                assert_eq!(&result.class_of_device, &[0x0c, 0x02, 0x7a]);
+                assert_eq!(result.clockoffset, 9541);
+            }
+            _ => assert!(false, "packet not an inquiry result"),
+        }
+    }
+
+    #[test]
+    fn test_event_packet_decode_inquiry_complete() {
+        let pkt = EventPacket::new(&[
+            0x01, 0x0f, // HCI_Inquiry_Complete
+            0x00,
+        ]);
+        match pkt {
+            EventPacket::InquiryComplete { status_code, .. } => {
+                assert_eq!(status_code, StatusCode::Success);
+            }
+            _ => assert!(false, "packet not an inquiry complete"),
+        }
+    }
+
+    #[test]
+    fn test_event_packet_decode_unhandled() {
+        let pkt = EventPacket::new(&[0x0e]);
+        let e = pkt.decode();
+        assert_eq!(format!("{}", e), "Unknown Event: 0x0e Payload: 0e".to_string());
     }
 }
