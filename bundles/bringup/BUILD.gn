@@ -33,6 +33,7 @@ group("tests") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
     "//src/media/audio/tools/audio-driver-ctl:test-bootfs-test",
+    "//src/storage/blobfs/test:bootfs-tests",
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-bootfs-test",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-bootfs-test",
     "//src/ui/backlight/tests:backlight-test-bootfs-test",

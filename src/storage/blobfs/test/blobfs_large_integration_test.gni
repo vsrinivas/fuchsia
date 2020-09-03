@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 template("blobfs_large_integration_test") {
   test_case_sources = invoker.sources
@@ -37,6 +38,12 @@ template("blobfs_large_integration_test") {
     ]
   }
 
+  test_target_bootfs_name = "${test_target_name}-bootfs-test"
+  bootfs_test(test_target_bootfs_name) {
+    name = "$test_target_name-test"
+    deps = [ ":$test_target_name" ]
+  }
+
   paged_target_name = "${test_target_name}-paged"
   test(paged_target_name) {
     output_name = "$paged_target_name-test"
@@ -58,5 +65,11 @@ template("blobfs_large_integration_test") {
     defines = [
       "BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE=\"${test_target_name}-test\"",
     ]
+  }
+
+  paged_target_bootfs_name = "${paged_target_name}-bootfs-test"
+  bootfs_test(paged_target_bootfs_name) {
+    name = "$paged_target_name-test"
+    deps = [ ":$paged_target_name" ]
   }
 }
