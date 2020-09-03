@@ -45,6 +45,8 @@ Flash test options:
                          to clean up persistent test partitions left over from
                          previous flash tests which did not exit cleanly.
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager.
+  -i, --iterations=<number>
+                         Number of full write/read cycles to perform before finishing the test.
   -m, --memory=<size>    Amount of flash memory to test, in megabytes.
 
 Light test options:

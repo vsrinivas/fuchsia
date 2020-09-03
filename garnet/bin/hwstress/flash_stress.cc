@@ -349,6 +349,11 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
     return false;
   }
 
+  bool iterations_set = false;
+  if (args.iterations > 0) {
+    iterations_set = true;
+  }
+
   zx::time end_time = zx::deadline_after(duration);
   uint64_t num_tests = 1;
 
@@ -374,7 +379,9 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
                 bytes_to_test / (DurationToSecs(test_duration) * 1024 * 1024));
 
     num_tests++;
-  } while (zx::clock::get_monotonic() < end_time);
+    // If 'iterations' is set the duration will be infinite
+  } while (zx::clock::get_monotonic() < end_time &&
+           (!iterations_set || num_tests <= args.iterations));
 
   return true;
 }

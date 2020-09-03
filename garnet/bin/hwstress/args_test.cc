@@ -120,5 +120,18 @@ TEST(Args, ParseLight) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "light", "--light-off-time=-3"}}).is_error());
 }
 
+TEST(Args, ParseIterations) {
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path=abc"}})->iterations,
+            static_cast<uint64_t>(0));
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path=abc", "--iterations=7"}})->iterations,
+            static_cast<uint64_t>(7));
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path=abc", "-i", "11"}})->iterations,
+            static_cast<uint64_t>(11));
+
+  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "--fvm-path=abc", "--iterations=1", "--duration=2"}})
+                  .is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "--fvm-path=abc", "--iterations=1.5"}}).is_error());
+}
+
 }  // namespace
 }  // namespace hwstress

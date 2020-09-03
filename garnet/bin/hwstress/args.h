@@ -59,6 +59,9 @@ struct CommandLineArgs {
   // Path to the Fuchsia Volume Manager
   std::string fvm_path;
 
+  // Number of full write/read cycles to perform before finishing the test.
+  uint64_t iterations = 0;
+
   // Destroy any existing flash test partitions.
   bool destroy_partitions = false;
 

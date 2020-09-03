@@ -36,6 +36,8 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   parser->AddSwitch("cleanup-test-partitions", 'c', "Cleanup all existing flash test partitions.",
                     &CommandLineArgs::destroy_partitions);
   parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
+  parser->AddSwitch("iterations", 'i', "Number of times to test the flash.",
+                    &CommandLineArgs::iterations);
 
   // Memory test flags.
   parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
@@ -99,6 +101,8 @@ Flash test options:
                          to clean up persistent test partitions left over from
                          previous flash tests which did not exit cleanly.
   -f, --fvm-path=<path>  Path to Fuchsia Volume Manager.
+  -i, --iterations=<number>
+                         Number of full write/read cycles to perform before finishing the test.
   -m, --memory=<size>    Amount of flash memory to test, in megabytes.
 
 Light test options:
@@ -200,6 +204,19 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   }
   if (result.light_off_time_seconds < 0) {
     return fitx::error("'--light-off-time' cannot be negative.");
+  }
+
+  // Validate iterations.
+  if (result.iterations) {
+    if (result.iterations < 1) {
+      return fitx::error("'--iterations' must be at least 1.");
+    }
+    if (result.test_duration_seconds) {
+      return fitx::error("'--duration' and '--iterations' cannot both be specified.");
+    }
+    if (result.subcommand != StressTest::kFlash) {
+      return fitx::error("'--iterations' is only valid for the flash test.");
+    }
   }
 
   // Ensure mandatory flash test argument is provided
