@@ -4,8 +4,6 @@
 
 #include "src/ui/lib/key_util/key_util.h"
 
-#include <iostream>
-
 #include "hid-parser/usages.h"
 #include "hid/usages.h"
 
@@ -203,9 +201,6 @@ std::optional<fuchsia::input::Key> hid_key_to_fuchsia_key3(hid::Usage usage) {
         (code >= ((uint32_t)fuchsia::input::Key::LEFT_CTRL) &&
          (code <= ((uint32_t)fuchsia::input::Key::RIGHT_META)))) {
       return static_cast<fuchsia::input::Key>(code);
-    } else {
-      std::cout << "hid_key_to_fuchsia_key3 miss: " << std::hex << code << "\n";
-      return {};
     }
   }
   return {};
