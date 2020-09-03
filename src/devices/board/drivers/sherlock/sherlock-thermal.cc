@@ -301,12 +301,7 @@ zx_status_t Sherlock::SherlockThermalInit() {
 zx_status_t Sherlock::ThermalInit() {
   switch (pid_) {
     case PDEV_PID_LUIS:
-      // TODO(pshickel): while we migrate Luis from the legacy thermal driver to the new one, we
-      // need to call both LuisThermalInit and SherlockThermalInit so that both drivers have the
-      // opportunity to bind. The driver that ultimately binds will be determined by the build
-      // configuration (only one of the drivers should be built into the image). Remove the call to
-      // SherlockThermalInit after Luis has been migrated to the new thermal driver.
-      return LuisThermalInit() || SherlockThermalInit();
+      return LuisThermalInit();
     case PDEV_PID_SHERLOCK:
       return SherlockThermalInit();
     default:

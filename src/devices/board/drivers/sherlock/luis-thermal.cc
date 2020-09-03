@@ -79,13 +79,7 @@ static pbus_dev_t thermal_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-thermal";
   dev.vid = PDEV_VID_AMLOGIC;
-
-  // TODO(pshickel): use PDEV_PID_LUIS only temporarily while the migration from
-  // aml-thermal-s905d2g-legacy to aml-thermal-s905d2g is taking place (to avoid a VID:PID:DID
-  // collision with the Sherlock thermal device - see sherlock-thermal.cc). After the migration is
-  // complete, update this back to PDEV_PID_AMLOGIC_T931.
-  dev.pid = PDEV_PID_LUIS;
-
+  dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_THERMAL;
   dev.mmio_list = thermal_mmios;
   dev.mmio_count = countof(thermal_mmios);

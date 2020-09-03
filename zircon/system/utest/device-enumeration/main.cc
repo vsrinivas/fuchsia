@@ -491,6 +491,11 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "luis-i2s-audio-out",
       "sherlock-buttons/hid-buttons",
       "ft5726-touch",
+
+      // Thermal devices
+      "sys/platform/05:04:a/thermal",
+
+      // Thermistor and ADC devices
       "class/adc/000",
       "class/adc/001",
       "class/adc/002",
