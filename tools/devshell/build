@@ -19,6 +19,10 @@
 ## optional arguments:
 ##   --log LOGFILE    Print debug information to LOGFILE. Please attach the
 ##                    resulting file when reporting bugs.
+##   --no-zircon      Skip building zircon (ignoring any zircon targets that
+##                    may have been passed). This is useful for efficiently
+##                    building host-side targets that have no zircon
+##                    dependencies.
 ##
 ## Other arguments are passed through to Ninja (same switches for both Zircon
 ## and Fuchsia).
@@ -31,6 +35,7 @@ function main {
   local switches=() zircon_targets=() fuchsia_targets=()
   local log_file is_logging continue_on_error
   is_logging=false
+  build_zircon=true
   continue_on_error=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -50,6 +55,9 @@ function main {
        # fi
         is_logging=true
         shift
+        ;;
+      --no-zircon)
+        build_zircon=false
         ;;
       # These Ninja switches take an argument.
       -[Cfjkldtw])
@@ -136,11 +144,13 @@ function main {
     echo -e "\\n------ RUNNING ninja ------"
   fi
 
-  (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${ZIRCON_BUILDROOT}" \
-    "${switches[@]}" "${zircon_targets[@]}")
-  status=$?
-  if [[ "${status}" -ne 0 && "$continue_on_error" = false ]]; then
-    exit-with-message
+  if $build_zircon ; then 
+    (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${ZIRCON_BUILDROOT}" \
+      "${switches[@]}" "${zircon_targets[@]}")
+    status=$?
+    if [[ "${status}" -ne 0 && "$continue_on_error" = false ]]; then
+      exit-with-message
+    fi
   fi
 
   # If there were explicit Zircon targets and no other explicit targets,
