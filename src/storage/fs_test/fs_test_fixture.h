@@ -23,7 +23,7 @@ class BaseFilesystemTest : public testing::Test {
   ~BaseFilesystemTest();
 
   std::string GetPath(std::string_view relative_path) const {
-    std::string path = fs_.mount_path() + "/";
+    std::string path = fs_.mount_path();
     path.append(relative_path);
     return path;
   }

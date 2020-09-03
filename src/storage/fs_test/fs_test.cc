@@ -440,7 +440,8 @@ zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& o
     FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  TestFilesystem filesystem(options, std::move(instance_or).value(), mount_path_c_str);
+  TestFilesystem filesystem(options, std::move(instance_or).value(),
+                            std::string(mount_path_c_str) + "/");
   auto status = filesystem.Mount();
   if (status.is_error()) {
     return status.take_error();

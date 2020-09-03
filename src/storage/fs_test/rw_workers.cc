@@ -42,8 +42,6 @@ class RwWorkersTest : public FilesystemTest {
   std::vector<thrd_t> threads_;
 };
 
-typedef struct worker worker_t;
-
 class Worker {
  public:
   using WorkFn = Status (Worker::*)(void);
@@ -70,10 +68,10 @@ class Worker {
   std::default_random_engine io_size_random_;
 
   fbl::unique_fd fd_;
-  Status status_;
+  Status status_ = Status::kBusy;
   const uint32_t size_;
   const uint32_t flags_;
-  uint32_t pos_;
+  uint32_t pos_ = 0;
 
   union {
     uint8_t u8[kBufSize];

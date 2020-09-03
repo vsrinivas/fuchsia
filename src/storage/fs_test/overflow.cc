@@ -22,7 +22,7 @@ using OverflowTest = FilesystemTest;
 
 // Make a 'len' byte long filename (not including null) consisting of the character 'c'.
 std::string MakeName(std::string_view mount_path, size_t len, char c) {
-  std::string path = std::string(mount_path) + "/";
+  std::string path(mount_path);
   path.append(len, c);
   return path;
 }
