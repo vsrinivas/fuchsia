@@ -18,8 +18,8 @@ success("CorrectPaddingBetweenFieldsInt8Int16") {
 }
 
 decode_failure("BadPaddingBetweenFieldsInt8Int16") {
-    bindings_denylist = [go, rust, dart],
-    type = TestOptionalXUnionInStruct,
+    bindings_denylist = [go, dart],
+    type = PaddingBetweenFieldsInt8Int16,
     bytes = {
         v1 = [
             0x01, 0xee, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00,
@@ -111,8 +111,8 @@ decode_failure("BadPaddingBetweenFieldsInt8Int64MiddleByte") {
 }
 
 decode_failure("BadPaddingBetweenFieldsInt8Int64UpperByte") {
-    bindings_denylist = [go, rust, dart],
-    type = PaddingBetweenFieldsInt8Int32,
+    bindings_denylist = [go, dart],
+    type = PaddingBetweenFieldsInt8Int64,
     bytes = {
         v1 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xee,
@@ -194,8 +194,8 @@ decode_failure("BadPaddingBetweenFieldsInt16Int64MiddleByte") {
 }
 
 decode_failure("BadPaddingBetweenFieldsInt16Int64UpperByte") {
-    bindings_denylist = [go, rust, dart],
-    type = PaddingBetweenFieldsInt16Int32,
+    bindings_denylist = [go, dart],
+    type = PaddingBetweenFieldsInt16Int64,
     bytes = {
         v1 = [
             0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xee,
