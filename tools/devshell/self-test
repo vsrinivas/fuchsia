@@ -37,38 +37,53 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh \
     || exit $?
 
-declare -r test_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/tests" >/dev/null 2>&1 && pwd)"
-declare -r test_framework_dir="${test_dir}/lib"
+declare -r test_framework_dir="${FUCHSIA_DIR}/tools/devshell/tests/lib"
+
+
 
 usage() {
   fx-command-help
   echo
   echo "Available test scripts:"
-  for script_name in $(all_tests); do
-    echo "  ${script_name}"
+  for script_name in $(list_tests); do
+    echo "  //${script_name#${FUCHSIA_DIR}/}"
   done
 }
 
-all_tests() {
-  local subdirectory
-  if [[ $# -gt 0 ]]; then
-    subdirectory="/$1"
+# //<dir>
+# //<file>
+#if dir exists, use it. If file exists, use it
+#otherwise, prefix with tools/devshell/tests and test again
+# ./<dir>
+# ./<file>
+# <dir_or_file_inside_tools/devshell/tests/...>
+list_tests() {
+  local file=$1
+  # expand // to FUCHSIA_DIR:
+  if [[ "$file" =~ ^// ]]; then
+    file="${FUCHSIA_DIR}/${file#\//}"
   fi
-  local tests=()
-  for t in $(find "${test_dir}${subdirectory}" -type f -not -path "${test_framework_dir}" -name "*_test"); do
-    if [[ ! -f "${t}" || "${t}" != *${test_dir}/* ]]; then
-      fx-error "Test file '${t}' doesn't exist, make sure test files and subdirectories don't contain spaces"
-      exit 1
-    fi
-    tests+=( "${t#${test_dir}/}" )
-  done
-  echo "${tests[@]}"
+  if [[ -f "$file" && "$file" =~ _test$ ]]; then
+    echo "$file"
+  else
+    file="/${file}"
+    list_tests_in_dir "${FUCHSIA_DIR}/tools/devshell/tests${file}"
+    list_tests_in_dir "${FUCHSIA_DIR}"/vendor/*/scripts/devshell/tests"${file}"
+  fi
+}
+
+list_tests_in_dir() {
+  local d="$1"
+  if [[ -d "$d" ]]; then
+    find "$d" -type f -path "*/devshell/*" -not -path "*/lib/*" -not -path "*/data/*" -name "*_test"
+  elif [[ -f "$d" ]]; then
+    echo "$d"
+  fi
 }
 
 launch_script() {
-  local test_script_name="$1"
+  declare -r test_script_path="$1"
   shift
-  declare -r test_script_path="${test_dir}/${test_script_name}"
 
   if [[ ! -f "${test_script_path}" ]]; then
     fx-error "Test script '${test_script_path}' not found. Aborting."
@@ -104,23 +119,25 @@ fi
 all=0
 test_args=()
 if [[ "$1" == "--all" ]]; then
-  tests="$(all_tests)"
+  tests="$(list_tests)"
 else
   tests_arr=()
   while [[ $# -gt 0 && "$1" != "--"* ]]; do
-    if [[ "$1" == *_test ]]; then
-      tests_arr+=( "$1" )
-    elif [[ -d "${test_dir}/$1" ]]; then
-      tests_arr+=( $(all_tests "$1") )
-    else
-      fx-error "Invalid option $1"
+    arg="$1"
+
+
+    expanded_tests=( $(list_tests "$arg") )
+    if [[ "${#expanded_tests[@]}" -eq 0 ]]; then
+      fx-error "Invalid test name or directory '$arg'"
       usage
       exit 1
     fi
+
+    tests_arr+=( "${expanded_tests[@]}" )
     shift
   done
   tests="${tests_arr[@]}"
-  if [[ $# -gt 0 && "$1" == "--"* ]]; then
+  if [[ $# -gt 0 && "$arg" == "--"* ]]; then
     test_args+=( "$@" )
   fi
 fi
