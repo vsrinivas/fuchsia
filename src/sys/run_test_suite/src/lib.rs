@@ -66,6 +66,7 @@ pub async fn run_test<W: Write>(
     timeout: Option<std::num::NonZeroU32>,
     test_filter: Option<&str>,
     disabled_tests: DisabledTestHandling,
+    parallel: Option<u16>,
     harness: HarnessProxy,
 ) -> Result<RunResult, anyhow::Error> {
     let mut timeout = match timeout {
@@ -87,7 +88,7 @@ pub async fn run_test<W: Write>(
 
     let mut successful_completion = false;
 
-    let run_options = TestRunOptions { disabled_tests };
+    let run_options = TestRunOptions { disabled_tests, parallel };
 
     let test_fut =
         test_executor::run_v2_test_component(harness, url, sender, test_filter, run_options).fuse();
@@ -212,6 +213,7 @@ pub async fn run_tests_and_get_outcome(
     timeout: Option<std::num::NonZeroU32>,
     test_filter: Option<String>,
     also_run_disabled_tests: bool,
+    parallel: Option<u16>,
     harness: HarnessProxy,
 ) -> Outcome {
     println!("\nRunning test '{}'", &test_url);
@@ -230,6 +232,7 @@ pub async fn run_tests_and_get_outcome(
         timeout,
         test_filter.as_ref().map(String::as_str),
         disabled_tests,
+        parallel,
         harness,
     )
     .await

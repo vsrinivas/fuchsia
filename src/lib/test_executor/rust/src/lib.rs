@@ -40,6 +40,9 @@ use fidl_fuchsia_sys::LauncherProxy;
 pub struct TestRunOptions {
     /// How to handle tests that were marked disabled/ignored by the developer.
     pub disabled_tests: DisabledTestHandling,
+
+    /// Number of test cases to run in parallel.
+    pub parallel: Option<u16>,
 }
 
 /// How to handle tests that were marked disabled/ignored by the developer.
@@ -62,6 +65,7 @@ impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
     fn from(test_run_options: TestRunOptions) -> Self {
         // Note: This will *not* break if new members are added to the FIDL table.
         let mut run_options = fidl_fuchsia_test::RunOptions::empty();
+        run_options.parallel = test_run_options.parallel;
         match test_run_options.disabled_tests {
             DisabledTestHandling::Exclude => {
                 run_options.include_disabled_tests = Some(false);

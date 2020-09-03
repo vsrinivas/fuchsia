@@ -53,6 +53,10 @@ fuchsia_component("fatfs-mounter-test") {
 }
 
 fuchsia_test_package("fatfs-mounter-tests") {
+  test_specs = {
+    # This test fails when test cases are executed in parallel.
+    parallel = 1
+  }
   test_components = [ ":fatfs-mounter-test" ]
 }
 

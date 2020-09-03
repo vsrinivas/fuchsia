@@ -165,6 +165,8 @@ pub struct TestServer {
     tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
 }
 
+static PARALLEL_DEFAULT: u16 = 1;
+
 #[async_trait]
 impl SuiteServer for TestServer {
     /// Launches test process and gets test list out. Returns list of tests names in the format
@@ -187,7 +189,8 @@ impl SuiteServer for TestServer {
         component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        let num_parallel = Self::get_parallel_count(&run_options);
+        let num_parallel =
+            Self::get_parallel_count(run_options.parallel.unwrap_or(PARALLEL_DEFAULT));
 
         let invocations = stream::iter(invocations);
         invocations

@@ -26,6 +26,7 @@ pub async fn test(
             cmd.timeout.and_then(std::num::NonZeroU32::new),
             cmd.test_filter,
             cmd.also_run_disabled_tests,
+            cmd.parallel,
             harness_proxy,
         )
         .await

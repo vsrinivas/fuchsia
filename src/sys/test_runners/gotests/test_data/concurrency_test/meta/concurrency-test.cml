@@ -1,0 +1,36 @@
+// Component test which will inject a test and a echo server. The test cases are supposed
+// to be executed in parallel to succeed as echo server will only reply back once it gets
+// 5 requests.
+{
+    children: [
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo-server-for-concurrency-test.cm",
+        },
+        {
+            name: "concurrency_test_driver",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/concurrency-test-driver.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#concurrency_test_driver" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#concurrency_test_driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#concurrency_test_driver",
+        },
+    ],
+}

@@ -35,7 +35,7 @@ async fn launch_and_test_no_clean_exit() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm"
             .to_string(),
-        &mut output, None, None, DisabledTestHandling::Exclude, harness
+        &mut output, None, None, DisabledTestHandling::Exclude, None, harness
     )
     .await
     .expect("Running test should not fail");
@@ -74,7 +74,7 @@ async fn launch_and_test_passing_v2_test() {
         .expect("connecting to HarnessProxy");
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output, None, None, DisabledTestHandling::Exclude, harness
+            .to_string(), &mut output, None, None, DisabledTestHandling::Exclude, None, harness
     )
     .await
     .expect("Running test should not fail");
@@ -113,7 +113,7 @@ async fn launch_and_test_with_filter() {
         .expect("connecting to HarnessProxy");
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output, None, Some("*Test3"), DisabledTestHandling::Exclude, harness
+            .to_string(), &mut output, None, Some("*Test3"), DisabledTestHandling::Exclude, None, harness
     )
     .await
     .expect("Running test should not fail");
@@ -147,6 +147,7 @@ async fn launch_and_test_empty_test() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -170,6 +171,7 @@ async fn launch_and_test_huge_test() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -192,6 +194,7 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -233,6 +236,7 @@ async fn launch_and_test_disabled_test_include_disabled() {
         None,
         None,
         DisabledTestHandling::Include,
+        None,
         harness,
     )
     .await
@@ -280,6 +284,7 @@ async fn launch_and_test_failing_test() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -321,7 +326,7 @@ async fn launch_and_test_incomplete_test() {
             .to_string(),
             &mut output, None, None,
             DisabledTestHandling::Exclude,
-            harness,
+            None,harness,
     )
     .await
     .expect("Running test should not fail");
@@ -366,6 +371,7 @@ async fn launch_and_test_invalid_test() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -411,6 +417,7 @@ async fn launch_and_run_echo_test() {
         None,
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -440,6 +447,7 @@ async fn test_timeout() {
         std::num::NonZeroU32::new(1),
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await
@@ -463,6 +471,7 @@ async fn test_passes_with_large_timeout() {
         std::num::NonZeroU32::new(600), // make timeout 10 minutes.
         None,
         DisabledTestHandling::Exclude,
+        None,
         harness,
     )
     .await

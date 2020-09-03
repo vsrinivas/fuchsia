@@ -27,4 +27,8 @@ pub struct TestCommand {
     /// whether to also run tests that have been marked disabled/ignored by the test author.
     #[argh(switch)]
     pub also_run_disabled_tests: bool,
+
+    /// run test cases in parallel.
+    #[argh(option)]
+    pub parallel: Option<u16>,
 }

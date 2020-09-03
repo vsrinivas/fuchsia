@@ -187,6 +187,9 @@ package("elf_runner_lifecycle_test") {
     },
     {
       name = "component_exit_integration_test"
+
+      # This test fails when test cases are executed in parallel.
+      parallel = 1
     },
   ]
 

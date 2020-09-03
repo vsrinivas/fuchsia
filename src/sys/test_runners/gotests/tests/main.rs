@@ -13,6 +13,8 @@ use {
     fuchsia_component::client::connect_to_protocol_at_dir_svc,
     futures::{channel::mpsc, prelude::*},
     pretty_assertions::assert_eq,
+    regex::Regex,
+    test_executor::GroupByTestCase,
     test_executor::{DisabledTestHandling, TestEvent, TestResult},
 };
 
@@ -51,12 +53,14 @@ async fn launch_test(
 async fn run_test(
     test_url: &str,
     disabled_tests: DisabledTestHandling,
+    parallel: Option<u16>,
 ) -> Result<Vec<TestEvent>, Error> {
+    let time_taken = Regex::new(r" \(.*?\)$").unwrap();
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
-    let run_options = test_executor::TestRunOptions { disabled_tests };
+    let run_options = test_executor::TestRunOptions { disabled_tests, parallel };
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
@@ -70,15 +74,18 @@ async fn run_test(
     // break logs as they can be grouped in any way.
     for event in events {
         match event {
-            TestEvent::LogMessage { test_case_name, msg } => {
+            TestEvent::LogMessage { test_case_name, mut msg } => {
+                if msg.ends_with("\n") {
+                    msg.truncate(msg.len() - 1);
+                }
                 let logs = msg.split("\n");
                 for log in logs {
-                    if log.len() > 0 {
-                        test_events.push(TestEvent::LogMessage {
-                            test_case_name: test_case_name.clone(),
-                            msg: log.to_string(),
-                        });
-                    }
+                    // flaky to compare time taken in sub-tests. Remove those bits.
+                    let log = time_taken.replace(log, "");
+                    test_events.push(TestEvent::LogMessage {
+                        test_case_name: test_case_name.clone(),
+                        msg: log.to_string(),
+                    });
                 }
             }
             event => {
@@ -93,7 +100,7 @@ async fn run_test(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo-test-realm.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("TestEcho"),
@@ -106,16 +113,15 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/empty_go_test.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
     assert_eq!(expected_events, events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_run_sample_test() {
+async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/sample_go_test.cm";
-    let mut events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let mut events = run_test(test_url, DisabledTestHandling::Exclude, parallel).await.unwrap();
 
     let mut expected_events = vec![
         TestEvent::test_case_started("TestFailing"),
@@ -139,9 +145,9 @@ async fn launch_and_run_sample_test() {
         TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
         TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest2"),
         TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest3"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest1 (0.00s)"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest2 (0.00s)"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest3 (0.00s)"),
+        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest1"),
+        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest2"),
+        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest3"),
         TestEvent::test_case_finished("TestSubtests", TestResult::Passed),
         TestEvent::test_case_started("TestPrefixExtra"),
         TestEvent::log_message("TestPrefixExtra", "Testing that given two tests where one test is prefix of another can execute independently."),
@@ -172,5 +178,38 @@ async fn launch_and_run_sample_test() {
 
     expected_events.sort();
     events.sort();
+    assert_eq!(events, expected_events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test() {
+    launch_and_run_sample_test_helper(Some(10)).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test_no_concurrent() {
+    launch_and_run_sample_test_helper(None).await;
+}
+
+// This test will hang if test cases are not executed in parallel.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_parallel_execution() {
+    let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/concurrency-test.cm";
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(5))
+        .await
+        .unwrap()
+        .into_iter()
+        .group_by_test_case_unordered();
+
+    let mut expected_events = vec![];
+    for i in 1..=5 {
+        let s = format!("Test{}", i);
+        expected_events.extend(vec![
+            TestEvent::test_case_started(&s),
+            TestEvent::test_case_finished(&s, TestResult::Passed),
+        ])
+    }
+    expected_events.push(TestEvent::test_finished());
+    let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(events, expected_events);
 }

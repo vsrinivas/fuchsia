@@ -25,6 +25,11 @@ To run this example:
 fx test go-test-runner-example
 ```
 
+## Concurrency
+
+Test cases are executed concurrently (max 10 test cases at a time by default).
+[Instruction to override][override-parallel].
+
 ## Limitations
 
 ### Test Enumeration
@@ -53,3 +58,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
+[override-parallel]: /docs/concepts/testing/test_component.md#running-test-cases-in-parallel

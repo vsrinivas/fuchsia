@@ -17,6 +17,7 @@ group("test_data") {
 fuchsia_package("rust-test-runner-example") {
   testonly = true
   deps = [
+    "concurrency-test",
     "echo-example",
     "huge-rust-tests",
     "no-rust-tests",

@@ -41,6 +41,9 @@ pub struct TestServer {
     disabled_tests_future_container: MemoizedFutureContainer<EnumeratedTestNames, EnumerationError>,
 }
 
+/// Default concurrency for running test cases in parallel.
+static PARALLEL_DEFAULT: u16 = 10;
+
 #[async_trait]
 impl SuiteServer for TestServer {
     /// Launches a process that lists the tests without actually running any of them. It then parses
@@ -71,8 +74,8 @@ impl SuiteServer for TestServer {
         test_component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        let num_parallel = Self::get_parallel_count(&run_options);
-
+        let num_parallel =
+            Self::get_parallel_count(run_options.parallel.unwrap_or(PARALLEL_DEFAULT));
         let invocations = stream::iter(invocations);
         invocations
             .map(Ok)
@@ -684,7 +687,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
         )
         .await
         .unwrap();
@@ -793,7 +796,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(true), parallel: None },
+            RunOptions { include_disabled_tests: Some(true), parallel: Some(1) },
         )
         .await
         .unwrap();

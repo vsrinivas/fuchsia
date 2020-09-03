@@ -58,7 +58,8 @@ table RunOptions {
     1: bool include_disabled_tests;
 
     /// Defines maximum number of test cases to run simultaneously.
-    /// By default tests are executed sequentially.
+    /// If unspecified, the default behavior is chosen by the `Suite`
+    /// implementation.
     2: uint16 parallel;
 };
 

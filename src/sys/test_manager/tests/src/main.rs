@@ -131,12 +131,14 @@ async fn calling_kill_should_kill_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap()
-            .into_iter()
-            .group_by_test_case_unordered();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let expected_events = hashmap! {
         Some("EchoTest".to_string()) => vec![
@@ -156,12 +158,14 @@ async fn launch_and_test_no_on_finished() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
 
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap()
-            .into_iter()
-            .group_by_test_case_unordered();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let test_cases = ["Example.Test1", "Example.Test2", "Example.Test3"];
     let mut expected_events = vec![];
@@ -181,12 +185,14 @@ async fn launch_and_test_no_on_finished() {
 async fn launch_and_test_gtest_runner_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap()
-            .into_iter()
-            .group_by_test_case_unordered();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let expected_events =
         include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");

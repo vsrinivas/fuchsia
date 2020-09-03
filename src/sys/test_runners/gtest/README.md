@@ -25,6 +25,11 @@ To run this example:
 fx run-test gtest-runner-example-tests
 ```
 
+## Concurrency
+
+Test cases are executed sequentially by default.
+[Instruction to override][override-parallel].
+
 ## Limitations
 
 -   If a test calls `GTEST_SKIP()`, it will be recorded as `Passed` rather than
@@ -52,3 +57,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
+[override-parallel]: /docs/concepts/testing/test_component.md#running-test-cases-in-parallel

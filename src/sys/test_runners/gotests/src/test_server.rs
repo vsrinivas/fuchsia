@@ -43,6 +43,9 @@ pub struct TestServer {
     tests_future_container: MemoizedFutureContainer<EnumeratedTestCases, EnumerationError>,
 }
 
+/// Default concurrency for running test cases in parallel.
+static PARALLEL_DEFAULT: u16 = 10;
+
 #[async_trait]
 impl SuiteServer for TestServer {
     /// Launches a process that lists the tests without actually running any of them. It then parses
@@ -71,7 +74,8 @@ impl SuiteServer for TestServer {
         test_component: Arc<Component>,
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
-        let num_parallel = Self::get_parallel_count(&run_options);
+        let num_parallel =
+            Self::get_parallel_count(run_options.parallel.unwrap_or(PARALLEL_DEFAULT));
 
         let invocations = stream::iter(invocations);
         invocations
@@ -553,7 +557,7 @@ mod tests {
                 "TestSkipped",
                 "TestPrefixExtra",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
         )
         .await
         .unwrap();
@@ -626,10 +630,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
-        let events =
-            run_tests(vec![], RunOptions { include_disabled_tests: Some(false), parallel: None })
-                .await
-                .unwrap();
+        let events = run_tests(
+            vec![],
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
+        )
+        .await
+        .unwrap();
 
         let expected_events = vec![ListenerEvent::finish_all_test()];
 
@@ -641,7 +647,7 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["TestPassing"]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
         )
         .await
         .unwrap();

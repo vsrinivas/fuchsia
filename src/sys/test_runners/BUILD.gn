@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
@@ -12,10 +13,10 @@ rustc_library("lib") {
 
   # Only for internal use.
   visibility = [
+    ":*",
+    "gotests/*",
     "gtest/*",
     "rust/*",
-    "gotests/*",
-    ":*",
   ]
 
   deps = [
@@ -64,10 +65,10 @@ rustc_library("test_lib") {
 
   # Only for internal use.
   visibility = [
+    ":*",
+    "gotests/*",
     "gtest/*",
     "rust/*",
-    "gotests/*",
-    ":*",
   ]
 
   deps = [
@@ -77,6 +78,29 @@ rustc_library("test_lib") {
   ]
 
   sources = [ "src/test_lib.rs" ]
+}
+
+rustc_binary("echo_server_for_concurrency_test_bin") {
+  name = "echo_server_for_concurrency_test"
+  edition = "2018"
+  source_root = "src/echo_server_for_concurrency_test.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/echo_server_for_concurrency_test.rs" ]
+}
+
+fuchsia_component("echo_server_for_concurrency_test") {
+  testonly = true
+  manifest = "meta/echo-server-for-concurrency-test.cml"
+  component_name = "echo-server-for-concurrency-test"
+  deps = [ ":echo_server_for_concurrency_test_bin" ]
 }
 
 fuchsia_unittest_package("test-runner-unit-tests") {

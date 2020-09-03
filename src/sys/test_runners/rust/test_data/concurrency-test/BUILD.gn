@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("concurrency_test_driver_bin") {
+  edition = "2018"
+  name = "concurrency_test_driver_rust"
+  source_root = "src/main.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("concurrency_test_driver_component") {
+  testonly = true
+  manifest = "meta/concurrency-test-driver.cml"
+  component_name = "concurrency-test-driver"
+  deps = [ ":concurrency_test_driver_bin" ]
+}
+
+fuchsia_component("concurrency_test_component") {
+  testonly = true
+  component_name = "concurrency-test"
+  manifest = "meta/concurrency-test.cml"
+}
+
+group("concurrency-test") {
+  testonly = true
+  public_deps = [
+    ":concurrency_test_component",
+    ":concurrency_test_driver_component",
+    "//src/sys/test_runners:echo_server_for_concurrency_test",
+  ]
+}

@@ -23,6 +23,11 @@ To run this example:
 fx run-test rust-test-runner-example
 ```
 
+## Concurrency
+
+Test cases are executed concurrently (max 10 test cases at a time by default).
+[Instruction to override][override-parallel].
+
 ## Limitations
 
 No known current limitations.
@@ -44,3 +49,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation. Integration tests are located in `tests` folder.
 
 [test-runner]: ../README.md
+[override-parallel]: /docs/concepts/testing/test_component.md#running-test-cases-in-parallel

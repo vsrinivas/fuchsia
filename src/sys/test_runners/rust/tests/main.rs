@@ -13,6 +13,7 @@ use {
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     futures::{channel::mpsc, prelude::*},
     pretty_assertions::assert_eq,
+    test_executor::GroupByTestCase,
     test_executor::{DisabledTestHandling, TestEvent, TestResult},
 };
 
@@ -52,12 +53,13 @@ async fn launch_test(
 async fn run_test(
     test_url: &str,
     disabled_tests: DisabledTestHandling,
+    parallel: Option<u16>,
 ) -> Result<Vec<TestEvent>, Error> {
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
-    let run_options = test_executor::TestRunOptions { disabled_tests };
+    let run_options = test_executor::TestRunOptions { disabled_tests, parallel };
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
@@ -94,7 +96,7 @@ async fn run_test(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo-test-realm.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("test_echo"),
@@ -107,18 +109,16 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/no_rust_tests.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
     assert_eq!(expected_events, events);
 }
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_run_sample_test() {
+async fn launch_and_run_sample_test_internal(parallel: u16) {
     use test_executor::GroupByTestCase as _;
 
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(parallel)).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("my_tests::failing_test"),
@@ -173,11 +173,21 @@ async fn launch_and_run_sample_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test() {
+    launch_and_run_sample_test_internal(10).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test_no_concurrency() {
+    launch_and_run_sample_test_internal(1).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test_include_disabled() {
     use test_executor::GroupByTestCase as _;
 
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
-    let events = run_test(test_url, DisabledTestHandling::Include).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Include, Some(10)).await.unwrap();
 
     let grouped_events = events.into_iter().group_by_test_case_ordered();
 
@@ -224,14 +234,14 @@ async fn launch_and_run_sample_test_include_disabled() {
     );
 }
 
-/*
-// fxb/50793: ignore doesn't work right now.
-// Stress test with a very large gtest suite.
 #[fuchsia_async::run_singlethreaded(test)]
-#[ignore = "Timeouts on CQ bots"]
 async fn launch_and_run_hugetest() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/huge_rust_tests.cm";
-    let mut events = run_test(test_url).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(100))
+        .await
+        .unwrap()
+        .into_iter()
+        .group_by_test_case_unordered();
 
     let mut expected_events = vec![];
 
@@ -243,8 +253,29 @@ async fn launch_and_run_hugetest() {
         ])
     }
     expected_events.push(TestEvent::test_finished());
-    expected_events.sort();
-    events.sort();
+    let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(expected_events, events);
 }
-*/
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_parallel_execution() {
+    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/concurrency-test.cm";
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(100))
+        .await
+        .unwrap()
+        .into_iter()
+        .group_by_test_case_unordered();
+
+    let mut expected_events = vec![];
+
+    for i in 1..=5 {
+        let s = format!("test_echo{}", i);
+        expected_events.extend(vec![
+            TestEvent::test_case_started(&s),
+            TestEvent::test_case_finished(&s, TestResult::Passed),
+        ])
+    }
+    expected_events.push(TestEvent::test_finished());
+    let expected_events = expected_events.into_iter().group_by_test_case_unordered();
+    assert_eq!(expected_events, events);
+}

@@ -16,6 +16,7 @@ group("test_data") {
 fuchsia_package("go-test-runner-example") {
   testonly = true
   deps = [
+    "concurrency_test:concurrency-test",
     "echo_example:echo-example",
     "empty_go_test:empty-go-test",
     "sample_go_test:sample-go-test",

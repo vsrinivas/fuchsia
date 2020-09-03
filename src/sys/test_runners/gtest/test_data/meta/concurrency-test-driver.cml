@@ -1,0 +1,22 @@
+// Component manifest for the `concurrency_test_driver`.
+// The test cases should run in parallel to succeed.
+{
+    program: {
+        binary: "bin/concurrency_test_driver_gtest",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

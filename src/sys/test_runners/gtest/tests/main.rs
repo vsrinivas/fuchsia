@@ -114,12 +114,32 @@ fn assert_events_eq(
 async fn launch_and_run_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap()
-            .into_iter()
-            .group_by_test_case_unordered();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+
+    assert_events_eq(&events, &expected_events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_sample_test_no_concurrent() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
 
@@ -130,12 +150,14 @@ async fn launch_and_run_sample_test() {
 async fn launch_and_run_sample_test_include_disabled() {
     const TEST_URL: &str =
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
-    let events =
-        run_test(TEST_URL, TestRunOptions { disabled_tests: DisabledTestHandling::Include })
-            .await
-            .unwrap()
-            .into_iter()
-            .group_by_test_case_unordered();
+    let events = run_test(
+        TEST_URL,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Include, parallel: Some(10) },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let expected_pass_events = vec![
         TestEvent::test_case_started("SampleDisabled.DISABLED_TestPass"),
@@ -172,10 +194,12 @@ async fn launch_and_run_sample_test_include_disabled() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_empty_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+    )
+    .await
+    .unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
 
@@ -185,10 +209,12 @@ async fn launch_and_run_empty_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_test_realm.cm";
-    let events =
-        run_test(test_url, TestRunOptions { disabled_tests: DisabledTestHandling::Exclude })
-            .await
-            .unwrap();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+    )
+    .await
+    .unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("EchoTest.TestEcho"),
@@ -198,14 +224,18 @@ async fn launch_and_test_echo_test() {
     assert_eq!(expected_events, events);
 }
 
-/*
-// fxb/50793: ignore doesn't work right now.
 // Stress test with a very large gtest suite.
 #[fuchsia_async::run_singlethreaded(test)]
-#[ignore = "Timeouts on CQ bots"]
 async fn launch_and_run_hugetest() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/huge_gtest.cm";
-    let events = run_test(test_url).await.unwrap();
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(100) },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
 
     let mut expected_events = vec![];
 
@@ -217,6 +247,32 @@ async fn launch_and_run_hugetest() {
         ])
     }
     expected_events.push(TestEvent::test_finished());
-    assert_eq!(expected_events, events);
+    let expected_events = expected_events.into_iter().group_by_test_case_unordered();
+    assert_events_eq(&expected_events, &events);
 }
-*/
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_parallel_execution() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/concurrency-test.cm";
+    let events = run_test(
+        test_url,
+        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(5) },
+    )
+    .await
+    .unwrap()
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    let mut expected_events = vec![];
+
+    for i in 1..=5 {
+        let s = format!("EchoTest.TestEcho{}", i);
+        expected_events.extend(vec![
+            TestEvent::test_case_started(&s),
+            TestEvent::test_case_finished(&s, TestResult::Passed),
+        ])
+    }
+    expected_events.push(TestEvent::test_finished());
+    let expected_events = expected_events.into_iter().group_by_test_case_unordered();
+    assert_events_eq(&expected_events, &events);
+}

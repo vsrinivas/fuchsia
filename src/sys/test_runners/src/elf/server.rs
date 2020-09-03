@@ -74,17 +74,12 @@ pub trait SuiteServer: Sized + Sync + Send {
         run_listener: &ftest::RunListenerProxy,
     ) -> Result<(), RunTestError>;
 
-    fn get_parallel_count(run_options: &ftest::RunOptions) -> usize {
-        match run_options.parallel {
-            Some(i) => {
-                if i == 0 {
-                    warn!("Client passed number of concurrent tests as 0, setting it to 1.");
-                    return 1;
-                }
-                i.into()
-            }
-            None => 1,
+    fn get_parallel_count(parallel: u16) -> usize {
+        if parallel == 0 {
+            warn!("Client passed number of concurrent tests as 0, setting it to 1.");
+            return 1;
         }
+        parallel.into()
     }
 
     /// Implements `fuchsia.test.Suite` service and runs test.
