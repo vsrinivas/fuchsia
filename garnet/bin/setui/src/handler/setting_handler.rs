@@ -47,6 +47,8 @@ pub enum ControllerError {
     DeliveryError(SettingType, SettingType),
     #[error("Irrecoverable error")]
     IrrecoverableError,
+    #[error("Timeout occurred")]
+    TimeoutError,
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;

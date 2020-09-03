@@ -47,6 +47,7 @@ use {
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon::DurationNum,
     futures::lock::Mutex,
     futures::StreamExt,
     serde::Deserialize,
@@ -85,6 +86,7 @@ pub mod service_context;
 pub mod switchboard;
 
 const DEFAULT_SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
+const DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS: i64 = 10_000;
 
 /// A common trigger for exiting.
 pub type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
@@ -460,6 +462,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     let mut proxies = HashMap::new();
 
     // TODO(58893): make max attempts a configurable option.
+    // TODO(59174): make setting proxy response timeout and retry configurable.
     for setting_type in &components {
         proxies.insert(
             *setting_type,
@@ -470,6 +473,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
                 setting_handler_messenger_factory.clone(),
                 event_messenger_factory.clone(),
                 DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
+                Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
+                true,
             )
             .await?
             .0,

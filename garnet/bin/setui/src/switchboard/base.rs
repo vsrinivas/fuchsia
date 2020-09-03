@@ -64,6 +64,9 @@ pub enum SwitchboardError {
 
     #[error("Irrecoverable error")]
     IrrecoverableError,
+
+    #[error("Timeout error")]
+    TimeoutError,
 }
 
 impl From<ControllerError> for SwitchboardError {
@@ -96,6 +99,7 @@ impl From<ControllerError> for SwitchboardError {
                 SwitchboardError::DeliveryError(setting_type, setting_type_2)
             }
             ControllerError::IrrecoverableError => SwitchboardError::IrrecoverableError,
+            ControllerError::TimeoutError => SwitchboardError::TimeoutError,
         }
     }
 }

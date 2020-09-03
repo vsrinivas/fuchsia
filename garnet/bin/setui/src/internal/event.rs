@@ -50,6 +50,7 @@ pub mod handler {
     #[derive(PartialEq, Clone, Debug)]
     pub enum Event {
         Retry(SettingType, SettingRequest),
+        Timeout(SettingType, SettingRequest),
         AttemptsExceeded(SettingType, SettingRequest),
         Execute(SettingType, u64),
         Teardown(SettingType),

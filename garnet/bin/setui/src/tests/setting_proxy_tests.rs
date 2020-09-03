@@ -4,8 +4,10 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::task::Poll;
 
 use fuchsia_async as fasync;
+use fuchsia_zircon::{Duration, DurationNum};
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
@@ -29,6 +31,7 @@ use crate::switchboard::base::{
 };
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
+const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
 
 pub type SwitchboardReceptor = BaseReceptor<Payload, Address>;
 
@@ -36,7 +39,7 @@ struct SettingHandler {
     setting_type: SettingType,
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
-    responses: Vec<(SettingRequest, SettingHandlerResult)>,
+    responses: Vec<(SettingRequest, Option<SettingHandlerResult>)>,
     done_tx: Option<oneshot::Sender<()>>,
     proxy_signature: handler::message::Signature,
 }
@@ -47,7 +50,11 @@ impl SettingHandler {
         Ok(None)
     }
 
-    pub fn queue_response(&mut self, request: SettingRequest, response: SettingHandlerResult) {
+    pub fn queue_response(
+        &mut self,
+        request: SettingRequest,
+        response: Option<SettingHandlerResult>,
+    ) {
         self.responses.push((request, response));
     }
 
@@ -61,14 +68,14 @@ impl SettingHandler {
             .ack();
     }
 
-    fn process_request(&mut self, request: SettingRequest) -> SettingHandlerResult {
+    fn process_request(&mut self, request: SettingRequest) -> Option<SettingHandlerResult> {
         if let Some((match_request, result)) = self.responses.pop() {
             if request == match_request {
                 return result;
             }
         }
 
-        Err(ControllerError::UnimplementedRequest(self.setting_type, request))
+        Some(Err(ControllerError::UnimplementedRequest(self.setting_type, request)))
     }
 
     fn create(
@@ -96,7 +103,10 @@ impl SettingHandler {
                         handler::Payload::Command(Command::HandleRequest(request)),
                         client,
                     ) => {
-                        handler::reply(client, handler_clone.lock().await.process_request(request));
+                        if let Some(response) = handler_clone.lock().await.process_request(request)
+                        {
+                            handler::reply(client, response);
+                        }
                     }
                     MessageEvent::Message(
                         handler::Payload::Command(Command::ChangeState(state)),
@@ -175,6 +185,78 @@ impl SettingHandlerFactory for FakeFactory {
     }
 }
 
+struct TestEnvironmentBuilder {
+    setting_type: SettingType,
+    done_tx: Option<oneshot::Sender<()>>,
+    timeout: Option<(Duration, bool)>,
+}
+
+impl TestEnvironmentBuilder {
+    pub fn new(setting_type: SettingType) -> Self {
+        Self { setting_type, done_tx: None, timeout: None }
+    }
+
+    pub fn set_done_tx(mut self, tx: Option<oneshot::Sender<()>>) -> Self {
+        self.done_tx = tx;
+        self
+    }
+
+    pub fn set_timeout(mut self, duration: Duration, retry_on_timeout: bool) -> Self {
+        self.timeout = Some((duration, retry_on_timeout));
+        self
+    }
+
+    pub async fn build(self) -> TestEnvironment {
+        let messenger_factory = create_hub();
+        let handler_messenger_factory = handler::message::create_hub();
+        let event_messenger_factory = event::message::create_hub();
+
+        let handler_factory =
+            Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
+
+        let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
+            self.setting_type,
+            handler_factory.clone(),
+            messenger_factory.clone(),
+            handler_messenger_factory,
+            event_messenger_factory.clone(),
+            SETTING_PROXY_MAX_ATTEMPTS,
+            self.timeout.map_or(None, |(duration, _)| Some(duration)),
+            self.timeout.map_or(true, |(_, retry)| retry),
+        )
+        .await
+        .expect("proxy creation should succeed");
+        let (messenger_client, receptor) = messenger_factory
+            .create(MessengerType::Addressable(Address::Switchboard))
+            .await
+            .unwrap();
+
+        let (handler_messenger, handler_receptor) =
+            handler_factory.lock().await.create(self.setting_type).await;
+        let (state_tx, state_rx) = futures::channel::mpsc::unbounded::<State>();
+        let handler = SettingHandler::create(
+            handler_messenger,
+            handler_receptor,
+            proxy_handler_signature,
+            self.setting_type,
+            state_tx,
+            self.done_tx,
+        );
+
+        TestEnvironment {
+            proxy_signature,
+            proxy_handler_signature,
+            messenger_client,
+            messenger_receptor: receptor,
+            handler_factory,
+            setting_handler_rx: state_rx,
+            setting_handler: handler,
+            event_factory: event_messenger_factory,
+            setting_type: self.setting_type,
+        }
+    }
+}
+
 pub struct TestEnvironment {
     proxy_signature: core::message::Signature,
     proxy_handler_signature: handler::message::Signature,
@@ -205,61 +287,10 @@ impl TestEnvironment {
     }
 }
 
-/// Generates a setting proxy, switchboard, and setting handler for testing.
-///
-/// If done_tx is provided, it will be passed to the created setting handler.
-async fn create_test_environment(
-    setting_type: SettingType,
-    done_tx: Option<oneshot::Sender<()>>,
-) -> TestEnvironment {
-    let messenger_factory = create_hub();
-    let handler_messenger_factory = handler::message::create_hub();
-    let event_messenger_factory = event::message::create_hub();
-
-    let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
-
-    let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
-        setting_type,
-        handler_factory.clone(),
-        messenger_factory.clone(),
-        handler_messenger_factory,
-        event_messenger_factory.clone(),
-        SETTING_PROXY_MAX_ATTEMPTS,
-    )
-    .await
-    .expect("proxy creation should succeed");
-    let (messenger_client, receptor) =
-        messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-
-    let (handler_messenger, handler_receptor) =
-        handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, state_rx) = futures::channel::mpsc::unbounded::<State>();
-    let handler = SettingHandler::create(
-        handler_messenger,
-        handler_receptor,
-        proxy_handler_signature,
-        setting_type,
-        state_tx,
-        done_tx,
-    );
-
-    TestEnvironment {
-        proxy_signature,
-        proxy_handler_signature,
-        messenger_client,
-        messenger_receptor: receptor,
-        handler_factory,
-        setting_handler_rx: state_rx,
-        setting_handler: handler,
-        event_factory: event_messenger_factory,
-        setting_type,
-    }
-}
-
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_notify() {
     let setting_type = SettingType::Unknown;
-    let mut environment = create_test_environment(setting_type, None).await;
+    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     // Send a listen state and make sure sink is notified.
     {
@@ -329,9 +360,9 @@ async fn test_notify() {
 async fn test_request() {
     let setting_type = SettingType::Unknown;
     let request_id = 42;
-    let environment = create_test_environment(setting_type, None).await;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
 
     // Send initial request.
     let mut receptor = environment
@@ -365,9 +396,9 @@ async fn test_request_order() {
     let setting_type = SettingType::Unknown;
     let request_id_1 = 42;
     let request_id_2 = 43;
-    let environment = create_test_environment(setting_type, None).await;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
 
     // Send multiple requests.
     let receptor_1 = environment
@@ -399,7 +430,11 @@ async fn test_request_order() {
     let mut receptor_1_fuse = receptor_1.fuse();
     let mut receptor_2_fuse = receptor_2.fuse();
     loop {
-        environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_response(SettingRequest::Get, Some(Ok(None)));
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Some(MessageEvent::Message(
@@ -439,7 +474,7 @@ async fn test_request_order() {
 async fn test_generation() {
     let setting_type = SettingType::Unknown;
     let request_id = 42;
-    let environment = create_test_environment(setting_type, None).await;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     // Send initial request.
     let _ = get_response(
@@ -486,7 +521,8 @@ async fn test_regeneration() {
     let setting_type = SettingType::Unknown;
     let request_id = 42;
     let (done_tx, done_rx) = oneshot::channel();
-    let mut environment = create_test_environment(setting_type, Some(done_tx)).await;
+    let mut environment =
+        TestEnvironmentBuilder::new(setting_type).set_done_tx(Some(done_tx)).build().await;
 
     // Send initial request.
     assert!(
@@ -576,7 +612,7 @@ async fn test_regeneration() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_retry() {
     let setting_type = SettingType::Unknown;
-    let mut environment = create_test_environment(setting_type, None).await;
+    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     let (_, mut event_receptor) = environment
         .event_factory
@@ -588,11 +624,11 @@ async fn test_retry() {
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
         environment.setting_handler.lock().await.queue_response(
             SettingRequest::Get,
-            Err(ControllerError::ExternalFailure(
+            Some(Err(ControllerError::ExternalFailure(
                 setting_type,
                 "test_commponent".into(),
                 "connect".into(),
-            )),
+            ))),
         );
     }
 
@@ -648,7 +684,7 @@ async fn test_retry() {
     environment.regenerate_handler(None).await;
 
     // Queue successful response
-    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Ok(None));
+    environment.setting_handler.lock().await.queue_response(SettingRequest::Get, Some(Ok(None)));
 
     // Ensure subsequent request succeeds
     assert!(get_response(
@@ -674,6 +710,177 @@ async fn test_retry() {
         event_receptor.next().await.expect("should be notified of teardown"),
         event::handler::Event::Teardown(setting_type),
     );
+}
+
+/// Ensures timeouts trigger retry flow.
+#[test]
+fn test_timeout() {
+    let mut executor =
+        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+
+    let fut = async move {
+        let setting_type = SettingType::Unknown;
+        let environment = TestEnvironmentBuilder::new(setting_type)
+            .set_timeout(SETTING_PROXY_TIMEOUT_MS.millis(), true)
+            .build()
+            .await;
+
+        let (_, mut event_receptor) = environment
+            .event_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Should be able to retrieve receptor");
+
+        // Queue up to ignore resquests
+        for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+            environment.setting_handler.lock().await.queue_response(SettingRequest::Get, None);
+        }
+
+        let request_id = 2;
+        let request = SettingRequest::Get;
+
+        // Send request.
+        let (returned_request_id, handler_result) = get_response(
+            environment
+                .messenger_client
+                .message(
+                    Payload::Action(SettingAction {
+                        id: request_id,
+                        setting_type,
+                        data: SettingActionData::Request(request.clone()),
+                    }),
+                    Audience::Messenger(environment.proxy_signature),
+                )
+                .send(),
+        )
+        .await
+        .expect("result should be present");
+
+        // Ensure returned request id matches the outgoing id
+        assert_eq!(request_id, returned_request_id);
+
+        // Make sure the result is an `ControllerError::TimeoutError`
+        assert!(
+            matches!(handler_result, Err(ControllerError::TimeoutError)),
+            "error should have been encountered"
+        );
+
+        // For each failed attempt, make sure a retry event was broadcasted
+        for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+            verify_handler_event(
+                event_receptor.next().await.expect("should be notified of execute"),
+                event::handler::Event::Execute(setting_type, request_id),
+            );
+            verify_handler_event(
+                event_receptor.next().await.expect("should be notified of timeout"),
+                event::handler::Event::Timeout(setting_type, request.clone()),
+            );
+            verify_handler_event(
+                event_receptor.next().await.expect("should be notified of reattempt"),
+                event::handler::Event::Retry(setting_type, request.clone()),
+            );
+        }
+
+        // Ensure that the final event reports that attempts were exceeded
+        verify_handler_event(
+            event_receptor.next().await.expect("should be notified of exceeded attempts"),
+            event::handler::Event::AttemptsExceeded(setting_type, request.clone()),
+        );
+    };
+
+    pin_utils::pin_mut!(fut);
+    let _result = loop {
+        executor.wake_main_future();
+        let new_time = fuchsia_async::Time::from_nanos(
+            executor.now().into_nanos()
+                + fuchsia_zircon::Duration::from_millis(SETTING_PROXY_TIMEOUT_MS).into_nanos(),
+        );
+        match executor.run_one_step(&mut fut) {
+            Some(Poll::Ready(x)) => break x,
+            None => panic!("Executor stalled"),
+            Some(Poll::Pending) => {
+                executor.set_fake_time(new_time);
+            }
+        }
+    };
+}
+
+/// Ensures that timeouts cause an error when retry is not enabled for them.
+#[test]
+fn test_timeout_no_retry() {
+    let mut executor =
+        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+
+    let fut = async move {
+        let setting_type = SettingType::Unknown;
+        let environment = TestEnvironmentBuilder::new(setting_type)
+            .set_timeout(SETTING_PROXY_TIMEOUT_MS.millis(), false)
+            .build()
+            .await;
+
+        let (_, mut event_receptor) = environment
+            .event_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Should be able to retrieve receptor");
+
+        // Queue up to ignore resquests
+        environment.setting_handler.lock().await.queue_response(SettingRequest::Get, None);
+
+        let request_id = 2;
+        let request = SettingRequest::Get;
+
+        // Send request.
+        let (returned_request_id, handler_result) = get_response(
+            environment
+                .messenger_client
+                .message(
+                    Payload::Action(SettingAction {
+                        id: request_id,
+                        setting_type,
+                        data: SettingActionData::Request(request.clone()),
+                    }),
+                    Audience::Messenger(environment.proxy_signature),
+                )
+                .send(),
+        )
+        .await
+        .expect("result should be present");
+
+        // Ensure returned request id matches the outgoing id
+        assert_eq!(request_id, returned_request_id);
+
+        // Make sure the result is an `ControllerError::TimeoutError`
+        assert!(
+            matches!(handler_result, Err(ControllerError::TimeoutError)),
+            "error should have been encountered"
+        );
+
+        verify_handler_event(
+            event_receptor.next().await.expect("should be notified of execution"),
+            event::handler::Event::Execute(setting_type, request_id),
+        );
+        verify_handler_event(
+            event_receptor.next().await.expect("should be notified of timeout"),
+            event::handler::Event::Timeout(setting_type, request),
+        );
+    };
+
+    pin_utils::pin_mut!(fut);
+    let _result = loop {
+        executor.wake_main_future();
+        let new_time = fuchsia_async::Time::from_nanos(
+            executor.now().into_nanos()
+                + fuchsia_zircon::Duration::from_millis(SETTING_PROXY_TIMEOUT_MS).into_nanos(),
+        );
+        match executor.run_one_step(&mut fut) {
+            Some(Poll::Ready(x)) => break x,
+            None => panic!("Executor stalled"),
+            Some(Poll::Pending) => {
+                executor.set_fake_time(new_time);
+            }
+        }
+    };
 }
 
 /// Checks that the supplied message event specifies the supplied handler event.

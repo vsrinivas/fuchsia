@@ -21,6 +21,7 @@ use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
+use fuchsia_zircon::Duration;
 
 #[derive(Clone, Debug)]
 struct ActiveRequest {
@@ -70,6 +71,8 @@ pub struct SettingProxy {
     /// Sender for passing messages about the active requests and controllers.
     active_controller_sender: UnboundedSender<ActiveControllerRequest>,
     max_attempts: u64,
+    request_timeout: Option<Duration>,
+    retry_on_timeout: bool,
 }
 
 impl SettingProxy {
@@ -82,6 +85,8 @@ impl SettingProxy {
         controller_messenger_factory: handler::message::Factory,
         event_messenger_factory: event::message::Factory,
         max_attempts: u64,
+        request_timeout: Option<Duration>,
+        retry_on_timeout: bool,
     ) -> Result<(core::message::Signature, handler::message::Signature), Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
         if let Err(error) = messenger_result {
@@ -124,6 +129,8 @@ impl SettingProxy {
             event_publisher: event_publisher,
             active_controller_sender,
             max_attempts,
+            request_timeout: request_timeout,
+            retry_on_timeout,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -345,6 +352,12 @@ impl SettingProxy {
         if matches!(result, Err(ControllerError::ExternalFailure(..))) {
             result = Err(ControllerError::IrrecoverableError);
             retry = true;
+        } else if matches!(result, Err(ControllerError::TimeoutError)) {
+            self.event_publisher.send_event(Event::Handler(event::handler::Event::Timeout(
+                self.setting_type,
+                request.request.clone(),
+            )));
+            retry = self.retry_on_timeout;
         }
 
         request.last_result = Some(result);
@@ -429,21 +442,20 @@ impl SettingProxy {
                 handler::Payload::Command(Command::HandleRequest(request.clone())),
                 Audience::Messenger(signature),
             )
+            .set_timeout(self.request_timeout)
             .send();
 
         let active_controller_sender_clone = self.active_controller_sender.clone();
 
-        // TODO(fxb/59016): add timeout for receptor.next() to remove the active request
-        // entry and prevent leaks. Context: Faulty handlers can cause `receptor` to never run. When
-        // rewriting this to handle retries, ensure that `RemoveActive` is called at some point, or
-        // the client will be leaked within active_requests. This must be done especially if the
-        // loop below never receives a result.
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
                 let handler_result = match message_event {
                     MessageEvent::Message(handler::Payload::Result(result), _) => Some(result),
                     MessageEvent::Status(Status::Undeliverable) => {
                         Some(Err(ControllerError::IrrecoverableError))
+                    }
+                    MessageEvent::Status(Status::Timeout) => {
+                        Some(Err(ControllerError::TimeoutError))
                     }
                     _ => None,
                 };
