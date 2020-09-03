@@ -265,5 +265,6 @@ group("manual_testing") {
     "//src/graphics/display/bin/display-test",
     "//src/security/bin/syscall-check",
     "//src/zircon/testing/mutex_pi_exerciser",
+    "//src/zircon/tests/evil",
   ]
 }
