@@ -40,7 +40,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1083
+From //build/config/BUILDCONFIG.gn:1061
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -53,18 +53,17 @@ From //build/images/args.gni:100
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 options (before the `ASAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "asan"
-variants in `known_variants` (which see), or overridden in
-toolchain_args in one of those variants.
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  This can be a list of strings or a single string.
 
-The default is ":" which doesn't affect any ASan behavior, but ensures that
-the ASan initializers run for all executable targets, including those that
-do not link C/C++ code. Note that this may conflict with programs that
-define their own `__asan_default_options` C function. Set this option to
-the empty string to support this.
+Note that even if this is empty, programs in this build **cannot** define
+their own `__asan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
 
-**Current value (from the default):** `":"`
+**Current value (from the default):** `[]`
 
-From //build/config/sanitizers/BUILD.gn:20
+From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:16
 
 ### auto_login_to_guest
 Whether basemgr should use a random identifier for sessions, leading to
@@ -115,7 +114,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:83
+From //BUILD.gn:85
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -130,7 +129,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:29
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -138,7 +137,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:29
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -450,7 +449,7 @@ From //products/core.gni:83
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:37
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
@@ -458,7 +457,7 @@ From //products/core.gni:83
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:37
 
 ### camera_debug
 
@@ -634,7 +633,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -642,14 +641,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -810,7 +809,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:841
+From //build/config/BUILDCONFIG.gn:834
 
 ### fastboot_product
 
@@ -852,7 +851,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -867,14 +866,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/bf775fabc3bcde00f388cabce557142358f70221/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/d56fc21874e8fafbed8e1dee3990c3b09d118ec2/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1101,7 +1100,7 @@ From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:56
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -1109,7 +1108,7 @@ From //products/bringup.gni:33
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:56
 
 ### host_os
 
@@ -1134,7 +1133,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/b1ee145207bde5f85ea70efd83f5c2815cca7b3b/config.gni#11)
+From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/config.gni#11)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1143,7 +1142,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"67"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/b1ee145207bde5f85ea70efd83f5c2815cca7b3b/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1151,7 +1150,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/b1ee145207bde5f85ea70efd83f5c2815cca7b3b/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/3c9e6d2e43ce7c41527b9d59b0a753803be5c3c1/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1363,7 +1362,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumented", "instrumentation-runtime"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
   toolchain_args = {
   use_scudo = false
 }
@@ -1372,7 +1371,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumented", "instrumentation-runtime"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
   toolchain_args = {
   use_scudo = false
 }
@@ -1381,19 +1380,8 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumented", "instrumentation-runtime"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
   toolchain_args = {
-  use_scudo = false
-}
-}, {
-  configs = ["//build/config/sanitizers:asan"]
-  host_only = {
-  remove_shared_configs = ["//build/config:symbol_no_undefined"]
-}
-  name = "asan_no_detect_leaks"
-  tags = ["asan", "instrumented", "instrumentation-runtime"]
-  toolchain_args = {
-  asan_default_options = "detect_leaks=0"
   use_scudo = false
 }
 }, {
@@ -1404,7 +1392,7 @@ Each element of the list is one variant, which is a scope defining:
   name = "asan-fuzzer"
   remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
-  tags = ["asan", "instrumented", "instrumentation-runtime", "fuzzer"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "fuzzer"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
   use_scudo = false
@@ -1418,7 +1406,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:752
+From //build/config/BUILDCONFIG.gn:753
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2082,7 +2070,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1073
+From //build/config/BUILDCONFIG.gn:1051
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2091,7 +2079,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1078
+From //build/config/BUILDCONFIG.gn:1056
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2105,10 +2093,6 @@ a list that can be spliced into [`select_variant`](#select_variant).
 [{
   name = "host_asan"
   select_variant = [{
-  dir = ["//third_party/yasm", "//third_party/vboot_reference", "//tools/vboot_reference", "//src/fonts/font_info"]
-  host = true
-  variant = "asan_no_detect_leaks"
-}, {
   host = true
   variant = "asan"
 }]
@@ -2127,7 +2111,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:887
+From //build/config/BUILDCONFIG.gn:880
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2271,7 +2255,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:41
+From //BUILD.gn:43
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2356,14 +2340,17 @@ From //build/config/BUILDCONFIG.gn:129
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
 options (before the `UBSAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "ubsan"
-variants in `known_variants` (which see), or overridden in
-toolchain_args in one of those variants.  Note that setting this
-nonempty may conflict with programs that define their own
-`__ubsan_default_options` C function.
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  This can be a list of strings or a single string.
 
-**Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
+Note that even if this is empty, programs in this build **cannot** define
+their own `__ubsan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
 
-From //build/config/sanitizers/BUILD.gn:29
+**Current value (from the default):** `["print_stacktrace=1", "halt_on_error=1"]`
+
+From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:28
 
 ### universal_variants
 
@@ -2378,7 +2365,7 @@ From //build/config/sanitizers/BUILD.gn:29
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:861
+From //build/config/BUILDCONFIG.gn:854
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2394,7 +2381,7 @@ From //products/core.gni:85
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:49
+From //BUILD.gn:51
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
@@ -2402,7 +2389,7 @@ From //products/core.gni:85
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:49
+From //BUILD.gn:51
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2733,7 +2720,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:108
+From //BUILD.gn:110
 
 ### zircon_asserts
 
@@ -2758,7 +2745,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:78
+From //BUILD.gn:80
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2775,14 +2762,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:67
+From //BUILD.gn:69
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:71
+From //BUILD.gn:73
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -2824,7 +2811,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:75
+From //BUILD.gn:77
 
 ### zvb_partition_name
 Partition name from where image will be verified

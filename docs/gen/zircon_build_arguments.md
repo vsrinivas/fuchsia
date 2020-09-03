@@ -7,13 +7,20 @@ Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 options (before the `ASAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "asan"
 variants in $variants (which see), or overridden in $toolchain_args in
-one of those variants.  Note that setting this nonempty may conflict
-with programs that define their own `__asan_default_options` C
-function.
+one of those variants.  This can be a list of strings or a single string.
 
-**Current value (from the default):** `""`
+Note that even if this is empty, programs in this build **cannot** define
+their own `__asan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:15
+**Current value for `target_cpu = `:** `[]`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:4
+
+**Overridden from the default:** `[]`
+
+From //public/gn/config/instrumentation/sanitizer_default_options.gni:16
 
 ### assert_level
 Controls which asserts are enabled.
@@ -88,7 +95,7 @@ TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-x64", "//tools:all-hosts"]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:6
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
 
 **Overridden from the default:** `false`
 
@@ -100,7 +107,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `false`
 
@@ -264,7 +271,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -362,7 +369,7 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `false`
 
@@ -388,7 +395,7 @@ prebuilt.
 
 **Current value for `target_cpu = `:** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:20
 
 **Overridden from the default:** `""`
 
@@ -478,20 +485,27 @@ Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehavi
 options (before the `UBSAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "ubsan"
 variants in $variants (which see), or overridden in $toolchain_args in
-one of those variants.  Note that setting this nonempty may conflict
-with programs that define their own `__ubsan_default_options` C
-function.
+one of those variants.  This can be a list of strings or a single string.
 
-**Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
+Note that even if this is empty, programs in this build **cannot** define
+their own `__ubsan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:24
+**Current value for `target_cpu = `:** `["print_stacktrace=1", "halt_on_error=1"]`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
+
+**Overridden from the default:** `["print_stacktrace=1", "halt_on_error=1"]`
+
+From //public/gn/config/instrumentation/sanitizer_default_options.gni:28
 
 ### use_ccache
 Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:21
 
 **Overridden from the default:** `false`
 
@@ -502,7 +516,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:22
 
 **Overridden from the default:** `false`
 
@@ -746,7 +760,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:23
 
 **Overridden from the default:** `[]`
 
@@ -765,7 +779,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:24
 
 **Overridden from the default:** `"zstd"`
 
@@ -797,7 +811,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:20
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:25
 
 **Overridden from the default:** `0`
 
