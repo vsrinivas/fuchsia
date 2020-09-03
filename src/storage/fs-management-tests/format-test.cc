@@ -47,4 +47,27 @@ TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
   ASSERT_EQ(detect_disk_format(fd), DISK_FORMAT_GPT);
   ASSERT_EQ(ramdisk_destroy(client), ZX_OK);
 }
+
+TEST(FormatDetectionTest, TestVbmetaRecognised) {
+  ramdisk_client *client;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(2 * ZX_PAGE_SIZE, 0, &vmo));
+
+  // Write the vbmeta magic string at the start of the device.
+  const unsigned char kVbmetaMagic[] = {'A','V','B','0'};
+  vmo.write(kVbmetaMagic, /*offset=*/0x0, sizeof(kVbmetaMagic));
+
+  // Add the MBR magic string to the end of the first sector. These bytes in
+  // vbmeta tend to be randomish, and previously we've had bugs where if these
+  // bytes happened to match the MBR magic, we would misrecognise the partition.
+  // (c.f. fxb/59374)
+  const unsigned char kMbrMagic[] = {0x55, 0xaa};
+  vmo.write(kMbrMagic, /*offset=*/510, sizeof(kMbrMagic));
+
+  ASSERT_NO_FATAL_FAILURES(CreateEmptyRamdisk(std::move(vmo), &client));
+  int fd = ramdisk_get_block_fd(client);
+  ASSERT_EQ(detect_disk_format(fd), DISK_FORMAT_VBMETA);
+  ASSERT_EQ(ramdisk_destroy(client), ZX_OK);
+}
+
 }  // namespace

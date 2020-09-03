@@ -20,6 +20,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_ZXCRYPT,
   DISK_FORMAT_FACTORYFS,
   DISK_FORMAT_BLOCK_VERITY,
+  DISK_FORMAT_VBMETA,
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 
@@ -32,7 +33,9 @@ static const char* disk_format_string_[DISK_FORMAT_COUNT_] = {
     [DISK_FORMAT_BLOBFS] = "blobfs",
     [DISK_FORMAT_FVM] = "fvm",
     [DISK_FORMAT_ZXCRYPT] = "zxcrypt",
-    [DISK_FORMAT_FACTORYFS] = "factoryfs"};
+    [DISK_FORMAT_FACTORYFS] = "factoryfs",
+    [DISK_FORMAT_VBMETA] = "vbmeta",
+};
 
 static inline const char* disk_format_string(disk_format_t fs_type) {
   return disk_format_string_[fs_type];
@@ -64,6 +67,10 @@ static const uint8_t block_verity_magic[16] = {0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2
                                                0x72, 0x69, 0x74, 0x79, 0x2d, 0x76, 0x31, 0x00};
 static const uint8_t factoryfs_magic[8] = {
     0x21, 0x4d, 0x69, 0x1e, 0xF9, 0x3F, 0x5D, 0xA5,
+};
+
+static const uint8_t vbmeta_magic[4] = {
+    'A', 'V', 'B', '0',
 };
 
 disk_format_t detect_disk_format(int fd);
