@@ -44,6 +44,9 @@ class ExecutionHandle {
   /// Complete string passed to `fx` to execute the test.
   final String handle;
 
+  /// Flags to pass to test runner.
+  final List<String> flags;
+
   /// Name of the operating system which will execute this test. "linux" or "mac"
   /// designate the host, while "fuchsia" designates the target device.
   final String os;
@@ -55,24 +58,33 @@ class ExecutionHandle {
   /// execute the test.
   final Map<String, String> environment;
 
-  ExecutionHandle(this.handle, this.os, {this.testType, this.environment});
+  ExecutionHandle(this.handle, this.os,
+      {this.flags = const [], this.testType, this.environment})
+      : assert(flags != null);
   ExecutionHandle.command(this.handle, this.os, {this.environment = const {}})
-      : testType = TestType.command;
+      : testType = TestType.command,
+        flags = [];
   ExecutionHandle.component(this.handle, this.os, {this.environment = const {}})
-      : testType = TestType.component;
+      : testType = TestType.component,
+        flags = [];
   ExecutionHandle.e2e(this.handle, this.os, {this.environment = const {}})
-      : testType = TestType.e2e;
-  ExecutionHandle.suite(this.handle, this.os, {this.environment = const {}})
+      : testType = TestType.e2e,
+        flags = [];
+  ExecutionHandle.suite(this.handle, this.os,
+      {this.flags = const [], this.environment = const {}})
       : testType = TestType.suite;
   ExecutionHandle.host(this.handle, this.os, {this.environment = const {}})
-      : testType = TestType.host;
+      : testType = TestType.host,
+        flags = [];
   ExecutionHandle.unsupportedDeviceTest(this.handle,
       {this.environment = const {}})
       : os = 'fuchsia',
+        flags = [],
         testType = TestType.unsupportedDeviceTest;
   const ExecutionHandle.unsupported()
       : handle = '',
         os = '',
+        flags = const [],
         environment = const {},
         testType = TestType.unsupported;
 
@@ -130,7 +142,7 @@ class ExecutionHandle {
   /// in ".cm".
   CommandTokens _getSuiteTokens() {
     List<String> subCommand = ['shell', 'run-test-suite'];
-    return CommandTokens(['fx', ...subCommand, handle]);
+    return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `path` key.

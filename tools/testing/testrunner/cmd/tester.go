@@ -357,6 +357,9 @@ func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
 			test.Command = []string{runTestSuiteName}
+			if test.Parallel != 0 {
+				test.Command = append(test.Command, "--parallel", fmt.Sprintf("%d", test.Parallel))
+			}
 			// TODO(fxbug.dev/49262): Once fixed, combine
 			// timeout flag setting for v1 and v2.
 			if timeout > 0 {

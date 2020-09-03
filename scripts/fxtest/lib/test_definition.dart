@@ -22,6 +22,8 @@ class TestDefinition {
   final String os;
   final PackageUrl packageUrl;
   final String maxLogSeverity;
+  final String parallel;
+
   String hash;
 
   final List<TestEnvironment> testEnvironments;
@@ -37,6 +39,7 @@ class TestDefinition {
     this.label,
     this.path,
     this.maxLogSeverity,
+    this.parallel,
     this.testEnvironments = const [],
   });
 
@@ -64,6 +67,7 @@ class TestDefinition {
           : PackageUrl.fromString(testDetails['package_url']),
       path: testDetails['path'] ?? '',
       maxLogSeverity: logSettings['max_severity'],
+      parallel: testDetails['parallel']?.toString(),
       testEnvironments: testEnvironments,
     );
   }
@@ -79,6 +83,7 @@ class TestDefinition {
   name: $name
   os: $os
   max_log_severity: $maxLogSeverity
+  parallel: $parallel
 />''';
 
   TestType get testType {
@@ -129,7 +134,12 @@ class TestDefinition {
       case TestType.component:
         return ExecutionHandle.component(decoratedPackageUrl.toString(), os);
       case TestType.suite:
-        return ExecutionHandle.suite(decoratedPackageUrl.toString(), os);
+        List<String> flags = [];
+        if (parallel != null) {
+          flags.addAll(['--parallel', parallel]);
+        }
+        return ExecutionHandle.suite(decoratedPackageUrl.toString(), os,
+            flags: flags);
       case TestType.command:
         return ExecutionHandle.command(command.join(' '), os);
       case TestType.host:

@@ -121,6 +121,7 @@ class Flags {
   logPath: $logPath,
   matchLength: ${matchLength.toString()},
   realm: $realm
+  min-severity-logs: $minSeverityLogs,
   shouldFailFast: $shouldFailFast
   simpleOutput: $simpleOutput,
   shouldFailFast: $shouldFailFast
@@ -202,6 +203,7 @@ class TestsConfig {
     if (flags.minSeverityLogs != null) {
       runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
     }
+
     return TestsConfig(
       flags: flags,
       fxEnv: fxEnv,

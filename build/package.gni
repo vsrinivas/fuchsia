@@ -104,6 +104,10 @@ import("//tools/cmc/build/validate_component_manifest_references.gni")
 #          if any component in its environment produces log with greater severity
 #          than defined here.
 #
+#     parallel (optional)
+#       [int] Defines maximum concurrent test cases to run. This only works with v2 tests.
+#             If not defined, test runner will decide the default value.
+#
 #   drivers (optional)
 #     [list of scopes] Defines the drivers in the package. A driver is
 #     typically produced by the build system and is placed in the `driver/`
@@ -443,12 +447,13 @@ template("package") {
           path = path
           if (!bootfs_only) {
             package_url = url
+            forward_variables_from(test,
+                                   [
+                                     "log_settings",
+                                     "parallel",
+                                   ])
           }
-          forward_variables_from(test,
-                                 [
-                                   "environments",
-                                   "log_settings",
-                                 ])
+          forward_variables_from(test, [ "environments" ])
         }
       } else {
         not_needed([

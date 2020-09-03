@@ -45,6 +45,9 @@ type Test struct {
 	// Settings of log produced by this test
 	LogSettings LogSettings `json:"log_settings,omitempty"`
 
+	// Number of test cases to run in parallel. This only works with v2 tests.
+	Parallel uint16 `json:"parallel,omitempty"`
+
 	// RuntimeDepsFile is a relative path within the build directory to a file
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.

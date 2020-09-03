@@ -22,11 +22,17 @@ struct Args {
     /// whether to also run tests that have been marked disabled/ignored by the test author.
     #[argh(switch)]
     also_run_disabled_tests: bool,
+
+    /// run test cases in parallel. This feature is not fully implemented yet.
+    #[argh(option)]
+    parallel: Option<u16>,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    let Args { timeout, test_url, test_filter, also_run_disabled_tests } = argh::from_env();
+    let Args { timeout, test_url, test_filter, also_run_disabled_tests, parallel } =
+        argh::from_env();
+    let _ = parallel; // so that compiler doesn't throw unused error.
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 

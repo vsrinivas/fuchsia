@@ -439,6 +439,27 @@ func TestSetCommand(t *testing.T) {
 			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
+			name:        "components v2 no parallel",
+			useRuntests: false,
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cm",
+				}},
+			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
+		},
+		{
+			name:        "components v2 parallel",
+			useRuntests: false,
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cm",
+					Parallel:   2,
+				}},
+			expected: []string{"run-test-suite", "--parallel", "2", "fuchsia-pkg://example.com/test.cm"},
+		},
+		{
 			name:        "components v2 timeout",
 			useRuntests: false,
 			test: testsharder.Test{

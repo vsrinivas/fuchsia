@@ -23,7 +23,8 @@ func TestUnmarshalTest(t *testing.T) {
 			  "name": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
 			  "os": "fuchsia",
 			  "package_url": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
-			  "path": ""
+			  "path": "",
+			  "parallel": 2
 			}
 		  },
 		  {
@@ -62,6 +63,7 @@ func TestUnmarshalTest(t *testing.T) {
 				Command:         nil,
 				LogSettings:     LogSettings{MaxSeverity: "ERROR"},
 				RuntimeDepsFile: "",
+				Parallel:        2,
 			},
 			Envs: []Environment{},
 		},
@@ -75,6 +77,7 @@ func TestUnmarshalTest(t *testing.T) {
 				Command:         nil,
 				LogSettings:     LogSettings{},
 				RuntimeDepsFile: "",
+				Parallel:        0,
 			},
 			Envs: []Environment{},
 		},
@@ -88,6 +91,7 @@ func TestUnmarshalTest(t *testing.T) {
 				Command:         nil,
 				LogSettings:     LogSettings{},
 				RuntimeDepsFile: "",
+				Parallel:        0,
 			},
 			Envs: []Environment{},
 		},
