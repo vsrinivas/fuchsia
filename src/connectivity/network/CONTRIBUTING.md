@@ -17,6 +17,29 @@ document describes best practices specific to Fuchsia Networking.
 
 ## Coding Guidelines
 
+### Philosohpy
+
+This section is inspired by [Flutter's style guide][flutter_philosophy], which
+contains many general principles that you should apply to all your programming
+work. Read it. The below calls out specific aspects that we feel are
+particularly important.
+
+#### Be Lazy
+
+Do not implement features you don't need. It is hard to correctly design unused
+code. This is closely related to the commit sizing advice given above; adding a
+new data structure to be used in some future commit is akin to adding a feature
+you don't need - it is exceedingly hard for your code reviewer to determine if
+you've designed the structure correctly because they (and you!) can't see how it
+is to be used.
+
+#### Go Down the Rabbit Hole
+
+You will occasionally encounter behaviour that surprises you or seems wrong. It
+probably is! Invest the time to find the root cause - you will either learn
+something, or fix something, and both are worth your time. Do not work around
+behaviour you don't understand.
+
 ### Avoid Duplication
 
 Avoid duplicating code whenever possible. In cases where existing code is not
@@ -208,29 +231,6 @@ should:
 1. Describe how to run new/affected test cases.
 
 For example: ``Test: Added new unit tests. `fx test netstack_gotests` ``.
-
-### Philosohpy
-
-This section is inspired by [Flutter's style guide][flutter_philosophy], which
-contains many general principles that you should apply to all your programming
-work. Read it. The below calls out specific aspects that we feel are
-particularly important.
-
-#### Be Lazy
-
-Do not implement features you don't need. It is hard to correctly design unused
-code. This is closely related to the commit sizing advice given above; adding a
-new data structure to be used in some future commit is akin to adding a feature
-you don't need - it is exceedingly hard for your code reviewer to determine if
-you've designed the structure correctly because they (and you!) can't see how it
-is to be used.
-
-#### Go Down the Rabbit Hole
-
-You will occasionally encounter behaviour that surprises you or seems wrong. It
-probably is! Invest the time to find the root cause - you will either learn
-something, or fix something, and both are worth your time. Do not work around
-behaviour you don't understand.
 
 ## Tips & Tricks
 
