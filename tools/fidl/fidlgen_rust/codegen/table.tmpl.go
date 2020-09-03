@@ -21,14 +21,14 @@ pub struct {{ .Name }} {
 
 fidl_table! {
   name: {{ .Name }},
-  members: {
+  members: [
     {{- range .Members }}
     {{ .Name }} {
       ty: {{ .Type }},
       ordinal: {{ .Ordinal }},
     },
     {{- end }}
-  },
+  ],
 }
 {{- end }}
 `

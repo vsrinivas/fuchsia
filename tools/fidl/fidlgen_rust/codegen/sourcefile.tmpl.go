@@ -15,6 +15,8 @@ const sourceFileTmpl = `
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#![recursion_limit="512"]
+
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;

@@ -2332,13 +2332,13 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> R
 macro_rules! fidl_table {
     (
         name: $name:ty,
-        members: {$(
-            // NOTE: members must be in order from lowest to highest ordinal
+        members: [$(
+            // NOTE: members are in order from lowest to highest ordinal
             $member_name:ident {
                 ty: $member_ty:ty,
                 ordinal: $ordinal:expr,
             },
-        )*},
+        )*],
     ) => {
         impl $name {
             /// Generates an empty table, with every field set to `None`.
@@ -2348,24 +2348,21 @@ macro_rules! fidl_table {
                 )*}
             }
 
+            #[inline(always)]
+            fn find_max_ordinal(&self) -> u64 {
+                $crate::fidl_reverse_blocks!{$({
+                    if let Some(_) = self.$member_name {
+                        return $ordinal;
+                    }
+                })*}
+                0
+            }
+
             // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
             // lead to unintended unsafe operations.
             fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
-                let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
-                    ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
-                )*];
-
-                // Cut off the `None` elements at the tail of the table
-                let last_some_index = members.iter().rposition(|x| x.1.is_some());
-
-                let members = if let Some(i) = last_some_index {
-                    &mut members[..(i + 1)]
-                } else {
-                    &mut []
-                };
-
                 // Vector header
-                let max_ordinal = members.last().map(|v| v.0).unwrap_or(0);
+                let max_ordinal = self.find_max_ordinal();
                 unsafe {
                     $crate::fidl_unsafe_encode!(&mut (max_ordinal as u64), encoder, offset, recursion_depth)?;
                     $crate::fidl_unsafe_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 8, recursion_depth)?;
@@ -2375,14 +2372,18 @@ macro_rules! fidl_table {
                     return Ok(());
                 }
                 let bytes_len = (max_ordinal as usize) * 16;
-                encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
-                    let mut prev_end_offset: usize = 0;
-                    for (ref ordinal, encodable) in members.iter_mut() {
+                encoder.write_out_of_line(bytes_len, recursion_depth, |_encoder, _offset, _recursion_depth| {
+                    let mut _prev_end_offset: usize = 0;
+                    $(
+                        if $ordinal > max_ordinal {
+                            return Ok(());
+                        }
+
                         // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
-                        let cur_offset = (*ordinal as usize - 1) * 16;
+                        let cur_offset: usize = ($ordinal - 1) * 16;
 
                         // Zero reserved fields.
-                        encoder.padding(offset + prev_end_offset, cur_offset - prev_end_offset);
+                        _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
                         // Encode present field.
                         // # Safety:
@@ -2390,11 +2391,12 @@ macro_rules! fidl_table {
                         // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
                         // always sufficient room.
                         unsafe {
-                            $crate::encoding::encode_in_envelope(encodable, encoder, offset + cur_offset, recursion_depth)?;
+                            let mut field = self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable);
+                            $crate::encoding::encode_in_envelope(&mut field, _encoder, _offset + cur_offset, _recursion_depth)?;
                         }
 
-                        prev_end_offset = cur_offset + 16;
-                    }
+                        _prev_end_offset = cur_offset + 16;
+                    )*
                     Ok(())
                 })
             }
@@ -2510,6 +2512,40 @@ macro_rules! fidl_table {
             }
         }
     }
+}
+
+/// Reverses the order of brace-enclosed statements.
+///
+/// Example:
+///
+/// ```rust
+/// fidl_reverse_blocks! {
+///     { println!("A"); }
+///     { println!("B"); }
+///     { println!("C"); }
+/// }
+/// ```
+///
+/// produces:
+///
+/// ```rust
+/// { println!("C"); }
+/// { println!("B"); }
+/// { println!("A"); }
+/// ```
+#[doc(hidden)]
+#[macro_export]
+macro_rules! fidl_reverse_blocks {
+    ($($b:block)*) => {
+        $crate::fidl_reverse_blocks!(@internal { $($b)* } {})
+    };
+    (@internal { $head:block $($tail:block)* } { $($res:block)* }) => {
+        $crate::fidl_reverse_blocks!(@internal { $($tail)* } { $head $($res)* })
+    };
+    (@internal {} { $($res:block)* }) => {
+        #[allow(unused_braces)]
+        { $($res)* }
+    };
 }
 
 /// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
@@ -3837,7 +3873,7 @@ mod test {
 
     fidl_table! {
         name: MyTable,
-        members: {
+        members: [
             num {
                 ty: i32,
                 ordinal: 1,
@@ -3854,14 +3890,14 @@ mod test {
                 ty: Handle,
                 ordinal: 4,
             },
-        },
+        ],
     }
 
     #[allow(unused)]
     struct EmptyTableCompiles {}
     fidl_table! {
         name: EmptyTableCompiles,
-        members: {},
+        members: [],
     }
 
     struct TablePrefix {
@@ -3871,7 +3907,7 @@ mod test {
 
     fidl_table! {
         name: TablePrefix,
-        members: {
+        members: [
             num {
                 ty: i32,
                 ordinal: 1,
@@ -3880,7 +3916,7 @@ mod test {
                 ty: i32,
                 ordinal: 2,
             },
-        },
+        ],
     }
 
     #[test]
@@ -3962,7 +3998,7 @@ mod test {
 
     fidl_table! {
         name: SimpleTable,
-        members: {
+        members: [
             x {
                 ty: i64,
                 ordinal: 1,
@@ -3971,7 +4007,7 @@ mod test {
                 ty: i64,
                 ordinal: 5,
             },
-        },
+        ],
     }
 
     #[derive(Debug, PartialEq)]
@@ -3983,7 +4019,7 @@ mod test {
 
     fidl_table! {
         name: TableWithStringAndVector,
-        members: {
+        members: [
             foo {
                 ty: String,
                 ordinal: 1,
@@ -3996,7 +4032,7 @@ mod test {
                 ty: Vec<u8>,
                 ordinal: 3,
             },
-        },
+        ],
     }
 
     #[test]
@@ -4095,7 +4131,7 @@ mod test {
 
     fidl_table! {
         name: TableWithGaps,
-        members: {
+        members: [
             second {
                 ty: i32,
                 ordinal: 2,
@@ -4104,7 +4140,7 @@ mod test {
                 ty: i32,
                 ordinal: 4,
             },
-        },
+        ],
     }
 
     #[test]
@@ -4143,7 +4179,7 @@ mod test {
         }
         fidl_table! {
             name: TableWithoutGaps,
-            members: {
+            members: [
                 first {
                     ty: i32,
                     ordinal: 1,
@@ -4152,7 +4188,7 @@ mod test {
                     ty: i32,
                     ordinal: 2,
                 },
-            },
+            ],
         }
 
         for ctx in CONTEXTS {

@@ -6,6 +6,7 @@
 	unused_mut, // not all args require mutation, but many do
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
+#![recursion_limit = "512"]
 
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
@@ -26,8 +27,8 @@ pub struct EmptyTable {}
 
 fidl_table! {
   name: EmptyTable,
-  members: {
-  },
+  members: [
+  ],
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,7 +39,7 @@ pub struct SimpleTable {
 
 fidl_table! {
   name: SimpleTable,
-  members: {
+  members: [
     x {
       ty: i64,
       ordinal: 1,
@@ -47,7 +48,7 @@ fidl_table! {
       ty: i64,
       ordinal: 5,
     },
-  },
+  ],
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,12 +58,12 @@ pub struct OlderSimpleTable {
 
 fidl_table! {
   name: OlderSimpleTable,
-  members: {
+  members: [
     x {
       ty: i64,
       ordinal: 1,
     },
-  },
+  ],
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +75,7 @@ pub struct NewerSimpleTable {
 
 fidl_table! {
   name: NewerSimpleTable,
-  members: {
+  members: [
     x {
       ty: i64,
       ordinal: 1,
@@ -87,7 +88,7 @@ fidl_table! {
       ty: i64,
       ordinal: 6,
     },
-  },
+  ],
 }
 
 #[derive(Debug, PartialEq)]
@@ -99,7 +100,7 @@ pub struct ReverseOrdinalTable {
 
 fidl_table! {
   name: ReverseOrdinalTable,
-  members: {
+  members: [
     z {
       ty: i64,
       ordinal: 1,
@@ -112,5 +113,5 @@ fidl_table! {
       ty: i64,
       ordinal: 3,
     },
-  },
+  ],
 }

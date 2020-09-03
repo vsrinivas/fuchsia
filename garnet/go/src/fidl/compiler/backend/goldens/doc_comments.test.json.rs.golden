@@ -6,6 +6,7 @@
 	unused_mut, // not all args require mutation, but many do
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
+#![recursion_limit = "512"]
 
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
@@ -126,12 +127,12 @@ pub struct Table {
 
 fidl_table! {
   name: Table,
-  members: {
+  members: [
     field {
       ty: i32,
       ordinal: 1,
     },
-  },
+  ],
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

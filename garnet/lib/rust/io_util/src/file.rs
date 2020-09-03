@@ -462,7 +462,7 @@ mod tests {
 
         fidl_table! {
             name: DataTable,
-            members: {
+            members: [
                 num {
                     ty: i32,
                     ordinal: 1,
@@ -471,7 +471,7 @@ mod tests {
                     ty: String,
                     ordinal: 2,
                 },
-            },
+            ],
         }
 
         let tempdir = TempDir::new().unwrap();
@@ -508,7 +508,7 @@ mod tests {
 
         fidl_table! {
             name: DataTable,
-            members: {
+            members: [
                 num {
                     ty: i32,
                     ordinal: 1,
@@ -521,7 +521,7 @@ mod tests {
                     ty: String,
                     ordinal: 3,
                 },
-            },
+            ],
         }
 
         let file = open_in_namespace("/pkg/data/fidl_file", OPEN_RIGHT_READABLE).unwrap();

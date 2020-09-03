@@ -6,6 +6,7 @@
 	unused_mut, // not all args require mutation, but many do
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
+#![recursion_limit = "512"]
 
 #[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
@@ -120,10 +121,10 @@ pub struct TableWithHandle {
 
 fidl_table! {
   name: TableWithHandle,
-  members: {
+  members: [
     h {
       ty: fidl::Vmo,
       ordinal: 1,
     },
-  },
+  ],
 }
