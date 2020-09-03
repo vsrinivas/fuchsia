@@ -12,8 +12,9 @@ import (
 
 func init() {
 	util.Register(config.FidlFile{
-		Filename: "handle_array.gen.test.fidl",
-		Gen:      fidlGenHandleArray,
+		Filename:        "handle_array_event.gen.test.fidl",
+		Gen:             fidlGenHandleArrayEvent,
+		ExtraDefinition: `using zx;`,
 		Definitions: []config.Definition{
 			{
 				Config: config.Config{
@@ -24,10 +25,10 @@ func init() {
 	})
 }
 
-func fidlGenHandleArray(config config.Config) (string, error) {
+func fidlGenHandleArrayEvent(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct HandleArray%[1]d {
-	array<handle>:%[1]d handles;
+struct HandleArrayEvent%[1]d {
+	array<zx.handle:EVENT>:%[1]d handles;
 };`, size), nil
 }

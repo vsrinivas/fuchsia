@@ -13,6 +13,7 @@ fidl("benchmark_suite_fidl") {
   testonly = true
   name = "benchmarkfidl"
   sources = benchmark_suite_fidl_files
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 template("benchmark_fidl") {
@@ -38,6 +39,7 @@ template("benchmark_fidl") {
     name = library_name
     sources = get_target_outputs(":${copy_target}")
     non_fidl_deps = [ ":${copy_target}" ]
+    public_deps = [ "//zircon/vdso/zx" ]
   }
 }
 

@@ -12,15 +12,18 @@ import (
 
 func init() {
 	util.Register(config.GidlFile{
-		Filename: "handle_array.gen.gidl",
-		Gen:      gidlGenHandleArray,
+		Filename: "handle_array_plain.gen.gidl",
+		Gen:      gidlGenHandleArrayPlain,
 		Benchmarks: []config.Benchmark{
 			{
-				Name:    "HandleArray/64",
-				Comment: `64 handle array in a struct`,
+				Name:    "HandleArray/Plain/64",
+				Comment: `64 plain handle array in a struct`,
 				Config: config.Config{
 					"size": 64,
 				},
+				// The FIDL type of the handle is a plain handle, but the handle value still needs
+				// a type, chosen here to be 'event' for better comparison with the
+				// event_handle_array benchmark.
 				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
 				Allowlist:  []config.Binding{config.Rust},
 			},
@@ -28,14 +31,14 @@ func init() {
 	})
 }
 
-func gidlGenHandleArray(conf config.Config) (string, error) {
+func gidlGenHandleArrayPlain(conf config.Config) (string, error) {
 	size := conf.GetInt("size")
 	handleValues := ""
 	for i := 0; i < size; i++ {
 		handleValues += fmt.Sprintf("#%d,\n", i)
 	}
 	return fmt.Sprintf(`
-HandleArray%[1]d{
+HandleArrayPlain%[1]d{
 	handles: [
 %[2]s
 	]

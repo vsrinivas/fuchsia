@@ -44,9 +44,14 @@ benchmark_suite_declarations = [
     fidl = [ "gpu_magma.test.fidl" ]
   },
   {
-    name = "handle_array"
-    gidl = [ "handle_array.gen.gidl" ]
-    fidl = [ "handle_array.gen.test.fidl" ]
+    name = "handle_array_event"
+    gidl = [ "handle_array_event.gen.gidl" ]
+    fidl = [ "handle_array_event.gen.test.fidl" ]
+  },
+  {
+    name = "handle_array_plain"
+    gidl = [ "handle_array_plain.gen.gidl" ]
+    fidl = [ "handle_array_plain.gen.test.fidl" ]
   },
   {
     name = "hardware_display"
