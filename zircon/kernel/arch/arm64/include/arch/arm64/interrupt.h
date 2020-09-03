@@ -9,19 +9,19 @@
 
 #ifndef __ASSEMBLER__
 
-#include <kernel/atomic.h>
+#include <ktl/atomic.h>
 
 __BEGIN_CDECLS
 
 // override of some routines
 static inline void arch_enable_ints(void) {
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   __asm__ volatile("msr daifclr, #2" ::: "memory");
 }
 
 static inline void arch_disable_ints(void) {
   __asm__ volatile("msr daifset, #2" ::: "memory");
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 }
 
 static inline bool arch_ints_disabled(void) {
@@ -34,13 +34,13 @@ static inline bool arch_ints_disabled(void) {
 }
 
 static inline void arch_enable_fiqs(void) {
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   __asm__ volatile("msr daifclr, #1" ::: "memory");
 }
 
 static inline void arch_disable_fiqs(void) {
   __asm__ volatile("msr daifset, #1" ::: "memory");
-  atomic_signal_fence();
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 }
 
 // XXX

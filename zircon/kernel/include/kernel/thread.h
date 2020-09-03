@@ -26,6 +26,7 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
+#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
 #include <kernel/scheduler_state.h>

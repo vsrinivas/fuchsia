@@ -14,7 +14,6 @@
 
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
-#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 
 __BEGIN_CDECLS
