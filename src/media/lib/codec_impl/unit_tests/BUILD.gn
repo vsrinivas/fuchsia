@@ -42,7 +42,6 @@ source_set("codec_impl_tests") {
 
   sources = [
     "test_admission_control.cc",
-    "test_aux_buffers.cc",
     "test_failures.cc",
     "test_fake_map_range.cc",
     "test_lifetime.cc",

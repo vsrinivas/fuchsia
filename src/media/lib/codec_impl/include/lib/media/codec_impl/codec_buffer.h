@@ -10,7 +10,6 @@
 #include <lib/media/codec_impl/codec_vmo_range.h>
 
 #include <memory>
-#include <optional>
 
 #include <fbl/macros.h>
 
@@ -47,7 +46,6 @@ class CodecBuffer {
   CodecPort port() const { return buffer_info_.port; }
 
   bool is_secure() const { return buffer_info_.is_secure; }
-
   // The vaddr of the start of the mapped VMO for this buffer.
   //
   // This will return nullptr if there's no VMO mapping because CPU access isn't
@@ -63,7 +61,7 @@ class CodecBuffer {
 
   size_t size() const;
 
-  // The main VMO, not the aux VMO.
+  // The main VMO.
   const zx::vmo& vmo() const;
 
   // The offset within the main VMO where data of this CodecBuffer starts.  The vmo_offset() is not
@@ -87,8 +85,6 @@ class CodecBuffer {
 
   [[nodiscard]] zx_status_t CacheFlush(uint32_t flush_offset, uint32_t length) const;
 
-  bool has_aux_buffer() const { return aux_vmo_range_.has_value(); }
-
  private:
   friend class CodecImpl;
   friend class std::unique_ptr<CodecBuffer>;
@@ -103,8 +99,7 @@ class CodecBuffer {
     bool is_secure;
   };
 
-  CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range,
-              std::optional<CodecVmoRange> aux_vmo_range = std::nullopt);
+  CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range);
   ~CodecBuffer();
 
   // Maps a page-aligned portion of the VMO including vmo_usable_start to vmo_usable_start +
@@ -140,7 +135,6 @@ class CodecBuffer {
 
   // This msg still has the live vmo_handle.
   CodecVmoRange vmo_range_;
-  std::optional<CodecVmoRange> aux_vmo_range_;
 
   // Mutable only in the sense that it's set later than the constructor.  The
   // association does not switch to a different VideoFrame once set.
@@ -149,8 +143,6 @@ class CodecBuffer {
   // This accounts for vmo_usable_start.  The content bytes are not part of
   // a Buffer instance from a const-ness point of view.
   uint8_t* buffer_base_ = nullptr;
-  uint8_t* aux_buffer_base_ = nullptr;
-
   // This remains false if fake_map_addr is passed to Map().  Not to be exposed to clients of
   // CodecBuffer.
   bool is_mapped_ = false;

@@ -7,10 +7,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 
 #include <list>
-#include <optional>
 #include <random>
 
 #include <fbl/macros.h>
@@ -186,19 +184,6 @@ class CodecAdapter {
   virtual fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) = 0;
-
-  // CoreCodecGetAuxBufferCollectionConstraints
-  //
-  // The AuxBufferCollection is a secondary set of buffers paired with the primary buffers. They are
-  // used as a passthrough of clear data from a Decryptor to a Decoder in normal non-protected
-  // buffers.  Generally, if the DecryptorAdapter can support this functionality, it should set
-  // `allow_clear_aux_buffers_for_secure` to true for the Output port. If the decoder's CodecAdapter
-  // needs the clear data in insecure buffers, it should set the `need_clear_aux_buffers_for_secure`
-  // to true for the Input port.
-  virtual std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
-  CoreCodecGetAuxBufferCollectionConstraints(CodecPort port) {
-    return std::nullopt;
-  }
 
   // There are no VMO handles in the buffer_collection_info.  Those are instead
   // provided via calls to CoreCodecAddBuffer(), as CodecImpl handles allocation

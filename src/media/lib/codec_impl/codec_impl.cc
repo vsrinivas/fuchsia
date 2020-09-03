@@ -4,7 +4,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/clone.h>
@@ -12,11 +11,8 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_vmo_range.h>
 #include <lib/media/codec_impl/log.h>
-#include <lib/media/codec_impl/pending_buffer_collection_info.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
-
-#include <mutex>
 
 #include <fbl/macros.h>
 
@@ -371,15 +367,15 @@ void CodecImpl::AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer
                     vmo.vmo_usable_size()));
 }
 
-void CodecImpl::AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-                                             std::optional<CodecVmoRange> aux_vmo_range) {
+void CodecImpl::AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info,
+                                             CodecVmoRange vmo_range) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   if (IsStopping()) {
     return;
   }
   // We must check, because __WARN_UNUSED_RESULT, and it's worth it for the
   // enforcement and consistency.
-  if (!AddBufferCommon(std::move(buffer_info), std::move(vmo_range), std::move(aux_vmo_range))) {
+  if (!AddBufferCommon(std::move(buffer_info), std::move(vmo_range))) {
     return;
   }
 }
@@ -508,12 +504,11 @@ void CodecImpl::AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer) {
                                         vmo.vmo_usable_start(), vmo.vmo_usable_size()));
 }
 
-void CodecImpl::AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-                                        std::optional<CodecVmoRange> aux_vmo_range) {
+void CodecImpl::AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
 
   bool output_buffers_done_configuring =
-      AddBufferCommon(std::move(buffer_info), std::move(vmo_range), std::move(aux_vmo_range));
+      AddBufferCommon(std::move(buffer_info), std::move(vmo_range));
   if (output_buffers_done_configuring) {
     // The StreamControl domain _might_ be waiting for output to be configured.
     wake_stream_control_condition_.notify_all();
@@ -1699,16 +1694,14 @@ void CodecImpl::SetBufferSettingsCommon(
     // We intentionally don't want to hand the sysmem token directly to the core
     // codec, at least for now (maybe later it'll be necessary).
     ZX_DEBUG_ASSERT(!port_settings_[port]->partial_settings().has_sysmem_token());
-    auto [buffer_collection_constraints,
-          maybe_aux_buffer_collection_constraints] = [this, port, &lock, &stream_constraints]() {
-      // port_settings_[port] can only change on this thread so are safe to
-      // read outside the lock.
-      ScopedUnlock unlock(lock);
-      return std::make_pair(CoreCodecGetBufferCollectionConstraints(
-                                port, stream_constraints, port_settings_[port]->partial_settings()),
-                            CoreCodecGetAuxBufferCollectionConstraints(port));
-    }();
-
+    fuchsia::sysmem::BufferCollectionConstraints buffer_collection_constraints =
+        [this, port, &lock, &stream_constraints]() {
+          // port_settings_[port] can only change on this thread so are safe to
+          // read outside the lock.
+          ScopedUnlock unlock(lock);
+          return CoreCodecGetBufferCollectionConstraints(port, stream_constraints,
+                                                         port_settings_[port]->partial_settings());
+        }();
     // The core codec doesn't fill out usage directly.  Instead we fill it out
     // here.
     if (!FixupBufferCollectionConstraintsLocked(port, stream_constraints,
@@ -1720,86 +1713,68 @@ void CodecImpl::SetBufferSettingsCommon(
     }
     // For output, the only reason we re-post here is to share the lock
     // acquisition code with input.
-    PostToSharedFidl([this, port, buffer_lifetime_ordinal = buffer_lifetime_ordinal_[port],
-                      token = std::move(token),
-                      buffer_collection_constraints = std::move(buffer_collection_constraints),
-                      maybe_aux_buffer_collection_constraints =
-                          std::move(maybe_aux_buffer_collection_constraints)]() mutable {
-      std::lock_guard<std::mutex> lock(lock_);
-      if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
-        return;
-      }
-      if (!sysmem_) {
-        return;
-      }
-      if (IsStoppingLocked()) {
-        return;
-      }
-      sysmem_->BindSharedCollection(
-          std::move(token),
-          port_settings_[port]->NewBufferCollectionRequest(shared_fidl_dispatcher_));
-      port_settings_[port]->buffer_collection().set_error_handler(
-          [this, port, buffer_lifetime_ordinal](zx_status_t status) {
-            std::lock_guard<std::mutex> lock(lock_);
-            if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
-              // It's fine if a BufferCollection fails after we're already
-              // done using it.
-              return;
-            }
-            // We're intentionally picky about the BufferCollection failing
-            // too soon, as all clean closes should use Close(), which will
-            // avoid causing this.  If we find a case where a client
-            // legitimately needs to try one way then if that fails try
-            // another way, we should see if we can avoid the need to do
-            // that by expressing in sysmem constraints, or more likely just
-            // accept that such a client will need to start with a new codec
-            // instance for the 2nd try.
-            UnbindLocked();
-          });
-      std::string buffer_name = codec_adapter_->CoreCodecGetName();
-      switch (port) {
-        case kInputPort:
-          buffer_name += "Input";
-          break;
-        case kOutputPort:
-          buffer_name += "Output";
-          break;
-        default:
-          buffer_name += "Unknown";
-          break;
-      }
-      port_settings_[port]->buffer_collection()->SetName(11, buffer_name);
-      port_settings_[port]->buffer_collection()->SetDebugClientInfo(
-          codec_adapter_->CoreCodecGetName(), 0);
+    PostToSharedFidl(
+        [this, port, buffer_lifetime_ordinal = buffer_lifetime_ordinal_[port],
+         token = std::move(token),
+         buffer_collection_constraints = std::move(buffer_collection_constraints)]() mutable {
+          std::lock_guard<std::mutex> lock(lock_);
+          if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+            return;
+          }
+          if (!sysmem_) {
+            return;
+          }
+          if (IsStoppingLocked()) {
+            return;
+          }
+          sysmem_->BindSharedCollection(
+              std::move(token),
+              port_settings_[port]->NewBufferCollectionRequest(shared_fidl_dispatcher_));
+          port_settings_[port]->buffer_collection().set_error_handler(
+              [this, port, buffer_lifetime_ordinal](zx_status_t status) {
+                std::lock_guard<std::mutex> lock(lock_);
+                if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+                  // It's fine if a BufferCollection fails after we're already
+                  // done using it.
+                  return;
+                }
+                // We're intentionally picky about the BufferCollection failing
+                // too soon, as all clean closes should use Close(), which will
+                // avoid causing this.  If we find a case where a client
+                // legitimately needs to try one way then if that fails try
+                // another way, we should see if we can avoid the need to do
+                // that by expressing in sysmem constraints, or more likely just
+                // accept that such a client will need to start with a new codec
+                // instance for the 2nd try.
+                UnbindLocked();
+              });
+          std::string buffer_name = codec_adapter_->CoreCodecGetName();
+          switch (port) {
+            case kInputPort:
+              buffer_name += "Input";
+              break;
+            case kOutputPort:
+              buffer_name += "Output";
+              break;
+            default:
+              buffer_name += "Unknown";
+              break;
+          }
+          port_settings_[port]->buffer_collection()->SetName(11, buffer_name);
+          port_settings_[port]->buffer_collection()->SetDebugClientInfo(
+              codec_adapter_->CoreCodecGetName(), 0);
 
-      PendingBufferCollectionInfo pending_buffer_collection_info(
-          port, buffer_lifetime_ordinal, maybe_aux_buffer_collection_constraints);
+          port_settings_[port]->buffer_collection()->SetConstraints(
+              true, std::move(buffer_collection_constraints));
 
-      if (maybe_aux_buffer_collection_constraints) {
-        port_settings_[port]->buffer_collection()->SetConstraintsAuxBuffers(
-            *std::move(maybe_aux_buffer_collection_constraints));
-      }
-
-      port_settings_[port]->buffer_collection()->SetConstraints(
-          true, std::move(buffer_collection_constraints));
-
-      port_settings_[port]->buffer_collection()->WaitForBuffersAllocated(
-          [this, pending_buffer_collection_info = std::move(pending_buffer_collection_info)](
-              zx_status_t status,
-              fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) mutable {
-            pending_buffer_collection_info.set_buffer_collection_info(
-                status, std::move(buffer_collection_info));
-
-            // If the CoreCodec allows AuxBuffers, then we should attempt to fetch them from sysmem
-            // unless there is already an error on the buffer collection.
-            if (pending_buffer_collection_info.AllowsAuxBuffersForSecure() &&
-                !pending_buffer_collection_info.HasError()) {
-              GetAuxBuffers(std::move(pending_buffer_collection_info));
-            } else {
-              OnBufferCollectionInfo(std::move(pending_buffer_collection_info));
-            }
-          });
-    });
+          port_settings_[port]->buffer_collection()->WaitForBuffersAllocated(
+              [this, port, buffer_lifetime_ordinal](
+                  zx_status_t status,
+                  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) mutable {
+                OnBufferCollectionInfo(port, buffer_lifetime_ordinal, status,
+                                       std::move(buffer_collection_info));
+              });
+        });
   } else {
     // This path probably won't stick around for very long, and involves a
     // substantial amount of simulation of the new way based on old settings. To
@@ -1868,39 +1843,27 @@ void CodecImpl::SetBufferSettingsCommon(
   }
 }
 
-void CodecImpl::GetAuxBuffers(PendingBufferCollectionInfo pending_buffer_collection_info) {
+void CodecImpl::OnBufferCollectionInfo(
+    CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t status,
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
 
-  std::lock_guard<std::mutex> lock(lock_);
-  port_settings_[pending_buffer_collection_info.port()]->buffer_collection()->GetAuxBuffers(
-      [this, pending_buffer_collection_info = std::move(pending_buffer_collection_info)](
-          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) mutable {
-        pending_buffer_collection_info.set_aux_buffer_collection_info(status, std::move(info));
-        OnBufferCollectionInfo(std::move(pending_buffer_collection_info));
-      });
-}
-
-void CodecImpl::OnBufferCollectionInfo(PendingBufferCollectionInfo pending_buffer_collection_info) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-
-  auto port = pending_buffer_collection_info.port();
   if (port == kInputPort) {
-    PostSysmemCompletion([this, pending_buffer_collection_info =
-                                    std::move(pending_buffer_collection_info)]() mutable {
-      OnBufferCollectionInfoInternal(std::move(pending_buffer_collection_info));
+    PostSysmemCompletion([this, port, buffer_lifetime_ordinal, status,
+                          buffer_collection_info = std::move(buffer_collection_info)]() mutable {
+      OnBufferCollectionInfoInternal(port, buffer_lifetime_ordinal, status,
+                                     std::move(buffer_collection_info));
     });
   } else {
     ZX_DEBUG_ASSERT(port == kOutputPort);
-    OnBufferCollectionInfoInternal(std::move(pending_buffer_collection_info));
+    OnBufferCollectionInfoInternal(port, buffer_lifetime_ordinal, status,
+                                   std::move(buffer_collection_info));
   }
 }
 
 void CodecImpl::OnBufferCollectionInfoInternal(
-    PendingBufferCollectionInfo pending_buffer_collection_info) {
-  auto port = pending_buffer_collection_info.port();
-  auto buffer_lifetime_ordinal = pending_buffer_collection_info.buffer_lifetime_ordinal();
-  ZX_DEBUG_ASSERT(pending_buffer_collection_info.IsReady());
-
+    CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t allocate_status,
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
 
@@ -1915,67 +1878,15 @@ void CodecImpl::OnBufferCollectionInfoInternal(
       // stale response
       return;
     }
-    if (pending_buffer_collection_info.buffer_collection().is_error()) {
-      FailLocked("OnBufferCollectionInfoInternal() sees failure - port: %d allocate_status: %d",
-                 port, pending_buffer_collection_info.buffer_collection().error());
+    if (allocate_status != ZX_OK) {
+      FailLocked(
+          "OnBufferCollectionInfoLocked() sees failure - port: %d "
+          "allocate_status: %d",
+          port, allocate_status);
       return;
-    }
-
-    // Additional checks for aux buffers
-    if (pending_buffer_collection_info.AllowsAuxBuffersForSecure()) {
-      ZX_DEBUG_ASSERT(pending_buffer_collection_info.aux_buffer_collection());
-      if (pending_buffer_collection_info.aux_buffer_collection().is_error()) {
-        FailLocked(
-            "OnBufferCollectionInfoInternal() sees failure - port: %d aux_buffers_allocate_status: "
-            "%d",
-            port, pending_buffer_collection_info.aux_buffer_collection().error());
-        return;
-      }
-      bool is_secure = pending_buffer_collection_info.buffer_collection()
-                           .value()
-                           .settings.buffer_settings.is_secure;
-      if (is_secure && pending_buffer_collection_info.NeedsAuxBuffersForSecure() &&
-          !pending_buffer_collection_info.HasValidAuxBufferCollection()) {
-        // If we don't have valid buffers, we should fail the allocation if we needed them, or just
-        // skip the checks if we didn't.
-        FailLocked(
-            "OnBufferCollectionInfoInternal() aux buffers needed, but not provided - port: %d",
-            port);
-        return;
-      }
-
-      if (pending_buffer_collection_info.HasValidAuxBufferCollection()) {
-        // Only need to check the buffer count and size if we actually have a valid buffer
-        // collection.
-        const auto& primary_info = pending_buffer_collection_info.buffer_collection().value();
-        const auto& aux_info = pending_buffer_collection_info.aux_buffer_collection().value();
-
-        if (primary_info.buffer_count != aux_info.buffer_count) {
-          FailLocked(
-              "OnBufferCollectionInfoInternal() buffer_count mismatch between primary and aux - "
-              "port: "
-              "%d primary: %d, aux: %d",
-              port, primary_info.buffer_count, aux_info.buffer_count);
-          return;
-        }
-        if (primary_info.settings.buffer_settings.size_bytes !=
-            aux_info.settings.buffer_settings.size_bytes) {
-          // Aux buffers should be the same size of the primary buffers, else they might not be
-          // usable.
-          FailLocked(
-              "OnBufferCollectionInfoInternal() aux_buffer size does not match primary buffer size "
-              "- port: %d %d != %d",
-              port, primary_info.settings.buffer_settings.size_bytes,
-              aux_info.settings.buffer_settings.size_bytes);
-          return;
-        }
-      }
     }
   }  // ~lock
 
-  auto buffer_collection_info = pending_buffer_collection_info.TakeBufferCollectionInfo();
-  auto maybe_aux_buffer_collection_info =
-      pending_buffer_collection_info.TakeAuxBufferCollectionInfo();
   uint32_t buffer_count = buffer_collection_info.buffer_count;
 
   // This code trusts sysmem to really be sysmem and to behave correctly, but
@@ -2028,7 +1939,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
 
   ZX_DEBUG_ASSERT(!fake_map_range_[port]);
   if (port_settings_[port]->is_secure()) {
-    if (IsCoreCodecMappedBufferUseful(port) && !maybe_aux_buffer_collection_info) {
+    if (IsCoreCodecMappedBufferUseful(port)) {
       zx_status_t status =
           FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
       if (status != ZX_OK) {
@@ -2063,22 +1974,11 @@ void CodecImpl::OnBufferCollectionInfoInternal(
                                   .index = i,
                                   .is_secure = is_secure};
     CodecVmoRange vmo_range(std::move(vmos[i]), vmo_usable_start, vmo_usable_size);
-
-    std::optional<CodecVmoRange> aux_vmo_range;
-    if (maybe_aux_buffer_collection_info) {
-      auto& aux_info = maybe_aux_buffer_collection_info.value();
-      aux_vmo_range =
-          CodecVmoRange(std::move(aux_info.buffers[i].vmo), aux_info.buffers[i].vmo_usable_start,
-                        aux_info.settings.buffer_settings.size_bytes);
-    }
-
     if (port == kInputPort) {
-      AddInputBuffer_StreamControl(std::move(buffer_info), std::move(vmo_range),
-                                   std::move(aux_vmo_range));
+      AddInputBuffer_StreamControl(std::move(buffer_info), std::move(vmo_range));
     } else {
       ZX_DEBUG_ASSERT(port == kOutputPort);
-      AddOutputBufferInternal(std::move(buffer_info), std::move(vmo_range),
-                              std::move(aux_vmo_range));
+      AddOutputBufferInternal(std::move(buffer_info), std::move(vmo_range));
     }
   }
 }
@@ -2284,8 +2184,7 @@ bool CodecImpl::ValidateStreamBuffer(const fuchsia::media::StreamBuffer& buffer)
   return true;
 }
 
-bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-                                std::optional<CodecVmoRange> aux_vmo_range) {
+bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range) {
   const CodecPort port = buffer_info.port;
   ZX_DEBUG_ASSERT(port == kInputPort && (thrd_current() == stream_control_thread_) ||
                   port == kOutputPort && (thrd_current() == fidl_thread()));
@@ -2339,11 +2238,10 @@ bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo
     return false;
   }
 
-  std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(new CodecBuffer(
-      this, std::move(buffer_info), std::move(vmo_range), std::move(aux_vmo_range)));
+  std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(
+      new CodecBuffer(this, std::move(buffer_info), std::move(vmo_range)));
 
-  if (IsCoreCodecMappedBufferUseful(port) || local_buffer->has_aux_buffer()) {
-    // This will be false if has_aux_buffer().
+  if (IsCoreCodecMappedBufferUseful(port)) {
     if (fake_map_range_[port]) {
       // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
       // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
@@ -4153,13 +4051,6 @@ fuchsia::sysmem::BufferCollectionConstraints CodecImpl::CoreCodecGetBufferCollec
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
   return codec_adapter_->CoreCodecGetBufferCollectionConstraints(port, stream_buffer_constraints,
                                                                  partial_settings);
-}
-
-std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
-CodecImpl::CoreCodecGetAuxBufferCollectionConstraints(CodecPort port) {
-  ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
-                  port == kOutputPort && thrd_current() == fidl_thread());
-  return codec_adapter_->CoreCodecGetAuxBufferCollectionConstraints(port);
 }
 
 void CodecImpl::CoreCodecSetBufferCollectionInfo(

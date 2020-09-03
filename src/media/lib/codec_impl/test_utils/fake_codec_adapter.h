@@ -20,8 +20,6 @@ class FakeCodecAdapter : public CodecAdapter {
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
-  std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
-  CoreCodecGetAuxBufferCollectionConstraints(CodecPort port) override;
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
       const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
@@ -48,14 +46,10 @@ class FakeCodecAdapter : public CodecAdapter {
   // Test hooks
   void SetBufferCollectionConstraints(CodecPort port,
                                       fuchsia::sysmem::BufferCollectionConstraints constraints);
-  void SetAuxBufferCollectionConstraints(
-      CodecPort port, fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints);
 
  private:
   std::optional<fuchsia::sysmem::BufferCollectionConstraints>
       buffer_collection_constraints_[kPortCount];
-  std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
-      aux_buffer_collection_constraints_[kPortCount];
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_TEST_UTILS_FAKE_CODEC_ADAPTER_H_

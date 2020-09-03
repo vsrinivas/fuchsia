@@ -28,8 +28,6 @@ source_set("codec_impl") {
     "codec_vmo_range.cc",
     "decryptor_adapter.cc",
     "fake_map_range.cc",
-    "include/lib/media/codec_impl/pending_buffer_collection_info.h",
-    "pending_buffer_collection_info.cc",
   ]
   include_dirs = [ "include" ]
   public = [

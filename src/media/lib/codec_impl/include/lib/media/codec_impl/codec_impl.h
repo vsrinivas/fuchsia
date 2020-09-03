@@ -7,13 +7,11 @@
 
 #include <fuchsia/media/drm/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
 #include <lib/fit/variant.h>
 #include <lib/thread-safe-deleter/thread_safe_deleter.h>
 #include <zircon/compiler.h>
@@ -29,7 +27,6 @@
 #include "codec_buffer.h"
 #include "codec_packet.h"
 #include "fake_map_range.h"
-#include "pending_buffer_collection_info.h"
 
 // The CodecImpl class can be used for both SW and HW codecs.
 //
@@ -193,8 +190,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void FailFatalLocked(const char* format, ...);
 
  private:
-  using PendingBufferCollectionInfo = codec_impl::internal::PendingBufferCollectionInfo;
-
   // We keep a queue of Stream objects rather than just a single current stream
   // object, so we can track which streams are future-discarded and which are
   // not yet known to be future-discarded.  This difference matters because
@@ -552,8 +547,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void SetInputBufferSettings_StreamControl(fuchsia::media::StreamBufferSettings input_settings);
   // Temporary until StreamProcessor.AddInputBuffer is removed.
   void AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer);
-  void AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-                                    std::optional<CodecVmoRange> aux_vmo_range = std::nullopt);
+  void AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
   void SetInputBufferPartialSettings_StreamControl(
       fuchsia::media::StreamBufferPartialSettings input_partial_settings);
   void FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lifetime_ordinal);
@@ -603,16 +597,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // Temporary until StreamProcessor.AddOutputBuffer is removed.
   void AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer);
-  void AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-                               std::optional<CodecVmoRange> aux_vmo_range = std::nullopt);
+  void AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
 
   // Returns true if the port is done configuring (last buffer was added).
   // Returns false if the port is not done configuring or if Fail() was called;
   // currently the caller doesn't need to tell the difference between these two
   // very different cases.
-  __WARN_UNUSED_RESULT bool AddBufferCommon(
-      CodecBuffer::Info buffer_info, CodecVmoRange vmo_range,
-      std::optional<CodecVmoRange> aux_vmo_range = std::nullopt);
+  __WARN_UNUSED_RESULT bool AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
 
   // Return value of false means FailLocked() has already been called.
   __WARN_UNUSED_RESULT bool CheckOldBufferLifetimeOrdinalLocked(CodecPort port,
@@ -826,13 +817,14 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings,
       fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints);
 
-  void GetAuxBuffers(PendingBufferCollectionInfo pending_buffer_collection_info);
-
-  void OnBufferCollectionInfo(PendingBufferCollectionInfo pending_buffer_collection_info);
+  void OnBufferCollectionInfo(CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t status,
+                              fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
   // When this method is called we know we're already on the correct thread per
   // the port.
-  void OnBufferCollectionInfoInternal(PendingBufferCollectionInfo pending_buffer_collection_info);
+  void OnBufferCollectionInfoInternal(
+      CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t allocate_status,
+      fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
   // This is set if IsCoreCodecHwBased(), so CodecBuffer::Pin() can get the physical address info,
   // so DMA can be done directly from/to BufferCollection buffers.  We cache this just so we're not
@@ -974,9 +966,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
-
-  std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
-  CoreCodecGetAuxBufferCollectionConstraints(CodecPort port) override;
 
   void CoreCodecSetBufferCollectionInfo(
       CodecPort port,
