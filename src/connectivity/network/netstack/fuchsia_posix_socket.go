@@ -1220,22 +1220,10 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 
 func (s *streamSocketImpl) close() {
 	if s.endpoint.decRef() {
-		var v tcpip.LingerOption
-		if err := s.ep.GetSockOpt(&v); err != nil {
-			panic(fmt.Sprintf("GetSockOpt(%T): %s", v, err))
+		var linger tcpip.LingerOption
+		if err := s.ep.GetSockOpt(&linger); err != nil {
+			panic(fmt.Sprintf("GetSockOpt(%T): %s", linger, err))
 		}
-
-		// From the gospel of `man 7 socket`:
-		//
-		//  When enabled, a close(2) or shutdown(2) will not return until all
-		//  queued messages for the socket have been successfully sent or the
-		//  linger timeout has been reached.  Otherwise, the call returns
-		//  immediately and the closing is done in the background.  When the socket
-		//  is closed as part of exit(2), it always lingers in the background.
-		//
-		// Thus we must allow linger-amount-of-time for pending writes to flush,
-		// and do so synchronously if linger is enabled.
-		time.AfterFunc(v.Timeout, func() { close(s.linger) })
 
 		doClose := func() {
 			s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone, s.loopPollDone)
@@ -1245,9 +1233,43 @@ func (s *streamSocketImpl) close() {
 			}
 		}
 
-		if v.Enabled {
+		if linger.Enabled {
+			// `man 7 socket`:
+			//
+			//  When enabled, a close(2) or shutdown(2) will not return until all
+			//  queued messages for the socket have been successfully sent or the
+			//  linger timeout has been reached. Otherwise, the call returns
+			//  immediately and the closing is done in the background. When the
+			//  socket is closed as part of exit(2), it always lingers in the
+			//  background.
+			//
+			// Thus we must allow linger-amount-of-time for pending writes to flush,
+			// and do so synchronously if linger is enabled.
+			time.AfterFunc(linger.Timeout, func() { close(s.linger) })
 			doClose()
 		} else {
+			// Here be dragons.
+			//
+			// Normally, with linger disabled, the socket is immediately closed to
+			// the application (accepting no more writes) and lingers for TCP_LINGER2
+			// duration. However, because of the use of a zircon socket in front of
+			// the netstack endpoint, we can't be sure that all writes have flushed
+			// from the zircon socket to the netstack endpoint when we observe
+			// `close(3)`. This in turn means we can't close the netstack endpoint
+			// (which would start the TCP_LINGER2 timer), because there may still be
+			// data pending in the zircon socket (e.g. when the netstack endpoint's
+			// send buffer is full). We need *some* condition to break us out of this
+			// deadlock.
+			//
+			// We pick TCP_LINGER2 somewhat arbitrarily. In the worst case, this
+			// means that our true TCP linger time will be twice the configured
+			// value, but this is the best we can do without rethinking the
+			// interfaces.
+			var linger tcpip.TCPLingerTimeoutOption
+			if err := s.ep.GetSockOpt(&linger); err != nil {
+				panic(fmt.Sprintf("GetSockOpt(%T): %s", linger, err))
+			}
+			time.AfterFunc(time.Duration(linger), func() { close(s.linger) })
 			go doClose()
 		}
 	}
