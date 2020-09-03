@@ -1,0 +1,4 @@
+fuchsia-pkg://fuchsia.com/factory_store_providers#meta/factory_store_providers.cmx
+fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx
+fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx
+fuchsia-pkg://fuchsia.com/has-factory-data#meta/has-factory-data.cmx
