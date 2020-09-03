@@ -56,10 +56,6 @@ var (
 	useRuntests bool
 
 	// The output filename for the snapshot. This will be created in the outDir.
-	// TODO(fxb/50926): to be deprecated in favor of `snapshotFile`.
-	bugreportFile string
-
-	// The output filename for the snapshot. This will be created in the outDir.
 	snapshotFile string
 
 	// Per-test timeout.
@@ -81,8 +77,6 @@ func main() {
 	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
-	// TODO(fxb/50926): to be deprecated in favor of `snapshot-output`.
-	flag.StringVar(&bugreportFile, "bugreport-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	flag.StringVar(&snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	// TODO(fxb/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
@@ -254,12 +248,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			continue
 		}
 		defer t.Close()
-		// TODO(fxb/50926): temporarily fallback on the legacy `bugreportFile` if the replacing flag has not been set.
-		file := snapshotFile
-		if file == "" {
-			file = bugreportFile
-		}
-		if err := t.RunSnapshot(ctx, file); err != nil {
+		if err := t.RunSnapshot(ctx, snapshotFile); err != nil {
 			return err
 		}
 		if err := t.CopySinks(ctx, sinks); err != nil {
