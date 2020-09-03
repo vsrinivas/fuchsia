@@ -509,9 +509,12 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
   bcme_status_t fw_err = BCME_OK;
   struct brcmf_if* ifp;
+  const char* iface_role_name;
 
   switch (req->role) {
     case WLAN_INFO_MAC_ROLE_AP:
+      iface_role_name = "ap";
+
       if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, true)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
@@ -534,9 +537,10 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         }
       }
 
-      *wdev_out = wdev;
-      return ZX_OK;
+      break;
     case WLAN_INFO_MAC_ROLE_CLIENT:
+      iface_role_name = "client";
+
       if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, false)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
@@ -588,11 +592,19 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         }
       }
 
-      *wdev_out = wdev;
-      return ZX_OK;
+      break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
+
+  // Log the new iface's role, name, and MAC address
+  const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
+  BRCMF_DBG(WLANIF, "Created %s iface netdev:%s with MAC address %02x:%02x:%02x:%02x:%02x:%02x",
+            iface_role_name, ndev->name, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
+            mac_addr[4], mac_addr[5]);
+
+  *wdev_out = wdev;
+  return ZX_OK;
 }
 
 static void brcmf_scan_config_mpc(struct brcmf_if* ifp, int mpc) {
