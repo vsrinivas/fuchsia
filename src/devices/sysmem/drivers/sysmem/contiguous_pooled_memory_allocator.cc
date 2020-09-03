@@ -240,8 +240,9 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   return ZX_OK;
 }
 
-zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(const zx::vmo& parent_vmo,
-                                                           const zx::vmo& child_vmo) {
+zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(
+    const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+    llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) {
   // nothing to do here
   return ZX_OK;
 }

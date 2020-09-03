@@ -45,7 +45,10 @@ class MemoryAllocator {
   // boot, and can be used to identify whether an arbitrary VMO handle refers to
   // the same VMO as child_vmo.  Any such tracking by koid should be cleaned up
   // during Delete().
-  virtual zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) = 0;
+  virtual zx_status_t SetupChildVmo(
+      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) = 0;
+
   // This also should clean up any tracking of child_vmo by child_vmo's koid.
   // The child_vmo object itself, and all handles to it, are completely gone by
   // this point.  Any child_vmo handle values are no longer guaranteed unique,

@@ -73,7 +73,9 @@ void Heap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) {
   }
 }
 
-void Heap::CreateResource(::zx::vmo vmo, CreateResourceCompleter::Sync completer) {
+void Heap::CreateResource(::zx::vmo vmo,
+                          llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
+                          CreateResourceCompleter::Sync completer) {
   uint64_t id = control_->RegisterBufferHandle(vmo);
   if (id == ZX_KOID_INVALID) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0u);

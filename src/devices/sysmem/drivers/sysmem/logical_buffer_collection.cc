@@ -2046,7 +2046,9 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   ZX_DEBUG_ASSERT(emplace_result.second);
 
   // Now inform the allocator about the child VMO before we return it.
-  status = allocator->SetupChildVmo(parent_vmo_ref.vmo(), local_child_vmo);
+  status = allocator->SetupChildVmo(
+      parent_vmo_ref.vmo(), local_child_vmo,
+      sysmem::V2CloneSingleBufferSettingsBuilder(&allocator_, settings).build());
   if (status != ZX_OK) {
     LogError("allocator->SetupChildVmo() failed - status: %d", status);
     // In this path, the ~local_child_vmo will async trigger parent_vmo_ref::OnZeroChildren()

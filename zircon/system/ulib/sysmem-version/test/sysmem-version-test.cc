@@ -538,6 +538,17 @@ TEST(SysmemVersion, SingleBufferSettings) {
     auto v1_2 = v1_2_result.take_value();
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
+
+    auto v2_builder_result = sysmem::V2CopyFromV1SingleBufferSettings(&allocator, snap_1->value());
+    EXPECT_TRUE(v2_builder_result.is_ok());
+    auto v2_3_result =
+        sysmem::V2CloneSingleBufferSettingsBuilder(&allocator, v2_builder_result.value());
+    auto v2_3 = v2_3_result.build();
+    auto v1_3_result = sysmem::V1CopyFromV2SingleBufferSettings(v2_3);
+    EXPECT_TRUE(v1_3_result.is_ok());
+    auto v1_3 = v1_3_result.take_value();
+    auto snap_3 = SnapMoveFrom(std::move(v1_3));
+    EXPECT_TRUE(IsEqual(*snap_1, *snap_3));
   }
 }
 

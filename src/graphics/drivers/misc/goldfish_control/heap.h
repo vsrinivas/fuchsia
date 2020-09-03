@@ -35,7 +35,8 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void CreateResource(::zx::vmo vmo, CreateResourceCompleter::Sync completer) override;
+  void CreateResource(::zx::vmo vmo, llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
+                      CreateResourceCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) override;

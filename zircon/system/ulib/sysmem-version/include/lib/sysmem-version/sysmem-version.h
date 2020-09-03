@@ -152,6 +152,9 @@ V2CloneImageFormatConstraints(fidl::Allocator* allocator,
                               const llcpp::fuchsia::sysmem2::ImageFormatConstraints& src);
 [[nodiscard]] llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder V2CloneSingleBufferSettings(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings& src);
+[[nodiscard]] llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder
+V2CloneSingleBufferSettingsBuilder(
+    fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder& src);
 [[nodiscard]] fit::result<llcpp::fuchsia::sysmem2::VmoBuffer::Builder, zx_status_t>
 V2CloneVmoBuffer(fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::VmoBuffer& src,
                  uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask);

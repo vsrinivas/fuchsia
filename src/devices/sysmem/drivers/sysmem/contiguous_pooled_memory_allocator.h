@@ -37,7 +37,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override;
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override;
+  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+                            llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override;
   void Delete(zx::vmo parent_vmo) override;
 
   zx_status_t GetPhysicalMemoryInfo(uint64_t* base, uint64_t* size) override {

@@ -70,10 +70,14 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
     parent_vmo->set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
     return status;
   }
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
+
+  zx_status_t SetupChildVmo(
+      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
+
   virtual void Delete(zx::vmo parent_vmo) override {
     // ~parent_vmo
   }
@@ -119,7 +123,9 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
     *parent_vmo = std::move(result_parent_vmo);
     return ZX_OK;
   }
-  virtual zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
+  virtual zx_status_t SetupChildVmo(
+      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override {
     // nothing to do here
     return ZX_OK;
   }
@@ -156,7 +162,9 @@ class ExternalMemoryAllocator : public MemoryAllocator {
     return ZX_OK;
   }
 
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
+  zx_status_t SetupChildVmo(
+      const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
+      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override {
     zx::vmo child_vmo_copy;
     zx_status_t status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &child_vmo_copy);
     if (status != ZX_OK) {
@@ -166,7 +174,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    auto result = heap_->CreateResource_Sync(std::move(child_vmo_copy));
+    auto result = heap_->CreateResource_Sync(std::move(child_vmo_copy), std::move(buffer_settings));
     if (!result.ok() || result.value().s != ZX_OK) {
       DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
                    result.value().s);

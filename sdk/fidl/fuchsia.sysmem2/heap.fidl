@@ -64,7 +64,8 @@ protocol Heap {
     /// VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     /// alive beyond all sysmem participant usages of the vmo; instead
     /// the heap can get the vmo's koid for the heap's mapping.
-    CreateResource(zx.handle:VMO vmo) -> (zx.status s, uint64 id);
+    CreateResource(zx.handle:VMO vmo, SingleBufferSettings buffer_settings)
+        -> (zx.status s, uint64 id);
 
     /// Destroy previously created resources.
     DestroyResource(uint64 id) -> ();

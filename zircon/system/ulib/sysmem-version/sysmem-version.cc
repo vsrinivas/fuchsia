@@ -932,6 +932,21 @@ llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder V2CloneSingleBufferSettin
   return builder;
 }
 
+llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder V2CloneSingleBufferSettingsBuilder(
+    fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder& src) {
+  auto builder = allocator->make_table_builder<llcpp::fuchsia::sysmem2::SingleBufferSettings>();
+  if (src.has_buffer_settings()) {
+    builder.set_buffer_settings(sysmem::MakeTracking(
+        allocator, V2CloneBufferMemorySettings(allocator, src.buffer_settings()).build()));
+  }
+  if (src.has_image_format_constraints()) {
+    builder.set_image_format_constraints(sysmem::MakeTracking(
+        allocator,
+        V2CloneImageFormatConstraints(allocator, src.image_format_constraints()).build()));
+  }
+  return builder;
+}
+
 fit::result<llcpp::fuchsia::sysmem2::VmoBuffer::Builder, zx_status_t> V2CloneVmoBuffer(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::VmoBuffer& src,
     uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask) {
