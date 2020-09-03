@@ -99,15 +99,8 @@ impl ArchiveAccessor {
                             );
 
                             inspect_reader_server
-                                .stream_diagnostics(
-                                    stream_mode,
-                                    format,
-                                    result_stream,
-                                    inspect_reader_server_stats.clone(),
-                                )
-                                .unwrap_or_else(|_| {
-                                    warn!("Inspect Reader session crashed.");
-                                });
+                                .spawn(stream_mode, format, result_stream)
+                                .detach();
                             Ok(())
                         }
                         Err(e) => {
@@ -133,16 +126,7 @@ impl ArchiveAccessor {
                         inspect_reader_server_stats.clone(),
                     );
 
-                    inspect_reader_server
-                        .stream_diagnostics(
-                            stream_mode,
-                            format,
-                            result_stream,
-                            inspect_reader_server_stats.clone(),
-                        )
-                        .unwrap_or_else(|_| {
-                            warn!("Inspect Reader session crashed.");
-                        });
+                    inspect_reader_server.spawn(stream_mode, format, result_stream).detach();
                     Ok(())
                 }
                 _ => {
@@ -199,11 +183,7 @@ impl ArchiveAccessor {
                         lifecycle_stats.clone(),
                     );
 
-                    lifecycle_reader_server
-                        .stream_diagnostics(stream_mode, format, result_stream, lifecycle_stats)
-                        .unwrap_or_else(|_| {
-                            warn!("Lifecycle Reader session crashed.");
-                        });
+                    lifecycle_reader_server.spawn(stream_mode, format, result_stream).detach();
                     Ok(())
                 }
                 _ => {

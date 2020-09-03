@@ -229,11 +229,13 @@ impl Archivist {
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(55735): Lock down this protocol using allowlists.
-        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
+        let all_inspect_repository =
+            Arc::new(RwLock::new(DiagnosticsDataRepository::new(log_manager.clone(), None)));
 
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
         let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+            log_manager.clone(),
             match feedback_config.disable_filtering {
                 false => feedback_config.take_inspect_selectors().map(|selectors| {
                     selectors
@@ -248,17 +250,19 @@ impl Archivist {
         // The Inspect Repository offered to the LegacyMetrics
         // pipeline. This repository applies static selectors configured
         // under config/data/legacy_metrics to inspect exfiltration.
-        let legacy_metrics_inspect_repository = Arc::new(RwLock::new(
-            DiagnosticsDataRepository::new(match feedback_config.disable_filtering {
-                false => legacy_config.take_inspect_selectors().map(|selectors| {
-                    selectors
-                        .into_iter()
-                        .map(|selector| Arc::new(selector))
-                        .collect::<Vec<Arc<Selector>>>()
-                }),
-                true => None,
-            }),
-        ));
+        let legacy_metrics_inspect_repository =
+            Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+                log_manager.clone(),
+                match feedback_config.disable_filtering {
+                    false => legacy_config.take_inspect_selectors().map(|selectors| {
+                        selectors
+                            .into_iter()
+                            .map(|selector| Arc::new(selector))
+                            .collect::<Vec<Arc<Selector>>>()
+                    }),
+                    true => None,
+                },
+            )));
 
         // TODO(55736): Refactor this code so that we don't store
         // diagnostics data N times if we have N pipelines. We should be

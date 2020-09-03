@@ -6,7 +6,7 @@ use {
     crate::archive::EventFileGroupStatsMap,
     anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
-    fuchsia_inspect::{component, health::Reporter, Node, UintProperty},
+    fuchsia_inspect::{component, health::Reporter, Node, NumericProperty, UintProperty},
     lazy_static::lazy_static,
     parking_lot::Mutex,
     std::sync::Arc,
@@ -78,6 +78,10 @@ pub struct ArchiveAccessorStats {
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating lifecycle data.
     pub global_lifecycle_stats: Arc<DiagnosticsServerStatsGlobal>,
+
+    /// Global stats tracking the usages of StreamDiagnostics for
+    /// exfiltrating logs.
+    pub global_logs_stats: Arc<DiagnosticsServerStatsGlobal>,
 }
 
 pub struct ArchiveAccessorStatsGlobal {
@@ -106,6 +110,9 @@ impl ArchiveAccessorStats {
         let global_lifecycle_stats =
             Arc::new(DiagnosticsServerStatsGlobal::for_lifecycle(&mut archive_accessor_node));
 
+        let global_logs_stats =
+            Arc::new(DiagnosticsServerStatsGlobal::for_logs(&mut archive_accessor_node));
+
         ArchiveAccessorStats {
             archive_accessor_node,
             global_stats: Arc::new(ArchiveAccessorStatsGlobal {
@@ -115,6 +122,7 @@ impl ArchiveAccessorStats {
             }),
             global_inspect_stats,
             global_lifecycle_stats,
+            global_logs_stats,
         }
     }
 }
@@ -122,26 +130,26 @@ impl ArchiveAccessorStats {
 pub struct DiagnosticsServerStatsGlobal {
     /// Number of DiagnosticsServers created in response to an StreamDiagnostics
     /// client request.
-    pub reader_servers_constructed: fuchsia_inspect::UintProperty,
+    reader_servers_constructed: fuchsia_inspect::UintProperty,
     /// Number of DiagnosticsServers destroyed in response to falling out of scope.
-    pub reader_servers_destroyed: fuchsia_inspect::UintProperty,
+    reader_servers_destroyed: fuchsia_inspect::UintProperty,
     /// Property tracking number of opening connections to any batch iterator instance.
-    pub batch_iterator_connections_opened: fuchsia_inspect::UintProperty,
+    batch_iterator_connections_opened: fuchsia_inspect::UintProperty,
     /// Property tracking number of closing connections to any batch iterator instance.
-    pub batch_iterator_connections_closed: fuchsia_inspect::UintProperty,
+    batch_iterator_connections_closed: fuchsia_inspect::UintProperty,
     /// Property tracking number of times a future to retrieve diagnostics data for a component
     /// timed out.
-    pub component_timeouts_count: fuchsia_inspect::UintProperty,
+    component_timeouts_count: fuchsia_inspect::UintProperty,
     /// Number of times "GetNext" was called
-    pub batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
     /// Number of times a "GetNext" response was sent
-    pub batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
     /// Number of times "GetNext" resulted in an error
-    pub batch_iterator_get_next_errors: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_errors: fuchsia_inspect::UintProperty,
     /// Number of items returned in batches from "GetNext"
-    pub batch_iterator_get_next_result_count: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_result_count: fuchsia_inspect::UintProperty,
     /// Number of items returned in batches from "GetNext" that contained errors
-    pub batch_iterator_get_next_result_errors: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_result_errors: fuchsia_inspect::UintProperty,
 }
 
 impl DiagnosticsServerStatsGlobal {
@@ -155,6 +163,12 @@ impl DiagnosticsServerStatsGlobal {
     //              named properties under different nodes for each diagnostics source.
     pub fn for_lifecycle(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
         DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "lifecycle")
+    }
+
+    // TODO(54442): Consider encoding prefix as node name and represent the same
+    //              named properties under different nodes for each diagnostics source.
+    pub fn for_logs(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
+        DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "logs")
     }
 
     fn generate_server_properties(
@@ -196,6 +210,10 @@ impl DiagnosticsServerStatsGlobal {
             batch_iterator_get_next_result_errors,
         }
     }
+
+    pub fn add_timeout(&self) {
+        self.component_timeouts_count.add(1);
+    }
 }
 
 pub struct DiagnosticsServerStats {
@@ -203,18 +221,56 @@ pub struct DiagnosticsServerStats {
     _batch_iterator_connection_node: fuchsia_inspect::Node,
 
     /// Global stats for the accessor itself.
-    pub global_stats: Arc<DiagnosticsServerStatsGlobal>,
+    global_stats: Arc<DiagnosticsServerStatsGlobal>,
 
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
-    pub batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
     /// Property tracking number of responses from the BatchIterator instance this struct is tracking.
-    pub batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
     /// Property tracking number of times the batch iterator has served a terminal batch signalling that
     /// the client has reached the end of the iterator and should terminate their connection.
-    pub batch_iterator_terminal_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_terminal_responses: fuchsia_inspect::UintProperty,
 }
 
 impl DiagnosticsServerStats {
+    pub fn open_connection(&self) {
+        self.global_stats.batch_iterator_connections_opened.add(1);
+    }
+
+    pub fn close_connection(&self) {
+        self.global_stats.batch_iterator_connections_closed.add(1);
+    }
+
+    pub fn global_stats(&self) -> &Arc<DiagnosticsServerStatsGlobal> {
+        &self.global_stats
+    }
+
+    pub fn add_request(self: &Arc<Self>) {
+        self.global_stats.batch_iterator_get_next_requests.add(1);
+        self.batch_iterator_get_next_requests.add(1);
+    }
+
+    pub fn add_response(self: &Arc<Self>) {
+        self.global_stats.batch_iterator_get_next_responses.add(1);
+        self.batch_iterator_get_next_responses.add(1);
+    }
+
+    pub fn add_terminal(self: &Arc<Self>) {
+        self.batch_iterator_terminal_responses.add(1);
+    }
+
+    pub fn add_result(&self) {
+        self.global_stats.batch_iterator_get_next_result_count.add(1);
+    }
+
+    pub fn add_error(&self) {
+        self.global_stats.batch_iterator_get_next_errors.add(1);
+    }
+
+    pub fn add_result_error(&self) {
+        self.global_stats.batch_iterator_get_next_result_errors.add(1);
+    }
+
     pub fn for_inspect(archive_accessor_stats: Arc<ArchiveAccessorStats>) -> Self {
         let global_inspect = archive_accessor_stats.global_inspect_stats.clone();
         DiagnosticsServerStats::generate_diagnostics_server_stats(
@@ -233,11 +289,24 @@ impl DiagnosticsServerStats {
         )
     }
 
+    pub fn for_logs(archive_accessor_stats: Arc<ArchiveAccessorStats>) -> Self {
+        let global_logs = archive_accessor_stats.global_logs_stats.clone();
+        DiagnosticsServerStats::generate_diagnostics_server_stats(
+            archive_accessor_stats,
+            global_logs,
+            "logs",
+        )
+    }
+
     pub fn generate_diagnostics_server_stats(
         archive_accessor_stats: Arc<ArchiveAccessorStats>,
         global_stats: Arc<DiagnosticsServerStatsGlobal>,
         prefix: &str,
     ) -> Self {
+        // we'll decrement these on drop
+        global_stats.reader_servers_constructed.add(1);
+
+        // TODO(fxbug.dev/59454) add this to a "list node" instead of using numeric suffixes
         let batch_iterator_connection_node =
             archive_accessor_stats.archive_accessor_node.create_child(
                 fuchsia_inspect::unique_name(&format!("{}_batch_iterator_connection", prefix)),
@@ -257,6 +326,12 @@ impl DiagnosticsServerStats {
             batch_iterator_get_next_responses,
             batch_iterator_terminal_responses,
         }
+    }
+}
+
+impl Drop for DiagnosticsServerStats {
+    fn drop(&mut self) {
+        self.global_stats.reader_servers_destroyed.add(1);
     }
 }
 

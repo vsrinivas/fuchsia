@@ -8,42 +8,35 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream},
-    fuchsia_async::{self as fasync},
-    fuchsia_inspect::NumericProperty,
+    fuchsia_async::{self as fasync, Task},
     futures::stream::FusedStream,
-    futures::{TryFutureExt, TryStreamExt},
-    log::{error, warn},
+    futures::TryStreamExt,
+    log::warn,
     std::sync::Arc,
 };
 
 #[async_trait]
 pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
-    /// Serve a snapshot of the buffered diagnostics data on system.
-    async fn serve_snapshot(
+    /// Return a reference to the stats node for this server.
+    fn stats(&self) -> &Arc<DiagnosticsServerStats>;
+
+    /// Serve a snapshot of the buffered diagnostics data.
+    async fn snapshot(
         &self,
         stream: &mut BatchIteratorRequestStream,
         format: &fidl_fuchsia_diagnostics::Format,
-        diagnostics_server_stats: Arc<DiagnosticsServerStats>,
     ) -> Result<(), Error>;
 
     /// Serve an empty vector to the client. The terminal vector will be sent
     /// until the client closes their connection.
-    async fn serve_terminal_batch(
-        &self,
-        stream: &mut BatchIteratorRequestStream,
-        diagnostics_server_stats: Arc<DiagnosticsServerStats>,
-    ) -> Result<(), Error> {
+    async fn terminate_batch(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {
         if stream.is_terminated() {
             return Ok(());
         }
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
-                    diagnostics_server_stats.global_stats.batch_iterator_get_next_requests.add(1);
-                    diagnostics_server_stats.global_stats.batch_iterator_get_next_responses.add(1);
-                    diagnostics_server_stats.batch_iterator_get_next_requests.add(1);
-                    diagnostics_server_stats.batch_iterator_get_next_responses.add(1);
-                    diagnostics_server_stats.batch_iterator_terminal_responses.add(1);
+                    self.stats().add_terminal();
                     responder.send(&mut Ok(Vec::new()))?;
                 }
             }
@@ -51,48 +44,47 @@ pub trait DiagnosticsServer: 'static + Sized + Send + Sync {
         Ok(())
     }
 
-    fn stream_diagnostics(
+    async fn serve(
         self,
         stream_mode: fidl_fuchsia_diagnostics::StreamMode,
         format: fidl_fuchsia_diagnostics::Format,
         result_stream: ServerEnd<BatchIteratorMarker>,
-        server_stats: Arc<DiagnosticsServerStats>,
     ) -> Result<(), Error> {
         let result_channel = fasync::Channel::from_channel(result_stream.into_channel())?;
-        let errorful_server_stats = server_stats.clone();
 
-        fasync::Task::spawn(
-            async move {
-                server_stats.global_stats.batch_iterator_connections_opened.add(1);
+        let mut iterator_req_stream =
+            fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(result_channel);
 
-                let mut iterator_req_stream =
-                    fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
-                        result_channel,
-                    );
+        if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Snapshot
+            || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
+        {
+            self.snapshot(&mut iterator_req_stream, &format).await?;
+        }
 
-                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Snapshot
-                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
-                {
-                    self.serve_snapshot(&mut iterator_req_stream, &format, server_stats.clone())
-                        .await?;
-                }
-
-                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Subscribe
-                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
-                {
-                    error!("not yet supported");
-                }
-                self.serve_terminal_batch(&mut iterator_req_stream, server_stats.clone()).await?;
-                server_stats.global_stats.batch_iterator_connections_closed.add(1);
-                Ok(())
-            }
-            .unwrap_or_else(move |e: anyhow::Error| {
-                errorful_server_stats.global_stats.batch_iterator_get_next_errors.add(1);
-                errorful_server_stats.global_stats.batch_iterator_connections_closed.add(1);
-                warn!("Error encountered running diagnostics server: {:?}", e);
-            }),
-        )
-        .detach();
+        if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Subscribe
+            || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
+        {
+            warn!("not yet supported");
+        }
+        self.terminate_batch(&mut iterator_req_stream).await?;
         Ok(())
+    }
+
+    /// Spawn a `Task` to serve the request.
+    fn spawn(
+        self,
+        stream_mode: fidl_fuchsia_diagnostics::StreamMode,
+        format: fidl_fuchsia_diagnostics::Format,
+        result_stream: ServerEnd<BatchIteratorMarker>,
+    ) -> Task<()> {
+        Task::spawn(async move {
+            let stats = self.stats().clone();
+            stats.open_connection();
+            if let Err(e) = self.serve(stream_mode, format, result_stream).await {
+                stats.add_error();
+                warn!("Error encountered running diagnostics server: {:?}", e);
+            }
+            stats.close_connection();
+        })
     }
 }

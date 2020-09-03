@@ -10,7 +10,6 @@ use {
     async_trait::async_trait,
     diagnostics_data::Data,
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
-    fuchsia_inspect::NumericProperty,
     futures::stream::FusedStream,
     futures::TryStreamExt,
     parking_lot::RwLock,
@@ -34,19 +33,12 @@ pub struct LifecycleServer {
     pub server_stats: Arc<DiagnosticsServerStats>,
 }
 
-impl Drop for LifecycleServer {
-    fn drop(&mut self) {
-        self.server_stats.global_stats.reader_servers_destroyed.add(1);
-    }
-}
-
 impl LifecycleServer {
     pub fn new(
         diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
         server_stats: Arc<DiagnosticsServerStats>,
     ) -> Self {
-        server_stats.global_stats.reader_servers_constructed.add(1);
         LifecycleServer {
             diagnostics_repo,
             configured_selectors: configured_selectors.map(|selectors| {
@@ -94,17 +86,20 @@ impl LifecycleServer {
 
 #[async_trait]
 impl DiagnosticsServer for LifecycleServer {
+    fn stats(&self) -> &Arc<DiagnosticsServerStats> {
+        &self.server_stats
+    }
+
     /// Takes a BatchIterator server channel and starts serving snapshotted
     /// lifecycle events as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
     /// diagnostics data aren't taken until a component is included in the upcoming batch.
     ///
     /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
-    async fn serve_snapshot(
+    async fn snapshot(
         &self,
         stream: &mut BatchIteratorRequestStream,
         format: &fidl_fuchsia_diagnostics::Format,
-        _diagnostics_server_stats: Arc<DiagnosticsServerStats>,
     ) -> Result<(), Error> {
         if stream.is_terminated() {
             return Ok(());
@@ -225,7 +220,10 @@ mod tests {
     }
 
     async fn verify_reader(path: PathBuf) {
-        let diagnostics_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
+        let diagnostics_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+            crate::logs::LogManager::new(),
+            None,
+        )));
 
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
@@ -269,8 +267,7 @@ mod tests {
                 test_batch_iterator_stats1.clone(),
             );
 
-            let result_json =
-                read_snapshot(reader_server, test_batch_iterator_stats1.clone()).await;
+            let result_json = read_snapshot(reader_server).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
@@ -288,34 +285,26 @@ mod tests {
                 test_batch_iterator_stats2.clone(),
             );
 
-            let result_json =
-                read_snapshot(reader_server, test_batch_iterator_stats2.clone()).await;
+            let result_json = read_snapshot(reader_server).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 0, "Expect no schema to be returned.");
         }
     }
 
-    async fn read_snapshot(
-        reader_server: LifecycleServer,
-        server_stats: Arc<DiagnosticsServerStats>,
-    ) -> serde_json::Value {
+    async fn read_snapshot(reader_server: LifecycleServer) -> serde_json::Value {
         let (consumer, batch_iterator): (
             _,
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
         ) = create_proxy().unwrap();
 
-        fasync::Task::spawn(async move {
-            reader_server
-                .stream_diagnostics(
-                    fidl_fuchsia_diagnostics::StreamMode::Snapshot,
-                    fidl_fuchsia_diagnostics::Format::Json,
-                    batch_iterator,
-                    server_stats.clone(),
-                )
-                .unwrap();
-        })
-        .detach();
+        reader_server
+            .spawn(
+                fidl_fuchsia_diagnostics::StreamMode::Snapshot,
+                fidl_fuchsia_diagnostics::Format::Json,
+                batch_iterator,
+            )
+            .detach();
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
