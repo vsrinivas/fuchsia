@@ -605,7 +605,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
 
   /* add primary networking interface */
   // TODO(WLAN-740): Name uniqueness
-  err = brcmf_add_if(drvr, 0, 0, "wlan", NULL, &ifp);
+  err = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
   if (err != ZX_OK) {
     return err;
   }
@@ -713,6 +713,13 @@ zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, 
 
 static int brcmf_get_pend_8021x_cnt(struct brcmf_if* ifp) { return ifp->pend_8021x_cnt.load(); }
 
+void brcmf_write_net_device_name(struct net_device* dev, const char* name) {
+  strlcpy(dev->name, name, sizeof(dev->name));
+  if (strlen(name) + 1 > sizeof(dev->name)) {
+    BRCMF_WARN("Truncated netdev:%s to netdev:%s", name, dev->name);
+  }
+}
+
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name) {
   struct net_device* dev = static_cast<decltype(dev)>(calloc(1, sizeof(*dev)));
   if (dev == NULL) {
@@ -723,7 +730,7 @@ struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name)
     free(dev);
     return NULL;
   }
-  strlcpy(dev->name, name, sizeof(dev->name));
+  brcmf_write_net_device_name(dev, name);
   return dev;
 }
 

@@ -5,6 +5,7 @@
 #include <ddk/protocol/wlanif.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -234,6 +235,88 @@ TEST_F(DynamicIfTest, CreateClientWritesWdev) {
 TEST_F(DynamicIfTest, CreateApWritesWdev) {
   Init();
   CheckAddIfaceWritesWdev(WLAN_INFO_MAC_ROLE_AP, kFakeApName, softap_ifc_);
+}
+
+// This test verifies new client interface names are assigned, and that the default for the
+// primary network interface is kPrimaryNetworkInterfaceName (defined in core.h)
+TEST_F(DynamicIfTest, CreateClientWithCustomName) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  wireless_dev* wdev = nullptr;
+
+  wlan_info_mac_role_t client_role = WLAN_INFO_MAC_ROLE_CLIENT;
+  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
+
+  wlanphy_impl_create_iface_req_t req = {
+      .role = client_role,
+      .sme_channel = client_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kPrimaryNetworkInterfaceName));
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, &wdev));
+  EXPECT_EQ(0, strcmp(wdev->netdev->name, kFakeClientName));
+  EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kFakeClientName));
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+  EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kPrimaryNetworkInterfaceName));
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// This test verifies new ap interface names are assigned.
+TEST_F(DynamicIfTest, CreateApWithCustomName) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+  wireless_dev* wdev = nullptr;
+
+  wlan_info_mac_role_t ap_role = WLAN_INFO_MAC_ROLE_AP;
+  EXPECT_EQ(ZX_OK, softap_ifc_.Init(env_, ap_role));
+
+  wlanphy_impl_create_iface_req_t req = {
+      .role = ap_role,
+      .sme_channel = softap_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeApName, nullptr, &req, &wdev));
+  EXPECT_EQ(0, strcmp(wdev->netdev->name, kFakeApName));
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// This test verifies the truncation of long interface names.
+TEST_F(DynamicIfTest, CreateClientWithLongName) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+  wireless_dev* wdev = nullptr;
+
+  wlan_info_mac_role_t client_role = WLAN_INFO_MAC_ROLE_CLIENT;
+  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
+
+  size_t really_long_name_len = NET_DEVICE_NAME_MAX_LEN + 1;
+  ASSERT_GT(really_long_name_len,
+            (size_t)NET_DEVICE_NAME_MAX_LEN);  // assert + 1 did not cause an overflow
+  char really_long_name[really_long_name_len];
+  for (size_t i = 0; i < really_long_name_len - 1; i++) {
+    really_long_name[i] = '0' + ((i + 1) % 10);
+  }
+  really_long_name[really_long_name_len - 1] = '\0';
+
+  char truncated_name[NET_DEVICE_NAME_MAX_LEN];
+  strlcpy(truncated_name, really_long_name, sizeof(truncated_name));
+  ASSERT_LT(strlen(truncated_name),
+            strlen(really_long_name));  // sanity check that truncated_name is actually shorter
+
+  wlanphy_impl_create_iface_req_t req = {
+      .role = client_role,
+      .sme_channel = client_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, really_long_name, nullptr, &req, &wdev));
+  EXPECT_EQ(0, strcmp(wdev->netdev->name, truncated_name));
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
 TEST_F(DynamicIfTest, DualInterfaces) {

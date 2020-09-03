@@ -212,6 +212,7 @@ struct brcmf_if {
   sync_completion_t pend_8021x_wait;
 };
 
+void brcmf_write_net_device_name(struct net_device* dev, const char* name);
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name);
 void brcmf_free_net_device(struct net_device* dev);
 void brcmf_enable_tx(struct net_device* dev);
@@ -234,6 +235,9 @@ void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool succes
 void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 
+const char kPrimaryNetworkInterfaceName[] = "wlan";
+#define NET_DEVICE_NAME_MAX_LEN 123
+
 struct net_device {
   bool initialized_for_ap;
   bool scan_busy;
@@ -243,7 +247,7 @@ struct net_device {
   uint32_t scan_num_results;
   wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
-  char name[123];
+  char name[NET_DEVICE_NAME_MAX_LEN];
   void* priv;
   struct {
     int tx_dropped;

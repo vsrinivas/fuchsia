@@ -550,6 +550,12 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       }
 
       ndev = drvr->iflist[bsscfgidx]->ndev;
+      if (strncmp(ndev->name, name, sizeof(ndev->name))) {
+        BRCMF_DBG(WLANIF,
+                  "Reusing netdev:%s for new client iface, but changing its name to netdev:%s.",
+                  ndev->name, name);
+        brcmf_write_net_device_name(ndev, name);
+      }
       ifp = brcmf_get_ifp(drvr, 0);
 
       // Since a single IF is shared when operating with manufacturing FW, ensure
@@ -797,6 +803,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
       // explicitly deleted.
       ndev->sme_channel.reset();
       ndev->needs_free_net_device = true;
+      brcmf_write_net_device_name(ndev, kPrimaryNetworkInterfaceName);
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;
