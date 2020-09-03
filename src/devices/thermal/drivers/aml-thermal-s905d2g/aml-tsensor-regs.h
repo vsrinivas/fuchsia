@@ -14,16 +14,16 @@
 // Register offset
 #define AML_TRIM_INFO           0x268
 #define AML_HHI_TS_CLK_CNTL     0x64 << 2
-#define AML_TS_CFG_REG1         (0x800 + (0x1 << 2))
-#define AML_TS_CFG_REG2         (0x800 + (0x2 << 2))
-#define AML_TS_CFG_REG3         (0x800 + (0x3 << 2))
-#define AML_TS_CFG_REG4         (0x800 + (0x4 << 2))
-#define AML_TS_CFG_REG5         (0x800 + (0x5 << 2))
-#define AML_TS_CFG_REG6         (0x800 + (0x6 << 2))
-#define AML_TS_CFG_REG7         (0x800 + (0x7 << 2))
-#define AML_TS_CFG_REG8         (0x800 + (0x8 << 2))
-#define AML_TS_STAT0            (0x800 + (0x10 << 2))
-#define AML_TS_STAT1            (0x800 + (0x11 << 2))
+#define AML_TS_CFG_REG1         (0x1 << 2)
+#define AML_TS_CFG_REG2         (0x2 << 2)
+#define AML_TS_CFG_REG3         (0x3 << 2)
+#define AML_TS_CFG_REG4         (0x4 << 2)
+#define AML_TS_CFG_REG5         (0x5 << 2)
+#define AML_TS_CFG_REG6         (0x6 << 2)
+#define AML_TS_CFG_REG7         (0x7 << 2)
+#define AML_TS_CFG_REG8         (0x8 << 2)
+#define AML_TS_STAT0            (0x10 << 2)
+#define AML_TS_STAT1            (0x11 << 2)
 #define IRQ_FALL_ENABLE_SHIFT   28
 #define IRQ_RISE_ENABLE_SHIFT   24
 #define IRQ_FALL_STAT_CLR_SHIFT 20

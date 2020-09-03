@@ -313,53 +313,51 @@ class AmlTSensorTest : public zxtest::Test {
       return;
     }
 
-    (*mock_ao_mmio_)[0x268].ExpectRead(0x00000000);      // trim_info_
-    (*mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);  // set clock
-    (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
-        .ExpectRead(0x00000000)
-        .ExpectWrite(0x63B);  // sensor ctl
+    (*mock_ao_mmio_)[0x268].ExpectRead(0x00000000);                           // trim_info_
+    (*mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);                       // set clock
+    (*mock_pll_mmio_)[(0x1 << 2)].ExpectRead(0x00000000).ExpectWrite(0x63B);  // sensor ctl
   }
 
   void Create(bool less) {
     // InitTripPoints
     if (!less) {
-      (*mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+      (*mock_pll_mmio_)[(0x5 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 4, rise
           .ExpectWrite(0x00027E);
-      (*mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+      (*mock_pll_mmio_)[(0x7 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 4, fall
           .ExpectWrite(0x000272);
-      (*mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+      (*mock_pll_mmio_)[(0x5 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 3, rise
           .ExpectWrite(0x272000);
-      (*mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+      (*mock_pll_mmio_)[(0x7 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 3, fall
           .ExpectWrite(0x268000);
-      (*mock_pll_mmio_)[(0x800 + (0x4 << 2))]
+      (*mock_pll_mmio_)[(0x4 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 2, rise
           .ExpectWrite(0x00025A);
-      (*mock_pll_mmio_)[(0x800 + (0x6 << 2))]
+      (*mock_pll_mmio_)[(0x6 << 2)]
           .ExpectRead(0x00000000)  // set thresholds 2, fall
           .ExpectWrite(0x000251);
     }
-    (*mock_pll_mmio_)[(0x800 + (0x4 << 2))]
+    (*mock_pll_mmio_)[(0x4 << 2)]
         .ExpectRead(0x00000000)  // set thresholds 1, rise
         .ExpectWrite(0x250000);
-    (*mock_pll_mmio_)[(0x800 + (0x6 << 2))]
+    (*mock_pll_mmio_)[(0x6 << 2)]
         .ExpectRead(0x00000000)  // set thresholds 1, fall
         .ExpectWrite(0x245000);
-    (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+    (*mock_pll_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);
-    (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+    (*mock_pll_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00000000);
     if (!less) {
-      (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+      (*mock_pll_mmio_)[(0x1 << 2)]
           .ExpectRead(0x00000000)  // enable IRQs
           .ExpectWrite(0x0F008000);
     } else {
-      (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+      (*mock_pll_mmio_)[(0x1 << 2)]
           .ExpectRead(0x00000000)  // enable IRQs
           .ExpectWrite(0x01008000);
     }
@@ -394,7 +392,7 @@ class AmlTSensorTest : public zxtest::Test {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x0000);
+    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -404,7 +402,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18A9);
+    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -414,7 +412,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
   Create(false);
   for (int j = 0; j < 0x10; j++) {
-    (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x32A7);
+    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x32A7);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -423,10 +421,10 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest3) {
   Create(false);
-  (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18A9);
-  (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18AA);
+  (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18A9);
+  (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x18AA);
   for (int j = 0; j < 0xE; j++) {
-    (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x0000);
+    (*mock_pll_mmio_)[(0x10 << 2)].ExpectRead(0x0000);
   }
 
   float val = tsensor_->ReadTemperatureCelsius();
@@ -901,18 +899,16 @@ class AmlThermalTest : public zxtest::Test {
       zxlogf(ERROR, "AmlThermalTest::SetUp: mock_hiu_mmio_ alloc failed");
       return;
     }
-    (*tsensor_mock_ao_mmio_)[0x268].ExpectRead(0x00000000);      // trim_info_
-    (*tsensor_mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);  // set clock
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
-        .ExpectRead(0x00000000)
-        .ExpectWrite(0x63B);  // sensor ctl
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+    (*tsensor_mock_ao_mmio_)[0x268].ExpectRead(0x00000000);                           // trim_info_
+    (*tsensor_mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);                       // set clock
+    (*tsensor_mock_pll_mmio_)[(0x1 << 2)].ExpectRead(0x00000000).ExpectWrite(0x63B);  // sensor ctl
+    (*tsensor_mock_pll_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+    (*tsensor_mock_pll_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00000000);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+    (*tsensor_mock_pll_mmio_)[(0x1 << 2)]
         .ExpectRead(0x00000000)  // enable IRQs
         .ExpectWrite(0x0F008000);
 
@@ -935,10 +931,10 @@ class AmlThermalTest : public zxtest::Test {
     }
 
     cpufreq_scaling_mock_hiu_internal_mmio_ = {
-            .vaddr = FakeMmioPtr(cpufreq_scaling_hiu_internal_mmio_.get()),
-            .offset = 0,
-            .size = kRegSize * sizeof(uint32_t),
-            .vmo = ZX_HANDLE_INVALID};
+        .vaddr = FakeMmioPtr(cpufreq_scaling_hiu_internal_mmio_.get()),
+        .offset = 0,
+        .size = kRegSize * sizeof(uint32_t),
+        .vmo = ZX_HANDLE_INVALID};
     InitHiuInternalMmio();
   }
 
@@ -995,14 +991,14 @@ class AmlThermalTest : public zxtest::Test {
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
 
         // InitTripPoints
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x00027E);  // set thresholds 4, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000272);  // set thresholds 4, fall
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x27227E);  // set thresholds 3, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x268272);  // set thresholds 3, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x00025A);  // set thresholds 2, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x000251);  // set thresholds 2, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x25025A);  // set thresholds 1, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x245251);  // set thresholds 1, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x00027E);  // set thresholds 4, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x000272);  // set thresholds 4, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x27227E);  // set thresholds 3, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x268272);  // set thresholds 3, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x00025A);  // set thresholds 2, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x000251);  // set thresholds 2, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x25025A);  // set thresholds 1, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x245251);  // set thresholds 1, fall
 
         break;
       }
@@ -1025,14 +1021,14 @@ class AmlThermalTest : public zxtest::Test {
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
 
         // InitTripPoints
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x000272);  // set thresholds 4, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000268);  // set thresholds 4, fall
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x266272);  // set thresholds 3, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x25c268);  // set thresholds 3, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x00025A);  // set thresholds 2, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x000251);  // set thresholds 2, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x25025A);  // set thresholds 1, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x245251);  // set thresholds 1, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x000272);  // set thresholds 4, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x000268);  // set thresholds 4, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x266272);  // set thresholds 3, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x25c268);  // set thresholds 3, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x00025A);  // set thresholds 2, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x000251);  // set thresholds 2, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x25025A);  // set thresholds 1, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x245251);  // set thresholds 1, fall
         break;
       }
       case 5: {  // Nelson
@@ -1055,14 +1051,14 @@ class AmlThermalTest : public zxtest::Test {
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
 
         // InitTripPoints
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x00029D);  // set thresholds 4, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000299);  // set thresholds 4, fall
-        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x26329D);  // set thresholds 3, rise
-        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x24A299);  // set thresholds 3, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x000257);  // set thresholds 2, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x00023F);  // set thresholds 2, fall
-        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x236257);  // set thresholds 1, rise
-        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x21F23F);  // set thresholds 1, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x00029D);  // set thresholds 4, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x000299);  // set thresholds 4, fall
+        tsensor_mmio[(0x5 << 2)].ExpectWrite(0x26329D);  // set thresholds 3, rise
+        tsensor_mmio[(0x7 << 2)].ExpectWrite(0x24A299);  // set thresholds 3, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x000257);  // set thresholds 2, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x00023F);  // set thresholds 2, fall
+        tsensor_mmio[(0x4 << 2)].ExpectWrite(0x236257);  // set thresholds 1, rise
+        tsensor_mmio[(0x6 << 2)].ExpectWrite(0x21F23F);  // set thresholds 1, fall
         break;
       }
       default:
