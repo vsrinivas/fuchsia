@@ -26,7 +26,17 @@ mod refs;
 mod types;
 mod util;
 
-pub use crate::types::Disk;
+#[cfg(fuzz)]
+mod fuzzer;
+#[cfg(fuzz)]
+use fuzz::fuzz;
+#[cfg(fuzz)]
+#[fuzz]
+fn fuzz_fatfs(fs: &[u8]) {
+    fuzzer::fuzz_fatfs(fs);
+}
+
+pub use types::Disk;
 
 /// Number of UCS-2 characters that fit in a VFAT LFN.
 /// Note that FAT doesn't support the full range of Unicode characters (UCS-2 is only 16 bits),
@@ -56,12 +66,12 @@ impl FatFs {
         FatFs { inner, root, fs_id: Event::create().expect("Event::create succeeds") }
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, fuzz))]
     pub fn get_fatfs_root(&self) -> Arc<FatDirectory> {
         self.root.clone()
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, fuzz))]
     pub fn filesystem(&self) -> &FatFilesystem {
         return &self.inner;
     }
