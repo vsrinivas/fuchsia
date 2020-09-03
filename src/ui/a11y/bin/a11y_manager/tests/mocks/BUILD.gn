@@ -12,8 +12,6 @@ source_set("mocks") {
     "mock_pointer_event_registry.h",
     "mock_property_provider.cc",
     "mock_property_provider.h",
-    "mock_semantic_listener.cc",
-    "mock_semantic_listener.h",
     "mock_setui_accessibility.cc",
     "mock_setui_accessibility.h",
   ]

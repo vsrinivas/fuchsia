@@ -18,12 +18,13 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_focus_chain.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_property_provider.h"
-#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
@@ -48,12 +49,14 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_focus_chain_(&context_provider_),
         mock_property_provider_(&context_provider_),
         mock_annotation_view_factory_(new MockAnnotationViewFactory()),
+        mock_view_semantics_factory_(new MockViewSemanticsFactory()),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<MockViewSemanticsFactory>(),
+                      std::unique_ptr<MockViewSemanticsFactory>(mock_view_semantics_factory_),
                       std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
                       context_provider_.context(), context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
+        mock_semantic_provider_(&view_manager_),
         app_(context_, &view_manager_, &tts_manager_, &color_transform_manager_,
              &gesture_listener_registry_) {}
 
@@ -72,11 +75,25 @@ class AppUnitTest : public gtest::TestLoopFixture {
               mock_property_provider_.get_profile_count());  // Stil 1, no changes in profile yet.
     // Note: 2 here because as soon as we get a settings, we call Watch() again.
     ASSERT_EQ(2, mock_setui_.num_watch_called());
+  }
 
-    zx::eventpair::create(0u, &eventpair_, &eventpair_peer_);
-    view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(eventpair_),
-    });
+  void AddNodeToTree(uint32_t node_id, std::string label,
+                     std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
+    std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+    auto node = CreateTestNode(node_id, label, child_ids);
+    node_updates.emplace_back(std::move(node));
+
+    ApplyNodeUpdates(std::move(node_updates));
+  }
+
+  void ApplyNodeUpdates(std::vector<a11y::SemanticTree::TreeUpdate> node_updates) {
+    auto mock_view_semantics = mock_view_semantics_factory_->GetViewSemantics();
+    ASSERT_TRUE(mock_view_semantics);
+
+    auto tree_ptr = mock_view_semantics->GetTree();
+    ASSERT_TRUE(tree_ptr);
+
+    ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
     RunLoopUntilIdle();
   }
 
@@ -102,7 +119,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   }
 
   void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
-    listener->OnEvent(ToPointerEvent(params, input_event_time_++, a11y::GetKoid(view_ref_)));
+    listener->OnEvent(ToPointerEvent(params, input_event_time_++, mock_semantic_provider_.koid()));
 
     // Simulate trivial passage of time (can expose edge cases with posted async tasks).
     RunLoopUntilIdle();
@@ -123,17 +140,16 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockFocusChain mock_focus_chain_;
   MockPropertyProvider mock_property_provider_;
   MockAnnotationViewFactory* mock_annotation_view_factory_;
+  MockViewSemanticsFactory* mock_view_semantics_factory_;
 
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
   a11y::GestureListenerRegistry gesture_listener_registry_;
+  MockSemanticProvider mock_semantic_provider_;
 
   // App under test
   a11y_manager::App app_;
-
-  fuchsia::ui::views::ViewRef view_ref_;
-  zx::eventpair eventpair_, eventpair_peer_;
 
  private:
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
@@ -145,46 +161,28 @@ class AppUnitTest : public gtest::TestLoopFixture {
 // Test sends a node update to ViewManager and then compare the expected
 // result using log file created by semantics manager.
 TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection;
-  fidl::Clone(view_ref_, &view_ref_connection);
-
   // Turn on the screen reader.
   fuchsia::settings::AccessibilitySettings settings;
   settings.set_screen_reader(true);
   mock_setui_.Set(std::move(settings), [](auto) {});
 
-  // Create ActionListener.
-  accessibility_test::MockSemanticListener semantic_listener(&context_provider_,
-                                                             std::move(view_ref_connection));
-  // We make sure the Semantic Listener has finished connecting to the
-  // root.
+  // Enble semantics and verify that they were enabled correctly.
+  view_manager_.SetSemanticsEnabled(true);
   RunLoopUntilIdle();
+  EXPECT_TRUE(mock_semantic_provider_.GetSemanticsEnabled());
 
   // Creating test node to update.
-  std::vector<Node> update_nodes;
-  Node node = CreateTestNode(0, "Label A");
-  Node clone_node;
-  node.Clone(&clone_node);
-  update_nodes.push_back(std::move(clone_node));
-
-  // Update the node created above.
-  semantic_listener.UpdateSemanticNodes(std::move(update_nodes));
-  RunLoopUntilIdle();
-
-  // Commit nodes.
-  semantic_listener.CommitUpdates();
-  RunLoopUntilIdle();
+  AddNodeToTree(0, "Label A");
 
   // Check that the node is in the semantic tree
-  auto created_node = view_manager_.GetSemanticNode(a11y::GetKoid(view_ref_), 0u);
+  auto created_node = view_manager_.GetSemanticNode(mock_semantic_provider_.koid(), 0u);
   EXPECT_TRUE(created_node);
   EXPECT_EQ(created_node->attributes().label(), "Label A");
 
   // Check that the committed node is present in the logs
   vfs::PseudoDir* debug_dir = context_->outgoing()->debug_dir();
   vfs::internal::Node* test_node;
-  EXPECT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
+  EXPECT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(mock_semantic_provider_.koid()), &test_node));
 }
 
 // This test makes sure that services implemented by the Tts manager are
@@ -405,34 +403,15 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
   RunLoopUntilIdle();
 
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection;
-  fidl::Clone(view_ref_, &view_ref_connection);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticListener semantic_listener(&context_provider_,
-                                                             std::move(view_ref_connection));
-  // We make sure the Semantic Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
   // Creating test node to update.
-  std::vector<Node> update_nodes;
-  uint32_t node_id = 0;
-  std::string node_label = "Label A";
-  Node node = CreateTestNode(node_id, node_label);
-  update_nodes.push_back(std::move(node));
+  AddNodeToTree(0, "Label A");
 
-  // Update the node created above.
-  semantic_listener.UpdateSemanticNodes(std::move(update_nodes));
-  RunLoopUntilIdle();
-
-  // Commit nodes.
-  semantic_listener.CommitUpdates();
-  RunLoopUntilIdle();
+  auto created_node = view_manager_.GetSemanticNode(mock_semantic_provider_.koid(), 0u);
+  EXPECT_TRUE(created_node);
+  EXPECT_EQ(created_node->attributes().label(), "Label A");
 
   // Set HitTest result which is required to know which node is being tapped.
-  semantic_listener.SetHitTestResult(node_id);
+  mock_semantic_provider_.SetHitTestResult(0);
 
   // Send Tap event for view_ref_. This should trigger explore action, which should then call
   // FocusChain to set focus to the tapped view.
@@ -440,10 +419,10 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
   ASSERT_TRUE(mock_focus_chain_.IsRequestFocusCalled());
-  EXPECT_EQ(a11y::GetKoid(view_ref_), mock_focus_chain_.GetFocusedViewKoid());
+  EXPECT_EQ(mock_semantic_provider_.koid(), mock_focus_chain_.GetFocusedViewKoid());
 
   auto highlighted_view =
-      mock_annotation_view_factory_->GetAnnotationView(a11y::GetKoid(view_ref_));
+      mock_annotation_view_factory_->GetAnnotationView(mock_semantic_provider_.koid());
   EXPECT_TRUE(highlighted_view);
   auto highlight = highlighted_view->GetCurrentHighlight();
   EXPECT_TRUE(highlight.has_value());

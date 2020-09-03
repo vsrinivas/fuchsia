@@ -64,6 +64,7 @@ executable("a11y_manager_apptests") {
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnification_handler",
+    "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/testing:input",
     "//src/ui/a11y/lib/util",
     "//src/ui/a11y/lib/view/tests/mocks",
