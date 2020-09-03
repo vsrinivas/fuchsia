@@ -167,6 +167,8 @@ TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0) << strerror(errno);
+
+  ASSERT_EQ(close(s), 0) << strerror(errno);
 }
 
 struct SockOption {
@@ -1178,6 +1180,25 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 
   fbl::unique_fd s1;
   ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type, 0))) << strerror(errno);
+
+// TODO(gvisor.dev/issue/3839): Remove this.
+#if defined(__Fuchsia__)
+  // Must outlive the block below.
+  fbl::unique_fd s;
+  if (type != SOCK_DGRAM && multicast) {
+    ASSERT_EQ(bind(s1.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
+    ASSERT_EQ(errno, EADDRNOTAVAIL) << strerror(errno);
+    ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
+    ip_mreqn param = {
+        .imr_multiaddr = addr.sin_addr,
+        .imr_address.s_addr = htonl(INADDR_ANY),
+        .imr_ifindex = 1,
+    };
+    ASSERT_EQ(setsockopt(s.get(), SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
+        << strerror(errno);
+  }
+#endif
+
   ASSERT_EQ(setsockopt(s1.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
   ASSERT_EQ(bind(s1.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
