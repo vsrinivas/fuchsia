@@ -26,7 +26,7 @@ MOCK_GN="prebuilt/third_party/gn/test/gn"
 MOCK_PYTHON3_DIR="prebuilt/third_party/python3/test"
 MOCK_RUST_TOOLS_DIR="prebuilt/third_party/rust_tools/test"
 BT_MOCKED_TOOLS=(
-  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/platform.sh"
   "prebuilt/third_party/vpython/vpython3"
   "${MOCK_CLANG_DIR}/bin/clang-format"
   "${MOCK_GN}"
@@ -45,7 +45,7 @@ BT_SET_UP() {
 
   # Set up mocked replacements for system utils.
   export PATH="${BT_TEMP_DIR}/bin:${PATH}"
-  cat > "${BT_TEMP_DIR}/tools/devshell/lib/prebuilt.sh.mock_side_effects" <<EOF
+  cat > "${BT_TEMP_DIR}/tools/devshell/lib/platform.sh.mock_side_effects" <<EOF
     readonly PREBUILT_CLANG_DIR=${BT_TEMP_DIR}/${MOCK_CLANG_DIR}
     readonly PREBUILT_GN=${BT_TEMP_DIR}/${MOCK_GN}
     readonly PREBUILT_PYTHON3_DIR=${BT_TEMP_DIR}/${MOCK_PYTHON3_DIR}

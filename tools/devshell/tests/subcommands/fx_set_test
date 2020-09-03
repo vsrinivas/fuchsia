@@ -18,7 +18,7 @@ BT_FILE_DEPS=(
 )
 BT_MOCKED_TOOLS=(
   "tools/devshell/lib/metrics.sh"
-  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/platform.sh"
   "${MOCKED_GN}"
 )
 
@@ -44,7 +44,7 @@ BT_SET_UP() {
     echo ""
   }
 EOF
-  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh.mock_side_effects" <<EOF
+  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/platform.sh.mock_side_effects" <<EOF
     readonly PREBUILT_GN="\${FUCHSIA_DIR}/${MOCKED_GN}"
 EOF
   cat > "${_FUCHSIA_DIR}/${MOCKED_GN}.mock_side_effects" <<EOF

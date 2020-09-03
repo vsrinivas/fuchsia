@@ -12,7 +12,7 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/vars.sh"
-  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/platform.sh"
 )
 
 BT_MOCKED_TOOLS=(
@@ -47,8 +47,8 @@ BT_SET_UP() {
     IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
 EOF
 
-  # Set up a dummy "prebuilt.sh"
-  cat > "${BT_TEMP_DIR}/tools/devshell/lib/prebuilt.sh" <<EOF
+  # Set up a dummy "platform.sh"
+  cat > "${BT_TEMP_DIR}/tools/devshell/lib/platform.sh" <<EOF
   readonly PREBUILT_CGPT_DIR="${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64"
 EOF
 

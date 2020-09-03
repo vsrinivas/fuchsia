@@ -11,7 +11,7 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
-  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/platform.sh"
   "tools/devshell/set-device"
   "tools/devshell/get-device-addr"
   "tools/devshell/shell"

@@ -2,21 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-case "$(uname -s)-$(uname -m)" in
-  Darwin-x86_64)
-    readonly HOST_PLATFORM="mac-x64"
+case "$(uname -s)" in
+  Linux)
+    readonly HOST_OS="linux"
     ;;
-  Linux-x86_64)
-    readonly HOST_PLATFORM="linux-x64"
-    ;;
-  Linux-aarch64)
-    readonly HOST_PLATFORM="linux-arm64"
+  Darwin)
+    readonly HOST_OS="mac"
     ;;
   *)
-    echo >&2 "Unknown operating system."
+    echo >&2 "Unknown operating system: $(uname -s)."
     exit 1
     ;;
 esac
+
+case "$(uname -m)" in
+  x86_64)
+    readonly HOST_CPU="x64"
+    ;;
+  aarch64)
+    readonly HOST_CPU="arm64"
+    ;;
+  *)
+    echo >&2 "Unknown architecture: $(uname -m)."
+    exit 1
+    ;;
+esac
+
+readonly HOST_PLATFORM="${HOST_OS}-${HOST_CPU}"
 
 readonly PREBUILT_3P_DIR="${FUCHSIA_DIR}/prebuilt/third_party"
 readonly PREBUILT_TOOLS_DIR="${FUCHSIA_DIR}/prebuilt/tools"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
+source "${FUCHSIA_DIR}/tools/devshell/lib/platform.sh"
 
 if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     echo "error: did you fx exec? missing \$FUCHSIA_BUILD_DIR" 1>&2

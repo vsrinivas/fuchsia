@@ -7,7 +7,7 @@
 
 BT_FILE_DEPS=(
     "scripts/fx-env.sh"
-    "tools/devshell/lib/prebuilt.sh"
+    "tools/devshell/lib/platform.sh"
     "tools/devshell/lib/vars.sh"
 )
 

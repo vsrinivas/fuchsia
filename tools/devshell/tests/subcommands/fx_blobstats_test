@@ -23,7 +23,7 @@ BT_FILE_DEPS=(
   "tools/devshell/contrib/blobstats"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
-  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/platform.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/blob.manifest"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/blobs.csv"

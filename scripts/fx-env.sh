@@ -68,7 +68,7 @@ function __fx_env_main() {
   # Add tools to path, removing prior tools directory if any. This also
   # matches the Zircon tools directory added by zset, so add it back too.
   function fx-update-path {
-    local rust_dir="$(source "${FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh" && echo -n "${PREBUILT_RUST_DIR}/bin")"
+    local rust_dir="$(source "${FUCHSIA_DIR}/tools/devshell/lib/platform.sh" && echo -n "${PREBUILT_RUST_DIR}/bin")"
     __update_path \
       .jiri_root/bin \
       scripts/git \

@@ -17,7 +17,7 @@ export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
 
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
-source "${devshell_lib_dir}/prebuilt.sh"
+source "${devshell_lib_dir}/platform.sh"
 unset devshell_lib_dir
 
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then

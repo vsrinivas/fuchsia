@@ -112,7 +112,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/fx-remote.sh",
         "//tools/devshell/lib/image_build_vars.sh",
         "//tools/devshell/lib/metrics.sh",
-        "//tools/devshell/lib/prebuilt.sh",
+        "//tools/devshell/lib/platform.sh",
         "//tools/devshell/lib/style.sh",
         "//tools/devshell/lib/vars.sh",
         "//tools/devshell/log",
