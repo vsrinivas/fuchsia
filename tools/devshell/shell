@@ -6,13 +6,15 @@
 #### CATEGORY=Device management
 ### start a remote interactive shell in the target device
 
-## usage: fx shell [-h|--help] [--info | <command>]
+## usage: fx shell [-h|--help] [--info | [<ssh flags>] <command>]
 ##
 ## Creates an SSH connection with a device and executes a command.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
 ##   --info       Show information about SSH keys and the target device and exit.
+##   <ssh flags>  Flags and command are passed to SSH as is. Consult SSH help
+##                for a list of available flags.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
