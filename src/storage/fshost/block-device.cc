@@ -518,6 +518,26 @@ zx_status_t BlockDeviceInterface::Add() {
 
       return ZX_OK;
     }
+    case DISK_FORMAT_FACTORYFS: {
+      // Check if the block device canonical path ends in "/verity/verified/block".  If so,
+      // this is a child of a block-verity verified device; mount factoryfs.
+      bool is_verified_child;
+      if ((status = IsTopologicalPathSuffix(std::string_view("/verity/verified/block"),
+                                            &is_verified_child)) != ZX_OK) {
+        return status;
+      }
+
+      if (!is_verified_child) {
+        printf("Ignoring factoryfs-formatted device that is not under a verified block device\n");
+        return ZX_OK;
+      }
+
+      if ((status = CheckFilesystem()) != ZX_OK) {
+        return status;
+      }
+
+      return MountFilesystem();
+    }
     case DISK_FORMAT_ZXCRYPT: {
       if (!Netbooting()) {
         return UnsealZxcrypt();
@@ -576,17 +596,6 @@ zx_status_t BlockDeviceInterface::Add() {
         return status;
       }
       return ZX_OK;
-    }
-    case DISK_FORMAT_FACTORYFS: {
-      const uint8_t expected_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
-      if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      if ((status = CheckFilesystem()) != ZX_OK) {
-        return status;
-      }
-
-      return MountFilesystem();
     }
     default:
       // If the disk format is unknown but we know it should be the data

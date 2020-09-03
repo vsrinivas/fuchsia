@@ -760,14 +760,16 @@ TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
   EXPECT_FALSE(volume.formatted);
 }
 
-// Tests adding factoryfs with a valid type GUID, but invalid metadata.
+// Tests adding factoryfs with valid factoryfs magic, as a verified child of a
+// block-verity device, but with invalid metadata.
 TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
   class FactoryfsDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
-    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
-      const uint8_t expected[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
-      memcpy(out_guid->value, expected, sizeof(expected));
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = true;
       return ZX_OK;
     }
     zx_status_t CheckFilesystem() final {
@@ -794,14 +796,16 @@ TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
   EXPECT_FALSE(device.mounted);
 }
 
-// Tests adding factoryfs with a valid type GUID and valid metadata.
+// Tests adding factoryfs with valid fasctoryfs magic, as a verified child of a
+// block-verity device, and valid metadata.
 TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
   class FactoryfsDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
-    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
-      const uint8_t expected[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
-      memcpy(out_guid->value, expected, sizeof(expected));
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = true;
       return ZX_OK;
     }
     zx_status_t CheckFilesystem() final {
@@ -826,6 +830,42 @@ TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
   EXPECT_TRUE(device.checked);
   EXPECT_FALSE(device.formatted);
   EXPECT_TRUE(device.mounted);
+}
+
+// Tests adding factoryfs with a valid superblock, as a device which is not a
+// verified child of a block-verity device.
+TEST(AddDeviceTestCase, AddUnverifiedFactoryFsDevice) {
+  class FactoryfsDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_FACTORYFS; }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ(expected_path.data(), "/verity/verified/block");
+      *is_path = false; // Not a verified child path
+      return ZX_OK;
+    }
+    zx_status_t CheckFilesystem() final {
+      checked = true;
+      return ZX_OK;
+    }
+    zx_status_t FormatFilesystem() final {
+      formatted = true;
+      return ZX_OK;
+    }
+    zx_status_t MountFilesystem() final {
+      mounted = true;
+      return ZX_OK;
+    }
+
+    bool checked = false;
+    bool formatted = false;
+    bool mounted = false;
+  };
+  FactoryfsDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_FALSE(device.checked);
+  EXPECT_FALSE(device.formatted);
+  EXPECT_FALSE(device.mounted);
 }
 
 class BlockWatcherTest : public zxtest::Test {
