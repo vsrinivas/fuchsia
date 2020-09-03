@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{AppSet, CheckOptions},
+    common::AppSet,
     configuration::Config,
     http_request::HttpRequest,
     installer::Installer,
     metrics::MetricsReporter,
     policy::PolicyEngine,
+    request_builder::RequestParams,
     state_machine::{update_check, ControlHandle, State, StateMachine, StateMachineEvent},
     storage::Storage,
     time::Timer,
@@ -235,14 +236,12 @@ where
     }
 
     /// Run start_upate_check once, returning a stream of the states it produces.
-    pub async fn oneshot_check(
-        self,
-        options: CheckOptions,
-    ) -> impl Stream<Item = StateMachineEvent> + 'a {
+    pub async fn oneshot_check(self) -> impl Stream<Item = StateMachineEvent> + 'a {
         let mut state_machine = self.build().await;
+        let request_params = RequestParams::default();
 
         async_generator::generate(move |mut co| async move {
-            state_machine.start_update_check(&options, &mut co).await
+            state_machine.start_update_check(request_params, &mut co).await
         })
         .into_yielded()
     }

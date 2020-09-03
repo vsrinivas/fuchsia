@@ -25,15 +25,12 @@ use {
     futures::prelude::*,
     log::error,
     omaha_client::{
-        common::{App, AppSet, CheckOptions, Version},
+        common::{App, AppSet, Version},
         configuration::{Config, Updater},
         http_request::HttpRequest,
         metrics::StubMetricsReporter,
         policy::StubPolicyEngine,
-        protocol::{
-            request::{InstallSource, OS},
-            Cohort,
-        },
+        protocol::{request::OS, Cohort},
         state_machine::{update_check, StateMachineBuilder, StateMachineEvent, UpdateCheckError},
         storage::MemStorage,
         time::StandardTimeSource,
@@ -123,11 +120,7 @@ where
         app_set.clone(),
     );
 
-    let stream: Vec<StateMachineEvent> = state_machine
-        .oneshot_check(CheckOptions { source: InstallSource::OnDemand })
-        .await
-        .collect()
-        .await;
+    let stream: Vec<StateMachineEvent> = state_machine.oneshot_check().await.collect().await;
 
     let mut result: Vec<Result<update_check::Response, UpdateCheckError>> = stream
         .into_iter()

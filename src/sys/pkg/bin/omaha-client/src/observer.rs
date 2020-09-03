@@ -167,12 +167,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fidl::{FidlServerBuilder, StubOrRealStateMachineController};
+    use crate::fidl::{FidlServerBuilder, MockOrRealStateMachineController};
+    use anyhow::anyhow;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use omaha_client::{
         common::{App, UserCounting},
-        policy::CheckDecision,
         protocol::{
             response::{self, Manifest, UpdateCheck},
             Cohort,
@@ -180,7 +180,7 @@ mod tests {
         storage::MemStorage,
     };
 
-    async fn new_test_observer() -> FuchsiaObserver<MemStorage, StubOrRealStateMachineController> {
+    async fn new_test_observer() -> FuchsiaObserver<MemStorage, MockOrRealStateMachineController> {
         let fidl = FidlServerBuilder::new().build().await;
         let inspector = Inspector::new();
         let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
@@ -206,7 +206,7 @@ mod tests {
 
         assert!(!observer.notified_cobalt);
         observer
-            .on_update_check_result(&Err(UpdateCheckError::Policy(CheckDecision::DeniedByPolicy)))
+            .on_update_check_result(&Err(UpdateCheckError::InstallPlan(anyhow!("some error"))))
             .await;
         assert!(!observer.notified_cobalt);
 

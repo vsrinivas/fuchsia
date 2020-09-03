@@ -87,6 +87,7 @@ rustc_binary("bin") {
     "src/observer.rs",
     "src/observer/platform.rs",
     "src/policy.rs",
+    "src/policy/rate_limiter.rs",
     "src/storage.rs",
     "src/storage/stash.rs",
     "src/temp_installer.rs",

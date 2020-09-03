@@ -19,9 +19,6 @@ use crate::{
     time::{TimeSource, Timer},
 };
 
-#[cfg(test)]
-use crate::common::{ProtocolState, UpdateCheckSchedule};
-
 use anyhow::anyhow;
 use futures::{
     channel::{mpsc, oneshot},
@@ -170,9 +167,6 @@ pub enum ResponseParseError {
 
 #[derive(Error, Debug)]
 pub enum UpdateCheckError {
-    #[error("Check not performed per policy: {:?}", _0)]
-    Policy(CheckDecision),
-
     #[error("Error checking with Omaha: {:?}", _0)]
     OmahaRequest(OmahaRequestError),
 
@@ -217,6 +211,9 @@ pub enum StartUpdateCheckResponse {
     /// The state machine was already processing an update check and ignored this request and
     /// options.
     AlreadyRunning,
+
+    /// The update check was throttled by policy.
+    Throttled,
 }
 
 impl ControlHandle {
@@ -339,24 +336,56 @@ where
                 }
             }
 
-            let options = {
+            let (options, responder) = {
                 let check_timing = self.update_next_update_time(&mut co).await;
                 let mut wait_to_next_check = self.make_wait_to_next_check(check_timing).await;
 
                 // Wait for either the next check time or a request to start an update check.  Use
                 // the default check options with the timed check, or those sent with a request.
                 select! {
-                    () = wait_to_next_check => CheckOptions::default(),
+                    () = wait_to_next_check => (CheckOptions::default(), None),
                     ControlRequest::StartUpdateCheck{options, responder} = control.select_next_some() => {
-                        let _ = responder.send(StartUpdateCheckResponse::Started);
-                        options
+                        (options, Some(responder))
                     }
                 }
             };
 
             {
+                let apps = self.app_set.to_vec().await;
+                info!("Checking to see if an update check is allowed at this time for {:?}", apps);
+                let decision = self
+                    .policy_engine
+                    .update_check_allowed(
+                        &apps,
+                        &self.context.schedule,
+                        &self.context.state,
+                        &options,
+                    )
+                    .await;
+
+                info!("The update check decision is: {:?}", decision);
+
+                let request_params = match decision {
+                    // Positive results, will continue with the update check process
+                    CheckDecision::Ok(rp) | CheckDecision::OkUpdateDeferred(rp) => rp,
+
+                    // Negative results, exit early
+                    CheckDecision::TooSoon
+                    | CheckDecision::ThrottledByPolicy
+                    | CheckDecision::DeniedByPolicy => {
+                        info!("The update check is not allowed at this time.");
+                        if let Some(responder) = responder {
+                            let _ = responder.send(StartUpdateCheckResponse::Throttled);
+                        }
+                        continue;
+                    }
+                };
+                if let Some(responder) = responder {
+                    let _ = responder.send(StartUpdateCheckResponse::Started);
+                }
+
                 // "start" the update check itself (well, create the future that is the update check)
-                let update_check = self.start_update_check(&options, &mut co).fuse();
+                let update_check = self.start_update_check(request_params, &mut co).fuse();
                 futures::pin_mut!(update_check);
 
                 // Wait for the update check to complete, handling any control requests that come in
@@ -450,11 +479,11 @@ where
     /// and cohort.
     pub async fn start_update_check(
         &mut self,
-        options: &CheckOptions,
+        request_params: RequestParams,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let apps = self.app_set.to_vec().await;
-        let result = self.perform_update_check(options, self.context.clone(), apps, co).await;
+        let result = self.perform_update_check(request_params, apps, co).await;
         match &result {
             Ok(result) => {
                 info!("Update check result: {:?}", result);
@@ -500,7 +529,6 @@ where
 
                         UpdateCheckFailureReason::Omaha
                     }
-                    UpdateCheckError::Policy(_) => UpdateCheckFailureReason::Internal,
                     UpdateCheckError::OmahaRequest(request_error) => match request_error {
                         OmahaRequestError::Json(_) | OmahaRequestError::HttpBuilder(_) => {
                             UpdateCheckFailureReason::Internal
@@ -552,43 +580,10 @@ where
     /// that comprise an update check.
     async fn perform_update_check(
         &mut self,
-        options: &CheckOptions,
-        context: update_check::Context,
+        request_params: RequestParams,
         apps: Vec<App>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<update_check::Response, UpdateCheckError> {
-        // TODO: Move this check outside perform_update_check() so that FIDL server can know if
-        // update check is throttled.
-        info!("Checking to see if an update check is allowed at this time for {:?}", apps);
-        let decision = self
-            .policy_engine
-            .update_check_allowed(&apps, &context.schedule, &context.state, &options)
-            .await;
-
-        info!("The update check decision is: {:?}", decision);
-
-        let request_params = match decision {
-            // Positive results, will continue with the update check process
-            CheckDecision::Ok(rp) | CheckDecision::OkUpdateDeferred(rp) => rp,
-
-            // Negative results, exit early
-            CheckDecision::TooSoon => {
-                info!("Too soon for update check, ending");
-                // TODO: Report status
-                return Err(UpdateCheckError::Policy(decision));
-            }
-            CheckDecision::ThrottledByPolicy => {
-                info!("Update check has been throttled by the Policy, ending");
-                // TODO: Report status
-                return Err(UpdateCheckError::Policy(decision));
-            }
-            CheckDecision::DeniedByPolicy => {
-                info!("Update check has ben denied by the Policy");
-                // TODO: Report status
-                return Err(UpdateCheckError::Policy(decision));
-            }
-        };
-
         self.set_state(State::CheckingForUpdates, co).await;
 
         self.report_check_interval().await;
@@ -1097,20 +1092,12 @@ where
 {
     /// Run perform_update_check once, returning the update check result.
     pub async fn oneshot(&mut self) -> Result<update_check::Response, UpdateCheckError> {
-        let options = CheckOptions::default();
-
-        let context = update_check::Context {
-            schedule: UpdateCheckSchedule::builder()
-                .last_time(self.time_source.now() - Duration::new(500, 0))
-                .next_timing(CheckTiming::builder().time(self.time_source.now()).build())
-                .build(),
-            state: ProtocolState::default(),
-        };
+        let request_params = RequestParams::default();
 
         let apps = self.app_set.to_vec().await;
 
         async_generator::generate(move |mut co| async move {
-            self.perform_update_check(&options, context, apps, &mut co).await
+            self.perform_update_check(request_params, apps, &mut co).await
         })
         .into_complete()
         .await
@@ -1118,10 +1105,10 @@ where
 
     /// Run start_upate_check once, discarding its states.
     pub async fn run_once(&mut self) {
-        let options = CheckOptions::default();
+        let request_params = RequestParams::default();
 
         async_generator::generate(move |mut co| async move {
-            self.start_update_check(&options, &mut co).await;
+            self.start_update_check(request_params, &mut co).await;
         })
         .map(|_| ())
         .collect::<()>()
@@ -1547,7 +1534,7 @@ mod tests {
     fn test_observe_state() {
         block_on(async {
             let actual_states = StateMachineBuilder::new_stub()
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .filter_map(|event| {
                     future::ready(match event {
@@ -1569,7 +1556,7 @@ mod tests {
             let mock_time = MockTimeSource::new_from_now();
             let actual_schedules = StateMachineBuilder::new_stub()
                 .policy_engine(StubPolicyEngine::new(&mock_time))
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .filter_map(|event| {
                     future::ready(match event {
@@ -1592,7 +1579,7 @@ mod tests {
     fn test_observe_protocol_state() {
         block_on(async {
             let actual_protocol_states = StateMachineBuilder::new_stub()
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .filter_map(|event| {
                     future::ready(match event {
@@ -1632,7 +1619,7 @@ mod tests {
 
             let actual_omaha_response = StateMachineBuilder::new_stub()
                 .http(http)
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .filter_map(|event| {
                     future::ready(match event {
@@ -1750,7 +1737,7 @@ mod tests {
 
             StateMachineBuilder::new_stub()
                 .storage(Rc::clone(&storage))
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .map(|_| ())
                 .collect::<()>()
@@ -1771,7 +1758,7 @@ mod tests {
 
             StateMachineBuilder::new_stub()
                 .storage(Rc::clone(&storage))
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .map(|_| ())
                 .collect::<()>()
@@ -1792,7 +1779,7 @@ mod tests {
             StateMachineBuilder::new_stub()
                 .storage(Rc::clone(&storage))
                 .app_set(app_set.clone())
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .map(|_| ())
                 .collect::<()>()
@@ -2600,6 +2587,43 @@ mod tests {
     }
 
     #[test]
+    fn test_start_update_check_returns_throttled() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let mut mock_time = MockTimeSource::new_from_now();
+        let next_update_time = mock_time.now() + Duration::from_secs(321);
+
+        let (timer, mut timers) = BlockingTimer::new();
+        let policy_engine = MockPolicyEngine {
+            check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            time_source: mock_time.clone(),
+            check_decision: CheckDecision::ThrottledByPolicy,
+            ..MockPolicyEngine::default()
+        };
+        let (mut ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub().policy_engine(policy_engine).timer(timer).start(),
+        );
+
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        mock_time.advance(Duration::from_secs(200));
+        assert_eq!(observer.take_states(), vec![]);
+
+        pool.run_until(async {
+            assert_eq!(
+                ctl.start_update_check(CheckOptions::default()).await,
+                Ok(StartUpdateCheckResponse::Throttled)
+            );
+        });
+        pool.run_until_stalled();
+        assert_eq!(observer.take_states(), vec![]);
+    }
+
+    #[test]
     fn test_progress_observer() {
         block_on(async {
             let response = json!({"response":{
@@ -2620,7 +2644,7 @@ mod tests {
                 .http(http)
                 .installer(TestInstaller::builder(mock_time.clone()).build())
                 .policy_engine(StubPolicyEngine::new(mock_time))
-                .oneshot_check(CheckOptions::default())
+                .oneshot_check()
                 .await
                 .filter_map(|event| {
                     future::ready(match event {

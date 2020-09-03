@@ -454,6 +454,7 @@ where
                     Err(CheckNotStartedReason::AlreadyInProgress)
                 }
             }
+            Ok(StartUpdateCheckResponse::Throttled) => Err(CheckNotStartedReason::Throttled),
             Err(state_machine::StateMachineGone) => Err(CheckNotStartedReason::Internal),
         }
     }
@@ -514,7 +515,7 @@ where
 
 #[cfg(test)]
 pub use stub::{
-    FidlServerBuilder, StubFidlServer, StubOrRealStateMachineController, StubStateMachineController,
+    FidlServerBuilder, MockOrRealStateMachineController, MockStateMachineController, StubFidlServer,
 };
 
 #[cfg(test)]
@@ -542,44 +543,51 @@ mod stub {
     use std::time::Duration;
 
     #[derive(Clone)]
-    pub struct StubStateMachineController;
+    pub struct MockStateMachineController {
+        result: Result<StartUpdateCheckResponse, StateMachineGone>,
+    }
 
-    impl StateMachineController for StubStateMachineController {
+    impl MockStateMachineController {
+        pub fn new(result: Result<StartUpdateCheckResponse, StateMachineGone>) -> Self {
+            Self { result }
+        }
+    }
+
+    impl StateMachineController for MockStateMachineController {
         fn start_update_check(
             &mut self,
             _options: CheckOptions,
         ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>> {
-            future::ready(Ok(StartUpdateCheckResponse::Started)).boxed()
+            future::ready(self.result.clone()).boxed()
         }
     }
 
     #[derive(Clone)]
-    pub enum StubOrRealStateMachineController {
-        Stub(StubStateMachineController),
+    pub enum MockOrRealStateMachineController {
+        Mock(MockStateMachineController),
         Real(state_machine::ControlHandle),
     }
 
-    impl StateMachineController for StubOrRealStateMachineController {
+    impl StateMachineController for MockOrRealStateMachineController {
         fn start_update_check(
             &mut self,
             options: CheckOptions,
         ) -> BoxFuture<'_, Result<StartUpdateCheckResponse, StateMachineGone>> {
             match self {
-                Self::Stub(stub) => stub.start_update_check(options),
+                Self::Mock(mock) => mock.start_update_check(options),
                 Self::Real(real) => real.start_update_check(options).boxed(),
             }
         }
     }
 
-    pub type StubFidlServer = FidlServer<MemStorage, StubOrRealStateMachineController>;
+    pub type StubFidlServer = FidlServer<MemStorage, MockOrRealStateMachineController>;
 
     pub struct FidlServerBuilder {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
         apps_node: Option<AppsNode>,
         state_node: Option<StateNode>,
-        allow_update_check: bool,
-        state_machine_control: Option<StubStateMachineController>,
+        state_machine_control: Option<MockStateMachineController>,
         time_source: Option<MockTimeSource>,
         current_channel: Option<String>,
     }
@@ -591,7 +599,6 @@ mod stub {
                 channel_configs: None,
                 apps_node: None,
                 state_node: None,
-                allow_update_check: true,
                 state_machine_control: None,
                 time_source: None,
                 current_channel: None,
@@ -620,14 +627,9 @@ mod stub {
             self
         }
 
-        pub fn allow_update_check(mut self, allow_update_check: bool) -> Self {
-            self.allow_update_check = allow_update_check;
-            self
-        }
-
         pub fn state_machine_control(
             mut self,
-            state_machine_control: StubStateMachineController,
+            state_machine_control: MockStateMachineController,
         ) -> Self {
             self.state_machine_control = Some(state_machine_control);
             self
@@ -657,7 +659,7 @@ mod stub {
             // Configure the state machine to schedule automatic update checks in the future and
             // block timers forever so we can control when update checks happen.
             let (state_machine_control, state_machine) = StateMachineBuilder::new(
-                MockPolicyEngine { allow_update_check: self.allow_update_check, time_source },
+                MockPolicyEngine { time_source },
                 StubHttpRequest,
                 StubInstaller::default(),
                 InfiniteTimer,
@@ -674,8 +676,8 @@ mod stub {
             let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
             let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
             let state_machine_control = match self.state_machine_control {
-                Some(stub) => StubOrRealStateMachineController::Stub(stub),
-                None => StubOrRealStateMachineController::Real(state_machine_control),
+                Some(mock) => MockOrRealStateMachineController::Mock(mock),
+                None => MockOrRealStateMachineController::Real(state_machine_control),
             };
             let fidl = Rc::new(RefCell::new(FidlServer::new(
                 state_machine_control,
@@ -719,7 +721,6 @@ mod stub {
     /// seconds.
     #[derive(Debug)]
     pub struct MockPolicyEngine {
-        allow_update_check: bool,
         time_source: MockTimeSource,
     }
 
@@ -749,15 +750,11 @@ mod stub {
             _protocol_state: &ProtocolState,
             check_options: &CheckOptions,
         ) -> BoxFuture<'_, CheckDecision> {
-            if self.allow_update_check {
-                future::ready(CheckDecision::Ok(RequestParams {
-                    source: check_options.source.clone(),
-                    use_configured_proxies: true,
-                }))
-                .boxed()
-            } else {
-                future::pending().boxed()
-            }
+            future::ready(CheckDecision::Ok(RequestParams {
+                source: check_options.source.clone(),
+                use_configured_proxies: true,
+            }))
+            .boxed()
         }
 
         fn update_can_start(
@@ -833,20 +830,36 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_already_in_progress() {
-        let fidl = FidlServerBuilder::new().allow_update_check(false).build().await;
+        let fidl = FidlServerBuilder::new()
+            .state_machine_control(MockStateMachineController::new(Ok(
+                StartUpdateCheckResponse::AlreadyRunning,
+            )))
+            .build()
+            .await;
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
         };
         let result = proxy.check_now(options, None).await.unwrap();
-        assert_matches!(result, Ok(()));
+        assert_matches!(result, Err(CheckNotStartedReason::AlreadyInProgress));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_check_now_throttled() {
+        let fidl = FidlServerBuilder::new()
+            .state_machine_control(MockStateMachineController::new(Ok(
+                StartUpdateCheckResponse::Throttled,
+            )))
+            .build()
+            .await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
         };
         let result = proxy.check_now(options, None).await.unwrap();
-        assert_matches!(result, Err(CheckNotStartedReason::AlreadyInProgress));
+        assert_matches!(result, Err(CheckNotStartedReason::Throttled));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -893,7 +906,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_monitor_progress() {
         let fidl = FidlServerBuilder::new()
-            .state_machine_control(StubStateMachineController)
+            .state_machine_control(MockStateMachineController::new(Ok(
+                StartUpdateCheckResponse::Started,
+            )))
             .build()
             .await;
         let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
