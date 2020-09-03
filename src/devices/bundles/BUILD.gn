@@ -7,8 +7,11 @@
 group("bootstrap") {
   deps = [
     "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/sdmmc",
+    "//src/devices/block/drivers/zxcrypt",
     "//src/devices/bus/drivers/platform:platform-bus",
     "//src/devices/bus/drivers/platform:platform-bus.proxy",
     "//src/devices/clock/drivers/clock",
@@ -17,7 +20,9 @@ group("bootstrap") {
     "//src/devices/internal/drivers/fragment",
     "//src/devices/internal/drivers/fragment:fragment.proxy",
     "//src/devices/misc/drivers/builtin",
+    "//src/devices/misc/drivers/cpu-trace",
     "//src/devices/power/drivers/power",
+    "//src/devices/pwm/drivers/pwm",
     "//src/devices/serial/drivers/serial",
     "//src/devices/serial/drivers/serial-async",
     "//src/devices/spi/drivers/spi",
