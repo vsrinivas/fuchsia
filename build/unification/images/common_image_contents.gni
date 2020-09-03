@@ -18,12 +18,12 @@
 # vetted and properly structured.
 _common_image_deps = [
   "//build/info:bootfs",
+  "//bundles:bootstrap",
   "//bundles/bringup:manual_testing",
   "//bundles/drivers:bootstrap",
   "//bundles/drivers:usb-host-stack",
   "//bundles/drivers:usb-peripheral-stack",
   "//bundles/drivers:utils",
-  "//src/bringup/bundles:bootstrap",
 ]
 
 # TODO(56988): We shouldn't need runtests, but right now it's used by profile
@@ -77,8 +77,6 @@ _common_image_deps += [
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/diagnostics/dlog",
-  "//src/power/shutdown-shim:bootfs",
-  "//src/storage/bin/blobfs",
   "//src/storage/bin/dd",
   "//src/storage/bin/df",
   "//src/storage/bin/disk-pave:install-disk-image",
@@ -88,8 +86,6 @@ _common_image_deps += [
   "//src/storage/bin/mount:mount",
   "//src/storage/bin/storage-metrics",
   "//src/storage/bin/umount:umount",
-  "//src/storage/fshost",
-  "//src/storage/fshost:bootfs",
   "//src/sys/bin/psutils",
   "//src/sys/bootstrap:root_manifests",
   "//src/sys/component_manager:bootfs",

@@ -326,6 +326,13 @@ fuchsia_test_package("fshost-tests") {
   ]
 }
 
-component_manifest_resources("bootfs") {
+component_manifest_resources("meta") {
   sources = [ "meta/fshost.cml" ]
+}
+
+group("bootfs") {
+  deps = [
+    ":fshost",
+    ":meta",
+  ]
 }

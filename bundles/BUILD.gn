@@ -114,3 +114,21 @@ group("amlogic_hw_dependent_tests") {
     "//src/security/tee_manager:optee_smoke_test",
   ]
 }
+
+# Binaries that form the base of every single product.
+group("bootstrap") {
+  deps = [
+    "//src/bringup/bundles:bootstrap",
+    "//src/power/bundles:bootstrap",
+    "//src/storage/bundles:bootstrap",
+  ]
+}
+
+# Binaries that form the base of every single zedboot image.
+group("zedboot") {
+  deps = [
+    "//src/bringup/bundles:zedboot",
+    "//src/power/bundles:bootstrap",
+    "//src/storage/bundles:bootstrap",
+  ]
+}

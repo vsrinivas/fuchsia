@@ -17,9 +17,8 @@ zedboot_deps = []
 
 # Core things needed for booting (local and netboot).
 zedboot_deps += [
+  "//bundles:zedboot",
   "//bundles/drivers:bootstrap",
-  "//src/bringup/bundles:zedboot",
-  "//src/storage/fshost",
 ]
 
 # Migrated from //build/images/bootfs_manifest_additions.gni.
@@ -27,15 +26,12 @@ zedboot_deps += [
   "//build/info:bootfs",
   "//src/devices/bin/driver_host",
   "//src/devices/bin/driver_manager:bootfs",
-  "//src/power/shutdown-shim:bootfs",
-  "//src/storage/fshost:bootfs",
   "//src/sys/bootstrap:root_manifests",
   "//src/sys/component_manager:bootfs",
 ]
 
 # Needed for installer runs.
 zedboot_deps += [
-  "//src/storage/bin/blobfs",
   "//src/storage/bin/disk-pave:install-disk-image",
   "//src/storage/bin/minfs",
   "//src/storage/bin/mount:mount",
