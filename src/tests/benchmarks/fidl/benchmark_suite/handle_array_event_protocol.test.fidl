@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
-
 library benchmarkfidl;
 
-using zx;
+protocol HandleArrayEvent64EventProtocol {
+    -> Send(HandleArrayEvent64 val);
+};
 
-struct HandleArrayEvent64 {
-    array<zx.handle:EVENT>:64 handles;
+protocol HandleArrayEvent64EchoCall {
+    Echo(HandleArrayEvent64 val) -> (HandleArrayEvent64 val);
 };

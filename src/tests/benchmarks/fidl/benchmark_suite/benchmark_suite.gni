@@ -46,7 +46,10 @@ benchmark_suite_declarations = [
   {
     name = "handle_array_event"
     gidl = [ "handle_array_event.gen.gidl" ]
-    fidl = [ "handle_array_event.gen.test.fidl" ]
+    fidl = [
+      "handle_array_event.gen.test.fidl",
+      "handle_array_event_protocol.test.fidl",
+    ]
   },
   {
     name = "handle_array_plain"

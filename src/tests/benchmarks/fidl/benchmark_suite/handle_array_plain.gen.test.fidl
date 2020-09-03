@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-
 struct HandleArrayPlain64 {
     array<handle>:64 handles;
 };

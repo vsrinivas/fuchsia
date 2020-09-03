@@ -145,6 +145,11 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 			let async_sender_fidl_chan_end = fuchsia_async::Channel::from_channel(sender_fidl_chan_end).unwrap();
 			let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
 			b.iter_batched_ref(|| {
+				{{- if .HandleDefs }}
+				let handle_defs = vec!{{ .HandleDefs }};
+				let handle_defs = unsafe { disown_handles(handle_defs) };
+				let handle_defs = handle_defs.as_ref();
+				{{- end }}
 				{{ .Value }}
 			},
 			|value| {
@@ -185,6 +190,11 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	});
 	let mut proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
 	b.iter_batched_ref(|| {
+		{{- if .HandleDefs }}
+		let handle_defs = vec!{{ .HandleDefs }};
+		let handle_defs = unsafe { disown_handles(handle_defs) };
+		let handle_defs = handle_defs.as_ref();
+		{{- end }}
 		{{ .Value }}
 	},
 	|value| {

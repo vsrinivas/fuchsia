@@ -21,8 +21,10 @@ func init() {
 				Config: config.Config{
 					"size": 64,
 				},
-				HandleDefs: util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
-				Allowlist:  []config.Binding{config.Rust},
+				EnableSendEventBenchmark: true,
+				EnableEchoCallBenchmark:  true,
+				HandleDefs:               util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
+				Allowlist:                []config.Binding{config.Rust},
 			},
 		},
 	})
