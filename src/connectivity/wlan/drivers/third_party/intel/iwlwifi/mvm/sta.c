@@ -35,6 +35,8 @@
  *****************************************************************************/
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 
+#include <zircon/status.h>
+
 #include <ddk/hw/wlan/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
@@ -112,7 +114,7 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
   }
 
   if (!update || (flags & STA_MODIFY_QUEUES)) {
-    memcpy(&add_sta_cmd.addr, mvm_sta->addr, ETH_ALEN);
+    memcpy(add_sta_cmd.addr, mvm_sta->addr, ETH_ALEN);
 
     if (!iwl_mvm_has_new_tx_api(mvm)) {
       add_sta_cmd.tfd_queue_msk = cpu_to_le32(mvm_sta->tfd_queue_msk);
@@ -1668,7 +1670,8 @@ update_fw:
 #endif  // NEEDS_PORTING
 
   ret = iwl_mvm_sta_send_to_fw(mvmvif->mvm, mvm_sta, sta_update, sta_flags);
-  if (ret) {
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Add sta cannot send the comment to firmware: %s\n", zx_status_get_string(ret));
     goto err;
   }
 
@@ -3611,6 +3614,7 @@ void iwl_mvm_rx_eosp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
   }
   rcu_read_unlock();
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool disable) {
   struct iwl_mvm_add_sta_cmd cmd = {
@@ -3620,14 +3624,15 @@ void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvms
       .station_flags_msk = cpu_to_le32(STA_FLG_DISABLE_TX),
       .mac_id_n_color = cpu_to_le32(mvmsta->mac_id_n_color),
   };
-  int ret;
 
-  ret = iwl_mvm_send_cmd_pdu(mvm, ADD_STA, CMD_ASYNC, iwl_mvm_add_sta_cmd_size(mvm), &cmd);
-  if (ret) {
+  zx_status_t ret =
+      iwl_mvm_send_cmd_pdu(mvm, ADD_STA, CMD_ASYNC, iwl_mvm_add_sta_cmd_size(mvm), &cmd);
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to send ADD_STA command (%d)\n", ret);
   }
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                       bool disable) {
   struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);

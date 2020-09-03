@@ -167,6 +167,16 @@ executable("phy-ctxt_test") {
   deps = testing_deps
 }
 
+executable("sta_test") {
+  output_name = "sta_test"
+  testonly = true
+
+  sources = [ "sta_test.cc" ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("utils_test") {
   output_name = "utils_test"
   testonly = true
@@ -201,6 +211,7 @@ unittest_package("iwlwifi_test") {
     ":nvm_test",
     ":pcie_test",
     ":phy-ctxt_test",
+    ":sta_test",
     ":utils_test",
     ":wlan-device_test",
   ]
@@ -244,6 +255,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "phy-ctxt_test"
+      environments = basic_envs
+    },
+    {
+      name = "sta_test"
       environments = basic_envs
     },
     {
