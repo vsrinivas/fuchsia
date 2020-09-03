@@ -151,6 +151,8 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
 
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+template <>
+struct IsUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 {{- end }}
 `

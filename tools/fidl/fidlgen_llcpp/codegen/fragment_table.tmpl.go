@@ -247,6 +247,10 @@ private:
 
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+template <>
+struct IsTable<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+template <>
+struct IsTableBuilder<{{ .Namespace }}::{{ .Name }}::Builder> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 {{- end }}
 `

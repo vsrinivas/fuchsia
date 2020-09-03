@@ -533,6 +533,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Response>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Example_foo_Response>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Response>);
 static_assert(offsetof(::llcpp::fidl::test::json::Example_foo_Response, y) ==
@@ -542,6 +545,9 @@ static_assert(sizeof(::llcpp::fidl::test::json::Example_foo_Response) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::Example_foo_Result>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Result>);

@@ -4574,6 +4574,9 @@ template <>
 struct IsFidlType<
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>);
 static_assert(
@@ -4593,12 +4596,18 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>);
 
 template <>
 struct IsFidlType<
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
@@ -4613,11 +4622,17 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
@@ -4925,6 +4940,9 @@ struct IsFidlType<::llcpp::test::name::ErrorEnun> : public std::true_type {};
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);

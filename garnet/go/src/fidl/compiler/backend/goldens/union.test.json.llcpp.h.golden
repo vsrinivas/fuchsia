@@ -3223,10 +3223,15 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Union> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Union>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StructWithNullableXUnion>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::StructWithNullableXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::json::StructWithNullableXUnion>);
@@ -3238,11 +3243,17 @@ static_assert(sizeof(::llcpp::fidl::test::json::StructWithNullableXUnion) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictUnion>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictUnion> : public std::true_type {
+};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::StrictUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictSimpleXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictSimpleXUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::StrictSimpleXUnion>);
@@ -3250,10 +3261,15 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictFoo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictBoundedXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictBoundedXUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::StrictBoundedXUnion>);
@@ -3261,11 +3277,16 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalUnion>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ReverseOrdinalUnion>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Pizza> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Pizza> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Pizza>);
 static_assert(offsetof(::llcpp::fidl::test::json::Pizza, toppings) == 0);
 static_assert(sizeof(::llcpp::fidl::test::json::Pizza) ==
@@ -3273,6 +3294,8 @@ static_assert(sizeof(::llcpp::fidl::test::json::Pizza) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Pasta> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Pasta> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Pasta>);
 static_assert(offsetof(::llcpp::fidl::test::json::Pasta, sauce) == 0);
 static_assert(sizeof(::llcpp::fidl::test::json::Pasta) ==
@@ -3281,11 +3304,17 @@ static_assert(sizeof(::llcpp::fidl::test::json::Pasta) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictPizzaOrPasta>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictPizzaOrPasta>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::StrictPizzaOrPasta>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::PizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::PizzaOrPasta>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::PizzaOrPasta>);
@@ -3293,17 +3322,26 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::FlexiblePizzaOrPasta>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitPizzaOrPasta>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::OlderSimpleUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleUnion>);
@@ -3374,6 +3412,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::NullableUnionStruct>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::NullableUnionStruct>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::NullableUnionStruct>);
 static_assert(offsetof(::llcpp::fidl::test::json::NullableUnionStruct,
@@ -3384,11 +3425,17 @@ static_assert(sizeof(::llcpp::fidl::test::json::NullableUnionStruct) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleUnion>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::NewerSimpleUnion>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::FlexibleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::FlexibleUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleUnion>);
@@ -3396,11 +3443,17 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::FlexibleFoo> : public std::true_type {
+};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::FieldCollision>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::FieldCollision>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::FieldCollision>);
@@ -3408,11 +3461,17 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExplicitXUnion>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ExplicitXUnion>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitXUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExplicitUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ExplicitUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitUnion>);
@@ -3420,17 +3479,25 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExplicitStrictFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ExplicitStrictFoo>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitStrictFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExplicitFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::ExplicitFoo> : public std::true_type {
+};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExplicitFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Empty> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Empty> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Empty>);
 static_assert(offsetof(::llcpp::fidl::test::json::Empty, __reserved) == 0);
 static_assert(sizeof(::llcpp::fidl::test::json::Empty) ==
@@ -3438,6 +3505,9 @@ static_assert(sizeof(::llcpp::fidl::test::json::Empty) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::XUnionContainingEmptyStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::json::XUnionContainingEmptyStruct>);

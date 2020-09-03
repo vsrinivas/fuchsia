@@ -473,11 +473,18 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4>);
 
 template <>
 struct IsFidlType<
+    ::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>
+    : public std::true_type {};
+template <>
+struct IsStruct<
     ::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>
     : public std::true_type {};
 static_assert(
@@ -500,11 +507,18 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4>);
 
 template <>
 struct IsFidlType<
+    ::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>
+    : public std::true_type {};
+template <>
+struct IsStruct<
     ::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>
     : public std::true_type {};
 static_assert(
@@ -527,11 +541,18 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4>);
 
 template <>
 struct IsFidlType<
+    ::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>
+    : public std::true_type {};
+template <>
+struct IsStruct<
     ::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>
     : public std::true_type {};
 static_assert(
@@ -554,6 +575,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>);
 static_assert(
@@ -569,11 +593,18 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8>);
 
 template <>
 struct IsFidlType<
+    ::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>
+    : public std::true_type {};
+template <>
+struct IsStruct<
     ::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>
     : public std::true_type {};
 static_assert(

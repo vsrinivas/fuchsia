@@ -624,6 +624,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableVector>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableVector>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableVector>);
 static_assert(offsetof(::llcpp::fidl::test::nullable::StructWithNullableVector,
@@ -634,6 +637,9 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableUnion>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableUnion>);
@@ -646,6 +652,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableStruct>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableStruct>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableStruct>);
 static_assert(offsetof(::llcpp::fidl::test::nullable::StructWithNullableStruct,
@@ -656,6 +665,9 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableString>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableString>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableString>);
@@ -668,6 +680,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableRequest>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableRequest>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableRequest>);
 static_assert(offsetof(::llcpp::fidl::test::nullable::StructWithNullableRequest,
@@ -678,6 +693,9 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableProtocol>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableProtocol>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableProtocol>);
@@ -690,6 +708,9 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableHandle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::StructWithNullableHandle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::nullable::StructWithNullableHandle>);
@@ -731,11 +752,17 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::SimpleUnion>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::nullable::SimpleUnion>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::nullable::SimpleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::Int32Wrapper>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::nullable::Int32Wrapper>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::nullable::Int32Wrapper>);

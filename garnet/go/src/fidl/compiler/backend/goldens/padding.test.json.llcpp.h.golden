@@ -332,6 +332,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding7ByteMiddle>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding7ByteMiddle>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding7ByteMiddle>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding7ByteMiddle, a) ==
@@ -344,6 +347,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding7ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding7ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding7ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding7ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding7ByteEnd, a) == 0);
@@ -353,6 +359,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding7ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding6ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding6ByteMiddle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding6ByteMiddle>);
@@ -366,6 +375,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding6ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding6ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding6ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding6ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding6ByteEnd, a) == 0);
@@ -375,6 +387,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding6ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding5ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding5ByteMiddle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding5ByteMiddle>);
@@ -390,6 +405,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding5ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding5ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding5ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding5ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding5ByteEnd, a) == 0);
@@ -400,6 +418,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding5ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding4ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding4ByteMiddle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding4ByteMiddle>);
@@ -413,6 +434,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding4ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding4ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding4ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding4ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding4ByteEnd, a) == 0);
@@ -422,6 +446,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding4ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding4ByteAlignmentLength12>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding4ByteAlignmentLength12>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding4ByteAlignmentLength12>);
@@ -444,6 +471,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding3ByteMiddle>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding3ByteMiddle>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding3ByteMiddle>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding3ByteMiddle, a) ==
@@ -456,6 +486,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding3ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding3ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding3ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding3ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding3ByteEnd, a) == 0);
@@ -465,6 +498,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding3ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding2ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding2ByteMiddle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding2ByteMiddle>);
@@ -478,6 +514,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding2ByteMiddle) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding2ByteEnd>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding2ByteEnd>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding2ByteEnd>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding2ByteEnd, a) == 0);
@@ -487,6 +526,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding2ByteEnd) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding2ByteAlignmentLength6>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding2ByteAlignmentLength6>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding2ByteAlignmentLength6>);
@@ -506,6 +548,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding1ByteMiddle>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding1ByteMiddle>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::padding::Padding1ByteMiddle>);
 static_assert(offsetof(::llcpp::fidl::test::padding::Padding1ByteMiddle, a) ==
@@ -517,6 +562,9 @@ static_assert(sizeof(::llcpp::fidl::test::padding::Padding1ByteMiddle) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::padding::Padding1ByteEnd>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::padding::Padding1ByteEnd>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::padding::Padding1ByteEnd>);

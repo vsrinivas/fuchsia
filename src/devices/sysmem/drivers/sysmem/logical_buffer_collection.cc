@@ -115,7 +115,7 @@ bool IsNonZeroPowerOf2(T value) {
     auto builder_ptr = (builder_ptr_name);                                                    \
     static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
     using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;     \
-    static_assert(!fidl::IsStructOrTable<FieldType>::value);                                  \
+    static_assert(!fidl::IsFidlObject<FieldType>::value);                                     \
     static_assert(!fidl::IsVectorView<FieldType>::value);                                     \
     static_assert(!fidl::IsStringView<FieldType>::value);                                     \
     if (!builder_ptr->has_##field_name()) {                                                   \

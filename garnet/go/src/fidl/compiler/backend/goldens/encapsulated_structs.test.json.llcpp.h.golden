@@ -156,6 +156,10 @@ template <>
 struct IsFidlType<
     ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
     : public std::true_type {};
+template <>
+struct IsStruct<
+    ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<
         ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>);
@@ -176,6 +180,9 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::Int8Int32>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::encapsulatedstructs::Int8Int32>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::encapsulatedstructs::Int8Int32>);
 static_assert(offsetof(::llcpp::fidl::test::encapsulatedstructs::Int8Int32,
@@ -187,6 +194,9 @@ static_assert(sizeof(::llcpp::fidl::test::encapsulatedstructs::Int8Int32) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::Int16Int8>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::encapsulatedstructs::Int16Int8>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::encapsulatedstructs::Int16Int8>);
@@ -200,6 +210,9 @@ static_assert(sizeof(::llcpp::fidl::test::encapsulatedstructs::Int16Int8) ==
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8>);
 static_assert(offsetof(::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8,
@@ -210,6 +223,10 @@ static_assert(
 
 template <>
 struct IsFidlType<
+    ::llcpp::fidl::test::encapsulatedstructs::StructPaddingTestStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<
     ::llcpp::fidl::test::encapsulatedstructs::StructPaddingTestStruct>
     : public std::true_type {};
 static_assert(
@@ -231,6 +248,9 @@ static_assert(
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct>);

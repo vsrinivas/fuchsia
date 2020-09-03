@@ -1027,11 +1027,23 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::SimpleTable>
     : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::json::SimpleTable> : public std::true_type {
+};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::json::SimpleTable::Builder>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::SimpleTable>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::json::ReverseOrdinalTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::json::ReverseOrdinalTable::Builder>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalTable>);
@@ -1039,17 +1051,35 @@ static_assert(
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleTable>
     : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::json::OlderSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::json::OlderSimpleTable::Builder>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleTable>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleTable>
     : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::json::NewerSimpleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::json::NewerSimpleTable::Builder>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleTable>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::EmptyTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::json::EmptyTable> : public std::true_type {
+};
+template <>
+struct IsTableBuilder<::llcpp::fidl::test::json::EmptyTable::Builder>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::EmptyTable>);
 

@@ -12,26 +12,36 @@ namespace test = llcpp::fidl::llcpp::types::test;
 
 // There's no actual code in here, but if it compiles, success.
 TEST(Traits, NotConst) {
-  static_assert(!fidl::IsStructOrTable<uint32_t>::value);
-  static_assert(fidl::IsStructOrTable<test::CopyableStruct>::value);
-  static_assert(fidl::IsStructOrTable<test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsStructOrTable<test::SampleTable>::value);
+  static_assert(!fidl::IsFidlObject<uint32_t>::value);
+  static_assert(fidl::IsFidlObject<test::CopyableStruct>::value);
+  static_assert(fidl::IsFidlObject<test::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlObject<test::SampleTable>::value);
+  static_assert(fidl::IsFidlObject<test::TestUnion>::value);
 
   static_assert(!fidl::IsTable<uint32_t>::value);
   static_assert(!fidl::IsTable<test::CopyableStruct>::value);
   static_assert(!fidl::IsTable<test::MoveOnlyStruct>::value);
   static_assert(fidl::IsTable<test::SampleTable>::value);
+  static_assert(!fidl::IsTable<test::TestUnion>::value);
+
+  static_assert(!fidl::IsUnion<uint32_t>::value);
+  static_assert(!fidl::IsUnion<test::CopyableStruct>::value);
+  static_assert(!fidl::IsUnion<test::MoveOnlyStruct>::value);
+  static_assert(!fidl::IsUnion<test::SampleTable>::value);
+  static_assert(fidl::IsUnion<test::TestUnion>::value);
 
   static_assert(!fidl::IsStruct<uint32_t>::value);
   static_assert(fidl::IsStruct<test::CopyableStruct>::value);
   static_assert(fidl::IsStruct<test::MoveOnlyStruct>::value);
   static_assert(!fidl::IsStruct<test::SampleTable>::value);
+  static_assert(!fidl::IsStruct<test::TestUnion>::value);
 
   static_assert(!fidl::IsTableBuilder<uint32_t>::value);
   static_assert(!fidl::IsTableBuilder<test::CopyableStruct>::value);
   static_assert(!fidl::IsTableBuilder<test::MoveOnlyStruct>::value);
   static_assert(!fidl::IsTableBuilder<test::SampleTable>::value);
   static_assert(fidl::IsTableBuilder<test::SampleTable::Builder>::value);
+  static_assert(!fidl::IsTableBuilder<test::TestUnion>::value);
 
   static_assert(!fidl::IsStringView<uint32_t>::value);
   static_assert(fidl::IsStringView<fidl::StringView>::value);
@@ -41,10 +51,10 @@ TEST(Traits, NotConst) {
 }
 
 TEST(Traits, Const) {
-  static_assert(!fidl::IsStructOrTable<const uint32_t>::value);
-  static_assert(fidl::IsStructOrTable<const test::CopyableStruct>::value);
-  static_assert(fidl::IsStructOrTable<const test::MoveOnlyStruct>::value);
-  static_assert(fidl::IsStructOrTable<const test::SampleTable>::value);
+  static_assert(!fidl::IsFidlObject<const uint32_t>::value);
+  static_assert(fidl::IsFidlObject<const test::CopyableStruct>::value);
+  static_assert(fidl::IsFidlObject<const test::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlObject<const test::SampleTable>::value);
 
   static_assert(!fidl::IsTable<const uint32_t>::value);
   static_assert(!fidl::IsTable<const test::CopyableStruct>::value);

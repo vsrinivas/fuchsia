@@ -272,6 +272,9 @@ struct IsFidlType<::llcpp::fidl::test::handles::obj_type>
 template <>
 struct IsFidlType<::llcpp::fidl::test::handles::Handles>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::handles::Handles> : public std::true_type {
+};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::handles::Handles>);
 static_assert(offsetof(::llcpp::fidl::test::handles::Handles, plain_handle) ==
               0);

@@ -58,6 +58,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::top::Baz> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::top::Baz> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::top::Baz>);
 static_assert(offsetof(::llcpp::top::Baz, g) == 0);
 static_assert(sizeof(::llcpp::top::Baz) == ::llcpp::top::Baz::PrimarySize);

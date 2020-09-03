@@ -981,11 +981,16 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::StrictFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::StrictFoo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::json::FlexibleFoo> : public std::true_type {
+};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
 

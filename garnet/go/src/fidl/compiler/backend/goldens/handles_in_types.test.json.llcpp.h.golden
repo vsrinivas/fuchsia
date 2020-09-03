@@ -312,16 +312,25 @@ struct IsFidlType<::llcpp::test::name::obj_type> : public std::true_type {};
 template <>
 struct IsFidlType<::llcpp::test::name::UnionWithHandle>
     : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::UnionWithHandle> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::UnionWithHandle>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::TableWithHandle>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::test::name::TableWithHandle> : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::test::name::TableWithHandle::Builder>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::TableWithHandle>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::HandlesInTypes> : public std::true_type {
 };
+template <>
+struct IsStruct<::llcpp::test::name::HandlesInTypes> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::HandlesInTypes>);
 static_assert(offsetof(::llcpp::test::name::HandlesInTypes, normal_handle) ==
               0);

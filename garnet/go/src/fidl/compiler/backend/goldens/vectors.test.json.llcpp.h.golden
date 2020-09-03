@@ -65,6 +65,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::ExampleUseOfVectors>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::ExampleUseOfVectors>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::ExampleUseOfVectors>);
 static_assert(offsetof(::llcpp::fidl::test::json::ExampleUseOfVectors,

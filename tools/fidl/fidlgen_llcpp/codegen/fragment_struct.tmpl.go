@@ -41,6 +41,8 @@ struct {{ .Name }} {
 
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+template <>
+struct IsStruct<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 {{- $struct := . }}
 {{- range .Members }}

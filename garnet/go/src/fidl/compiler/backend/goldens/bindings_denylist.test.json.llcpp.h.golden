@@ -124,6 +124,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::test::name::OnlyLlcpp> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::OnlyLlcpp> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::OnlyLlcpp>);
 
 }  // namespace fidl

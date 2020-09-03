@@ -60,6 +60,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::escapeme::DocCommentWithQuotes>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::escapeme::DocCommentWithQuotes>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::escapeme::DocCommentWithQuotes>);
 static_assert(offsetof(::llcpp::escapeme::DocCommentWithQuotes, __reserved) ==

@@ -58,6 +58,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::example::Foo> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::example::Foo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::Foo>);
 static_assert(offsetof(::llcpp::example::Foo, field) == 0);
 static_assert(sizeof(::llcpp::example::Foo) ==

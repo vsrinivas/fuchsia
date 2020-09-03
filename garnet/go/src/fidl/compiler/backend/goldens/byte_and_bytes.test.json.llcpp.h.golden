@@ -63,6 +63,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::example::ByteAndBytes> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::example::ByteAndBytes> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ByteAndBytes>);
 static_assert(offsetof(::llcpp::example::ByteAndBytes, single_byte) == 0);
 static_assert(offsetof(::llcpp::example::ByteAndBytes, many_bytes) == 8);

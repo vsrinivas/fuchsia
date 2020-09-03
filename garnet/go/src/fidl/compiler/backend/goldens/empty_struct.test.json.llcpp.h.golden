@@ -674,6 +674,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Empty> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Empty> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Empty>);
 static_assert(offsetof(::llcpp::fidl::test::json::Empty, __reserved) == 0);
 static_assert(sizeof(::llcpp::fidl::test::json::Empty) ==

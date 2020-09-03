@@ -79,6 +79,8 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::Simple> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::Simple> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Simple>);
 static_assert(offsetof(::llcpp::fidl::test::json::Simple, f1) == 0);
 static_assert(offsetof(::llcpp::fidl::test::json::Simple, f2) == 1);
@@ -87,6 +89,9 @@ static_assert(sizeof(::llcpp::fidl::test::json::Simple) ==
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::json::BasicStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::json::BasicStruct>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::fidl::test::json::BasicStruct>);

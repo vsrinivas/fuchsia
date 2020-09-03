@@ -778,14 +778,23 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Table> : public std::true_type {};
+template <>
+struct IsTable<::llcpp::test::name::Table> : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::test::name::Table::Builder>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Table>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::test::name::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
 static_assert(sizeof(::llcpp::test::name::Struct) ==

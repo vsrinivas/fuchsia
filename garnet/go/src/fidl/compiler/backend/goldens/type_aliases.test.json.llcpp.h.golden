@@ -90,6 +90,9 @@ struct IsFidlType<::llcpp::example::obj_type> : public std::true_type {};
 template <>
 struct IsFidlType<::llcpp::example::ExampleOfUseOfAliases>
     : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::example::ExampleOfUseOfAliases>
+    : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::llcpp::example::ExampleOfUseOfAliases>);
 static_assert(offsetof(::llcpp::example::ExampleOfUseOfAliases, field_of_u32) ==

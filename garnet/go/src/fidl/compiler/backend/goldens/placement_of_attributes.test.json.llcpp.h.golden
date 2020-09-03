@@ -670,18 +670,29 @@ static_assert(offsetof(::llcpp::example::ExampleProtocol::MethodRequest, arg) ==
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleXUnion> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::example::ExampleXUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ExampleXUnion>);
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::example::ExampleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ExampleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleTable> : public std::true_type {};
+template <>
+struct IsTable<::llcpp::example::ExampleTable> : public std::true_type {};
+template <>
+struct IsTableBuilder<::llcpp::example::ExampleTable::Builder>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ExampleTable>);
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleStruct> : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::example::ExampleStruct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ExampleStruct>);
 static_assert(offsetof(::llcpp::example::ExampleStruct, member) == 0);
 static_assert(sizeof(::llcpp::example::ExampleStruct) ==
