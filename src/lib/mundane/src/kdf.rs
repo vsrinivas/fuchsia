@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,8 @@
 //! protocols. Unless you're sure that this is what you need, you should
 //! probably be using something else. In particular:
 //! - If you need password verification, see the [`password`] module.
+//!
+//! *This module is available if Mundane is built with the `kdf` feature.*
 //!
 //! [`password`]: ::password
 

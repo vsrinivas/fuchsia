@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,7 +16,7 @@ pub trait Sealed {}
 
 macro_rules! sealed {
     ($name:ident) => {
-        impl ::boringssl::wrapper::Sealed for ::boringssl::raw::boringssl_sys::$name {}
+        impl ::boringssl::wrapper::Sealed for ::boringssl::raw::ffi::$name {}
     };
 }
 
@@ -63,9 +63,9 @@ pub unsafe trait CNew: Sealed {
 
 macro_rules! c_new {
     ($name:ident, $new:ident) => {
-        unsafe impl ::boringssl::wrapper::CNew for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CNew for ::boringssl::raw::ffi::$name {
             unsafe fn new_raw() -> *mut Self {
-                ::boringssl::raw::boringssl_sys::$new()
+                ::boringssl::raw::ffi::$new()
             }
         }
     };
@@ -80,12 +80,12 @@ pub unsafe trait CUpRef: Sealed {
 
 macro_rules! c_up_ref {
     ($name:ident, $up_ref:ident) => {
-        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl::raw::ffi::$name {
             unsafe fn up_ref(slf: *mut Self) {
                 use boringssl::abort::UnwrapAbort;
                 ::boringssl::raw::one_or_err(
                     stringify!($up_ref),
-                    ::boringssl::raw::boringssl_sys::$up_ref(slf),
+                    ::boringssl::raw::ffi::$up_ref(slf),
                 )
                 .unwrap_abort()
             }
@@ -105,9 +105,9 @@ pub unsafe trait CFree: Sealed {
 
 macro_rules! c_free {
     ($name:ident, $free:ident) => {
-        unsafe impl ::boringssl::wrapper::CFree for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CFree for ::boringssl::raw::ffi::$name {
             unsafe fn free(slf: *mut Self) {
-                ::boringssl::raw::boringssl_sys::$free(slf)
+                ::boringssl::raw::ffi::$free(slf)
             }
         }
     };
@@ -126,9 +126,9 @@ pub unsafe trait CInit: Sealed {
 #[allow(unused)] // TODO: Remove once it's used in the 'raw' module
 macro_rules! c_init {
     ($name:ident, $init:ident) => {
-        unsafe impl ::boringssl::wrapper::CInit for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CInit for ::boringssl::raw::ffi::$name {
             unsafe fn init(slf: *mut Self) {
-                ::boringssl::raw::boringssl_sys::$init(slf)
+                ::boringssl::raw::ffi::$init(slf)
             }
         }
     };
@@ -147,14 +147,14 @@ pub unsafe trait CDestruct: Sealed {
 
 macro_rules! c_destruct {
     ($name:ident, _) => {
-        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::ffi::$name {
             unsafe fn destruct(_slf: *mut Self) {}
         }
     };
     ($name:ident, $destruct:tt) => {
-        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::ffi::$name {
             unsafe fn destruct(slf: *mut Self) {
-                ::boringssl::raw::boringssl_sys::$destruct(slf)
+                ::boringssl::raw::ffi::$destruct(slf)
             }
         }
     };
@@ -314,7 +314,7 @@ impl<C: CDestruct> CStackWrapper<C> {
     }
 
     #[must_use]
-    pub fn as_c_ref(&mut self) -> CRef<C> {
+    pub fn as_c_ref(&mut self) -> CRef<'_, C> {
         unsafe { CRef::new(NonNull::new_unchecked(&mut self.obj as *mut C)) }
     }
 

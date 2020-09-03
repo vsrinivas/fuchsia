@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -40,7 +40,7 @@ mod inner {
         ///
         /// If `group` is not equal to the curve's group, `from_group` returns
         /// an error.
-        fn validate_group(group: CRef<boringssl::EC_GROUP>) -> Result<(), Error>;
+        fn validate_group(group: CRef<'_, boringssl::EC_GROUP>) -> Result<(), Error>;
     }
 }
 
@@ -93,7 +93,9 @@ macro_rules! impl_curve {
             fn nid() -> i32 {
                 $nid
             }
-            fn validate_group(group: boringssl::CRef<boringssl::EC_GROUP>) -> Result<(), ::Error> {
+            fn validate_group(
+                group: boringssl::CRef<'_, boringssl::EC_GROUP>,
+            ) -> Result<(), ::Error> {
                 let nid = group.ec_group_get_curve_name();
                 if nid != $nid {
                     return Err(::Error::new(format!(

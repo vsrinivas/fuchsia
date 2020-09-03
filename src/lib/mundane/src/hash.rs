@@ -1,8 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 //! Cryptographic hash functions.
+//!
+//! *This module is available if Mundane is built with the `insecure` feature.*
 
 use std::fmt::{self, Debug, Display, Formatter};
 
@@ -97,6 +99,28 @@ pub trait Digest: Eq + PartialEq + Display + Debug + Sized + self::inner::Digest
     /// Returns the bytes of this digest.
     #[must_use]
     fn bytes(&self) -> Self::Bytes;
+}
+
+#[cfg(feature = "insecure")]
+#[deprecated(note = "MD5 is considered insecure")]
+#[allow(deprecated)] // Work-around until Rust issue #56195 is resolved
+#[derive(Clone, Default)]
+pub(crate) struct InsecureMd5 {
+    ctx: CStackWrapper<boringssl::MD5_CTX>,
+}
+
+#[cfg(feature = "insecure")]
+pub(crate) mod insecure_md5_digest {
+    use boringssl;
+
+    /// INSECURE: The digest output by the MD5 hash function.
+    ///
+    /// # Security
+    ///
+    /// MD5 is considered insecure, and should only be used for compatibility
+    /// with legacy applications.
+    #[deprecated(note = "MD5 is considered insecure")]
+    pub struct InsecureMd5Digest(pub(crate) [u8; boringssl::MD5_DIGEST_LENGTH as usize]);
 }
 
 // NOTE: InsecureSha1 is not publicly available; it is only used in HMAC-SHA1.
@@ -274,6 +298,16 @@ macro_rules! impl_hash {
     };
 }
 
+#[cfg(feature = "insecure")]
+impl_hash!(
+    InsecureMd5,
+    self::insecure_md5_digest::InsecureMd5Digest,
+    boringssl::MD5_DIGEST_LENGTH,
+    md5_update,
+    md5_final,
+    evp_md5,
+    NID_md5
+);
 #[cfg(feature = "insecure")]
 impl_hash!(
     InsecureSha1,

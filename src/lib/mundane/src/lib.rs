@@ -1,9 +1,6 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TODO Follow 2018 idioms
-#![allow(elided_lifetimes_in_paths)]
 
 //! Cryptography in Rust.
 //!
@@ -56,17 +53,20 @@ extern crate boringssl_sys;
 // Forbid unsafe code except in the boringssl module.
 #[allow(unsafe_code)]
 mod boringssl;
-#[cfg(feature = "bytes")]
+#[cfg(any(doc, feature = "bytes"))]
 #[forbid(unsafe_code)]
 pub mod bytes;
 #[forbid(unsafe_code)]
 pub mod hash;
 #[forbid(unsafe_code)]
 pub mod hmac;
-#[cfg(feature = "insecure")]
+#[cfg(any(doc, feature = "insecure"))]
 #[forbid(unsafe_code)]
 pub mod insecure;
-#[cfg(feature = "kdf")]
+#[cfg(any(doc, feature = "insecure"))]
+#[forbid(unsafe_code)]
+mod insecure_rc4;
+#[cfg(any(doc, feature = "kdf"))]
 #[forbid(unsafe_code)]
 pub mod kdf;
 #[forbid(unsafe_code)]

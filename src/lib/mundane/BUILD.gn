@@ -37,6 +37,7 @@ rustc_library("mundane") {
     "src/hash.rs",
     "src/hmac.rs",
     "src/insecure.rs",
+    "src/insecure_rc4.rs",
     "src/kdf.rs",
     "src/lib.rs",
     "src/macros.rs",
