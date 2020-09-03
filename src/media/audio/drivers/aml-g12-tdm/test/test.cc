@@ -183,12 +183,17 @@ TEST(AmlG12Tdm, InitializeI2sOut) {
 
   // Configure TDM OUT for I2S.
   mock[0x580].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM OUT CTRL0 disable.
-  // TDM OUT CTRL0 config, bitoffset 3, 2 slots, 16 bits per slot.
-  mock[0x580].ExpectWrite(0x0001803f);
+  // TDM OUT CTRL0 config, bitoffset 2, 2 slots, 16 bits per slot.
+  mock[0x580].ExpectWrite(0x0001003f);
   // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
   mock[0x584].ExpectWrite(0x02000F20);
 
   mock[0x050].ExpectWrite(0xc1807c3f);  // SCLK CTRL, enabled, 24 sdiv, 31 lrduty, 63 lrdiv.
+  // SCLK CTRL1, clear delay, sclk_invert_ph0.
+  mock[0x054].ExpectWrite(0x00000000).ExpectWrite(0x00000001);
+
+  // CLK TDMOUT CTL, enable, no sclk_inv, sclk_ws_inv, mclk_ch 2.
+  mock[0x098].ExpectWrite(0).ExpectWrite(0xd2200000);
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -228,10 +233,17 @@ TEST(AmlG12Tdm, InitializePcmOut) {
 
   // Configure TDM OUT for PCM.
   mock[0x580].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM OUT CTRL0 disable.
-  // TDM OUT CTRL0 config, bitoffset 3, 1 slot, 32 bits per slot.
-  mock[0x580].ExpectWrite(0x0001801f);
+  // TDM OUT CTRL0 config, bitoffset 2, 1 slot, 16 bits per slot.
+  mock[0x580].ExpectWrite(0x0001000f);
   // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
   mock[0x584].ExpectWrite(0x02000F20);
+
+  mock[0x050].ExpectWrite(0xc180000f);  // SCLK CTRL, enabled, 24 sdiv, 0 lrduty, 15 lrdiv.
+  // SCLK CTRL1, clear delay, no sclk_invert_ph0.
+  mock[0x054].ExpectWrite(0x00000000).ExpectWrite(0x00000000);
+
+  // CLK TDMOUT CTL, enable, no sclk_inv, sclk_ws_inv, mclk_ch 2.
+  mock[0x098].ExpectWrite(0).ExpectWrite(0xd2200000);
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -799,6 +811,11 @@ TEST(AmlG12Tdm, InitializeI2sIn) {
   mock[0x380].ExpectWrite(0x4023001f);
 
   mock[0x050].ExpectWrite(0xc1807c3f);  // SCLK CTRL, enabled, 24 sdiv, 31 lrduty, 63 lrdiv.
+  // SCLK CTRL1, clear delay, sclk_invert_ph0.
+  mock[0x054].ExpectWrite(0x00000000).ExpectWrite(0x00000001);
+
+  // CLK TDMIN CTL, enable, sclk_inv, no sclk_ws_inv, mclk_ch 2.
+  mock[0x088].ExpectWrite(0).ExpectWrite(0xe2200000);
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -824,10 +841,15 @@ TEST(AmlG12Tdm, InitializePcmIn) {
 
   // Configure TDM IN for PCM.
   mock[0x380].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM IN CTRL0 disable.
-  // TDM IN CTRL config, TDM, source TDM IN C, TDM mode, bitoffset 3, 1 slot, 32 bits per slot.
-  mock[0x380].ExpectWrite(0x0023001f);
+  // TDM IN CTRL config, TDM, source TDM IN C, TDM mode, bitoffset 3, 1 slot, 16 bits per slot.
+  mock[0x380].ExpectWrite(0x0023000f);
 
-  mock[0x050].ExpectWrite(0xc180041f);  // SCLK CTRL, enabled, 24 sdiv, 1 lrduty, 31 lrdiv.
+  mock[0x050].ExpectWrite(0xc180000f);  // SCLK CTRL, enabled, 24 sdiv, 0 lrduty, 15 lrdiv.
+  // SCLK CTRL1, clear delay, no sclk_invert_ph0.
+  mock[0x054].ExpectWrite(0x00000000).ExpectWrite(0x00000000);
+
+  // CLK TDMIN CTL, enable, sclk_inv, no sclk_ws_inv, mclk_ch 2.
+  mock[0x088].ExpectWrite(0).ExpectWrite(0xe2200000);
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;

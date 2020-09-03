@@ -40,7 +40,11 @@ void AmlTdmOutDevice::Initialize() {
 
   // Set the sclk and lrclk sources to the chosen mclk channel
   zx_off_t ptr = EE_AUDIO_CLK_TDMOUT_A_CTL + tdm_ch_ * sizeof(uint32_t);
-  mmio_.Write32((0x03 << 30) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
+
+  // We set the Frame Sync sclk invert bit that shifts the delta between FS and DATA, and
+  // allows FS of width 1.
+  constexpr uint32_t sclk_ws_inv = 1;
+  mmio_.Write32((0x03 << 30) | (sclk_ws_inv << 28) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
 
   // Enable DDR ARB, and enable this ddr channels bit.
   mmio_.SetBits32((1 << 31) | (1 << (4 + frddr_ch_)), EE_AUDIO_ARB_CTRL);

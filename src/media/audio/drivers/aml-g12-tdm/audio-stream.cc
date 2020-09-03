@@ -61,6 +61,7 @@ zx_status_t AmlG12TdmStream::InitHW() {
   aml_audio_->Initialize();
 
   // Setup TDM.
+  // TODO(andresoportus): Allow more flexibility by providing some of these parameters via metadata.
   uint8_t bits_per_bitoffset = 0;
   uint8_t number_of_slots = 0;
   uint8_t bits_per_slot = 0;
@@ -70,13 +71,13 @@ zx_status_t AmlG12TdmStream::InitHW() {
   switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
     case metadata::TdmType::LeftJustified:
-      // 4/3 bitoffset, 2 slots (regardless of number of channels), 32 bits/slot, 16 bits/sample.
+      // bitoffset, 2 slots (regardless of number of channels), 32 bits/slot, 16 bits/sample.
       // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
       // to provide i2s framing.
       if (metadata_.tdm.type == metadata::TdmType::I2s) {
-        bits_per_bitoffset = 3;
+        bits_per_bitoffset = metadata_.is_input ? 3 : 2;
       } else {
-        bits_per_bitoffset = 4;
+        bits_per_bitoffset = metadata_.is_input ? 4 : 3;
       }
       number_of_slots = 2;
       bits_per_slot = 32;
@@ -95,12 +96,12 @@ zx_status_t AmlG12TdmStream::InitHW() {
                metadata_.number_of_channels);
         return ZX_ERR_NOT_SUPPORTED;
       }
-      // bitoffset = 3, 1 slot, 16 bits/slot, 32 bits/sample.
+      // bitoffset, 1 slot, 16 bits/slot, 16 bits/sample.
       // For output bitoffest 3 places msb of sample one sclk period after fsync to provide PCM
       // framing.
-      bits_per_bitoffset = 3;
+      bits_per_bitoffset = metadata_.is_input ? 3 : 2;
       number_of_slots = 1;
-      bits_per_slot = 32;
+      bits_per_slot = 16;
       bits_per_sample = 16;
 
       lanes_mutes[0] =
@@ -150,9 +151,10 @@ zx_status_t AmlG12TdmStream::InitHW() {
         break;
       case metadata::TdmType::Pcm:
         // lrduty = 1 sclk cycles (write 0) for PCM
-        // TODO(andresoportus): For now we set lrduty to 2 sclk cycles (write 1), 1 does not work.
-        // invert sclk = false = sclk is falling edge in middle of bit for PCM
-        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 1, 31, true);
+        // invert sclk = false. Note this is true for one PCM device, not sure if true for all.
+        // TODO(andresoportus): Allow more flexibility by providing some of these parameters via
+        // metadata in particular if it is a part configuration.
+        status = aml_audio_->SetSclkDiv(metadata_.sClockDivFactor - 1, 0, bits_per_slot - 1, false);
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
           return status;

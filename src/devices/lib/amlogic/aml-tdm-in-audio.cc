@@ -44,8 +44,7 @@ void AmlTdmInDevice::Initialize() {
 
   // Set the sclk and lrclk sources to the chosen mclk channel
   zx_off_t ptr = EE_AUDIO_CLK_TDMIN_A_CTL + tdm_ch_ * sizeof(uint32_t);
-  // Read TDMIN in the raising edge (we clock TDMOUT in the falling edge).
-  constexpr bool sclk_inv = true;
+  constexpr bool sclk_inv = true;  // Invert sclk wrt TDMOUT.
   mmio_.Write32((0x03 << 30) | (sclk_inv << 29) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
 
   // Enable DDR ARB, and enable this ddr channels bit.
