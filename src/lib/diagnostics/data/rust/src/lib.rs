@@ -327,7 +327,7 @@ impl Data<LogsField, LogsMetadata> {
 /// This contains the fields of logs sent as a [`LogMessage`].
 ///
 /// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize)]
 pub enum LogsField {
     ProcessId,
     ThreadId,
@@ -375,17 +375,28 @@ impl AsRef<str> for LogsField {
     }
 }
 
-impl From<String> for LogsField {
-    fn from(s: String) -> Self {
-        match s.as_str() {
+impl<T> From<T> for LogsField
+where
+    // Deref instead of AsRef b/c LogsField: AsRef<str> so this conflicts with concrete From<Self>
+    T: Deref<Target = str>,
+{
+    fn from(s: T) -> Self {
+        match s.as_ref() {
             PID_LABEL => Self::ProcessId,
             TID_LABEL => Self::ThreadId,
             DROPPED_LABEL => Self::Dropped,
             VERBOSITY_LABEL => Self::Verbosity,
             TAG_LABEL => Self::Tag,
             MESSAGE_LABEL => Self::Msg,
-            _ => Self::Other(s),
+            _ => Self::Other(s.to_string()),
         }
+    }
+}
+
+impl FromStr for LogsField {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::from(s))
     }
 }
 

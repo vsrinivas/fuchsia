@@ -4,7 +4,9 @@
 
 // TODO(fxb/58038) use thiserror for library errors
 use anyhow::{Context as _, Error};
-use diagnostics_data::{Data, InspectData, InspectMetadata, LifecycleEventMetadata, LogsMetadata};
+use diagnostics_data::{
+    Data, InspectData, InspectMetadata, LifecycleEventMetadata, LogsField, LogsMetadata,
+};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
@@ -17,6 +19,7 @@ use fuchsia_zircon::{Duration, DurationNum};
 use futures::sink::{Sink, SinkExt};
 use serde::de::DeserializeOwned;
 use serde_json;
+use std::{hash::Hash, str::FromStr};
 
 pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
@@ -149,7 +152,7 @@ impl ArchiveReader {
     }
 
     /// Connects to the ArchiveAccessor and returns data matching provided selectors.
-    pub async fn snapshot<T>(&self) -> Result<Vec<Data<String, T::Metadata>>, Error>
+    pub async fn snapshot<T>(&self) -> Result<Vec<Data<T::Key, T::Metadata>>, Error>
     where
         T: BatchIteratorType,
     {
@@ -257,13 +260,15 @@ where
 }
 
 pub trait BatchIteratorType {
-    type Metadata: DeserializeOwned;
+    type Key: AsRef<str> + Clone + DeserializeOwned + Eq + FromStr + Hash + Send + 'static;
+    type Metadata: DeserializeOwned + Send + 'static;
     fn data_type() -> DataType;
     fn component_url(metadata: &Self::Metadata) -> &str;
 }
 
 pub struct Inspect;
 impl BatchIteratorType for Inspect {
+    type Key = String;
     type Metadata = InspectMetadata;
 
     fn data_type() -> DataType {
@@ -277,6 +282,7 @@ impl BatchIteratorType for Inspect {
 
 pub struct Lifecycle;
 impl BatchIteratorType for Lifecycle {
+    type Key = String;
     type Metadata = LifecycleEventMetadata;
 
     fn data_type() -> DataType {
@@ -290,6 +296,7 @@ impl BatchIteratorType for Lifecycle {
 
 pub struct Logs;
 impl BatchIteratorType for Logs {
+    type Key = LogsField;
     type Metadata = LogsMetadata;
 
     fn data_type() -> DataType {
