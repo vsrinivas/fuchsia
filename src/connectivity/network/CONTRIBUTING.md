@@ -189,7 +189,7 @@ design doc or [RFC][rfc_process]**.
 
 #### Commit Messages
 
-Commit messages should be _concise_ but self-contained (avoid relying on bug
+Commit messages should be _concise_ but self-contained (avoid relying on issue
 references as explanations for changes) and written such that they are helpful
 to people reading in the future (include rationale and any necessary context).
 
@@ -214,6 +214,12 @@ Beams](https://chris.beams.io/).
 Commit messages should make use of issue tracker integration. See [Commit-log
 message integration][commit_log-message-integration] in the monorail
 documentation.
+
+When using issue tracker integration, don't omit necessary context that may
+also be included in the relevant issue (see "Commit messages should be
+_concise_ but self-contained" above). Many issues are Google-internal, and any
+given issue tracker is not guaranteed to be usable at the time that the commit
+history is read.
 
 Commit messages should never contain references to any of:
 1. Relative moments in time
