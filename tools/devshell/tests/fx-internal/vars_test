@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 BT_FILE_DEPS=(
+  "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
 )
@@ -255,6 +256,19 @@ TEST_fx-is-bringup() {
 
   echo 'import("//products/core.gni") #import("//products/bringup.gni")' > "${BT_TEMP_DIR}/args.gn"
   BT_EXPECT_FAIL fx-is-bringup
+}
+
+# Ensure that fx-command-run can find and execute a command defined in a
+# metadata (*.fx) file.
+TEST_fx-command-run() {
+  local mycmd="${BT_TEMP_DIR}/prebuilt/third_party/mycmdexec"
+  btf::make_mock "${mycmd}"
+  local mymetadata="${BT_TEMP_DIR}/tools/devshell/mycmd.fx"
+  echo "#### EXECUTABLE=\${PREBUILT_3P_DIR}/mycmdexec" > "${mymetadata}"
+  BT_EXPECT fx-command-run mycmd myarg1
+  source "${mycmd}.mock_state"
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[1]}" "myarg1" \
+    "Expected a single argument 'myarg1' to mycmd, got '${BT_MOCK_ARGS[@]:1}'"
 }
 
 BT_RUN_TESTS "$@"

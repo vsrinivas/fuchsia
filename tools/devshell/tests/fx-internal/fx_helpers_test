@@ -6,6 +6,7 @@
 ### Test the helper functions defined in //tools/devshell/README.md#helper-functions
 
 BT_FILE_DEPS=(
+  "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
 )

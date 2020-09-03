@@ -18,6 +18,7 @@ export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 source "${devshell_lib_dir}/platform.sh"
+source "${devshell_lib_dir}/fx-cmd-locator.sh"
 unset devshell_lib_dir
 
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
@@ -420,27 +421,9 @@ function get-device-addr-url {
   get-device-addr-resource | sed 's#%#%25#'
 }
 
-function fx-find-command {
-  local -r cmd=$1
-
-  local command_path="${FUCHSIA_DIR}/tools/devshell/${cmd}"
-  if [[ -x "${command_path}" ]]; then
-    echo "${command_path}"
-    return 0
-  fi
-
-  local command_path="${FUCHSIA_DIR}/tools/devshell/contrib/${cmd}"
-  if [[ -x "${command_path}" ]]; then
-    echo "${command_path}"
-    return 0
-  fi
-
-  return 1
-}
-
 function fx-command-run {
   local -r command_name="$1"
-  local -r command_path="$(fx-find-command ${command_name})"
+  local -r command_path="$(find_executable ${command_name})"
 
   if [[ ${command_path} == "" ]]; then
     fx-error "Unknown command ${command_name}"
