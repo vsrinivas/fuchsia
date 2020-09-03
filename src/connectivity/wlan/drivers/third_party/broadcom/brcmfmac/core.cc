@@ -634,9 +634,9 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
 
   brcmf_proto_add_if(drvr, ifp);
 
-  drvr->config = brcmf_cfg80211_attach(drvr);
-  if (drvr->config == NULL) {
-    ret = ZX_ERR_IO;
+  ret = brcmf_cfg80211_attach(drvr);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("brcmf_cfg80211_attach failed.");
     goto fail;
   }
 

@@ -4893,7 +4893,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
 }
 
-static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
+static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {
   free(cfg->conf);
   cfg->conf = NULL;
   free(cfg->extra_buf);
@@ -4909,7 +4909,7 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
   delete cfg->connect_timer;
 }
 
-static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
+static zx_status_t brcmf_init_cfg_mem(struct brcmf_cfg80211_info* cfg) {
   cfg->conf = static_cast<decltype(cfg->conf)>(calloc(1, sizeof(*cfg->conf)));
   if (!cfg->conf) {
     goto init_priv_mem_out;
@@ -4931,18 +4931,18 @@ static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
   return ZX_OK;
 
 init_priv_mem_out:
-  brcmf_deinit_priv_mem(cfg);
+  brcmf_deinit_cfg_mem(cfg);
 
   return ZX_ERR_NO_MEMORY;
 }
 
-static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
+static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
 
   cfg->scan_request = NULL;
   cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
   cfg->dongle_up = false; /* dongle is not up yet */
-  err = brcmf_init_priv_mem(cfg);
+  err = brcmf_init_cfg_mem(cfg);
   if (err != ZX_OK) {
     return err;
   }
@@ -4967,10 +4967,10 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   return err;
 }
 
-static void wl_deinit_priv(struct brcmf_cfg80211_info* cfg) {
+static void brcmf_deinit_cfg(struct brcmf_cfg80211_info* cfg) {
   cfg->dongle_up = false; /* dongle down */
   brcmf_abort_scanning(cfg);
-  brcmf_deinit_priv_mem(cfg);
+  brcmf_deinit_cfg_mem(cfg);
 }
 
 static void init_vif_event(struct brcmf_cfg80211_vif_event* event) {
@@ -5243,7 +5243,7 @@ zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_du
   return sync_completion_wait(&event->vif_event_wait, timeout);
 }
 
-struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
+zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
   struct brcmf_cfg80211_info* cfg;
   struct brcmf_cfg80211_vif* vif;
@@ -5255,7 +5255,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   BRCMF_DBG(TEMP, "Enter");
   if (!ndev) {
     BRCMF_ERR("ndev is invalid");
-    return NULL;
+    return ZX_ERR_UNAVAILABLE;
   }
 
   ifp = ndev_to_if(ndev);
@@ -5275,9 +5275,9 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   vif->ifp = ifp;
   vif->wdev.netdev = ndev;
 
-  err = wl_init_priv(cfg);
+  err = brcmf_init_cfg(cfg);
   if (err != ZX_OK) {
-    BRCMF_ERR("Failed to init iwm_priv (%d)", err);
+    BRCMF_ERR("Failed to init cfg (%d)", err);
     brcmf_free_vif(vif);
     goto cfg80211_info_out;
   }
@@ -5288,7 +5288,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   if (err != ZX_OK) {
     BRCMF_ERR("Failed to get D11 version: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
-    goto priv_out;
+    goto cfg_out;
   }
   cfg->d11inf.io_type = (uint8_t)io_type;
   brcmu_d11_attach(&cfg->d11inf);
@@ -5341,20 +5341,20 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   }
 
   BRCMF_DBG(TEMP, "Exit");
-  return cfg;
+  return ZX_OK;
 
 detach:
   brcmf_pno_detach(cfg);
   brcmf_btcoex_detach(cfg);
 unreg_out:
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
-priv_out:
-  wl_deinit_priv(cfg);
+cfg_out:
+  brcmf_deinit_cfg(cfg);
   brcmf_free_vif(vif);
   ifp->vif = NULL;
 cfg80211_info_out:
   free(cfg);
-  return NULL;
+  return err;
 }
 
 void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
@@ -5365,7 +5365,7 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_pno_detach(cfg);
   brcmf_btcoex_detach(cfg);
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
-  wl_deinit_priv(cfg);
+  brcmf_deinit_cfg(cfg);
   brcmf_clear_assoc_ies(cfg);
   free(cfg);
 }
