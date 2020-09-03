@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -95,7 +94,7 @@ func main() {
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
 	if err != nil {
-		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
+		logger.Fatalf(ctx, "failed to load tests from %q: %v", testsPath, err)
 	}
 
 	// Configure a test outputs object, responsible for producing TAP output,
@@ -105,7 +104,7 @@ func main() {
 		var err error
 		testOutdir, err = ioutil.TempDir("", "testrunner")
 		if err != nil {
-			log.Fatalf("failed to create a test output directory")
+			logger.Fatalf(ctx, "failed to create a test output directory")
 		}
 	}
 	logger.Debugf(ctx, "test output directory: %s", testOutdir)
@@ -114,7 +113,7 @@ func main() {
 	tapProducer.Plan(len(tests))
 	outputs, err := createTestOutputs(tapProducer, testOutdir)
 	if err != nil {
-		log.Fatalf("failed to create test results object: %v", err)
+		logger.Fatalf(ctx, "failed to create test results object: %v", err)
 	}
 	defer outputs.Close()
 
@@ -123,13 +122,13 @@ func main() {
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
-		log.Fatalf("failed to setup environment: %v", err)
+		logger.Fatalf(ctx, "failed to setup environment: %v", err)
 	}
 	defer cleanUp()
 
 	serialSocketPath := os.Getenv(serialSocketEnvVar)
 	if err := execute(ctx, tests, outputs, nodename, sshKeyFile, serialSocketPath); err != nil {
-		log.Fatal(err)
+		logger.Fatalf(ctx, err.Error())
 	}
 }
 
