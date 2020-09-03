@@ -12,6 +12,7 @@ executable("unittests") {
   output_name = "flatland_unittests"
   testonly = true
   sources = [
+    "engine_unittest.cc",
     "flatland_unittest.cc",
     "global_matrix_data_unittest.cc",
     "global_topology_data_unittest.cc",
