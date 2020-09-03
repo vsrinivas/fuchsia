@@ -10,6 +10,7 @@ fidl("fuchsia.sysmem2") {
   sources = [
     "constraints.fidl",
     "format_modifier.fidl",
+    "heap.fidl",
     "image_formats.fidl",
     "results.fidl",
     "usages.fidl",

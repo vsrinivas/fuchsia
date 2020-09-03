@@ -8,7 +8,7 @@
 
 namespace sysmem_driver {
 
-MemoryAllocator::MemoryAllocator(llcpp::fuchsia::sysmem::HeapProperties properties)
+MemoryAllocator::MemoryAllocator(llcpp::fuchsia::sysmem2::HeapProperties properties)
     : heap_properties_(std::move(properties)) {}
 
 MemoryAllocator::~MemoryAllocator() {

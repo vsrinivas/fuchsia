@@ -4,7 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/heap.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -26,19 +26,19 @@ static const char* kTag = "device-local-heap";
 
 static const char* kThreadName = "goldfish_device_local_heap_thread";
 
-llcpp::fuchsia::sysmem::HeapProperties GetDeviceLocalHeapProperties() {
+llcpp::fuchsia::sysmem2::HeapProperties GetDeviceLocalHeapProperties() {
   auto coherency_domain_support =
-      std::make_unique<llcpp::fuchsia::sysmem::CoherencyDomainSupport>();
+      std::make_unique<llcpp::fuchsia::sysmem2::CoherencyDomainSupport>();
   *coherency_domain_support =
-      llcpp::fuchsia::sysmem::CoherencyDomainSupport::Builder(
-          std::make_unique<llcpp::fuchsia::sysmem::CoherencyDomainSupport::Frame>())
+      llcpp::fuchsia::sysmem2::CoherencyDomainSupport::Builder(
+          std::make_unique<llcpp::fuchsia::sysmem2::CoherencyDomainSupport::Frame>())
           .set_cpu_supported(std::make_unique<bool>(false))
           .set_ram_supported(std::make_unique<bool>(false))
           .set_inaccessible_supported(std::make_unique<bool>(true))
           .build();
 
-  return llcpp::fuchsia::sysmem::HeapProperties::Builder(
-             std::make_unique<llcpp::fuchsia::sysmem::HeapProperties::Frame>())
+  return llcpp::fuchsia::sysmem2::HeapProperties::Builder(
+             std::make_unique<llcpp::fuchsia::sysmem2::HeapProperties::Frame>())
       .set_coherency_domain_support(std::move(coherency_domain_support))
       .build();
 }

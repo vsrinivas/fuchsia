@@ -15,7 +15,6 @@ fidl("fuchsia.sysmem") {
     "driver_connector.fidl",
     "format_modifier.fidl",
     "formats_deprecated.fidl",
-    "heap.fidl",
     "image_formats.fidl",
     "image_formats_deprecated.fidl",
     "secure_mem.fidl",

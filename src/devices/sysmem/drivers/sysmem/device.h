@@ -103,7 +103,7 @@ class Device final : public DdkDeviceType,
   //
   // Clients should guarantee that the heap is valid and already registered
   // to sysmem driver.
-  const llcpp::fuchsia::sysmem::HeapProperties& GetHeapProperties(
+  const llcpp::fuchsia::sysmem2::HeapProperties& GetHeapProperties(
       llcpp::fuchsia::sysmem2::HeapType heap) const;
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }

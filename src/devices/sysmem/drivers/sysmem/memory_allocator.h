@@ -6,6 +6,7 @@
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MEMORY_ALLOCATOR_H_
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
@@ -24,7 +25,7 @@ class MemoryAllocator {
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
   };
 
-  explicit MemoryAllocator(llcpp::fuchsia::sysmem::HeapProperties properties);
+  explicit MemoryAllocator(llcpp::fuchsia::sysmem2::HeapProperties properties);
 
   virtual ~MemoryAllocator();
 
@@ -58,7 +59,9 @@ class MemoryAllocator {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const llcpp::fuchsia::sysmem::HeapProperties& heap_properties() const { return heap_properties_; }
+  const llcpp::fuchsia::sysmem2::HeapProperties& heap_properties() const {
+    return heap_properties_;
+  }
 
   // These avoid the possibility of trying to use a sysmem-configured secure
   // heap before the TEE has told the HW to make the physical range
@@ -74,7 +77,7 @@ class MemoryAllocator {
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;
 
  private:
-  llcpp::fuchsia::sysmem::HeapProperties heap_properties_;
+  llcpp::fuchsia::sysmem2::HeapProperties heap_properties_;
 };
 
 }  // namespace sysmem_driver

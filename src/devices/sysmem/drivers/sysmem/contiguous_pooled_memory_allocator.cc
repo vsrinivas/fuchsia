@@ -4,7 +4,7 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 
 #include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
@@ -15,9 +15,9 @@ namespace sysmem_driver {
 
 namespace {
 
-llcpp::fuchsia::sysmem::HeapProperties BuildHeapProperties(bool is_cpu_accessible) {
-  using llcpp::fuchsia::sysmem::CoherencyDomainSupport;
-  using llcpp::fuchsia::sysmem::HeapProperties;
+llcpp::fuchsia::sysmem2::HeapProperties BuildHeapProperties(bool is_cpu_accessible) {
+  using llcpp::fuchsia::sysmem2::CoherencyDomainSupport;
+  using llcpp::fuchsia::sysmem2::HeapProperties;
 
   auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
   *coherency_domain_support =

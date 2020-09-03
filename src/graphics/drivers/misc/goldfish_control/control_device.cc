@@ -206,7 +206,7 @@ zx_status_t Control::Bind() {
     return status;
   }
   status = pipe_.RegisterSysmemHeap(
-      static_cast<uint64_t>(llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL),
+      static_cast<uint64_t>(llcpp::fuchsia::sysmem2::HeapType::GOLDFISH_DEVICE_LOCAL),
       std::move(heap_connection));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to register heap: %d", kTag, status);

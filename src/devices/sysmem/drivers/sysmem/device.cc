@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl-async-2/simple_binding.h>
@@ -35,10 +36,10 @@ namespace sysmem_driver {
 namespace {
 
 // Helper function to build owned HeapProperties table with coherency doman support.
-llcpp::fuchsia::sysmem::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
+llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
     bool cpu_supported, bool ram_supported, bool inaccessible_supported) {
-  using llcpp::fuchsia::sysmem::CoherencyDomainSupport;
-  using llcpp::fuchsia::sysmem::HeapProperties;
+  using llcpp::fuchsia::sysmem2::CoherencyDomainSupport;
+  using llcpp::fuchsia::sysmem2::HeapProperties;
 
   auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
   *coherency_domain_support =
@@ -132,9 +133,9 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
-  ExternalMemoryAllocator(fidl::Client<llcpp::fuchsia::sysmem::Heap> heap,
+  ExternalMemoryAllocator(fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
                           std::unique_ptr<async::Wait> wait_for_close,
-                          llcpp::fuchsia::sysmem::HeapProperties properties)
+                          llcpp::fuchsia::sysmem2::HeapProperties properties)
       : MemoryAllocator(std::move(properties)),
         heap_(std::move(heap)),
         wait_for_close_(std::move(wait_for_close)) {}
@@ -194,7 +195,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
   }
 
  private:
-  fidl::Client<llcpp::fuchsia::sysmem::Heap> heap_;
+  fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap_;
   std::unique_ptr<async::Wait> wait_for_close_;
 
   // From parent vmo handle to ID.
@@ -405,7 +406,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
           return;
         }
 
-        auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem::Heap>>();
+        auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem2::Heap>>();
         auto heap_client_ptr = heap_client.get();
         status = heap_client_ptr->Bind(
             std::move(heap_connection), loop_.dispatcher(),
@@ -419,7 +420,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
             },
             {.on_register = [this, heap, wait_for_close = std::move(wait_for_close),
                              heap_client = std::move(heap_client)](
-                                llcpp::fuchsia::sysmem::Heap::OnRegisterResponse* message) mutable {
+                                llcpp::fuchsia::sysmem2::Heap::OnRegisterResponse* message) mutable {
               // A heap should not be registered twice.
               ZX_DEBUG_ASSERT(heap_client);
               // This replaces any previously registered allocator for heap (also cancels the old
@@ -646,7 +647,7 @@ MemoryAllocator* Device::GetAllocator(
   return iter->second.get();
 }
 
-const llcpp::fuchsia::sysmem::HeapProperties& Device::GetHeapProperties(
+const llcpp::fuchsia::sysmem2::HeapProperties& Device::GetHeapProperties(
     llcpp::fuchsia::sysmem2::HeapType heap) const {
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
   return allocators_.at(heap)->heap_properties();

@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_HEAP_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_HEAP_H_
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/server.h>
@@ -19,7 +19,7 @@
 namespace goldfish {
 
 class Control;
-using HeapInterface = ::llcpp::fuchsia::sysmem::Heap::Interface;
+using HeapInterface = ::llcpp::fuchsia::sysmem2::Heap::Interface;
 
 // LLCPP synchronous server of a goldfish device-local Fuchsia sysmem Heap
 // interface.
@@ -31,13 +31,13 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
 
   ~Heap();
 
-  // |llcpp::fuchsia::sysmem::Heap::Interface|
+  // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) override;
 
-  // |llcpp::fuchsia::sysmem::Heap::Interface|
+  // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void CreateResource(::zx::vmo vmo, CreateResourceCompleter::Sync completer) override;
 
-  // |llcpp::fuchsia::sysmem::Heap::Interface|
+  // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) override;
 
   // Bind the server to a FIDL channel.
