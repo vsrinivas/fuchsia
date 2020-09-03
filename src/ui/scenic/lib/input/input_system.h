@@ -129,7 +129,8 @@ class InputSystem : public System,
   void InjectTouchEventExclusive(const InternalPointerEvent& event);
 
   // Injects a touch event by hit testing for appropriate targets.
-  void InjectTouchEventHitTested(const InternalPointerEvent& event, bool parallel_dispatch);
+  void InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id,
+                                 bool parallel_dispatch);
   void InjectMouseEventHitTested(const InternalPointerEvent& event);
 
   // Retrieve KOID of focus chain's root view.
@@ -196,6 +197,9 @@ class InputSystem : public System,
   // This is used to ensure consistent delivery of mouse events for a given device. A focus change
   // triggered by other pointer events should *not* affect delivery of events to existing mice.
   std::unordered_map<uint32_t, std::vector</*view_ref_koids*/ zx_koid_t>> mouse_targets_;
+
+  // Mapping of {device_id, pointer_id} to stream id for gfx legacy injection.
+  std::unordered_map<uint64_t, StreamId> gfx_legacy_streams_;
 };
 
 }  // namespace input

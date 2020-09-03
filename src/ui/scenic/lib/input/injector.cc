@@ -7,12 +7,16 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include "src/ui/scenic/lib/input/helper.h"
 
 namespace scenic_impl {
 namespace input {
 
 using fuchsia::ui::pointerinjector::EventPhase;
+
+StreamId NewStreamId() {
+  static StreamId next_id = 1;
+  return next_id++;
+}
 
 namespace {
 
@@ -121,7 +125,7 @@ Injector::Injector(InjectorSettings settings, Viewport viewport,
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                    fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                        is_descendant_and_connected,
-                   fit::function<void(const InternalPointerEvent&)> inject)
+                   fit::function<void(const InternalPointerEvent&, StreamId)> inject)
     : binding_(this, std::move(device)),
       settings_(std::move(settings)),
       viewport_(std::move(viewport)),
@@ -191,12 +195,10 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
     } else if (event.data().is_pointer_sample()) {
       const auto& pointer_sample = event.data().pointer_sample();
 
-      {
-        const zx_status_t result = ValidatePointerSample(pointer_sample);
-        if (result != ZX_OK) {
-          CloseChannel(result);
-          return;
-        }
+      const auto [result, stream_id] = ValidatePointerSample(pointer_sample);
+      if (result != ZX_OK) {
+        CloseChannel(result);
+        return;
       }
 
       if (event.has_trace_flow_id()) {
@@ -207,8 +209,10 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
       std::vector<InternalPointerEvent> internal_events =
           PointerInjectorEventToInternalPointerEvent(event, settings_.device_id, viewport_,
                                                      settings_.context_koid, settings_.target_koid);
+
+      FX_DCHECK(stream_id != kInvalidStreamId);
       for (auto& internal_event : internal_events) {
-        inject_(internal_event);
+        inject_(internal_event, stream_id);
       }
 
       continue;
@@ -221,52 +225,60 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
   callback();
 }
 
-zx_status_t Injector::ValidatePointerSample(
+std::pair<zx_status_t, StreamId> Injector::ValidatePointerSample(
     const fuchsia::ui::pointerinjector::PointerSample& pointer_sample) {
   if (!HasRequiredFields(pointer_sample)) {
     FX_LOGS(ERROR)
         << "Injected fuchsia::ui::pointerinjector::PointerSample was missing required fields";
-    return ZX_ERR_INVALID_ARGS;
+    return {ZX_ERR_INVALID_ARGS, kInvalidStreamId};
   }
 
   const auto [x, y] = pointer_sample.position_in_viewport();
   if (!std::isfinite(x) || !std::isfinite(y)) {
     FX_LOGS(ERROR) << "fuchsia::ui::pointerinjector::PointerSample contained a NaN or inf value";
-    return ZX_ERR_INVALID_ARGS;
+    return {ZX_ERR_INVALID_ARGS, kInvalidStreamId};
   }
 
   // Enforce event stream ordering rules.
-  if (!ValidateEventStream(pointer_sample.pointer_id(), pointer_sample.phase())) {
+  const auto stream_id = ValidateEventStream(pointer_sample.pointer_id(), pointer_sample.phase());
+  if (stream_id == kInvalidStreamId) {
     FX_LOGS(ERROR) << "Inject() called with invalid event stream";
-    return ZX_ERR_BAD_STATE;
+    return {ZX_ERR_BAD_STATE, kInvalidStreamId};
   }
 
-  return ZX_OK;
+  return {ZX_OK, stream_id};
 }
 
-bool Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
+StreamId Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
   const bool stream_is_ongoing = ongoing_streams_.count(pointer_id) > 0;
   const bool double_add = stream_is_ongoing && phase == EventPhase::ADD;
   const bool invalid_start = !stream_is_ongoing && phase != EventPhase::ADD;
   if (double_add || invalid_start) {
-    return false;
+    return kInvalidStreamId;
   }
 
   // Update stream state.
+  StreamId stream_id = kInvalidStreamId;
   if (phase == EventPhase::ADD) {
-    ongoing_streams_.insert(pointer_id);
+    ongoing_streams_.emplace(pointer_id, NewStreamId());
+    stream_id = ongoing_streams_.at(pointer_id);
   } else if (phase == EventPhase::REMOVE || phase == EventPhase::CANCEL) {
+    stream_id = ongoing_streams_.at(pointer_id);
     ongoing_streams_.erase(pointer_id);
+  } else {
+    stream_id = ongoing_streams_.at(pointer_id);
   }
 
-  return true;
+  FX_DCHECK(stream_id != kInvalidStreamId);
+  return stream_id;
 }
 
 void Injector::CancelOngoingStreams() {
   // Inject CANCEL event for each ongoing stream.
-  for (auto pointer_id : ongoing_streams_) {
+  for (const auto [pointer_id, stream_id] : ongoing_streams_) {
     inject_(CreateCancelEvent(settings_.device_id, pointer_id, settings_.context_koid,
-                              settings_.target_koid));
+                              settings_.target_koid),
+            stream_id);
   }
   ongoing_streams_.clear();
 }

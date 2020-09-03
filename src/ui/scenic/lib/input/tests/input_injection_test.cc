@@ -18,6 +18,7 @@
 using fuchsia::ui::views::ViewRef;
 using Phase = fuchsia::ui::pointerinjector::EventPhase;
 using DeviceType = fuchsia::ui::pointerinjector::DeviceType;
+using StreamId = scenic_impl::input::StreamId;
 
 namespace lib_ui_input_tests {
 namespace {
@@ -667,7 +668,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event) {
+      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
       });
@@ -733,7 +734,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event) {
+      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
       });
@@ -839,7 +840,7 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/
-      [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event) {
+      [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         num_cancel_events += event.phase == scenic_impl::input::Phase::CANCEL ? 1 : 0;
       });
 

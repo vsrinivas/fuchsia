@@ -277,14 +277,16 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
           ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
-  fit::function<void(const InternalPointerEvent&)> inject_func;
+  fit::function<void(const InternalPointerEvent&, StreamId)> inject_func;
   switch (settings.dispatch_policy) {
     case fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET:
-      inject_func = [this](const InternalPointerEvent& event) { InjectTouchEventExclusive(event); };
+      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
+        InjectTouchEventExclusive(event);
+      };
       break;
     case fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET:
-      inject_func = [this](const InternalPointerEvent& event) {
-        InjectTouchEventHitTested(event, /*parallel_dispatch*/ false);
+      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
+        InjectTouchEventHitTested(event, stream_id, /*parallel_dispatch*/ false);
       };
       break;
     default:
@@ -409,11 +411,32 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
 
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH: {
+      // Get stream id. Create one if this is a new stream.
+      const uint64_t stream_key =
+          ((uint64_t)internal_event.device_id << 32) | (uint64_t)internal_event.pointer_id;
+      if (!gfx_legacy_streams_.count(stream_key)) {
+        if (internal_event.phase != Phase::ADD) {
+          FX_LOGS(WARNING) << "Attempted to start a stream without an initial ADD.";
+          return;
+        }
+
+        gfx_legacy_streams_.emplace(stream_key, NewStreamId());
+      } else if (internal_event.phase == Phase::ADD) {
+        FX_LOGS(WARNING) << "Attempted to ADD twice for the same stream.";
+        return;
+      }
+      const auto stream_id = gfx_legacy_streams_[stream_key];
+
+      // Remove from ongoing streams on stream end.
+      if (internal_event.phase == Phase::REMOVE || internal_event.phase == Phase::CANCEL) {
+        gfx_legacy_streams_.erase(stream_key);
+      }
+
       TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
       TRACE_FLOW_END(
           "input", "dispatch_event_to_scenic",
           PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor));
-      InjectTouchEventHitTested(internal_event, parallel_dispatch);
+      InjectTouchEventHitTested(internal_event, stream_id, parallel_dispatch);
       break;
     }
     case PointerEventType::MOUSE: {
@@ -447,7 +470,7 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event) {
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
+void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id,
                                             bool parallel_dispatch) {
   FX_DCHECK(scene_graph_);
   const gfx::ViewTree& view_tree = scene_graph_->view_tree();

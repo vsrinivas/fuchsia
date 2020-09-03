@@ -306,7 +306,7 @@ TEST_F(PointerCaptureTest, WhenListenerDisconnects_OtherClientsShouldStillWork) 
   // Send more input
   {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
-                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+                                    /*pointer id*/ 2, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
     session->Enqueue(pointer.Add(2, 2));
     RequestToPresent(session);
@@ -545,8 +545,8 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Down(0, 0));
-    session->Enqueue(pointer.Move(5, 0));
+    session->Enqueue(pointer.Add(0, 0));
+    session->Enqueue(pointer.Down(5, 0));
     session->Enqueue(pointer.Move(5, 5));
     session->Enqueue(pointer.Up(0, 5));
     RequestToPresent(session);
@@ -558,8 +558,8 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::DOWN, 0.0 / 2.0, 1.0 / 3.0));
-    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::MOVE, 0.0 / 2.0, -4.0 / 3.0));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0.0 / 2.0, 1.0 / 3.0));
+    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 0.0 / 2.0, -4.0 / 3.0));
     EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 5.0 / 2.0, -4.0 / 3.0));
     EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 5.0 / 2.0, 1.0 / 3.0));
   }
@@ -655,8 +655,8 @@ TEST_F(PointerCaptureTest, ClipSpaceTransformedListenerView_ShouldGetTransformed
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Down(0, 0));
-    session->Enqueue(pointer.Move(5, 0));
+    session->Enqueue(pointer.Add(0, 0));
+    session->Enqueue(pointer.Down(5, 0));
     session->Enqueue(pointer.Move(5, 5));
     session->Enqueue(pointer.Up(0, 5));
     RequestToPresent(session);
@@ -668,8 +668,8 @@ TEST_F(PointerCaptureTest, ClipSpaceTransformedListenerView_ShouldGetTransformed
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::DOWN, 0, 0));
-    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::MOVE, 2.5, 0));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 0, 0));
+    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 2.5, 0));
     EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 2.5, 2.5));
     EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 0, 2.5));
   }
@@ -762,8 +762,8 @@ TEST_F(PointerCaptureTest,
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Down(0, 0));
-    session->Enqueue(pointer.Move(5, 0));
+    session->Enqueue(pointer.Add(0, 0));
+    session->Enqueue(pointer.Down(5, 0));
     session->Enqueue(pointer.Move(5, 5));
     session->Enqueue(pointer.Up(0, 5));
     RequestToPresent(session);
@@ -775,8 +775,8 @@ TEST_F(PointerCaptureTest,
     ASSERT_EQ(events.size(), 4u);
 
     // Verify capture client gets properly transformed input coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::DOWN, 2.25 - 1, 2.25 - 1));
-    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::MOVE, 4.75 - 1, 2.25 - 1));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 2.25 - 1, 2.25 - 1));
+    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 4.75 - 1, 2.25 - 1));
     EXPECT_TRUE(PointerMatches(events[2], 1u, PointerEventPhase::MOVE, 4.75 - 1, 4.75 - 1));
     EXPECT_TRUE(PointerMatches(events[3], 1u, PointerEventPhase::UP, 2.25 - 1, 4.75 - 1));
   }
