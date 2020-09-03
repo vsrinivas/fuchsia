@@ -37,12 +37,6 @@ template("banjo") {
     banjo_library(target_name) {
       forward_variables_from(invoker, "*")
     }
-  } else if (current_toolchain == rust_toolchain) {
-    import("//build/rust/banjo_rust.gni")
-
-    banjo_rust(target_name) {
-      forward_variables_from(invoker, "*")
-    }
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
     import("//build/rust/banjo_rust_library.gni")
@@ -70,19 +64,11 @@ template("banjo_dummy") {
     banjo_dummy_library(target_name) {
       forward_variables_from(invoker, "*")
     }
-  } else if (current_toolchain == rust_toolchain) {
-    import("//build/rust/banjo_rust.gni")
-
-    banjo_rust(target_name) {
-      forward_variables_from(invoker, "*")
-    }
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
     import("//build/rust/banjo_rust_library.gni")
 
-    #
-    # TODO(cramertj): remove pending TC-81.
-    banjo_rust_library(target_name) {
+    banjo_dummy_rust_library(target_name) {
       forward_variables_from(invoker, "*")
     }
 

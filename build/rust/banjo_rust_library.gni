@@ -12,8 +12,8 @@ import("//build/rust/toolchain.gni")
 template("banjo_rust_library") {
   not_needed(invoker, [ "sources" ])
 
-  generation_target_name = "${target_name}_rust_generate"
   rustc_target_name = "${target_name}-rustc"
+  generation_target_name = "${target_name}_rust_compile"
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -51,8 +51,28 @@ template("banjo_rust_library") {
       }
     }
 
-    non_rust_deps = [ ":$generation_target_name($rust_toolchain)" ]
+    non_rust_deps = [ ":$generation_target_name($banjo_toolchain)" ]
     source_root = rebase_path("$file_stem.rs")
     sources = [ rebase_path("$file_stem.rs") ]
+  }
+}
+
+template("banjo_dummy_rust_library") {
+  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
+
+  not_needed(invoker,
+             [
+               "sources",
+               "name",
+             ])
+
+  rustc_target_name = "${target_name}-rustc"
+  group(rustc_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }

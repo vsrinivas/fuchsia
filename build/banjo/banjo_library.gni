@@ -220,14 +220,14 @@ template("banjo_library") {
       ]
 
       args = [
+               "--output",
+               rebase_path(output, root_build_dir),
                "--out-response-file",
                rebase_path(response_file, root_build_dir),
                "--out-libraries",
                rebase_path(libraries, root_build_dir),
                "--backend",
                backend,
-               "--output",
-               rebase_path(output, root_build_dir),
                "--name",
                library_name,
                "--sources",
@@ -247,10 +247,6 @@ template("banjo_library") {
         args +=
             [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
       }
-
-      metadata = {
-        generated_sources = [ rebase_path(output, root_build_dir) ]
-      }
     }
   }
 
@@ -261,23 +257,25 @@ template("banjo_library") {
     backend = target[3]
     output = target[4]
 
-    if (backend != "rust") {
-      compiled_action(target_name) {
-        forward_variables_from(invoker, [ "testonly" ])
+    compiled_action(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-        visibility = [ ":*" ]
+      visibility = [ ":*" ]
 
-        tool = "//src/devices/tools/banjo:banjo_bin"
+      tool = "//src/devices/tools/banjo:banjo_bin"
 
-        inputs = [ response_file ]
+      inputs = [ response_file ]
 
-        outputs = [ output ]
+      outputs = [ output ]
 
-        rebased_response_file = rebase_path(response_file, root_build_dir)
+      rebased_response_file = rebase_path(response_file, root_build_dir)
 
-        args = [ "@$rebased_response_file" ]
+      args = [ "@$rebased_response_file" ]
 
-        deps = [ ":$response_target_name" ]
+      deps = [ ":$response_target_name" ]
+
+      metadata = {
+        generated_sources = [ rebase_path(output, root_build_dir) ]
       }
     }
   }
@@ -298,6 +296,7 @@ template("banjo_library") {
       ":$cpp_mock_response_file_target_name",
       ":$cpp_mock_target_name",
       ":$cpp_response_file_target_name",
+      ":$rust_compile_target_name",
       ":$rust_response_file_target_name",
     ]
   }
@@ -382,10 +381,6 @@ template("banjo_dummy_library") {
                library_name,
                "--sources",
              ] + rebase_path(sources, root_build_dir)
-
-      metadata = {
-        generated_sources = [ rebase_path(output, root_build_dir) ]
-      }
     }
   }
 
