@@ -6,38 +6,48 @@
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
 
 #include <stdint.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
+#include <memory>
 
-#define I2C_7BIT_ADDRESS 7
-#define I2C_10BIT_ADDRESS 10
+namespace intel_i2c {
 
-typedef struct i2c_subordinate_segment {
+inline constexpr uint8_t kI2c7BitAddress = 7;
+inline constexpr uint8_t kI2c10BitAddress = 10;
+
+class IntelI2cController;
+
+struct IntelI2cSubordinateSegment {
   int type;
   int len;
   uint8_t* buf;
-} i2c_subordinate_segment_t;
+};
 
-typedef struct intel_serialio_i2c_subordinate_device {
-  zx_device_t* zxdev;
-  struct intel_serialio_i2c_device* controller;
+class IntelI2cSubordinate {
+ public:
+  static std::unique_ptr<IntelI2cSubordinate> Create(IntelI2cController* controller,
+                                                     const uint8_t chip_address_width,
+                                                     const uint16_t chip_address,
+                                                     const uint32_t i2c_class);
 
-  uint8_t chip_address_width;
-  uint16_t chip_address;
+  zx_status_t Transfer(const IntelI2cSubordinateSegment* segments, int segment_count);
+  uint8_t GetChipAddressWidth() const { return chip_address_width_; }
+  uint16_t GetChipAddress() const { return chip_address_; }
+  uint32_t GetI2cClass() const { return i2c_class_; }
 
-  struct list_node subordinate_list_node;
-} intel_serialio_i2c_subordinate_device_t;
+ private:
+  IntelI2cSubordinate(IntelI2cController* controller, const uint8_t chip_address_width,
+                      const uint16_t chip_address, const uint32_t i2c_class)
+      : controller_(controller),
+        chip_address_width_(chip_address_width),
+        chip_address_(chip_address),
+        i2c_class_(i2c_class) {}
+  IntelI2cController* controller_;
+  const uint8_t chip_address_width_;
+  const uint16_t chip_address_;
+  const uint32_t i2c_class_;
+};
 
-// device protocol for a subordinate device
-extern zx_protocol_device_t intel_serialio_i2c_subordinate_device_proto;
-
-zx_status_t intel_serialio_i2c_subordinate_transfer(
-    intel_serialio_i2c_subordinate_device_t* subordinate, i2c_subordinate_segment_t* segments,
-    int segment_count);
-zx_status_t intel_serialio_i2c_subordinate_get_irq(
-    intel_serialio_i2c_subordinate_device_t* subordinate, zx_handle_t* out);
+}  // namespace intel_i2c
 
 #endif  // SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_

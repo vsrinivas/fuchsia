@@ -5,15 +5,29 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
+#include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/event.h>
+#include <lib/zx/interrupt.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <map>
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/i2cimpl.h>
+#include <ddktl/protocol/pci.h>
 
-typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
+#include "intel-i2c-subordinate.h"
+
+namespace intel_i2c {
+struct __attribute__((packed)) I2cRegs {
   uint32_t ctl;
   uint32_t tar_add;
   uint32_t _reserved0[2];
@@ -56,144 +70,175 @@ typedef struct __attribute__((packed)) intel_serialio_i2c_regs {
   uint32_t comp_param1;
   uint32_t comp_ver;
   uint32_t comp_type;
-} intel_serialio_i2c_regs;
-_Static_assert(sizeof(intel_serialio_i2c_regs) <= 0x200, "bad struct");
-
-enum {
-  I2C_MAX_FAST_PLUS_SPEED_HZ = 1000000,
-  I2C_MAX_FAST_SPEED_HZ = 400000,
-  I2C_MAX_STANDARD_SPEED_HZ = 100000,
 };
+_Static_assert(sizeof(I2cRegs) <= 0x200, "bad struct");
 
-enum {
-  I2C_EN_ABORT = 1,
-  I2C_EN_ENABLE = 0,
-};
+inline constexpr uint32_t kI2cMaxFastPlusSpeedHz = 1000000;
+inline constexpr uint32_t kI2cMaxFastSpeedHz = 400000;
+inline constexpr uint32_t kI2cMaxStandardSpeedHz = 100000;
 
-enum {
-  CTL_SLAVE_DISABLE = 6,
-  CTL_RESTART_ENABLE = 5,
-  CTL_ADDRESSING_MODE = 4,
+inline constexpr uint32_t kI2cEnAbort = 1;
+inline constexpr uint32_t kI2cEnEnable = 0;
 
-  CTL_ADDRESSING_MODE_7BIT = 0x0,
-  CTL_ADDRESSING_MODE_10BIT = 0x1,
+inline constexpr uint32_t kCtlSlaveDisable = 6;
+inline constexpr uint32_t kCtlRestartEnable = 5;
+inline constexpr uint32_t kCtlAddressingMode = 4;
 
-  CTL_SPEED = 1,
-  CTL_SPEED_STANDARD = 0x1,
-  CTL_SPEED_FAST = 0x2,
+inline constexpr uint32_t kCtlAddressingMode7Bit = 0x0;
+inline constexpr uint32_t kCtlAddressingMode10Bit = 0x1;
 
-  CTL_MASTER_MODE = 0,
-  CTL_MASTER_MODE_ENABLED = 0x1,
-};
+inline constexpr uint32_t kCtlSpeed = 1;
+inline constexpr uint32_t kCtlSpeedStandard = 0x1;
+inline constexpr uint32_t kCtlSpeedFast = 0x2;
 
-enum {
-  INTR_GENERAL_CALL = 11,
-  INTR_START_DETECTION = 10,
-  INTR_STOP_DETECTION = 9,
-  INTR_ACTIVITY = 8,
-  INTR_TX_ABORT = 6,
-  INTR_TX_EMPTY = 4,
-  INTR_TX_OVER = 3,
-  INTR_RX_FULL = 2,
-  INTR_RX_OVER = 1,
-  INTR_RX_UNDER = 0,
-};
+inline constexpr uint32_t kCtlMasterMode = 0;
+inline constexpr uint32_t kCtlMasterModeEnabled = 0x1;
 
-enum {
-  TAR_ADD_WIDTH = 12,
-  TAR_ADD_WIDTH_7BIT = 0x0,
-  TAR_ADD_WIDTH_10BIT = 0x1,
+inline constexpr uint32_t kIntrGeneralCall = 11;
+inline constexpr uint32_t kIntrStartDetection = 10;
+inline constexpr uint32_t kIntrStopDetection = 9;
+inline constexpr uint32_t kIntrActivity = 8;
+inline constexpr uint32_t kIntrTxAbort = 6;
+inline constexpr uint32_t kIntrTxEmpty = 4;
+inline constexpr uint32_t kIntrTxOver = 3;
+inline constexpr uint32_t kIntrRxFull = 2;
+inline constexpr uint32_t kIntrRxOver = 1;
+inline constexpr uint32_t kIntrRxUnder = 0;
 
-  TAR_ADD_SPECIAL = 11,
-  TAR_ADD_GC_OR_START = 10,
-  TAR_ADD_IC_TAR = 0,
-};
+inline constexpr uint32_t kTarAddWidth = 12;
+inline constexpr uint32_t kTarAddWidth7Bit = 0x0;
+inline constexpr uint32_t kTarAddWidth10Bit = 0x1;
 
-enum {
-  I2C_STA_CA = 5,
-  I2C_STA_RFCF = 4,
-  I2C_STA_RFNE = 3,
-  I2C_STA_TFCE = 2,
-  I2C_STA_TFNF = 1,
-  I2C_STA_ACTIVITY = 0,
-};
+inline constexpr uint32_t kTarAddSpecial = 11;
+inline constexpr uint32_t kTarAddGcOrStart = 10;
+inline constexpr uint32_t kTarAddIcTar = 0;
 
-enum {
-  DATA_CMD_RESTART = 10,
-  DATA_CMD_STOP = 9,
+inline constexpr uint32_t kI2cStaCa = 5;
+inline constexpr uint32_t kI2cStaRfcf = 4;
+inline constexpr uint32_t kI2cStaRfne = 3;
+inline constexpr uint32_t kI2cStaTfce = 2;
+inline constexpr uint32_t kI2cStaTfnf = 1;
+inline constexpr uint32_t kI2cStaActivity = 0;
 
-  DATA_CMD_CMD = 8,
-  DATA_CMD_CMD_WRITE = 0,
-  DATA_CMD_CMD_READ = 1,
+inline constexpr uint32_t kDataCmdRestart = 10;
+inline constexpr uint32_t kDataCmdStop = 9;
 
-  DATA_CMD_DAT = 0,
-};
+inline constexpr uint32_t kDataCmdCmd = 8;
+inline constexpr uint32_t kDataCmdCmdWrite = 0;
+inline constexpr uint32_t kDataCmdCmdRead = 1;
 
-typedef struct intel_serialio_i2c_device {
-  zx_device_t* zxdev;
-  zx_device_t* pcidev;
+inline constexpr uint32_t kDataCmdDat = 0;
 
-  MMIO_PTR intel_serialio_i2c_regs* regs;
-  MMIO_PTR volatile uint32_t* soft_reset;
+class IntelI2cController;
+using IntelI2cControllerType =
+    ddk::Device<IntelI2cController, ddk::Initializable, ddk::UnbindableNew>;
 
-  mmio_buffer_t mmio;
+class IntelI2cController : public IntelI2cControllerType,
+                           public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
+ public:
+  IntelI2cController(zx_device_t* parent) : IntelI2cControllerType(parent), pci_(parent) {}
 
-  thrd_t irq_thread;
-  zx_handle_t irq_handle;
-  zx_handle_t event_handle;
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  uint32_t controller_freq;
-  uint32_t bus_freq;
+  void DdkInit(ddk::InitTxn txn);
+
+  zx_status_t Reset() TA_REQ(mutex_);
+  zx_status_t WaitForRxFull(const zx::time deadline);
+  zx_status_t WaitForTxEmpty(const zx::time deadline);
+  zx_status_t WaitForStopDetect(const zx::time deadline);
+  zx_status_t ClearStopDetect();
+  zx_status_t CheckForError();
+
+  // Acts on the DATA_CMD register, and clear
+  // interrupt masks as appropriate
+  zx_status_t IssueRx(const uint32_t data_cmd);
+  zx_status_t FlushRxFullIrq();
+  uint8_t ReadRx();
+  zx_status_t IssueTx(const uint32_t data_cmd);
+
+  void Enable();
+  uint8_t GetRxFifoDepth() const { return rx_fifo_depth_; }
+  zx_status_t SetRxFifoThreshold(const uint32_t threshold);
+  uint32_t GetRxFifoLevel();
+  bool IsRxFifoEmpty();
+  bool IsTxFifoFull();
+  bool IsBusIdle();
+  uint32_t StopDetected();
+  void SetAddressingMode(const uint32_t addr_mode_bit);
+  void SetTargetAddress(const uint32_t addr_mode_bit, const uint32_t address);
+
+  uint32_t I2cImplGetBusCount();
+  zx_status_t I2cImplGetMaxTransferSize(const uint32_t bus_id, size_t* out_size);
+  zx_status_t I2cImplSetBitrate(const uint32_t bus_id, const uint32_t bitrate);
+  zx_status_t I2cImplTransact(const uint32_t bus_id, const i2c_impl_op_t* op_list,
+                              const size_t op_count);
+
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+
+ private:
+  zx_status_t Init();
+  ddk::Pci pci_;
+
+  thrd_t irq_thread_;
+  zx::interrupt irq_handle_;
+  zx::event event_handle_;
+  int IrqThread();
+
+  zx_status_t DeviceSpecificInit(const uint16_t device_id);
+
+  zx_status_t ComputeBusTiming();
+
+  uint32_t GetRxFifoThreshold();
+  uint32_t GetTxFifoThreshold();
+  zx_status_t SetTxFifoThreshold(const uint32_t threshold);
+
+  zx_status_t SetBusFrequency(const uint32_t frequency);
+
+  zx_status_t AddSubordinates();
+  zx_status_t AddSubordinate(const uint8_t width, const uint16_t address,
+                             const zx_device_prop_t* props, const uint32_t propcount);
+
+  static uint32_t ComputeSclHcnt(const uint32_t controller_freq, const uint32_t t_high_nanos,
+                                 const uint32_t t_r_nanos);
+
+  static uint32_t ComputeSclLcnt(const uint32_t controller_freq, const uint32_t t_low_nanos,
+                                 const uint32_t t_f_nanos);
+
+  static uint8_t ExtractTxFifoDepthFromParam(const uint32_t param);
+  static uint8_t ExtractRxFifoDepthFromParam(const uint32_t param);
+  static uint32_t ChipAddrMask(const int width);
+
+  MMIO_PTR I2cRegs* regs_;
+  MMIO_PTR volatile uint32_t* soft_reset_;
+
+  mtx_t mutex_;
+  uint8_t rx_fifo_depth_;
+
+  std::optional<ddk::MmioBuffer> mmio_;
+
+  uint32_t controller_freq_;
+  uint32_t bus_freq_;
 
   // Bus parameters
-  uint16_t sda_hold;
+  uint16_t sda_hold_;
   // Standard speed parameters
-  uint16_t ss_scl_hcnt;
-  uint16_t ss_scl_lcnt;
+  uint16_t ss_scl_hcnt_;
+  uint16_t ss_scl_lcnt_;
   // Fast mode speed parameters
-  uint16_t fs_scl_hcnt;
-  uint16_t fs_scl_lcnt;
+  uint16_t fs_scl_hcnt_;
+  uint16_t fs_scl_lcnt_;
   // Fast mode plus speed parameters
-  uint16_t fmp_scl_hcnt;
-  uint16_t fmp_scl_lcnt;
+  uint16_t fmp_scl_hcnt_;
+  uint16_t fmp_scl_lcnt_;
 
-  uint8_t rx_fifo_depth;
-  uint8_t tx_fifo_depth;
+  uint8_t tx_fifo_depth_;
 
-  struct list_node subordinate_list;
+  std::map<uint16_t, std::unique_ptr<IntelI2cSubordinate>> subordinates_ TA_GUARDED(mutex_);
 
-  mtx_t mutex;
-  mtx_t irq_mask_mutex;
-} intel_serialio_i2c_device_t;
+  mtx_t irq_mask_mutex_;
+};
 
-zx_status_t intel_serialio_i2c_reset_controller(intel_serialio_i2c_device_t* controller);
-
-zx_status_t intel_serialio_i2c_wait_for_rx_full(intel_serialio_i2c_device_t* controller,
-                                                zx_time_t deadline);
-zx_status_t intel_serialio_i2c_wait_for_tx_empty(intel_serialio_i2c_device_t* controller,
-                                                 zx_time_t deadline);
-zx_status_t intel_serialio_i2c_wait_for_stop_detect(intel_serialio_i2c_device_t* controller,
-                                                    zx_time_t deadline);
-
-// Acts on the DATA_CMD register, and clear
-// interrupt masks as appropriate
-zx_status_t intel_serialio_i2c_issue_rx(intel_serialio_i2c_device_t* controller, uint32_t data_cmd);
-zx_status_t intel_serialio_i2c_flush_rx_full_irq(intel_serialio_i2c_device_t* controller);
-zx_status_t intel_serialio_i2c_read_rx(intel_serialio_i2c_device_t* controller, uint8_t* data);
-zx_status_t intel_serialio_i2c_issue_tx(intel_serialio_i2c_device_t* controller, uint32_t data_cmd);
-
-zx_status_t intel_serialio_i2c_clear_stop_detect(intel_serialio_i2c_device_t* controller);
-
-zx_status_t intel_serialio_i2c_check_for_error(intel_serialio_i2c_device_t* controller);
-
-void intel_serialio_i2c_get_rx_fifo_threshold(intel_serialio_i2c_device_t* controller,
-                                              uint32_t* threshold);
-zx_status_t intel_serialio_i2c_set_rx_fifo_threshold(intel_serialio_i2c_device_t* controller,
-                                                     uint32_t threshold);
-
-void intel_serialio_i2c_get_tx_fifo_threshold(intel_serialio_i2c_device_t* controller,
-                                              uint32_t* threshold);
-zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(intel_serialio_i2c_device_t* controller,
-                                                     uint32_t threshold);
+}  // namespace intel_i2c
 
 #endif  // SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_

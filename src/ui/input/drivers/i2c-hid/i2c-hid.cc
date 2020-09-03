@@ -453,6 +453,11 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
     desc_len = sizeof(I2cHidDesc);
   }
 
+  if (desc_len == 0) {
+    zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d", status);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   status = i2c_.WriteReadSync(buf, sizeof(buf), reinterpret_cast<uint8_t*>(hiddesc), desc_len);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d", status);

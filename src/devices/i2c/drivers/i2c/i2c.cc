@@ -113,6 +113,7 @@ void I2cDevice::AddChildren() {
     const auto& channel = channels[i];
     const auto bus_id = channel.bus_id;
     const auto address = channel.address;
+    const auto i2c_class = channel.i2c_class;
     const auto vid = channel.vid;
     const auto pid = channel.pid;
     const auto did = channel.did;
@@ -136,7 +137,7 @@ void I2cDevice::AddChildren() {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},
           {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
-          {BIND_PLATFORM_DEV_DID, 0, did},
+          {BIND_PLATFORM_DEV_DID, 0, did}, {BIND_I2C_CLASS, 0, i2c_class},
       };
 
       status = dev->DdkAdd(
@@ -145,6 +146,7 @@ void I2cDevice::AddChildren() {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},
           {BIND_I2C_ADDRESS, 0, address},
+          {BIND_I2C_CLASS, 0, i2c_class},
       };
 
       status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));

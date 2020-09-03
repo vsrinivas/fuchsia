@@ -15,6 +15,7 @@
 typedef struct {
   uint32_t bus_id;
   uint16_t address;
+  uint32_t i2c_class;
   // Used for binding directly to the I2C device using platform device IDs.
   // Set to zero if unused.
   uint32_t vid;

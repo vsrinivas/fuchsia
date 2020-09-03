@@ -18,8 +18,8 @@ driver_module("intel-i2c") {
     "//build/unification/config:zircon-migrated",
   ]
   sources = [
-    "intel-i2c-controller.c",
-    "intel-i2c-subordinate.c",
+    "intel-i2c-controller.cc",
+    "intel-i2c-subordinate.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.i2c",
@@ -27,8 +27,10 @@ driver_module("intel-i2c") {
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
