@@ -149,7 +149,6 @@ if (is_host) {
     _lib_dir = vulkan_host_runtime_sub_dirs.lib
     sources = [
       "$vulkan_host_runtime_dir/$_lib_dir/libVkLayer_khronos_validation.so",
-      "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so",
       "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so.1",
     ]
     if (use_swiftshader_vulkan_icd_on_host) {
@@ -159,6 +158,18 @@ if (is_host) {
       ]
     }
     outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
+  }
+
+  # libvulkan.so is a symbolic link to libvulkan.so.1. For symbolic links, ninja
+  # records the modification time of the linked file into its log, so we need to
+  # ensure that the original library file is copied before the symbolic link. We
+  # do this by adding "copy_vulkan_libs" as its dependency.
+  copy("copy_vulkan_lib_links") {
+    assert(is_linux, "Vulkan is only supported on Linux host.")
+    _lib_dir = vulkan_host_runtime_sub_dirs.lib
+    sources = [ "$vulkan_host_runtime_dir/$_lib_dir/libvulkan.so" ]
+    outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_lib_dir}/{{source_file_part}}" ]
+    deps = [ ":copy_vulkan_libs" ]
   }
 
   copy("copy_vulkan_etc") {
@@ -189,6 +200,7 @@ if (is_host) {
     assert(is_linux, "Vulkan is only supported on Linux host.")
     deps = [
       ":copy_vulkan_etc",
+      ":copy_vulkan_lib_links",
       ":copy_vulkan_libs",
     ]
   }
