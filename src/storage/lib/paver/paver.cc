@@ -861,7 +861,8 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                        zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
-  auto status = abr::ClientFactory::Create(std::move(devfs_root), std::move(svc_root), context);
+  auto status = abr::ClientFactory::Create(
+      std::move(devfs_root), zx::channel(fdio_service_clone(svc_root.get())), context);
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
     fidl_epitaph_write(server.get(), status.error_value());
@@ -869,8 +870,17 @@ void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root
   }
   auto& abr_client = status.value();
 
-  auto boot_manager = std::make_unique<BootManager>(std::move(abr_client));
+  auto boot_manager = std::make_unique<BootManager>(std::move(abr_client), std::move(svc_root));
   fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(boot_manager));
+}
+
+void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync completer) {
+  zx::status<Configuration> status = abr::QueryBootConfig(svc_root_);
+  if (status.is_error()) {
+    completer.ReplyError(status.status_value());
+    return;
+  }
+  completer.ReplySuccess(status.value());
 }
 
 void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {

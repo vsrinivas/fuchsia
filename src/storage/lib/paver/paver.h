@@ -188,10 +188,13 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
 
 class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
  public:
-  BootManager(std::unique_ptr<abr::Client> abr_client) : abr_client_(std::move(abr_client)) {}
+  BootManager(std::unique_ptr<abr::Client> abr_client, zx::channel svc_root)
+      : abr_client_(std::move(abr_client)), svc_root_(std::move(svc_root)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
+
+  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync completer) override;
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override;
 
@@ -213,6 +216,7 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 
  private:
   std::unique_ptr<abr::Client> abr_client_;
+  zx::channel svc_root_;
 };
 
 }  // namespace paver

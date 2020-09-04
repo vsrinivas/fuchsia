@@ -6,7 +6,6 @@
 
 #include <endian.h>
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
@@ -22,8 +21,6 @@
 #include "src/storage/lib/paver/pave-logging.h"
 
 namespace abr {
-
-namespace {
 
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
@@ -64,6 +61,8 @@ zx::status<Configuration> QueryBootConfig(const zx::channel& svc_root) {
         slot.data());
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
+
+namespace {
 
 zx::status<> SupportsVerifiedBoot(const zx::channel& svc_root) {
   return zx::make_status(QueryBootConfig(svc_root).status_value());

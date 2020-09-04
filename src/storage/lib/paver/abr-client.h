@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 #define SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/abr/abr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -18,6 +19,8 @@
 #include "src/storage/lib/paver/paver-context.h"
 
 namespace abr {
+
+zx::status<llcpp::fuchsia::paver::Configuration> QueryBootConfig(const zx::channel& svc_root);
 
 // Interface for interacting with ABR data.
 class Client {

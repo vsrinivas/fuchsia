@@ -184,7 +184,7 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
   }
 
   void GetString(::fidl::StringView arg, GetStringCompleter::Sync completer) override {
-    completer.Reply(::fidl::StringView{"-a"});
+    completer.Reply(fidl::unowned_str(arg_response_));
   }
 
   // Stubs
@@ -210,9 +210,12 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
 
   void SetAstroSysConfigBufferedClient(bool opt) { astro_sysconfig_buffered_client_ = opt; }
 
+  void SetArgResponse(std::string arg_response) { arg_response_ = arg_response; }
+
  private:
   bool astro_sysconfig_abr_wear_leveling_ = false;
   bool astro_sysconfig_buffered_client_ = false;
+  std::string arg_response_ = "-a";
 };
 
 class FakeSvc {
@@ -551,6 +554,68 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  auto result = boot_manager_->QueryCurrentConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::A);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  fake_svc_.fake_boot_args().SetArgResponse("-b");
+
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  auto result = boot_manager_->QueryCurrentConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  fake_svc_.fake_boot_args().SetArgResponse("-r");
+
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  auto result = boot_manager_->QueryCurrentConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().configuration,
+            ::llcpp::fuchsia::paver::Configuration::RECOVERY);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotInvalid) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  fake_svc_.fake_boot_args().SetArgResponse("");
+
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  auto result = boot_manager_->QueryCurrentConfiguration();
+  ASSERT_STATUS(result, ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {

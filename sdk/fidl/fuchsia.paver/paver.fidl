@@ -210,7 +210,17 @@ protocol DynamicDataSink {
 /// the default state if it's invalid.
 /// The new configuration is not guaranteed to persist to storage before Flush() is called.
 protocol BootManager {
-    /// Queries active configuration.
+    /// Queries the configuration the system is currently running.
+    ///
+    /// Returns `ZX_ERR_NOT_SUPPORTED` if the `zvb.current_slot` boot argument cannot be read
+    /// or is an unexpected value.
+    QueryCurrentConfiguration() -> (Configuration configuration) error zx.status;
+
+    /// Queries the configuration which will be used as the default boot choice on a normal cold
+    /// boot, which may differ from the currently running configuration. `Configuration::RECOVERY`
+    /// should never be active.
+    ///
+    /// Returns `ZX_ERR_NOT_SUPPORTED` if `Configuration.RECOVERY` is active.
     QueryActiveConfiguration() -> (Configuration configuration) error zx.status;
 
     /// Queries status of `configuration`.

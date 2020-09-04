@@ -34,6 +34,7 @@
 enum class Command {
   kUnknown,
   kInitializeAbr,
+  kQueryCurrentConfiguration,
   kQueryActiveConfiguration,
   kQueryConfigurationStatus,
   kSetConfigurationActive,
@@ -112,6 +113,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
       fidl::BindSingleInFlightOnly<::llcpp::fuchsia::paver::BootManager::Interface>(
           dispatcher_, std::move(boot_manager), this);
     }
+  }
+
+  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync completer) override {
+    AppendCommand(Command::kQueryCurrentConfiguration);
+    completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
   }
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override {
