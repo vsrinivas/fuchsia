@@ -40,6 +40,8 @@ class PolicyChecker final {
 
   bool CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url);
   bool CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url);
+  bool CheckDurableData(const FuchsiaPkgUrl& pkg_url);
+  bool CheckFactoryData(const FuchsiaPkgUrl& pkg_url);
   bool CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url);
   bool CheckHub(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageResolver(const FuchsiaPkgUrl& pkg_url);
