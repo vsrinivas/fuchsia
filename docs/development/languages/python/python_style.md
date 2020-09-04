@@ -1,17 +1,15 @@
-Python style guide
-==============================
+# Python style guide
 
-The Fuchsia project follows the [Google Python style guide](
-https://github.com/google/styleguide/blob/gh-pages/pyguide.md), with a few
-[refinements](#Refinements).
+The Fuchsia project follows the [Google Python style guide](https://github.com/google/styleguide/blob/gh-pages/pyguide.md){:.external},
+with a few [refinements](#refinements).
 
 The Google Python style guide allows more variation (presumably to cover a large
 breadth of existing source). This guide has a tighter set of choices. So a
 Fuchsia Python file will also comply with the Google style guide, but a Google
-Python file might not comply with this guide. See [refinements](#Refinements)
+Python file might not comply with this guide. See [refinements](#refinements)
 below for details.
 
-## Python versions
+## Python versions {#python-versions}
 
 ### Scripts invoked by the build
 
@@ -40,11 +38,12 @@ Python team.
 ## Multiple Inheritance
 
 Multiple inheritance is strongly discouraged. This is for the same reason
-listed in the Google C++ style guide: risk of "diamond" inheritance patterns,
-which are prone to confusion. If a case is found where avoiding multiple
-inheritance is unreasonable, all classes involved must initially inherit from
-the base class `object`, which governs which multiple inheritance scheme is
-used.
+listed in the
+[Google C++ style guide: risk of "diamond" inheritance](https://google.github.io/styleguide/cppguide.html#Inheritance){:.external}
+patterns, which are prone to confusion. If a case is found where avoiding
+multiple inheritance is unreasonable, all classes involved must initially
+inherit from the base class `object`, which governs which multiple inheritance
+scheme is used.
 
 ## Use Unicode for Text
 
@@ -72,37 +71,71 @@ No:
   d = open("bar.txt").read()  # Read text as ascii.
 ```
 
-# Refinements
+## Refinements
 
 The following refinements we make to the Google Python style guide are largely
 choices between variations. For example, if the style guide says you may do A,
 B, or C we may choose to favor B and avoid the other choices.
 
-## [Indentation](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#34-indentation)
+### Indentation
 
 Avoid aligning with opening delimiter. Prefer instead to indent using fixed
 (4 space) indentation.
 
-## [Statements](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#314-statements)
+(See
+[Indentation](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#34-indentation){:.external}
+in the Google Python style guide for comparison.)
+
+### Statements
 
 Avoid creating single line statements, even with `if` statements.
 
-## [Type Annotations](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#319-type-annotations)
+```python {.good}
+Yes:
+
+    if foo:
+        bar(foo)
+```
+
+```python {.bad}
+No:
+
+    if foo: bar(foo)
+```
+
+(See
+[Statements](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#314-statements){:.external}
+in the Google Python style guide for comparison.)
+
+### Type annotations
 
 In scripts that support Python 2.x (see [Python versions](#python-versions)),
 type annotations will not be used.
 
-## [Strings](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#310-strings)
+(See
+[Type Annotations](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#319-type-annotations){:.external}
+in the Google Python style guide for comparison.)
 
-Prefer double quotes for strings ("). Use single quotes when the declaration is
-more readable with single quotes. E.g. 'The cat said "Meow"' is more readable
-than "The cat said \\"Meow\\"".
+### Strings
 
-## [Be consistent](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#4-parting-words)
+Prefer double quotes for strings (`"`). Use single quotes when the declaration is
+more readable with single quotes. For example, `'The cat said "Meow"'` is more readable
+than `"The cat said \\"Meow\\""`.
 
-Be consistent within a large scope. Avoid making small pockets of consistency
-within Fuchsia. Being consistent within one file or directory is not much
+(See
+[Strings](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#310-strings){:.external}
+in the Google Python style guide for comparison.)
+
+### Be consistent
+
+Be consistent within a large scope. Avoid displaying small pockets of consistency
+within Fuchsia. Being consistent within only a single file or directory is not
 consistency.
 
-Within third_party, the intent is to follow the existing style for that project
+Within `third_party`, the intent is to follow the existing style for that project
 or library. Look for a style guide within that library as appropriate.
+
+(See
+[Parting Words](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#4-parting-words){:.external}
+in the Google Python style guide.)
+
