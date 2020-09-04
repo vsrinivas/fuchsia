@@ -145,6 +145,7 @@ group("tests") {
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-bootfs-test",
     "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
     "//zircon/system/ulib/tftp/test:tftp-test-bootfs-test",
+    "//zircon/system/ulib/trace-provider/test:trace-provider-bootfs-test",
     "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-bootfs-test",
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-bootfs-test",

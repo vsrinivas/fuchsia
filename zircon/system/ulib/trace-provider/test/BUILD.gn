@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -51,4 +52,9 @@ test("provider-test") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
+}
+
+bootfs_test("trace-provider-bootfs-test") {
+  name = "provider-test"
+  deps = [ ":provider-test" ]
 }
