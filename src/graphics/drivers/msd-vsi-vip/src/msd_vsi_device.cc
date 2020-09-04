@@ -175,6 +175,10 @@ bool MsdVsiDevice::Init(void* device_handle) {
   ringbuffer_ =
       std::make_unique<Ringbuffer>(std::move(buffer), AddressSpaceLayout::ringbuffer_size());
 
+  if (!ringbuffer_->MapCpu()) {
+    return DRETF(false, "Failed to map cpu for ringbuffer");
+  }
+
   progress_ = std::make_unique<GpuProgress>();
 
   constexpr uint32_t kFirstSequenceNumber = 0x1;

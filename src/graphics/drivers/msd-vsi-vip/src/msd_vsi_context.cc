@@ -89,10 +89,11 @@ bool MsdVsiContext::MapRingbuffer(Ringbuffer* ringbuffer) {
   }
 
   gpu_addr = AddressSpaceLayout::system_gpu_addr_base();
+  std::shared_ptr<GpuMapping> gpu_mapping;
   // TODO(fxbug.dev/50307): ringbuffer should be mapped read-only
-  bool res = ringbuffer->MultiMap(exec_address_space(), gpu_addr);
+  bool res = ringbuffer->MultiMap(exec_address_space(), gpu_addr, &gpu_mapping);
   if (res) {
-    exec_address_space()->SetRingbufferGpuAddress(gpu_addr);
+    exec_address_space()->SetRingbufferGpuMapping(gpu_mapping);
   }
   return res;
 }

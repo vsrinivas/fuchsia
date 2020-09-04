@@ -28,10 +28,6 @@ class TestRingbuffer : public ::testing::Test {
   };
 
   static uint32_t* vaddr(Ringbuffer* ringbuffer) { return ringbuffer->vaddr(); }
-
-  static uint64_t gpu_mapping_count(Ringbuffer* ringbuffer) {
-    return ringbuffer->gpu_mappings_.size();
-  }
 };
 
 TEST_F(TestRingbuffer, CreateAndDestroy) {
@@ -64,8 +60,10 @@ TEST_F(TestRingbuffer, Size) {
   auto address_space =
       std::make_shared<NonAllocatingAddressSpace>(owner.get(), kGpuAddr + kBufferSize);
 
-  EXPECT_TRUE(ringbuffer->MultiMap(address_space, kGpuAddr));
+  std::shared_ptr<GpuMapping> gpu_mapping;
+  EXPECT_TRUE(ringbuffer->MultiMap(address_space, kGpuAddr, &gpu_mapping));
   EXPECT_EQ(kBufferSize, address_space->inserted_size(kGpuAddr));
+  EXPECT_NE(gpu_mapping, nullptr);
 }
 
 TEST_F(TestRingbuffer, Write) {
@@ -117,21 +115,18 @@ TEST_F(TestRingbuffer, MultipleAddressSpaces) {
   auto address_space = std::make_shared<NonAllocatingAddressSpace>(owner.get(), UINT32_MAX);
 
   const uint64_t kGpuAddr = 0x10000;
-  EXPECT_TRUE(ringbuffer->MultiMap(address_space, kGpuAddr));
+  std::shared_ptr<GpuMapping> gpu_mapping;
+  EXPECT_TRUE(ringbuffer->MultiMap(address_space, kGpuAddr, &gpu_mapping));
+  EXPECT_NE(gpu_mapping, nullptr);
 
   // Try mapping additional address spaces.
   auto address_space2 = std::make_shared<NonAllocatingAddressSpace>(owner.get(), UINT32_MAX);
-  EXPECT_TRUE(ringbuffer->MultiMap(address_space2, kGpuAddr));
+  std::shared_ptr<GpuMapping> gpu_mapping2;
+  EXPECT_TRUE(ringbuffer->MultiMap(address_space2, kGpuAddr, &gpu_mapping2));
+  EXPECT_NE(gpu_mapping2, nullptr);
 
   auto address_space3 = std::make_shared<NonAllocatingAddressSpace>(owner.get(), UINT32_MAX);
-  EXPECT_TRUE(ringbuffer->MultiMap(address_space3, kGpuAddr));
-
-  EXPECT_EQ(gpu_mapping_count(ringbuffer.get()), 3uL);
-
-  // Drop two of the address spaces and try mapping the second address space again.
-  address_space.reset();
-  address_space3.reset();
-
-  EXPECT_FALSE(ringbuffer->MultiMap(address_space2, kGpuAddr));
-  EXPECT_EQ(gpu_mapping_count(ringbuffer.get()), 1uL);
+  std::shared_ptr<GpuMapping> gpu_mapping3;
+  EXPECT_TRUE(ringbuffer->MultiMap(address_space3, kGpuAddr, &gpu_mapping3));
+  EXPECT_NE(gpu_mapping3, nullptr);
 }

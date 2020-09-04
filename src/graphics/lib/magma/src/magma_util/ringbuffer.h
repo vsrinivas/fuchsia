@@ -49,7 +49,10 @@ class Ringbuffer : public InstructionWriter {
 
   // Maps to both CPU and GPU.
   bool Map(std::shared_ptr<AddressSpace<GpuMapping>> address_space, uint64_t* gpu_addr_out);
-  bool MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> address_space, uint64_t gpu_addr);
+  // Thread-safe variant of |Map|. The created GPU mapping is returned in |out_gpu_mapping|.
+  bool MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> address_space, uint64_t gpu_addr,
+                std::shared_ptr<GpuMapping>* out_gpu_mapping);
+  bool MapCpu();
   bool Unmap();
 
  protected:
@@ -64,7 +67,7 @@ class Ringbuffer : public InstructionWriter {
 
  private:
   std::shared_ptr<typename GpuMapping::BufferType> buffer_;
-  std::vector<std::shared_ptr<GpuMapping>> gpu_mappings_;
+  std::shared_ptr<GpuMapping> gpu_mapping_;
   uint64_t size_;
   uint32_t head_;
   uint32_t tail_;
@@ -130,34 +133,15 @@ bool Ringbuffer<GpuMapping>::Map(std::shared_ptr<AddressSpace<GpuMapping>> addre
   vaddr_ = reinterpret_cast<uint32_t*>(addr);
 
   *gpu_addr_out = gpu_mapping->gpu_addr();
-  gpu_mappings_.push_back(std::move(gpu_mapping));
+  gpu_mapping_ = std::move(gpu_mapping);
 
   return true;
 }
 
 template <typename GpuMapping>
 bool Ringbuffer<GpuMapping>::MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> address_space,
-                                      uint64_t gpu_addr) {
-  // Check if the address space is already mapped.
-  // If an address space is already dead, we can also drop the mapping to avoid forever
-  // accumulating more gpu mappings.
-  bool found_mapping = false;
-  unsigned int i = 0;
-  while (i < gpu_mappings_.size()) {
-    auto mapped_address_space = gpu_mappings_[i]->address_space().lock();
-    if (!mapped_address_space) {
-      gpu_mappings_.erase(gpu_mappings_.begin() + i);
-      continue;
-    }
-    if (mapped_address_space.get() == address_space.get()) {
-      found_mapping = true;
-    }
-    i++;
-  }
-  if (found_mapping) {
-    return DRETF(false, "Ringbuffer was already mapped in address space %p\n", address_space.get());
-  }
-
+                                      uint64_t gpu_addr,
+                                      std::shared_ptr<GpuMapping>* out_gpu_mapping) {
   uint64_t page_count =
       BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size() /
       magma::page_size();
@@ -170,17 +154,22 @@ bool Ringbuffer<GpuMapping>::MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> 
   }
   DASSERT(gpu_mapping);
 
-  if (!vaddr_) {
-    void* addr;
-    if (!BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())
-             ->MapCpu(&addr)) {
-      return DRETF(false, "MapCpu failed");
-    }
+  *out_gpu_mapping = std::move(gpu_mapping);
 
-    vaddr_ = reinterpret_cast<uint32_t*>(addr);
+  return true;
+}
+
+template <typename GpuMapping>
+bool Ringbuffer<GpuMapping>::MapCpu() {
+  DASSERT(!vaddr_);
+
+  void* addr;
+  if (!BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())
+           ->MapCpu(&addr)) {
+    return DRETF(false, "MapCpu failed");
   }
 
-  gpu_mappings_.push_back(std::move(gpu_mapping));
+  vaddr_ = reinterpret_cast<uint32_t*>(addr);
 
   return true;
 }
@@ -192,7 +181,7 @@ bool Ringbuffer<GpuMapping>::Unmap() {
   if (!buffer_->platform_buffer()->UnmapCpu())
     return DRETF(false, "UnmapCpu failed");
 
-  gpu_mappings_.clear();
+  gpu_mapping_.reset();
 
   return true;
 }

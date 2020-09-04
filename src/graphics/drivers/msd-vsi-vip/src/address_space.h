@@ -49,14 +49,14 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
 
   uint32_t page_table_array_slot() { return page_table_array_slot_; }
 
-  void SetRingbufferGpuAddress(uint64_t gpu_addr) {
-    DASSERT(!ringbuffer_gpu_addr_.has_value());
-    ringbuffer_gpu_addr_ = gpu_addr;
+  void SetRingbufferGpuMapping(std::shared_ptr<GpuMapping> gpu_mapping) {
+    DASSERT(!ringbuffer_gpu_mapping_);
+    ringbuffer_gpu_mapping_ = gpu_mapping;
   }
 
   bool GetRingbufferGpuAddress(uint64_t* gpu_addr_out) {
-    if (ringbuffer_gpu_addr_.has_value()) {
-      *gpu_addr_out = *ringbuffer_gpu_addr_;
+    if (ringbuffer_gpu_mapping_) {
+      *gpu_addr_out = ringbuffer_gpu_mapping_->gpu_addr();
       return true;
     }
     return false;
@@ -181,7 +181,7 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
 
   uint32_t page_table_array_slot_;
 
-  std::optional<uint64_t> ringbuffer_gpu_addr_;
+  std::shared_ptr<GpuMapping> ringbuffer_gpu_mapping_;
 
   friend class TestAddressSpace;
   friend class TestAddressSpace_GarbageCollect_Test;

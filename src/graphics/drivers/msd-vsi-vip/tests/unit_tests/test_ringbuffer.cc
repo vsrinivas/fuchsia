@@ -103,6 +103,8 @@ TEST_F(RingbufferTest, ReserveContiguous) {
       std::make_unique<Ringbuffer>(MsdVsiBuffer::Create(kRingbufferSize, "ringbuffer"));
   EXPECT_NE(ringbuffer, nullptr);
 
+  EXPECT_TRUE(ringbuffer->MapCpu());
+
   MockAddressSpaceOwner owner;
   std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
   ASSERT_NE(nullptr, address_space);
@@ -164,6 +166,8 @@ TEST_F(RingbufferTest, UsedSize) {
   auto ringbuffer =
       std::make_unique<Ringbuffer>(MsdVsiBuffer::Create(kRingbufferSize, "ringbuffer"));
   EXPECT_NE(ringbuffer, nullptr);
+
+  EXPECT_TRUE(ringbuffer->MapCpu());
 
   MockAddressSpaceOwner owner;
   std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
