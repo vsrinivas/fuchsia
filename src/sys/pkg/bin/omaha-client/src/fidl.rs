@@ -301,57 +301,8 @@ where
                     .metrics_reporter
                     .emit_event(ApiEvent::UpdateChannelControlSetTarget);
 
-                // TODO: Verify that channel is valid.
-                let app_set = server.borrow().app_set.clone();
-                if channel.is_empty() {
-                    let default_channel_cfg = match &server.borrow().channel_configs {
-                        Some(cfgs) => cfgs.get_default_channel(),
-                        None => None,
-                    };
-                    let (channel_name, appid) = match default_channel_cfg {
-                        Some(cfg) => (Some(cfg.name), cfg.appid.clone()),
-                        None => (None, None),
-                    };
-                    if let Some(name) = &channel_name {
-                        warn!(
-                            "setting device to default channel: '{}' with app id: '{:?}'",
-                            name, appid
-                        );
-                    }
-                    // TODO(fxb/58887): only OTA that follows can change the current channel.
-                    // Simplify this logic.
-                    app_set.set_target_channel(channel_name, appid).await;
-                } else {
-                    let server = server.borrow();
-                    let channel_cfg = match &server.channel_configs {
-                        Some(cfgs) => cfgs.get_channel(&channel),
-                        None => None,
-                    };
-                    if channel_cfg.is_none() {
-                        warn!("Channel {} not found in known channels", &channel);
-                    }
-                    let appid = match channel_cfg {
-                        Some(cfg) => cfg.appid.clone(),
-                        None => None,
-                    };
+                Self::handle_set_target(server, channel).await;
 
-                    let storage_ref = Rc::clone(&server.storage_ref);
-                    // Don't borrow server across await.
-                    drop(server);
-                    let mut storage = storage_ref.lock().await;
-
-                    if let Some(id) = &appid {
-                        if id != &app_set.get_current_app_id().await {
-                            warn!("Changing app id to: {}", id);
-                        }
-                    }
-
-                    app_set.set_target_channel(Some(channel), appid).await;
-                    app_set.persist(&mut *storage).await;
-                    storage.commit_or_log().await;
-                }
-                let app_vec = app_set.to_vec().await;
-                server.borrow().apps_node.set(&app_vec);
                 responder.send().context("error sending response")?;
             }
             ChannelControlRequest::GetTarget { responder } => {
@@ -457,6 +408,67 @@ where
             Ok(StartUpdateCheckResponse::Throttled) => Err(CheckNotStartedReason::Throttled),
             Err(state_machine::StateMachineGone) => Err(CheckNotStartedReason::Internal),
         }
+    }
+
+    async fn handle_set_target(server: Rc<RefCell<Self>>, channel: String) {
+        // TODO: Verify that channel is valid.
+        let app_set = server.borrow().app_set.clone();
+        let target_channel = app_set.get_target_channel().await;
+        if channel.is_empty() {
+            let default_channel_cfg = match &server.borrow().channel_configs {
+                Some(cfgs) => cfgs.get_default_channel(),
+                None => None,
+            };
+            let (channel_name, appid) = match default_channel_cfg {
+                Some(cfg) => (Some(cfg.name), cfg.appid.clone()),
+                None => (None, None),
+            };
+            if let Some(name) = &channel_name {
+                // If the default channel is the same as the target channel, then this is a no-op.
+                if name == &target_channel {
+                    return;
+                }
+                warn!("setting device to default channel: '{}' with app id: '{:?}'", name, appid);
+            }
+            // TODO(fxb/58887): only OTA that follows can change the current channel.
+            // Simplify this logic.
+            app_set.set_target_channel(channel_name, appid).await;
+        } else {
+            // If the new target channel is the same as the existing target channel, then this is
+            // a no-op.
+            if channel == target_channel {
+                return;
+            }
+            let server = server.borrow();
+            let channel_cfg = match &server.channel_configs {
+                Some(cfgs) => cfgs.get_channel(&channel),
+                None => None,
+            };
+            if channel_cfg.is_none() {
+                warn!("Channel {} not found in known channels", &channel);
+            }
+            let appid = match channel_cfg {
+                Some(cfg) => cfg.appid.clone(),
+                None => None,
+            };
+
+            let storage_ref = Rc::clone(&server.storage_ref);
+            // Don't borrow server across await.
+            drop(server);
+            let mut storage = storage_ref.lock().await;
+
+            if let Some(id) = &appid {
+                if id != &app_set.get_current_app_id().await {
+                    warn!("Changing app id to: {}", id);
+                }
+            }
+
+            app_set.set_target_channel(Some(channel), appid).await;
+            app_set.persist(&mut *storage).await;
+            storage.commit_or_log().await;
+        }
+        let app_vec = app_set.to_vec().await;
+        server.borrow().apps_node.set(&app_vec);
     }
 
     /// The state change callback from StateMachine.
@@ -1098,6 +1110,26 @@ mod tests {
         let storage = fidl.storage_ref.lock().await;
         // Default channel should not be persisted to storage.
         assert_eq!(None, storage.get_string(&apps[0].id).await);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_target_no_op() {
+        let apps = vec![App::builder("id", [1, 0])
+            .with_cohort(Cohort::from_hint("target-channel"))
+            .build()];
+        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
+
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            Rc::clone(&fidl),
+            IncomingServices::ChannelControl,
+        );
+        proxy.set_target("target-channel").await.unwrap();
+        let fidl = fidl.borrow();
+        let apps = fidl.app_set.to_vec().await;
+        assert_eq!("target-channel", apps[0].get_target_channel());
+        let storage = fidl.storage_ref.lock().await;
+        // Verify that app is not persisted to storage.
+        assert_eq!(storage.get_string(&apps[0].id).await, None);
     }
 
     #[fasync::run_singlethreaded(test)]
