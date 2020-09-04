@@ -209,10 +209,10 @@ constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceS
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
     "multiple resource properties with the same name; previous was at {}");
-constexpr ErrorDef<const flat::Type *, flat::Name, std::string_view, flat::Name>
-    ErrResourceTypeInValueType(
-        "'{}' is a resource type (may contain handles), but '{}' is not. "
-        "either remove member '{}', or declare '{}' with the `resource` modifier");
+constexpr WarningDef<flat::Name, std::string_view, std::string_view, flat::Name>
+    ErrTypeMustBeResource(
+        "'{}' may contain handles (due to member '{}'), so it must "
+        "be declared with the `resource` modifier: `resource {} {}`");
 constexpr ErrorDef ErrInlineSizeExceeds64k(
     "inline objects greater than 64k not currently supported");
 

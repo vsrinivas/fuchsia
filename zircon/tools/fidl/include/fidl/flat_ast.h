@@ -726,6 +726,7 @@ class Dependencies {
 class StepBase;
 class ConsumeStep;
 class CompileStep;
+class VerifyResourcenessStep;
 class VerifyAttributesStep;
 
 using MethodHasher = fit::function<raw::Ordinal64(
@@ -736,6 +737,7 @@ class Library {
   friend StepBase;
   friend ConsumeStep;
   friend CompileStep;
+  friend VerifyResourcenessStep;
   friend VerifyAttributesStep;
 
  public:
@@ -790,6 +792,7 @@ class Library {
 
   ConsumeStep StartConsumeStep();
   CompileStep StartCompileStep();
+  VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
 
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
@@ -993,6 +996,25 @@ class CompileStep : public StepBase {
   CompileStep(Library* library) : StepBase(library) {}
 
   void ForDecl(Decl* decl) { library_->CompileDecl(decl); }
+};
+
+class VerifyResourcenessStep : public StepBase {
+ public:
+  VerifyResourcenessStep(Library* library) : StepBase(library) {}
+
+  void ForDecl(const Decl* decl);
+
+ private:
+  // Returns the effective resourcenss of |type|. The set of effective resource
+  // types includes (1) nominal resource types per the FTP-057 definition, and
+  // (2) declarations that have an effective resource member (or equivalently,
+  // transitively contain a nominal resource).
+  types::Resourceness EffectiveResourceness(const Type* type);
+
+  // Map from struct/table/union declarations to their effective resourceness. A
+  // value of std::nullopt indicates that the declaration has been visited, used
+  // to prevent infinite recursion.
+  std::map<const Decl*, std::optional<types::Resourceness>> effective_resourceness_;
 };
 
 class VerifyAttributesStep : public StepBase {

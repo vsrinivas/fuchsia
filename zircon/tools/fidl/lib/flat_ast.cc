@@ -13,6 +13,7 @@
 
 #include "fidl/attributes.h"
 #include "fidl/diagnostics.h"
+#include "fidl/experimental_flags.h"
 #include "fidl/lexer.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
@@ -248,45 +249,6 @@ bool IsSimple(const Type* type, Reporter* reporter) {
       }
     }
   }
-}
-
-// Returns true if |type| is a resource type, false if it is a value type. See
-// FTP-057 for the definitions of these terms.
-bool IsResourceType(const Type* type) {
-  switch (type->kind) {
-    case Type::Kind::kPrimitive:
-    case Type::Kind::kString:
-      return false;
-    case Type::Kind::kHandle:
-    case Type::Kind::kRequestHandle:
-      return true;
-    case Type::Kind::kArray:
-      return IsResourceType(static_cast<const ArrayType*>(type)->element_type);
-    case Type::Kind::kVector:
-      return IsResourceType(static_cast<const VectorType*>(type)->element_type);
-    case Type::Kind::kIdentifier: {
-      const auto decl = static_cast<const IdentifierType*>(type)->type_decl;
-      switch (decl->kind) {
-        case Decl::Kind::kBits:
-        case Decl::Kind::kEnum:
-          return false;
-        case Decl::Kind::kProtocol:
-          return true;
-        case Decl::Kind::kStruct:
-          return static_cast<const Struct*>(decl)->resourceness == types::Resourceness::kResource;
-        case Decl::Kind::kTable:
-          return static_cast<const Table*>(decl)->resourceness == types::Resourceness::kResource;
-        case Decl::Kind::kUnion:
-          return static_cast<const Union*>(decl)->resourceness == types::Resourceness::kResource;
-        case Decl::Kind::kConst:
-        case Decl::Kind::kResource:
-        case Decl::Kind::kService:
-        case Decl::Kind::kTypeAlias:
-          assert(false && "Unexpected kind");
-      }
-    }
-  }
-  __builtin_unreachable();
 }
 
 FieldShape Struct::Member::fieldshape(WireFormat wire_format) const {
@@ -1416,6 +1378,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
 
 ConsumeStep Library::StartConsumeStep() { return ConsumeStep(this); }
 CompileStep Library::StartCompileStep() { return CompileStep(this); }
+VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
+  return VerifyResourcenessStep(this);
+}
 VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
 
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
@@ -2960,6 +2925,154 @@ void Library::VerifyDeclAttributes(Decl* decl) {
   }  // switch
 }
 
+void VerifyResourcenessStep::ForDecl(const Decl* decl) {
+  assert(decl->compiled && "verification must happen after compilation of decls");
+  if (!library_->experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+    return;
+  }
+
+  switch (decl->kind) {
+    case Decl::Kind::kStruct: {
+      const auto* struct_decl = static_cast<const Struct*>(decl);
+      if (struct_decl->resourceness == types::Resourceness::kValue) {
+        for (const auto& member : struct_decl->members) {
+          if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
+            library_->reporter_->ReportWarning(ErrTypeMustBeResource, struct_decl->name.span(),
+                                               struct_decl->name, member.name.data(),
+                                               std::string_view("struct"), struct_decl->name);
+          }
+        }
+      }
+      break;
+    }
+    case Decl::Kind::kTable: {
+      const auto* table_decl = static_cast<const Table*>(decl);
+      if (table_decl->resourceness == types::Resourceness::kValue) {
+        for (const auto& member : table_decl->members) {
+          if (member.maybe_used) {
+            const auto& used = *member.maybe_used;
+            if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
+              library_->reporter_->ReportWarning(ErrTypeMustBeResource, table_decl->name.span(),
+                                                 table_decl->name, used.name.data(),
+                                                 std::string_view("table"), table_decl->name);
+            }
+          }
+        }
+      }
+      break;
+    }
+    case Decl::Kind::kUnion: {
+      const auto* union_decl = static_cast<const Union*>(decl);
+      if (union_decl->resourceness == types::Resourceness::kValue) {
+        for (const auto& member : union_decl->members) {
+          if (member.maybe_used) {
+            const auto& used = *member.maybe_used;
+            if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
+              library_->reporter_->ReportWarning(ErrTypeMustBeResource, union_decl->name.span(),
+                                                 union_decl->name, used.name.data(),
+                                                 std::string_view("union"), union_decl->name);
+            }
+          }
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* type) {
+  switch (type->kind) {
+    case Type::Kind::kPrimitive:
+    case Type::Kind::kString:
+      return types::Resourceness::kValue;
+    case Type::Kind::kHandle:
+    case Type::Kind::kRequestHandle:
+      return types::Resourceness::kResource;
+    case Type::Kind::kArray:
+      return EffectiveResourceness(static_cast<const ArrayType*>(type)->element_type);
+    case Type::Kind::kVector:
+      return EffectiveResourceness(static_cast<const VectorType*>(type)->element_type);
+    case Type::Kind::kIdentifier:
+      break;
+  }
+
+  auto decl = static_cast<const IdentifierType*>(type)->type_decl;
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+    case Decl::Kind::kEnum:
+      return types::Resourceness::kValue;
+    case Decl::Kind::kProtocol:
+      return types::Resourceness::kResource;
+    case Decl::Kind::kStruct:
+      if (static_cast<const Struct*>(decl)->resourceness == types::Resourceness::kResource) {
+        return types::Resourceness::kResource;
+      }
+      break;
+    case Decl::Kind::kTable:
+      if (static_cast<const Table*>(decl)->resourceness == types::Resourceness::kResource) {
+        return types::Resourceness::kResource;
+      }
+      break;
+    case Decl::Kind::kUnion:
+      if (static_cast<const Union*>(decl)->resourceness == types::Resourceness::kResource) {
+        return types::Resourceness::kResource;
+      }
+      break;
+    case Decl::Kind::kConst:
+    case Decl::Kind::kResource:
+    case Decl::Kind::kService:
+    case Decl::Kind::kTypeAlias:
+      assert(false && "Compiler bug: unexpected kind");
+  }
+
+  const auto [it, inserted] = effective_resourceness_.try_emplace(decl, std::nullopt);
+  if (!inserted) {
+    const auto& maybe_value = it->second;
+    // If we already computed effective resourceness, return it. If we started
+    // computing it but did not complete (nullopt), we're in a cycle, so return
+    // kValue as the default assumption.
+    return maybe_value.value_or(types::Resourceness::kValue);
+  }
+
+  switch (decl->kind) {
+    case Decl::Kind::kStruct:
+      for (const auto& member : static_cast<const Struct*>(decl)->members) {
+        if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
+          effective_resourceness_[decl] = types::Resourceness::kResource;
+          return types::Resourceness::kResource;
+        }
+      }
+      break;
+    case Decl::Kind::kTable:
+      for (const auto& member : static_cast<const Table*>(decl)->members) {
+        const auto& used = member.maybe_used;
+        if (used &&
+            EffectiveResourceness(used->type_ctor->type) == types::Resourceness::kResource) {
+          effective_resourceness_[decl] = types::Resourceness::kResource;
+          return types::Resourceness::kResource;
+        }
+      }
+      break;
+    case Decl::Kind::kUnion:
+      for (const auto& member : static_cast<const Table*>(decl)->members) {
+        const auto& used = member.maybe_used;
+        if (used &&
+            EffectiveResourceness(used->type_ctor->type) == types::Resourceness::kResource) {
+          effective_resourceness_[decl] = types::Resourceness::kResource;
+          return types::Resourceness::kResource;
+        }
+      }
+      break;
+    default:
+      assert(false && "Compiler bug: unexpected kind");
+  }
+
+  effective_resourceness_[decl] = types::Resourceness::kValue;
+  return types::Resourceness::kValue;
+}
+
 bool Library::CompileBits(Bits* bits_declaration) {
   if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get()))
     return false;
@@ -3242,7 +3355,6 @@ bool Library::CompileService(Service* service_decl) {
 
 bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string> scope;
-  const StructMember* first_resource_member = nullptr;
   for (const auto& member : struct_declaration->members) {
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
@@ -3264,9 +3376,6 @@ bool Library::CompileStruct(Struct* struct_declaration) {
       return false;
     assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
            "method parameters cannot have default values");
-    if (!first_resource_member && IsResourceType(member.type_ctor->type)) {
-      first_resource_member = &member;
-    }
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {
@@ -3279,19 +3388,12 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     }
   }
 
-  if (first_resource_member && struct_declaration->resourceness == types::Resourceness::kValue) {
-    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
-                first_resource_member->type_ctor->type, struct_declaration->name,
-                first_resource_member->name.data(), struct_declaration->name);
-  }
-
   return true;
 }
 
 bool Library::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
   Ordinal64Scope ordinal_scope;
-  const Table::Member::Used* first_resource_member = nullptr;
 
   for (const auto& member : table_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -3315,9 +3417,6 @@ bool Library::CompileTable(Table* table_declaration) {
       if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
       }
-      if (!first_resource_member && IsResourceType(member_used.type_ctor->type)) {
-        first_resource_member = &member_used;
-      }
     }
   }
 
@@ -3326,19 +3425,12 @@ bool Library::CompileTable(Table* table_declaration) {
     return Fail(ErrNonDenseOrdinal, span, ordinal);
   }
 
-  if (first_resource_member && table_declaration->resourceness == types::Resourceness::kValue) {
-    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
-                first_resource_member->type_ctor->type, table_declaration->name,
-                first_resource_member->name.data(), table_declaration->name);
-  }
-
   return true;
 }
 
 bool Library::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
   Ordinal64Scope ordinal_scope;
-  const Union::Member::Used* first_resource_member = nullptr;
 
   for (const auto& member : union_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -3363,21 +3455,12 @@ bool Library::CompileUnion(Union* union_declaration) {
       if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
       }
-      if (!first_resource_member && IsResourceType(member_used.type_ctor->type)) {
-        first_resource_member = &member_used;
-      }
     }
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
     return Fail(ErrNonDenseOrdinal, span, ordinal);
-  }
-
-  if (first_resource_member && union_declaration->resourceness == types::Resourceness::kValue) {
-    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
-                first_resource_member->type_ctor->type, union_declaration->name,
-                first_resource_member->name.data(), union_declaration->name);
   }
 
   {
@@ -3434,6 +3517,13 @@ bool Library::Compile() {
     compile_step.ForDecl(decl);
   }
   if (!compile_step.Done())
+    return false;
+
+  auto verify_resourceness_step = StartVerifyResourcenessStep();
+  for (Decl* decl : declaration_order_) {
+    verify_resourceness_step.ForDecl(decl);
+  }
+  if (!verify_resourceness_step.Done())
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();

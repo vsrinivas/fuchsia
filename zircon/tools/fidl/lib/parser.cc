@@ -1414,37 +1414,25 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
       return More;
 
+    // TODO(fxb/59467): Accept modifiers in any order.
     auto maybe_strictness = MaybeParseStrictness();
     if (!Ok())
       return More;
 
-    auto resourceness = types::Resourceness::kResource;
-    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
-      resourceness = types::Resourceness::kValue;
-      switch (Peek().combined()) {
-        case CASE_IDENTIFIER(Token::Subkind::kResource):
-          ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
-          assert(Ok() && "we should have just seen a resource token");
-          resourceness = types::Resourceness::kResource;
-          switch (Peek().combined()) {
-            case CASE_TOKEN(Token::Kind::kEndOfFile):
-              Fail();
-              return Done;
-            case CASE_IDENTIFIER(Token::Subkind::kStruct):
-            case CASE_IDENTIFIER(Token::Subkind::kTable):
-            case CASE_IDENTIFIER(Token::Subkind::kUnion):
-            case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-              break;
-            default:
-              // TODO(fxbug.dev/57409): Improve this error message.
-              Fail(ErrCannotSpecifyResource, Peek());
-          }
-          break;
-      }
+    auto resourceness = types::Resourceness::kValue;
+    switch (Peek().combined()) {
+      case CASE_IDENTIFIER(Token::Subkind::kResource):
+        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
+        assert(Ok() && "we should have just seen a resource token");
+        resourceness = types::Resourceness::kResource;
+        break;
     }
 
     if (maybe_strictness) {
       switch (Peek().combined()) {
+        case CASE_TOKEN(Token::Kind::kEndOfFile):
+          Fail();
+          return Done;
         case CASE_IDENTIFIER(Token::Subkind::kBits):
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
@@ -1455,6 +1443,29 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
           Fail(ErrCannotSpecifyStrict, Peek());
           return More;
       }
+    }
+
+    if (resourceness == types::Resourceness::kResource) {
+      switch (Peek().combined()) {
+        case CASE_TOKEN(Token::Kind::kEndOfFile):
+          Fail();
+          return Done;
+        case CASE_IDENTIFIER(Token::Subkind::kStruct):
+        case CASE_IDENTIFIER(Token::Subkind::kTable):
+        case CASE_IDENTIFIER(Token::Subkind::kUnion):
+        case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+          break;
+        default:
+          // TODO(fxbug.dev/57409): Improve this error message.
+          Fail(ErrCannotSpecifyResource, Peek());
+      }
+    }
+
+    // Unless the flag is enabled, make everything a resource regardless of
+    // whether the modifier is there. This is just to avoid goldens churn.
+    // TODO(fxbug.dev/7989) remove this.
+    if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+      resourceness = types::Resourceness::kResource;
     }
 
     switch (Peek().combined()) {
