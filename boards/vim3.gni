@@ -13,6 +13,7 @@ _common_bootfs_deps = [
   "//src/devices/block/drivers/bootpart",
   "//src/devices/board/drivers/vim3",
   "//src/devices/mcu/drivers/vim3-mcu",
+  "//src/devices/ml/drivers/aml-nna",
   "//src/devices/rtc/drivers/nxp",
 ]
 
