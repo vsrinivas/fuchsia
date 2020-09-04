@@ -131,11 +131,10 @@ impl Shell {
     }
 
     fn prompt(&mut self) -> Option<String> {
-        let prompt = format!("{reset}{yellow_bg}{black_fg}{arrow}{reset}{black_fg}{yellow_bg} scrutiny {reset}{yellow_fg}{arrow}{reset} ",
-            black_fg = color::Fg(color::Black),
+        let prompt = format!(
+            "{reset}{bold}{yellow_fg}scrutiny »{reset} ",
             yellow_fg = color::Fg(color::Yellow),
-            yellow_bg = color::Bg(color::Yellow),
-            arrow = "\u{E0B0}",
+            bold = style::Bold,
             reset = style::Reset,
         );
 
