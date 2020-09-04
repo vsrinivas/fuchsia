@@ -9,11 +9,15 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <zircon/boot/bootfs.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <cerrno>
 #include <string>
@@ -28,6 +32,44 @@
 #include "src/lib/bootfs/parser.h"
 
 namespace zbi_bootfs {
+
+namespace {
+zx_status_t FindEntry(zx::unowned_vmo vmo, const char* filename, zbi_bootfs_dirent_t* entry) {
+  bootfs::Parser parser;
+  zx_status_t status = parser.Init(std::move(vmo));
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to init bootfs::Parser: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // TODO(joeljacob): Consider making the vector a class member
+  // This will prevent unnecessarily re-reading the VMO
+  fbl::Vector<const zbi_bootfs_dirent_t*> parsed_entries;
+  parser.Parse([&](const zbi_bootfs_dirent_t* entry) {
+    parsed_entries.push_back(entry);
+    return ZX_OK;
+  });
+
+  for (const auto& parsed_entry : parsed_entries) {
+    printf("Entry = %s\n ", parsed_entry->name);
+
+    // This is not the entry we are looking for.
+    if (strcmp(parsed_entry->name, filename) != 0) {
+      continue;
+    }
+
+    printf("Filename = %s\n ", parsed_entry->name);
+    printf("File name length = %d\n", parsed_entry->name_len);
+    printf("File data length = %d\n", parsed_entry->data_len);
+    printf("File data offset = %d\n", parsed_entry->data_off);
+
+    memcpy(entry, parsed_entry, sizeof(zbi_bootfs_dirent_t));
+    return ZX_OK;
+  }
+
+  return ZX_ERR_NOT_FOUND;
+}
+}  // namespace
 
 bool ZbiBootfsParser::IsSkipBlock(const char* path,
                                   fuchsia_hardware_skipblock_PartitionInfo* partition_info) {
@@ -51,118 +93,121 @@ bool ZbiBootfsParser::IsSkipBlock(const char* path,
   return status == ZX_OK;
 }
 
-__EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
-  zbi_header_t hdr;
-  zx::vmo bootfs_vmo;
+zx_status_t ZbiBootfsParser::FindBootZbi(uint32_t* read_offset, zbi_header_t* header) {
+  zbi_header_t container_header;
 
-  zx_status_t status = zbi_vmo.read(&hdr, 0, sizeof(hdr));
+  zx_status_t status = zbi_vmo_.read(&container_header, 0, sizeof(zbi_header_t));
   if (status != ZX_OK) {
-    fprintf(stderr, "VMO read error\n");
+    fprintf(stderr, "Failed to read ZBI header from vmo.\n");
     return ZX_ERR_BAD_STATE;
   }
-  printf("ZBI Container Header\n");
-  printf("ZBI type   = %08x\n", hdr.type);
-  printf("ZBI Magic  = %08x\n", hdr.magic);
-  printf("ZBI extra  = %08x\n", hdr.extra);
-  printf("ZBI Length = %u\n", hdr.length);
-  printf("ZBI Flags  = %08x\n", hdr.flags);
 
-  if ((hdr.type != ZBI_TYPE_CONTAINER) || (hdr.extra != ZBI_CONTAINER_MAGIC)) {
+  printf("ZBI Container Header\n");
+  printf("ZBI Type   = %08x\n", container_header.type);
+  printf("ZBI Magic  = %08x\n", container_header.magic);
+  printf("ZBI Extra  = %08x\n", container_header.extra);
+  printf("ZBI Length = %u\n", container_header.length);
+  printf("ZBI Flags  = %08x\n", container_header.flags);
+
+  if ((container_header.type != ZBI_TYPE_CONTAINER) ||
+      (container_header.extra != ZBI_CONTAINER_MAGIC)) {
     printf("ZBI item does not have a container header\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  uint32_t len = hdr.length;
-  uint32_t off = sizeof(zbi_header_t);
+  uint32_t bytes_to_read = container_header.length;
+  uint32_t current_offset = sizeof(zbi_header_t);
+  zbi_header_t item_header;
 
-  while (len > sizeof(zbi_header_t)) {
-    status = zbi_vmo.read(&hdr, off, sizeof(hdr));
+  while (bytes_to_read > 0) {
+    status = zbi_vmo_.read(&item_header, current_offset, sizeof(zbi_header_t));
     if (status != ZX_OK) {
-      fprintf(stderr, "VMO read error\n");
-      break;
+      fprintf(stderr, "Failed to read ZBI header from vmo.\n");
+      return status;
     }
-    printf("ZBI Payload Header\n");
-    printf("ZBI type   = %08x\n", hdr.type);
-    printf("ZBI Magic  = %08x\n", hdr.magic);
-    printf("ZBI extra  = %08x\n", hdr.extra);
-    printf("ZBI Length = %u\n", hdr.length);
-    printf("ZBI Flags  = %08x\n", hdr.flags);
 
-    uint32_t item_len = ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + hdr.length);
-    if (item_len > len) {
-      fprintf(stderr, "ZBI item too large (%u > %u)\n", item_len, len);
-      break;
+    printf("ZBI Payload Header\n");
+    printf("ZBI Type   = %08x\n", item_header.type);
+    printf("ZBI Magic  = %08x\n", item_header.magic);
+    printf("ZBI Extra  = %08x\n", item_header.extra);
+    printf("ZBI Length = %u\n", item_header.length);
+    printf("ZBI Flags  = %08x\n", item_header.flags);
+
+    uint32_t item_len = ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + item_header.length);
+    if (item_len > bytes_to_read) {
+      fprintf(stderr, "ZBI item too large (%u > %u)\n", item_len, bytes_to_read);
+      return ZX_ERR_BAD_STATE;
     }
-    switch (hdr.type) {
+
+    switch (item_header.type) {
       case ZBI_TYPE_CONTAINER:
         fprintf(stderr, "Unexpected ZBI container header\n");
+        status = ZX_ERR_INVALID_ARGS;
         break;
+
       case ZBI_TYPE_STORAGE_BOOTFS: {
-        if (hdr.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
-          status = zx::vmo::create(hdr.extra, 0, &bootfs_vmo);
-          if (status == ZX_OK) {
-            status = Decompress(zbi_vmo, off + sizeof(hdr), hdr.length, bootfs_vmo, 0, hdr.extra);
-          }
-          if (status != ZX_OK) {
-            fprintf(stderr, "Failed to decompress bootfs: %s\n", zx_status_get_string(status));
-            break;
-          }
-        } else {
+        if (!(item_header.flags & ZBI_FLAG_STORAGE_COMPRESSED)) {
           fprintf(stderr, "Processing an uncompressed ZBI image is not currently supported\n");
           return ZX_ERR_NOT_SUPPORTED;
         }
 
-        bootfs::Parser parser;
-        status = parser.Init(zx::unowned_vmo(bootfs_vmo));
-        if (status != ZX_OK) {
-          return status;
-        }
-
-        // TODO(joeljacob): Consider making the vector a class member
-        // This will prevent unnecessarily re-reading the VMO
-        fbl::Vector<const zbi_bootfs_dirent_t*> parsed_entries;
-        parser.Parse([&](const zbi_bootfs_dirent_t* entry) {
-          parsed_entries.push_back(entry);
-
-          return ZX_OK;
-        });
-
-        bool found = false;
-
-        for (const auto& parsed_entry : parsed_entries) {
-          printf("Entry = %s\n ", parsed_entry->name);
-          if (!(strcmp(parsed_entry->name, filename))) {
-            printf("Filename = %s\n ", parsed_entry->name);
-            printf("File name length = %d\n", parsed_entry->name_len);
-            printf("File data length = %d\n", parsed_entry->data_len);
-            printf("File data offset = %d\n", parsed_entry->data_off);
-            auto buffer = std::make_unique<uint8_t[]>(parsed_entry->data_len);
-
-            size_t data_len = parsed_entry->data_len;
-            bootfs_vmo.read(buffer.get(), parsed_entry->data_off, data_len);
-
-            zx::vmo vmo;
-            zx::vmo::create(parsed_entry->data_len, 0, &vmo);
-            *entry = Entry{parsed_entry->data_len, std::move(vmo)};
-
-            entry->vmo.write(buffer.get(), 0, data_len);
-            found = true;
-            break;
-          }
-        }
-
-        status = found ? ZX_OK : ZX_ERR_NOT_FOUND;
-        break;
+        *read_offset = current_offset;
+        memcpy(header, &item_header, sizeof(zbi_header_t));
+        return ZX_OK;
       }
+
       default:
         printf("Unknown payload type, processing will stop\n");
         status = ZX_ERR_NOT_SUPPORTED;
         break;
     }
-    off += item_len;
-    len -= item_len;
+
+    current_offset += item_len;
+    bytes_to_read -= item_len;
   }
   return status;
+}
+
+__EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
+  uint32_t read_offset;
+  zbi_header_t boot_header;
+  zx_status_t status = FindBootZbi(&read_offset, &boot_header);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::vmo boot_vmo;
+  uint32_t decompressed_size = boot_header.extra;
+  status = zx::vmo::create(decompressed_size, 0, &boot_vmo);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create boot vmo: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  status = Decompress(zbi_vmo_, read_offset + sizeof(zbi_header_t), boot_header.length, boot_vmo, 0,
+                      decompressed_size);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to decompress bootfs: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  zbi_bootfs_dirent_t parsed_entry;
+  status = FindEntry(zx::unowned_vmo(boot_vmo), filename, &parsed_entry);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t data_len = parsed_entry.data_len;
+  auto buffer = std::make_unique<uint8_t[]>(data_len);
+  boot_vmo.read(buffer.get(), parsed_entry.data_off, data_len);
+
+  zx::vmo vmo;
+  zx::vmo::create(data_len, 0, &vmo);
+  *entry = Entry{data_len, std::move(vmo)};
+
+  entry->vmo.write(buffer.get(), 0, data_len);
+
+  return ZX_OK;
 }
 
 __EXPORT zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
@@ -241,9 +286,9 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
     // Check ZBI header for content length and set buffer size
     // accordingly
     zbi_header_t hdr;
-    status = vmo.read(&hdr, 0, sizeof(hdr));
+    status = vmo.read(&hdr, 0, sizeof(zbi_header_t));
     if (status != ZX_OK) {
-      fprintf(stderr, "VMO read error\n");
+      fprintf(stderr, "Failed to read ZBI header from vmo.\n");
       return status;
     }
 
@@ -318,7 +363,7 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
     read(fd.get(), mapping.start(), mapping.size());
   }
 
-  zbi_vmo = std::move(vmo);
+  zbi_vmo_ = std::move(vmo);
   return ZX_OK;
 }
 
@@ -422,7 +467,9 @@ zx_status_t Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size,
 
   if (magic == kLz4fMagic) {
     return DecompressLz4f(input, input_offset, input_size, output, output_offset, output_size);
-  } else if (magic == kZstdMagic) {
+  }
+
+  if (magic == kZstdMagic) {
     return DecompressZstd(input, input_offset, input_size, output, output_offset, output_size);
   }
 

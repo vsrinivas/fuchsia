@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/zx/vmo.h>
+#include <zircon/boot/image.h>
 #include <zircon/types.h>
 
 namespace zbi_bootfs {
@@ -37,7 +38,9 @@ class __EXPORT ZbiBootfsParser {
 
  private:
   bool IsSkipBlock(const char* path, fuchsia_hardware_skipblock_PartitionInfo* partition_info);
-  zx::vmo zbi_vmo;
+  zx_status_t FindBootZbi(uint32_t* read_offset, zbi_header_t* header);
+
+  zx::vmo zbi_vmo_;
 };
 
 __EXPORT
