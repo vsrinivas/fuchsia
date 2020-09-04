@@ -12,6 +12,7 @@ source_set("compiler") {
   sources = [
     "lib/attributes.cc",
     "lib/c_generator.cc",
+    "lib/check.cc",
     "lib/coded_types_generator.cc",
     "lib/diagnostic_types.cc",
     "lib/diagnostics_json.cc",
