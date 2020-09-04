@@ -115,7 +115,8 @@ impl CapabilityProvider for VmexCapabilityProvider {
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
-        let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
+        let stream: fsec::VmexRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         fasync::Task::spawn(async move {
             let result = self.vmex_service.serve(stream).await;
             if let Err(e) = result {

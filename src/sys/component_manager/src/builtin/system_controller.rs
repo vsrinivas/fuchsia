@@ -152,7 +152,8 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
-        let stream: SystemControllerRequestStream = server_end.into_stream().unwrap();
+        let stream: SystemControllerRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {

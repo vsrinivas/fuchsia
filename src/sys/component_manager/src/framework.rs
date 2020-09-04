@@ -288,7 +288,7 @@ impl RealmCapabilityHost {
                 cmp::Ordering::Greater
             }
         });
-        let stream = iter.into_stream().expect("could not convert iterator channel into stream");
+        let stream = iter.into_stream().map_err(|_| fcomponent::Error::AccessDenied)?;
         fasync::Task::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
@@ -1040,6 +1040,26 @@ mod tests {
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fcomponent::Error::CollectionNotFound);
+        }
+
+        // Insufficient rights.
+        {
+            let (_client_end, server_end) = zx::Channel::create().unwrap();
+            let server_end: zx::Handle = server_end.into();
+            // no WAIT
+            let server_end: zx::Channel = server_end
+                .replace(zx::Rights::READ | zx::Rights::WRITE | zx::Rights::TRANSFER)
+                .unwrap()
+                .into();
+            let server_end = ServerEnd::new(server_end);
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let err = test
+                .realm_proxy
+                .list_children(&mut collection_ref, server_end)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::AccessDenied);
         }
     }
 }

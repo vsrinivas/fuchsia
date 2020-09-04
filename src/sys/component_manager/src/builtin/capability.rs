@@ -101,7 +101,7 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<B::Marker>::new(server_end);
-        let stream = server_end.into_stream().unwrap();
+        let stream = server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         fasync::Task::spawn(async move {
             if let Some(capability) = self.capability.upgrade() {
                 if let Err(err) = capability.serve(stream).await {

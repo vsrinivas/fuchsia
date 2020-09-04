@@ -13,18 +13,21 @@ enum Error {
     INVALID_ARGUMENTS = 2;
     /// The feature is not yet supported.
     UNSUPPORTED = 3;
+    /// The caller did not have permission to perform the specified operation,
+    /// or one of the handles provided to the call had insufficient rights.
+    ACCESS_DENIED = 4;
     /// The component instance was not found.
-    INSTANCE_NOT_FOUND = 4;
+    INSTANCE_NOT_FOUND = 5;
     /// The component instance already exists.
-    INSTANCE_ALREADY_EXISTS = 5;
+    INSTANCE_ALREADY_EXISTS = 6;
     /// The component instance could not be started.
-    INSTANCE_CANNOT_START = 6;
+    INSTANCE_CANNOT_START = 7;
     /// Failed to resolve the component's declaration.
-    INSTANCE_CANNOT_RESOLVE = 7;
+    INSTANCE_CANNOT_RESOLVE = 8;
     /// The component collection was not found.
-    COLLECTION_NOT_FOUND = 8;
+    COLLECTION_NOT_FOUND = 9;
     /// There were insufficient resources to perform the operation.
-    RESOURCE_UNAVAILABLE = 9;
+    RESOURCE_UNAVAILABLE = 10;
     /// The component instance died unexpectedly.
-    INSTANCE_DIED = 10;
+    INSTANCE_DIED = 11;
 };

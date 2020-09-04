@@ -299,7 +299,8 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
-        let stream: fproc::LauncherRequestStream = server_end.into_stream().unwrap();
+        let stream: fproc::LauncherRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         fasync::Task::spawn(async move {
             let result = ProcessLauncher::serve(stream).await;
             if let Err(e) = result {

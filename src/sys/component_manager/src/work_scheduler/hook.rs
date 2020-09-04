@@ -172,7 +172,8 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
-        let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
+        let stream: fsys::WorkSchedulerControlRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {
@@ -240,7 +241,8 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
-        let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
+        let stream: fsys::WorkSchedulerRequestStream =
+            server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         let work_scheduler = self.work_scheduler.clone();
         let scope_moniker = self.scope_moniker.clone();
         fasync::Task::spawn(async move {

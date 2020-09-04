@@ -744,7 +744,13 @@ impl Runner for ScopedElfRunner {
                 // epitaph on the controller channel, closes it, and stops
                 // serving the protocol.
                 fasync::Task::spawn(async move {
-                    let server_stream = server_end.into_stream().expect("failed to convert");
+                    let server_stream = match server_end.into_stream() {
+                        Ok(s) => s,
+                        Err(e) => {
+                            warn!("Converting Controller channel to stream failed: {}", e);
+                            return;
+                        }
+                    };
                     runner::component::Controller::new(elf_component, server_stream)
                         .serve(epitaph_fn)
                         .await

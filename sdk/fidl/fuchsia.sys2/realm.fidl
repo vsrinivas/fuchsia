@@ -75,8 +75,11 @@ protocol Realm {
     /// won't be observed by the iterator after this method returns.
     ///
     /// Errors:
-    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference.
+    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `iter`
+    /// does not have `ZX_RIGHT_WAIT`.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - If `iter` does not have standard channel rights, this function may
+    /// return `ACCESS_DENIED` or component manager may close `iter`.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
         error fuchsia.component.Error;
 };

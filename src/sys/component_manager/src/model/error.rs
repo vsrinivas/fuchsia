@@ -90,6 +90,11 @@ pub enum ModelError {
     RemoveEntryError { entry_name: String },
     #[error("failed to open directory '{}' for component '{}'", relative_path, moniker)]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
+    #[error("failed to create stream from channel")]
+    StreamCreationError {
+        #[source]
+        err: ClonableError,
+    },
     #[error("insufficient resources to complete operation")]
     InsufficientResources,
     #[error("failed to send {} to runner for component {}", operation, moniker)]
@@ -176,6 +181,10 @@ impl ModelError {
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
+    }
+
+    pub fn stream_creation_error(err: impl Into<Error>) -> ModelError {
+        ModelError::StreamCreationError { err: err.into().into() }
     }
 }
 
