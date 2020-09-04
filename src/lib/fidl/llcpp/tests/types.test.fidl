@@ -25,9 +25,17 @@ flexible union TestXUnion {
     3: handle h;
 };
 
+struct TestXUnionInStruct {
+    TestXUnion xu;
+};
+
 union TestStrictXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
+};
+
+struct TestStrictXUnionInStruct {
+    TestStrictXUnion xu;
 };
 
 /// Verifies that user code can manipulate these bits.

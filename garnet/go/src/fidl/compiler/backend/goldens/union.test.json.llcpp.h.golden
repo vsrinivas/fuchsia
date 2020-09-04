@@ -1090,10 +1090,6 @@ class FlexiblePizzaOrPasta {
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(
         envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
@@ -1314,10 +1310,6 @@ class OlderSimpleUnion {
     ZX_ASSERT(ordinal_ == Ordinal::kF);
     return *static_cast<float*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
@@ -1449,10 +1441,6 @@ class NewerSimpleUnion {
     ZX_ASSERT(ordinal_ == Ordinal::kV);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
         envelope_.data.get());
-  }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
   }
   Tag which() const;
 
@@ -1602,10 +1590,6 @@ class FlexibleUnion {
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
         envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleUnionTable;
@@ -1717,10 +1701,6 @@ class FlexibleFoo {
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data.get());
-  }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
   }
   Tag which() const;
 
@@ -1905,10 +1885,6 @@ class ExplicitXUnion {
   const float& f() const {
     ZX_ASSERT(ordinal_ == Ordinal::kF);
     return *static_cast<float*>(envelope_.data.get());
-  }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
   }
   Tag which() const;
 
@@ -2232,10 +2208,6 @@ class ExplicitFoo {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fidl_test_json_ExplicitFooTable;
@@ -2321,10 +2293,6 @@ class XUnionContainingEmptyStruct {
     ZX_ASSERT(ordinal_ == Ordinal::kEmpty);
     return *static_cast<::llcpp::fidl::test::json::Empty*>(
         envelope_.data.get());
-  }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
   }
   Tag which() const;
 

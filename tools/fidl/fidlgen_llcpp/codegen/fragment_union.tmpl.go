@@ -69,12 +69,6 @@ class {{ .Name }} {
   {{- end }}
 
   {{- if .IsFlexible }}
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
-  {{- end }}
-  {{- if .IsFlexible }}
   Tag which() const;
   {{- else }}
   Tag which() const {

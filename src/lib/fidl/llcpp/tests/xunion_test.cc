@@ -131,26 +131,30 @@ TEST(XUnion, InitialTag) {
   EXPECT_TRUE(strict_xunion.has_invalid_tag());
 }
 
+// Flexible unions with unknown data should decode successfully but fail to encode.
 TEST(XUnion, UnknownTagFlexible) {
-  fidl_xunion_tag_t unknown_tag = 0x01020304;
-  int32_t xunion_data = 0x0A0B0C0D;
-  auto flexible_xunion = llcpp_test::TestXUnion::WithPrimitive(fidl::unowned_ptr(&xunion_data));
+  // Unknown data decodes successfully and results in an unknown tag. The latter cannot be checked
+  // with GIDL.
+  auto bytes = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8 bytes, 0 handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown bytes
+  };
+  fidl::EncodedMessage<llcpp_test::TestXUnionInStruct> message(
+      fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  auto decode_result = fidl::Decode(std::move(message));
+  ASSERT_EQ(decode_result.status, ZX_OK) << zx_status_get_string(decode_result.status);
+  EXPECT_EQ(decode_result.Unwrap()->xu.which(), llcpp_test::TestXUnion::Tag::kUnknown);
 
-  // set to an unknown tag
-  auto raw_bytes = reinterpret_cast<uint32_t*>(&flexible_xunion);
-  raw_bytes[0] = unknown_tag;
-
-  EXPECT_EQ(flexible_xunion.which(), llcpp_test::TestXUnion::Tag::kUnknown);
-  int32_t unknown_data = *(static_cast<int32_t*>(flexible_xunion.unknownData()));
-  EXPECT_EQ(unknown_data, xunion_data);
-}
-
-TEST(XUnion, UnknownTagStrict) {
-  fidl_xunion_tag_t unknown_tag = 0x01020304;
-  int32_t xunion_data = 0x0A0B0C0D;
-  auto strict_xunion = llcpp_test::TestStrictXUnion::WithPrimitive(fidl::unowned_ptr(&xunion_data));
-
-  // set to an unknown tag
-  auto raw_bytes = reinterpret_cast<uint32_t*>(&strict_xunion);
-  raw_bytes[0] = unknown_tag;
+  // Unknown data fails to encode. This cannot be in expressed in GIDL because unknown unions cannot
+  // be constructed natively in LLCPP. Decoding raw bytes would also not work because encode_failure
+  // tests do not specify the raw bytes.
+  fidl::internal::LinearizeBuffer<llcpp_test::TestXUnionInStruct> buffer;
+  auto xu_bytes = decode_result.message.Release();
+  auto encode_result = fidl::LinearizeAndEncode(
+      reinterpret_cast<llcpp_test::TestXUnionInStruct*>(xu_bytes.data()), buffer.buffer());
+  ASSERT_EQ(encode_result.status, ZX_ERR_INVALID_ARGS)
+      << zx_status_get_string(encode_result.status);
+  EXPECT_STREQ(encode_result.error, "Cannot encode unknown union or table") << encode_result.error;
 }

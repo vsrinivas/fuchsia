@@ -156,10 +156,6 @@ class ExampleXUnion {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &example_ExampleXUnionTable;

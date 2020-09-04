@@ -85,10 +85,6 @@ class UnionWithHandle {
     ZX_ASSERT(ordinal_ == Ordinal::kH);
     return *static_cast<::zx::vmo*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
-  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &test_name_UnionWithHandleTable;

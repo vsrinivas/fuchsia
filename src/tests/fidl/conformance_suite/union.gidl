@@ -131,7 +131,7 @@ decode_success("FlexibleUnionUnknownValue") {
 
 decode_failure("StrictUnionUnknownValue") {
     // TODO(8047) Enable for each binding and remove redundant manual tests
-    bindings_allowlist = [cpp,go,rust],
+    bindings_allowlist = [cpp,go,llcpp,rust],
     type = TestStrictXUnionInStruct,
     bytes = {
         v1 = [
