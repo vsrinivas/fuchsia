@@ -6,8 +6,7 @@ events to all interested clients.
 ## Rendered Docs
 
 * [FIDL](https://fuchsia.dev/reference/fidl/fuchsia.ui.input3)
-* [Rust](https://fuchsia-docs.firebaseapp.com/rust/fidl_fuchsia_media_sessions2/index.html)
-
+* [Rust](https://fuchsia-docs.firebaseapp.com/rust/fidl_fuchsia_ui_input3/index.html)
 
 ## Overview
 
