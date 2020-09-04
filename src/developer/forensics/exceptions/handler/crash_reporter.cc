@@ -27,7 +27,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       component_lookup_timeout_(component_lookup_timeout) {}
 
 void CrashReporter::Send(const std::string crashed_process_name,
-                         const zx_koid_t crashed_process_koid, zx::exception exception,
+                         const zx_koid_t crashed_thread_koid, zx::exception exception,
                          SendCallback callback) {
   CrashReportBuilder builder;
   builder.SetProcessName(crashed_process_name);
@@ -44,7 +44,7 @@ void CrashReporter::Send(const std::string crashed_process_name,
 
   auto file_crash_report =
       GetComponentSourceIdentity(dispatcher_, services_, fit::Timeout(component_lookup_timeout_),
-                                 crashed_process_koid)
+                                 crashed_thread_koid)
           .then([services = services_, builder = std::move(builder),
                  callback = std::move(callback)](::fit::result<SourceIdentity>& result) mutable {
             SourceIdentity component_lookup;

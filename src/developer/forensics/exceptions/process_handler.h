@@ -24,7 +24,7 @@ class ProcessHandler {
   ProcessHandler(ProcessHandler&&) = default;
   ProcessHandler& operator=(ProcessHandler&&) = default;
 
-  void Handle(const std::string& crashed_process_name, zx_koid_t crashed_process_koid,
+  void Handle(const std::string& crashed_process_name, zx_koid_t crashed_thread_koid,
               zx::exception exception);
 
  private:

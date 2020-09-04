@@ -22,14 +22,14 @@ class PendingException {
 
   zx::exception&& TakeException();
   std::string CrashedProcessName() const;
-  zx_koid_t CrashedProcessKoid() const;
+  zx_koid_t CrashedThreadKoid() const;
 
  private:
   void Reset();
 
   zx::exception exception_;
   std::string crashed_process_name_;
-  zx_koid_t crashed_process_koid_;
+  zx_koid_t crashed_thread_koid_;
   async::TaskClosureMethod<PendingException, &PendingException::Reset> reset_{this};
 };
 

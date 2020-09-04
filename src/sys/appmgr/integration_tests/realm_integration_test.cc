@@ -396,8 +396,8 @@ std::string GetUnhashedUrl(const std::string& url) {
 
 class RealmCrashIntrospectTest : public RealmTest {
  public:
-  using CrashIntrospect_FindComponentByProcessKoid_Result =
-      fuchsia::sys::internal::CrashIntrospect_FindComponentByProcessKoid_Result;
+  using CrashIntrospect_FindComponentByThreadKoid_Result =
+      fuchsia::sys::internal::CrashIntrospect_FindComponentByThreadKoid_Result;
 
   void SetUp() override {
     RealmTest::SetUp();
@@ -405,9 +405,9 @@ class RealmCrashIntrospectTest : public RealmTest {
     ASSERT_TRUE(files::ReadFileToString("hub/name", &current_realm_name_));
   }
 
-  CrashIntrospect_FindComponentByProcessKoid_Result FindComponent(zx_koid_t process_koid) {
-    CrashIntrospect_FindComponentByProcessKoid_Result result;
-    auto status = introspect_->FindComponentByProcessKoid(process_koid, &result);
+  CrashIntrospect_FindComponentByThreadKoid_Result FindComponent(zx_koid_t thread_koid) {
+    CrashIntrospect_FindComponentByThreadKoid_Result result;
+    auto status = introspect_->FindComponentByThreadKoid(thread_koid, &result);
     FX_CHECK(ZX_OK == status) << "status: " << status;
     return result;
   }

@@ -7,6 +7,8 @@
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
@@ -68,13 +70,12 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
 
 class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
  public:
-  void FindComponentByProcessKoid(uint64_t process_koid,
-                                  FindComponentByProcessKoidCallback callback) {
+  void FindComponentByThreadKoid(uint64_t thread_koid, FindComponentByThreadKoidCallback callback) {
     using namespace fuchsia::sys::internal;
-    if (pids_to_component_infos_.find(process_koid) == pids_to_component_infos_.end()) {
-      callback(CrashIntrospect_FindComponentByProcessKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
+    if (tids_to_component_infos_.find(thread_koid) == tids_to_component_infos_.end()) {
+      callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
     } else {
-      const auto& info = pids_to_component_infos_[process_koid];
+      const auto& info = tids_to_component_infos_[thread_koid];
 
       SourceIdentity source_identity;
       source_identity.set_component_url(info.component_url);
@@ -83,8 +84,8 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
         source_identity.set_realm_path(info.realm_path.value());
       }
 
-      callback(CrashIntrospect_FindComponentByProcessKoid_Result::WithResponse(
-          CrashIntrospect_FindComponentByProcessKoid_Response(std::move(source_identity))));
+      callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithResponse(
+          CrashIntrospect_FindComponentByThreadKoid_Response(std::move(source_identity))));
     }
   }
 
@@ -99,12 +100,12 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
     std::optional<std::vector<std::string>> realm_path;
   };
 
-  void AddProcessKoidToComponentInfo(uint64_t process_koid, ComponentInfo component_info) {
-    pids_to_component_infos_[process_koid] = component_info;
+  void AddThreadKoidToComponentInfo(uint64_t thread_koid, ComponentInfo component_info) {
+    tids_to_component_infos_[thread_koid] = component_info;
   }
 
  private:
-  std::map<uint64_t, ComponentInfo> pids_to_component_infos_;
+  std::map<uint64_t, ComponentInfo> tids_to_component_infos_;
 
   fidl::BindingSet<fuchsia::sys::internal::CrashIntrospect> bindings_;
 };
@@ -119,18 +120,21 @@ class HandlerTest : public UnitTestFixture {
     zx::process process;
     exception.get_process(&process);
     const std::string process_name = fsl::GetObjectName(process.get());
-    const zx_koid_t process_koid = fsl::GetKoid(process.get());
 
-    handler_->Send(process_name, process_koid, std::move(exception), std::move(callback));
+    zx::thread thread;
+    exception.get_thread(&thread);
+    const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
+
+    handler_->Send(process_name, thread_koid, std::move(exception), std::move(callback));
     RunLoopUntilIdle();
   }
 
   void HandleException(
-      const std::string& process_name, const zx_koid_t process_koid,
+      const std::string& process_name, const zx_koid_t thread_koid,
       zx::duration component_lookup_timeout, ::fit::closure callback = [] {}) {
     handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
 
-    handler_->Send(process_name, process_koid, zx::exception{}, std::move(callback));
+    handler_->Send(process_name, thread_koid, zx::exception{}, std::move(callback));
     RunLoopUntilIdle();
   }
 
@@ -151,7 +155,7 @@ class HandlerTest : public UnitTestFixture {
 
 bool RetrieveExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
-  // By the time |SpawnCrasher| has returned, the process has already thrown an exception.
+  // By the time |SpawnCrasher| has returned, the thread has already thrown an exception.
   if (!SpawnCrasher(pe))
     return false;
 
@@ -298,19 +302,21 @@ TEST_F(HandlerTest, NoException) {
 
   zx::process process;
   ASSERT_EQ(exception.exception.get_process(&process), ZX_OK);
-
   const std::string process_name = fsl::GetObjectName(process.get());
-  const zx_koid_t process_koid = fsl::GetKoid(process.get());
+
+  zx::thread thread;
+  ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
   const std::string kComponentUrl = "component_url";
-  introspect().AddProcessKoidToComponentInfo(process_koid, StubCrashIntrospect::ComponentInfo{
-                                                               .component_url = kComponentUrl,
-                                                               .realm_path = std::nullopt,
-                                                           });
+  introspect().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospect::ComponentInfo{
+                                                             .component_url = kComponentUrl,
+                                                             .realm_path = std::nullopt,
+                                                         });
   exception.exception.reset();
 
   bool called = false;
-  HandleException(process_name, process_koid, zx::duration::infinite(),
+  HandleException(process_name, thread_koid, zx::duration::infinite(),
                   [&called] { called = true; });
 
   ASSERT_TRUE(called);

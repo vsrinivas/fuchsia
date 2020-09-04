@@ -15,27 +15,27 @@
 #include "lib/async/cpp/wait.h"
 #include "lib/fitx/internal/result.h"
 #include "lib/zx/channel.h"
-#include "lib/zx/process.h"
+#include "lib/zx/thread.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace component {
 
-// Implements |CrashIntrospect| fidl service and keeps a cache of all crashed processes in monitored
+// Implements |CrashIntrospect| fidl service and keeps a cache of all crashed threads in monitored
 // jobs. The cached results are automatically deleted after some time or when retrieved using
-// |FindComponentByProcessKoid| call.
+// |FindComponentByThreadKoid| call.
 class CrashIntrospector : public fuchsia::sys::internal::CrashIntrospect {
  public:
   CrashIntrospector();
   virtual ~CrashIntrospector() override;
 
-  // Register the job to be monitored for process crashes and associate it with |component_info|.
+  // Register the job to be monitored for thread crashes and associate it with |component_info|.
   void RegisterJob(const zx::job& job, fuchsia::sys::internal::SourceIdentity component_info);
 
-  // Removes and returns the component associated with crashed process which is cached in this
+  // Removes and returns the component associated with crashed thread which is cached in this
   // class.
-  void FindComponentByProcessKoid(zx_koid_t process,
-                                  FindComponentByProcessKoidCallback callback) override;
+  void FindComponentByThreadKoid(zx_koid_t thread_koid,
+                                 FindComponentByThreadKoidCallback callback) override;
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::internal::CrashIntrospect> request);
 
@@ -58,13 +58,14 @@ class CrashIntrospector : public fuchsia::sys::internal::CrashIntrospect {
     FXL_DISALLOW_COPY_AND_ASSIGN(CrashMonitor);
   };
 
-  // Adds process and associated |component_info| to the cache.
-  void AddProcessToCache(const zx::process& process,
-                         const fuchsia::sys::internal::SourceIdentity& component_info);
-  // Removes process from the cache and returns |component_info| if available.
-  // Returns false if process is not in the cache.
-  fitx::result<bool, fuchsia::sys::internal::SourceIdentity> RemoveProcessFromCache(
-      zx_koid_t process_koid);
+  // Adds thread and associated |component_info| to the cache.
+  void AddThreadToCache(const zx::thread& thread,
+                        const fuchsia::sys::internal::SourceIdentity& component_info);
+
+  // Removes thread from the cache and returns |component_info| if available.
+  // Returns false if thread is not in the cache.
+  fitx::result<bool, fuchsia::sys::internal::SourceIdentity> RemoveThreadFromCache(
+      zx_koid_t thread_koid);
 
   std::unique_ptr<CrashMonitor> ExtractMonitor(const CrashMonitor* monitor);
 
@@ -72,11 +73,11 @@ class CrashIntrospector : public fuchsia::sys::internal::CrashIntrospect {
   // Keep monitors for safe keeping till they are running.
   std::map<const CrashMonitor*, std::unique_ptr<CrashMonitor>> monitors_;
 
-  // stores associated |component_info| and a task which will auto delete it from the cache in a
-  // fixed time(as defined in implementation file).
+  // Stores associated |component_info| and a task which will auto delete it from the cache in a
+  // fixed time (as defined in implementation file).
   std::map<zx_koid_t,
            std::pair<std::unique_ptr<async::TaskClosure>, fuchsia::sys::internal::SourceIdentity>>
-      process_cache_;
+      thread_cache_;
 
   fidl::BindingSet<fuchsia::sys::internal::CrashIntrospect> bindings_;
 

@@ -76,7 +76,7 @@ ProcessHandler::~ProcessHandler() {
 }
 
 void ProcessHandler::Handle(const std::string& crashed_process_name,
-                            const zx_koid_t crashed_process_koid, zx::exception exception) {
+                            const zx_koid_t crashed_thread_koid, zx::exception exception) {
   if (!crash_reporter_.is_bound()) {
     zx::channel client;
 
@@ -90,7 +90,7 @@ void ProcessHandler::Handle(const std::string& crashed_process_name,
     crash_reporter_.Bind(std::move(client), dispatcher_);
   }
 
-  crash_reporter_->Send(crashed_process_name, crashed_process_koid, std::move(exception),
+  crash_reporter_->Send(crashed_process_name, crashed_thread_koid, std::move(exception),
                         [this] { on_available_(); });
 }
 

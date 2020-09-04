@@ -5,6 +5,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -23,10 +24,15 @@ PendingException::PendingException(async_dispatcher_t* dispatcher, zx::duration 
     FX_PLOGS(ERROR, status) << "Failed to get process; releasing the exception";
     exception_.reset();
   }
-
   crashed_process_name_ =
       (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
-  crashed_process_koid_ = fsl::GetKoid(process.get());
+
+  zx::thread thread;
+  if (const zx_status_t status = exception_.get_thread(&thread); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get thread; releasing the exception";
+    exception_.reset();
+  }
+  crashed_thread_koid_ = fsl::GetKoid(thread.get());
 
   if (const zx_status_t status = reset_.PostDelayed(dispatcher, ttl); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post reset task for exception; releasing the exception";
@@ -38,7 +44,7 @@ zx::exception&& PendingException::TakeException() { return std::move(exception_)
 
 std::string PendingException::CrashedProcessName() const { return crashed_process_name_; }
 
-zx_koid_t PendingException::CrashedProcessKoid() const { return crashed_process_koid_; }
+zx_koid_t PendingException::CrashedThreadKoid() const { return crashed_thread_koid_; }
 
 void PendingException::Reset() { exception_.reset(); }
 

@@ -18,12 +18,12 @@ namespace forensics {
 namespace exceptions {
 namespace handler {
 
-// Get component information about the process with koid |process_koid|.
+// Get component information about the thread with koid |thread_koid|.
 //
 // fuchsia.sys.internal.CrashIntrospect is expected to be in |services|.
 ::fit::promise<fuchsia::sys::internal::SourceIdentity> GetComponentSourceIdentity(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout, zx_koid_t process_koid);
+    fit::Timeout timeout, zx_koid_t thread_koid);
 
 }  // namespace handler
 }  // namespace exceptions

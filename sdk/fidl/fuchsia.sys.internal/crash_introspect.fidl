@@ -7,13 +7,13 @@ library fuchsia.sys.internal;
 using zx;
 
 [Discoverable]
-// Provides introspection information about crashed processes in appmgr.
+// Provides introspection information about crashed threads in appmgr.
 protocol CrashIntrospect {
-    // Finds the component whose job contains `process_koid`.
-    // This can only be called for crashed processes and once per |process_koid|. Subsequent calls
-    // will return |ZX_ERR_NOT_FOUND|.
+    // Finds the component whose job contains a process with a thread `thread_koid`.
+    // This can only be called for threads that have crashed and once per `thread_koid`. Subsequent
+    // calls will return |ZX_ERR_NOT_FOUND|.
     // Returns component's source identity.
     // Errors:
-    // - `ZX_ERR_NOT_FOUND`: If process_koid is not found in the crashed process list.
-    FindComponentByProcessKoid(zx.koid process_koid) -> (SourceIdentity component_info) error zx.status;
+    // - `ZX_ERR_NOT_FOUND`: If thread_koid is not found in the crashed thread list.
+    FindComponentByThreadKoid(zx.koid thread_koid) -> (SourceIdentity component_info) error zx.status;
 };

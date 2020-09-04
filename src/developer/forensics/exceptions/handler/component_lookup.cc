@@ -16,7 +16,7 @@ namespace exceptions {
 namespace handler {
 namespace {
 
-using fuchsia::sys::internal::CrashIntrospect_FindComponentByProcessKoid_Result;
+using fuchsia::sys::internal::CrashIntrospect_FindComponentByThreadKoid_Result;
 using fuchsia::sys::internal::SourceIdentity;
 
 // Wraps around fuchsia::sys::internal::CrashIntrospectPtr to handle establishing the connection,
@@ -35,10 +35,10 @@ class ComponentLookup {
   fidl::OneShotPtr<fuchsia::sys::internal::CrashIntrospect, SourceIdentity> introspect_;
 };
 
-::fit::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t process_koid,
+::fit::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t thread_koid,
                                                                   fit::Timeout timeout) {
-  introspect_->FindComponentByProcessKoid(
-      process_koid, [this](CrashIntrospect_FindComponentByProcessKoid_Result result) {
+  introspect_->FindComponentByThreadKoid(
+      thread_koid, [this](CrashIntrospect_FindComponentByThreadKoid_Result result) {
         if (introspect_.IsAlreadyDone()) {
           return;
         }
@@ -63,12 +63,12 @@ class ComponentLookup {
 
 ::fit::promise<SourceIdentity> GetComponentSourceIdentity(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout, zx_koid_t process_koid) {
+    fit::Timeout timeout, zx_koid_t thread_koid) {
   auto component_lookup = std::make_unique<ComponentLookup>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
-  auto component = component_lookup->GetSourceIdentity(process_koid, std::move(timeout));
+  auto component = component_lookup->GetSourceIdentity(thread_koid, std::move(timeout));
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(component),
                                               /*args=*/std::move(component_lookup));
 }
