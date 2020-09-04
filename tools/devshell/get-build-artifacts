@@ -13,8 +13,16 @@
 ##
 ##  --no-build    do not build the artifacts and just return the list of them
 ##  --allow-empty do not fail if no such artifacts are found
-##  --name        filter the set of images to pick out the particular one of
+##  --expect-one  fail if zero or more than one artifacts are found. This
+##                option is mutually exclusive from `--allow-emmpty`.
+##  --name        filter the set of artifacts to pick out the particular one of
 ##                the same name
+##  --os          filter the set of artifacts by intended operating system: one
+##                of `fuchsia`, `linux`, or `mac`. Defaults to $HOST_OS when
+##                the mode is `tools.`
+##  --cpu         filter the set of artifacts by intended architecture: one of
+##                `x64` or `arm64`. Defaults to $HOST_CPU when the mode is
+##                `tools`.
 ##
 ##  MODE          One of the following:
 ##                `images` -- returns the list of images
@@ -22,7 +30,9 @@
 ##                `pave-zedboot`-- returns the list of images needed to pave
 ##                zedboot;
 ##                `netboot`-- returns the list of images needed to netboot
+##                `flash`-- returns the list of images needed to flash
 ##                `tools` -- returns the list of host tools
+##                `zbi-tests`-- returns the list of ZBI tests
 ##
 
 set -o errexit
@@ -32,11 +42,15 @@ fx-config-read
 
 readonly IMAGES_JSON="images.json"
 readonly TOOL_PATHS_JSON="tool_paths.json"
+readonly ZBI_TESTS_JSON="zbi_tests.json"
 
 build=true
+allow_empty=false
+expect_one=false
 mode=""
 name=""
-allow_empty=false
+os=""
+cpu=""
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -49,9 +63,20 @@ while [[ $# -ne 0 ]]; do
   --allow-empty)
     allow_empty=true
     ;;
+  --expect-one)
+    expect_one=true
+    ;;
   --name)
     shift
     name="$1"
+    ;;
+  --os)
+    shift
+    os="$1"
+    ;;
+  --cpu)
+    shift
+    cpu="$1"
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -76,6 +101,12 @@ if [[ -z "${mode}" ]]; then
   exit 1
 fi
 
+if $allow_empty && $expect_one ; then
+  fx-error "cannot set both `--allow-empty` and `--expect-one`"
+  fx-command-help
+  exit 1
+fi
+
 manifest=""
 jq_filter=".[]"
 paths=()
@@ -93,9 +124,16 @@ elif [[ "${mode}" == netboot ]]; then
   manifest="${IMAGES_JSON}"
   paths+=("netboot.sh")
   jq_filter+=" | select(.bootserver_netboot != null)"
+elif [[ "${mode}" == flash ]]; then
+  manifest="${IMAGES_JSON}"
+  paths+=("flash.sh")
+  jq_filter+=" | select(.fastboot_flash != null)"
 elif [[ "${mode}" == tools ]]; then
   manifest="${TOOL_PATHS_JSON}"
-  jq_filter+=" | select(.os == \"${HOST_OS}\" and .cpu == \"${HOST_CPU}\")"
+  os="${os:-${HOST_OS}}"
+  cpu="${cpu:-${HOST_CPU}}"
+elif [[ "${mode}" == zbi-tests ]]; then
+  manifest="${ZBI_TESTS_JSON}"
 else
   fx-error "unknown MODE: ${mode}"
   fx-command-help
@@ -111,25 +149,32 @@ if [[ ! -z "${name}" ]]; then
     paths=()
   fi
 fi
+if [[ ! -z "${os}" ]]; then
+  jq_filter+=" | select(.os == \"${os}\")"
+fi
+if [[ ! -z "${cpu}" ]]; then
+  jq_filter+=" | select(.cpu == \"${cpu}\")"
+fi
 jq_filter+=" | .path"
 
 paths+=($(fx-command-run jq --raw-output "${jq_filter}" "${FUCHSIA_BUILD_DIR}/${manifest}"))
-if $build ; then
+if $build && [[ ${#paths[@]} -ne 0 ]] ; then
   # For efficiency's sake, we avoid having to build zircon when building
-  # host-side tools.
-  if [[ "$mode" == tools ]]; then
+  # host-side artifacts.
+  if [[ ! -z "${os}" && "$os" != fuchsia ]]; then
     fx-command-run build --no-zircon "${paths[@]}" >&2
   else
     fx-command-run build "${paths[@]}" >&2
   fi
 fi
 
-if ! $allow_empty && [[ ${#paths[@]} -eq 0 ]] ; then
-  if [[ -z "${name}" ]] ; then
-    fx-error "found no artifacts of type \"${mode}\" found in GN graph"
-  else
-    fx-error "found no artifacts of type \"${mode}\" with name \"${name}\" found in GN graph"
-  fi
+if [[ ${#paths[@]} -eq 0 ]] && (! $allow_empty || $expect_one) ; then
+  fx-error "found no artifacts in the GN graph of type \"${mode}\" with (name, os, cpu) == (\"${name:-*}\", \"${os:-*}\", \"${cpu:-*}\")"
+  exit 1
+fi
+
+if [[ ${#paths[@]} -gt 1 ]] && $expect_one ; then
+  fx-error "expected one artifact; found multiple: ${paths[@]}"
   exit 1
 fi
 
