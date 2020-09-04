@@ -25,7 +25,11 @@ use {
     fuchsia_inspect::{self as inspect, unique_name, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
-    futures::{channel::mpsc, future::BoxFuture, FutureExt},
+    futures::{
+        channel::{mpsc, oneshot},
+        future::BoxFuture,
+        FutureExt,
+    },
     parking_lot::RwLock,
     slab::Slab,
     std::{
@@ -69,6 +73,7 @@ pub enum HostService {
 /// physically ocurring and persists until the host disappears or the host session is dropped.
 pub enum DiscoveryState {
     NotDiscovering,
+    Pending(Vec<oneshot::Sender<Arc<DiscoverySession>>>),
     Discovering(Weak<DiscoverySession>, HostDiscoverySession),
 }
 
@@ -77,20 +82,8 @@ impl DiscoveryState {
     fn get_discovery_session(&self) -> Option<Arc<DiscoverySession>> {
         match self {
             DiscoveryState::Discovering(weak_session, _) => weak_session.upgrade(),
-            DiscoveryState::NotDiscovering => None,
+            _ => None,
         }
-    }
-
-    // Establish and return a new dispatcher discovery session, given the dispatcher state and
-    // a host discovery session.
-    fn new_discovery_session(
-        &mut self,
-        dispatcher_state: Arc<RwLock<HostDispatcherState>>,
-        host_session: HostDiscoverySession,
-    ) -> Arc<DiscoverySession> {
-        let dispatcher_session = Arc::new(DiscoverySession { dispatcher_state });
-        *self = DiscoveryState::Discovering(Arc::downgrade(&dispatcher_session), host_session);
-        dispatcher_session
     }
 
     fn end_discovery_session(&mut self) {
@@ -542,21 +535,48 @@ impl HostDispatcher {
     }
 
     pub async fn start_discovery(&self) -> types::Result<Arc<DiscoverySession>> {
-        // TODO(57494): fix TOCTOU race condition between the following two cases.
-        // Case: a discovery session already exists; return Arc<> to this session
-        if let Some(existing_discovery_session) =
-            self.state.read().discovery.get_discovery_session()
-        {
-            return Ok(existing_discovery_session);
+        // If a Discovery session already exists, return its session token
+        if let Some(existing_session) = self.state.read().discovery.get_discovery_session() {
+            return Ok(existing_session);
         }
 
-        // Case: no discovery session exists; create and return new session
+        // If Discovery is pending, add ourself to queue of clients awaiting session token
+        let mut session_receiver = None;
+        if let DiscoveryState::Pending(client_queue) = &mut self.state.write().discovery {
+            let (send, recv) = oneshot::channel();
+            client_queue.push(send);
+            session_receiver = Some(recv);
+        }
+
+        // We cannot also .await on the channel in the previous if statement, since we
+        // acquire a lock on the dispatcher state there, i.e. self.state.write()
+        if let Some(recv) = session_receiver {
+            return recv
+                .await
+                .map_err(|_| format_err!("Pending discovery client channel closed").into());
+        }
+
+        // If we don't have a discovery session and we're not pending, we must be
+        // NotDiscovering, so start a new discovery session
+
+        // Immediately mark the state as pending to indicate to other requests to wait on
+        // this discovery session initialization
+        self.state.write().discovery = DiscoveryState::Pending(Vec::new());
         let host_session = self.discover_on_active_host().await?;
-        Ok(self
-            .state
-            .write()
-            .discovery
-            .new_discovery_session(Arc::clone(&self.state), host_session))
+        let dispatcher_session =
+            Arc::new(DiscoverySession { dispatcher_state: self.state.clone() });
+
+        // Replace Pending state with new session and send session token to waiters
+        if let DiscoveryState::Pending(client_queue) = std::mem::replace(
+            &mut self.state.write().discovery,
+            DiscoveryState::Discovering(Arc::downgrade(&dispatcher_session), host_session),
+        ) {
+            for client in client_queue {
+                let _ = client.send(dispatcher_session.clone());
+            }
+        }
+
+        Ok(dispatcher_session)
     }
 
     pub async fn set_discoverable(&self) -> types::Result<Arc<DiscoverableRequestToken>> {
