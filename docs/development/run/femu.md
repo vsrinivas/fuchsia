@@ -72,12 +72,12 @@ sudo chown $USER /dev/tap0
 ## Run Fuchsia under FEMU
 
 Ensure that you have set up and built the Fuchsia product (this example uses
-`workstation` product). Currently only `x64` boards are supported.
+`workstation` product). Currently only `qemu-x64` boards are supported.
 
 ```posix-terminal
 cd $FUCHSIA_DIR
 
-fx set workstation.x64 --release [--with=...]
+fx set workstation.qemu-x64 --release [--with=...]
 
 fx build
 ```
