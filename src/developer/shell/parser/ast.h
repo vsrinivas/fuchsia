@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_SHELL_PARSER_AST_H_
 #define SRC_DEVELOPER_SHELL_PARSER_AST_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,12 +40,14 @@ class Field;
 class Path;
 class AddSub;
 
+template <typename T = void>
 class NodeVisitor;
+
+template <typename T>
+class WrappingVisitor;
 
 // A node in our AST.
 class Node {
-  friend class NodeVisitor;
-
  public:
   explicit Node(size_t start) : start_(start) {}
   virtual ~Node() = default;
@@ -70,7 +74,16 @@ class Node {
   virtual bool HasErrors() const { return IsError(); }
 
   // Visit this node with a visitor.
-  virtual void Visit(NodeVisitor* visitor) const = 0;
+  template <typename T>
+  T Visit(NodeVisitor<T>* visitor) const {
+    WrappingVisitor wrapped(visitor);
+    Visit(&wrapped);
+    return std::move(wrapped.result);
+  }
+  template <>
+  void Visit<void>(NodeVisitor<void>* visitor) const {
+    VisitVoid(visitor);
+  }
 
   // Downcasting methods
   virtual Error* AsError() { return nullptr; }
@@ -123,6 +136,8 @@ class Node {
   virtual bool IsPathSeparator() const { return false; }
 
  private:
+  virtual void VisitVoid(NodeVisitor<void>* visitor) const = 0;
+
   // Offset into the original text where the text this node corresponds to starts.
   const size_t start_;
 };
@@ -136,9 +151,10 @@ class Terminal : public Node {
   size_t Size() const override { return size_; }
 
   std::string ToString(std::string_view unit) const override;
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   static const std::vector<std::shared_ptr<Node>> kEmptyChildren;
 
   const size_t size_;
@@ -155,9 +171,10 @@ class Error : public Terminal {
 
   std::string ToString(std::string_view unit) const override;
   Error* AsError() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   const std::string message_;
 };
 
@@ -168,7 +185,9 @@ class FieldSeparator : public Terminal {
       : Terminal(start, size, content) {}
 
   bool IsFieldSeparator() const override { return true; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Terminal representing the "const" keyword.
@@ -177,7 +196,9 @@ class Const : public Terminal {
   Const(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
 
   bool IsConst() const override { return true; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Terminal representing the "var" keyword.
@@ -186,7 +207,9 @@ class Var : public Terminal {
   Var(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
 
   bool IsVar() const override { return true; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Terminal representing a sequence of decimal digits.
@@ -198,9 +221,10 @@ class DecimalGroup : public Terminal {
   uint64_t value() const { return value_; }
 
   DecimalGroup* AsDecimalGroup() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   size_t digits_;
   uint64_t value_ = 0;
 };
@@ -214,9 +238,10 @@ class HexGroup : public Terminal {
   uint64_t value() const { return value_; }
 
   HexGroup* AsHexGroup() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   size_t digits_;
   uint64_t value_ = 0;
 };
@@ -230,9 +255,10 @@ class UnescapedIdentifier : public Terminal {
   const std::string& identifier() const { return identifier_; }
 
   UnescapedIdentifier* AsUnescapedIdentifier() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string identifier_ = "";
 };
 
@@ -245,9 +271,10 @@ class StringEntity : public Terminal {
   const std::string& content() const { return content_; }
 
   StringEntity* AsStringEntity() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string content_ = "";
 };
 
@@ -258,9 +285,10 @@ class EscapeSequence : public StringEntity {
       : StringEntity(start, size, Decode(content)) {}
 
   EscapeSequence* AsEscapeSequence() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   static std::string Decode(std::string_view sequence);
 };
 
@@ -273,9 +301,10 @@ class PathElement : public Terminal {
   const std::string& content() const { return content_; }
 
   PathElement* AsPathElement() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string content_ = "";
 };
 
@@ -286,7 +315,9 @@ class PathEscape : public PathElement {
       : PathElement(start, size, content.substr(1)) {}
 
   PathEscape* AsPathEscape() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Terminal representing a path separator.
@@ -296,7 +327,9 @@ class PathSeparator : public Terminal {
       : Terminal(start, size, content) {}
 
   bool IsPathSeparator() const override { return true; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Terminal representing an operator.
@@ -308,9 +341,10 @@ class Operator : public Terminal {
   const std::string& op() const { return operator_; }
 
   Operator* AsOperator() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string operator_ = "";
 };
 
@@ -343,9 +377,9 @@ class Nonterminal : public Node {
 
   bool HasErrors() const override { return has_errors_; }
 
-  void Visit(NodeVisitor* visitor) const override;
-
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   bool has_errors_ = false;
   std::vector<std::shared_ptr<Node>> children_;
 };
@@ -381,7 +415,9 @@ class Program : public Nonterminal {
 
   std::string_view Name() const override { return "Program"; }
   Program* AsProgram() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 class VariableDecl : public Nonterminal {
@@ -394,9 +430,10 @@ class VariableDecl : public Nonterminal {
 
   std::string_view Name() const override { return "VariableDecl"; }
   VariableDecl* AsVariableDecl() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   Expression* expression_ = nullptr;
   bool is_const_ = false;
   std::string identifier_ = "";
@@ -411,9 +448,10 @@ class Integer : public Nonterminal {
   std::string_view Name() const override { return "Integer"; }
 
   Integer* AsInteger() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
- public:
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   uint64_t value_ = 0;
 };
 
@@ -426,9 +464,10 @@ class String : public Nonterminal {
   std::string_view Name() const override { return "String"; }
 
   String* AsString() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
- public:
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string value_;
 };
 
@@ -441,9 +480,10 @@ class Identifier : public Nonterminal {
   std::string_view Name() const override { return "Identifier"; }
 
   Identifier* AsIdentifier() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string identifier_;
 };
 
@@ -456,9 +496,10 @@ class Object : public Nonterminal {
   std::string_view Name() const override { return "Object"; }
 
   Object* AsObject() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::vector<Field*> fields_;
 };
 
@@ -472,9 +513,10 @@ class Field : public Nonterminal {
   std::string_view Name() const override { return "Field"; }
 
   Field* AsField() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   std::string name_;
   Node* value_ = nullptr;
 };
@@ -489,9 +531,10 @@ class Path : public Nonterminal {
   std::string_view Name() const override { return "Path"; }
 
   Path* AsPath() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   bool is_local_;
   std::vector<std::string> elements_;
 };
@@ -512,9 +555,10 @@ class AddSub : public Nonterminal {
   std::string_view Name() const override { return "AddSub"; }
 
   AddSub* AsAddSub() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
 
  private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
+
   Type type_ = kAdd;
   Node* a_ = nullptr;
   Node* b_ = nullptr;
@@ -527,10 +571,13 @@ class Expression : public Nonterminal {
 
   std::string_view Name() const override { return "Expression"; }
   Expression* AsExpression() override { return this; }
-  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  void VisitVoid(NodeVisitor<void>* visitor) const override;
 };
 
 // Visitor for AST nodes.
+template <typename T>
 class NodeVisitor {
   friend class Node;
   friend class Terminal;
@@ -559,33 +606,105 @@ class NodeVisitor {
   friend class Path;
   friend class AddSub;
 
+  friend class WrappingVisitor<T>;
+
  protected:
-  virtual void VisitNode(const Node& node){};
-  virtual void VisitTerminal(const Terminal& node) { VisitNode(node); };
-  virtual void VisitNonterminal(const Nonterminal& node) { VisitNode(node); };
-  virtual void VisitError(const Error& node) { VisitTerminal(node); };
-  virtual void VisitConst(const Const& node) { VisitTerminal(node); };
-  virtual void VisitVar(const Var& node) { VisitTerminal(node); };
-  virtual void VisitFieldSeparator(const FieldSeparator& node) { VisitTerminal(node); };
-  virtual void VisitProgram(const Program& node) { VisitNonterminal(node); };
-  virtual void VisitVariableDecl(const VariableDecl& node) { VisitNonterminal(node); };
-  virtual void VisitIdentifier(const Identifier& node) { VisitNonterminal(node); };
-  virtual void VisitInteger(const Integer& node) { VisitNonterminal(node); };
-  virtual void VisitExpression(const Expression& node) { VisitNonterminal(node); };
-  virtual void VisitDecimalGroup(const DecimalGroup& node) { VisitTerminal(node); };
-  virtual void VisitHexGroup(const HexGroup& node) { VisitTerminal(node); };
-  virtual void VisitUnescapedIdentifier(const UnescapedIdentifier& node) { VisitTerminal(node); };
-  virtual void VisitStringEntity(const StringEntity& node) { VisitTerminal(node); };
-  virtual void VisitEscapeSequence(const EscapeSequence& node) { VisitStringEntity(node); };
-  virtual void VisitString(const String& node) { VisitNonterminal(node); };
-  virtual void VisitObject(const Object& node) { VisitNonterminal(node); };
-  virtual void VisitField(const Field& node) { VisitNonterminal(node); };
-  virtual void VisitPathElement(const PathElement& node) { VisitTerminal(node); };
-  virtual void VisitPathEscape(const PathEscape& node) { VisitTerminal(node); };
-  virtual void VisitPathSeparator(const PathSeparator& node) { VisitTerminal(node); };
-  virtual void VisitOperator(const Operator& node) { VisitTerminal(node); };
-  virtual void VisitPath(const Path& node) { VisitNonterminal(node); };
-  virtual void VisitAddSub(const AddSub& node) { VisitNonterminal(node); };
+  virtual T VisitNode(const Node& node) {
+    if constexpr (!std::is_void<T>::value) {
+      FX_NOTREACHED();
+      std::terminate();
+    }
+  }
+
+  virtual T VisitTerminal(const Terminal& node) { return VisitNode(node); };
+  virtual T VisitNonterminal(const Nonterminal& node) { return VisitNode(node); };
+  virtual T VisitError(const Error& node) { return VisitTerminal(node); };
+  virtual T VisitConst(const Const& node) { return VisitTerminal(node); };
+  virtual T VisitVar(const Var& node) { return VisitTerminal(node); };
+  virtual T VisitFieldSeparator(const FieldSeparator& node) { return VisitTerminal(node); };
+  virtual T VisitProgram(const Program& node) { return VisitNonterminal(node); };
+  virtual T VisitVariableDecl(const VariableDecl& node) { return VisitNonterminal(node); };
+  virtual T VisitIdentifier(const Identifier& node) { return VisitNonterminal(node); };
+  virtual T VisitInteger(const Integer& node) { return VisitNonterminal(node); };
+  virtual T VisitExpression(const Expression& node) { return VisitNonterminal(node); };
+  virtual T VisitDecimalGroup(const DecimalGroup& node) { return VisitTerminal(node); };
+  virtual T VisitHexGroup(const HexGroup& node) { return VisitTerminal(node); };
+  virtual T VisitUnescapedIdentifier(const UnescapedIdentifier& node) {
+    return VisitTerminal(node);
+  };
+  virtual T VisitStringEntity(const StringEntity& node) { return VisitTerminal(node); };
+  virtual T VisitEscapeSequence(const EscapeSequence& node) { return VisitStringEntity(node); };
+  virtual T VisitString(const String& node) { return VisitNonterminal(node); };
+  virtual T VisitObject(const Object& node) { return VisitNonterminal(node); };
+  virtual T VisitField(const Field& node) { return VisitNonterminal(node); };
+  virtual T VisitPathElement(const PathElement& node) { return VisitTerminal(node); };
+  virtual T VisitPathEscape(const PathEscape& node) { return VisitTerminal(node); };
+  virtual T VisitPathSeparator(const PathSeparator& node) { return VisitTerminal(node); };
+  virtual T VisitOperator(const Operator& node) { return VisitTerminal(node); };
+  virtual T VisitPath(const Path& node) { return VisitNonterminal(node); };
+  virtual T VisitAddSub(const AddSub& node) { return VisitNonterminal(node); };
+};
+
+template <typename T>
+class WrappingVisitor : public NodeVisitor<void> {
+ public:
+  WrappingVisitor(NodeVisitor<T>* wrapped) : wrapped_(wrapped) {}
+
+  T result;
+
+ private:
+  void VisitNode(const Node& node) override { result = wrapped_->VisitNode(node); }
+  void VisitTerminal(const Terminal& node) override { result = wrapped_->VisitTerminal(node); }
+  void VisitNonterminal(const Nonterminal& node) override {
+    result = wrapped_->VisitNonterminal(node);
+  }
+  void VisitError(const Error& node) override { result = wrapped_->VisitError(node); }
+  void VisitConst(const Const& node) override { result = wrapped_->VisitConst(node); }
+  void VisitVar(const Var& node) override { result = wrapped_->VisitVar(node); }
+  void VisitFieldSeparator(const FieldSeparator& node) override {
+    result = wrapped_->VisitFieldSeparator(node);
+  }
+  void VisitProgram(const Program& node) override { result = wrapped_->VisitProgram(node); }
+  void VisitVariableDecl(const VariableDecl& node) override {
+    result = wrapped_->VisitVariableDecl(node);
+  }
+  void VisitIdentifier(const Identifier& node) override {
+    result = wrapped_->VisitIdentifier(node);
+  }
+  void VisitInteger(const Integer& node) override { result = wrapped_->VisitInteger(node); }
+  void VisitExpression(const Expression& node) override {
+    result = wrapped_->VisitExpression(node);
+  }
+  void VisitDecimalGroup(const DecimalGroup& node) override {
+    result = wrapped_->VisitDecimalGroup(node);
+  }
+  void VisitHexGroup(const HexGroup& node) override { result = wrapped_->VisitHexGroup(node); }
+  void VisitUnescapedIdentifier(const UnescapedIdentifier& node) override {
+    result = wrapped_->VisitUnescapedIdentifier(node);
+  }
+  void VisitStringEntity(const StringEntity& node) override {
+    result = wrapped_->VisitStringEntity(node);
+  }
+  void VisitEscapeSequence(const EscapeSequence& node) override {
+    result = wrapped_->VisitEscapeSequence(node);
+  }
+  void VisitString(const String& node) override { result = wrapped_->VisitString(node); }
+  void VisitObject(const Object& node) override { result = wrapped_->VisitObject(node); }
+  void VisitField(const Field& node) override { result = wrapped_->VisitField(node); }
+  void VisitPathElement(const PathElement& node) override {
+    result = wrapped_->VisitPathElement(node);
+  }
+  void VisitPathEscape(const PathEscape& node) override {
+    result = wrapped_->VisitPathEscape(node);
+  }
+  void VisitPathSeparator(const PathSeparator& node) override {
+    result = wrapped_->VisitPathSeparator(node);
+  }
+  void VisitOperator(const Operator& node) override { result = wrapped_->VisitOperator(node); }
+  void VisitPath(const Path& node) override { result = wrapped_->VisitPath(node); }
+  void VisitAddSub(const AddSub& node) override { result = wrapped_->VisitAddSub(node); }
+
+  NodeVisitor<T>* wrapped_;
 };
 
 }  // namespace shell::parser::ast

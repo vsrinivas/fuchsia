@@ -45,73 +45,89 @@ std::string CollectErrors(const parser::ast::Node& node) {
   return out.str();
 }
 
+struct IdAndType {
+  AstBuilder::NodeId id;
+  llcpp::fuchsia::shell::ShellType type;
+};
+
 // Visitor for loading a parser AST into a FIDL AST.
-class NodeASTVisitor : public parser::ast::NodeVisitor {
+class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
  public:
   explicit NodeASTVisitor(AstBuilder* builder) : builder_(builder) {}
-  AstBuilder::NodeId id() const { return id_; }
 
-  void VisitNode(const parser::ast::Node& node) override {
+  IdAndType VisitNode(const parser::ast::Node& node) override {
     FX_NOTREACHED() << "Parser produced unknown node type.";
+    return {};
   }
 
-  void VisitProgram(const parser::ast::Program& node) override {
+  IdAndType VisitProgram(const parser::ast::Program& node) override {
     // TODO: Multiple statements.
     for (const auto& child : node.Children()) {
       if (auto ch = child->AsVariableDecl()) {
-        VisitVariableDecl(*ch);
+        auto ret = VisitVariableDecl(*ch);
         // Return the value of the variable to the command line when done evaluating.
         builder_->AddEmitResult(builder_->AddVariable(ch->identifier()));
-        return;
+        return ret;
       }
     }
 
     FX_NOTREACHED();
+    return {};
   }
 
-  void VisitVariableDecl(const parser::ast::VariableDecl& node) override {
-    node.expression()->Visit(this);
-    id_ = builder_->AddVariableDeclaration(node.identifier(), std::move(type_), id_, false);
+  IdAndType VisitVariableDecl(const parser::ast::VariableDecl& node) override {
+    IdAndType expression = node.expression()->Visit(this);
+    AstBuilder::NodeId id = builder_->AddVariableDeclaration(
+        node.identifier(), std::move(expression.type), expression.id, false);
+
+    return {.id = id, .type = llcpp::fuchsia::shell::ShellType()};
   }
 
-  void VisitInteger(const parser::ast::Integer& node) override {
-    id_ = builder_->AddIntegerLiteral(node.value());
-    llcpp::fuchsia::shell::BuiltinType type = llcpp::fuchsia::shell::BuiltinType::INTEGER;
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&type);
-    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+  IdAndType VisitInteger(const parser::ast::Integer& node) override {
+    AstBuilder::NodeId id = builder_->AddIntegerLiteral(node.value());
+    llcpp::fuchsia::shell::BuiltinType builtin_type = llcpp::fuchsia::shell::BuiltinType::INTEGER;
+    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&builtin_type);
+    llcpp::fuchsia::shell::ShellType type =
+        llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+
+    return {.id = id, .type = std::move(type)};
   }
 
-  void VisitIdentifier(const parser::ast::Identifier& node) override {
+  IdAndType VisitIdentifier(const parser::ast::Identifier& node) override {
     FX_NOTREACHED() << "Variable fetches are unimplemented." << node.identifier();
+    return {};
   }
 
-  void VisitPath(const parser::ast::Path& node) override {
+  IdAndType VisitPath(const parser::ast::Path& node) override {
     FX_NOTREACHED() << "Paths are unimplemented.";
+    return {};
   }
 
-  void VisitAddSub(const parser::ast::AddSub& node) override {
+  IdAndType VisitAddSub(const parser::ast::AddSub& node) override {
     FX_DCHECK(node.type() == parser::ast::AddSub::kAdd) << "Subtraction is unimplemented.";
-    node.a()->Visit(this);
-    AstBuilder::NodeId a_id = id_;
-    node.b()->Visit(this);
-    AstBuilder::NodeId b_id = id_;
-    // type_ is now from b, and we leak it on purpose
-    id_ = builder_->AddAddition(/*with_exceptions=*/false, a_id, b_id);
+    AstBuilder::NodeId a_id = node.a()->Visit(this).id;
+    IdAndType b_value = node.b()->Visit(this);
+    AstBuilder::NodeId b_id = b_value.id;
+
+    AstBuilder::NodeId id = builder_->AddAddition(/*with_exceptions=*/false, a_id, b_id);
+    return {.id = id, .type = std::move(b_value.type)};
   }
 
-  void VisitExpression(const parser::ast::Expression& node) override {
+  IdAndType VisitExpression(const parser::ast::Expression& node) override {
     FX_DCHECK(node.Children().size() > 0);
-    node.Children()[0]->Visit(this);
+    return node.Children()[0]->Visit(this);
   }
 
-  void VisitString(const parser::ast::String& node) override {
-    id_ = builder_->AddStringLiteral(node.value());
-    llcpp::fuchsia::shell::BuiltinType type = llcpp::fuchsia::shell::BuiltinType::STRING;
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&type);
-    type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+  IdAndType VisitString(const parser::ast::String& node) override {
+    AstBuilder::NodeId id = builder_->AddStringLiteral(node.value());
+    llcpp::fuchsia::shell::BuiltinType builtin_type = llcpp::fuchsia::shell::BuiltinType::STRING;
+    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&builtin_type);
+    llcpp::fuchsia::shell::ShellType type =
+        llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+    return {.id = id, .type = std::move(type)};
   }
 
-  void VisitObject(const parser::ast::Object& node) override {
+  IdAndType VisitObject(const parser::ast::Object& node) override {
     builder_->OpenObject();
 
     for (const auto& field : node.fields()) {
@@ -119,23 +135,25 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     }
 
     auto result = builder_->CloseObject();
-    id_ = result.value_node;
+    AstBuilder::NodeId id = result.value_node;
 
-    llcpp::fuchsia::shell::NodeId id;
-    id = result.schema_node;
-    llcpp::fuchsia::shell::NodeId* id_ptr = builder_->ManageCopyOf(&id);
-    type_ = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(id_ptr));
+    llcpp::fuchsia::shell::NodeId shell_id;
+    shell_id = result.schema_node;
+    llcpp::fuchsia::shell::NodeId* id_ptr = builder_->ManageCopyOf(&shell_id);
+    llcpp::fuchsia::shell::ShellType type =
+        llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(id_ptr));
+
+    return {.id = id, .type = std::move(type)};
   }
 
-  void VisitField(const parser::ast::Field& node) override {
-    node.value()->Visit(this);
-    builder_->AddField(node.name(), id_, std::move(type_));
+  IdAndType VisitField(const parser::ast::Field& node) override {
+    IdAndType value = node.value()->Visit(this);
+    builder_->AddField(node.name(), value.id, std::move(value.type));
+    return {};
   }
 
  private:
   AstBuilder* builder_;
-  AstBuilder::NodeId id_;
-  llcpp::fuchsia::shell::ShellType type_;
 };
 
 }  // namespace
@@ -158,8 +176,8 @@ bool Command::Parse(const std::string& line) {
   // TODO: Change the file ID to something useful.
   AstBuilder builder(1);
   NodeASTVisitor visitor(&builder);
-  program->Visit(&visitor);
-  builder.SetRoot(visitor.id());
+  IdAndType value = program->Visit(&visitor);
+  builder.SetRoot(value.id);
   accumulated_nodes_ = std::move(builder);
 
   return true;

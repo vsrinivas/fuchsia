@@ -25,6 +25,8 @@ static_library("parser") {
     "//third_party/icu",
     "//zircon/public/lib/fit",
   ]
+
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 test("parser_tests_bin") {

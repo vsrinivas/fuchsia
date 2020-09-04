@@ -238,32 +238,44 @@ AddSub::AddSub(size_t start, std::vector<std::shared_ptr<Node>> children)
 }
 
 // Visit implementations
-void Terminal::Visit(NodeVisitor* visitor) const { visitor->VisitTerminal(*this); }
-void Error::Visit(NodeVisitor* visitor) const { visitor->VisitError(*this); }
-void Const::Visit(NodeVisitor* visitor) const { visitor->VisitConst(*this); }
-void Var::Visit(NodeVisitor* visitor) const { visitor->VisitVar(*this); }
-void FieldSeparator::Visit(NodeVisitor* visitor) const { visitor->VisitFieldSeparator(*this); }
-void DecimalGroup::Visit(NodeVisitor* visitor) const { visitor->VisitDecimalGroup(*this); }
-void HexGroup::Visit(NodeVisitor* visitor) const { visitor->VisitHexGroup(*this); }
-void UnescapedIdentifier::Visit(NodeVisitor* visitor) const {
+void Terminal::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitTerminal(*this); }
+void Error::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitError(*this); }
+void Const::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitConst(*this); }
+void Var::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitVar(*this); }
+void FieldSeparator::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitFieldSeparator(*this);
+}
+void DecimalGroup::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitDecimalGroup(*this);
+}
+void HexGroup::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitHexGroup(*this); }
+void UnescapedIdentifier::VisitVoid(NodeVisitor<void>* visitor) const {
   visitor->VisitUnescapedIdentifier(*this);
 }
-void StringEntity::Visit(NodeVisitor* visitor) const { visitor->VisitStringEntity(*this); }
-void EscapeSequence::Visit(NodeVisitor* visitor) const { visitor->VisitEscapeSequence(*this); }
-void PathElement::Visit(NodeVisitor* visitor) const { visitor->VisitPathElement(*this); }
-void PathEscape::Visit(NodeVisitor* visitor) const { visitor->VisitPathEscape(*this); }
-void PathSeparator::Visit(NodeVisitor* visitor) const { visitor->VisitPathSeparator(*this); }
-void Operator::Visit(NodeVisitor* visitor) const { visitor->VisitOperator(*this); }
-void Nonterminal::Visit(NodeVisitor* visitor) const { visitor->VisitNonterminal(*this); }
-void Program::Visit(NodeVisitor* visitor) const { visitor->VisitProgram(*this); }
-void VariableDecl::Visit(NodeVisitor* visitor) const { visitor->VisitVariableDecl(*this); }
-void Integer::Visit(NodeVisitor* visitor) const { visitor->VisitInteger(*this); }
-void String::Visit(NodeVisitor* visitor) const { visitor->VisitString(*this); }
-void Identifier::Visit(NodeVisitor* visitor) const { visitor->VisitIdentifier(*this); }
-void Object::Visit(NodeVisitor* visitor) const { visitor->VisitObject(*this); }
-void Field::Visit(NodeVisitor* visitor) const { visitor->VisitField(*this); }
-void Path::Visit(NodeVisitor* visitor) const { visitor->VisitPath(*this); }
-void AddSub::Visit(NodeVisitor* visitor) const { visitor->VisitAddSub(*this); }
-void Expression::Visit(NodeVisitor* visitor) const { visitor->VisitExpression(*this); }
+void StringEntity::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitStringEntity(*this);
+}
+void EscapeSequence::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitEscapeSequence(*this);
+}
+void PathElement::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitPathElement(*this); }
+void PathEscape::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitPathEscape(*this); }
+void PathSeparator::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitPathSeparator(*this);
+}
+void Operator::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitOperator(*this); }
+void Nonterminal::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitNonterminal(*this); }
+void Program::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitProgram(*this); }
+void VariableDecl::VisitVoid(NodeVisitor<void>* visitor) const {
+  visitor->VisitVariableDecl(*this);
+}
+void Integer::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitInteger(*this); }
+void String::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitString(*this); }
+void Identifier::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitIdentifier(*this); }
+void Object::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitObject(*this); }
+void Field::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitField(*this); }
+void Path::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitPath(*this); }
+void AddSub::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitAddSub(*this); }
+void Expression::VisitVoid(NodeVisitor<void>* visitor) const { visitor->VisitExpression(*this); }
 
 }  // namespace shell::parser::ast
