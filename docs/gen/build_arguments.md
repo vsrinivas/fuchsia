@@ -40,7 +40,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1061
+From //build/config/BUILDCONFIG.gn:1068
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -594,13 +594,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c4acae9f961a1b4b5ca6bba4dbfc8ffbce035470/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ca88ff1edb8e998c8af3fdb985ec6e3f22ee2663/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c4acae9f961a1b4b5ca6bba4dbfc8ffbce035470/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ca88ff1edb8e998c8af3fdb985ec6e3f22ee2663/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -809,7 +809,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:834
+From //build/config/BUILDCONFIG.gn:841
 
 ### fastboot_product
 
@@ -1406,7 +1406,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:753
+From //build/config/BUILDCONFIG.gn:760
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2070,7 +2070,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1051
+From //build/config/BUILDCONFIG.gn:1058
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2079,7 +2079,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1056
+From //build/config/BUILDCONFIG.gn:1063
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2111,7 +2111,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:880
+From //build/config/BUILDCONFIG.gn:887
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2365,7 +2365,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:28
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:854
+From //build/config/BUILDCONFIG.gn:861
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
