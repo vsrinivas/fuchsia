@@ -12,8 +12,6 @@
 
 #include <list>
 #include <memory>
-#include <queue>
-#include <thread>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -21,12 +19,7 @@
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
-#include <fbl/auto_lock.h>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
-
-#include "usb-phy-regs.h"
 
 struct zx_device : std::enable_shared_from_this<zx_device> {
   std::list<std::shared_ptr<zx_device>> devices;
@@ -65,7 +58,6 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
       }
       regions_[i].emplace(regs_[i], sizeof(uint32_t), kRegisterCount);
     }
-    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
   }
 
   void SetWriteCallback(fit::function<void(size_t bank, size_t reg, uint64_t value)> callback) {
@@ -113,15 +105,18 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
   pdev_protocol_t pdev_;
 };
 
+static void DestroyDevices(zx_device_t* node) {
+  for (auto& dev : node->devices) {
+    DestroyDevices(dev.get());
+    if (dev->dev_ops.unbind) {
+      dev->dev_ops.unbind(dev->pdev_ops.ctx);
+    }
+    dev->dev_ops.release(dev->pdev_ops.ctx);
+  }
+}
+
 class Ddk : public fake_ddk::Bind {
  public:
-  // Device lifecycle events that will be recorded and returned by |WaitForEvent|.
-  enum struct EventType { DEVICE_ADDED, DEVICE_RELEASED };
-  struct Event {
-    EventType type;
-    void* device_ctx;  // The test should not dereference this if the device has been released.
-  };
-
   zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
                                 size_t* actual) override {
     uint32_t magic_numbers[8] = {};
@@ -153,91 +148,13 @@ class Ddk : public fake_ddk::Bind {
     dev->parent = parent->weak_from_this();
     parent->devices.push_back(dev);
     *out = dev.get();
-
-    fbl::AutoLock lock(&events_lock_);
-    events_.push(Event{EventType::DEVICE_ADDED, args->ctx});
-    events_signal_.Signal();
-
-    if (dev->dev_ops.init) {
-      dev->dev_ops.init(dev->pdev_ops.ctx);
-    }
     return ZX_OK;
   }
 
-  // Schedules a device to be unbound and released.
-  // If the test expects this to be called, it should wait for the corresponding DEVICE_RELEASED
-  // event.
-  void DeviceAsyncRemove(zx_device_t* device) override {
-    // Run this in a new thread to simulate the asynchronous nature.
-    std::thread t([&] {
-      // Call the unbind hook. When unbind replies, |DeviceRemove| will handle
-      // unbinding and releasing the children, then releasing the device itself.
-      if (device->dev_ops.unbind) {
-        device->dev_ops.unbind(device->pdev_ops.ctx);
-      } else {
-        // The unbind hook has not been implemented, so we can reply to the unbind immediately.
-        DeviceRemove(device);
-      }
-    });
-    t.detach();
-  }
-
-  // Called once unbind replies.
   zx_status_t DeviceRemove(zx_device_t* device) override {
-    // Unbind and release all children.
     DestroyDevices(device);
-
-    auto parent = device->parent.lock();
-    if (parent && parent->dev_ops.child_pre_release) {
-      parent->dev_ops.child_pre_release(parent->pdev_ops.ctx, device->pdev_ops.ctx);
-    }
-    device->dev_ops.release(device->pdev_ops.ctx);
-
-    fbl::AutoLock lock(&events_lock_);
-    events_.push(Event{EventType::DEVICE_RELEASED, device->pdev_ops.ctx});
-
-    // Remove it from the parent's devices list so that we don't try
-    // to unbind it again when cleaning up at the end of the test with |DestroyDevices|.
-    // This may drop the last reference to the zx_device object.
-    if (parent) {
-      parent->devices.erase(std::find_if(parent->devices.begin(), parent->devices.end(),
-                                         [&](const auto& dev) { return dev.get() == device; }));
-    }
-    events_signal_.Signal();
     return ZX_OK;
   }
-
-  void DestroyDevices(zx_device_t* node) {
-    // Make a copy of the list, as the device will remove itself from the parent's list after
-    // being released.
-    std::list<std::shared_ptr<zx_device>> devices(node->devices);
-    for (auto& dev : devices) {
-      // Call the unbind hook. When unbind replies, |DeviceRemove| will handle
-      // unbinding and releasing the children, then releasing the device itself.
-      if (dev->dev_ops.unbind) {
-        dev->dev_ops.unbind(dev->pdev_ops.ctx);
-      } else {
-        // The unbind hook has not been implemented, so we can reply to the unbind immediately.
-        DeviceRemove(dev.get());
-      }
-    }
-  }
-
-  // Blocks until the next device lifecycle event is recorded and returns the event.
-  Event WaitForEvent() {
-    fbl::AutoLock lock(&events_lock_);
-    while (events_.empty()) {
-      events_signal_.Wait(&events_lock_);
-    }
-    auto event = events_.front();
-    events_.pop();
-    return event;
-  }
-
- private:
-  fbl::Mutex events_lock_;
-  fbl::ConditionVariable events_signal_ __TA_GUARDED(events_lock_);
-  std::queue<Event> events_;
 };
 
 TEST(AmlUsbPhy, DoesNotCrash) {
@@ -248,7 +165,7 @@ TEST(AmlUsbPhy, DoesNotCrash) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
   ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
-  ddk.DestroyDevices(root_device.get());
+  DestroyDevices(root_device.get());
 }
 
 TEST(AmlUsbPhy, FIDLWrites) {
@@ -276,65 +193,7 @@ TEST(AmlUsbPhy, FIDLWrites) {
   constexpr auto kUsbBaseAddress = 0xff400000;
   ASSERT_OK(device.WriteRegister(kUsbBaseAddress + (5 * 4), 42));
   ASSERT_TRUE(written);
-  ddk.DestroyDevices(root_device.get());
-}
-
-TEST(AmlUsbPhy, SetMode) {
-  Ddk ddk;
-  auto pdev = std::make_unique<FakeDevice>();
-  auto root_device = std::make_shared<zx_device_t>();
-  root_device->pdev_ops = *pdev->pdev();
-  ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
-
-  // The aml-usb-phy device should be added.
-  auto event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
-  auto root_ctx = static_cast<AmlUsbPhy*>(event.device_ctx);
-
-  // Wait for host mode to be set by the irq thread. This should add the xhci child device.
-  event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
-  auto xhci_ctx = event.device_ctx;
-  ASSERT_NE(xhci_ctx, root_ctx);
-  ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::HOST);
-
-  ddk::PDev client(&root_device->pdev_ops);
-  std::optional<ddk::MmioBuffer> usbctrl_mmio;
-  ASSERT_OK(client.MapMmio(1, &usbctrl_mmio));
-
-  // Switch to peripheral mode. This will be read by the irq thread.
-  USB_R5_V2::Get().FromValue(0).set_iddig_curr(1).WriteTo(&usbctrl_mmio.value());
-  // Wake up the irq thread.
-  pdev->Interrupt();
-
-  event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
-  auto dwc2_ctx = event.device_ctx;
-  ASSERT_NE(dwc2_ctx, root_ctx);
-
-  event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_RELEASED);
-  ASSERT_EQ(event.device_ctx, xhci_ctx);
-
-  ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::PERIPHERAL);
-
-  // Switch back to host mode. This will be read by the irq thread.
-  USB_R5_V2::Get().FromValue(0).set_iddig_curr(0).WriteTo(&usbctrl_mmio.value());
-  // Wake up the irq thread.
-  pdev->Interrupt();
-
-  event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
-  xhci_ctx = event.device_ctx;
-  ASSERT_NE(xhci_ctx, root_ctx);
-
-  event = ddk.WaitForEvent();
-  ASSERT_EQ(event.type, Ddk::EventType::DEVICE_RELEASED);
-  ASSERT_EQ(event.device_ctx, dwc2_ctx);
-
-  ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::HOST);
-
-  ddk.DestroyDevices(root_device.get());
+  DestroyDevices(root_device.get());
 }
 
 }  // namespace aml_usb_phy
