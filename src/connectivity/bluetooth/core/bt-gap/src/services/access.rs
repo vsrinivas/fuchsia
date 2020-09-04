@@ -6,34 +6,66 @@ use {
     anyhow::{format_err, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl_fuchsia_bluetooth_sys::{self as sys, AccessRequest, AccessRequestStream},
-    fuchsia_async as fasync,
     fuchsia_bluetooth::types::{
         pairing_options::{BondableMode, PairingOptions},
         Peer, PeerId, Technology,
     },
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
-    futures::{Stream, StreamExt},
+    futures::{
+        future::{pending, BoxFuture},
+        select, FutureExt, Stream, StreamExt,
+    },
     parking_lot::Mutex,
     std::{collections::HashMap, mem, sync::Arc},
 };
 
 use crate::{host_dispatcher::*, watch_peers::PeerWatcher};
 
+#[derive(Default)]
+struct AccessSession {
+    peers_seen: Arc<Mutex<HashMap<PeerId, Peer>>>,
+    /// Only one discovery session is stored per Access session at a time;
+    /// if an Access client requests discovery while holding an existing session token,
+    /// the old session is replaced, and the old session token is invalidated.
+    discovery_session: Option<BoxFuture<'static, ()>>,
+    discoverable_session: Option<BoxFuture<'static, ()>>,
+}
+
 pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<(), Error> {
     fx_log_info!("fuchsia.bluetooth.sys.Access session started");
     let mut watch_peers_subscriber = hd.watch_peers().await;
-    let peers_seen = Arc::new(Mutex::new(HashMap::new()));
-    while let Some(event) = stream.next().await {
-        handler(hd.clone(), peers_seen.clone(), &mut watch_peers_subscriber, event?).await?;
+    let mut session: AccessSession = Default::default();
+    let mut discovery_pending = pending().boxed();
+    let mut discoverable_pending = pending().boxed();
+
+    loop {
+        select! {
+            event_opt = stream.next().fuse() => {
+                match event_opt {
+                    Some(event) => handler(hd.clone(), &mut watch_peers_subscriber, &mut session, event?).await?,
+                    None => break,
+                }
+            }
+
+            token_dropped = session.discovery_session.as_mut().unwrap_or(&mut discovery_pending).fuse() => {
+                // drop the boxed future, which owns the discovery session token
+                session.discovery_session = None;
+            }
+
+            token_dropped = session.discoverable_session.as_mut().unwrap_or(&mut discoverable_pending).fuse() => {
+                session.discoverable_session = None;
+            }
+        };
     }
+
     fx_log_info!("fuchsia.bluetooth.sys.Access session terminated");
     Ok(())
 }
 
 async fn handler(
     hd: HostDispatcher,
-    peers_seen: Arc<Mutex<HashMap<PeerId, Peer>>>,
     watch_peers_subscriber: &mut hanging_get::Subscriber<PeerWatcher>,
+    session: &mut AccessSession,
     request: AccessRequest,
 ) -> Result<(), Error> {
     match request {
@@ -72,7 +104,8 @@ async fn handler(
                 .set_discoverable()
                 .await
                 .map(|token| {
-                    watch_stream_for_session(stream, token);
+                    session.discoverable_session =
+                        Some(watch_stream_for_session(stream, token).boxed());
                 })
                 .map_err(|e| e.into());
             responder.send(&mut result).map_err(Error::from)
@@ -84,21 +117,23 @@ async fn handler(
                 .start_discovery()
                 .await
                 .map(|token| {
-                    watch_stream_for_session(stream, token);
+                    session.discovery_session =
+                        Some(watch_stream_for_session(stream, token).boxed());
                 })
                 .map_err(|e| e.into());
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::WatchPeers { responder } => {
-            watch_peers_subscriber.register(PeerWatcher::new(peers_seen, responder)).await.map_err(
-                |e| {
+            watch_peers_subscriber
+                .register(PeerWatcher::new(session.peers_seen.clone(), responder))
+                .await
+                .map_err(|e| {
                     // If we cannot register the observation, we return an error from the handler
                     // function. This terminates the stream and will drop the channel, as we are unable
                     // to fulfill our contract for WatchPeers(). The client can attempt to reconnect and
                     // if successful will receive a fresh session with initial state of the world
                     format_err!("Failed to watch peers: {:?}", e)
-                },
-            )
+                })
         }
         AccessRequest::Connect { id, responder } => {
             let id = PeerId::from(id);
@@ -155,12 +190,12 @@ async fn handler(
     }
 }
 
-fn watch_stream_for_session<S: Stream + Send + 'static, T: Send + 'static>(stream: S, token: T) {
-    fasync::Task::spawn(async move {
-        stream.map(|_| ()).collect::<()>().await;
-        // the remote end closed; drop our session token
-        mem::drop(token);
-        fx_vlog!(1, "ProcedureToken dropped")
-    })
-    .detach();
+async fn watch_stream_for_session<S: Stream + Send + 'static, T: Send + 'static>(
+    stream: S,
+    token: T,
+) {
+    stream.map(|_| ()).collect::<()>().await;
+    // the remote end closed; drop our session token
+    mem::drop(token);
+    fx_vlog!(1, "ProcedureToken dropped");
 }

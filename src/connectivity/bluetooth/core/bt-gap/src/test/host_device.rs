@@ -6,21 +6,17 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, HostInfo as FidlHostInfo, TechnologyType},
+    fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
     fuchsia_bluetooth::{
         inspect::{placeholder_node, Inspectable},
         types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
     },
-    futures::{
-        future, join,
-        stream::{StreamExt, TryStreamExt},
-    },
-    matches::assert_matches,
+    futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
     std::{path::PathBuf, sync::Arc},
 };
 
-use crate::{host_device, host_dispatcher, services::access};
+use crate::host_device;
 
 // An impl that ignores all events
 impl host_device::HostListener for () {
@@ -152,126 +148,6 @@ async fn test_discovery_session() -> Result<(), Error> {
     assert!(!is_discovering);
 
     Ok(())
-}
-
-// Test that we can start discovery on a host then migrate that discovery session onto a different
-// host when the original host is deactivated
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_discovery_over_adapter_change() -> Result<(), Error> {
-    // Create mock host dispatcher
-    let hd = host_dispatcher::test::make_simple_test_dispatcher()?;
-
-    // Add Host #1 to dispatcher and make active
-    let host_id = HostId(1);
-    let active_host_path = PathBuf::from("/dev/host1");
-    let host_info_1 = HostInfo {
-        id: host_id,
-        technology: TechnologyType::DualMode,
-        address: Address::Public([0, 0, 0, 0, 0, 1]),
-        local_name: None,
-        active: false,
-        discoverable: false,
-        discovering: false,
-    };
-    let (host_proxy_1, host_server_1) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let host_1 = Arc::new(RwLock::new(host_device::HostDevice::new(
-        active_host_path.clone(),
-        host_proxy_1,
-        Inspectable::new(host_info_1.clone(), placeholder_node()),
-    )));
-    let host_info_1 = Arc::new(RwLock::new(host_info_1));
-    hd.add_test_host(host_id, host_1.clone());
-    hd.set_active_host(host_id)?;
-
-    // Add Host #2 to dispatcher
-    let host_id = HostId(2);
-    let host_info_2 = HostInfo {
-        id: host_id,
-        technology: TechnologyType::DualMode,
-        address: Address::Public([0, 0, 0, 0, 0, 2]),
-        local_name: None,
-        active: false,
-        discoverable: false,
-        discovering: false,
-    };
-    let (host_proxy_2, host_server_2) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let host_2 = Arc::new(RwLock::new(host_device::HostDevice::new(
-        PathBuf::from("/dev/host2"),
-        host_proxy_2,
-        Inspectable::new(host_info_2.clone(), placeholder_node()),
-    )));
-    let host_info_2 = Arc::new(RwLock::new(host_info_2));
-    hd.add_test_host(host_id, host_2.clone());
-
-    // Create access server future
-    let (access_client, access_server) =
-        fidl::endpoints::create_proxy_and_stream::<AccessMarker>()?;
-    let run_access = access::run(hd.clone(), access_server);
-
-    // Create access client future
-    let (discovery_session, discovery_session_server) = fidl::endpoints::create_proxy()?;
-    let run_client = async move {
-        // Request discovery on active Host #1
-        let response = access_client.start_discovery(discovery_session_server).await;
-        assert_matches!(response, Ok(Ok(())));
-
-        // Assert that Host #1 is now marked as discovering
-        host_device::refresh_host_info(host_1.clone())
-            .await
-            .expect("did not receive Host #1 info update");
-        let is_discovering = host_1.read().get_info().discovering.clone();
-        assert!(is_discovering);
-
-        // Deactivate Host #1
-        hd.rm_adapter(&active_host_path).await;
-
-        // Assert that Host #2 is now marked as discovering
-        host_device::refresh_host_info(host_2.clone())
-            .await
-            .expect("did not receive Host #2 info update");
-        let is_discovering = host_2.read().get_info().discovering.clone();
-        assert!(is_discovering);
-
-        // Drop discovery session, which contains an internal reference to the dispatcher state,
-        // so that the other futures may terminate
-        drop(discovery_session);
-        Ok(())
-    };
-
-    future::try_join4(
-        run_client,
-        run_access,
-        run_discovery_host_server(host_server_1, host_info_1),
-        run_discovery_host_server(host_server_2, host_info_2),
-    )
-    .await
-    .map(|_: ((), (), (), ())| ())
-}
-
-// Runs a HostRequestStream that handles StartDiscovery and WatchState requests
-async fn run_discovery_host_server(
-    server: HostRequestStream,
-    host_info: Arc<RwLock<HostInfo>>,
-) -> Result<(), Error> {
-    server
-        .try_for_each(move |req| {
-            // Set discovery field of host info
-            if let HostRequest::StartDiscovery { responder } = req {
-                host_info.write().discovering = true;
-                assert_matches!(responder.send(&mut Ok(())), Ok(()));
-            }
-            // Update host with current info state
-            else if let HostRequest::WatchState { responder } = req {
-                assert_matches!(
-                    responder.send(FidlHostInfo::from(host_info.read().clone())),
-                    Ok(())
-                );
-            }
-
-            future::ok(())
-        })
-        .await
-        .map_err(|e| e.into())
 }
 
 // TODO(39373): Add host.fidl emulation to bt-fidl-mocks and use that instead.
