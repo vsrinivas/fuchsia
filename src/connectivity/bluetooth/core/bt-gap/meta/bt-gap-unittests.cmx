@@ -15,7 +15,10 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.stash.SecureStore"
+            "fuchsia.stash.SecureStore",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

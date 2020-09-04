@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:host-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",

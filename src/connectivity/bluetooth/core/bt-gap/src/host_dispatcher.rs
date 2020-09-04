@@ -1155,6 +1155,7 @@ mod tests {
     use crate::{
         build_config::{BrEdrConfig, Config},
         host_dispatcher::test as hd_test,
+        launch_profile_forwarding_component, relay_profile_channel,
         store::stash::Stash,
     };
     use {
@@ -1164,6 +1165,7 @@ mod tests {
         fidl_fuchsia_bluetooth_sys::TechnologyType,
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::{Peer, PeerId},
+        fuchsia_component::fuchsia_single_component_package_url,
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
         futures::stream::TryStreamExt,
         matches::assert_matches,
@@ -1317,6 +1319,83 @@ mod tests {
         };
         futures::future::join(run_host, disable_connectable_fut).await;
         assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
+    }
+
+    /// Tests that launching the profile forwarding component is successful. The component
+    /// (in this case bt-rfcomm.cmx) should connect to the Profile service (indicated by the
+    /// upstream host_server). We then expect any subsequent client connections over `Profile`
+    /// to be relayed to the component and _not_ the upstream Host Server.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_launch_profile_forwarding_component_success() {
+        let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
+        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+
+        let host_id = HostId(43);
+        let mut host_server =
+            hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
+        assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
+        let component =
+            launch_profile_forwarding_component(rfcomm_url, host_dispatcher.clone()).await;
+        assert!(component.is_ok());
+        let component = component.ok();
+
+        // We expect the launched RFCOMM component to connect to the Profile service - this should
+        // be relayed to the `host_dispatcher` and then to the Test Host.
+        match host_server.try_next().await {
+            Ok(Some(HostRequest::RequestProfile { .. })) => {}
+            x => panic!("Expected Profile Request but got: {:?}", x),
+        }
+
+        // Simulate a new client connection - this should be relayed to the launched RFCOMM
+        // component but _not_ the upstream Host Server.
+        let (chan, _local) = zx::Channel::create().unwrap();
+        relay_profile_channel(chan, &component, host_dispatcher.clone());
+
+        // We don't expect the `chan` to be relayed to the host server.
+        let host_fut = host_server.try_next();
+        assert!(futures::poll!(host_fut).is_pending());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_launch_profile_forwarding_component_invalid_component() {
+        let rfcomm_url = fuchsia_single_component_package_url!("nonexistent-package").to_string();
+        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+
+        let host_id = HostId(44);
+        let mut host_server =
+            hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
+        assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
+        let component =
+            launch_profile_forwarding_component(rfcomm_url, host_dispatcher.clone()).await;
+        assert!(component.is_err());
+
+        // No component should be launched - therefore no clients of the `host_server`.
+        let host_fut = host_server.try_next();
+        assert!(futures::poll!(host_fut).is_pending());
+    }
+
+    /// Tests that an incoming Profile `channel` is relayed directly to the HostDispatcher in
+    /// the event that we don't have a launched profile forwarding component.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_relay_channel_without_component_is_relayed_to_host() {
+        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+
+        let host_id = HostId(46);
+        let mut host_server =
+            hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
+        assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
+
+        // Relay the channel - we have no component.
+        let component = None;
+        let (chan, _local) = zx::Channel::create().unwrap();
+        relay_profile_channel(chan, &component, host_dispatcher.clone());
+
+        // We expect the `chan` to be relayed to the `host_dispatcher` (which then forwards
+        // to the `host_server`) since the `component` is not set.
+        match host_server.try_next().await {
+            Ok(Some(HostRequest::RequestProfile { .. })) => {}
+            x => panic!("Expected Profile Request but got: {:?}", x),
+        }
     }
 }
 

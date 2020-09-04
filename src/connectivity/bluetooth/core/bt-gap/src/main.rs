@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
+    fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{self, connect_to_service, App},
@@ -21,6 +22,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, future::try_join5, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     pin_utils::pin_mut,
     std::collections::HashMap,
@@ -69,10 +71,14 @@ async fn get_host_name() -> Result<String, Error> {
         .map_err(|e| format_err!("failed to obtain host name: {:?}", e))
 }
 
-/// Creates a NestedEnvironment and launches the RFCOMM component.
+/// Creates a NestedEnvironment and launches the component specified by `component_url`. The
+/// provided component must provide the Profile service.
 /// Returns the controller for the launched component and the NestedEnvironment - dropping
 /// either will result in component termination.
-fn launch_rfcomm_component(profile_hd: HostDispatcher) -> Result<(App, NestedEnvironment), Error> {
+async fn launch_profile_forwarding_component(
+    component_url: String,
+    profile_hd: HostDispatcher,
+) -> Result<(App, NestedEnvironment), Error> {
     let mut rfcomm_fs = ServiceFs::new();
     rfcomm_fs
         .add_service_at(ProfileMarker::NAME, move |chan| {
@@ -83,16 +89,38 @@ fn launch_rfcomm_component(profile_hd: HostDispatcher) -> Result<(App, NestedEnv
         .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
         .add_proxy_service::<fidl_fuchsia_cobalt::LoggerFactoryMarker, _>();
 
-    let env = rfcomm_fs.create_nested_environment("bt-rfcomm")?;
+    let env = rfcomm_fs.create_salted_nested_environment("bt-rfcomm")?;
     fasync::Task::spawn(rfcomm_fs.collect()).detach();
 
-    let bt_rfcomm = client::launch(
-        &env.launcher(),
-        fuchsia_single_component_package_url!("bt-rfcomm").to_string(),
-        None,
-    )?;
+    let bt_rfcomm = client::launch(&env.launcher(), component_url, None)?;
 
-    Ok((bt_rfcomm, env))
+    // Wait until component has successfully launched before returning the controller.
+    let mut event_stream = bt_rfcomm.controller().take_event_stream();
+    match event_stream.next().await {
+        Some(Ok(ComponentControllerEvent::OnDirectoryReady { .. })) => Ok((bt_rfcomm, env)),
+        x => Err(format_err!("Launch failure: {:?}", x)),
+    }
+}
+
+/// Relays the provided `chan` to upstream clients.
+///
+/// If `component` is set, the `chan` will be relayed to the component.
+/// Otherwise, `chan` will be relayed directly to the `profile_hd`.
+fn relay_profile_channel(
+    chan: zx::Channel,
+    component: &Option<(App, NestedEnvironment)>,
+    profile_hd: HostDispatcher,
+) {
+    match &component {
+        Some((rfcomm_component, _env)) => {
+            fx_log_info!("Passing Profile to RFCOMM Service");
+            let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
+        }
+        None => {
+            fx_log_info!("Directly connecting Profile Service to Adapter");
+            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
+        }
+    }
 }
 
 async fn run() -> Result<(), Error> {
@@ -177,9 +205,18 @@ async fn run() -> Result<(), Error> {
     let generic_access_service_task =
         GenericAccessService { hd: hd.clone(), generic_access_req_stream }.run().map(|()| Ok(()));
 
-    // Launch the RFCOMM component that will serve requests over `Profile`. It will then forward
-    // connection requests to the Host Server.
-    let (bt_rfcomm, _env) = launch_rfcomm_component(profile_hd.clone())?;
+    // Attempt to launch the RFCOMM component that will serve requests over `Profile` and forward
+    // to the Host Server. If RFCOMM is not available for any reason, bt-gap will forward `Profile`
+    // requests directly to the Host Server.
+    let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
+    let bt_rfcomm = match launch_profile_forwarding_component(rfcomm_url, profile_hd.clone()).await
+    {
+        Ok((rfcomm, env)) => Some((rfcomm, env)),
+        Err(e) => {
+            fx_log_warn!("bt-gap unable to launch bt-rfcomm: {:?}", e);
+            None
+        }
+    };
 
     let mut fs = ServiceFs::new();
 
@@ -200,8 +237,7 @@ async fn run() -> Result<(), Error> {
             None
         })
         .add_service_at(ProfileMarker::NAME, move |chan| {
-            fx_log_info!("Passing Profile to RFCOMM Service");
-            let _ = bt_rfcomm.pass_to_service::<ProfileMarker>(chan);
+            relay_profile_channel(chan, &bt_rfcomm, profile_hd.clone());
             None
         })
         .add_service_at(Server_Marker::NAME, move |chan| {
