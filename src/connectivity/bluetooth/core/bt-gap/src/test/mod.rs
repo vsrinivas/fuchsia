@@ -5,4 +5,5 @@
 mod access;
 mod configuration;
 mod control;
+mod discovery;
 mod host_device;

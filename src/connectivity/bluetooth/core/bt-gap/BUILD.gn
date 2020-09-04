@@ -75,6 +75,7 @@ rustc_binary("bin") {
     "src/test/access.rs",
     "src/test/configuration.rs",
     "src/test/control.rs",
+    "src/test/discovery.rs",
     "src/test/host_device.rs",
     "src/test/mod.rs",
     "src/types.rs",

@@ -313,9 +313,11 @@ pub(crate) mod test {
     use super::*;
 
     use {
-        fidl_fuchsia_bluetooth_sys::TechnologyType,
+        fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream},
+        fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
         fuchsia_bluetooth::inspect::placeholder_node,
         fuchsia_bluetooth::types::{Address, HostId},
+        futures::{future, TryStreamExt},
         std::path::Path,
     };
 
@@ -339,5 +341,37 @@ pub(crate) mod test {
             host: proxy,
             info: Inspectable::new(info, placeholder_node()),
         }
+    }
+
+    /// Runs a HostRequestStream that handles StartDiscovery, StopDiscovery, & WatchState requests.
+    pub(crate) async fn run_discovery_host_server(
+        server: HostRequestStream,
+        host_info: Arc<RwLock<HostInfo>>,
+    ) -> Result<(), anyhow::Error> {
+        server
+            .try_for_each(move |req| {
+                // Set discovery field of host info
+                if let HostRequest::StartDiscovery { responder } = req {
+                    assert!(!host_info.read().discovering);
+                    host_info.write().discovering = true;
+                    matches::assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                }
+                // Clear discovery field of host info
+                else if let HostRequest::StopDiscovery { control_handle: _ } = req {
+                    assert!(host_info.read().discovering);
+                    host_info.write().discovering = false;
+                }
+                // Update host with current info state
+                else if let HostRequest::WatchState { responder } = req {
+                    matches::assert_matches!(
+                        responder.send(FidlHostInfo::from(host_info.read().clone())),
+                        Ok(())
+                    );
+                }
+
+                future::ok(())
+            })
+            .await
+            .map_err(|e| e.into())
     }
 }
