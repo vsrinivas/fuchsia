@@ -208,6 +208,7 @@ template("zircon_toolchain") {
         is_pic_default = false
         with_shared = defined(invoker.shlib) && invoker.shlib
         instrumented = false
+        tags = []
       }
     }
   }
@@ -483,6 +484,8 @@ template("zircon_toolchain") {
       strip_command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$gsym_outfile.gsym\""
     }
   }
+
+  not_needed(invoker, [ "propagates_configs" ])
 
   toolchain(target_name) {
     propagates_configs = true
