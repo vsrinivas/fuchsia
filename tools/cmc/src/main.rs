@@ -8,18 +8,16 @@
 
 //! `cmc` is the Component Manifest Compiler.
 
-use crate::error::Error;
+pub use cml::{self, error, one_or_many, translate};
+use error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
 
-mod cml;
 mod compile;
-mod error;
 mod format;
 mod merge;
-mod one_or_many;
 mod opts;
 mod validate;
 

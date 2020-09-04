@@ -5,6 +5,7 @@
 use crate::cml::{self, CapabilityClause};
 use crate::error::Error;
 use crate::one_or_many::OneOrMany;
+use crate::translate;
 use crate::validate;
 use cm_types as cm;
 use fidl::encoding::encode_persistent;
@@ -60,7 +61,11 @@ fn compile_cml(document: cml::Document) -> Result<fsys::ComponentDecl, Error> {
                 translate_offer(offer, &all_children, &all_collections)
             })
             .transpose()?,
-        capabilities: document.capabilities.as_ref().map(translate_capabilities).transpose()?,
+        capabilities: document
+            .capabilities
+            .as_ref()
+            .map(translate::translate_capabilities)
+            .transpose()?,
         children: document.children.as_ref().map(translate_children).transpose()?,
         collections: document.collections.as_ref().map(translate_collections).transpose()?,
         environments: document.environments.as_ref().map(translate_environments).transpose()?,
@@ -235,11 +240,11 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
                     .extract_path()?,
             );
-            let rights = extract_required_rights(use_, "use")?;
+            let rights = translate::extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                 source: Some(source),
-                source_path: Some(p.clone().into()), // Q: Why do we need to clone here as opposed to with source_path and target_path elsewhere, which are also &Path
+                source_path: Some(p.clone().into()),
                 target_path: Some(target_path.into()),
                 rights: Some(rights),
                 subdir: subdir.map(|s| s.into()),
@@ -535,72 +540,6 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-fn translate_capabilities(
-    capabilities_in: &Vec<cml::Capability>,
-) -> Result<Vec<fsys::CapabilityDecl>, Error> {
-    let mut out_capabilities = vec![];
-    for capability in capabilities_in {
-        if let Some(n) = &capability.service {
-            let source_path =
-                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(source_path.into()),
-            }));
-        } else if let Some(protocol) = &capability.protocol {
-            for n in protocol.to_vec() {
-                let source_path = capability
-                    .path
-                    .clone()
-                    .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-                out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
-                    name: Some(n.clone().into()),
-                    source_path: Some(source_path.into()),
-                }));
-            }
-        } else if let Some(n) = &capability.directory {
-            let source_path =
-                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            let rights = extract_required_rights(capability, "capability")?;
-            out_capabilities.push(fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(source_path.into()),
-                rights: Some(rights),
-            }));
-        } else if let Some(n) = &capability.storage {
-            let source_path = if let Some(source_path) = capability.path.as_ref() {
-                source_path.clone().into()
-            } else {
-                capability
-                    .backing_dir
-                    .as_ref()
-                    .expect("storage has no path or backing_dir")
-                    .clone()
-                    .into()
-            };
-            out_capabilities.push(fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(source_path),
-                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
-            }));
-        } else if let Some(n) = &capability.runner {
-            out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(capability.path.clone().expect("missing path").into()),
-                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
-            }));
-        } else if let Some(n) = &capability.resolver {
-            out_capabilities.push(fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
-                name: Some(n.clone().into()),
-                source_path: Some(capability.path.clone().expect("missing path").into()),
-            }));
-        } else {
-            return Err(Error::internal(format!("no capability in use declaration")));
-        }
-    }
-    Ok(out_capabilities)
-}
-
 fn translate_environments(
     envs_in: &Vec<cml::Environment>,
 ) -> Result<Vec<fsys::EnvironmentDecl>, Error> {
@@ -692,44 +631,6 @@ fn extract_use_event_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
-    }
-}
-
-fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<fio2::Operations, Error>
-where
-    T: cml::RightsClause,
-{
-    match in_obj.rights() {
-        Some(rights_tokens) => {
-            let mut rights = Vec::new();
-            for token in rights_tokens.0.iter() {
-                rights.append(&mut token.expand())
-            }
-            if rights.is_empty() {
-                return Err(Error::missing_rights(format!(
-                    "Rights provided to `{}` are not well formed.",
-                    keyword
-                )));
-            }
-            let mut seen_rights = HashSet::with_capacity(rights.len());
-            let mut operations: fio2::Operations = fio2::Operations::empty();
-            for right in rights.iter() {
-                if seen_rights.contains(&right) {
-                    return Err(Error::duplicate_rights(format!(
-                        "Rights provided to `{}` are not well formed.",
-                        keyword
-                    )));
-                }
-                seen_rights.insert(right);
-                operations |= *right;
-            }
-
-            Ok(operations)
-        }
-        None => Err(Error::internal(format!(
-            "No `{}` rights provided but required for directories",
-            keyword
-        ))),
     }
 }
 
@@ -831,23 +732,12 @@ fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<fio2::Operations>,
     }
 }
 
-fn offer_source_from_ref(reference: cml::AnyRef) -> Result<fsys::Ref, Error> {
-    match reference {
-        cml::AnyRef::Named(name) => {
-            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
-        }
-        cml::AnyRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
-        cml::AnyRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
-        cml::AnyRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
-    }
-}
-
 fn extract_single_offer_source<T>(in_obj: &T) -> Result<fsys::Ref, Error>
 where
     T: cml::FromClause,
 {
     match in_obj.from_() {
-        OneOrMany::One(reference) => offer_source_from_ref(reference),
+        OneOrMany::One(reference) => translate::offer_source_from_ref(reference),
         many => {
             return Err(Error::internal(format!(
                 "multiple unexpected \"from\" clauses for \"offer\": {}",
@@ -858,7 +748,7 @@ where
 }
 
 fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<fsys::Ref>, Error> {
-    in_obj.from.to_vec().into_iter().map(|r| offer_source_from_ref(r.into())).collect()
+    in_obj.from.to_vec().into_iter().map(|r| translate::offer_source_from_ref(r.into())).collect()
 }
 
 fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<fsys::Ref, Error> {

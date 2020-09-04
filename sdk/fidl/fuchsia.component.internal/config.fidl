@@ -5,6 +5,7 @@
 library fuchsia.component.internal;
 
 using fuchsia.component;
+using fuchsia.sys2;
 
 /// The maximum size of the JobPolicyAllowlists entries.
 /// This value is currently set arbitrarily.
@@ -25,6 +26,9 @@ table Config {
 
     /// Security policy configuration.
     3: SecurityPolicy security_policy;
+
+    /// Capabilities offered from component manager's namespace.
+    4: vector<fuchsia.sys2.CapabilityDecl>:MAX namespace_capabilities;
 };
 
 /// Runtime security policy.

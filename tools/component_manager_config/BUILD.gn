@@ -38,9 +38,15 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:serde_json5",
+      "//tools/lib/cml",
     ]
 
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
+    test_deps = [
+      "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:tempfile",
+    ]
 
     sources = [
       "src/compile.rs",

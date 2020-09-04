@@ -4,7 +4,6 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_macro.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test/test_package.gni")
 
@@ -14,7 +13,6 @@ rustc_binary("cmc") {
   edition = "2018"
 
   deps = [
-    ":cmc_macro",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -35,6 +33,7 @@ rustc_binary("cmc") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
+    "//tools/lib/cml",
   ]
 
   non_rust_deps = [ ":cmc_test_schemas" ]
@@ -42,13 +41,10 @@ rustc_binary("cmc") {
   test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
-    "src/cml.rs",
     "src/compile.rs",
-    "src/error.rs",
     "src/format.rs",
     "src/main.rs",
     "src/merge.rs",
-    "src/one_or_many.rs",
     "src/opts.rs",
     "src/validate.rs",
   ]
@@ -63,20 +59,6 @@ sdk_host_tool("cmc_sdk") {
   category = "partner"
   output_name = "cmc"
   deps = [ ":cmc" ]
-}
-
-rustc_macro("cmc_macro") {
-  edition = "2018"
-  source_root = "macro/src/lib.rs"
-
-  deps = [
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:proc-macro2",
-    "//third_party/rust_crates:quote",
-    "//third_party/rust_crates:syn",
-  ]
-
-  sources = [ "macro/src/lib.rs" ]
 }
 
 source_set("cmc_test_schemas") {

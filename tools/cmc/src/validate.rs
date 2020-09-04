@@ -7,7 +7,6 @@ use {
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
-    lazy_static::lazy_static,
     serde_json::Value,
     serde_json5,
     std::{
@@ -21,11 +20,6 @@ use {
     },
     valico::json_schema,
 };
-
-lazy_static! {
-    static ref DEFAULT_EVENT_STREAM_PATH: cml::Path =
-        "/svc/fuchsia.sys2.EventStream".parse().unwrap();
-}
 
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
 /// or Ok(()) if all files are valid.
@@ -164,280 +158,6 @@ struct ValidationContext<'a> {
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
     all_event_names: HashSet<cml::Name>,
-}
-
-/// A name/identity of a capability exposed/offered to another component.
-///
-/// Exposed or offered capabilities have an identifier whose format
-/// depends on the capability type. For directories and services this is
-/// a path, while for storage this is a storage name. Paths and storage
-/// names, however, are in different conceptual namespaces, and can't
-/// collide with each other.
-///
-/// This enum allows such names to be specified disambuating what
-/// namespace they are in.
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-enum CapabilityId {
-    Service(cml::Name),
-    Protocol(cml::NameOrPath),
-    Directory(cml::NameOrPath),
-    // A service in a `use` declaration has a target path in the component's namespace.
-    UsedService(cml::Path),
-    // A protocol in a `use` declaration has a target path in the component's namespace.
-    UsedProtocol(cml::Path),
-    // A directory in a `use` declaration has a target path in the component's namespace.
-    UsedDirectory(cml::Path),
-    Storage(cml::Name),
-    Runner(cml::Name),
-    Resolver(cml::Name),
-    StorageType(cml::StorageType),
-    Event(cml::Name),
-    EventStream(cml::Path),
-}
-
-impl CapabilityId {
-    /// Human readable description of this capability type.
-    pub fn type_str(&self) -> &'static str {
-        match self {
-            CapabilityId::Service(_) => "service",
-            CapabilityId::Protocol(_) => "protocol",
-            CapabilityId::Directory(_) => "directory",
-            CapabilityId::UsedService(_) => "service",
-            CapabilityId::UsedDirectory(_) => "directory",
-            CapabilityId::UsedProtocol(_) => "protocol",
-            CapabilityId::Storage(_) => "storage",
-            CapabilityId::Runner(_) => "runner",
-            CapabilityId::Resolver(_) => "resolver",
-            CapabilityId::StorageType(_) => "storage type",
-            CapabilityId::Event(_) => "event",
-            CapabilityId::EventStream(_) => "event_stream",
-        }
-    }
-
-    /// Return the directory containing the capability.
-    pub fn get_dir_path(&self) -> Option<&Path> {
-        match self {
-            CapabilityId::UsedService(p) => Path::new(p.as_str()).parent(),
-            CapabilityId::UsedProtocol(p) => Path::new(p.as_str()).parent(),
-            CapabilityId::UsedDirectory(p) => Some(Path::new(p.as_str())),
-            _ => None,
-        }
-    }
-
-    /// Given a Capability, Use, Offer or Expose clause, return the set of target identifiers.
-    ///
-    /// When only one capability identifier is specified, the target identifier name is derived
-    /// using the "as" clause. If an "as" clause is not specified, the target identifier is the
-    /// same name as the source.
-    ///
-    /// When multiple capability identifiers are specified, the target names are the same as the
-    /// source names.
-    // TODO: Break up this function by clause type, it's trying to do too much. This will be easier
-    // to do once name-based capabilities have fully replaced path-based.
-    pub fn from_clause<T>(
-        clause: &T,
-        clause_type: cml::RoutingClauseType,
-    ) -> Result<Vec<CapabilityId>, Error>
-    where
-        T: cml::CapabilityClause + cml::AsClause + cml::PathClause + cml::FilterClause + fmt::Debug,
-    {
-        // For directory/service/runner types, return the source name,
-        // using the "as" clause to rename if neccessary.
-        // TODO: Validate that exactly one of these is set.
-        let alias = clause.r#as();
-        let path = clause.path();
-        if let Some(n) = clause.service().as_ref() {
-            return match clause_type {
-                cml::RoutingClauseType::Use => {
-                    let path = match path {
-                        Some(path) => path.clone(),
-                        None => format!("/svc/{}", n).parse().unwrap(),
-                    };
-                    Ok(vec![CapabilityId::UsedService(path)])
-                }
-                _ => Ok(vec![CapabilityId::Service(cml::alias_or_name(alias, n)?)]),
-            };
-        } else if let Some(OneOrMany::One(protocol)) = clause.protocol() {
-            return match (clause_type, protocol) {
-                (cml::RoutingClauseType::Capability, protocol) => {
-                    Ok(vec![CapabilityId::Protocol(protocol)])
-                }
-                (cml::RoutingClauseType::Use, cml::NameOrPath::Path(protocol)) => {
-                    Ok(vec![CapabilityId::UsedProtocol(cml::alias_or_path(alias, &protocol)?)])
-                }
-                (cml::RoutingClauseType::Use, cml::NameOrPath::Name(protocol)) => {
-                    let path = match path {
-                        Some(path) => path.clone(),
-                        None => format!("/svc/{}", protocol).parse().unwrap(),
-                    };
-                    Ok(vec![CapabilityId::UsedProtocol(path)])
-                }
-                (_, protocol) => {
-                    Ok(vec![CapabilityId::Protocol(cml::alias_or_name_or_path(alias, &protocol))])
-                }
-            };
-        } else if let Some(OneOrMany::Many(protocols)) = clause.protocol() {
-            return match clause_type {
-                cml::RoutingClauseType::Use if protocols.len() == 1 => match &protocols[0] {
-                    cml::NameOrPath::Path(protocol) => {
-                        Ok(vec![CapabilityId::UsedProtocol(cml::alias_or_path(alias, protocol)?)])
-                    }
-                    cml::NameOrPath::Name(protocol) => {
-                        let path = match path {
-                            Some(path) => path.clone(),
-                            None => format!("/svc/{}", protocol).parse().unwrap(),
-                        };
-                        Ok(vec![CapabilityId::UsedProtocol(path)])
-                    }
-                },
-                cml::RoutingClauseType::Use => {
-                    if alias.is_some() {
-                        return Err(Error::validate(
-                            "\"as\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    if path.is_some() {
-                        return Err(Error::validate(
-                            "\"path\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &cml::NameOrPath| match protocol {
-                            cml::NameOrPath::Path(protocol) => {
-                                CapabilityId::UsedProtocol(protocol.clone())
-                            }
-                            cml::NameOrPath::Name(protocol) => {
-                                let protocol: cml::Path =
-                                    format!("/svc/{}", protocol).parse().unwrap();
-                                CapabilityId::UsedProtocol(protocol)
-                            }
-                        })
-                        .collect())
-                }
-                cml::RoutingClauseType::Capability if protocols.len() == 1 => {
-                    Ok(vec![CapabilityId::Protocol(protocols[0].clone())])
-                }
-                cml::RoutingClauseType::Capability => {
-                    if path.is_some() {
-                        return Err(Error::validate(
-                            "\"path\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &cml::NameOrPath| CapabilityId::Protocol(protocol.clone()))
-                        .collect())
-                }
-                _ if protocols.len() == 1 => Ok(vec![CapabilityId::Protocol(
-                    cml::alias_or_name_or_path(alias, &protocols[0]),
-                )]),
-                _ => {
-                    if alias.is_some() {
-                        return Err(Error::validate(
-                            "\"as\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &cml::NameOrPath| CapabilityId::Protocol(protocol.clone()))
-                        .collect())
-                }
-            };
-        } else if let Some(directory) = clause.directory() {
-            return match (clause_type, directory) {
-                (cml::RoutingClauseType::Capability, directory) => {
-                    Ok(vec![CapabilityId::Directory(directory)])
-                }
-                (cml::RoutingClauseType::Use, cml::NameOrPath::Path(directory)) => {
-                    Ok(vec![CapabilityId::UsedDirectory(cml::alias_or_path(alias, &directory)?)])
-                }
-                (cml::RoutingClauseType::Use, cml::NameOrPath::Name(_)) => {
-                    if path.is_none() {
-                        return Err(Error::validate(
-                            "\"path\" field should be present for `use directory`.",
-                        ));
-                    }
-                    Ok(vec![CapabilityId::UsedDirectory(path.unwrap().clone())])
-                }
-                (_, directory) => {
-                    Ok(vec![CapabilityId::Directory(cml::alias_or_name_or_path(alias, &directory))])
-                }
-            };
-        } else if let Some(n) = clause.storage().as_ref() {
-            return Ok(vec![CapabilityId::Storage(cml::alias_or_name(alias, n)?)]);
-        } else if let Some(n) = clause.runner().as_ref() {
-            return Ok(vec![CapabilityId::Runner(cml::alias_or_name(alias, n)?)]);
-        } else if let Some(n) = clause.resolver().as_ref() {
-            return Ok(vec![CapabilityId::Resolver(cml::alias_or_name(alias, n)?)]);
-        } else if let Some(OneOrMany::One(n)) = clause.event().as_ref() {
-            return Ok(vec![CapabilityId::Event(cml::alias_or_name(alias, n)?)]);
-        } else if let Some(OneOrMany::Many(events)) = clause.event().as_ref() {
-            return match (alias, clause.filter(), events.len()) {
-                (Some(valid_alias), _, 1) => {
-                    Ok(vec![CapabilityId::Event(valid_alias.extract_name_borrowed()?.clone())])
-                }
-                (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].clone())]),
-                (Some(_), None, _) => Err(Error::validate(
-                    "\"as\" field can only be specified when one `event` is supplied",
-                )),
-                (None, Some(_), _) => Err(Error::validate(
-                    "\"filter\" field can only be specified when one `event` is supplied",
-                )),
-                (Some(_), Some(_), _) => Err(Error::validate(
-                    "\"as\",\"filter\" fields can only be specified when one `event` is supplied",
-                )),
-                (None, None, _) => Ok(events
-                    .iter()
-                    .map(|event: &cml::Name| CapabilityId::Event(event.clone()))
-                    .collect()),
-            };
-        } else if let Some(_) = clause.event_stream().as_ref() {
-            return Ok(vec![CapabilityId::EventStream(cml::alias_or_path(
-                alias,
-                &DEFAULT_EVENT_STREAM_PATH,
-            )?)]);
-        }
-
-        // Offers rules prohibit using the "as" clause for storage; this is validated outside the
-        // scope of this function.
-        if let Some(p) = clause.storage_type().as_ref() {
-            return Ok(vec![CapabilityId::StorageType(p.clone())]);
-        }
-
-        // Unknown capability type.
-        let supported_keywords = clause
-            .supported()
-            .into_iter()
-            .map(|k| format!("\"{}\"", k))
-            .collect::<Vec<_>>()
-            .join(", ");
-        Err(Error::validate(format!(
-            "`{}` declaration is missing a capability keyword, one of: {}",
-            clause.decl_type(),
-            supported_keywords,
-        )))
-    }
-}
-
-impl fmt::Display for CapabilityId {
-    /// Return the string ID of this clause.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            CapabilityId::Service(n)
-            | CapabilityId::Storage(n)
-            | CapabilityId::Runner(n)
-            | CapabilityId::Resolver(n)
-            | CapabilityId::Event(n) => n.as_str(),
-            CapabilityId::UsedService(p)
-            | CapabilityId::UsedProtocol(p)
-            | CapabilityId::UsedDirectory(p) => p.as_str(),
-            CapabilityId::EventStream(p) => p.as_str(),
-            CapabilityId::Protocol(p) | CapabilityId::Directory(p) => p.as_str(),
-            CapabilityId::StorageType(s) => s.as_str(),
-        };
-        write!(f, "{}", s)
-    }
 }
 
 impl<'a> ValidationContext<'a> {
@@ -600,7 +320,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_capability(
         &self,
         capability: &'a cml::Capability,
-        used_ids: &mut HashMap<String, CapabilityId>,
+        used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
         if capability.directory.is_some() && capability.path.is_none() {
             return Err(Error::validate("\"path\" should be present with \"directory\""));
@@ -641,7 +361,7 @@ impl<'a> ValidationContext<'a> {
 
         // Disallow multiple capability ids of the same name.
         let capability_ids =
-            CapabilityId::from_clause(capability, cml::RoutingClauseType::Capability)?;
+            cml::CapabilityId::from_clause(capability, cml::RoutingClauseType::Capability)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -657,7 +377,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_use(
         &self,
         use_: &'a cml::Use,
-        used_ids: &mut HashMap<String, CapabilityId>,
+        used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
         if use_.service.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"service\""));
@@ -709,7 +429,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids = CapabilityId::from_clause(use_, cml::RoutingClauseType::Use)?;
+        let capability_ids = cml::CapabilityId::from_clause(use_, cml::RoutingClauseType::Use)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -736,12 +456,13 @@ impl<'a> ValidationContext<'a> {
 
                 if match (used_id, &capability_id) {
                     // Directories can't be the same or partially overlap.
-                    (CapabilityId::UsedDirectory(_), CapabilityId::UsedDirectory(_)) => {
+                    (cml::CapabilityId::UsedDirectory(_), cml::CapabilityId::UsedDirectory(_)) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
                     // Protocols and Services can't overlap with Directories.
-                    (_, CapabilityId::UsedDirectory(_)) | (CapabilityId::UsedDirectory(_), _) => {
+                    (_, cml::CapabilityId::UsedDirectory(_))
+                    | (cml::CapabilityId::UsedDirectory(_), _) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
@@ -777,7 +498,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose(
         &self,
         expose: &'a cml::Expose,
-        used_ids: &mut HashMap<String, CapabilityId>,
+        used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
         // TODO: Many of these checks are similar, see if we can unify them
 
@@ -887,7 +608,8 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we haven't already exposed an entity of the same name.
-        let capability_ids = CapabilityId::from_clause(expose, cml::RoutingClauseType::Expose)?;
+        let capability_ids =
+            cml::CapabilityId::from_clause(expose, cml::RoutingClauseType::Expose)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -908,7 +630,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_offer(
         &self,
         offer: &'a cml::Offer,
-        used_ids: &mut HashMap<&'a cml::Name, HashMap<String, CapabilityId>>,
+        used_ids: &mut HashMap<&'a cml::Name, HashMap<String, cml::CapabilityId>>,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
         // TODO: Many of these checks are repititious, see if we can unify them
@@ -1012,7 +734,7 @@ impl<'a> ValidationContext<'a> {
         }?;
 
         // Validate every target of this offer.
-        let target_cap_ids = CapabilityId::from_clause(offer, cml::RoutingClauseType::Offer)?;
+        let target_cap_ids = cml::CapabilityId::from_clause(offer, cml::RoutingClauseType::Offer)?;
         for to in &offer.to.0 {
             // Ensure the "to" value is a child.
             let to_target = match to {
@@ -4495,230 +4217,5 @@ mod tests {
             &[(&BLOCK_DEV_SCHEMA, Some("Extra error".to_string()))],
             Err(Error::Validate { schema_name: Some(s), err, .. }) if *s == BLOCK_DEV_SCHEMA.name && &err == "Not condition is not met at /dev\nExtra error"
         ),
-    }
-
-    // TODO: Use Default::default() instead
-
-    fn empty_offer() -> cml::Offer {
-        cml::Offer {
-            service: None,
-            protocol: None,
-            directory: None,
-            storage: None,
-            runner: None,
-            resolver: None,
-            event: None,
-            from: OneOrMany::One(cml::OfferFromRef::Self_),
-            to: cml::OfferTo(vec![]),
-            r#as: None,
-            rights: None,
-            subdir: None,
-            dependency: None,
-            filter: None,
-        }
-    }
-
-    fn empty_use() -> cml::Use {
-        cml::Use {
-            service: None,
-            protocol: None,
-            directory: None,
-            storage: None,
-            runner: None,
-            from: None,
-            path: None,
-            r#as: None,
-            rights: None,
-            subdir: None,
-            event: None,
-            event_stream: None,
-            filter: None,
-        }
-    }
-
-    #[test]
-    fn test_capability_id() -> Result<(), Error> {
-        // service
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer { service: Some("a".parse().unwrap()), ..empty_offer() },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Service("a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use { service: Some("a".parse().unwrap()), ..empty_use() },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![CapabilityId::UsedService("/svc/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use {
-                    service: Some("a".parse().unwrap()),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![CapabilityId::UsedService("/b".parse().unwrap())]
-        );
-
-        // protocol
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::One("a".parse().unwrap())),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "a".parse().unwrap(),
-                        "b".parse().unwrap()
-                    ],)),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![
-                CapabilityId::Protocol("a".parse().unwrap()),
-                CapabilityId::Protocol("b".parse().unwrap())
-            ]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "/a".parse().unwrap(),
-                        "/b".parse().unwrap()
-                    ],)),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![
-                CapabilityId::Protocol("/a".parse().unwrap()),
-                CapabilityId::Protocol("/b".parse().unwrap())
-            ]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use { protocol: Some(OneOrMany::One("a".parse().unwrap())), ..empty_use() },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![CapabilityId::UsedProtocol("/svc/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "a".parse().unwrap(),
-                        "b".parse().unwrap(),
-                    ],)),
-                    ..empty_use()
-                },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![
-                CapabilityId::UsedProtocol("/svc/a".parse().unwrap()),
-                CapabilityId::UsedProtocol("/svc/b".parse().unwrap())
-            ]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use {
-                    protocol: Some(OneOrMany::One("a".parse().unwrap())),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![CapabilityId::UsedProtocol("/b".parse().unwrap())]
-        );
-
-        // directory
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer { directory: Some("a".parse().unwrap()), ..empty_offer() },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Directory("a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer { directory: Some("/a".parse().unwrap()), ..empty_offer() },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Directory("/a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Use {
-                    directory: Some("a".parse().unwrap()),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                cml::RoutingClauseType::Use
-            )?,
-            vec![CapabilityId::UsedDirectory("/b".parse().unwrap())]
-        );
-
-        // storage
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer { storage: Some(cml::StorageType::Cache), ..empty_offer() },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::StorageType(cml::StorageType::Cache)],
-        );
-
-        // "as" aliasing.
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    service: Some("a".parse().unwrap()),
-                    r#as: Some("b".parse().unwrap()),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Service("b".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
-                    r#as: Some("/b".parse().unwrap()),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("/b".parse().unwrap())]
-        );
-
-        // Error case.
-        assert_matches!(
-            CapabilityId::from_clause(&empty_offer(), cml::RoutingClauseType::Offer),
-            Err(_)
-        );
-
-        Ok(())
     }
 }

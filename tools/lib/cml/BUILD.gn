@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("cml") {
+  name = "cml"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "macro",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/lib/cm_json",
+    "//src/sys/lib/cm_types",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+  ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
+  sources = [
+    "src/error.rs",
+    "src/lib.rs",
+    "src/one_or_many.rs",
+    "src/translate.rs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cml_test($host_toolchain)" ]
+}

@@ -227,6 +227,7 @@ mod tests {
                     ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
                 }),
             }),
+            namespace_capabilities: None,
         };
 
         assert_matches!(RuntimeConfig::try_from(&config), Err(_));
@@ -237,6 +238,7 @@ mod tests {
             debug: None,
             list_children_batch_size: None,
             security_policy: None,
+            namespace_capabilities: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
@@ -247,6 +249,7 @@ mod tests {
                     ambient_mark_vmo_exec: None,
                 }),
             }),
+            namespace_capabilities: None,
         }, RuntimeConfig { debug:false, list_children_batch_size: 5, ..Default::default() }),
         all_fields_some => (
             component_internal::Config {
@@ -258,6 +261,7 @@ mod tests {
                         ambient_mark_vmo_exec: Some(vec!["/".to_string(), "/foo/bar".to_string()]),
                     }),
                 }),
+                namespace_capabilities: None,
             },
             RuntimeConfig {
                 debug: true,
@@ -325,6 +329,7 @@ mod tests {
             debug: None,
             list_children_batch_size: Some(42),
             security_policy: None,
+            namespace_capabilities: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 
