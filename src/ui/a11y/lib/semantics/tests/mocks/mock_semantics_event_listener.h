@@ -22,17 +22,17 @@ class MockSemanticsEventListener : public a11y::SemanticsEventListener {
   ~MockSemanticsEventListener() override { listener_factory_->InvalidateWeakPtrs(); }
 
   // |SemanticsEventListener|
-  void OnEvent(a11y::EventInfo event_info) { events_received_.push_back(event_info); }
+  void OnEvent(a11y::SemanticsEventInfo event_info) { events_received_.push_back(event_info); }
 
   // Returns a list of events in the order in which they were received.
-  std::vector<a11y::EventInfo> GetReceivedEvents() { return events_received_; }
+  std::vector<a11y::SemanticsEventInfo> GetReceivedEvents() { return events_received_; }
 
   fxl::WeakPtr<a11y::SemanticsEventListener> GetWeakPtr() {
     return listener_factory_->GetWeakPtr();
   }
 
  private:
-  std::vector<a11y::EventInfo> events_received_;
+  std::vector<a11y::SemanticsEventInfo> events_received_;
 
   std::unique_ptr<fxl::WeakPtrFactory<a11y::SemanticsEventListener>> listener_factory_;
 };

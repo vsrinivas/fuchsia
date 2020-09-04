@@ -16,7 +16,7 @@ namespace a11y {
 
 // Collects semantics events on existing semantic trees and
 // notifies registered listeners.
-class A11ySemanticsEventManager : SemanticsEventManager {
+class A11ySemanticsEventManager : public SemanticsEventManager {
  public:
   A11ySemanticsEventManager() = default;
   ~A11ySemanticsEventManager() override = default;
@@ -25,7 +25,7 @@ class A11ySemanticsEventManager : SemanticsEventManager {
   void Register(fxl::WeakPtr<SemanticsEventListener> listener) override;
 
   // |SemanticsEventManager|
-  void OnEvent(EventInfo event_info) override;
+  void OnEvent(SemanticsEventInfo event_info) override;
 
  private:
   // List of registered listeners.

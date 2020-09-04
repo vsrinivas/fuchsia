@@ -15,7 +15,7 @@ namespace a11y {
 enum class SemanticsEventType { kUnknown = 0, kSemanticTreeUpdated = 1 };
 
 // Describes a semantics event of which semantics consumers must be notified.
-struct EventInfo {
+struct SemanticsEventInfo {
   // Event type.
   SemanticsEventType event_type;
 

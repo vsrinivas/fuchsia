@@ -123,7 +123,8 @@ class SemanticTreeServiceFactory {
 
   virtual std::unique_ptr<SemanticTreeService> NewService(
       zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback);
+      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
+      SemanticTree::SemanticsEventCallback semantics_event_callback);
 };
 
 }  // namespace a11y

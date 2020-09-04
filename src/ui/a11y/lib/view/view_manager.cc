@@ -10,6 +10,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include "src/ui/a11y/lib/semantics/semantics_event.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {
@@ -17,10 +18,12 @@ namespace a11y {
 ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                          std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                         std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                          sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)),
       view_semantics_factory_(std::move(view_semantics_factory)),
       annotation_view_factory_(std::move(annotation_view_factory)),
+      semantics_event_manager_(std::move(semantics_event_manager)),
       context_(context),
       debug_dir_(debug_dir) {}
 
@@ -52,14 +55,24 @@ void ViewManager::RegisterViewForSemantics(
     view_wrapper_map_.erase(koid);
   };
 
+  auto semantics_event_callback = [this, koid](SemanticsEventType event_type) {
+    SemanticsEventInfo event;
+    event.event_type = event_type;
+    event.view_ref_koid = koid;
+    if (semantics_event_manager_) {
+      semantics_event_manager_->OnEvent(event);
+    }
+  };
+
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener = handle.Bind();
   semantic_listener.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Semantic Provider disconnected with status: "
                    << zx_status_get_string(status);
   });
 
-  auto service = factory_->NewService(koid, std::move(semantic_listener), debug_dir_,
-                                      std::move(close_channel_callback));
+  auto service =
+      factory_->NewService(koid, std::move(semantic_listener), debug_dir_,
+                           std::move(close_channel_callback), std::move(semantics_event_callback));
 
   // As part of the registration, client should get notified about the current Semantics Manager
   // enable settings.

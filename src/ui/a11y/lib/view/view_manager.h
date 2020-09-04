@@ -13,7 +13,9 @@
 #include <zircon/types.h>
 
 #include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
+#include "src/ui/a11y/lib/semantics/semantics_event_manager.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
@@ -31,6 +33,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                        std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                       std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                        sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
   ~ViewManager() override;
 
@@ -40,6 +43,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   void SetSemanticsEnabled(bool enabled);
 
   bool GetSemanticsEnabled() { return semantics_enabled_; }
+
+  // Returns a handle to the semantics event manager so that listeners
+  // can register.
+  SemanticsEventManager* GetSemanticsEventManager() { return semantics_event_manager_.get(); }
 
   // |FocusHighlightManager|
   void SetAnnotationsEnabled(bool annotations_enabled) override;
@@ -128,6 +135,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::unique_ptr<ViewSemanticsFactory> view_semantics_factory_;
 
   std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
+
+  std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
 
   sys::ComponentContext* context_;
 

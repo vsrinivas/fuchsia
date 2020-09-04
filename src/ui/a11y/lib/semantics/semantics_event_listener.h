@@ -21,7 +21,7 @@ class SemanticsEventListener {
   virtual ~SemanticsEventListener() = default;
 
   // This method gets called on a semantics event.
-  virtual void OnEvent(EventInfo event_info) = 0;
+  virtual void OnEvent(SemanticsEventInfo event_info) = 0;
 };
 
 }  // namespace a11y

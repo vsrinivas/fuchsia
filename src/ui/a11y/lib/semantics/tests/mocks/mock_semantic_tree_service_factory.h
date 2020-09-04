@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 
@@ -20,7 +21,8 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   std::unique_ptr<a11y::SemanticTreeService> NewService(
       zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       vfs::PseudoDir* debug_dir,
-      a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) override;
+      a11y::SemanticTreeService::CloseChannelCallback close_channel_callback,
+      a11y::SemanticTree::SemanticsEventCallback semantics_event_callback) override;
 
   a11y::SemanticTreeService* service() { return service_; }
   MockSemanticTree* semantic_tree() { return semantic_tree_ptr_; }

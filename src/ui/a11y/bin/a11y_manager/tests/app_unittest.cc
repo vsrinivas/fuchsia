@@ -25,6 +25,7 @@
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
@@ -53,7 +54,8 @@ class AppUnitTest : public gtest::TestLoopFixture {
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       std::unique_ptr<MockViewSemanticsFactory>(mock_view_semantics_factory_),
                       std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
-                      context_provider_.context(), context_->outgoing()->debug_dir()),
+                      std::make_unique<MockSemanticsEventManager>(), context_provider_.context(),
+                      context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
         mock_semantic_provider_(&view_manager_),

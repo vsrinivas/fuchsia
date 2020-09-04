@@ -9,7 +9,8 @@ namespace accessibility_test {
 std::unique_ptr<a11y::SemanticTreeService> MockSemanticTreeServiceFactory::NewService(
     zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     vfs::PseudoDir* debug_dir,
-    a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) {
+    a11y::SemanticTreeService::CloseChannelCallback close_channel_callback,
+    a11y::SemanticTree::SemanticsEventCallback semantics_event_callback) {
   semantic_tree_ = std::make_unique<MockSemanticTree>();
   semantic_tree_ptr_ = semantic_tree_.get();
   auto service = std::make_unique<a11y::SemanticTreeService>(

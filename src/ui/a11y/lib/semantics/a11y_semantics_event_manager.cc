@@ -30,7 +30,7 @@ void A11ySemanticsEventManager::Register(fxl::WeakPtr<SemanticsEventListener> li
   listeners_.push_back(listener);
 }
 
-void A11ySemanticsEventManager::OnEvent(EventInfo event_info) {
+void A11ySemanticsEventManager::OnEvent(SemanticsEventInfo event_info) {
   std::list<fxl::WeakPtr<SemanticsEventListener>> valid_listeners;
   for (auto it = listeners_.begin(); it != listeners_.end(); ++it) {
     // If listener pointer is no longer valid, remove it from the set of

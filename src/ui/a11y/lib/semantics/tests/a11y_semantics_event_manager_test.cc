@@ -35,7 +35,7 @@ TEST_F(A11ySemanticsEventManagerTest, RegisterAndListen) {
   a11y_semantics_event_manager_->Register(listener_->GetWeakPtr());
 
   // Generate event.
-  a11y::EventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
+  a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
   a11y_semantics_event_manager_->OnEvent(event);
@@ -57,7 +57,7 @@ TEST_F(A11ySemanticsEventManagerTest, ListenerGoesOutOfScope) {
   }
 
   // Generate event.
-  a11y::EventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
+  a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
   a11y_semantics_event_manager_->OnEvent(event);
@@ -78,7 +78,7 @@ TEST_F(A11ySemanticsEventManagerTest, SameListenerRegisteredTwice) {
   a11y_semantics_event_manager_->Register(listener_->GetWeakPtr());
 
   // Generate event.
-  a11y::EventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
+  a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
   a11y_semantics_event_manager_->OnEvent(event);

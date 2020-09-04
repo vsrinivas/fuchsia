@@ -59,7 +59,8 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_ptr;
     auto tree_service = semantic_tree_service_factory_->NewService(
         koid_, std::move(semantic_listener_ptr),
-        context_provider_.context()->outgoing()->debug_dir(), [](zx_status_t status) {});
+        context_provider_.context()->outgoing()->debug_dir(), [](zx_status_t status) {},
+        [](a11y::SemanticsEventType event_type) {});
     tree_service_ = tree_service.get();
 
     auto view_semantics =

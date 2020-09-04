@@ -165,10 +165,13 @@ const fxl::WeakPtr<::a11y::SemanticTree> SemanticTreeService::Get() const {
 
 std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
     zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback) {
-  auto semantic_tree = std::make_unique<SemanticTreeService>(
-      std::make_unique<SemanticTree>(), koid, std::move(semantic_listener), debug_dir,
-      std::move(close_channel_callback));
+    vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
+    SemanticTree::SemanticsEventCallback semantics_event_callback) {
+  auto tree_ptr = std::make_unique<SemanticTree>();
+  tree_ptr->set_semantics_event_callback(std::move(semantics_event_callback));
+  auto semantic_tree =
+      std::make_unique<SemanticTreeService>(std::move(tree_ptr), koid, std::move(semantic_listener),
+                                            debug_dir, std::move(close_channel_callback));
   return semantic_tree;
 }
 

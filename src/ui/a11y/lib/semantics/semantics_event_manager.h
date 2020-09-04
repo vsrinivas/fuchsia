@@ -32,7 +32,7 @@ class SemanticsEventManager {
   // successfully calls |SemanticTreeService::Commit|. This method will
   // call |SemanticsEventListener::OnEvent| for each registered
   // semantics listener.
-  virtual void OnEvent(EventInfo event_info) = 0;
+  virtual void OnEvent(SemanticsEventInfo event_info) = 0;
 };
 
 }  // namespace a11y

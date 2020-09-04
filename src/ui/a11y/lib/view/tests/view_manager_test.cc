@@ -25,6 +25,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
@@ -55,7 +56,8 @@ class ViewManagerTest : public gtest::TestLoopFixture {
 
     view_manager_ = std::make_unique<a11y::ViewManager>(
         std::move(tree_service_factory_), std::move(view_semantics_factory),
-        std::move(annotation_view_factory), context_provider_.context(), debug_dir());
+        std::move(annotation_view_factory), std::make_unique<MockSemanticsEventManager>(),
+        context_provider_.context(), debug_dir());
     view_manager_->SetAnnotationsEnabled(true);
 
     semantic_provider_ = std::make_unique<MockSemanticProvider>(view_manager_.get());
