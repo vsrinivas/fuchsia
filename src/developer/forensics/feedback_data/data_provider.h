@@ -26,9 +26,6 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                IntegrityReporter integrity_reporter, cobalt::Logger* cobalt, Datastore* datastore);
 
   // |fuchsia::feedback::DataProvider|
-  // TODO(50926): remove GetBugreport once no clients calls it.
-  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                    GetBugreportCallback callback) override;
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                    GetSnapshotCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,

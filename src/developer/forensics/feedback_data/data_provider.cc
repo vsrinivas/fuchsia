@@ -58,24 +58,6 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       datastore_(datastore),
       executor_(dispatcher_) {}
 
-void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                                GetBugreportCallback callback) {
-  fuchsia::feedback::GetSnapshotParameters new_params;
-  if (params.has_collection_timeout_per_data()) {
-    new_params.set_collection_timeout_per_data(params.collection_timeout_per_data());
-  }
-  GetSnapshot(std::move(new_params), [callback = std::move(callback)](Snapshot snapshot) {
-    fuchsia::feedback::Bugreport bugreport;
-    if (snapshot.has_annotations()) {
-      bugreport.set_annotations(snapshot.annotations());
-    }
-    if (snapshot.has_archive()) {
-      bugreport.set_bugreport(std::move(*snapshot.mutable_archive()));
-    }
-    callback(std::move(bugreport));
-  });
-}
-
 void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                GetSnapshotCallback callback) {
   const zx::duration timeout = (params.has_collection_timeout_per_data())

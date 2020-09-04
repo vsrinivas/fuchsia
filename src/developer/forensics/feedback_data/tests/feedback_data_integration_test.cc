@@ -412,26 +412,6 @@ TEST_F(FeedbackDataIntegrationTest,
   EXPECT_THAT(snapshot.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
 }
 
-// TODO(fxbug.dev/50926): clean up once no clients calls it.
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_SmokeTest) {
-  // We make sure the components serving the services GetBugreport() connects to are up and running.
-  WaitForLogger();
-  WaitForChannelProvider();
-  WaitForInspect();
-  WaitForBoardProvider();
-  WaitForProductProvider();
-  WaitForLastRebootInfoProvider();
-
-  DataProviderSyncPtr data_provider;
-  environment_services_->Connect(data_provider.NewRequest());
-
-  fuchsia::feedback::Bugreport bugreport;
-  ASSERT_EQ(data_provider->GetBugreport(fuchsia::feedback::GetBugreportParameters(), &bugreport),
-            ZX_OK);
-
-  ASSERT_FALSE(bugreport.IsEmpty());
-}
-
 TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
   DeviceIdProviderSyncPtr device_id_provider;
   environment_services_->Connect(device_id_provider.NewRequest());

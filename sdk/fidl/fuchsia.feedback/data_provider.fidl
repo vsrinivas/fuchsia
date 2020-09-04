@@ -8,20 +8,13 @@ using fuchsia.math;
 using fuchsia.mem;
 using zx;
 
-/// Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
+/// Provides data useful to attach to feedback reports, e.g., a crash report filed by the system, a
+/// user feedback report filed by a user or a bug report filed by a developer.
 [Discoverable]
 protocol DataProvider {
-    /// Returns a bugreport containing all the feedback data except the screenshot, which is
-    /// provided separately.
-    ///
-    /// `bugreport` may be empty if there was an issue generating the bugreport.
-    [Transitional = "Please use GetSnapshot instead"]
-    GetBugreport(GetBugreportParameters params) -> (Bugreport bugreport);
-
     /// Returns a snapshot of the device's state.
     ///
     /// `snpashot` may be empty if there was an issue generating the snpashot.
-    [Transitional = "Replacement for GetBugreport"]
     GetSnapshot(GetSnapshotParameters params) -> (Snapshot snapshot);
 
     /// Returns an image of the current view encoded in the provided `encoding`.
@@ -29,47 +22,13 @@ protocol DataProvider {
     /// `screenshot` may be null if the encoding is not supported, the device does not have a
     /// display, or there is not enough memory to allocate the screenshot image.
     ///
-    /// The screenshot is provided separately from the bugreport as callers might want to block on
-    /// this call before changing the view while collecting a bugreport in the background is fine.
+    /// The screenshot is provided separately from the snapshot as callers might want to block on
+    /// this call before changing the view while collecting a snapshot in the background is fine.
     /// There are also a lot of clients that are not interested in the screenshot.
     GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
 };
 
 const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
-
-/// Parameters for the DataProvider::GetBugreport() method.
-table GetBugreportParameters {
-    /// A bugreport aggregates various data from the platform (device uptime, logs, Inspect data,
-    /// etc.) that are collected in parallel. Internally, each data collection is done within a
-    /// timeout.
-    ///
-    /// `collection_timeout_per_data` allows clients to control how much time is given to each data
-    /// collection. It enables clients to get a partial yet valid bugreport under a certain time.
-    ///
-    /// Note that this does not control how much total time the bugreport generation may take,
-    /// which is by construction higher than `collection_timeout_per_data`, as clients can control
-    /// the total time by using a timeout on the call to GetBugreport() on their side.
-    1: zx.duration collection_timeout_per_data;
-};
-
-/// Represents a bugreport.
-///
-/// Clients typically upload the data straight to servers. So the data comes in the form of
-/// arbitrary key-value pairs that clients can directly forward to the servers.
-table Bugreport {
-    /// A <filename, ZIP archive> pair.
-    ///
-    /// The ZIP archive contains several files corresponding to the various data it collected from
-    /// the platform. There is typically one file for all the annotations (device uptime, build
-    /// version, etc.) and one file per attachment (logs, Inspect data, etc.).
-    1: Attachment bugreport;
-
-    /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-    ///
-    /// While the annotations are included in the ZIP archive itself, some clients also want them
-    /// separately to index or augment them so we provide them separately as well.
-    2: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
-};
 
 /// Parameters for the DataProvider::GetSnapshot() method.
 table GetSnapshotParameters {
