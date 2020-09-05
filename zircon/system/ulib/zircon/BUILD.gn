@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The vDSO is built in its own special environment because it has special
+# constraints.  If all the code going into the vDSO were built entirely in
+# this BUILD.gn file, then a separate environment would not be necessary.
+# But the vDSO needs to be able to use some other library code defined
+# elsewhere.
+
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+import("//build/unification/global_variables.gni")
+
+if (current_toolchain == default_toolchain) {
+  # Define the special toolchain itself only in the default toolchain.
+  foreach(cpu,
+          [
+            "x64",
+            "arm64",
+          ]) {
+    zircon_toolchain_suite("user.vdso_$cpu") {
+      cpu = cpu
+      os = current_os
+      shlib = true
+      strip = "--strip-sections"
+      environment = "user.vdso"
+
+      toolchain_variant_args = {
+        configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
+      }
+
+      # The vDSO can't use instrumentation runtimes.
+      exclude_variant_tags = [ "instrumented" ]
+
+      #tags = [ "vdso" ]
+    }
+  }
+} else if (toolchain.environment == "user.vdso") {
+  config("user.vdso.config") {
+    configs = [
+      # This is mostly like other user code.
+      "//build/config/zircon:user",
+
+      # But it can't rely on full Fuchsia ABI like SafeStack/ShadowCallStack.
+      "//build/config/zircon:no_sanitizers",
+
+      # And it can't rely on libc.
+      "//build/config/zircon:freestanding",
+
+      "//build/config/zircon:rodso",
+    ]
+  }
+
+  group("user.vdso.config_deps") {
+  }
+}

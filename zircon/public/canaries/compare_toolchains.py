@@ -91,6 +91,14 @@ _ALL_TOOLCHAINS = [
         },
         'output_extension': 'exe',
         'no_shared': True,
+    }, {
+        'name': 'user.vdso_x64',
+        'gn': {
+            'toolchain': '//zircon/system/ulib/zircon:user.vdso_x64',
+        },
+        'zn': {
+            'toolchain': '//system/ulib/zircon:user.vdso-x64-clang',
+        },
     }
 ]
 
