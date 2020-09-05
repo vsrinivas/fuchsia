@@ -17,7 +17,6 @@ common_test_contents = [
   "//src/storage/bin/factoryfs",
   "//src/storage/bin/minfs",
   "//zircon/system/ulib/trace-engine/test",
-  "//zircon/system/utest/msd",
 ]
 
 if (target_cpu == "x64") {

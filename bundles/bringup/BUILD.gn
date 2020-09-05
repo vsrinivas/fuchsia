@@ -267,5 +267,6 @@ group("manual_testing") {
     "//src/security/bin/syscall-check",
     "//src/zircon/testing/mutex_pi_exerciser",
     "//src/zircon/tests/evil",
+    "//zircon/system/utest/msd",
   ]
 }
