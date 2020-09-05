@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/bootfs_test.gni")
 
 group("test") {
   testonly = true
@@ -39,4 +40,9 @@ test("hash-table-test") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+bootfs_test("hash-table-bootfs-test") {
+  name = "hash-table-test"
+  deps = [ ":hash-table-test" ]
 }
