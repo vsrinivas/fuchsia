@@ -419,40 +419,49 @@ std::optional<::fidl::UnbindInfo> TestProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated(
+    TestProtocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
+  interface->StrictXUnionHenceResponseMayBeStackAllocated(
+      TestProtocol::Interface::
+          StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
+}
+
+void TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated(
+    TestProtocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
+  interface->FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      TestProtocol::Interface::
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<TestProtocol::Interface> TestProtocol[] = {
+    {kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+     TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::Type,
+     methods::TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated},
+    {kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+     TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::Type,
+     methods::
+         TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated},
+};
+
+}  // namespace entries
+
 bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
-      auto result =
-          ::fidl::DecodeAs<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
-              msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->StrictXUnionHenceResponseMayBeStackAllocated(
-          Interface::StrictXUnionHenceResponseMayBeStackAllocatedCompleter::
-              Sync(txn));
-      return true;
-    }
-    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
-      auto result = ::fidl::DecodeAs<
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          Interface::FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::
-              Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::TestProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::TestProtocol +
+          sizeof(entries::TestProtocol) /
+              sizeof(
+                  ::fidl::internal::InterfaceEntry<TestProtocol::Interface>)));
 }
 
 bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

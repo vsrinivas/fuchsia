@@ -56,24 +56,37 @@ std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void SecondProtocolDispatchMethodOnSecond(SecondProtocol::Interface* interface,
+                                          void* bytes,
+                                          ::fidl::Transaction* txn) {
+  interface->MethodOnSecond(
+      SecondProtocol::Interface::MethodOnSecondCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<SecondProtocol::Interface> SecondProtocol[] = {
+    {kSecondProtocol_MethodOnSecond_Ordinal,
+     SecondProtocol::MethodOnSecondRequest::Type,
+     methods::SecondProtocolDispatchMethodOnSecond},
+};
+
+}  // namespace entries
+
 bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                  ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kSecondProtocol_MethodOnSecond_Ordinal: {
-      auto result = ::fidl::DecodeAs<MethodOnSecondRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->MethodOnSecond(Interface::MethodOnSecondCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SecondProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SecondProtocol + sizeof(entries::SecondProtocol) /
+                                        sizeof(::fidl::internal::InterfaceEntry<
+                                               SecondProtocol::Interface>)));
 }
 
 bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -137,24 +150,37 @@ std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void FirstProtocolDispatchMethodOnFirst(FirstProtocol::Interface* interface,
+                                        void* bytes, ::fidl::Transaction* txn) {
+  interface->MethodOnFirst(
+      FirstProtocol::Interface::MethodOnFirstCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<FirstProtocol::Interface> FirstProtocol[] = {
+    {kFirstProtocol_MethodOnFirst_Ordinal,
+     FirstProtocol::MethodOnFirstRequest::Type,
+     methods::FirstProtocolDispatchMethodOnFirst},
+};
+
+}  // namespace entries
+
 bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                 ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kFirstProtocol_MethodOnFirst_Ordinal: {
-      auto result = ::fidl::DecodeAs<MethodOnFirstRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->MethodOnFirst(Interface::MethodOnFirstCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::FirstProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::FirstProtocol +
+          sizeof(entries::FirstProtocol) /
+              sizeof(
+                  ::fidl::internal::InterfaceEntry<FirstProtocol::Interface>)));
 }
 
 bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

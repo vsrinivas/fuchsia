@@ -67,6 +67,16 @@ class FidlMessage final : public ::fidl::Result {
   bool encoded_ = false;
 };
 
+template <typename Interface>
+struct InterfaceEntry {
+  uint64_t ordinal;
+  const fidl_type_t* type;
+  void (*dispatch)(Interface* interface, void* bytes, ::fidl::Transaction* txn);
+};
+
+bool TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn, InterfaceEntry<void>* begin,
+                 InterfaceEntry<void>* end);
+
 }  // namespace internal
 
 }  // namespace fidl

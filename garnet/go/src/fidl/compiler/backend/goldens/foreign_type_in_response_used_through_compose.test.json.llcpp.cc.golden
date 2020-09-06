@@ -126,24 +126,32 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void TopDispatchGetFoo(Top::Interface* interface, void* bytes,
+                       ::fidl::Transaction* txn) {
+  interface->GetFoo(Top::Interface::GetFooCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Top::Interface> Top[] = {
+    {kTop_GetFoo_Ordinal, Top::GetFooRequest::Type, methods::TopDispatchGetFoo},
+};
+
+}  // namespace entries
+
 bool Top::TryDispatch(Interface* impl, fidl_msg_t* msg,
                       ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kTop_GetFoo_Ordinal: {
-      auto result = ::fidl::DecodeAs<GetFooRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->GetFoo(Interface::GetFooCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Top),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Top +
+          sizeof(entries::Top) /
+              sizeof(::fidl::internal::InterfaceEntry<Top::Interface>)));
 }
 
 bool Top::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {

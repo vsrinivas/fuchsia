@@ -313,36 +313,49 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
   }
 }
 
+namespace methods {
+
+void EmptyProtocolDispatchSend(EmptyProtocol::Interface* interface, void* bytes,
+                               ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<EmptyProtocol::SendRequest*>(bytes);
+  interface->Send(std::move(message->e),
+                  EmptyProtocol::Interface::SendCompleter::Sync(txn));
+}
+
+void EmptyProtocolDispatchSendAndReceive(EmptyProtocol::Interface* interface,
+                                         void* bytes,
+                                         ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<EmptyProtocol::SendAndReceiveRequest*>(bytes);
+  interface->SendAndReceive(
+      std::move(message->e),
+      EmptyProtocol::Interface::SendAndReceiveCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<EmptyProtocol::Interface> EmptyProtocol[] = {
+    {kEmptyProtocol_Send_Ordinal, EmptyProtocol::SendRequest::Type,
+     methods::EmptyProtocolDispatchSend},
+    {kEmptyProtocol_SendAndReceive_Ordinal,
+     EmptyProtocol::SendAndReceiveRequest::Type,
+     methods::EmptyProtocolDispatchSendAndReceive},
+};
+
+}  // namespace entries
+
 bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                 ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kEmptyProtocol_Send_Ordinal: {
-      auto result = ::fidl::DecodeAs<SendRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Send(std::move(message->e), Interface::SendCompleter::Sync(txn));
-      return true;
-    }
-    case kEmptyProtocol_SendAndReceive_Ordinal: {
-      auto result = ::fidl::DecodeAs<SendAndReceiveRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->SendAndReceive(std::move(message->e),
-                           Interface::SendAndReceiveCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::EmptyProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::EmptyProtocol +
+          sizeof(entries::EmptyProtocol) /
+              sizeof(
+                  ::fidl::internal::InterfaceEntry<EmptyProtocol::Interface>)));
 }
 
 bool EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

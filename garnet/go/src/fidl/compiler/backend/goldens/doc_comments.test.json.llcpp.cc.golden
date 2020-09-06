@@ -154,24 +154,34 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
   }
 }
 
+namespace methods {
+
+void InterfaceDispatchMethod(Interface::Interface* interface, void* bytes,
+                             ::fidl::Transaction* txn) {
+  interface->Method(Interface::Interface::MethodCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Interface::Interface> Interface[] = {
+    {kInterface_Method_Ordinal, Interface::MethodRequest::Type,
+     methods::InterfaceDispatchMethod},
+};
+
+}  // namespace entries
+
 bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
                             ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kInterface_Method_Ordinal: {
-      auto result = ::fidl::DecodeAs<MethodRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->Method(Interface::MethodCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Interface),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Interface +
+          sizeof(entries::Interface) /
+              sizeof(::fidl::internal::InterfaceEntry<Interface::Interface>)));
 }
 
 bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg,

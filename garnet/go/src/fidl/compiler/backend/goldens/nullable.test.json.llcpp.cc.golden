@@ -144,26 +144,36 @@ std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void SimpleProtocolDispatchAdd(SimpleProtocol::Interface* interface,
+                               void* bytes, ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<SimpleProtocol::AddRequest*>(bytes);
+  interface->Add(std::move(message->a), std::move(message->b),
+                 SimpleProtocol::Interface::AddCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<SimpleProtocol::Interface> SimpleProtocol[] = {
+    {kSimpleProtocol_Add_Ordinal, SimpleProtocol::AddRequest::Type,
+     methods::SimpleProtocolDispatchAdd},
+};
+
+}  // namespace entries
+
 bool SimpleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                  ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_Ordinal: {
-      auto result = ::fidl::DecodeAs<AddRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Add(std::move(message->a), std::move(message->b),
-                Interface::AddCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SimpleProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SimpleProtocol + sizeof(entries::SimpleProtocol) /
+                                        sizeof(::fidl::internal::InterfaceEntry<
+                                               SimpleProtocol::Interface>)));
 }
 
 bool SimpleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

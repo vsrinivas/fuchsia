@@ -371,55 +371,61 @@ std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void ParentDispatchGetChild(Parent::Interface* interface, void* bytes,
+                            ::fidl::Transaction* txn) {
+  interface->GetChild(Parent::Interface::GetChildCompleter::Sync(txn));
+}
+
+void ParentDispatchGetChildRequest(Parent::Interface* interface, void* bytes,
+                                   ::fidl::Transaction* txn) {
+  interface->GetChildRequest(
+      Parent::Interface::GetChildRequestCompleter::Sync(txn));
+}
+
+void ParentDispatchTakeChild(Parent::Interface* interface, void* bytes,
+                             ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<Parent::TakeChildRequest*>(bytes);
+  interface->TakeChild(std::move(message->c),
+                       Parent::Interface::TakeChildCompleter::Sync(txn));
+}
+
+void ParentDispatchTakeChildRequest(Parent::Interface* interface, void* bytes,
+                                    ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<Parent::TakeChildRequestRequest*>(bytes);
+  interface->TakeChildRequest(
+      std::move(message->r),
+      Parent::Interface::TakeChildRequestCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Parent::Interface> Parent[] = {
+    {kParent_GetChild_Ordinal, Parent::GetChildRequest::Type,
+     methods::ParentDispatchGetChild},
+    {kParent_GetChildRequest_Ordinal, Parent::GetChildRequestRequest::Type,
+     methods::ParentDispatchGetChildRequest},
+    {kParent_TakeChild_Ordinal, Parent::TakeChildRequest::Type,
+     methods::ParentDispatchTakeChild},
+    {kParent_TakeChildRequest_Ordinal, Parent::TakeChildRequestRequest::Type,
+     methods::ParentDispatchTakeChildRequest},
+};
+
+}  // namespace entries
+
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kParent_GetChild_Ordinal: {
-      auto result = ::fidl::DecodeAs<GetChildRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->GetChild(Interface::GetChildCompleter::Sync(txn));
-      return true;
-    }
-    case kParent_GetChildRequest_Ordinal: {
-      auto result = ::fidl::DecodeAs<GetChildRequestRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      impl->GetChildRequest(Interface::GetChildRequestCompleter::Sync(txn));
-      return true;
-    }
-    case kParent_TakeChild_Ordinal: {
-      auto result = ::fidl::DecodeAs<TakeChildRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->TakeChild(std::move(message->c),
-                      Interface::TakeChildCompleter::Sync(txn));
-      return true;
-    }
-    case kParent_TakeChildRequest_Ordinal: {
-      auto result = ::fidl::DecodeAs<TakeChildRequestRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->TakeChildRequest(std::move(message->r),
-                             Interface::TakeChildRequestCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Parent),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Parent +
+          sizeof(entries::Parent) /
+              sizeof(::fidl::internal::InterfaceEntry<Parent::Interface>)));
 }
 
 bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -497,15 +503,23 @@ std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Child::Interface> Child[] = {};
+
+}  // namespace entries
+
 bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Child),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Child +
+          sizeof(entries::Child) /
+              sizeof(::fidl::internal::InterfaceEntry<Child::Interface>)));
 }
 
 bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,

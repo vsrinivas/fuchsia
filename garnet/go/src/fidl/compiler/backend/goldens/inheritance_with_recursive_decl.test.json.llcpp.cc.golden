@@ -90,26 +90,36 @@ std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void ParentDispatchFirst(Parent::Interface* interface, void* bytes,
+                         ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<Parent::FirstRequest*>(bytes);
+  interface->First(std::move(message->request),
+                   Parent::Interface::FirstCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Parent::Interface> Parent[] = {
+    {kParent_First_Ordinal, Parent::FirstRequest::Type,
+     methods::ParentDispatchFirst},
+};
+
+}  // namespace entries
+
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kParent_First_Ordinal: {
-      auto result = ::fidl::DecodeAs<FirstRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->First(std::move(message->request),
-                  Interface::FirstCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Parent),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Parent +
+          sizeof(entries::Parent) /
+              sizeof(::fidl::internal::InterfaceEntry<Parent::Interface>)));
 }
 
 bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -270,37 +280,44 @@ std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void ChildDispatchFirst(Child::Interface* interface, void* bytes,
+                        ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<Child::FirstRequest*>(bytes);
+  interface->First(std::move(message->request),
+                   Child::Interface::FirstCompleter::Sync(txn));
+}
+
+void ChildDispatchSecond(Child::Interface* interface, void* bytes,
+                         ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<Child::SecondRequest*>(bytes);
+  interface->Second(std::move(message->request),
+                    Child::Interface::SecondCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<Child::Interface> Child[] = {
+    {kChild_First_Ordinal, Child::FirstRequest::Type,
+     methods::ChildDispatchFirst},
+    {kChild_Second_Ordinal, Child::SecondRequest::Type,
+     methods::ChildDispatchSecond},
+};
+
+}  // namespace entries
+
 bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kChild_First_Ordinal: {
-      auto result = ::fidl::DecodeAs<FirstRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->First(std::move(message->request),
-                  Interface::FirstCompleter::Sync(txn));
-      return true;
-    }
-    case kChild_Second_Ordinal: {
-      auto result = ::fidl::DecodeAs<SecondRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Second(std::move(message->request),
-                   Interface::SecondCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Child),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::Child +
+          sizeof(entries::Child) /
+              sizeof(::fidl::internal::InterfaceEntry<Child::Interface>)));
 }
 
 bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,

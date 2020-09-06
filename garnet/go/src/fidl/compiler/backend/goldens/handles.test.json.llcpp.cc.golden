@@ -25,15 +25,25 @@ std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<SomeProtocol::Interface> SomeProtocol[] = {};
+
+}  // namespace entries
+
 bool SomeProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SomeProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::SomeProtocol +
+          sizeof(entries::SomeProtocol) /
+              sizeof(
+                  ::fidl::internal::InterfaceEntry<SomeProtocol::Interface>)));
 }
 
 bool SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

@@ -89,26 +89,38 @@ std::optional<::fidl::UnbindInfo> ExampleProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
+namespace methods {
+
+void ExampleProtocolDispatchMethod(ExampleProtocol::Interface* interface,
+                                   void* bytes, ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<ExampleProtocol::MethodRequest*>(bytes);
+  interface->Method(std::move(message->arg),
+                    ExampleProtocol::Interface::MethodCompleter::Sync(txn));
+}
+
+}  // namespace methods
+
+namespace entries {
+
+::fidl::internal::InterfaceEntry<ExampleProtocol::Interface> ExampleProtocol[] =
+    {
+        {kExampleProtocol_Method_Ordinal, ExampleProtocol::MethodRequest::Type,
+         methods::ExampleProtocolDispatchMethod},
+};
+
+}  // namespace entries
+
 bool ExampleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                   ::fidl::Transaction* txn) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kExampleProtocol_Method_Ordinal: {
-      auto result = ::fidl::DecodeAs<MethodRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, result.status});
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Method(std::move(message->arg),
-                   Interface::MethodCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn,
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::ExampleProtocol),
+      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
+          entries::ExampleProtocol +
+          sizeof(entries::ExampleProtocol) /
+              sizeof(::fidl::internal::InterfaceEntry<
+                     ExampleProtocol::Interface>)));
 }
 
 bool ExampleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
