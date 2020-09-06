@@ -161,6 +161,7 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.with_shared = true
   toolchain_variant.instrumented = false
   toolchain_variant.tags = []
+  toolchain_variant.exclude_variant_tags = [ "gcc" ]
 }
 
 is_android = false
@@ -834,6 +835,13 @@ declare_args() {
         "instrumentation-runtime",
       ]
     },
+
+    # A variant to use GCC instead of Clang to build artefacts. This can only
+    # be used with Zircon-specific toolchains.
+    {
+      name = "gcc"
+      tags = [ "gcc" ]
+    },
   ]
 
   # Additional variant toolchain configs to support.
@@ -1092,7 +1100,7 @@ if (in_default_toolchain) {
     if (selector != "$selector") {
       # It's a scope, not a string.  Just use it as is.
       select_variant_canonical += [ selector ]
-    } else if (selector == "gcc" || selector == "clang") {
+    } else if (selector == "clang") {
       # Ignore these as special cases.  They're just here to be
       # passed through in zircon_args.
     } else {
@@ -1520,9 +1528,14 @@ template("variant_target") {
       if (defined(target_invoker.output_dir)) {
         local_out_dir = target_invoker.output_dir
 
-        # Output directories are supposed to be nested under root_out_dir.
-        relative_dir = rebase_path(local_out_dir, root_out_dir, root_build_dir)
-        variant_out_dir = "$variant_out_dir/$relative_dir"
+        # If invoker.output_dir is not root_build_dir, assume it is a
+        # sub-directory of root_out_dir, and adjust the source path accordingly
+        # (e.g. "<toolchain>/foo" -> "<toolchain>-<variant>/foo").
+        if (local_out_dir != root_build_dir) {
+          relative_dir =
+              rebase_path(local_out_dir, root_out_dir, root_build_dir)
+          variant_out_dir = "$variant_out_dir/$relative_dir"
+        }
       }
 
       sources = [ "$variant_out_dir/$full_output_name" ]

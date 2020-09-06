@@ -56,9 +56,6 @@ import("//build/unification/global_variables.gni")
 assert(zircon_toolchain != false,
        "The configs here must only be used by the Zircon toolchains!")
 
-# Import global variables from zircon_toolchain scope.
-is_gcc = zircon_toolchain.is_gcc
-
 config("compiler") {
   compiler_flags = []
   defines = []

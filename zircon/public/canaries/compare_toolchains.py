@@ -81,7 +81,8 @@ _ALL_TOOLCHAINS = [
         },
         'output_extension': 'exe',
         'no_shared': True,
-    }, {
+    },
+    {
         'name': 'bootloader_arm64',
         'gn': {
             'toolchain': '//zircon/bootloader:efi_arm64',
@@ -91,7 +92,8 @@ _ALL_TOOLCHAINS = [
         },
         'output_extension': 'exe',
         'no_shared': True,
-    }, {
+    },
+    {
         'name': 'user.vdso_x64',
         'gn': {
             'toolchain': '//zircon/system/ulib/zircon:user.vdso_x64',
@@ -99,7 +101,36 @@ _ALL_TOOLCHAINS = [
         'zn': {
             'toolchain': '//system/ulib/zircon:user.vdso-x64-clang',
         },
-    }
+    },
+    {
+        'name': 'user.vdso_x64-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/system/ulib/zircon:user.vdso_x64-gcc',
+        },
+        'zn': {
+            'toolchain': '//system/ulib/zircon:user.vdso-x64-gcc',
+        },
+    },
+    {
+        'name': 'user.vdso_arm64',
+        'gn': {
+            'toolchain': '//zircon/system/ulib/zircon:user.vdso_arm64',
+        },
+        'zn': {
+            'toolchain': '//system/ulib/zircon:user.vdso-arm64-clang',
+        },
+    },
+    {
+        'name': 'user.vdso_arm64-gcc',
+        'variants': ['gcc'],
+        'gn': {
+            'toolchain': '//zircon/system/ulib/zircon:user.vdso_arm64-gcc',
+        },
+        'zn': {
+            'toolchain': '//system/ulib/zircon:user.vdso-arm64-gcc',
+        },
+    },
 ]
 
 _GN_TOOLCHAINS = [e['gn']['toolchain'] for e in _ALL_TOOLCHAINS]
@@ -352,6 +383,49 @@ def _update_gn_executable_output_directory(commands):
     return result
 
 
+def _update_root_build_dir(commands, root_build_dir):
+    """Update the GN root build dir when it appears in commands.
+
+    The absolute root build dir sometimes appears in build commands (e.g.
+    when building with a 'gcc' variant, in a -fdebug-prefix=<...> compiler
+    argument). This function replaces it with the hard-coded ROOT_BUILD_DIR
+    string.
+
+    Args:
+      commands: list of command strings from either build.
+      root_build_dir: root build dir path.
+    Returns:
+      A new list of command strings.
+    """
+    root_build_dir = os.path.abspath(root_build_dir)
+    return [cmd.replace(root_build_dir, 'ROOT_BUILD_DIR') for cmd in commands]
+
+
+def _update_zn_prebuilt_path(commands, root_dir):
+    """Update the absolute prebuilt directory when it appears in ZN commands.
+
+    The absolute root prebuilt dir sometimes appears in ZN build commands, e.g.
+    when using a 'gcc' variant, it will appear in a compiler argument
+    that lists the path to the libc++ library. Meanwhile in the GN build, the
+    corresponding relative path (i.e. '../../prebuilt') will be used instead.
+
+    The reason for this is that GN will change the value of 'lib_dirs' from
+    absolute to relative when writing Ninja toolchain definitions, if the path
+    is absolute *and* in-tree.
+
+    In the case of the GN build, prebuilt is under the root directory, so the
+    substitution always happen (and cannot be disabled). In the case of the
+    ZN build, whose root_dir is really FUCHSIA_DIR/zircon/, the prebuilt
+    directory is out-of-tree so the value written to toolchain.ninja will still
+    be absolute for the same compiler argument.
+
+    This function deals with the issue by replacing the absolute prebuilt
+    directory path with '../../prebuilt' string, to match the GN build.
+    """
+    prebuilt_dir = os.path.abspath(os.path.join(root_dir, 'prebuilt'))
+    return [cmd.replace(prebuilt_dir, '../../prebuilt') for cmd in commands]
+
+
 def _check_toolchain_rules(
         gn_rules, gn_toolchain, zn_rules, zn_toolchain, verbose):
     """Check the toolchain rules between a GN toolchain and its ZN equivalent.
@@ -526,7 +600,6 @@ def main():
 
         if not args.skip_gen:
             # Generate the $ROOT_DIR/out/$PREFIX.gn/args.gn
-            print('VARIANT %s GN_OUT_DIR=%s' % (variant, gn_out_dir))
             _recreate_directory(gn_out_dir)
             _write_file(
                 os.path.join(gn_out_dir, 'args.gn'),
@@ -539,7 +612,6 @@ def main():
                 cwd=root_dir)
 
             # Generate $ROOT_DIR/out/$PREFIX.zn/args.gn
-            print('VARIANT %s ZN_OUT_DIR=%s' % (variant, zn_out_dir))
             _recreate_directory(zn_out_dir)
             _write_file(
                 os.path.join(zn_out_dir, 'args.gn'),
@@ -662,6 +734,9 @@ def main():
             # Sanitize GN commands a little.
             gn_commands = _remove_gn_config_deps_touch_commands(gn_commands)
             gn_commands = _update_gn_executable_output_directory(gn_commands)
+            gn_commands = _update_root_build_dir(gn_commands, gn_out_dir)
+            zn_commands = _update_root_build_dir(zn_commands, zn_out_dir)
+            zn_commands = _update_zn_prebuilt_path(zn_commands, root_dir)
 
             if len(gn_commands) != len(zn_commands):
                 errors += [

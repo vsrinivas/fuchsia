@@ -21,7 +21,6 @@ if (current_toolchain == default_toolchain) {
       cpu = invoker.cpu
       os = "win"
       environment = "efi"
-      gcc = false
       with_shared = false
       exclude_variant_tags = [
         "instrumented",

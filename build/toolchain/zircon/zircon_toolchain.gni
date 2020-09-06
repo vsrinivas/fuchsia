@@ -67,11 +67,6 @@ _buildidtool =
 #     Required: $current_cpu and $current_os values for the toolchain.
 #     Type: string
 #
-#   gcc
-#     Optional: If true, this toolchain uses GCC rather than Clang.
-#     Type: bool
-#     Default: false
-#
 #   strip
 #     Optional: If not false, linked binaries will be stripped.
 #     If this is a string rather than true, it's a switch to the `objcopy`
@@ -128,6 +123,12 @@ _buildidtool =
 #
 # The following parameters from the original Zircon builds are NOT SUPPORTED
 # and documented here for historical reasons!
+#
+#   gcc
+#     Optional: If true, this toolchain uses GCC rather than Clang.
+#     This template will instead look for 'gcc' in the list of tags.
+#     Type: bool
+#     Default: false
 #
 #   host
 #     Optional: If true, this is doing "host" compiles.  This only matters
@@ -234,7 +235,9 @@ template("zircon_toolchain") {
     }
   }
 
-  use_gcc = defined(invoker.gcc) && invoker.gcc
+  use_gcc =
+      _toolchain_variant.tags + [ "gcc" ] - [ "gcc" ] != _toolchain_variant.tags
+
   use_strip = defined(invoker.strip) && invoker.strip != false
 
   # These are used in some, but not all, of the if branches below.

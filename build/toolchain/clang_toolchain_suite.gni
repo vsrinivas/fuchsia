@@ -8,6 +8,7 @@ import("//build/toolchain/variant_toolchain_suite.gni")
 template("clang_toolchain_suite") {
   variant_toolchain_suite(target_name) {
     toolchain_template = "clang_toolchain"
+    exclude_variant_tags = [ "gcc" ]
     forward_variables_from(invoker, "*")
   }
 }
