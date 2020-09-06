@@ -71,27 +71,27 @@ if (host_os == "mac") {
 
 # Universal configs that apply to all code in the build.
 standard_configs = [
-  "$zx/public/gn/config:compiler",
-  "$zx/public/gn/config:language",
-  "$zx/public/gn/config:machine",
-  "$zx/public/gn/config:relative_paths",
-  "$zx/public/gn/config:assert_level",
-  "$zx/public/gn/config:default_optimize",
-  "$zx/public/gn/config:default_debuginfo",
-  "$zx/public/gn/config:default_warnings",
-  "$zx/public/gn/config:default_icf",
-  "$zx/public/gn/config:default_include_dirs",
-  "$zx/public/gn/config:default_frame_pointers",
-  "$zx/public/gn/config:default_linker_gc",
-  "$zx/public/gn/config:default_template_backtrace_limit",
-  "$zx/public/gn/config:no_exceptions",
-  "$zx/public/gn/config:no_rtti",
-  "$zx/public/gn/config:no_threadsafe_statics",
-  "$zx/public/gn/config:thread_safety_annotations",
-  "$zx/public/gn/config:warn-implicit-fallthrough",
-  "$zx/public/gn/config:visibility_hidden",
-  "$zx/public/gn/config:auto_var_init",
-  "$zx/public/gn/config:werror",
+  "$zx_build_config:compiler",
+  "$zx_build_config:language",
+  "$zx_build_config:machine",
+  "$zx_build_config:relative_paths",
+  "$zx_build_config:assert_level",
+  "$zx_build_config:default_optimize",
+  "$zx_build_config:default_debuginfo",
+  "$zx_build_config:default_warnings",
+  "$zx_build_config:default_icf",
+  "$zx_build_config:default_include_dirs",
+  "$zx_build_config:default_frame_pointers",
+  "$zx_build_config:default_linker_gc",
+  "$zx_build_config:default_template_backtrace_limit",
+  "$zx_build_config:no_exceptions",
+  "$zx_build_config:no_rtti",
+  "$zx_build_config:no_threadsafe_statics",
+  "$zx_build_config:thread_safety_annotations",
+  "$zx_build_config:warn-implicit-fallthrough",
+  "$zx_build_config:visibility_hidden",
+  "$zx_build_config:auto_var_init",
+  "$zx_build_config:werror",
 
   {
     # Additional configs apply only to code built into shared libraries.
@@ -99,8 +99,8 @@ standard_configs = [
     # directly in the `sources` of a shared_library() or library() target.
     shlib = true
     add = [
-      "$zx/public/gn/config:shared_library_config",
-      "$zx/public/gn/config:no_undefined_symbols",
+      "$zx_build_config:shared_library_config",
+      "$zx_build_config:no_undefined_symbols",
     ]
   },
 ]
@@ -134,10 +134,10 @@ standard_environments = [
     }
     configs = standard_fuchsia_configs
     configs += [
-      "$zx/public/gn/config:user",
+      "$zx_build_config:user",
       {
         shlib = false
-        add = [ "$zx/public/gn/config:user_executable" ]
+        add = [ "$zx_build_config:user_executable" ]
       },
       {
         # All drivers use hidden visibility and the static standard C++ library.
@@ -145,7 +145,7 @@ standard_environments = [
           "driver",
           "test_driver",
         ]
-        add = [ "$zx/public/gn/config:static-libc++" ]
+        add = [ "$zx_build_config:static-libc++" ]
       },
     ]
     implicit_deps = [
@@ -166,16 +166,16 @@ standard_environments = [
       # implicitly linked in might have runtime dependencies of their own.
       # So first add the static C++ deps and then, if not actually using
       # static C++, remove it again and add the shared C++ deps instead.
-      "$zx/public/gn/config:static-libc++-deps",
+      "$zx_build_config:static-libc++-deps",
       {
-        unless_configs = [ "$zx/public/gn/config:static-libc++" ]
-        add = [ "$zx/public/gn/config:shared-libc++-deps" ]
-        remove = [ "$zx/public/gn/config:static-libc++-deps" ]
+        unless_configs = [ "$zx_build_config:static-libc++" ]
+        add = [ "$zx_build_config:shared-libc++-deps" ]
+        remove = [ "$zx_build_config:static-libc++-deps" ]
       },
 
       # Currently there's no config in the zircon build for making the
       # Rust standard library static.
-      "$zx/public/gn/config:shared-ruststd-deps",
+      "$zx_build_config:shared-ruststd-deps",
     ]
     shlib = true
     strip = "--strip-sections"
@@ -221,14 +221,14 @@ standard_sanitizer_variants = [
         {
           # First add and then remove both in case either is already there.
           add = [
-            "$zx/public/gn/config:frame_pointers",
-            "$zx/public/gn/config:default_frame_pointers",
+            "$zx_build_config:frame_pointers",
+            "$zx_build_config:default_frame_pointers",
           ]
           remove = add
         },
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
-        "$zx/public/gn/config:frame_pointers",
+        "$zx_build_config:frame_pointers",
         "$zx/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
@@ -331,19 +331,19 @@ standard_variants += [
         {
           # First add and then remove both in case either is already there.
           add = [
-            "$zx/public/gn/config:frame_pointers",
-            "$zx/public/gn/config:default_frame_pointers",
+            "$zx_build_config:frame_pointers",
+            "$zx_build_config:default_frame_pointers",
           ]
           remove = add
         },
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
-        "$zx/public/gn/config:frame_pointers",
+        "$zx_build_config:frame_pointers",
 
         # kasan disables safestack for all files built with instrumentation, so
         # we need to ensure that files built without instrumentation have a
         # consistent no_safestack setting.
-        "$zx/public/gn/config:no_safestack",
+        "$zx_build_config:no_safestack",
 
         "$zx/public/gn/config/instrumentation:asan",
       ]

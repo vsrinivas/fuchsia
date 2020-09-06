@@ -24,15 +24,15 @@ if (current_toolchain == default_toolchain) {
       configs += standard_fuchsia_configs
       configs += [
         # This is mostly like other user code.
-        "$zx/public/gn/config:user",
+        "$zx_build_config:user",
 
         # But it can't rely on full Fuchsia ABI like SafeStack/ShadowCallStack.
-        "$zx/public/gn/config:no_sanitizers",
+        "$zx_build_config:no_sanitizers",
 
         # And it can't rely on libc.
-        "$zx/public/gn/config:freestanding",
+        "$zx_build_config:freestanding",
 
-        "$zx/public/gn/config:rodso",
+        "$zx_build_config:rodso",
       ]
 
       # The vDSO can't use instrumentation runtimes.
@@ -230,7 +230,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/syscalls",
     ]
     if (toolchain.base_environment == "user") {
-      configs -= [ "$zx/public/gn/config:user" ]
+      configs -= [ "$zx_build_config:user" ]
     }
   }
 }

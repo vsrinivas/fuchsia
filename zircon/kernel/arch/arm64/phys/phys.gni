@@ -14,7 +14,7 @@ phys_configs = [
   "$zx/kernel/arch/arm64/phys:strict-align",
 
   # All phys executables should be small enough for the tiny code model.
-  "$zx/public/gn/config:tiny",
+  "$zx_build_config:tiny",
 ]
 phys_tags = [
   "strict-align",

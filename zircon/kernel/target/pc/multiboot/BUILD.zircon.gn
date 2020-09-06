@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel:warnings",
       "$zx/kernel/arch/x86:abi",
       "$zx/kernel/arch/x86:kernel",
-      "$zx/public/gn/config:no_sanitizers",
+      "$zx_build_config:no_sanitizers",
     ]
     compiler_flags = [
       "-m32",

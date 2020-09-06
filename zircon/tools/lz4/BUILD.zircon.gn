@@ -13,7 +13,7 @@ zx_host_tool("lz4") {
     "$lz4_programs/lz4io.c",
   ]
   deps = [ "$zx/third_party/ulib/lz4" ]
-  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
   defines = [ "XXH_NAMESPACE=LZ4_" ]
   include_dirs = [ "$lz4_lib" ]
 }

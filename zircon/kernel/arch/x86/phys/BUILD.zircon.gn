@@ -38,8 +38,8 @@ if (current_toolchain == default_toolchain) {
     ]
 
     # Always enable frame pointers.
-    configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-    configs += [ "$zx/public/gn/config:frame_pointers" ]
+    configs -= [ "$zx_build_config:default_frame_pointers" ]
+    configs += [ "$zx_build_config:frame_pointers" ]
 
     tags = [
       "x86-32",

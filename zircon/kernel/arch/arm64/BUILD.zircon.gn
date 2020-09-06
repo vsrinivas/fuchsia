@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel:headers",
       "$zx/kernel:standalone",
       "$zx/kernel:warnings",
-      "$zx/public/gn/config:no_sanitizers",
+      "$zx_build_config:no_sanitizers",
     ]
 
     cflags = [
@@ -150,6 +150,6 @@ if (current_toolchain == default_toolchain) {
 
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
-    configs += [ "$zx/public/gn/config:no_sanitizers" ]
+    configs += [ "$zx_build_config:no_sanitizers" ]
   }
 }

@@ -598,10 +598,12 @@ if (toolchain.environment == "user") {
       visibility = [ ":instrumented-ulib-redirect" ]
       variant = variant
       deps = [
-        "$zx/public/gn/config:shared-libc++-deps",
-        "$zx/public/gn/config:shared-ruststd-deps",
-        "$zx/system/ulib",
+        "$zx_build_config:shared-libc++-deps",
+        "$zx_build_config:shared-ruststd-deps",
       ]
+
+      # NOTE: Order of deps items is important.
+      deps += [ "$zx/system/ulib" ]
       foreach(dep, toolchain.implicit_deps) {
         if (dep == "$dep") {
           deps += [ dep ]

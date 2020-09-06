@@ -15,6 +15,12 @@ declare_args() {
   # "$zx_build/" is the prefix for GN "source-absolute" paths in the Zircon
   # build for build infrastructure.
   zx_build = "/"
+
+  # "$zx_build_config" is the directory containing GN configs used by
+  # the Zircon build infrastructure. This allows referring to them
+  # with "$zx_build_config:<name>" in BUILD.zircon.gn and BUILD.gn
+  # files.
+  zx_build_config = "//public/gn/config"
 }
 
 declare_args() {
@@ -502,13 +508,12 @@ template("library") {
       local_defines += invoker.defines
     }
 
-    ubsan_config =
-        "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use"
+    ubsan_config = "$zx_build_config:temporarily_disable_ubsan_do_not_use"
     ubsan_disabled =
         defined(invoker.configs) &&
         invoker.configs + [ ubsan_config ] - [ ubsan_config ] != invoker.configs
 
-    unused_function_config = "$zx_build/public/gn/config:Wno-unused-function"
+    unused_function_config = "$zx_build_config:Wno-unused-function"
     has_unused_config = (defined(invoker.configs) &&
                          invoker.configs + [ unused_function_config ] -
                          [ unused_function_config ] != invoker.configs) ||
@@ -516,7 +521,7 @@ template("library") {
                          invoker.public_configs + [ unused_function_config ] -
                          [ unused_function_config ] != invoker.public_configs)
 
-    sanitizer_config = "$zx_build/public/gn/config:no_sanitizers"
+    sanitizer_config = "$zx_build_config:no_sanitizers"
     sanitizers_disabled =
         defined(invoker.configs) && invoker.configs + [ sanitizer_config ] -
                                     [ sanitizer_config ] != invoker.configs

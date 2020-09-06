@@ -36,5 +36,5 @@ source_set("thread") {
     "tss_set.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }

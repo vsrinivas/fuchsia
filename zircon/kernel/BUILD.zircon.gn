@@ -80,8 +80,8 @@ if (current_toolchain == default_toolchain) {
       # TODO(mcgrathr): Consider either removing this so there's a
       # no-frame-pointers option, or removing the kernel's support for
       # !WITH_FRAME_POINTERS if it will never be used.
-      configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-      configs += [ "$zx/public/gn/config:frame_pointers" ]
+      configs -= [ "$zx_build_config:default_frame_pointers" ]
+      configs += [ "$zx_build_config:frame_pointers" ]
 
       tags = [ "standalone" ]
 
@@ -90,8 +90,8 @@ if (current_toolchain == default_toolchain) {
         # because of crufty acpica code, and some compiler instrumentation
         # is broken wrt --gc-sections semantics.
         exclude_variant_tags = [ "breaks-gc-sections" ]
-        configs -= [ "$zx/public/gn/config:default_linker_gc" ]
-        configs += [ "$zx/public/gn/config:linker_gc" ]
+        configs -= [ "$zx_build_config:default_linker_gc" ]
+        configs += [ "$zx_build_config:linker_gc" ]
       }
     }
   }
@@ -116,7 +116,7 @@ if (current_toolchain == default_toolchain) {
       "arch/$zircon_cpu:kernel",
 
       # include/lib/counters.h and kernel.ld depend on -fdata-sections.
-      "$zx/public/gn/config:data_sections",
+      "$zx_build_config:data_sections",
     ]
 
     # Always enable frame pointers in the kernel so there are panic
@@ -124,7 +124,7 @@ if (current_toolchain == default_toolchain) {
     # TODO(mcgrathr): Consider either removing this so there's a
     # no-frame-pointers option, or removing the kernel's support for
     # !WITH_FRAME_POINTERS if it will never be used.
-    configs += [ "$zx/public/gn/config:frame_pointers" ]
+    configs += [ "$zx_build_config:frame_pointers" ]
 
     defines = kernel_defines + kernel_extra_defines
     defines += [
@@ -233,7 +233,7 @@ if (current_toolchain == default_toolchain) {
       ]
     }
 
-    configs = [ "$zx/public/gn/config:no_exceptions" ]
+    configs = [ "$zx_build_config:no_exceptions" ]
   }
 
   config("warnings") {

@@ -22,7 +22,7 @@ if (current_toolchain == default_toolchain) {
       configs += standard_fuchsia_configs + [ ":efi_config" ]
 
       # TODO: harmless, but just to match build.mk
-      configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+      configs -= [ "$zx_build_config:default_frame_pointers" ]
 
       # TODO: strip = true
 
@@ -41,7 +41,7 @@ if (current_toolchain == default_toolchain) {
   config("efi_config") {
     configs = [
       "$zx/kernel:standalone",
-      "$zx/public/gn/config:no_sanitizers",
+      "$zx_build_config:no_sanitizers",
 
       # TODO: "$zx/kernel:warnings",
     ]

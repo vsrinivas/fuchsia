@@ -71,12 +71,12 @@ config("musl_internal.config") {
   }
 
   configs = [
-    "$zx/public/gn/config:freestanding",
+    "$zx_build_config:freestanding",
 
     # libfuzzer also uses libc internally, by removing the fuzzing
     # instrumentation we avoid it adding noise to the fuzzing coverage.
     # TODO(25073): Once a cleaner solution is found, remove this.
-    "$zx/public/gn/config:no_fuzzer",
+    "$zx_build_config:no_fuzzer",
   ]
 }
 

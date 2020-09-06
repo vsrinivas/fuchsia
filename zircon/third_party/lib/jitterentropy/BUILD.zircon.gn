@@ -15,10 +15,10 @@ zx_library("jitterentropy") {
   # levels. If there is a significant difference in entropy quality,
   # replace the relevant C code by assembly code to protect against future
   # compiler changes.
-  configs -= [ "$zx/public/gn/config:default_optimize" ]
+  configs -= [ "$zx_build_config:default_optimize" ]
   configs += [
     ":config",
-    "$zx/public/gn/config:optimize_none",
+    "$zx_build_config:optimize_none",
   ]
 }
 

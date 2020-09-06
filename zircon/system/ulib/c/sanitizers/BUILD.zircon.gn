@@ -33,5 +33,5 @@ source_set("sanitizers") {
 source_set("sancov-stubs") {
   visibility = [ ":*" ]
   sources = [ "sancov-stubs.cc" ]
-  configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  configs += [ "$zx_build_config:no_sanitizers" ]
 }

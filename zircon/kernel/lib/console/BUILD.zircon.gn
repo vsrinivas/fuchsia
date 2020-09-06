@@ -17,5 +17,5 @@ zx_library("console") {
   ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+  public_configs = [ "$zx_build_config:Wno-unused-function" ]
 }

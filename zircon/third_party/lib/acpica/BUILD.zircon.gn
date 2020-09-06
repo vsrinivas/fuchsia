@@ -24,7 +24,7 @@ config("headers.config") {
 
 # Disable warnings we won't fix in third-party code.  Putting this in a
 # separate config rather than direclty in the target gets these flags
-# correctly ordered after the $zx/public/gn/config:default_warnings flags.
+# correctly ordered after the $zx_build_config:default_warnings flags.
 config("disable_warnings") {
   visibility = [ ":*" ]
 

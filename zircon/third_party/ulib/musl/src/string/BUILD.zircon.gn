@@ -36,7 +36,7 @@ source_set("compiler") {
     ]
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("stdmem") {
@@ -65,7 +65,7 @@ source_set("stdmem") {
     }
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("extmem") {
@@ -81,7 +81,7 @@ source_set("extmem") {
     sources += [ "mempcpy.c" ]
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("minimal_str") {
@@ -100,7 +100,7 @@ source_set("minimal_str") {
     ]
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("stdstr") {
@@ -138,7 +138,7 @@ source_set("stdstr") {
     ]
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("extstr") {
@@ -170,7 +170,7 @@ source_set("extstr") {
     ]
   }
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("bsd") {
@@ -184,7 +184,7 @@ source_set("bsd") {
     "swab.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("wcs") {
@@ -213,7 +213,7 @@ source_set("wcs") {
     "wcswcs.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }
 
 source_set("wmem") {
@@ -226,5 +226,5 @@ source_set("wmem") {
     "wmemset.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }

@@ -20,6 +20,10 @@ zx = "//zircon"
 # TODO(3367): remove when the build is unified.
 zx_build = "//build/unification/zn_build"
 
+# Variable used in Zircon build files to declare the directory path for the
+# BUILD.gn file that contains definitions for Zircon build specific configs.
+zx_build_config = "//build/config/zircon"
+
 declare_args() {
   # If set, the build will produce compilation analysis dumps, used for code
   # cross-referencing in code search.  The extra work done during analysis

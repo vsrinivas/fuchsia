@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/config/levels.gni")
+import("$zx_build_config/levels.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 zstd = "$zx/third_party/zstd"
@@ -18,7 +18,7 @@ config("zstd-config") {
     "$zstd/lib/dictBuilder",
   ]
 
-  configs = [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs = [ "$zx_build_config:visibility_hidden" ]
   defines = [
     "XXH_NAMESPACE=ZSTD_",
     "ZDICTLIB_VISIBILITY=",
@@ -32,8 +32,7 @@ config("zstd-config") {
 
   # TODO(41757): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 zstd_common_sources = [
@@ -88,14 +87,14 @@ zx_library("zstd") {
   configs += [ ":zstd-config" ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
 
   # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
   # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
   # optimizations for just this library to speed up builds.
   # See fxbug.dev/55297
-  configs -= [ "$zx_build/public/gn/config:default_optimize" ]
-  configs += [ "$zx_build/public/gn/config:optimize_speed" ]
+  configs -= [ "$zx_build_config:default_optimize" ]
+  configs += [ "$zx_build_config:optimize_speed" ]
 }
 
 # The standalone varaint of this library supports only decompression and does
@@ -119,7 +118,7 @@ zx_library("zstd-decompress-standalone") {
   configs += [ ":zstd-config" ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
 }
 
 config("zstd-seekable-config") {
@@ -162,7 +161,7 @@ zx_library("zstdseek") {
   ]
 
   # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+  configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
 }
 
 zx_host_tool("zstdcli") {

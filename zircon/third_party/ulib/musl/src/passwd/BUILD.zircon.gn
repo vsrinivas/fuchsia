@@ -21,5 +21,5 @@ source_set("passwd") {
     "putpwent.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }

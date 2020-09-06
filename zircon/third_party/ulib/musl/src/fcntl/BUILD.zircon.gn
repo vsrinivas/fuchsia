@@ -6,5 +6,5 @@ source_set("fcntl") {
   deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [ "creat.c" ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }

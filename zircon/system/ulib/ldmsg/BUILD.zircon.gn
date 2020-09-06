@@ -10,7 +10,7 @@ zx_library("ldmsg") {
 
   if (toolchain.base_environment == "user") {
     # This library is used by libc, so suppress the circularity.
-    configs -= [ "$zx_build/public/gn/config:user" ]
+    configs -= [ "$zx_build_config:user" ]
   }
 
   # However, it uses <string.h> for memcpy.
@@ -20,12 +20,12 @@ zx_library("ldmsg") {
   # fancy stacks have been set up.  So it can't rely on safe-stack or
   # shadow-call-stack ABIs.
   configs += [
-    "$zx_build/public/gn/config:no_safestack",
-    "$zx_build/public/gn/config:no-shadow-call-stack",
+    "$zx_build_config:no_safestack",
+    "$zx_build_config:no-shadow-call-stack",
 
     # This library is linked into libc, which is used by libfuzzer.
     # Don't instrument it to avoid getting noise in code coverage.
     # TODO(25073): Once a cleaner solution is found, remove this.
-    "$zx_build/public/gn/config:no_fuzzer",
+    "$zx_build_config:no_fuzzer",
   ]
 }

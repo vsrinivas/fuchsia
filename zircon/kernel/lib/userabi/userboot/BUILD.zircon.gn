@@ -26,7 +26,7 @@ if (current_toolchain == default_toolchain) {
                    # work around fxb/48501.  It's separate from
                    # userboot_config so it can be removed by other links
                    # reusing this environment, e.g. hermetic_module().
-                   "$zx/public/gn/config:rodso",
+                   "$zx_build_config:rodso",
                  ]
 
       # This doesn't get a separate shlib sub-toolchain, but the main one
@@ -52,10 +52,10 @@ if (current_toolchain == default_toolchain) {
   # Everything in userboot gets compiled this way.
   config("userboot_config") {
     configs = [
-      "$zx/public/gn/config:user",
-      "$zx/public/gn/config:static-libc++",
-      "$zx/public/gn/config:no_sanitizers",
-      "$zx/public/gn/config:no_undefined_symbols",
+      "$zx_build_config:user",
+      "$zx_build_config:static-libc++",
+      "$zx_build_config:no_sanitizers",
+      "$zx_build_config:no_undefined_symbols",
     ]
 
     cflags = [

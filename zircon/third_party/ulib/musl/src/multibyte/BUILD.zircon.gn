@@ -27,5 +27,5 @@ source_set("multibyte") {
     "wctomb.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
 }

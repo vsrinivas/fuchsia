@@ -31,7 +31,7 @@ zx_library("c") {
   no_implicit_deps = true
 
   # Don't link against the shared libc++.
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build_config:static-libc++" ]
 
   metadata = {
     # This library is on the allowlist for driver() shared library deps.
@@ -363,7 +363,7 @@ source_set("crt1") {
   sources = [ "Scrt1.cc" ]
 
   # This runs before all runtime setup.
-  configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  configs += [ "$zx_build_config:no_sanitizers" ]
 
   # Minimize the code.  Even if there were lazy PLT resolution, it's never
   # worthwhile to have PLT entries for main or __libc_start_main, since

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/instrumentation/sanitizer_default_options.gni")
+import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
 
 config("asan") {
   compiler_flags = [ "-fsanitize=address" ]
@@ -24,7 +24,7 @@ sanitizer_default_options("asan_default_options") {
 # and then add:
 # ```
 #   # TODO(nnnnn): Fix the leaks and remove this.
-#   deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+#   deps += [ "$zx_build_config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 # ```
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
@@ -40,7 +40,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
 # are found, file a bug #nnnnn for the buggy test/component, and then add:
 # ```
 #   # TODO(nnnnn): Fix the bugs and remove this.
-#   deps += [ "$zx/public/gn/instrumentation:suppress-asan-stack-use-after-return" ]
+#   deps += [ "$zx_build_config/instrumentation:suppress-asan-stack-use-after-return" ]
 # ```
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [

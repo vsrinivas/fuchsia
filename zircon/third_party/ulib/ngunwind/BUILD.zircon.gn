@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/config/levels.gni")
+import("$zx_build_config/levels.gni")
 
 zx_library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's
@@ -113,16 +113,16 @@ zx_library("ngunwind") {
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "$zx_build/public/gn/config:default_frame_pointers" ] -
-      [ "$zx_build/public/gn/config:default_frame_pointers" ] != configs) {
-    configs -= [ "$zx_build/public/gn/config:default_frame_pointers" ]
-    configs += [ "$zx_build/public/gn/config:frame_pointers" ]
+  if (configs + [ "$zx_build_config:default_frame_pointers" ] -
+      [ "$zx_build_config:default_frame_pointers" ] != configs) {
+    configs -= [ "$zx_build_config:default_frame_pointers" ]
+    configs += [ "$zx_build_config:frame_pointers" ]
   }
 
   if (optimize == "none" || optimize == "debug") {
     # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "$zx_build/public/gn/config:default_optimize" ]
-    configs += [ "$zx_build/public/gn/config:optimize_default" ]
+    configs -= [ "$zx_build_config:default_optimize" ]
+    configs += [ "$zx_build_config:optimize_default" ]
   }
 }
 

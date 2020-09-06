@@ -17,11 +17,11 @@ standard_environments(".fuzzer") {
       # Instrumented shared library code has dangling references to runtime
       # symbols that will only be defined in the executable.
       shlib = true
-      remove = [ "$zx/public/gn/config:no_undefined_symbols" ]
+      remove = [ "$zx_build_config:no_undefined_symbols" ]
     },
     {
       # We care more about accurate stack traces than binary size when fuzzing.
-      remove = [ "$zx/public/gn/config:default_icf" ]
+      remove = [ "$zx_build_config:default_icf" ]
     },
   ]
   implicit_deps = [

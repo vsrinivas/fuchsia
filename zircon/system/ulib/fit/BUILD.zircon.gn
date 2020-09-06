@@ -34,7 +34,7 @@ zx_library("fit") {
   ]
   host = true
   static = true
-  public_configs = [ "$zx_build/public/gn/config:no_maybe_uninitialized" ]
+  public_configs = [ "$zx_build_config:no_maybe_uninitialized" ]
   sources = [
     "barrier.cc",
     "promise.cc",

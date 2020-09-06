@@ -66,6 +66,6 @@ source_set("network") {
     "serv.c",
   ]
 
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+  configs -= [ "$zx_build_config:visibility_hidden" ]
+  public_configs = [ "$zx_build_config:Wno-unused-function" ]
 }
