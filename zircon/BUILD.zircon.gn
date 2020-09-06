@@ -44,7 +44,6 @@ build_api_module("api") {
     ":binaries",
     ":generated_sources",
     ":images",
-    ":packages",
     ":tests",
     ":tool_paths",
     ":zbi_tests",
@@ -201,42 +200,6 @@ build_api_module("images") {
   testonly = true
   data_keys = [ "images" ]
   deps = [ ":everything" ] + default_deps
-}
-
-# Packages defined in the build.
-#
-# Type: list(scope)
-#
-#   * name
-#     - Required: Name of the package.
-#     - Type: string
-#
-#   * label
-#     - Required: GN label of the package() target.
-#     - Type: label_with_toolchain
-#
-#   * cpu, os
-#     - Required: $current_cpu and $current_os values, respectively, for
-#       which this package is intended.
-#     - Type: string
-#
-#   * manifest
-#     - Required: Manifest file of the package's sandbox filesystem contents.
-#     - Type: path relative to $root_build_dir
-#
-#   * tags
-#     - Optional: List of tags to associate with the package.
-#     - Type: list(string)
-#
-#   * testonly
-#     - Optional: True if this package should never be in a production build.
-#     - Type: bool
-#     - Default: false
-#
-build_api_module("packages") {
-  testonly = true
-  data_keys = [ "packages" ]
-  deps = [ ":everything" ]
 }
 
 # Tests in the build.
