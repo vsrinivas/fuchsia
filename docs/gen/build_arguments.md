@@ -2890,5 +2890,5 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/53f1fa0c1db0fd16445fbb3c45b752633a3a9095/BUILD.gn#9)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/43a1af390c18b298e0bf1a081cbb2f608a91cf98/BUILD.gn#9)
 
