@@ -478,7 +478,7 @@ See environment() for more information.
 }
 ```
 
-From //public/gn/BUILDCONFIG.gn:24
+From //public/gn/BUILDCONFIG.gn:30
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -803,6 +803,16 @@ build for build infrastructure.
 **Current value (from the default):** `"/"`
 
 From //public/gn/BUILDCONFIG.gn:17
+
+### zx_build_config
+"$zx_build_config" is the directory containing GN configs used by
+the Zircon build infrastructure. This allows referring to them
+with "$zx_build_config:<name>" in BUILD.zircon.gn and BUILD.gn
+files.
+
+**Current value (from the default):** `"//public/gn/config"`
+
+From //public/gn/BUILDCONFIG.gn:23
 
 ### zx_fidl_trace_level
 This mirrors the fidl_trace_level GN variable in //build/fidl/args.gni to
