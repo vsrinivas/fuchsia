@@ -11,7 +11,9 @@ use {
     },
     anyhow::Error,
     fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
-    fuchsia_zircon::Status,
+    fuchsia_async::{Task, Time, Timer},
+    fuchsia_zircon::{Duration, Status},
+    futures::prelude::*,
     std::{
         any::Any,
         marker::PhantomPinned,
@@ -68,6 +70,7 @@ impl FatFilesystemInner {
 
 pub struct FatFilesystem {
     inner: Mutex<FatFilesystemInner>,
+    dirty_task: Mutex<Option<Task<()>>>,
 }
 
 impl FatFilesystem {
@@ -80,14 +83,14 @@ impl FatFilesystem {
             filesystem: fatfs::FileSystem::new(disk, options)?,
             _pinned: PhantomPinned,
         });
-        let result = Arc::pin(FatFilesystem { inner });
+        let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
         Ok((result.clone(), result.root_dir()))
     }
 
     #[cfg(test)]
     pub fn from_filesystem(filesystem: FileSystem) -> (Pin<Arc<Self>>, Arc<FatDirectory>) {
         let inner = Mutex::new(FatFilesystemInner { filesystem, _pinned: PhantomPinned });
-        let result = Arc::pin(FatFilesystem { inner });
+        let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
         (result.clone(), result.root_dir())
     }
 
@@ -104,6 +107,21 @@ impl FatFilesystem {
     /// Try and lock the underlying filesystem. Returns a LockResult, see `Mutex::lock`.
     pub fn lock(&self) -> LockResult<MutexGuard<'_, FatFilesystemInner>> {
         self.inner.lock()
+    }
+
+    /// Mark the filesystem as dirty. This will cause the disk to automatically be flushed after
+    /// one second, and cancel any previous pending flushes.
+    pub fn mark_dirty(self: &Pin<Arc<Self>>) {
+        let clone = self.clone();
+        let task = Timer::new(Time::after(Duration::from_seconds(1))).then(|_| async move {
+            let _ = clone.lock().unwrap().filesystem.flush();
+        });
+
+        let task = Task::spawn(task);
+        let mut task_lock = self.dirty_task.lock().unwrap();
+        // replace() will return the old Task, which we drop, which causes the old flush task to be
+        // cancelled.
+        task_lock.replace(task);
     }
 
     /// Do a simple rename of the file, without unlinking dst.
@@ -148,6 +166,8 @@ impl FatFilesystem {
 
         src_dir.did_remove(src_name);
         dst_dir.did_add(dst_name);
+
+        src_dir.fs().mark_dirty();
 
         // TODO: do the watcher event for existing.
 
@@ -314,4 +334,56 @@ pub(crate) enum ExistingRef<'a, 'b> {
     None,
     File(&'a mut crate::types::File<'b>),
     Dir(&'a mut crate::types::Dir<'b>),
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::tests::{TestDiskContents, TestFatDisk},
+        fidl_fuchsia_io::{FileProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+        scopeguard::defer,
+        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
+    };
+
+    const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_automatic_flush() {
+        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
+        let structure = TestDiskContents::dir().add_child("test", "Hello".into());
+        structure.create(&disk.root_dir());
+
+        let fs = disk.into_fatfs();
+        let dir = fs.get_fatfs_root();
+        dir.open_ref(&fs.filesystem().lock().unwrap()).unwrap();
+        defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) };
+
+        let scope = ExecutionScope::new();
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+        dir.clone().open(
+            scope.clone(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            0,
+            Path::validate_and_split("test").unwrap(),
+            server_end,
+        );
+
+        assert!(fs.filesystem().dirty_task.lock().unwrap().is_none());
+        let file = FileProxy::new(proxy.into_channel().unwrap());
+        file.write("hello there".as_bytes()).await.unwrap();
+        {
+            let fs_lock = fs.filesystem().lock().unwrap();
+            // fs should be dirty until the timer expires.
+            assert!(fs_lock.filesystem.is_dirty());
+        }
+        // Wait some time for the flush to happen. Don't hold the lock while waiting, otherwise
+        // the flush will get stuck waiting on the lock.
+        Timer::new(Time::after(Duration::from_millis(1500))).await;
+        {
+            let fs_lock = fs.filesystem().lock().unwrap();
+            assert_eq!(fs_lock.filesystem.is_dirty(), false);
+        }
+    }
 }

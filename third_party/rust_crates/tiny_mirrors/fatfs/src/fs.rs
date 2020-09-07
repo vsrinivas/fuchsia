@@ -530,6 +530,14 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         Ok(())
     }
 
+    /// Returns true if the disk is currently dirty (i.e. has writes that need to be flush()ed).
+    /// Note that this differs from the return value of read_status_flags() as it returns
+    /// the current state of the filesystem in memory, not whether or not the disk was unmounted in
+    /// a dirty state.
+    pub fn is_dirty(&self) -> bool {
+        self.current_status_flags.get().dirty()
+    }
+
     fn flush_fs_info(&self) -> io::Result<()> {
         let mut fs_info = self.fs_info.borrow_mut();
         if self.fat_type == FatType::Fat32 && fs_info.dirty {

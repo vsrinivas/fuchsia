@@ -182,6 +182,10 @@ impl FatDirectory {
         })
     }
 
+    pub(crate) fn fs(&self) -> &Pin<Arc<FatFilesystem>> {
+        &self.filesystem
+    }
+
     /// Borrow the underlying fatfs `Dir` that corresponds to this directory.
     pub(crate) fn borrow_dir<'a>(&self, fs: &'a FatFilesystemInner) -> Result<&Dir<'a>, Status> {
         unsafe { self.dir.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::BAD_HANDLE)
@@ -378,6 +382,7 @@ impl FatDirectory {
         data.children.insert(InsensitiveString(name.to_owned()), node.downgrade());
         if created {
             data.watchers.send_event(&mut SingleNameEventProducer::added(name));
+            self.filesystem.mark_dirty();
         }
 
         Ok(node)
@@ -519,6 +524,7 @@ impl MutableDirectory for FatDirectory {
             None => {}
         }
 
+        self.filesystem.mark_dirty();
         self.data.write().unwrap().watchers.send_event(&mut SingleNameEventProducer::removed(name));
         Ok(())
     }
@@ -534,6 +540,7 @@ impl MutableDirectory for FatDirectory {
             dir.set_modified(unix_to_dos_time(attrs.modification_time));
         }
 
+        self.filesystem.mark_dirty();
         Ok(())
     }
 

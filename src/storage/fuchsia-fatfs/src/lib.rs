@@ -340,6 +340,7 @@ mod tests {
 
         /// Convert this TestFatDisk into a FatFs for testing against.
         pub fn into_fatfs(self) -> FatFs {
+            self.fs.flush().unwrap();
             let (filesystem, root_dir) = FatFilesystem::from_filesystem(self.fs);
             FatFs::from_filesystem(filesystem, root_dir)
         }

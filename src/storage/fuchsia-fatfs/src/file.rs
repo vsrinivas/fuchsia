@@ -144,6 +144,7 @@ impl FatFile {
                 }
             }
         }
+        self.filesystem.mark_dirty();
         Ok((total_written as u64, file_offset))
     }
 }
@@ -253,6 +254,7 @@ impl VfsFile for FatFile {
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
         seek_for_write(file, length)?;
         file.truncate().map_err(fatfs_error_to_status)?;
+        self.filesystem.mark_dirty();
         Ok(())
     }
 
@@ -305,6 +307,7 @@ impl VfsFile for FatFile {
 
         if needs_flush != 0 {
             file.flush().map_err(fatfs_error_to_status)?;
+            self.filesystem.mark_dirty();
         }
         Ok(())
     }
