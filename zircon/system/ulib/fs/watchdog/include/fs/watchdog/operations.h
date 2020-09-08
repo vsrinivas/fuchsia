@@ -101,6 +101,10 @@ class FsOperationTracker : public OperationTracker {
   FsOperationTracker& operator=(const FsOperationTracker&) = delete;
   FsOperationTracker& operator=(FsOperationTracker&&) = delete;
 
+  ~FsOperationTracker() {
+    [[maybe_unused]] auto ignored_result = Complete();
+  }
+
   // Returns the operation's unique id across all tracked operations.
   OperationTrackerId GetId() const final { return id_; }
 

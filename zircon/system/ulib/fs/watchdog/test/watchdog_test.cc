@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -24,8 +25,7 @@ namespace fs_watchdog {
 namespace {
 
 // Default sleep argument for the watchdog
-constexpr int kSleepDurationSeconds = 1;
-constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::seconds(kSleepDurationSeconds);
+constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::milliseconds(500);
 
 // Custom/overloaded operation timeout
 constexpr int kOperationTimeoutSeconds = 1;
@@ -48,13 +48,13 @@ TEST(Watchdog, ShutDownTest) {
   ASSERT_TRUE(watchdog->ShutDown().is_ok());
 }
 
-// Test that we can shutdown watchdog without the tread waiting for duration of it's sleep.
+// Test that we can shutdown watchdog without the thread waiting for duration of it's sleep.
 TEST(Watchdog, ShutDownImmediatelyTest) {
   auto options = kDefaultOptions;
   options.sleep = std::chrono::hours(1);
   auto watchdog = CreateWatchdog(kDefaultOptions);
   ASSERT_TRUE(watchdog->Start().is_ok());
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   auto t1 = std::chrono::steady_clock::now();
   ASSERT_TRUE(watchdog->ShutDown().is_ok());
   auto t2 = std::chrono::steady_clock::now();
@@ -95,7 +95,6 @@ class TestOperationTracker : public FsOperationTracker {
   void OnTimeOut(FILE* out_stream) const final { handler_called_++; }
   bool TimeoutHandlerCalled() const { return handler_called_ > 0; }
   int TimeoutHandlerCalledCount() const { return handler_called_; }
-  ~TestOperationTracker() { (void)Complete(); }
 
  private:
   // Incremented on each call to TimeoutHandler.
@@ -158,7 +157,7 @@ TEST(Watchdog, TryToAddDuplicateAfterTimeout) {
   EXPECT_TRUE(watchdog->Start().is_ok());
   TestOperation op(kTestOperationName1, kOperationTimeout);
   TestOperationTracker tracker(&op, watchdog.get());
-  sleep(kOperationTimeoutSeconds + 1);
+  std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds + 1));
   ASSERT_TRUE(tracker.TimeoutHandlerCalled());
   ASSERT_EQ(watchdog->Track(&tracker).error_value(), ZX_ERR_ALREADY_EXISTS);
 }
@@ -214,7 +213,7 @@ TEST(Watchdog, OperationTimesOut) {
     {
       TestOperation op(kTestOperationName1, kOperationTimeout);
       TestOperationTracker tracker(&op, watchdog.get());
-      sleep(kOperationTimeoutSeconds + 1);
+      std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds + 1));
       ASSERT_TRUE(tracker.TimeoutHandlerCalled());
     }
   }
@@ -236,7 +235,7 @@ TEST(Watchdog, NoTimeoutsWhenDisabled) {
     {
       TestOperationTracker tracker(&op, watchdog.get(), false);
       ASSERT_EQ(watchdog->Track(&tracker).error_value(), ZX_ERR_BAD_STATE);
-      sleep(kOperationTimeoutSeconds + 1);
+      std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds + 1));
       ASSERT_FALSE(tracker.TimeoutHandlerCalled());
     }
   }
@@ -258,7 +257,7 @@ TEST(Watchdog, NoTimeoutsWhenShutDown) {
     TestOperation op(kTestOperationName1, kOperationTimeout);
     {
       TestOperationTracker tracker(&op, watchdog.get());
-      sleep(kOperationTimeoutSeconds + 1);
+      std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds + 1));
       ASSERT_FALSE(tracker.TimeoutHandlerCalled());
     }
   }
@@ -279,7 +278,7 @@ TEST(Watchdog, OperationDoesNotTimesOut) {
     TestOperation op(kTestOperationName1, kOperationTimeout + std::chrono::seconds(10));
     {
       TestOperationTracker tracker(&op, watchdog.get());
-      sleep(kOperationTimeoutSeconds);
+      std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds));
       ASSERT_FALSE(tracker.TimeoutHandlerCalled());
     }
   }
@@ -304,7 +303,7 @@ TEST(Watchdog, MultipleOperationsTimeout) {
       TestOperationTracker tracker1(&op1, watchdog.get());
       TestOperationTracker tracker3(&op3, watchdog.get());
       TestOperationTracker tracker2(&op2, watchdog.get());
-      sleep(kOperationTimeoutSeconds + 1);
+      std::this_thread::sleep_for(std::chrono::seconds(kOperationTimeoutSeconds + 1));
       ASSERT_TRUE(tracker1.TimeoutHandlerCalled());
       ASSERT_TRUE(tracker2.TimeoutHandlerCalled());
       ASSERT_FALSE(tracker3.TimeoutHandlerCalled());
@@ -331,7 +330,7 @@ TEST(Watchdog, LoggedOnlyOnce) {
       TestOperationTracker tracker(&op, watchdog.get());
 
       // Sleep as long as it takes to scan in-flight operation twice.
-      sleep((2 * kOperationTimeoutSeconds) + 1);
+      std::this_thread::sleep_for(std::chrono::seconds((2 * kOperationTimeoutSeconds) + 1));
       ASSERT_TRUE(tracker.TimeoutHandlerCalled());
       ASSERT_EQ(tracker.TimeoutHandlerCalledCount(), 1);
     }
@@ -358,7 +357,7 @@ TEST(Watchdog, DelayedCompletionLogging) {
       TestOperationTracker tracker(&op, watchdog.get());
 
       // Sleep as long as it takes to scan in-flight operation twice.
-      sleep((2 * kOperationTimeoutSeconds) + 1);
+      std::this_thread::sleep_for(std::chrono::seconds((2 * kOperationTimeoutSeconds) + 1));
       ASSERT_TRUE(tracker.TimeoutHandlerCalled());
       ASSERT_EQ(tracker.TimeoutHandlerCalledCount(), 1);
     }
