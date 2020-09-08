@@ -767,6 +767,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "sys/platform/acpi/goldfish/goldfish-pipe",
       "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-control",
       "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-control/goldfish-display",
+
+      "goldfish-control-2",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));

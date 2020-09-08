@@ -75,6 +75,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_NELSON             0x0A
 #define PDEV_PID_VS680_EVK          0x0B
 #define PDEV_PID_LUIS               0x0C
+#define PDEV_PID_GOLDFISH           0x0D
 
 #define PDEV_DID_GAUSS_AUDIO_IN     0x01
 #define PDEV_DID_GAUSS_AUDIO_OUT    0x02
@@ -82,6 +83,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_GAUSS_LED          0x04
 #define PDEV_DID_ASTRO_GOODIXTOUCH  0x05
 #define PDEV_DID_GOOGLE_AMLOGIC_CPU 0x06
+#define PDEV_DID_GOLDFISH_CONTROL   0x07
 
 // Khadas
 #define PDEV_VID_KHADAS             0x04

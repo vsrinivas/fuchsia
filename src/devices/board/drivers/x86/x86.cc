@@ -48,7 +48,19 @@ int X86::Thread() {
     zxlogf(ERROR, "%s: SysmemInit() failed: %d", __func__, status);
     return status;
   }
-  return publish_acpi_devices(parent(), sys_root_, zxdev());
+
+  status = publish_acpi_devices(parent(), sys_root_, zxdev());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: publish_acpi_devices() failed: %d", __func__, status);
+    return status;
+  }
+
+  status = GoldfishControlInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GoldfishControlInit() failed: %d", __func__, status);
+    return status;
+  }
+  return ZX_OK;
 }
 
 zx_status_t X86::Start() {

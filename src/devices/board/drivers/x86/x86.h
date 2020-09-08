@@ -60,6 +60,8 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
 
   zx_status_t SysmemInit();
 
+  zx_status_t GoldfishControlInit();
+
   // Register this instance with devmgr and launch the deferred initialization in Thread.
   zx_status_t Bind();
   zx_status_t Start();
