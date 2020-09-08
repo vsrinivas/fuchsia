@@ -41,7 +41,7 @@ pub struct Key {
 
 /// Types of timeout that are used by SAE handshakes. Duration and scheduling of these timeouts
 /// is left to the user of this library.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Timeout {
     /// Timeout before the most recent message(s) should be resent.
     Retransmission,

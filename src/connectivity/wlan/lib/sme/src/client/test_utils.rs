@@ -27,6 +27,7 @@ use {
         mac,
     },
     wlan_rsn::rsna::UpdateSink,
+    wlan_sae::Timeout as SaeTimeout,
     zerocopy::AsBytes,
 };
 
@@ -308,6 +309,14 @@ impl Supplicant for MockSupplicant {
         &mut self,
         _update_sink: &mut UpdateSink,
         _frame: fidl_mlme::SaeFrame,
+    ) -> Result<(), anyhow::Error> {
+        unimplemented!()
+    }
+    fn on_sae_timeout(
+        &mut self,
+        _update_sink: &mut UpdateSink,
+        _timer: SaeTimeout,
+        _event_id: u64,
     ) -> Result<(), anyhow::Error> {
         unimplemented!()
     }

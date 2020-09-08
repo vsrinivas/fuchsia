@@ -10,7 +10,7 @@ use {
         client::{
             bss::ClientConfig,
             capabilities::derive_join_channel_and_capabilities,
-            event::Event,
+            event::{self, Event},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure, Status,
@@ -309,6 +309,34 @@ impl Authenticating {
         supplicant.on_sae_frame_rx(&mut updates, frame)?;
         process_sae_updates(updates, peer_sta_address, context);
         Ok(())
+    }
+
+    fn handle_timeout(
+        mut self,
+        _event_id: EventId,
+        event: Event,
+        state_change_ctx: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, Idle> {
+        match event {
+            Event::SaeTimeout(timer) => {
+                let supplicant = match &mut self.cmd.protection {
+                    Protection::Rsna(rsna) => &mut rsna.supplicant,
+                    _ => return Ok(self),
+                };
+
+                let mut updates = UpdateSink::default();
+                if let Err(e) = supplicant.on_sae_timeout(&mut updates, timer.timer, timer.id) {
+                    // An error in handling a timeout means that we may have no way to abort a
+                    // failed handshake. Drop to idle.
+                    state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
+                    return Err(Idle { cfg: self.cfg });
+                }
+                process_sae_updates(updates, self.cmd.bss.bssid, context);
+            }
+            _ => (),
+        }
+        Ok(self)
     }
 }
 
@@ -715,6 +743,14 @@ impl ClientState {
         let mut state_change_ctx: Option<StateChangeContext> = None;
 
         let new_state = match self {
+            Self::Authenticating(state) => {
+                let (transition, authenticating) = state.release_data();
+                match authenticating.handle_timeout(event_id, event, &mut state_change_ctx, context)
+                {
+                    Ok(authenticating) => transition.to(authenticating).into(),
+                    Err(idle) => transition.to(idle).into(),
+                }
+            }
             Self::Associated(state) => {
                 let (transition, associated) = state.release_data();
                 match associated.handle_timeout(event_id, event, &mut state_change_ctx, context) {
@@ -909,6 +945,9 @@ fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: 
                     },
                 }),
             ),
+            SecAssocUpdate::ScheduleSaeTimeout { timer, id } => {
+                context.timer.schedule(event::SaeTimeout { timer, id });
+            }
             _ => (),
         }
     }

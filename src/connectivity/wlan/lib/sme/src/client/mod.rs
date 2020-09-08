@@ -450,7 +450,8 @@ impl super::Station for ClientSme {
         self.state = self.state.take().map(|state| match timed_event.event {
             event @ Event::EstablishingRsnaTimeout(..)
             | event @ Event::KeyFrameExchangeTimeout(..)
-            | event @ Event::ConnectionPing(..) => {
+            | event @ Event::ConnectionPing(..)
+            | event @ Event::SaeTimeout(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
             Event::InspectPulseCheck(..) => {

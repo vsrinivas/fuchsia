@@ -31,6 +31,7 @@ use {
     fidl_fuchsia_wlan_mlme::SaeFrame,
     std::sync::{Arc, Mutex},
     wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe},
+    wlan_sae::Timeout as SaeTimeout,
     zerocopy::ByteSlice,
 };
 
@@ -118,7 +119,7 @@ impl Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
     ) -> Result<(), anyhow::Error> {
-        self.esssa.on_sae_handshake_ind(update_sink)
+        self.esssa.on_sae_handshake_ind(update_sink).map_err(|e| e.into())
     }
 
     pub fn on_sae_frame_rx(
@@ -126,7 +127,16 @@ impl Supplicant {
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
     ) -> Result<(), anyhow::Error> {
-        self.esssa.on_sae_frame_rx(update_sink, frame)
+        self.esssa.on_sae_frame_rx(update_sink, frame).map_err(|e| e.into())
+    }
+
+    pub fn on_sae_timeout(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        timer: SaeTimeout,
+        event_id: u64,
+    ) -> Result<(), anyhow::Error> {
+        self.esssa.on_sae_timeout(update_sink, timer, event_id).map_err(|e| e.into())
     }
 }
 

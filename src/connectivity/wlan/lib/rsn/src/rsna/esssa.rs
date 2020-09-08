@@ -17,6 +17,7 @@ use eapol;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::{error, info};
 use std::collections::HashSet;
+use wlan_sae::Timeout as SaeTimeout;
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
@@ -193,7 +194,7 @@ impl EssSa {
                     self.on_key_confirmed(update_sink, Key::Pmk(psk))
                 }
                 // SAE defers deriving the PMK until after the handshake.
-                auth::Method::Sae { pmk, .. } => match pmk {
+                auth::Method::Sae(sae_data) => match &sae_data.pmk {
                     Some(key) => {
                         let pmk = key.pmk.to_vec();
                         self.on_key_confirmed(update_sink, Key::Pmk(pmk))
@@ -310,7 +311,7 @@ impl EssSa {
     pub fn on_sae_handshake_ind(
         &mut self,
         update_sink: &mut UpdateSink,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), auth::AuthError> {
         let auth_method = match &mut *self.pmksa {
             Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
         };
@@ -321,11 +322,23 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), auth::AuthError> {
         let auth_method = match &mut *self.pmksa {
             Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
         };
         auth_method.on_sae_frame_rx(update_sink, frame)
+    }
+
+    pub fn on_sae_timeout(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        timer: SaeTimeout,
+        event_id: u64,
+    ) -> Result<(), auth::AuthError> {
+        let auth_method = match &mut *self.pmksa {
+            Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
+        };
+        auth_method.on_sae_timeout(update_sink, timer, event_id)
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(
@@ -417,7 +430,9 @@ impl EssSa {
         // PMKSA must be established before any other security association can be established.
         match self.pmksa.as_mut() {
             Pmksa::Initialized { method } => {
-                return method.on_eapol_key_frame(update_sink, verified_frame);
+                return method
+                    .on_eapol_key_frame(update_sink, verified_frame)
+                    .map_err(|e| e.into());
             }
             Pmksa::Established { .. } => {}
         };
