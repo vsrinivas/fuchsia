@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 rustc_library("fs_management") {
   with_unit_tests = true
@@ -14,6 +15,7 @@ rustc_library("fs_management") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-runtime",
+    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -23,30 +25,25 @@ rustc_library("fs_management") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("fs_management_tests") {
+fuchsia_component("fs-management-rust-tests-component") {
+  component_name = "fs-management-rust-tests"
+  testonly = true
+  manifest = "meta/fs-management-tests.cml"
   deps = [
     ":fs_management_test",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "minfs"
-    },
-  ]
-  tests = [
-    {
-      name = "fs_management_lib_test"
-      environments = basic_envs
-    },
-  ]
+}
+
+fuchsia_test_package("fs-management-rust-tests") {
+  test_components = [ ":fs-management-rust-tests-component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":fs_management_tests" ]
+  deps = [
+    ":fs-management-rust-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
 }

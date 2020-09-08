@@ -22,25 +22,23 @@
 //! and the projects BUILD.gn file must contain
 //!
 //! ```
-//! generate_manifest("fs.manifest") {
-//!   visibility = [ ":*" ]
-//!   args = [ "--binary=bin/blobfs", "--binary=bin/minfs" ]
-//! }
-//! manifest_outputs = get_target_outputs(":fs.manifest")
-//! manifest_file = manifest_outputs[0]
-//! ...
 //! package("foo") {
-//!     extra = [ manifest_file ]
 //!     deps = [
-//!         ":fs.manifest",
-//!         ....
+//!         "//src/storage/bin/blobfs",
+//!         "//src/storage/bin/minfs",
+//!         ...
+//!     ]
+//!     binaries = [
+//!         { name = "blobfs" },
+//!         { name = "minfs" },
+//!         ...
 //!     ]
 //!     ...
 //! }
 //! ```
 //!
-//! This will put the filesystem utility binaries into your sandbox in `/pkg/bin` and allow
-//! your component to launch it. This boilerplate will hopefully be reduced soon (ZX-4402)
+//! for components v1. For components v2, add `/svc/fuchsia.process.Launcher` to `use` and add the
+//! binaries as dependencies to your component.
 //!
 //! This library currently doesn't work outside of a component (the filesystem utility binary paths
 //! are hard-coded strings).
@@ -515,8 +513,10 @@ mod tests {
     }
 
     fn ramdisk_blobfs(block_size: u64) -> (RamdiskClient, Filesystem<Blobfs>) {
-        let ramdisk =
-            RamdiskClient::builder(block_size, 1 << 16).isolated_dev_root().build().unwrap();
+        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
+        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
+            .unwrap();
+        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
         let device = ramdisk.open().unwrap();
         let blobfs = Blobfs::from_channel(device).unwrap();
         (ramdisk, blobfs)
@@ -589,8 +589,10 @@ mod tests {
     }
 
     fn ramdisk_minfs(block_size: u64) -> (RamdiskClient, Filesystem<Minfs>) {
-        let ramdisk =
-            RamdiskClient::builder(block_size, 1 << 16).isolated_dev_root().build().unwrap();
+        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
+        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
+            .unwrap();
+        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
         let device = ramdisk.open().unwrap();
         let minfs = Minfs::from_channel(device).unwrap();
         (ramdisk, minfs)
