@@ -29,76 +29,74 @@ import("//build/testing/test_spec.gni")
 #   deps, environments, data_deps, public_deps, visibility
 #     Forwarded from invoker.
 #
-if (is_host) {
-  template("host_test") {
-    assert(defined(invoker.binary_path), "Requires a binary_path")
+template("host_test") {
+  assert(defined(invoker.binary_path), "Requires a binary_path")
 
-    _test_path = invoker.binary_path
+  _test_path = invoker.binary_path
 
-    if (defined(invoker.args)) {
-      _test_data_target = "${target_name}_script_data"
-      _script_file = "${target_out_dir}/${target_name}.sh"
-      _test_path = _script_file
-      _test_script_target = "${target_name}_script"
+  if (defined(invoker.args)) {
+    _test_data_target = "${target_name}_script_data"
+    _script_file = "${target_out_dir}/${target_name}.sh"
+    _test_path = _script_file
+    _test_script_target = "${target_name}_script"
 
-      host_test_data(_test_data_target) {
-        sources = [
-          _script_file,
-          invoker.binary_path,
-        ]
-        visibility = [ ":*" ]
-      }
-
-      action(_test_script_target) {
-        testonly = true
-        script = "//build/testing/create_test.sh"
-        args = [
-          rebase_path(_script_file, root_build_dir),
-          rebase_path(invoker.binary_path, root_build_dir),
-        ]
-        args += invoker.args
-        outputs = [ "${_script_file}" ]
-        visibility = [ ":*" ]
-
-        # The infra currently uses ninja to build host tests, specifying the
-        # test_spec.path field as the target. Thus we have to ensure that
-        # this target has all the dependencies neede to actually build the test.
-        forward_variables_from(invoker,
-                               [
-                                 "data_deps",
-                                 "deps",
-                                 "public_deps",
-                               ])
-        deps += [ ":${_test_data_target}" ]
-      }
+    host_test_data(_test_data_target) {
+      sources = [
+        _script_file,
+        invoker.binary_path,
+      ]
+      visibility = [ ":*" ]
     }
 
-    test_spec(target_name) {
-      if (defined(invoker.target)) {
-        target = "${invoker.target}"
-      } else {
-        target = "${target_name}"
-      }
-      path = _test_path
+    action(_test_script_target) {
+      testonly = true
+      script = "//build/testing/create_test.sh"
+      args = [
+        rebase_path(_script_file, root_build_dir),
+        rebase_path(invoker.binary_path, root_build_dir),
+      ]
+      args += invoker.args
+      outputs = [ "${_script_file}" ]
+      visibility = [ ":*" ]
 
+      # The infra currently uses ninja to build host tests, specifying the
+      # test_spec.path field as the target. Thus we have to ensure that
+      # this target has all the dependencies neede to actually build the test.
       forward_variables_from(invoker,
                              [
-                               "environments",
-                               "visibility",
+                               "data_deps",
+                               "deps",
+                               "public_deps",
                              ])
+      deps += [ ":${_test_data_target}" ]
+    }
+  }
 
-      # If we have args, we put most deps on the script target,
-      # and here just depend on that.
-      if (defined(invoker.args)) {
-        deps = [ ":${_test_script_target}" ]
-      } else {
-        forward_variables_from(invoker,
-                               [
-                                 "data_deps",
-                                 "deps",
-                                 "public_deps",
-                               ])
-      }
+  test_spec(target_name) {
+    if (defined(invoker.target)) {
+      target = "${invoker.target}"
+    } else {
+      target = "${target_name}"
+    }
+    path = _test_path
+
+    forward_variables_from(invoker,
+                           [
+                             "environments",
+                             "visibility",
+                           ])
+
+    # If we have args, we put most deps on the script target,
+    # and here just depend on that.
+    if (defined(invoker.args)) {
+      deps = [ ":${_test_script_target}" ]
+    } else {
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "deps",
+                               "public_deps",
+                             ])
     }
   }
 }

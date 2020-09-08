@@ -23,55 +23,53 @@
 #   * visibility
 #     - Optional: Usual GN meanings.
 #
-if (is_host) {
-  template("host_test_data") {
-    assert(defined(invoker.sources), "sources are required")
+template("host_test_data") {
+  assert(defined(invoker.sources), "sources are required")
 
-    main_target_name = target_name
-    if (defined(invoker.outputs)) {
-      metadata_target_name = "${target_name}_metadata"
+  main_target_name = target_name
+  if (defined(invoker.outputs)) {
+    metadata_target_name = "${target_name}_metadata"
 
-      # The main target that copies test data to the build directory.
-      # It depends on the generated group `group_target_name`, which
-      # carries the `test_runtime_deps` metadata.
-      # The copy rule is the main target so that clients can still
-      # call `get_target_outputs` on it.
-      copy(main_target_name) {
-        testonly = true
-        forward_variables_from(invoker, "*")
-        if (!defined(deps)) {
-          deps = []
-        }
-        deps += [ ":$metadata_target_name" ]
-      }
-      test_data = get_target_outputs(":$main_target_name")
-    } else {
-      metadata_target_name = main_target_name
-
-      # In this case, all provided sources should lie within the build
-      # directory.
-      foreach(source, invoker.sources) {
-        in_build_dir =
-            get_path_info(rebase_path(source, root_build_dir), "dir") != ".."
-        assert(
-            in_build_dir,
-            "$source must be within the build directory to be declared as test data")
-      }
-      test_data = invoker.sources
-    }
-
-    # This group exists only to carry the `test_runtime_deps` metadata, which
-    # is aggregated by test_spec().
-    group(metadata_target_name) {
+    # The main target that copies test data to the build directory.
+    # It depends on the generated group `group_target_name`, which
+    # carries the `test_runtime_deps` metadata.
+    # The copy rule is the main target so that clients can still
+    # call `get_target_outputs` on it.
+    copy(main_target_name) {
       testonly = true
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "visibility",
-                             ])
-      metadata = {
-        test_runtime_deps = test_data
+      forward_variables_from(invoker, "*")
+      if (!defined(deps)) {
+        deps = []
       }
+      deps += [ ":$metadata_target_name" ]
+    }
+    test_data = get_target_outputs(":$main_target_name")
+  } else {
+    metadata_target_name = main_target_name
+
+    # In this case, all provided sources should lie within the build
+    # directory.
+    foreach(source, invoker.sources) {
+      in_build_dir =
+          get_path_info(rebase_path(source, root_build_dir), "dir") != ".."
+      assert(
+          in_build_dir,
+          "$source must be within the build directory to be declared as test data")
+    }
+    test_data = invoker.sources
+  }
+
+  # This group exists only to carry the `test_runtime_deps` metadata, which
+  # is aggregated by test_spec().
+  group(metadata_target_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                           ])
+    metadata = {
+      test_runtime_deps = test_data
     }
   }
 }
