@@ -463,12 +463,12 @@ async fn fetch_blob(
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), FetchError> {
-    if mirrors.is_empty() {
-        return Err(FetchError::NoMirrors);
-    }
-
     // TODO try the other mirrors depending on the errors encountered trying this one.
-    let blob_mirror_url = mirrors[0].blob_mirror_url().to_owned();
+    let blob_mirror_url = if let Some(mirror) = mirrors.get(0) {
+        mirror.blob_mirror_url().to_owned()
+    } else {
+        return Err(FetchError::NoMirrors);
+    };
     let mirror_stats = stats.lock().for_mirror(blob_mirror_url.to_string());
     let blob_url = make_blob_url(blob_mirror_url, &merkle).map_err(|e| FetchError::BlobUrl(e))?;
 
