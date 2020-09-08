@@ -436,6 +436,7 @@ impl<'a> Decoder<'a> {
 
     /// Runs the provided closure inside an decoder modified
     /// to read out-of-line data.
+    #[inline(always)]
     pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
     where
         F: FnOnce(&mut Decoder<'_>, usize) -> Result<R>,
