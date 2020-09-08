@@ -165,8 +165,7 @@ impl ProfileRegistrar {
         let local = protocol.iter().map(|p| p.into()).collect();
         match psm_from_protocol(&local).ok_or(format_err!("No PSM provided"))? {
             bredr::PSM_RFCOMM => {
-                // TODO(49073): Relay channel to RfcommServer.
-                return Err(format_err!("Connection requests over PSM_RFCOMM not implemented"));
+                self.rfcomm_server.new_l2cap_connection(peer_id, channel.try_into()?)
             }
             psm => {
                 match self.registered_services.iter().find(|(_, client)| client.contains_psm(psm)) {

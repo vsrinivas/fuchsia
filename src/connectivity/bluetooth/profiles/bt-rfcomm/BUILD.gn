@@ -26,6 +26,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:slab",
   ]
 
@@ -37,6 +39,7 @@ rustc_binary("bin") {
     "src/profile_registrar.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",
+    "src/rfcomm/session.rs",
     "src/rfcomm/types.rs",
     "src/types.rs",
   ]

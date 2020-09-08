@@ -5,6 +5,9 @@
 /// RFCOMM-specific types.
 mod types;
 
+/// The RFCOMM Session that multiplexes connections over a single L2CAP channel.
+mod session;
+
 /// The RFCOMM server that processes connections.
 mod server;
 
