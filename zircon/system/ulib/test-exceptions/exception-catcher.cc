@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/test-exceptions/exception-catcher.h>
-
-#include <utility>
-
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
+#include <stdio.h>
+#include <zircon/syscalls/debug.h>
+
+#include <utility>
 
 namespace test_exceptions {
 
@@ -23,16 +24,6 @@ zx_status_t GetKoid(const zx::object<T>& object, zx_koid_t* koid) {
   }
   *koid = info.koid;
   return ZX_OK;
-}
-
-// Extracts the thread from |exception| and kills it.
-zx_status_t KillExceptionThread(const zx::exception& exception) {
-  zx::thread thread;
-  zx_status_t status = exception.get_thread(&thread);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return thread.kill();
 }
 
 // Returns true if |info| matches the given koids, with ZX_KOID_INVALID
@@ -70,37 +61,37 @@ zx_status_t ExceptionCatcher::Stop() {
 }
 
 __EXPORT
-zx_status_t ExceptionCatcher::ExpectException() {
+zx::status<zx::exception> ExceptionCatcher::ExpectException() {
   return ExpectException(ZX_KOID_INVALID, ZX_KOID_INVALID);
 }
 
 __EXPORT
-zx_status_t ExceptionCatcher::ExpectException(const zx::thread& thread) {
+zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::thread& thread) {
   zx_koid_t tid;
   zx_status_t status = GetKoid(thread, &tid);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   return ExpectException(ZX_KOID_INVALID, tid);
 }
 
 __EXPORT
-zx_status_t ExceptionCatcher::ExpectException(const zx::process& process) {
+zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::process& process) {
   zx_koid_t pid;
   zx_status_t status = GetKoid(process, &pid);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   return ExpectException(pid, ZX_KOID_INVALID);
 }
 
-zx_status_t ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
+zx::status<zx::exception> ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
   // First check if we've already seen this exception on a previous call.
   for (auto iter = active_exceptions_.begin(); iter != active_exceptions_.end(); ++iter) {
     if (ExceptionMatches(iter->info, pid, tid)) {
-      zx_status_t status = KillExceptionThread(iter->exception);
+      auto exception = zx::ok(std::move(iter->exception));
       active_exceptions_.erase(iter);
-      return status;
+      return std::move(exception);
     }
   }
 
@@ -109,10 +100,10 @@ zx_status_t ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
     zx_status_t status = exception_channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                                      zx::time::infinite(), &signals);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
     if (!(signals & ZX_CHANNEL_READABLE)) {
-      return ZX_ERR_PEER_CLOSED;
+      return zx::error(ZX_ERR_PEER_CLOSED);
     }
 
     zx_exception_info_t info;
@@ -120,11 +111,11 @@ zx_status_t ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
     status = exception_channel_.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
                                      nullptr, nullptr);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
 
     if (ExceptionMatches(info, pid, tid)) {
-      return KillExceptionThread(exception);
+      return zx::ok(std::move(exception));
     }
     active_exceptions_.push_back(ActiveException{info, std::move(exception)});
   }

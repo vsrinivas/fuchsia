@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/test-exceptions/exception-handling.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
@@ -296,28 +297,20 @@ TEST(Threads, ThreadStartOnInitialThread) {
 
 // Test that we don't get an assertion failure (and kernel panic) if we
 // pass a zero instruction pointer when starting a thread (in this case via
-// zx_process_start()).
+// zx_thread_create()).
 TEST(Threads, ThreadStartWithZeroInstructionPointer) {
-  static const char kProcessName[] = "test-proc-thread2";
-  zx_handle_t process;
-  zx_handle_t vmar;
   zx_handle_t thread;
-  ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
-                              &vmar),
+  ASSERT_EQ(zx_thread_create(zx_process_self(), kThreadName, sizeof(kThreadName) - 1, 0, &thread),
             ZX_OK);
-  ASSERT_EQ(zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0, &thread), ZX_OK);
 
-  test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(process));
-  ASSERT_EQ(zx_process_start(process, thread, 0, 0, thread, 0), ZX_OK);
-  EXPECT_EQ(catcher.ExpectException(), ZX_OK);
+  test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(zx_process_self()));
+  ASSERT_EQ(zx_thread_start(thread, 0, 0, 0, 0), ZX_OK);
 
-  zx_signals_t signals;
-  EXPECT_EQ(zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
-  signals &= ZX_TASK_TERMINATED;
-  EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+  auto result = catcher.ExpectException();
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_OK(test_exceptions::ExitExceptionZxThread(std::move(result.value())));
 
-  ASSERT_EQ(zx_handle_close(process), ZX_OK);
-  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+  ASSERT_EQ(zx_handle_close(thread), ZX_OK);
 }
 
 TEST(Threads, NonstartedThread) {

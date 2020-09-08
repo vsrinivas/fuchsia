@@ -26,6 +26,5 @@ source_set("process") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
-    "//zircon/system/ulib/test-exceptions",
   ]
 }

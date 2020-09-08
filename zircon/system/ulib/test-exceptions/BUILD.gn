@@ -16,9 +16,16 @@ import("//build/unification/zx_library.gni")
 
 zx_library("test-exceptions") {
   sdk = "shared"
-  sdk_headers = [ "lib/test-exceptions/exception-catcher.h" ]
+  sdk_headers = [
+    "lib/test-exceptions/exception-catcher.h",
+    "lib/test-exceptions/exception-handling.h",
+  ]
   testonly = true
   shared = true
-  sources = [ "exception-catcher.cc" ]
+  sources = [
+    "exception-catcher.cc",
+    "exception-handling.cc",
+  ]
+  public_deps = [ "//zircon/public/lib/zxc" ]
   deps = [ "//zircon/public/lib/zx" ]
 }

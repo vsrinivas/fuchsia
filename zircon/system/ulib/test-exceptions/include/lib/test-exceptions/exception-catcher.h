@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_TEST_EXCEPTIONS_INCLUDE_LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
-#define ZIRCON_SYSTEM_ULIB_TEST_EXCEPTIONS_INCLUDE_LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
+#ifndef LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
+#define LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
 
+#include <lib/zx/channel.h>
+#include <lib/zx/exception.h>
+#include <lib/zx/status.h>
+#include <lib/zx/task.h>
+#include <lib/zx/thread.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-#include <list>
 
-#include <lib/zx/channel.h>
-#include <lib/zx/exception.h>
-#include <lib/zx/task.h>
-#include <lib/zx/thread.h>
+#include <list>
 
 namespace test_exceptions {
 
@@ -61,20 +62,21 @@ class ExceptionCatcher {
   // Any unhandled exceptions will be closed with TRY_NEXT.
   zx_status_t Stop();
 
-  // Blocks until an exception is received and kills the exception thread.
-  zx_status_t ExpectException();
+  // Blocks until an exception is received. It then returns the exception. This will
+  // return an error if the task exits without throwing an exception.
+  zx::status<zx::exception> ExpectException();
 
   // Same as ExpectException() but only matches exceptions on |thread|.
   //
   // Any non-|thread| exceptions received will be held until they are
   // handled or the catcher is stopped.
-  zx_status_t ExpectException(const zx::thread& thread);
+  zx::status<zx::exception> ExpectException(const zx::thread& thread);
 
   // Same as ExpectException() but only matches exceptions on |process|.
   //
   // Any non-|process| exceptions received will be held until they are
   // handled or the catcher is stopped.
-  zx_status_t ExpectException(const zx::process& process);
+  zx::status<zx::exception> ExpectException(const zx::process& process);
 
  private:
   struct ActiveException {
@@ -82,7 +84,7 @@ class ExceptionCatcher {
     zx::exception exception;
   };
 
-  zx_status_t ExpectException(zx_koid_t pid, zx_koid_t tid);
+  zx::status<zx::exception> ExpectException(zx_koid_t pid, zx_koid_t tid);
 
   zx::channel exception_channel_;
   std::list<ActiveException> active_exceptions_;
@@ -105,4 +107,4 @@ zx_status_t ExceptionCatcher::Start(const zx::task<T>& task) {
 
 }  // namespace test_exceptions
 
-#endif  // ZIRCON_SYSTEM_ULIB_TEST_EXCEPTIONS_INCLUDE_LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_
+#endif  // LIB_TEST_EXCEPTIONS_EXCEPTION_CATCHER_H_

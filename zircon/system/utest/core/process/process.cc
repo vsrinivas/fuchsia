@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/fit/function.h>
-#include <lib/test-exceptions/exception-catcher.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <threads.h>

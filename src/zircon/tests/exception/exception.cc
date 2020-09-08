@@ -469,7 +469,8 @@ TEST(ExceptionTest, Trigger) {
       exception.reset();
 
       if (exceptions[i].crashes) {
-        ASSERT_OK(catcher.ExpectException(child));
+        zx::status<zx::exception> result = catcher.ExpectException(child);
+        ASSERT_TRUE(result.is_ok());
         ASSERT_OK(child.kill());
       }
 
@@ -859,8 +860,9 @@ void receive_test(uint32_t create_flags, uint32_t expected_type, bool has_proces
 
   test_exceptions::ExceptionCatcher catcher(*zx::job::default_job());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ThreadReceive) {
@@ -902,8 +904,9 @@ TEST(ExceptionTest, ExceptionResume) {
   // Close the new exception without marking it handled so it bubbles up.
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ExceptionStateProperty) {
@@ -925,8 +928,9 @@ TEST(ExceptionTest, ExceptionStateProperty) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ExceptionStatePropertyBadArgs) {
@@ -958,8 +962,9 @@ TEST(ExceptionTest, ExceptionStatePropertyBadArgs) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ExceptionStrategy) {
@@ -985,8 +990,9 @@ TEST(ExceptionTest, ExceptionStrategy) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ExceptionStrategyBadArgs) {
@@ -1005,8 +1011,9 @@ TEST(ExceptionTest, ExceptionStrategyBadArgs) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, CloseChannelWithException) {
@@ -1021,8 +1028,9 @@ TEST(ExceptionTest, CloseChannelWithException) {
   // control to the next handler.
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception_channel.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, CloseChannelWithoutException) {
@@ -1044,8 +1052,9 @@ TEST(ExceptionTest, CloseChannelWithoutException) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 // Make sure a closed exception channel has no effect on other handlers.
@@ -1172,8 +1181,9 @@ TEST(ExceptionTest, ExceptionChannelOrder) {
     ReadException(channel, ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ExceptionChannelOrderWithSecondChanceDebugging) {
@@ -1204,8 +1214,9 @@ TEST(ExceptionTest, ExceptionChannelOrderWithSecondChanceDebugging) {
     ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, DebugChannelClosedBeforeSecondChance) {
@@ -1241,8 +1252,9 @@ TEST(ExceptionTest, DebugChannelClosedBeforeSecondChance) {
     ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
-  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_OK(loop.process().kill());
 }
 
 TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
