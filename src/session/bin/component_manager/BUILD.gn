@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
@@ -32,16 +33,22 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
+component_config("component_manager_config") {
+  sources = [
+    rebase_path("config.json"),
+    rebase_path("//src/security/policy/component_manager_policy.json"),
+  ]
+}
+
 package("component_manager_sfw") {
   deps = [
     ":bin",
-    "//src/sys/component_manager:component_manager_config",
+    ":component_manager_config",
   ]
 
   resources = [
     {
-      path =
-          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      path = "$target_gen_dir/component_manager_config"
       dest = "component_manager_config"
     },
   ]

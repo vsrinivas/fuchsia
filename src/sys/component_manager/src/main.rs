@@ -8,10 +8,7 @@
 use {
     anyhow::{Context as _, Error},
     component_manager_lib::{
-        builtin_environment::{
-            create_and_start_utc_clock, BuiltinEnvironment, BuiltinEnvironmentBuilder,
-        },
-        elf_runner::ElfRunner,
+        builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         klog, startup,
     },
     fuchsia_async as fasync,
@@ -19,7 +16,7 @@ use {
     fuchsia_trace_provider as trace_provider,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
-    std::{panic, process, sync::Arc, thread, time::Duration},
+    std::{panic, process, thread, time::Duration},
 };
 
 const NUM_THREADS: usize = 2;
@@ -87,26 +84,15 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error> {
-    // Create a UTC clock if required.
-    // Not every instance of component_manager running on the system maintains a
-    // UTC clock. Only the root component_manager should have the --maintain-utc-clock
-    // flag set.
-    let utc_clock = if args.maintain_utc_clock {
-        Some(Arc::new(create_and_start_utc_clock().await.context("failed to create UTC clock")?))
-    } else {
-        None
-    };
-
-    // Create an ELF runner for the root component.
-    let runner = Arc::new(ElfRunner::new(&args, utc_clock.clone()));
-
-    let mut builtin_environment_builder = BuiltinEnvironmentBuilder::new()
+    let builtin_environment_builder = BuiltinEnvironmentBuilder::new()
         .set_args(args)
-        .add_runner("elf".into(), runner)
+        .populate_config_from_args()
+        .await?
+        .create_and_start_utc_clock()
+        .await?
+        .add_elf_runner()?
         .add_available_resolvers_from_namespace()?;
-    if let Some(utc_clock) = utc_clock {
-        builtin_environment_builder = builtin_environment_builder.set_utc_clock(utc_clock);
-    }
+
     let builtin_environment = builtin_environment_builder.build().await?;
     builtin_environment.bind_service_fs_to_out().await?;
 

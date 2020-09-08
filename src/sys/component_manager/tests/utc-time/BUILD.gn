@@ -6,6 +6,7 @@
 # is located at `//tools/create/templates/component-v1/BUILD.gn.tmpl-rust`.
 # If you find something broken, we are eager to review fixes.
 
+import("//build/component/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
@@ -79,8 +80,31 @@ fuchsia_component("consumer-component") {
   deps = [ ":consumer_bin" ]
 }
 
+component_config("cm_config") {
+  sources = [ "cm_config.json" ]
+}
+
+resource("cm_config_resource") {
+  sources = [ "$target_gen_dir/cm_config" ]
+  outputs = [ "data/cm_config" ]
+  deps = [ ":cm_config" ]
+}
+
+fuchsia_component("component-manager") {
+  deps = [
+    ":cm_config_resource",
+    "//src/sys/component_manager:bin",
+  ]
+  component_name = "component_manager"
+  manifest =
+      rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
+}
+
 # Run with `fx test utc-time-tests`.
 fuchsia_test_package("utc-time-tests") {
   test_components = [ ":integration-test-component" ]
-  deps = [ ":consumer-component" ]
+  deps = [
+    ":component-manager",
+    ":consumer-component",
+  ]
 }

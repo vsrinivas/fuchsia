@@ -6,7 +6,6 @@ use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        config::RuntimeConfig,
         klog,
         model::{
             binding::Binder,
@@ -238,7 +237,7 @@ impl RoutingTest {
         };
         let mut env_builder = BuiltinEnvironmentBuilder::new()
             .set_args(args)
-            .set_runtime_config(RuntimeConfig::default())
+            .use_default_config()
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
         for (name, runner) in builder.builtin_runners {
