@@ -7,6 +7,7 @@
 #include <lib/zxio/null.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 
@@ -259,6 +260,14 @@ void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, i
           break;
       }
       break;
+    case IPPROTO_TCP:
+      switch (optname) {
+        case TCP_CONGESTION:
+          do_optlen_check = false;
+          break;
+        default:
+          break;
+      }
     default:
       break;
   }
