@@ -15,3 +15,4 @@
 EXTERN(CODE_clock_get_monotonic_via_kernel_ticks)
 EXTERN(CODE_deadline_after_via_kernel_mono)
 EXTERN(CODE_deadline_after_via_kernel_ticks)
+EXTERN(CODE_ticks_get_arm_a73)

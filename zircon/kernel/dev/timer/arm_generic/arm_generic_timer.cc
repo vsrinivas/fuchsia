@@ -17,6 +17,7 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
+#include <arch/quirks.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
 #include <ktl/atomic.h>
@@ -63,6 +64,9 @@ KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
 KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 namespace {
+
+// static translation unit local storage for the quirks flag.
+ktl::atomic<bool> s_arch_quirks_needs_arm_erratum_858921_mitigation{false};
 
 enum timer_irq_assignment {
   IRQ_PHYS,
@@ -251,9 +255,7 @@ static interrupt_eoi platform_tick(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-zx_ticks_t platform_current_ticks() {
-  return read_ct();
-}
+zx_ticks_t platform_current_ticks() { return read_ct(); }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
@@ -399,6 +401,8 @@ void late_update_reg_procs(uint) {
       panic("no irqs set in late_update_reg_procs\n");
     }
 
+    s_arch_quirks_needs_arm_erratum_858921_mitigation.store(true);
+
     ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   }
 }
@@ -408,6 +412,10 @@ LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_ti
 
 LK_INIT_HOOK_FLAGS(late_update_reg_procs, &late_update_reg_procs, LK_INIT_LEVEL_PLATFORM_EARLY + 1,
                    LK_INIT_FLAG_ALL_CPUS)
+
+bool arch_quirks_needs_arm_erratum_858921_mitigation() {
+  return s_arch_quirks_needs_arm_erratum_858921_mitigation.load();
+}
 
 /********************************************************************************
  *

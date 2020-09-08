@@ -50,6 +50,10 @@ __LOCAL decltype(zx_clock_get_monotonic) CODE_clock_get_monotonic_via_kernel_tic
 __LOCAL decltype(zx_deadline_after) CODE_deadline_after_via_kernel_mono;
 __LOCAL decltype(zx_deadline_after) CODE_deadline_after_via_kernel_ticks;
 
+#if __aarch64__
+__LOCAL decltype(zx_ticks_get) CODE_ticks_get_arm_a73;
+#endif
+
 }  // extern "C"
 
 // Code should define '_zx_foo' and then do 'VDSO_INTERFACE_FUNCTION(zx_foo);'

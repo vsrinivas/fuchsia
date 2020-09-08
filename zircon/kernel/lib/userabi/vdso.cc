@@ -12,6 +12,7 @@
 #include <platform.h>
 #include <zircon/types.h>
 
+#include <arch/quirks.h>
 #include <fbl/alloc_checker.h>
 #include <ktl/array.h>
 #include <object/handle.h>
@@ -279,6 +280,18 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   if (need_syscall_for_ticks) {
     REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, SYSCALL_zx_ticks_get_via_kernel);
   }
+#if ARCH_ARM64
+  else if (arch_quirks_needs_arm_erratum_858921_mitigation()) {
+    // TODO(fxb/59609) : Make sure this happens after all of the processors in
+    // the system have been started.  We don't know whether the quirk is needed
+    // or not until all processors have had a chance to start and examine the
+    // registers which describe the architecture and version of the core.
+    //
+    // see arch/quirks.h for details about the quirk itself.
+    dprintf(INFO, "Installing A73 quirks for zx_ticks_get in VDSO\n");
+    REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, ticks_get_arm_a73);
+  }
+#endif
 
   if (need_syscall_for_mono) {
     // Force a syscall for zx_clock_get_monotonic if instructed to do so by the
