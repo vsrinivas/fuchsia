@@ -20,18 +20,18 @@
 #include <vm/page_request.h>
 #include <vm/vm.h>
 
-// A page source has two parts - the PageSource and the PageSourceCallback. The
+// A page source has two parts - the PageSource and the PagerSource. The
 // PageSource is responsible for generic functionality, mostly around managing
-// the lifecycle of page requests. The PageSourceCallback is responsible for
-// actually providing the pages.
+// the lifecycle of page requests. The PagerSource is responsible for actually
+// providing the pages.
 //
 // The synchronous fulfillment of requests is fairly straightforward, with
-// direct calls from the vm object to the PageSource to the PageSourceCallback.
+// direct calls from the vm object to the PageSource to the PagerSource.
 //
 // For asynchronous requests, the lifecycle is as follows:
 //   1) A vm object requests a page with PageSource::GetPage
 //   2) PageSource starts tracking the request's PageRequest and then
-//      forwards the request to PageSourceCallback::GetPageAsync.
+//      forwards the request to PagerSource::GetPageAsync.
 //   3) The caller waits for the request with PageRequest::Wait
 //   4) At some point, whatever is backing the callback provides pages
 //      to the vm object (e.g. with VmObjectPaged::SupplyPages).
