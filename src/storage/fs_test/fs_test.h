@@ -21,6 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>
 #include <minfs/format.h>
+#include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/blobfs/include/blobfs/format.h"
@@ -38,6 +39,11 @@ struct TestFilesystemOptions {
   static TestFilesystemOptions BlobfsWithoutFvm();
 
   std::string description;
+  bool use_ram_nand = false;
+  // If use_ram_nand is true, specifies a VMO to be used to back the device.  If supplied, its size
+  // must match the device size (if device_block_count is non-zero), including the extra required
+  // for OOB.
+  zx::unowned_vmo ram_nand_vmo;
   bool use_fvm = false;
   uint64_t device_block_size = 0;
   uint64_t device_block_count = 0;
@@ -64,6 +70,7 @@ class FilesystemInstance {
   virtual zx::status<> Unmount(const std::string& mount_path) = 0;
   virtual zx::status<> Fsck() = 0;
   virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
+  virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
 };
 
 // Base class for all supported file systems. It is a factory class that generates
@@ -86,6 +93,10 @@ class Filesystem {
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
       const TestFilesystemOptions& options) const = 0;
+  virtual zx::status<std::unique_ptr<FilesystemInstance>> Open(
+      const TestFilesystemOptions& options) const {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
   virtual const Traits& GetTraits() const = 0;
 
  protected:
@@ -107,6 +118,8 @@ class FilesystemImpl : public Filesystem {
 class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
  public:
   zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
+  zx::status<std::unique_ptr<FilesystemInstance>> Open(
       const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {
     static Traits traits{
@@ -196,6 +209,8 @@ class TestFilesystem {
  public:
   // Creates and returns a mounted test file system.
   static zx::status<TestFilesystem> Create(const TestFilesystemOptions& options);
+  // Opens an existing instance of a file system.
+  static zx::status<TestFilesystem> Open(const TestFilesystemOptions& options);
 
   TestFilesystem(TestFilesystem&&) = default;
   TestFilesystem& operator=(TestFilesystem&&) = default;
@@ -225,7 +240,14 @@ class TestFilesystem {
   // Returns the ramdisk, or nullptr if one isn't being used.
   isolated_devmgr::RamDisk* GetRamDisk() const { return filesystem_->GetRamDisk(); }
 
+  // Returns the ram-nand device, or nullptr if one isn't being used.
+  ramdevice_client::RamNand* GetRamNand() const { return filesystem_->GetRamNand(); }
+
  private:
+  // Creates a mount point for the instance, mounts it and returns a TestFilesystem.
+  static zx::status<TestFilesystem> FromInstance(const TestFilesystemOptions& options,
+                                                 std::unique_ptr<FilesystemInstance> instance);
+
   TestFilesystem(const TestFilesystemOptions& options,
                  std::unique_ptr<FilesystemInstance> filesystem, const std::string& mount_path)
       : options_(options), filesystem_(std::move(filesystem)), mount_path_(mount_path) {}

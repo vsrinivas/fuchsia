@@ -5,7 +5,9 @@
 #include "src/storage/fs_test/fs_test.h"
 
 #include <errno.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/fs/cpp/fidl.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
@@ -27,6 +29,7 @@
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 
+#include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
 
 namespace fs_test {
@@ -57,6 +60,77 @@ static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDis
   }
 
   return zx::ok(std::make_pair(std::move(ram_disk_or).value(), device_path));
+}
+
+// Creates a ram-nand device.  It does not create an FVM partition; that is left to the caller.
+static zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
+    const TestFilesystemOptions& options) {
+  auto status = isolated_devmgr::OneTimeSetUp();
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  constexpr int kPageSize = 4096;
+  constexpr int kPagesPerBlock = 64;
+  constexpr int kOobSize = 8;
+
+  uint32_t block_count;
+  zx::vmo vmo;
+  if (options.ram_nand_vmo->is_valid()) {
+    uint64_t vmo_size;
+    status = zx::make_status(options.ram_nand_vmo->get_size(&vmo_size));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    block_count = vmo_size / (kPageSize + kOobSize) / kPagesPerBlock;
+    // For now, when using a ram-nand device, the only supported device block size is 8 KiB, so
+    // raise an error if the user tries to ask for something different.
+    if ((options.device_block_size != 0 && options.device_block_size != 8192) ||
+        (options.device_block_count != 0 &&
+         options.device_block_size * options.device_block_count !=
+             block_count * kPageSize * kPagesPerBlock)) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    status =
+        zx::make_status(options.ram_nand_vmo->create_child(ZX_VMO_CHILD_SLICE, 0, vmo_size, &vmo));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+  } else if (options.device_block_size != 8192) {  // FTL exports a device with 8 KiB blocks.
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  } else {
+    block_count =
+        options.device_block_size * options.device_block_count / kPageSize / kPagesPerBlock;
+  }
+
+  status = zx::make_status(wait_for_device("/dev/misc/nand-ctl", zx::sec(10).get()));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Timed out waiting for /dev/misc/nand-ctl to appear";
+    return status.take_error();
+  }
+
+  std::optional<ramdevice_client::RamNand> ram_nand;
+  fuchsia_hardware_nand_RamNandInfo config = {
+      .vmo = vmo.release(),
+      .nand_info.page_size = kPageSize,
+      .nand_info.pages_per_block = kPagesPerBlock,
+      .nand_info.num_blocks = block_count,
+      .nand_info.ecc_bits = 8,
+      .nand_info.oob_size = kOobSize,
+      .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL};
+  status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "RamNand::Create failed: " << status.status_string();
+    return status.take_error();
+  }
+
+  std::string ftl_path = std::string(ram_nand->path()) + "/ftl/block";
+  status = zx::make_status(wait_for_device(ftl_path.c_str(), zx::sec(10).get()));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Timed out waiting for RamNand";
+    return status.take_error();
+  }
+  return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
 // A wrapper around fs-management that can be used by filesytems if they so wish.
@@ -185,8 +259,10 @@ zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t fo
 
 class MinfsInstance : public FilesystemInstance {
  public:
-  MinfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
-      : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
+  using Device = std::variant<isolated_devmgr::RamDisk, ramdevice_client::RamNand>;
+
+  MinfsInstance(Device device, const std::string& device_path)
+      : device_(std::move(device)), device_path_(device_path) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, default_mount_options);
@@ -208,25 +284,100 @@ class MinfsInstance : public FilesystemInstance {
         fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
   }
 
-  isolated_devmgr::RamDisk* GetRamDisk() override { return &ram_disk_; }
+  isolated_devmgr::RamDisk* GetRamDisk() override {
+    return std::get_if<isolated_devmgr::RamDisk>(&device_);
+  }
+
+  ramdevice_client::RamNand* GetRamNand() override {
+    return std::get_if<ramdevice_client::RamNand>(&device_);
+  }
 
  private:
-  isolated_devmgr::RamDisk ram_disk_;
+  Device device_;
   std::string device_path_;
 };
 
 zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
     const TestFilesystemOptions& options) const {
-  auto ram_disk_or = CreateRamDisk(options);
-  if (ram_disk_or.is_error()) {
-    return ram_disk_or.take_error();
+  std::optional<MinfsInstance::Device> device;
+  std::string device_path;
+  if (options.use_ram_nand) {
+    auto ram_nand_or = CreateRamNand(options);
+    if (ram_nand_or.is_error()) {
+      return ram_nand_or.take_error();
+    }
+    auto [ram_nand, nand_device_path] = std::move(ram_nand_or).value();
+
+    auto fvm_partition_or =
+        isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
+    if (fvm_partition_or.is_error()) {
+      FX_LOGS(ERROR) << "Failed to create FVM partition: " << fvm_partition_or.status_string();
+      return fvm_partition_or.take_error();
+    }
+
+    device = std::move(ram_nand);
+    device_path = fvm_partition_or.value();
+  } else {
+    auto ram_disk_or = CreateRamDisk(options);
+    if (ram_disk_or.is_error()) {
+      return ram_disk_or.take_error();
+    }
+    std::tie(device, device_path) = std::move(ram_disk_or).value();
   }
-  auto [ram_disk, device_path] = std::move(ram_disk_or).value();
   zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_MINFS);
   if (status.is_error()) {
     return status.take_error();
   }
-  return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_disk), device_path));
+  return zx::ok(std::make_unique<MinfsInstance>(*std::move(device), device_path));
+}
+
+zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
+    const TestFilesystemOptions& options) const {
+  if (!options.use_ram_nand || !options.ram_nand_vmo->is_valid()) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  // First create the ram-nand device.
+  auto ram_nand_or = CreateRamNand(options);
+  if (ram_nand_or.is_error()) {
+    return ram_nand_or.take_error();
+  }
+  auto [ram_nand, ftl_device_path] = std::move(ram_nand_or).value();
+
+  // Now bind FVM to it.
+  zx::channel local, remote;
+  auto status = zx::make_status(zx::channel::create(0, &local, &remote));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  status = zx::make_status(fdio_service_connect(ftl_device_path.c_str(), remote.release()));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  fidl::StringView fvm_driver = fidl::StringView("/pkg/bin/driver/fvm.so");
+  auto resp = llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned_channel(local),
+                                                             std::move(fvm_driver));
+  status = zx::make_status(resp.status());
+  if (status.is_ok()) {
+    if (resp->result.is_err()) {
+      status = zx::make_status(resp->result.err());
+    }
+  }
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to bind FVM: " << status.status_string();
+    return status.take_error();
+  }
+
+  // Wait for the Minfs partition to show up.
+  const std::string device_path = ftl_device_path + "/fvm/fs-test-partition-p-1/block";
+  status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Timed out waiting for Minfs partition to show up";
+    return status.take_error();
+  }
+  return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), std::move(device_path)));
 }
 
 // -- Memfs --
@@ -427,26 +578,36 @@ zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Make(
 
 // --
 
-zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
-  // Make a file system.
-  auto instance_or = options.filesystem->Make(options);
-  if (instance_or.is_error()) {
-    return instance_or.take_error();
-  }
-
+zx::status<TestFilesystem> TestFilesystem::FromInstance(
+    const TestFilesystemOptions& options, std::unique_ptr<FilesystemInstance> instance) {
   // Mount the file system.
   char mount_path_c_str[] = "/tmp/fs_test.XXXXXX";
   if (mkdtemp(mount_path_c_str) == nullptr) {
     FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  TestFilesystem filesystem(options, std::move(instance_or).value(),
-                            std::string(mount_path_c_str) + "/");
+  TestFilesystem filesystem(options, std::move(instance), std::string(mount_path_c_str) + "/");
   auto status = filesystem.Mount();
   if (status.is_error()) {
     return status.take_error();
   }
   return zx::ok(std::move(filesystem));
+}
+
+zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
+  auto instance_or = options.filesystem->Make(options);
+  if (instance_or.is_error()) {
+    return instance_or.take_error();
+  }
+  return FromInstance(options, std::move(instance_or).value());
+}
+
+zx::status<TestFilesystem> TestFilesystem::Open(const TestFilesystemOptions& options) {
+  auto instance_or = options.filesystem->Open(options);
+  if (instance_or.is_error()) {
+    return instance_or.take_error();
+  }
+  return FromInstance(options, std::move(instance_or).value());
 }
 
 TestFilesystem::~TestFilesystem() {

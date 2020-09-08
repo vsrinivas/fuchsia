@@ -156,6 +156,24 @@ fuchsia_component("clone-tests") {
   ]
 }
 
+test("corrupt_tests") {
+  sources = [ "corrupt.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+fuchsia_component("corrupt-tests") {
+  testonly = true
+  manifest = "$target_gen_dir/corrupt-tests.cml"
+  deps = [
+    ":corrupt_tests",
+    ":manifests",
+  ]
+}
+
 test("directory_tests") {
   sources = [ "directory.cc" ]
   deps = [
@@ -597,6 +615,8 @@ fuchsia_test_package("fs-tests") {
     ":basic-tests",
     ":case-sensitivity-tests",
     ":clone-tests",
+    # Uncomment this when fxb/53973 is fixed.
+    # ":corrupt-tests",
     ":directory-tests",
     ":dot-dot-tests",
     ":fcntl-tests",
@@ -727,6 +747,7 @@ action("manifests") {
     "$target_gen_dir/basic-tests.cml",
     "$target_gen_dir/case-sensitivity-tests.cml",
     "$target_gen_dir/clone-tests.cml",
+    "$target_gen_dir/corrupt-tests.cml",
     "$target_gen_dir/directory-large-tests.cml",
     "$target_gen_dir/directory-tests.cml",
     "$target_gen_dir/dot-dot-tests.cml",
