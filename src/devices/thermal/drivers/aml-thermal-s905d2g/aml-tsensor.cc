@@ -25,7 +25,7 @@ namespace {
 
 // MMIO indexes.
 constexpr uint32_t kPllMmio = 0;
-constexpr uint32_t kAoMmio = 1;
+constexpr uint32_t kTrimMmio = 1;
 constexpr uint32_t kHiuMmio = 2;
 
 // Thermal calibration magic numbers from uboot.
@@ -361,12 +361,12 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
   }
   pll_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&pdev_, kTrimMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
-  ao_mmio_ = ddk::MmioBuffer(mmio);
+  trim_mmio_ = ddk::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
@@ -390,7 +390,7 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo th
   memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
 
   // Get the trim info.
-  trim_info_ = ao_mmio_->Read32(AML_TRIM_INFO);
+  trim_info_ = trim_mmio_->Read32(0);
 
   // Set the clk.
   hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE, AML_HHI_TS_CLK_CNTL);

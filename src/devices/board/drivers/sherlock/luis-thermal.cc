@@ -22,8 +22,8 @@ static const pbus_mmio_t thermal_mmios[] = {
         .length = T931_TEMP_SENSOR_LENGTH,
     },
     {
-        .base = T931_GPIO_A0_BASE,
-        .length = T931_GPIO_AO_LENGTH,
+        .base = T931_TEMP_SENSOR_TRIM,
+        .length = T931_TEMP_SENSOR_TRIM_LENGTH,
     },
     {
         .base = T931_HIU_BASE,

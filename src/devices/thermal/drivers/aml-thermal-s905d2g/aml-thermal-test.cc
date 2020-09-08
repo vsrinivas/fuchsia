@@ -119,12 +119,12 @@ namespace thermal {
 // Temperature Sensor
 class FakeAmlTSensor : public AmlTSensor {
  public:
-  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio,
+  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
                                                 ddk::MmioBuffer hiu_mmio, bool less) {
     fbl::AllocChecker ac;
 
     auto test = fbl::make_unique_checked<FakeAmlTSensor>(&ac, std::move(pll_mmio),
-                                                         std::move(ao_mmio), std::move(hiu_mmio));
+                                                         std::move(trim_mmio), std::move(hiu_mmio));
     if (!ac.check()) {
       return nullptr;
     }
@@ -139,9 +139,9 @@ class FakeAmlTSensor : public AmlTSensor {
     return test;
   }
 
-  explicit FakeAmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio,
+  explicit FakeAmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio,
                           ddk::MmioBuffer hiu_mmio)
-      : AmlTSensor(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio)) {}
+      : AmlTSensor(std::move(pll_mmio), std::move(trim_mmio), std::move(hiu_mmio)) {}
 };
 
 class AmlTSensorTest : public zxtest::Test {
@@ -161,15 +161,15 @@ class AmlTSensorTest : public zxtest::Test {
       return;
     }
 
-    ao_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
+    trim_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: ao_regs_ alloc failed");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: trim_regs_ alloc failed");
       return;
     }
-    mock_ao_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
-        &ac, ao_regs_.get(), sizeof(uint32_t), kRegSize);
+    mock_trim_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
+        &ac, trim_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_ao_mmio_ alloc failed");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_trim_mmio_ alloc failed");
       return;
     }
 
@@ -185,7 +185,7 @@ class AmlTSensorTest : public zxtest::Test {
       return;
     }
 
-    (*mock_ao_mmio_)[0x268].ExpectRead(0x00000000);                           // trim_info_
+    (*mock_trim_mmio_)[0].ExpectRead(0x00000000);                             // trim_info_
     (*mock_hiu_mmio_)[(0x64 << 2)].ExpectWrite(0x130U);                       // set clock
     (*mock_pll_mmio_)[(0x1 << 2)].ExpectRead(0x00000000).ExpectWrite(0x63B);  // sensor ctl
   }
@@ -235,17 +235,17 @@ class AmlTSensorTest : public zxtest::Test {
     }
 
     ddk::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
-    ddk::MmioBuffer ao_mmio(mock_ao_mmio_->GetMmioBuffer());
+    ddk::MmioBuffer trim_mmio(mock_trim_mmio_->GetMmioBuffer());
     ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
-    tsensor_ =
-        FakeAmlTSensor::Create(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio), less);
+    tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(trim_mmio),
+                                      std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);
   }
 
   void TearDown() override {
     // Verify
     mock_pll_mmio_->VerifyAll();
-    mock_ao_mmio_->VerifyAll();
+    mock_trim_mmio_->VerifyAll();
     mock_hiu_mmio_->VerifyAll();
   }
 
@@ -254,10 +254,10 @@ class AmlTSensorTest : public zxtest::Test {
 
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> pll_regs_;
-  fbl::Array<ddk_mock::MockMmioReg> ao_regs_;
+  fbl::Array<ddk_mock::MockMmioReg> trim_regs_;
   fbl::Array<ddk_mock::MockMmioReg> hiu_regs_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pll_mmio_;
-  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_ao_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_trim_mmio_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
 };
 

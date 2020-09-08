@@ -12,7 +12,6 @@
 // clang-format off
 
 // Register offset
-#define AML_TRIM_INFO           0x268
 #define AML_HHI_TS_CLK_CNTL     0x64 << 2
 #define AML_TS_CFG_REG1         (0x1 << 2)
 #define AML_TS_CFG_REG2         (0x2 << 2)

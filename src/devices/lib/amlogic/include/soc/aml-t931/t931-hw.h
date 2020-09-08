@@ -126,6 +126,11 @@
 #define T931_TEMP_SENSOR_BASE 0xff634800
 #define T931_TEMP_SENSOR_LENGTH 0x80
 
+// These registers are used to derive calibration data for the temperature sensors. The registers
+// are not documented in the datasheet - they were copied over from u-boot/Cast code.
+#define T931_TEMP_SENSOR_TRIM 0xff800268
+#define T931_TEMP_SENSOR_TRIM_LENGTH 0x4
+
 // MIPI CSI & Adapter
 #define T931_CSI_PHY0_BASE 0xff650000
 #define T931_CSI_PHY0_LENGTH 0x2000

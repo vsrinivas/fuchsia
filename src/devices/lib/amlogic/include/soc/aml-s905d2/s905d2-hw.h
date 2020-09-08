@@ -18,6 +18,11 @@
 #define S905D2_TEMP_SENSOR_BASE 0xff634800
 #define S905D2_TEMP_SENSOR_LENGTH 0x80
 
+// These registers are used to derive calibration data for the temperature sensors. The registers
+// are not documented in the datasheet - they were copied over from u-boot/Cast code.
+#define S905D2_TEMP_SENSOR_TRIM 0xff800268
+#define S905D2_TEMP_SENSOR_TRIM_LENGTH 0x4
+
 #define S905D2_USB0_BASE 0xff500000
 #define S905D2_USB0_LENGTH 0x100000
 

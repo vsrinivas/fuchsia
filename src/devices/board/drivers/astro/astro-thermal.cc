@@ -26,8 +26,8 @@ static const pbus_mmio_t thermal_mmios[] = {
         .length = S905D2_TEMP_SENSOR_LENGTH,
     },
     {
-        .base = S905D2_GPIO_A0_BASE,
-        .length = S905D2_GPIO_AO_LENGTH,
+        .base = S905D2_TEMP_SENSOR_TRIM,
+        .length = S905D2_TEMP_SENSOR_TRIM_LENGTH,
     },
     {
         .base = S905D2_HIU_BASE,

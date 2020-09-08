@@ -26,9 +26,9 @@ class AmlTSensor {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
   AmlTSensor() {}
   // For testing
-  AmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio, ddk::MmioBuffer hiu_mmio)
+  AmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer trim_mmio, ddk::MmioBuffer hiu_mmio)
       : pll_mmio_(std::move(pll_mmio)),
-        ao_mmio_(std::move(ao_mmio)),
+        trim_mmio_(std::move(trim_mmio)),
         hiu_mmio_(std::move(hiu_mmio)) {}
   float ReadTemperatureCelsius();
   zx_status_t Create(zx_device_t* parent,
@@ -49,7 +49,7 @@ class AmlTSensor {
   uint32_t trim_info_;
   pdev_protocol_t pdev_;
   std::optional<ddk::MmioBuffer> pll_mmio_;
-  std::optional<ddk::MmioBuffer> ao_mmio_;
+  std::optional<ddk::MmioBuffer> trim_mmio_;
   std::optional<ddk::MmioBuffer> hiu_mmio_;
   zx::interrupt tsensor_irq_;
   thrd_t irq_thread_;
