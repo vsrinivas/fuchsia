@@ -895,23 +895,26 @@ async fn test_interfaces_watcher_race() -> Result {
                 let (mut new_present, mut new_up, mut new_has_addr) = (present, up, has_addr);
                 match event {
                     fidl_fuchsia_net_interfaces::Event::Added(properties)
-                    | fidl_fuchsia_net_interfaces::Event::Exists(properties) => {
+                    | fidl_fuchsia_net_interfaces::Event::Existing(properties) => {
                         if properties.id == Some(id) {
-                            assert!(!present, "duplicate added/exists event");
+                            assert!(!present, "duplicate added/existing event");
                             new_present = true;
                             new_up = properties
                                 .online
-                                .expect("added/exists event missing online property");
+                                .expect("added/existing event missing online property");
                             new_has_addr = properties
                                 .addresses
-                                .expect("added/exists event missing addresses property")
+                                .expect("added/existing event missing addresses property")
                                 .iter()
                                 .any(|a| a.addr == Some(ADDR));
                         }
                     }
                     fidl_fuchsia_net_interfaces::Event::Changed(properties) => {
                         if properties.id == Some(id) {
-                            assert!(present, "property change event before added or exists event");
+                            assert!(
+                                present,
+                                "property change event before added or existing event"
+                            );
                             if let Some(online) = properties.online {
                                 new_up = online;
                             }
@@ -922,7 +925,7 @@ async fn test_interfaces_watcher_race() -> Result {
                     }
                     fidl_fuchsia_net_interfaces::Event::Removed(removed_id) => {
                         if removed_id == id {
-                            assert!(present, "removed event before added or exists");
+                            assert!(present, "removed event before added or existing");
                             new_present = false;
                         }
                     }
@@ -996,7 +999,7 @@ async fn test_interfaces_watcher() -> Result {
             .context("failed to initialize interface watcher")?;
 
         let event = watcher.watch().await.context("failed to watch")?;
-        if let fidl_fuchsia_net_interfaces::Event::Exists(properties) = event {
+        if let fidl_fuchsia_net_interfaces::Event::Existing(properties) = event {
             assert_eq!(
                 properties.device_class,
                 Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
@@ -1004,7 +1007,7 @@ async fn test_interfaces_watcher() -> Result {
                 ))
             );
         } else {
-            panic!("got {:?}, want loopback interface exists event", event);
+            panic!("got {:?}, want loopback interface existing event", event);
         }
 
         assert_eq!(

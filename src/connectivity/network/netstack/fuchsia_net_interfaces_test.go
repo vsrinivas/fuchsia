@@ -149,7 +149,7 @@ func TestInterfacesWatcher(t *testing.T) {
 			t.Fatalf("failed to call GetWatcher: %s", err)
 		}
 		event, err := watcher.Watch(context.Background())
-		if err := assertWatchResult(event, err, interfaces.EventWithExists(wantInterfaceProperties(ns, nicid))); err != nil {
+		if err := assertWatchResult(event, err, interfaces.EventWithExisting(wantInterfaceProperties(ns, nicid))); err != nil {
 			t.Fatal(err)
 		}
 		event, err = watcher.Watch(context.Background())

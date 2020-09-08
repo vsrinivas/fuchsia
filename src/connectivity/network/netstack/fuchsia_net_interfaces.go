@@ -319,7 +319,7 @@ func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOpt
 	si.ns.interfaceWatchers.mu.Lock()
 
 	for _, properties := range si.ns.interfaceWatchers.mu.lastObserved {
-		impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExists(properties))
+		impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExisting(properties))
 	}
 	impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
 

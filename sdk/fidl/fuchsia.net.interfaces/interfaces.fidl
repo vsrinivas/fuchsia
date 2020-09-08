@@ -12,15 +12,21 @@ struct Empty {
 
 /// An interface-state change event.
 union Event {
-    /// Properties of an existing interface.
-    1: Properties exists;
-    /// Properties of an interface that was added.
+    /// Properties of an interface that existed when watching started.
+    ///
+    /// All fields are set.
+    1: Properties existing;
+    /// Properties of an interface that was added while watching.
+    ///
+    /// All fields are set.
     2: Properties added;
-    /// ID of the interface that was removed.
+    /// ID of an interface that was removed while watching.
     3: fuchsia.net.interface_id removed;
-    /// Properties of an interface that have changed.
+    /// Properties of an interface that changed while watching.
+    ///
+    /// Only [`Properties.id`] and changed fields are set.
     4: Properties changed;
-    /// Sentinel value indicating there is no event to report.
+    /// Sentinel value indicating no more [`existing`] events will be sent.
     5: Empty idle;
 };
 
@@ -43,13 +49,13 @@ table Address {
 /// Properties of a network interface.
 table Properties {
     /// An opaque identifier for the interface. Its value will not be reused
-    /// even if the device is removed and subsequently re-added.
+    /// even if the device is removed and subsequently re-added. Immutable.
     1: fuchsia.net.interface_id id;
     /// The addresses currently assigned to the interface.
     2: vector<Address>:MAX addresses;
-    /// The online status of the interface.
+    /// The device is enabled and its physical state is online.
     3: bool online;
-    /// The device class of the interface.
+    /// The device class of the interface. Immutable.
     4: DeviceClass device_class;
     /// Whether there is a default IPv4 route through this interface.
     5: bool has_default_ipv4_route;
@@ -90,7 +96,7 @@ protocol Watcher {
     ///
     /// If there are N interfaces present at the time the channel was
     /// initialized, then the first N invocations of this method will return
-    /// each existing interface, followed by an idle value indicating that
+    /// [`Event.existing`] followed by a single [`Event.idle`] indicating that
     /// all existing interfaces have been sent. Subsequent calls will
     /// immediately return if there is a change to be reported, or block until a
     /// change occurs.
