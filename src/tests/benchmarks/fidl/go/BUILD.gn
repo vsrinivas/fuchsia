@@ -26,7 +26,10 @@ go_library("benchmark_suite_go_lib") {
   name = "benchmark_suite"
   source_dir = gidl_go_out_dir
   non_go_deps = [ ":benchmark_suite_go" ]
-  deps = [ "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl(${go_toolchain})" ]
+  deps = [
+    "//src/lib/component",
+    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl(${go_toolchain})",
+  ]
 }
 
 go_binary("go_fidl_microbenchmarks_bin") {

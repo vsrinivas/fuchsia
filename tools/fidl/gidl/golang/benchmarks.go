@@ -20,13 +20,17 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 package benchmark_suite
 
 import (
+	"context"
 	"sync"
 	"testing"
 
 	"fidl/benchmarkfidl"
 
 	"syscall/zx"
-	"syscall/zx/fidl")
+	"syscall/zx/fidl"
+
+	"go.fuchsia.dev/fuchsia/src/lib/component"
+)
 
 
 type pools struct {
@@ -97,6 +101,37 @@ func BenchmarkDecode{{ .Name }}(b *testing.B) {
 		}
 	}
 }
+
+{{ if .EnableEchoCallBenchmark }}
+type {{ .Name }}EchoCallService struct {}
+
+func (s *{{ .Name }}EchoCallService) Echo(ctx fidl.Context, val {{ .ValueType }}) ({{ .ValueType }}, error) {
+	return val, nil
+}
+
+func BenchmarkEchoCall{{ .Name }}(b *testing.B) {
+	client_end, server_end, err := zx.NewChannel(0)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer client_end.Close()
+	stub := &{{ .ValueType }}EchoCallWithCtxStub{
+		Impl: &{{ .Name }}EchoCallService{},
+	}
+	go component.ServeExclusive(context.Background(), stub, server_end, func (err error) {
+		b.Fatal(err)
+	})
+	proxy := {{ .ValueType }}EchoCallWithCtxInterface(fidl.ChannelProxy{Channel: client_end})
+
+	input := {{ .Value }}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := proxy.Echo(context.Background(), input); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+{{- end -}}
 {{ end }}
 
 type Benchmark struct {
@@ -115,6 +150,12 @@ var Benchmarks = []Benchmark{
 		Label: "Decode/{{ .ChromeperfPath }}",
 		BenchFunc: BenchmarkDecode{{ .Name }},
 	},
+	{{ if .EnableEchoCallBenchmark }}
+	{
+		Label: "EchoCall/{{ .ChromeperfPath }}",
+		BenchFunc: BenchmarkEchoCall{{ .Name }},
+	},
+	{{- end -}}
 {{ end }}
 }
 `))
@@ -125,6 +166,7 @@ type benchmarkTmplInput struct {
 
 type benchmark struct {
 	Name, ChromeperfPath, Value, ValueType string
+	EnableEchoCallBenchmark                bool
 }
 
 // GenerateBenchmarks generates Go benchmarks.
@@ -138,10 +180,11 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
-			Name:           goBenchmarkName(gidlBenchmark.Name),
-			ChromeperfPath: gidlBenchmark.Name,
-			Value:          value,
-			ValueType:      declName(decl),
+			Name:                    goBenchmarkName(gidlBenchmark.Name),
+			ChromeperfPath:          gidlBenchmark.Name,
+			Value:                   value,
+			ValueType:               declName(decl),
+			EnableEchoCallBenchmark: gidlBenchmark.EnableEchoCallBenchmark,
 		})
 	}
 	input := benchmarkTmplInput{
