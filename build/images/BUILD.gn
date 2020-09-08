@@ -607,6 +607,14 @@ migrated_zbi("fuchsia") {
             # zircon-r, so for now zedboot is being paved to this slot.
             # "--zirconb",
           ]
+
+          fastboot_flash = []
+          if (zircon_a_partition != "") {
+            fastboot_flash += [ zircon_a_partition ]
+          }
+          if (zircon_b_partition != "") {
+            fastboot_flash += [ zircon_b_partition ]
+          }
         }
       },
     ]
@@ -725,6 +733,14 @@ if (custom_signing_script != "") {
           name = "zircon-a.signed"
           path = "$output_name.signed"
           type = "zbi.signed"
+
+          fastboot_flash = []
+          if (zircon_a_partition != "") {
+            fastboot_flash += [ zircon_a_partition ]
+          }
+          if (zircon_b_partition != "") {
+            fastboot_flash += [ zircon_b_partition ]
+          }
         },
       ]
       image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
@@ -745,6 +761,14 @@ if (custom_signing_script != "") {
           name = "zircon-a.signed"
           path = "$output_name.vboot"
           type = "zbi.signed"
+
+          fastboot_flash = []
+          if (zircon_a_partition != "") {
+            fastboot_flash += [ zircon_a_partition ]
+          }
+          if (zircon_b_partition != "") {
+            fastboot_flash += [ zircon_b_partition ]
+          }
         },
       ]
       image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
@@ -852,6 +876,14 @@ if (use_vbmeta) {
           type = "vbmeta"
 
           bootserver_pave = [ "--vbmetaa" ]
+
+          fastboot_flash = []
+          if (vbmeta_a_partition != "") {
+            fastboot_flash += [ vbmeta_a_partition ]
+          }
+          if (vbmeta_b_partition != "") {
+            fastboot_flash += [ vbmeta_b_partition ]
+          }
         },
       ]
       image_paths = [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
@@ -1199,6 +1231,7 @@ if (fvm_partition != "") {
           name = "fvm.fastboot"
           path = rebased_output_name
           type = "blk"
+          fastboot_flash = [ fvm_partition ]
         },
       ]
       image_paths = [ "IMAGE_FVM_FASTBOOT=$rebased_output_name" ]
@@ -1372,6 +1405,10 @@ foreach(firmware, firmware_prebuilts) {
           name = name
           path = "$name.img"
           type = "img"
+
+          if (defined(firmware.partition)) {
+            fastboot_flash = [ firmware.partition ]
+          }
         },
       ]
       image_paths = [ "IMAGE_${upper_name}=$name.img" ]

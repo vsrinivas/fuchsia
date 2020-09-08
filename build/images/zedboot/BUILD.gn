@@ -34,8 +34,8 @@ action("devmgr_config.txt") {
     ":devmgr_config",
     ":zbi",
     ":zedboot.vbmeta",
-    ":zedboot.vbmeta__zbi_props",
     ":zedboot.vbmeta__vb_desc",
+    ":zedboot.vbmeta__zbi_props",
     "//build/unification/future/images:*",  # XXX
   ]
 
@@ -97,6 +97,9 @@ migrated_zbi("zbi") {
           archive = true
           if (use_zedboot_as_recovery) {
             bootserver_pave = [ "--zirconr" ]
+            if (zircon_r_partition != "") {
+              fastboot_flash = [ zircon_r_partition ]
+            }
           }
           bootserver_pave_zedboot = [ "--zircona" ]
         }
@@ -131,6 +134,9 @@ if (custom_signing_script != "") {
           archive = true
           if (use_zedboot_as_recovery) {
             bootserver_pave = [ "--zirconr" ]
+            if (zircon_r_partition != "") {
+              fastboot_flash = [ zircon_r_partition ]
+            }
           }
           name = "${zedboot_metadata_slot}.signed"
           bootserver_pave_zedboot = [ "--zircona" ]
@@ -155,6 +161,9 @@ if (custom_signing_script != "") {
           archive = true
           if (use_zedboot_as_recovery) {
             bootserver_pave = [ "--zirconr" ]
+            if (zircon_r_partition != "") {
+              fastboot_flash = [ zircon_r_partition ]
+            }
           }
           name = "${zedboot_metadata_slot}.signed"
           bootserver_pave_zedboot = [ "--zircona" ]
@@ -207,6 +216,9 @@ if (use_vbmeta) {
           archive = true
           if (use_zedboot_as_recovery) {
             bootserver_pave = [ "--vbmetar" ]
+            if (vbmeta_r_partition != "") {
+              fastboot_flash = [ vbmeta_r_partition ]
+            }
           }
           name = zedboot_metadata_slot
           bootserver_pave_zedboot = [ "--vbmetaa" ]
