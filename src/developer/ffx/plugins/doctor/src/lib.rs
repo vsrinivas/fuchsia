@@ -33,12 +33,17 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     let mut writer = Box::new(stdout());
     let daemon_manager = DefaultDaemonManager {};
     let delay = Duration::from_millis(cmd.retry_delay);
-    doctor(&mut writer, &daemon_manager, cmd.retry_count, delay).await
+
+    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let target_str = ffx.target.unwrap_or(String::default());
+
+    doctor(&mut writer, &daemon_manager, &target_str, cmd.retry_count, delay).await
 }
 
 async fn doctor<W: Write>(
     writer: &mut W,
     daemon_manager: &impl DaemonManager,
+    target_str: &str,
     retry_count: usize,
     retry_delay: Duration,
 ) -> Result<()> {
@@ -117,8 +122,16 @@ async fn doctor<W: Write>(
         if i > 0 {
             writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
         }
-        print_status_line(writer, LISTING_TARGETS);
-        let targets = match timeout(retry_delay, daemon.list_targets("")).await {
+
+        let status_str;
+        if target_str.is_empty() {
+            status_str = String::from(LISTING_TARGETS_NO_FILTER);
+        } else {
+            status_str = format!("Attempting to list targets with filter '{}'...", target_str);
+        }
+
+        print_status_line(writer, &status_str);
+        let targets = match timeout(retry_delay, daemon.list_targets(target_str)).await {
             Err(_) => {
                 writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
                 continue;
@@ -144,11 +157,18 @@ async fn doctor<W: Write>(
             }
         }
 
-        // TODO(jwing): 2 things:
-        // 1) add a mechanism for choosing which target to connect to here
-        // 2) SSH into the device and kill Overnet+RCS if anything below this fails
-        print_status_line(writer, CONNECTING_TO_RCS);
+        // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
         let target = targets.get(0).unwrap();
+        if target_str.is_empty() {
+            writeln!(
+                writer,
+                "Chose target: '{}'. {}",
+                target.nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+                TARGET_CHOICE_HELP
+            )
+            .unwrap();
+        }
+        print_status_line(writer, CONNECTING_TO_RCS);
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         match timeout(
             retry_delay,
@@ -217,6 +237,12 @@ mod test {
     };
 
     const NODENAME: &str = "fake-nodename";
+    const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
+    const LISTING_TARGETS_WITH_FILTER: &str =
+        "Attempting to list targets with filter 'fake-nodename'...";
+    const LISTING_TARGETS_WITH_FAKE_FILTER: &str =
+        "Attempting to list targets with filter 'extra-fake-nodename'...";
+    const CHOSE_TARGET: &str = "Chose target: 'fake-nodename'. ";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
 
     struct FakeStateManager {
@@ -388,20 +414,24 @@ mod test {
                 DaemonRequest::EchoString { value, responder } => {
                     responder.send(&value).unwrap();
                 }
-                DaemonRequest::ListTargets { value: _, responder } => {
-                    responder
-                        .send(
-                            &mut vec![Target {
-                                nodename: Some(NODENAME.to_string()),
-                                addresses: Some(vec![]),
-                                age_ms: Some(0),
-                                rcs_state: Some(RemoteControlState::Unknown),
-                                target_type: Some(TargetType::Unknown),
-                                target_state: Some(TargetState::Unknown),
-                            }]
-                            .drain(..),
-                        )
-                        .unwrap();
+                DaemonRequest::ListTargets { value, responder } => {
+                    if !value.is_empty() && value != NODENAME {
+                        responder.send(&mut vec![].drain(..)).unwrap();
+                    } else {
+                        responder
+                            .send(
+                                &mut vec![Target {
+                                    nodename: Some(NODENAME.to_string()),
+                                    addresses: Some(vec![]),
+                                    age_ms: Some(0),
+                                    rcs_state: Some(RemoteControlState::Unknown),
+                                    target_type: Some(TargetType::Unknown),
+                                    target_state: Some(TargetState::Unknown),
+                                }]
+                                .drain(..),
+                            )
+                            .unwrap();
+                    }
                 }
                 _ => {
                     assert!(false, format!("got unexpected request: {:?}", req));
@@ -481,7 +511,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -494,7 +524,7 @@ mod test {
                 format!("{}{}", SPAWNING_DAEMON, SUCCESS),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
@@ -516,7 +546,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -527,7 +557,7 @@ mod test {
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
@@ -549,7 +579,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -564,7 +594,7 @@ mod test {
                     // TODO(jwing): Print error on a new line so that this
                     // doesn't have to match the entire error message.
                     "{}{}",
-                    LISTING_TARGETS, FAILED_WITH_ERROR
+                    LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR
                 ),
                 String::from("PEER_CLOSED"),
                 String::default(),
@@ -601,7 +631,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -620,12 +650,12 @@ mod test {
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
                 String::default(),
                 String::from("Attempt 2 of 2"),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
                 String::from("No targets found"),
                 String::default(),
                 BUG_URL.to_string(),
@@ -647,7 +677,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 2, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -658,7 +688,8 @@ mod test {
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
+                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
                 format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
                 String::default(),
@@ -682,7 +713,7 @@ mod test {
         let mut output = String::new();
         {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, 1, DEFAULT_RETRY_DELAY).await.unwrap();
+            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY).await.unwrap();
         }
 
         print_full_output(&output);
@@ -693,7 +724,8 @@ mod test {
                 format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
                 format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
+                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
                 format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
                 format!("{}{}", COMMUNICATING_WITH_RCS, FAILED_TIMEOUT),
                 String::default(),
@@ -701,6 +733,76 @@ mod test {
                 String::from("Connecting to RCS failed after maximum attempts"),
                 String::default(),
                 String::from(BUG_URL),
+            ],
+        );
+
+        fake.assert_no_leftover_calls();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_with_filter() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
+        );
+
+        let mut output = String::new();
+        {
+            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            doctor(&mut writer, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY).await.unwrap();
+        }
+
+        print_full_output(&output);
+
+        verify_lines(
+            &output,
+            vec![
+                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
+                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_WITH_FILTER, SUCCESS),
+                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
+                String::default(),
+                String::default(),
+                String::from(ALL_CHECKS_PASSED),
+            ],
+        );
+
+        fake.assert_no_leftover_calls();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_filter_finds_no_targets() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
+        );
+
+        let mut output = String::new();
+        {
+            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+            doctor(&mut writer, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY)
+                .await
+                .unwrap();
+        }
+
+        print_full_output(&output);
+
+        verify_lines(
+            &output,
+            vec![
+                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
+                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
+                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
+                format!("{}{}", LISTING_TARGETS_WITH_FAKE_FILTER, SUCCESS),
+                String::from("No targets found"),
+                String::default(),
+                BUG_URL.to_string(),
             ],
         );
 

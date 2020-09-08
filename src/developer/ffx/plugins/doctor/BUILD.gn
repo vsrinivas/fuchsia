@@ -12,6 +12,7 @@ ffx_plugin("ffx_doctor") {
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//src/connectivity/overnet/lib/hoist",
+    "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/daemon:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
