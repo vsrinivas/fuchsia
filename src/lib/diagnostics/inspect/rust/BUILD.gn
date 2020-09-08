@@ -33,7 +33,6 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:derivative",
-    "//third_party/rust_crates:difference",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:itertools",
@@ -63,8 +62,6 @@ rustc_library("fuchsia-inspect") {
     "src/reader/tree_reader.rs",
     "src/service.rs",
     "src/state.rs",
-    "src/testing/macros.rs",
-    "src/testing/mod.rs",
     "src/trie.rs",
     "src/utils.rs",
   ]

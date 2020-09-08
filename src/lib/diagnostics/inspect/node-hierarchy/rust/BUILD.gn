@@ -15,6 +15,8 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "//src/diagnostics/lib/selectors",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:difference",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:num-derive",
@@ -30,6 +32,7 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "src/serialization/deserialize.rs",
     "src/serialization/mod.rs",
     "src/serialization/serialize.rs",
+    "src/testing.rs",
     "src/trie.rs",
   ]
 }

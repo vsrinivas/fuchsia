@@ -105,7 +105,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            constants,
+            assert_inspect_tree, constants,
             reader::{NodeHierarchy, PartialNodeHierarchy},
             Inspector,
         },

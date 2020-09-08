@@ -24,7 +24,16 @@ use {
 };
 
 pub mod serialization;
+pub mod testing;
 pub mod trie;
+
+/// Extra slots for a linear histogram: 2 parameter slots (floor, step size) and
+/// 2 overflow slots.
+pub const LINEAR_HISTOGRAM_EXTRA_SLOTS: usize = 4;
+
+/// Extra slots for an exponential histogram: 3 parameter slots (floor, initial
+/// step and step multiplier) and 2 overflow slots.
+pub const EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS: usize = 5;
 
 // TODO(fxb/43873): move LinkNodeDisposition and ArrayFormat to fuchsia-inspect-format
 /// Disposition of a Link value.
@@ -436,6 +445,24 @@ impl<K> Property<K> {
     }
 }
 
+impl<K> Property<K> {
+    /// Returns a string indicating which variant of property this is, useful for printing
+    /// debug values.
+    pub fn discriminant_name(&self) -> &'static str {
+        match self {
+            Property::String(_, _) => "String",
+            Property::Bytes(_, _) => "Bytes",
+            Property::Int(_, _) => "Int",
+            Property::IntArray(_, _) => "IntArray",
+            Property::Uint(_, _) => "Uint",
+            Property::UintArray(_, _) => "UintArray",
+            Property::Double(_, _) => "Double",
+            Property::DoubleArray(_, _) => "DoubleArray",
+            Property::Bool(_, _) => "Bool",
+        }
+    }
+}
+
 impl<K> Display for Property<K>
 where
     K: AsRef<str>,
@@ -808,6 +835,21 @@ where
     } else {
         Ok(None)
     }
+}
+
+#[allow(missing_docs)]
+pub struct ExponentialHistogramParams<T> {
+    pub floor: T,
+    pub initial_step: T,
+    pub step_multiplier: T,
+    pub buckets: usize,
+}
+
+#[allow(missing_docs)]
+pub struct LinearHistogramParams<T> {
+    pub floor: T,
+    pub step_size: T,
+    pub buckets: usize,
 }
 
 #[cfg(test)]

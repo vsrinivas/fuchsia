@@ -4,14 +4,11 @@
 
 use {
     crate::{
-        constants,
-        reader::{self, PartialNodeHierarchy},
-        ExponentialHistogramParams, Inspector, LinearHistogramParams,
+        ArrayContent, ArrayFormat, Bucket, ExponentialHistogramParams, LinearHistogramParams,
+        NodeHierarchy, Property, EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS, LINEAR_HISTOGRAM_EXTRA_SLOTS,
     },
     anyhow::{bail, format_err, Error},
     difference::{Changeset, Difference},
-    fuchsia_inspect_node_hierarchy::{ArrayContent, ArrayFormat, Bucket, NodeHierarchy, Property},
-    futures,
     num_traits::One,
     std::{
         borrow::Cow,
@@ -22,7 +19,7 @@ use {
 };
 
 /// Macro to simplify creating `TreeAssertion`s. Commonly used indirectly through the second
-/// parameter of `assert_inspect_tree!`. See `assert_inspect_tree!` for more usage examples.
+/// parameter of `assert_data_tree!`. See `assert_data_tree!` for more usage examples.
 ///
 /// Each leaf value must be a type that implements either `PropertyAssertion` or `TreeAssertion`.
 ///
@@ -56,24 +53,24 @@ macro_rules! tree_assertion {
     (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }) => {{
         #[allow(unused_mut)]
         let mut child_tree_assertion = TreeAssertion::new($key, true);
-        tree_assertion!(@build child_tree_assertion, $($sub)*);
+        $crate::tree_assertion!(@build child_tree_assertion, $($sub)*);
         $tree_assertion.add_child_assertion(child_tree_assertion);
     }};
     (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }, $($rest:tt)*) => {{
-        tree_assertion!(@build $tree_assertion, var $key: { $($sub)* });
-        tree_assertion!(@build $tree_assertion, $($rest)*);
+        $crate::tree_assertion!(@build $tree_assertion, var $key: { $($sub)* });
+        $crate::tree_assertion!(@build $tree_assertion, $($rest)*);
     }};
 
     // Partial match of tree
     (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }) => {{
         #[allow(unused_mut)]
         let mut child_tree_assertion = TreeAssertion::new($key, false);
-        tree_assertion!(@build child_tree_assertion, $($sub)*);
+        $crate::tree_assertion!(@build child_tree_assertion, $($sub)*);
         $tree_assertion.add_child_assertion(child_tree_assertion);
     }};
     (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }, $($rest:tt)*) => {{
-        tree_assertion!(@build $tree_assertion, var $key: contains { $($sub)* });
-        tree_assertion!(@build $tree_assertion, $($rest)*);
+        $crate::tree_assertion!(@build $tree_assertion, var $key: contains { $($sub)* });
+        $crate::tree_assertion!(@build $tree_assertion, $($rest)*);
     }};
 
     // Matching properties of a tree
@@ -81,30 +78,30 @@ macro_rules! tree_assertion {
         $tree_assertion.add_property_assertion($key, Box::new($assertion))
     }};
     (@build $tree_assertion:expr, var $key:ident: $assertion:expr, $($rest:tt)*) => {{
-        tree_assertion!(@build $tree_assertion, var $key: $assertion);
-        tree_assertion!(@build $tree_assertion, $($rest)*);
+        $crate::tree_assertion!(@build $tree_assertion, var $key: $assertion);
+        $crate::tree_assertion!(@build $tree_assertion, $($rest)*);
     }};
 
     // Key identifier format
     (@build $tree_assertion:expr, $key:ident: $($rest:tt)+) => {{
         let key = stringify!($key);
-        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+        $crate::tree_assertion!(@build $tree_assertion, var key: $($rest)+);
     }};
     // Allows string literal for key
     (@build $tree_assertion:expr, $key:tt: $($rest:tt)+) => {{
         let key: &'static str = $key;
-        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+        $crate::tree_assertion!(@build $tree_assertion, var key: $($rest)+);
     }};
     // Allows an expression that resolves into a String for key
     (@build $tree_assertion:expr, $key:expr => $($rest:tt)+) => {{
         let key_string : String = $key;
         let key = &key_string;
-        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+        $crate::tree_assertion!(@build $tree_assertion, var key: $($rest)+);
     }};
     // Allows an expression that resolves into a TreeAssertion
     (@build $tree_assertion:expr, $child_assertion:expr, $($rest:tt)*) => {{
         $tree_assertion.add_child_assertion($child_assertion);
-        tree_assertion!(@build $tree_assertion, $($rest)*);
+        $crate::tree_assertion!(@build $tree_assertion, $($rest)*);
     }};
 
     // Entry points
@@ -112,23 +109,23 @@ macro_rules! tree_assertion {
         use $crate::testing::TreeAssertion;
         #[allow(unused_mut)]
         let mut tree_assertion = TreeAssertion::new($key, true);
-        tree_assertion!(@build tree_assertion, $($sub)*);
+        $crate::tree_assertion!(@build tree_assertion, $($sub)*);
         tree_assertion
     }};
     (var $key:ident: contains { $($sub:tt)* }) => {{
         use $crate::testing::TreeAssertion;
         #[allow(unused_mut)]
         let mut tree_assertion = TreeAssertion::new($key, false);
-        tree_assertion!(@build tree_assertion, $($sub)*);
+        $crate::tree_assertion!(@build tree_assertion, $($sub)*);
         tree_assertion
     }};
     ($key:ident: $($rest:tt)+) => {{
         let key = stringify!($key);
-        tree_assertion!(var key: $($rest)+)
+        $crate::tree_assertion!(var key: $($rest)+)
     }};
     ($key:tt: $($rest:tt)+) => {{
         let key: &'static str = $key;
-        tree_assertion!(var key: $($rest)+)
+        $crate::tree_assertion!(var key: $($rest)+)
     }};
 }
 
@@ -165,7 +162,7 @@ macro_rules! tree_assertion {
 ///    ],
 /// };
 ///
-/// assert_inspect_tree!(
+/// assert_data_tree!(
 ///     node_hierarchy,
 ///     key: {
 ///         sub: AnyProperty,   // only verify that `sub` is a property of `key`
@@ -182,7 +179,7 @@ macro_rules! tree_assertion {
 ///
 /// In order to do a partial match on a tree, use the `contains` keyword:
 /// ```
-/// assert_inspect_tree!(node_hierarchy, key: contains {
+/// assert_data_tree!(node_hierarchy, key: contains {
 ///     sub: "sub_value",
 ///     child1: contains {},
 /// });
@@ -192,7 +189,7 @@ macro_rules! tree_assertion {
 /// expression), you'll need to use `=>` instead of `:`:
 ///
 /// ```
-/// assert_inspect_tree!(node_hierarchy, key: {
+/// assert_data_tree!(node_hierarchy, key: {
 ///     key_fn() => "value",
 /// })
 /// ```
@@ -202,12 +199,12 @@ macro_rules! tree_assertion {
 /// `Inspector` and matched against:
 /// ```
 /// let inspector = Inspector::new().unwrap();
-/// assert_inspect_tree!(inspector, root: {});
+/// assert_data_tree!(inspector, root: {});
 /// ```
 ///
 /// `TreeAssertion`s made elsewhere can be included bodily in the macro, but must always be followed
 /// by a trailing comma:
-/// assert_inspect_tree!(
+/// assert_data_tree!(
 ///     node_hierarchy,
 ///     key: {
 ///         make_child_tree_assertion(), // required trailing comma
@@ -219,56 +216,30 @@ macro_rules! tree_assertion {
 /// to provide warning for users who accidentally log the same name multiple times, as the
 /// behavior for reading properties or children with duplicate names is not well defined.
 #[macro_export]
-macro_rules! assert_inspect_tree {
+macro_rules! assert_data_tree {
     ($node_hierarchy:expr, $($rest:tt)+) => {{
-        use $crate::testing::{NodeHierarchyGetter as _, tree_assertion};
-        let tree_assertion = tree_assertion!($($rest)+);
+        let tree_assertion = $crate::tree_assertion!($($rest)+);
+
+        use $crate::testing::NodeHierarchyGetter as _;
         if let Err(e) = tree_assertion.run($node_hierarchy.get_node_hierarchy().as_ref()) {
             panic!("tree assertion fails: {}", e);
         }
     }};
 }
 
-#[allow(missing_docs)]
-pub trait NodeHierarchyGetter {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy>;
+/// A type which can function as a "view" into a node hierarchy, optionally allocating a new
+/// instance to service a request.
+pub trait NodeHierarchyGetter<K: Clone> {
+    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy<K>>;
 }
 
-impl NodeHierarchyGetter for NodeHierarchy {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
+impl<K: Clone> NodeHierarchyGetter<K> for NodeHierarchy<K> {
+    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy<K>> {
         Cow::Borrowed(self)
     }
 }
 
-impl NodeHierarchyGetter for PartialNodeHierarchy {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
-        let hierarchy: NodeHierarchy = self.clone().into();
-        if !hierarchy.missing.is_empty() {
-            panic!(
-                "Missing links: {:?}",
-                hierarchy
-                    .missing
-                    .iter()
-                    .map(|missing| {
-                        format!("(name:{:?}, reason:{:?})", missing.name, missing.reason)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-        }
-        Cow::Owned(hierarchy)
-    }
-}
-
-impl NodeHierarchyGetter for Inspector {
-    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
-        let hierarchy =
-            futures::executor::block_on(async move { reader::read_from_inspector(self).await })
-                .expect("failed to get hierarchy");
-        Cow::Owned(hierarchy)
-    }
-}
-
+/// A difference between expected and actual output.
 struct Diff(Changeset);
 
 impl Diff {
@@ -280,7 +251,7 @@ impl Diff {
 }
 
 impl Display for Diff {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         writeln!(f, "(-) Expected vs. (+) Actual:")?;
         for diff in &self.0.diffs {
             let (prefix, contents) = match diff {
@@ -311,22 +282,25 @@ macro_rules! eq_or_bail {
     }}
 }
 
-/// Struct for matching against an Inspect tree (NodeHierarchy).
-pub struct TreeAssertion {
+/// Struct for matching against a Data tree (NodeHierarchy).
+pub struct TreeAssertion<K = String> {
     /// Expected name of the node being compared against
     name: String,
     /// Friendly name that includes path from ancestors. Mainly used to indicate which node fails
     /// in error message
     path: String,
     /// Expected property names and assertions to match the actual properties against
-    properties: Vec<(String, Box<dyn PropertyAssertion>)>,
+    properties: Vec<(String, Box<dyn PropertyAssertion<K>>)>,
     /// Assertions to match against child trees
-    children: Vec<TreeAssertion>,
+    children: Vec<TreeAssertion<K>>,
     /// Whether all properties and children of the tree should be checked
     exact_match: bool,
 }
 
-impl TreeAssertion {
+impl<K> TreeAssertion<K>
+where
+    K: AsRef<str>,
+{
     /// Create a new `TreeAssertion`. The |name| argument is the expected name of the tree to be
     /// compared against. Set |exact_match| to true to specify that all properties and children of
     /// the tree should be checked. To perform partial matching of the tree, set it to false.
@@ -341,34 +315,34 @@ impl TreeAssertion {
     }
 
     #[allow(missing_docs)]
-    pub fn add_property_assertion(&mut self, key: &str, assertion: Box<dyn PropertyAssertion>) {
-        self.properties.push((key.to_string(), assertion));
+    pub fn add_property_assertion(&mut self, key: &str, assertion: Box<dyn PropertyAssertion<K>>) {
+        self.properties.push((key.to_owned(), assertion));
     }
 
     #[allow(missing_docs)]
-    pub fn add_child_assertion(&mut self, mut assertion: TreeAssertion) {
+    pub fn add_child_assertion(&mut self, mut assertion: TreeAssertion<K>) {
         assertion.path = format!("{}.{}", self.path, assertion.name);
         self.children.push(assertion);
     }
 
     /// Check whether |actual| tree satisfies criteria defined by `TreeAssertion`. Return `Ok` if
     /// assertion passes and `Error` if assertion fails.
-    pub fn run(&self, actual: &NodeHierarchy) -> Result<(), Error> {
+    pub fn run(&self, actual: &NodeHierarchy<K>) -> Result<(), Error> {
         eq_or_bail!(self.name, actual.name, "node `{}` - expected node name != actual", self.path);
 
         if self.exact_match {
-            let properties_names = self.properties.iter().map(|p| p.0.clone());
-            let children_names = self.children.iter().map(|c| c.name.clone());
+            let properties_names = self.properties.iter().map(|p| p.0.to_string());
+            let children_names = self.children.iter().map(|c| c.name.to_string());
             let keys: BTreeSet<String> = properties_names.chain(children_names).collect();
 
             let actual_props = actual.properties.iter().map(|p| p.name().to_string());
-            let actual_children = actual.children.iter().map(|c| c.name.clone());
+            let actual_children = actual.children.iter().map(|c| c.name.to_string());
             let actual_keys: BTreeSet<String> = actual_props.chain(actual_children).collect();
             eq_or_bail!(keys, actual_keys, "node `{}` - expected keys != actual", self.path);
         }
 
         for (name, assertion) in self.properties.iter() {
-            let mut matched = actual.properties.iter().filter(|p| p.name() == name);
+            let mut matched = actual.properties.iter().filter(|p| p.key().as_ref() == name);
             let first_match = matched.next();
             if let Some(_second_match) = matched.next() {
                 bail!("node `{}` - multiple properties found with name `{}`", self.path, name);
@@ -407,22 +381,22 @@ impl TreeAssertion {
 }
 
 #[allow(missing_docs)]
-pub trait PropertyAssertion {
+pub trait PropertyAssertion<K = String> {
     /// Check whether |actual| property satisfies criteria. Return `Ok` if assertion passes and
     /// `Error` if assertion fails.
-    fn run(&self, actual: &Property) -> Result<(), Error>;
+    fn run(&self, actual: &Property<K>) -> Result<(), Error>;
 }
 
 macro_rules! impl_property_assertion {
     ($prop_variant:ident, $($ty:ty),+) => {
         $(
-            impl PropertyAssertion for $ty {
-                fn run(&self, actual: &Property) -> Result<(), Error> {
+            impl<K> PropertyAssertion<K> for $ty {
+                fn run(&self, actual: &Property<K>) -> Result<(), Error> {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         eq_or_bail!(self, value);
                     } else {
                         return Err(format_err!("expected {}, found {}",
-                            stringify!($prop_variant), property_type_name(actual)));
+                            stringify!($prop_variant), actual.discriminant_name()));
                     }
                     Ok(())
                 }
@@ -435,8 +409,8 @@ macro_rules! impl_array_properties_assertion {
     ($prop_variant:ident, $($ty:ty),+) => {
         $(
             /// Asserts primitive arrays
-            impl PropertyAssertion for Vec<$ty> {
-                fn run(&self, actual: &Property) -> Result<(), Error> {
+            impl<K> PropertyAssertion<K> for Vec<$ty> {
+                fn run(&self, actual: &Property<K>) -> Result<(), Error> {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         match &value {
                             ArrayContent::Values(values) => eq_or_bail!(self, values),
@@ -449,15 +423,15 @@ macro_rules! impl_array_properties_assertion {
                         }
                     } else {
                         return Err(format_err!("expected {}, found {}",
-                            stringify!($prop_variant), property_type_name(actual)));
+                            stringify!($prop_variant), actual.discriminant_name()));
                     }
                     Ok(())
                 }
             }
 
             /// Asserts an array of buckets
-            impl PropertyAssertion for Vec<Bucket<$ty>> {
-                fn run(&self, actual: &Property) -> Result<(), Error> {
+            impl<K> PropertyAssertion<K> for Vec<Bucket<$ty>> {
+                fn run(&self, actual: &Property<K>) -> Result<(), Error> {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         match &value {
                             ArrayContent::Buckets(buckets) => eq_or_bail!(self, buckets),
@@ -470,46 +444,38 @@ macro_rules! impl_array_properties_assertion {
                         }
                     } else {
                         return Err(format_err!("expected {}, found {}",
-                            stringify!($prop_variant), property_type_name(actual)));
+                            stringify!($prop_variant), actual.discriminant_name()));
                     }
                     Ok(())
                 }
             }
 
             /// Asserts a histogram.
-            impl PropertyAssertion for HistogramAssertion<$ty> {
-                fn run(&self, actual: &Property) -> Result<(), Error> {
+            impl<K> PropertyAssertion<K> for HistogramAssertion<$ty> {
+                fn run(&self, actual: &Property<K>) -> Result<(), Error> {
                     if let Property::$prop_variant(_key, value, ..) = actual {
-                        let expected_content = ArrayContent::new(
-                                self.values.clone(), self.format.clone())
-                            .map_err(|e| {
-                                format_err!(
-                                    "failed to load array content for expected assertion {}: {:?}",
-                                    stringify!($prop_variant), e)
-                            })?;
+                        let expected_content =
+                            ArrayContent::new(self.values.clone(), self.format.clone()).map_err(
+                                |e| {
+                                    format_err!(
+                                        "failed to load array content for expected assertion {}: {:?}",
+                                        stringify!($prop_variant),
+                                        e
+                                    )
+                                },
+                            )?;
                         eq_or_bail!(&expected_content, value);
                     } else {
-                        return Err(format_err!("expected {}, found {}",
-                            stringify!($prop_variant), property_type_name(actual)));
+                        return Err(format_err!(
+                            "expected {}, found {}",
+                            stringify!($prop_variant),
+                            actual.discriminant_name(),
+                        ));
                     }
                     Ok(())
                 }
             }
         )+
-    }
-}
-
-fn property_type_name(property: &Property) -> &str {
-    match property {
-        Property::String(_, _) => "String",
-        Property::Bytes(_, _) => "Bytes",
-        Property::Int(_, _) => "Int",
-        Property::IntArray(_, _) => "IntArray",
-        Property::Uint(_, _) => "Uint",
-        Property::UintArray(_, _) => "UintArray",
-        Property::Double(_, _) => "Double",
-        Property::DoubleArray(_, _) => "DoubleArray",
-        Property::Bool(_, _) => "Bool",
     }
 }
 
@@ -526,8 +492,8 @@ impl_array_properties_assertion!(UintArray, u64);
 /// A PropertyAssertion that always passes
 pub struct AnyProperty;
 
-impl PropertyAssertion for AnyProperty {
-    fn run(&self, _actual: &Property) -> Result<(), Error> {
+impl<K> PropertyAssertion<K> for AnyProperty {
+    fn run(&self, _actual: &Property<K>) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -541,16 +507,14 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
     HistogramAssertion<T>
 {
     pub fn linear(params: LinearHistogramParams<T>) -> Self {
-        let mut values =
-            vec![T::default(); params.buckets + constants::LINEAR_HISTOGRAM_EXTRA_SLOTS];
+        let mut values = vec![T::default(); params.buckets + LINEAR_HISTOGRAM_EXTRA_SLOTS];
         values[0] = params.floor;
         values[1] = params.step_size;
         Self { format: ArrayFormat::LinearHistogram, values }
     }
 
     pub fn exponential(params: ExponentialHistogramParams<T>) -> Self {
-        let mut values =
-            vec![T::default(); params.buckets + constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS];
+        let mut values = vec![T::default(); params.buckets + EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS];
         values[0] = params.floor;
         values[1] = params.initial_step;
         values[2] = params.step_multiplier;
@@ -580,7 +544,7 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
             let mut current_floor = self.values[0];
             let step_size = self.values[1];
             // Start in the underflow index.
-            let mut index = constants::LINEAR_HISTOGRAM_EXTRA_SLOTS - 2;
+            let mut index = LINEAR_HISTOGRAM_EXTRA_SLOTS - 2;
             while value >= current_floor && index < self.values.len() - 1 {
                 current_floor += step_size;
                 index += 1;
@@ -597,7 +561,7 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
             let mut offset = self.values[1];
             let step_multiplier = self.values[2];
             // Start in the underflow index.
-            let mut index = constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2;
+            let mut index = EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2;
             while value >= current_floor && index < self.values.len() - 1 {
                 current_floor = floor + offset;
                 offset *= step_multiplier;
@@ -611,16 +575,12 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::LinkNodeDisposition,
-        fuchsia_inspect_node_hierarchy::{ArrayFormat, LinkValue},
-    };
+    use {super::*, crate::Bucket};
 
     #[test]
     fn test_exact_match_simple() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
         });
@@ -629,7 +589,7 @@ mod tests {
     #[test]
     fn test_exact_match_complex() {
         let node_hierarchy = complex_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -645,7 +605,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_mismatched_property_name() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub3: "sub2_value",
         });
@@ -655,7 +615,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_mismatched_child_name() {
         let node_hierarchy = complex_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -671,7 +631,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_mismatched_property_name_in_child() {
         let node_hierarchy = complex_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -687,7 +647,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_mismatched_property_value() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub2_value",
             sub2: "sub2_value",
         });
@@ -697,7 +657,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_missing_property() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
         });
     }
@@ -706,7 +666,7 @@ mod tests {
     #[should_panic]
     fn test_exact_match_missing_child() {
         let node_hierarchy = complex_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -720,10 +680,10 @@ mod tests {
         let node_hierarchy = complex_tree();
 
         // only verify the top tree name
-        assert_inspect_tree!(node_hierarchy, key: contains {});
+        assert_data_tree!(node_hierarchy, key: contains {});
 
         // verify parts of the tree
-        assert_inspect_tree!(node_hierarchy, key: contains {
+        assert_data_tree!(node_hierarchy, key: contains {
             sub: "sub_value",
             child1: contains {},
         });
@@ -733,7 +693,7 @@ mod tests {
     #[should_panic]
     fn test_partial_match_nonexistent_property() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: contains {
+        assert_data_tree!(node_hierarchy, key: contains {
             sub3: AnyProperty,
         });
     }
@@ -741,7 +701,7 @@ mod tests {
     #[test]
     fn test_ignore_property_value() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: AnyProperty,
             sub2: "sub2_value",
         });
@@ -751,7 +711,7 @@ mod tests {
     #[should_panic]
     fn test_ignore_property_value_property_name_is_still_checked() {
         let node_hierarchy = simple_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub1: AnyProperty,
             sub2: "sub2_value",
         })
@@ -764,7 +724,7 @@ mod tests {
             vec![Property::String("@time".to_string(), "1.000".to_string())],
             vec![],
         );
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             "@time": "1.000"
         });
     }
@@ -777,7 +737,7 @@ mod tests {
             vec![],
         );
         let time_key = "@time";
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             var time_key: "1.000"
         });
     }
@@ -796,7 +756,7 @@ mod tests {
             ],
             vec![],
         );
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             "@uints": vec![1u64, 2, 3],
             "@ints": vec![-2i64, -4, 0],
             "@doubles": vec![1.3, 2.5, -3.6]
@@ -858,7 +818,7 @@ mod tests {
         exponential_assertion.insert_values(vec![
             -3.1, -2.2, -1.3, 0.0, 1.1, 1.2, 2.5, 2.8, 2.0, 3.1, 4.2, 5.3, 6.4, 7.5, 8.6,
         ]);
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             "@linear-uints": linear_assertion,
             "@linear-ints": vec![
                 Bucket { floor: i64::MIN, upper: 6, count: 8 },
@@ -885,44 +845,6 @@ mod tests {
     }
 
     #[test]
-    fn test_matching_with_inspector() {
-        let inspector = Inspector::new();
-        assert_inspect_tree!(inspector, root: {});
-    }
-
-    #[test]
-    fn test_matching_with_partial() {
-        let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
-        let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
-        assert_inspect_tree!(partial, root: {
-            sub: "sub_value",
-        });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_missing_values_with_partial() {
-        let mut partial = PartialNodeHierarchy::new("root", vec![], vec![]);
-        partial.links = vec![LinkValue {
-            name: "missing-link".to_string(),
-            content: "missing-link-404".to_string(),
-            disposition: LinkNodeDisposition::Child,
-        }];
-        assert_inspect_tree!(partial, root: {});
-    }
-
-    #[test]
-    fn test_matching_with_expression_as_key() {
-        let properties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
-        let partial = PartialNodeHierarchy::new("root", properties, vec![]);
-        let value = || "sub_value";
-        let key = || "sub".to_string();
-        assert_inspect_tree!(partial, root: {
-            key() => value(),
-        });
-    }
-
-    #[test]
     fn test_matching_tree_assertion_expression() {
         let node_hierarchy = complex_tree();
         let child1 = tree_assertion!(
@@ -930,7 +852,7 @@ mod tests {
                 child1_sub: 10i64,
             }
         );
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1,
@@ -946,21 +868,21 @@ mod tests {
     #[should_panic]
     fn test_matching_non_unique_property_fails() {
         let node_hierarchy = non_unique_prop_tree();
-        assert_inspect_tree!(node_hierarchy, key: { prop: "prop_value#0" });
+        assert_data_tree!(node_hierarchy, key: { prop: "prop_value#0" });
     }
 
     #[test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_2() {
         let node_hierarchy = non_unique_prop_tree();
-        assert_inspect_tree!(node_hierarchy, key: { prop: "prop_value#1" });
+        assert_data_tree!(node_hierarchy, key: { prop: "prop_value#1" });
     }
 
     #[test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_3() {
         let node_hierarchy = non_unique_prop_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             prop: "prop_value#0",
             prop: "prop_value#1",
         });
@@ -970,7 +892,7 @@ mod tests {
     #[should_panic]
     fn test_matching_non_unique_child_fails() {
         let node_hierarchy = non_unique_child_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             child: {
                 prop: 10i64
             }
@@ -981,7 +903,7 @@ mod tests {
     #[should_panic]
     fn test_matching_non_unique_child_fails_2() {
         let node_hierarchy = non_unique_child_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             child: {
                 prop: 20i64
             }
@@ -992,7 +914,7 @@ mod tests {
     #[should_panic]
     fn test_matching_non_unique_child_fails_3() {
         let node_hierarchy = non_unique_child_tree();
-        assert_inspect_tree!(node_hierarchy, key: {
+        assert_data_tree!(node_hierarchy, key: {
             child: {
                 prop: 10i64,
             },

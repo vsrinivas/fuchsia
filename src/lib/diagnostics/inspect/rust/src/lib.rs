@@ -22,6 +22,7 @@ use {
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_inspect_node_hierarchy::testing::NodeHierarchyGetter,
     fuchsia_syslog::macros::*,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
@@ -30,6 +31,7 @@ use {
     parking_lot::Mutex,
     paste,
     std::{
+        borrow::Cow,
         cmp::max,
         default::Default,
         fmt::Debug,
@@ -47,17 +49,30 @@ use {
 #[cfg(test)]
 use crate::format::block::Block;
 
+pub use fuchsia_inspect_node_hierarchy::{
+    ExponentialHistogramParams, LinearHistogramParams, NodeHierarchy,
+};
+pub use testing::{assert_inspect_tree, tree_assertion};
+
 pub mod component;
 pub mod format;
 pub mod health;
 pub mod heap;
 pub mod reader;
-pub mod trie;
-#[macro_use]
-pub mod testing;
 pub mod service;
 mod state;
+pub mod trie;
 mod utils;
+
+pub mod testing {
+    pub use fuchsia_inspect_node_hierarchy::{
+        assert_data_tree as assert_inspect_tree,
+        testing::{
+            AnyProperty, HistogramAssertion, NodeHierarchyGetter, PropertyAssertion, TreeAssertion,
+        },
+        tree_assertion,
+    };
+}
 
 /// Directory where the diagnostics service should be added.
 pub const SERVICE_DIR: &str = "diagnostics";
@@ -75,6 +90,15 @@ pub struct Inspector {
 
     /// The VMO backing the inspector
     pub(in crate) vmo: Option<Arc<zx::Vmo>>,
+}
+
+impl NodeHierarchyGetter<String> for Inspector {
+    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
+        let hierarchy =
+            futures::executor::block_on(async move { reader::read_from_inspector(self).await })
+                .expect("failed to get hierarchy");
+        Cow::Owned(hierarchy)
+    }
 }
 
 /// Holds a list of inspect types that won't change.
@@ -520,13 +544,6 @@ macro_rules! create_array_property_fn {
     };
 }
 
-#[allow(missing_docs)]
-pub struct LinearHistogramParams<T> {
-    pub floor: T,
-    pub step_size: T,
-    pub buckets: usize,
-}
-
 /// Utility for generating functions to create a linear histogram property.
 ///   `name`: identifier for the name (example: double)
 ///   `name_cap`: identifier for the name capitalized (example: Double)
@@ -552,14 +569,6 @@ macro_rules! create_linear_histogram_property_fn {
             }
         }
     };
-}
-
-#[allow(missing_docs)]
-pub struct ExponentialHistogramParams<T> {
-    pub floor: T,
-    pub initial_step: T,
-    pub step_multiplier: T,
-    pub buckets: usize,
 }
 
 /// Utility for generating functions to create an exponential histogram property.
