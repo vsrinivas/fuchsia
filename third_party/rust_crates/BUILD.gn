@@ -345,11 +345,10 @@ if (!(current_os == "fuchsia")) {
     deps = [ ":petgraph-v0_5_1" ]
   }
 }
-if (current_os == "fuchsia") {
-  group("pin-project") {
-    deps = [ ":pin-project-v0_4_17" ]
-  }
+group("pin-project") {
+  deps = [ ":pin-project-v0_4_17" ]
 }
+
 group("pin-utils") {
   deps = [ ":pin-utils-v0_1_0" ]
 }
