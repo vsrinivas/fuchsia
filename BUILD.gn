@@ -512,8 +512,62 @@ build_api_module("fuzzers") {
 # This describes all the "image" files the build can produce, in the file:
 #  "$root_build_dir/images.json"
 #
-# See //zircon:images for a description and partial schema definition. Fields
-# additionally found in this build API module include
+# An "image file" is a binary file that typically ends up on a device
+# partition (e.g. kernel, boot loader, partition image, etc).
+#
+# Consumers of the build should look here for the images to be built.
+# The $cpu, $name, and $type fields identify the purpose of each image.
+# Consumers are expected to ignore extra images they have no use for or
+# whose fields they don't understand.
+#
+# The $path field indicates where the file is found in the build
+# directory.  The presence of an image in the list means that the build
+# *can* produce it, not that the build *will* produce it.  Hence,
+# consumers should use $path as an explicit argument to Ninja to ensure
+# that each needed image gets built.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the image is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   name
+#     Required: The primary way that this image is known to consumers.
+#     Note that the name need not be unique within the images list.
+#     The tuple of ($name, $type, $cpu) should be unique.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the image target.
+#     Type: label_with_toolchain
+#
+#   path
+#     Required: Path to where the file is found, relative to $root_build_dir.
+#     This is also the argument to Ninja that ensures this image will be built.
+#     Type: path relative to $root_build_dir
+#
+#   testonly
+#     Optional: This image includes test code/data not meant for production.
+#     Type: bool
+#     Default: false
+#
+#   tags
+#     Optional: Tags associated with the image.  Certain tags may indicate
+#     to the build API consumer what should be done with the image.
+#     Type: list(string)
+#
+#   type
+#     Required: Type of file, e.g. "zbi".  This often corresponds to the
+#     extension used on the image file name, but not always.  For many
+#     miscellaneous formats, this is just "bin" and the consumer is
+#     expected to understand what the particular format is for particular
+#     $name, $cpu combinations.  Other types include:
+#      * "zbi": the ZBI (<zircon/boot/image.h>) format
+#      * "efi": an EFI executable that an EFI boot loader can load
+#      * "kernel": some other format loaded by a boot loader or emulator
+#      * "blk": contents to be written to a storage device or partition
+#     Type: string
 #
 #   bootserver_pave, bootserver_pave_zedboot, bootserver_netboot
 #     Optional: flag names under which the associated image should be passed to
