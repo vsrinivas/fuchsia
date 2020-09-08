@@ -91,6 +91,9 @@ type QEMUConfig struct {
 	// This option should be used judiciously, as it can slow the process down.
 	Serial bool `json:"serial"`
 
+	// Logfile saves emulator standard output to a file if set.
+	Logfile string `json:"logfile"`
+
 	// Whether User networking is enabled; if false, a Tap interface will be used.
 	UserNetworking bool `json:"user_networking"`
 
@@ -124,6 +127,7 @@ type EMUCommandBuilder interface {
 	SetMemory(int)
 	SetCPUCount(int)
 	AddVirtioBlkPciDrive(qemu.Drive)
+	AddSerial(qemu.Chardev)
 	AddNetwork(qemu.Netdev)
 	AddKernelArg(string)
 	Build() ([]string, error)
@@ -296,6 +300,15 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	}
 	qemuCmd.AddNetwork(netdev)
 
+	chardev := qemu.Chardev{
+		ID:     "char0",
+		Signal: false,
+	}
+	if t.config.Logfile != "" {
+		chardev.Logfile = t.config.Logfile
+	}
+	qemuCmd.AddSerial(chardev)
+
 	// Disable the virtcon.
 	qemuCmd.AddKernelArg("virtcon.disable=true")
 	// The system will halt on a kernel panic instead of rebooting.
@@ -315,7 +328,6 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.SetCPUCount(t.config.CPU)
 	qemuCmd.SetMemory(t.config.Memory)
 	qemuCmd.SetFlag("-nographic")
-	qemuCmd.SetFlag("-serial", "stdio")
 	qemuCmd.SetFlag("-monitor", "none")
 
 	invocation, err := qemuCmd.Build()

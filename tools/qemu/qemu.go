@@ -27,6 +27,17 @@ type Drive struct {
 	Addr string
 }
 
+type Chardev struct {
+	// ID is the character device identifier.
+	ID string
+
+	// Logfile is a path to write the output to.
+	Logfile string
+
+	// Signal controls whether signals are enabled on the terminal.
+	Signal bool
+}
+
 type Forward struct {
 	// HostPort is the port on the host.
 	HostPort int
@@ -154,6 +165,20 @@ func (q *QEMUCommandBuilder) AddVirtioBlkPciDrive(d Drive) {
 		device += fmt.Sprintf(",addr=%s", d.Addr)
 	}
 	q.SetFlag("-device", device)
+}
+
+func (q *QEMUCommandBuilder) AddSerial(c Chardev) {
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("stdio,id=%s", c.ID))
+	if c.Logfile != "" {
+		builder.WriteString(fmt.Sprintf(",logfile=%s", c.Logfile))
+	}
+	if !c.Signal {
+		builder.WriteString(",signal=off")
+	}
+	q.SetFlag("-chardev", builder.String())
+	device := fmt.Sprintf("chardev:%s", c.ID)
+	q.SetFlag("-serial", device)
 }
 
 func (q *QEMUCommandBuilder) AddNetwork(n Netdev) {

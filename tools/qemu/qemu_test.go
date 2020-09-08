@@ -135,6 +135,35 @@ func TestQEMUCommandBuilder(t *testing.T) {
 		err: nil,
 	}, cmd, err)
 
+	b.AddSerial(
+		Chardev{
+			ID:      "char0",
+			Logfile: "logfile.txt",
+			Signal:  false,
+		},
+	)
+
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{
+			"./bin/qemu",
+			"-kernel", "./data/qemu-kernel",
+			"-initrd", "./data/zircon-a",
+			"-machine", "virt-2.12,gic-version=host",
+			"-cpu", "host",
+			"-enable-kvm",
+			"-m", "4096",
+			"-smp", "4",
+			"-object", "iothread,id=iothread-otherdisk",
+			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
+			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
+			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
+			"-serial", "chardev:char0",
+			"-net", "none",
+			"-append", "kernel.serial=legacy infra.foo=bar"},
+		err: nil,
+	}, cmd, err)
+
 	b.AddNetwork(
 		Netdev{
 			ID:   "net0",
@@ -157,6 +186,8 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-object", "iothread,id=iothread-otherdisk",
 			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
 			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
+			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
+			"-serial", "chardev:char0",
 			"-netdev", "user,id=net0",
 			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
