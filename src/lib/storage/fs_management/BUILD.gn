@@ -32,6 +32,7 @@ fuchsia_component("fs-management-rust-tests-component") {
   deps = [
     ":fs_management_test",
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/factoryfs",
     "//src/storage/bin/minfs",
   ]
 }

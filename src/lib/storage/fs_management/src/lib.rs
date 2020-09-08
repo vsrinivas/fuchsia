@@ -179,6 +179,41 @@ impl Filesystem<Minfs> {
     }
 }
 
+/// The factoryfs layout type.
+pub struct Factoryfs;
+
+impl Factoryfs {
+    /// Manage a factoryfs partition on the provided device. The device is not formatted, mounted,
+    /// or modified at this point.
+    pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
+        let (block_device, server_chan) = zx::Channel::create()?;
+        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
+        Filesystem::new(block_device)
+    }
+
+    /// Manage a factory partition on the provided device. The device is not formatted, mounted, or
+    /// modified at this point.
+    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::new(device_channel)
+    }
+}
+
+impl Layout for Factoryfs {
+    fn path() -> &'static CStr {
+        cstr!("/pkg/bin/factoryfs")
+    }
+
+    fn name() -> &'static str {
+        "factoryfs"
+    }
+
+    // factoryfs doesn't actually support any options, so even though it is "read only" we don't
+    // use the readonly flag.
+    fn options() -> FSOptions {
+        FSOptions { readonly: false, verbose: false, metrics: false, journal: false }
+    }
+}
+
 impl<FSType> Filesystem<FSType>
 where
     FSType: Layout,
@@ -434,7 +469,7 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::{Blobfs, FSLauncher, FSOptions, Filesystem, Launcher, Minfs},
+        super::{Blobfs, FSLauncher, FSOptions, Factoryfs, Filesystem, Launcher, Minfs},
         anyhow::Error,
         cstr::cstr,
         fdio::SpawnAction,
@@ -667,6 +702,40 @@ mod tests {
         }
 
         minfs.unmount().expect("failed to unmount minfs the second time");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
+    }
+
+    fn ramdisk_factoryfs(block_size: u64) -> (RamdiskClient, Filesystem<Factoryfs>) {
+        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
+        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
+            .unwrap();
+        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
+        let device = ramdisk.open().unwrap();
+        let factoryfs = Factoryfs::from_channel(device).unwrap();
+        (ramdisk, factoryfs)
+    }
+
+    #[test]
+    fn factoryfs_format_fsck_success() {
+        let block_size = 512;
+        let (ramdisk, mut factoryfs) = ramdisk_factoryfs(block_size);
+
+        factoryfs.format().expect("failed to format factoryfs");
+        factoryfs.fsck().expect("failed to fsck factoryfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
+    }
+
+    #[test]
+    fn factoryfs_format_mount_unmount() {
+        let block_size = 512;
+        let mount_point = "/test-fs-root";
+        let (ramdisk, mut factoryfs) = ramdisk_factoryfs(block_size);
+
+        factoryfs.format().expect("failed to format factoryfs");
+        factoryfs.mount(mount_point).expect("failed to mount factoryfs");
+        factoryfs.unmount().expect("failed to unmount factoryfs");
 
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
