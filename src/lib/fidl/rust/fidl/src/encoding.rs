@@ -217,6 +217,7 @@ impl<'a> Encoder<'a> {
 
     /// Extends buf by `len` bytes and calls the provided closure to write
     /// out-of-line data, with `offset` set to the start of the new region.
+    #[inline(always)]
     pub fn write_out_of_line<F>(&mut self, len: usize, recursion_depth: usize, f: F) -> Result<()>
     where
         F: FnOnce(&mut Encoder<'_>, usize, usize) -> Result<()>,
