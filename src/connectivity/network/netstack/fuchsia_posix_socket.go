@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
@@ -380,7 +379,7 @@ type endpointWithSocket struct {
 
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
-	closeOnce uint32
+	closeOnce sync.Once
 
 	// Used to unblock waiting to write when SO_LINGER is enabled.
 	linger chan struct{}
@@ -574,41 +573,39 @@ const localSignalClosing = zx.SignalUser1
 // Note, calling close on an endpoint that has already been closed is safe as
 // the cleanup work will only be done once.
 func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
-	if !atomic.CompareAndSwapUint32(&eps.closeOnce, 0, 1) {
-		return
-	}
+	eps.closeOnce.Do(func() {
+		// Interrupt waits on notification channels. Notification reads
+		// are always combined with closing in a select statement.
+		close(eps.closing)
 
-	// Interrupt waits on notification channels. Notification reads
-	// are always combined with closing in a select statement.
-	close(eps.closing)
+		// Interrupt waits on endpoint.local. Handle waits always
+		// include localSignalClosing.
+		if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
+			panic(err)
+		}
 
-	// Interrupt waits on endpoint.local. Handle waits always
-	// include localSignalClosing.
-	if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
-		panic(err)
-	}
+		// The interruptions above cause our loops to exit. Wait until
+		// they do before releasing resources they may be using.
+		for _, ch := range loopDone {
+			<-ch
+		}
 
-	// The interruptions above cause our loops to exit. Wait until
-	// they do before releasing resources they may be using.
-	for _, ch := range loopDone {
-		<-ch
-	}
+		// Copy the handle before closing below; (*zx.Handle).Close sets the
+		// receiver to zx.HandleInvalid.
+		key := zx.Handle(eps.local)
 
-	// Copy the handle before closing below; (*zx.Handle).Close sets the
-	// receiver to zx.HandleInvalid.
-	key := zx.Handle(eps.local)
+		if err := eps.local.Close(); err != nil {
+			panic(err)
+		}
 
-	if err := eps.local.Close(); err != nil {
-		panic(err)
-	}
+		eps.wq.EventUnregister(&eps.entry)
 
-	eps.wq.EventUnregister(&eps.entry)
+		eps.endpoint.ns.onRemoveEndpoint(key)
 
-	eps.endpoint.ns.onRemoveEndpoint(key)
+		eps.ep.Close()
 
-	eps.ep.Close()
-
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
+		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
+	})
 }
 
 func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.StreamSocketListenResult, error) {
@@ -676,9 +673,13 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (posix.Errno, *endpointWithS
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (eps *endpointWithSocket) loopWrite() {
-	defer close(eps.loopWriteDone)
-
-	closeFn := func() { eps.close(eps.loopReadDone, eps.loopPollDone) }
+	triggerClose := false
+	defer func() {
+		close(eps.loopWriteDone)
+		if triggerClose {
+			eps.close(eps.loopReadDone, eps.loopPollDone)
+		}
+	}()
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
@@ -770,12 +771,12 @@ func (eps *endpointWithSocket) loopWrite() {
 				}
 				return
 			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
-				closeFn()
+				triggerClose = true
 				return
 			case tcpip.ErrTimeout:
 				// The maximum duration of missing ACKs was reached, or the maximum
 				// number of unacknowledged keepalives was reached.
-				closeFn()
+				triggerClose = true
 				return
 			default:
 				syslog.Errorf("TCP Endpoint.Write(): %s", err)
@@ -787,7 +788,13 @@ func (eps *endpointWithSocket) loopWrite() {
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
 func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
-	defer close(eps.loopReadDone)
+	triggerClose := false
+	defer func() {
+		close(eps.loopReadDone)
+		if triggerClose {
+			eps.close(eps.loopWriteDone, eps.loopPollDone)
+		}
+	}()
 
 	initDone := func() {
 		if initCh != nil {
@@ -795,8 +802,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			initCh = nil
 		}
 	}
-
-	closeFn := func() { eps.close(eps.loopWriteDone, eps.loopPollDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
@@ -898,7 +903,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 				if connected {
 					// The connection was alive but now is dead - this is equivalent to
 					// having received a TCP RST.
-					closeFn()
+					triggerClose = true
 					return
 				}
 				// The connection was never created. This is equivalent to the
@@ -929,7 +934,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 				}
 				return
 			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
-				closeFn()
+				triggerClose = true
 				return
 			default:
 				syslog.Errorf("Endpoint.Read(): %s", err)

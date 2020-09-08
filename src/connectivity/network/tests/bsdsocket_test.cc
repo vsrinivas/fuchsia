@@ -1423,6 +1423,66 @@ TEST(NetStreamTest, ShutdownDuringConnect) {
   });
 }
 
+TEST(LocalhostTest, RaceLocalPeerClose) {
+  fbl::unique_fd listener;
+
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+
+  constexpr int kIterations = 50;
+
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  ASSERT_EQ(listen(listener.get(), kIterations), 0) << strerror(errno);
+
+  std::vector<std::thread> threads;
+  threads.reserve(kIterations);
+  // Run many iterations in parallel in order to increase load on Netstack and increase the
+  // probability we'll hit the problem.
+  for (int i = 0; i < kIterations; i++) {
+    threads.emplace_back(std::thread([&] {
+      fbl::unique_fd peer, local;
+      ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+      // Setting SO_LINGER to 0 and `close`ing the peer socket should
+      // immediately send a TCP RST.
+      struct linger opt = {
+          .l_onoff = 1,
+          .l_linger = 0,
+      };
+      EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+          << strerror(errno);
+
+      // Start a connection and immediately close it.
+      ASSERT_EQ(connect(peer.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+                0)
+          << strerror(errno);
+      ASSERT_EQ(close(peer.release()), 0) << strerror(errno);
+
+      // Accept the connection created above and close it in sequence. Ensure that signaling races
+      // within Netstack from the previous connection closing are not wrong or catastrophic.
+      ASSERT_TRUE(local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+          << strerror(errno);
+      ASSERT_EQ(close(local.release()), 0) << strerror(errno);
+    }));
+  }
+
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+}
+
 TEST(LocalhostTest, GetAddrInfo) {
   struct addrinfo hints = {
       .ai_family = AF_UNSPEC,
