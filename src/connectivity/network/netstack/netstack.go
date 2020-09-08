@@ -122,6 +122,14 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
+	ids := func(events []cobalt.CobaltEvent) []uint32 {
+		ids := make([]uint32, 0, len(events))
+		for _, event := range events {
+			ids = append(ids, event.MetricId)
+		}
+		return ids
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -129,9 +137,9 @@ func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 		case <-ticker.C:
 			events := c.Collect()
 			if status, err := cobaltLogger.LogCobaltEvents(context.Background(), events); err != nil {
-				syslog.Warnf("cobaltLogger.LogCobaltEvents(_, %+v) failed: %s", events, err)
+				_ = syslog.Warnf("cobaltLogger.LogCobaltEvents(_, MetricId: %d) failed: %s", ids(events), err)
 			} else if status != cobalt.StatusOk {
-				syslog.Warnf("cobaltLogger.LogCobaltEvents(_, %+v) rejected: %s", events, status)
+				_ = syslog.Warnf("cobaltLogger.LogCobaltEvents(_, MetricId: %d) rejected: %s", ids(events), status)
 			}
 		}
 	}
