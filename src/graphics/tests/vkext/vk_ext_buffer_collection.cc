@@ -71,13 +71,35 @@ class VulkanTest {
   bool device_supports_protected_memory() const { return device_supports_protected_memory_; }
 
  private:
+  using UniqueBufferCollection =
+      vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic>;
+
   bool InitVulkan();
-  bool InitImage();
+  bool InitSysmemAllocator();
+  std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> MakeSharedCollection(
+      uint32_t token_count);
+  UniqueBufferCollection CreateVkBufferCollectionForImage(
+      fuchsia::sysmem::BufferCollectionTokenSyncPtr token, vk::ImageCreateInfo image_create_info);
+  fuchsia::sysmem::BufferCollectionInfo_2 AllocateSysmemCollection(
+      std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints,
+      fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
+  void InitializeNonDirectImage(fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info,
+                                VkImageCreateInfo image_create_info);
+  void InitializeNonDirectMemory(fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info);
+  void InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
+                             vk::ImageCreateInfo image_create_info);
+  void InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection);
+  void CheckLinearSubresourceLayout(VkFormat format, uint32_t width);
+  void ValidateBufferProperties(const VkMemoryRequirements &requirements,
+                                const vk::BufferCollectionFUCHSIA collection,
+                                uint32_t expected_count, uint32_t *memory_type_out);
 
   bool is_initialized_ = false;
   bool use_protected_memory_ = false;
   bool device_supports_protected_memory_ = false;
   std::unique_ptr<VulkanContext> ctx_;
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   vk::UniqueImage vk_image_;
   VkDeviceMemory vk_device_memory_{};
   vk::DispatchLoaderDynamic loader_;
@@ -98,6 +120,10 @@ bool VulkanTest::Initialize() {
 
   if (!InitVulkan()) {
     RTN_MSG(false, "InitVulkan failed.\n");
+  }
+
+  if (!InitSysmemAllocator()) {
+    RTN_MSG(false, "InitSysmemAllocator failed.\n");
   }
 
   is_initialized_ = true;
@@ -153,190 +179,51 @@ bool VulkanTest::InitVulkan() {
   return true;
 }
 
-bool VulkanTest::Exec(
-    VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
-    bool repeat_constraints_as_non_protected,
-    const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints) {
-  const vk::Device &device = *ctx_->device();
-  VkResult result;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+bool VulkanTest::InitSysmemAllocator() {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
+                                            sysmem_allocator_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     RTN_MSG(false, "Fdio_service_connect failed: %d\n", status);
   }
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
-  status = sysmem_allocator->AllocateSharedCollection(vulkan_token.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "AllocateSharedCollection failed: %d\n", status);
-  }
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  return true;
+}
 
-  status = vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), local_token.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Duplicate failed: %d\n", status);
-  }
-  status = local_token->Sync();
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Sync failed: %d\n", status);
-  }
+std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> VulkanTest::MakeSharedCollection(
+    uint32_t token_count) {
+  std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> tokens;
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr token1;
+  zx_status_t status = sysmem_allocator_->AllocateSharedCollection(token1.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
 
-  // This bool suggests that we dup another token to set the same constraints, skipping protected
-  // memory requirements. This emulates another participant which does not require protected memory.
-  vk::BufferCollectionFUCHSIA non_protected_collection;
-  if (repeat_constraints_as_non_protected) {
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr repeat_token;
-    status =
-        vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), repeat_token.NewRequest());
-    if (status != ZX_OK) {
-      RTN_MSG(false, "Duplicate failed: %d\n", status);
-    }
-    status = vulkan_token->Sync();
-    if (status != ZX_OK) {
-      RTN_MSG(false, "Sync failed: %d\n", status);
-    }
-
-    auto image_create_info =
-        GetDefaultImageCreateInfo(/*use_protected_memory=*/false, format, width, height, linear);
-    vk::BufferCollectionCreateInfoFUCHSIA import_info(
-        repeat_token.Unbind().TakeChannel().release());
-    vk::Result result = ctx_->device()->createBufferCollectionFUCHSIA(
-        &import_info, nullptr, &non_protected_collection, loader_);
-    if (result != vk::Result::eSuccess) {
-      RTN_MSG(false, "Failed to create buffer collection: %d\n", result);
-    }
-    result = ctx_->device()->setBufferCollectionConstraintsFUCHSIA(non_protected_collection,
-                                                                   &image_create_info, loader_);
-    if (result != vk::Result::eSuccess) {
-      RTN_MSG(false, "Failed to set buffer constraints: %d\n", result);
-    }
+  for (uint32_t i = 1; i < token_count; ++i) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr tokenN;
+    status = token1->Duplicate(std::numeric_limits<uint32_t>::max(), tokenN.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    tokens.push_back(std::move(tokenN));
   }
 
-  auto image_create_info =
-      GetDefaultImageCreateInfo(use_protected_memory_, format, width, height, linear);
-  vk::BufferCollectionCreateInfoFUCHSIA import_info(vulkan_token.Unbind().TakeChannel().release());
-  vk::BufferCollectionFUCHSIA collection;
-  vk::Result result1 =
-      ctx_->device()->createBufferCollectionFUCHSIA(&import_info, nullptr, &collection, loader_);
-  if (result1 != vk::Result::eSuccess) {
-    RTN_MSG(false, "Failed to create buffer collection: %d\n", result1);
-  }
+  status = token1->Sync();
+  EXPECT_EQ(ZX_OK, status);
+  tokens.push_back(std::move(token1));
+  return tokens;
+}
 
-  result1 = ctx_->device()->setBufferCollectionConstraintsFUCHSIA(collection, &image_create_info,
-                                                                  loader_);
-  if (result1 != vk::Result::eSuccess) {
-    RTN_MSG(false, "Failed to set buffer constraints: %d\n", result1);
-  }
+void VulkanTest::CheckLinearSubresourceLayout(VkFormat format, uint32_t width) {
+  const vk::Device &device = *ctx_->device();
+  bool is_yuv = (format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR) ||
+                (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR);
+  VkImageSubresource subresource = {
+      .aspectMask = is_yuv ? VK_IMAGE_ASPECT_PLANE_0_BIT : VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .arrayLayer = 0};
+  VkSubresourceLayout layout;
+  vkGetImageSubresourceLayout(device, *vk_image_, &subresource, &layout);
 
-  fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  sysmem_collection.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "BindSharedCollection failed: %d\n", status);
-  }
-  fuchsia::sysmem::BufferCollectionConstraints constraints{};
-  if (!format_constraints.empty()) {
-    // Use the other connection to specify the actual desired format and size,
-    // which should be compatible with what the vulkan driver can use.
-    assert(direct);
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    // Try multiple format modifiers.
-    constraints.image_format_constraints_count = format_constraints.size();
-    for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
-      constraints.image_format_constraints[i] = format_constraints[i];
-    }
-    status = sysmem_collection->SetConstraints(true, constraints);
-  } else if (direct) {
-    status = sysmem_collection->SetConstraints(false, constraints);
-  } else {
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    // The total buffer count should be 1 with or without this set (because
-    // the Vulkan driver sets a minimum of one buffer).
-    constraints.min_buffer_count_for_camping = 1;
-    status = sysmem_collection->SetConstraints(true, constraints);
-  }
-  if (status != ZX_OK) {
-    RTN_MSG(false, "SetConstraints failed: %d\n", status);
-  }
+  VkDeviceSize min_bytes_per_pixel = is_yuv ? 1 : 4;
+  EXPECT_LE(min_bytes_per_pixel * width, layout.rowPitch);
+  EXPECT_LE(min_bytes_per_pixel * width * 64, layout.size);
 
-  zx_status_t allocation_status;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  if (status != ZX_OK) {
-    RTN_MSG(false, "WaitForBuffersAllocated failed: %d\n", status);
-  }
-  if (allocation_status != ZX_OK) {
-    if (use_protected_memory_) {
-      RTN_MSG(false, "WaitForBuffersAllocated failed: %d\n", allocation_status);
-    }
-    RTN_MSG(false, "WaitForBuffersAllocated failed: %d\n", allocation_status);
-  }
-  status = sysmem_collection->Close();
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Close failed: %d\n", status);
-  }
-
-  EXPECT_EQ(1u, buffer_collection_info.buffer_count);
-  fuchsia::sysmem::PixelFormat pixel_format =
-      buffer_collection_info.settings.image_format_constraints.pixel_format;
-
-  if (!direct) {
-    fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings>(&encoder));
-    buffer_collection_info.settings.Encode(&encoder, 0);
-    std::vector<uint8_t> encoded_data = encoder.TakeBytes();
-
-    VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
-        .pNext = nullptr,
-        .imageFormat = encoded_data.data(),
-        .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
-    image_create_info.pNext = &image_format_fuchsia;
-
-    auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
-    if (result != vk::Result::eSuccess) {
-      RTN_MSG(false, "vkCreateImage failed: %d\n", result);
-    }
-    vk_image_ = std::move(vk_image);
-  } else {
-    VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .collection = collection,
-        .index = 0};
-    if (format == VK_FORMAT_UNDEFINED) {
-      EXPECT_EQ(fuchsia::sysmem::PixelFormatType::BGRA32, pixel_format.type);
-      // Ensure that the image created matches what was asked for on
-      // sysmem_connection.
-      image_create_info.extent.width = 1024;
-      image_create_info.extent.height = 1024;
-      image_create_info.format = vk::Format::eB8G8R8A8Unorm;
-    }
-    image_create_info.pNext = &image_format_fuchsia;
-
-    auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
-    if (result != vk::Result::eSuccess) {
-      RTN_MSG(false, "vkCreateImage failed: %d\n", result);
-    }
-    vk_image_ = std::move(vk_image);
-  }
-
-  if (linear) {
-    bool is_yuv = (format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR) ||
-                  (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR);
-    VkImageSubresource subresource = {
-        .aspectMask = is_yuv ? VK_IMAGE_ASPECT_PLANE_0_BIT : VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .arrayLayer = 0};
-    VkSubresourceLayout layout;
-    vkGetImageSubresourceLayout(device, *vk_image_, &subresource, &layout);
-
-    VkDeviceSize min_bytes_per_pixel = is_yuv ? 1 : 4;
-    EXPECT_LE(min_bytes_per_pixel * width, layout.rowPitch);
-    EXPECT_LE(min_bytes_per_pixel * width * 64, layout.size);
-  }
-
-  if (linear && (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR)) {
+  if (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR) {
     VkImageSubresource subresource = {
         .aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT, .mipLevel = 0, .arrayLayer = 0};
     VkSubresourceLayout b_layout;
@@ -349,208 +236,21 @@ bool VulkanTest::Exec(
     // I420 has the U plane (mapped to B) before the V plane (mapped to R)
     EXPECT_LT(b_layout.offset, r_layout.offset);
   }
-
-  if (!direct) {
-    VkMemoryRequirements memory_reqs;
-    vkGetImageMemoryRequirements(device, *vk_image_, &memory_reqs);
-    // Use first supported type
-    uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
-
-    // The driver may not have the right information to choose the correct
-    // heap for protected memory.
-    EXPECT_FALSE(use_protected_memory_);
-
-    VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-        buffer_collection_info.buffers[0].vmo.release()};
-
-    VkMemoryAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &handle_info,
-        .allocationSize = memory_reqs.size,
-        .memoryTypeIndex = memory_type,
-    };
-
-    if ((result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_)) !=
-        VK_SUCCESS) {
-      RTN_MSG(false, "vkAllocateMemory failed");
-    }
-
-    result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0);
-    if (result != VK_SUCCESS) {
-      RTN_MSG(false, "vkBindImageMemory failed");
-    }
-  } else {
-    VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(device, *vk_image_, &requirements);
-    vk::BufferCollectionPropertiesFUCHSIA properties;
-    vk::Result result1 =
-        ctx_->device()->getBufferCollectionPropertiesFUCHSIA(collection, &properties, loader_);
-    if (result1 != vk::Result::eSuccess) {
-      RTN_MSG(false, "vkGetBufferCollectionProperties failed");
-    }
-
-    EXPECT_EQ(1u, properties.count);
-    uint32_t viable_memory_types = properties.memoryTypeBits & requirements.memoryTypeBits;
-    EXPECT_NE(0u, viable_memory_types);
-    uint32_t memory_type = __builtin_ctz(viable_memory_types);
-
-    VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(ctx_->physical_device(), &memory_properties);
-
-    EXPECT_LT(memory_type, memory_properties.memoryTypeCount);
-    if (use_protected_memory_) {
-      for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
-        if (properties.memoryTypeBits & (1 << i)) {
-          // Based only on the buffer collection it should be possible to
-          // determine that this is protected memory. viable_memory_types
-          // is a subset of these bits, so that should be true for it as
-          // well.
-          EXPECT_TRUE(memory_properties.memoryTypes[i].propertyFlags &
-                      VK_MEMORY_PROPERTY_PROTECTED_BIT);
-        }
-      }
-    } else {
-      EXPECT_FALSE(memory_properties.memoryTypes[memory_type].propertyFlags &
-                   VK_MEMORY_PROPERTY_PROTECTED_BIT);
-    }
-
-    VkImportMemoryBufferCollectionFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA};
-
-    import_info.collection = collection;
-    import_info.index = 0;
-    VkMemoryAllocateInfo alloc_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    alloc_info.pNext = &import_info;
-    alloc_info.allocationSize = requirements.size;
-    alloc_info.memoryTypeIndex = memory_type;
-
-    result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
-    if (result != VK_SUCCESS) {
-      RTN_MSG(false, "vkCreateImage failed: %d\n", result);
-    }
-
-    result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0u);
-    if (result != VK_SUCCESS) {
-      RTN_MSG(false, "vkCreateImage failed: %d\n", result);
-    }
-  }
-
-  ctx_->device()->destroyBufferCollectionFUCHSIA(collection, nullptr, loader_);
-  if (non_protected_collection) {
-    ctx_->device()->destroyBufferCollectionFUCHSIA(non_protected_collection, nullptr, loader_);
-  }
-
-  return true;
 }
 
-bool VulkanTest::ExecBuffer(uint32_t size) {
-  VkResult result;
-  const vk::Device &device = *ctx_->device();
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Fdio_service_connect failed: %d\n", status);
-  }
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
-  status = sysmem_allocator->AllocateSharedCollection(vulkan_token.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "AllocateSharedCollection failed: %d\n", status);
-  }
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-
-  status = vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), local_token.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Duplicate failed: %d\n", status);
-  }
-  status = local_token->Sync();
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Sync failed: %d\n", status);
-  }
-
-  vk::BufferCreateInfo buffer_create_info;
-  buffer_create_info.flags =
-      use_protected_memory_ ? vk::BufferCreateFlagBits::eProtected : vk::BufferCreateFlagBits();
-  buffer_create_info.size = size;
-  buffer_create_info.usage = vk::BufferUsageFlagBits::eIndexBuffer;
-  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-
-  vk::BufferCollectionCreateInfoFUCHSIA import_info(vulkan_token.Unbind().TakeChannel().release());
-  vk::BufferCollectionFUCHSIA collection;
-  vk::Result result1 =
-      ctx_->device()->createBufferCollectionFUCHSIA(&import_info, nullptr, &collection, loader_);
-  if (result1 != vk::Result::eSuccess) {
-    RTN_MSG(false, "Failed to create buffer collection: %d\n", result1);
-  }
-
-  vk::BufferConstraintsInfoFUCHSIA constraints;
-  constraints.pBufferCreateInfo = &buffer_create_info;
-  constraints.requiredFormatFeatures = vk::FormatFeatureFlagBits::eVertexBuffer;
-  constraints.minCount = 2;
-
-  result1 =
-      ctx_->device()->setBufferCollectionBufferConstraintsFUCHSIA(collection, constraints, loader_);
-
-  if (result1 != vk::Result::eSuccess) {
-    RTN_MSG(false, "Failed to set buffer constraints: %d\n", result1);
-  }
-
-  fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  sysmem_collection.NewRequest());
-  if (status != ZX_OK) {
-    RTN_MSG(false, "BindSharedCollection failed: %d\n", status);
-  }
-  fuchsia::sysmem::BufferCollectionConstraints sysmem_constraints{};
-  status = sysmem_collection->SetConstraints(false, sysmem_constraints);
-  if (status != ZX_OK) {
-    RTN_MSG(false, "SetConstraints failed: %d\n", status);
-  }
-
-  zx_status_t allocation_status;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  if (status != ZX_OK) {
-    RTN_MSG(false, "WaitForBuffersAllocated failed: %d\n", status);
-  }
-  if (allocation_status != ZX_OK) {
-    RTN_MSG(false, "WaitForBuffersAllocated failed: %d\n", allocation_status);
-  }
-  status = sysmem_collection->Close();
-  if (status != ZX_OK) {
-    RTN_MSG(false, "Close failed: %d\n", status);
-  }
-
-  VkBufferCollectionBufferCreateInfoFUCHSIA collection_buffer_create_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIA,
-      .pNext = nullptr,
-      .collection = collection,
-      .index = 1};
-  buffer_create_info.pNext = &collection_buffer_create_info;
-
-  VkBuffer buffer;
-
-  result = vkCreateBuffer(device, &static_cast<const VkBufferCreateInfo &>(buffer_create_info),
-                          nullptr, &buffer);
-  if (result != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
-  }
-
-  VkMemoryRequirements requirements;
-  vkGetBufferMemoryRequirements(device, buffer, &requirements);
+void VulkanTest::ValidateBufferProperties(const VkMemoryRequirements &requirements,
+                                          const vk::BufferCollectionFUCHSIA collection,
+                                          uint32_t expected_count, uint32_t *memory_type_out) {
   vk::BufferCollectionPropertiesFUCHSIA properties;
-  result1 = ctx_->device()->getBufferCollectionPropertiesFUCHSIA(collection, &properties, loader_);
-  if (result1 != vk::Result::eSuccess) {
-    RTN_MSG(false, "vkGetBufferCollectionProperties failed");
-  }
+  vk::Result result1 =
+      ctx_->device()->getBufferCollectionPropertiesFUCHSIA(collection, &properties, loader_);
+  EXPECT_EQ(result1, vk::Result::eSuccess);
 
-  EXPECT_EQ(2u, properties.count);
+  EXPECT_EQ(expected_count, properties.count);
   uint32_t viable_memory_types = properties.memoryTypeBits & requirements.memoryTypeBits;
   EXPECT_NE(0u, viable_memory_types);
   uint32_t memory_type = __builtin_ctz(viable_memory_types);
+
   VkPhysicalDeviceMemoryProperties memory_properties;
   vkGetPhysicalDeviceMemoryProperties(ctx_->physical_device(), &memory_properties);
 
@@ -570,6 +270,282 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
     EXPECT_FALSE(memory_properties.memoryTypes[memory_type].propertyFlags &
                  VK_MEMORY_PROPERTY_PROTECTED_BIT);
   }
+  *memory_type_out = memory_type;
+}
+
+fuchsia::sysmem::BufferCollectionInfo_2 VulkanTest::AllocateSysmemCollection(
+    std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
+  fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
+  zx_status_t status =
+      sysmem_allocator_->BindSharedCollection(std::move(token), sysmem_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  if (constraints) {
+    EXPECT_EQ(ZX_OK, sysmem_collection->SetConstraints(true, *constraints));
+  } else {
+    EXPECT_EQ(ZX_OK, sysmem_collection->SetConstraints(
+                         false, fuchsia::sysmem::BufferCollectionConstraints()));
+  }
+
+  zx_status_t allocation_status;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
+  EXPECT_EQ(ZX_OK, sysmem_collection->WaitForBuffersAllocated(&allocation_status,
+                                                              &buffer_collection_info));
+  EXPECT_EQ(ZX_OK, allocation_status);
+  EXPECT_EQ(ZX_OK, sysmem_collection->Close());
+  return buffer_collection_info;
+}
+
+void VulkanTest::InitializeNonDirectImage(
+    fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info,
+    VkImageCreateInfo image_create_info) {
+  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
+  encoder.Alloc(fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings>(&encoder));
+  buffer_collection_info.settings.Encode(&encoder, 0);
+  std::vector<uint8_t> encoded_data = encoder.TakeBytes();
+
+  VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
+      .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
+      .pNext = nullptr,
+      .imageFormat = encoded_data.data(),
+      .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
+  image_create_info.pNext = &image_format_fuchsia;
+
+  auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
+  EXPECT_EQ(vk::Result::eSuccess, result);
+  vk_image_ = std::move(vk_image);
+}
+
+void VulkanTest::InitializeNonDirectMemory(
+    fuchsia::sysmem::BufferCollectionInfo_2 &buffer_collection_info) {
+  const vk::Device &device = *ctx_->device();
+  VkMemoryRequirements memory_reqs;
+  vkGetImageMemoryRequirements(device, *vk_image_, &memory_reqs);
+  // Use first supported type
+  uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
+
+  // The driver may not have the right information to choose the correct
+  // heap for protected memory.
+  EXPECT_FALSE(use_protected_memory_);
+
+  VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
+      .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
+      .pNext = nullptr,
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+      buffer_collection_info.buffers[0].vmo.release()};
+
+  VkMemoryAllocateInfo alloc_info = {
+      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+      .pNext = &handle_info,
+      .allocationSize = memory_reqs.size,
+      .memoryTypeIndex = memory_type,
+  };
+  VkResult result;
+  if ((result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_)) != VK_SUCCESS) {
+    ASSERT_TRUE(false);
+  }
+
+  result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0);
+  if (result != VK_SUCCESS) {
+    ASSERT_TRUE(false);
+  }
+}
+
+void VulkanTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
+                                       vk::ImageCreateInfo image_create_info) {
+  VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .collection = collection,
+      .index = 0};
+  if (image_create_info.format == vk::Format::eUndefined) {
+    // Ensure that the image created matches what was asked for on
+    // sysmem_connection.
+    image_create_info.extent.width = 1024;
+    image_create_info.extent.height = 1024;
+    image_create_info.format = vk::Format::eB8G8R8A8Unorm;
+  }
+  image_create_info.pNext = &image_format_fuchsia;
+
+  auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
+  EXPECT_EQ(result, vk::Result::eSuccess);
+  vk_image_ = std::move(vk_image);
+}
+
+void VulkanTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection) {
+  const vk::Device &device = *ctx_->device();
+  VkMemoryRequirements requirements;
+  vkGetImageMemoryRequirements(device, *vk_image_, &requirements);
+  uint32_t memory_type;
+  ValidateBufferProperties(requirements, collection, 1u, &memory_type);
+
+  VkImportMemoryBufferCollectionFUCHSIA import_info = {
+      .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA};
+
+  import_info.collection = collection;
+  import_info.index = 0;
+  VkMemoryAllocateInfo alloc_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+  alloc_info.pNext = &import_info;
+  alloc_info.allocationSize = requirements.size;
+  alloc_info.memoryTypeIndex = memory_type;
+
+  VkResult result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
+  EXPECT_EQ(VK_SUCCESS, result);
+
+  result = vkBindImageMemory(device, *vk_image_, vk_device_memory_, 0u);
+  EXPECT_EQ(VK_SUCCESS, result);
+}
+
+VulkanTest::UniqueBufferCollection VulkanTest::CreateVkBufferCollectionForImage(
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token, vk::ImageCreateInfo image_create_info) {
+  vk::BufferCollectionCreateInfoFUCHSIA import_info(token.Unbind().TakeChannel().release());
+  auto [result, collection] =
+      ctx_->device()->createBufferCollectionFUCHSIAUnique(import_info, nullptr, loader_);
+  EXPECT_EQ(result, vk::Result::eSuccess);
+  result = ctx_->device()->setBufferCollectionConstraintsFUCHSIA(*collection, &image_create_info,
+                                                                 loader_);
+  EXPECT_EQ(result, vk::Result::eSuccess);
+  return std::move(collection);
+}
+
+bool VulkanTest::Exec(
+    VkFormat format, uint32_t width, uint32_t height, bool direct, bool linear,
+    bool repeat_constraints_as_non_protected,
+    const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints) {
+  auto tokens = MakeSharedCollection(3u);
+  auto local_token = std::move(tokens[0]);
+  auto vulkan_token = std::move(tokens[1]);
+  auto non_protected_token = std::move(tokens[2]);
+
+  // This bool suggests that we dup another token to set the same constraints, skipping protected
+  // memory requirements. This emulates another participant which does not require protected memory.
+  UniqueBufferCollection non_protected_collection;
+  if (repeat_constraints_as_non_protected) {
+    auto image_create_info =
+        GetDefaultImageCreateInfo(/*use_protected_memory=*/false, format, width, height, linear);
+    non_protected_collection =
+        CreateVkBufferCollectionForImage(std::move(non_protected_token), image_create_info);
+  } else {
+    // Close the token to prevent sysmem from waiting on it.
+    non_protected_token->Close();
+    non_protected_token = {};
+  }
+
+  auto image_create_info =
+      GetDefaultImageCreateInfo(use_protected_memory_, format, width, height, linear);
+  UniqueBufferCollection collection =
+      CreateVkBufferCollectionForImage(std::move(vulkan_token), image_create_info);
+
+  std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints_option;
+  if (!format_constraints.empty()) {
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    // Use the other connection to specify the actual desired format and size,
+    // which should be compatible with what the vulkan driver can use.
+    assert(direct);
+    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+    // Try multiple format modifiers.
+    constraints.image_format_constraints_count = format_constraints.size();
+    for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
+      constraints.image_format_constraints[i] = format_constraints[i];
+    }
+    constraints_option = constraints;
+  } else if (direct) {
+  } else {
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+    // The total buffer count should be 1 with or without this set (because
+    // the Vulkan driver sets a minimum of one buffer).
+    constraints.min_buffer_count_for_camping = 1;
+    constraints_option = constraints;
+  }
+  auto buffer_collection_info =
+      AllocateSysmemCollection(constraints_option, std::move(local_token));
+
+  EXPECT_EQ(1u, buffer_collection_info.buffer_count);
+  fuchsia::sysmem::PixelFormat pixel_format =
+      buffer_collection_info.settings.image_format_constraints.pixel_format;
+
+  if (format == VK_FORMAT_UNDEFINED && direct) {
+    EXPECT_EQ(pixel_format.type, fuchsia::sysmem::PixelFormatType::BGRA32);
+  }
+
+  if (!direct) {
+    InitializeNonDirectImage(buffer_collection_info, image_create_info);
+  } else {
+    InitializeDirectImage(*collection, image_create_info);
+  }
+
+  if (linear) {
+    CheckLinearSubresourceLayout(format, width);
+  }
+
+  if (!direct) {
+    InitializeNonDirectMemory(buffer_collection_info);
+  } else {
+    InitializeDirectImageMemory(*collection);
+  }
+
+  return true;
+}
+
+bool VulkanTest::ExecBuffer(uint32_t size) {
+  VkResult result;
+  const vk::Device &device = *ctx_->device();
+
+  auto tokens = MakeSharedCollection(2);
+  auto local_token = std::move(tokens[0]);
+  auto vulkan_token = std::move(tokens[1]);
+
+  constexpr uint32_t kMinBufferCount = 2;
+
+  vk::BufferCreateInfo buffer_create_info;
+  buffer_create_info.flags =
+      use_protected_memory_ ? vk::BufferCreateFlagBits::eProtected : vk::BufferCreateFlagBits();
+  buffer_create_info.size = size;
+  buffer_create_info.usage = vk::BufferUsageFlagBits::eIndexBuffer;
+  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
+
+  vk::BufferCollectionCreateInfoFUCHSIA import_info(vulkan_token.Unbind().TakeChannel().release());
+  vk::BufferCollectionFUCHSIA collection;
+  vk::Result result1 =
+      ctx_->device()->createBufferCollectionFUCHSIA(&import_info, nullptr, &collection, loader_);
+  if (result1 != vk::Result::eSuccess) {
+    RTN_MSG(false, "Failed to create buffer collection: %d\n", result1);
+  }
+
+  vk::BufferConstraintsInfoFUCHSIA constraints;
+  constraints.pBufferCreateInfo = &buffer_create_info;
+  constraints.requiredFormatFeatures = vk::FormatFeatureFlagBits::eVertexBuffer;
+  constraints.minCount = kMinBufferCount;
+
+  result1 =
+      ctx_->device()->setBufferCollectionBufferConstraintsFUCHSIA(collection, constraints, loader_);
+
+  if (result1 != vk::Result::eSuccess) {
+    RTN_MSG(false, "Failed to set buffer constraints: %d\n", result1);
+  }
+
+  auto buffer_collection_info = AllocateSysmemCollection({}, std::move(local_token));
+
+  VkBufferCollectionBufferCreateInfoFUCHSIA collection_buffer_create_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .collection = collection,
+      .index = 1};
+  buffer_create_info.pNext = &collection_buffer_create_info;
+
+  VkBuffer buffer;
+
+  result = vkCreateBuffer(device, &static_cast<const VkBufferCreateInfo &>(buffer_create_info),
+                          nullptr, &buffer);
+  if (result != VK_SUCCESS) {
+    RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
+  }
+
+  VkMemoryRequirements requirements;
+  vkGetBufferMemoryRequirements(device, buffer, &requirements);
+  uint32_t memory_type;
+  ValidateBufferProperties(requirements, collection, kMinBufferCount, &memory_type);
 
   VkImportMemoryBufferCollectionFUCHSIA memory_import_info = {
       .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
