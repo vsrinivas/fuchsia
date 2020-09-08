@@ -128,16 +128,16 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void TopDispatchGetFoo(Top::Interface* interface, void* bytes,
-                       ::fidl::Transaction* txn) {
-  interface->GetFoo(Top::Interface::GetFooCompleter::Sync(txn));
+void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<Top::Interface*>(interface)->GetFoo(
+      Top::Interface::GetFooCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Top::Interface> Top[] = {
+::fidl::internal::MethodEntry Top[] = {
     {kTop_GetFoo_Ordinal, Top::GetFooRequest::Type, methods::TopDispatchGetFoo},
 };
 
@@ -146,12 +146,9 @@ namespace entries {
 bool Top::TryDispatch(Interface* impl, fidl_msg_t* msg,
                       ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Top),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Top +
-          sizeof(entries::Top) /
-              sizeof(::fidl::internal::InterfaceEntry<Top::Interface>)));
+      impl, msg, txn, entries::Top,
+      entries::Top +
+          sizeof(entries::Top) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Top::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {

@@ -330,29 +330,33 @@ std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ProtocolDispatchRequestStrictResponseFlexible(
-    Protocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
+void ProtocolDispatchRequestStrictResponseFlexible(void* interface, void* bytes,
+                                                   ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<Protocol::RequestStrictResponseFlexibleRequest*>(bytes);
-  interface->RequestStrictResponseFlexible(
-      std::move(message->s),
-      Protocol::Interface::RequestStrictResponseFlexibleCompleter::Sync(txn));
+  reinterpret_cast<Protocol::Interface*>(interface)
+      ->RequestStrictResponseFlexible(
+          std::move(message->s),
+          Protocol::Interface::RequestStrictResponseFlexibleCompleter::Sync(
+              txn));
 }
 
-void ProtocolDispatchRequestFlexibleResponseStrict(
-    Protocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
+void ProtocolDispatchRequestFlexibleResponseStrict(void* interface, void* bytes,
+                                                   ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<Protocol::RequestFlexibleResponseStrictRequest*>(bytes);
-  interface->RequestFlexibleResponseStrict(
-      std::move(message->s),
-      Protocol::Interface::RequestFlexibleResponseStrictCompleter::Sync(txn));
+  reinterpret_cast<Protocol::Interface*>(interface)
+      ->RequestFlexibleResponseStrict(
+          std::move(message->s),
+          Protocol::Interface::RequestFlexibleResponseStrictCompleter::Sync(
+              txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Protocol::Interface> Protocol[] = {
+::fidl::internal::MethodEntry Protocol[] = {
     {kProtocol_RequestStrictResponseFlexible_Ordinal,
      Protocol::RequestStrictResponseFlexibleRequest::Type,
      methods::ProtocolDispatchRequestStrictResponseFlexible},
@@ -366,13 +370,9 @@ namespace entries {
 bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                            ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Protocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Protocol +
-          sizeof(entries::Protocol) /
-              sizeof(::fidl::internal::InterfaceEntry<Protocol::Interface>)));
+      impl, msg, txn, entries::Protocol,
+      entries::Protocol +
+          sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,

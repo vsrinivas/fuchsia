@@ -92,18 +92,19 @@ std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ParentDispatchFirst(Parent::Interface* interface, void* bytes,
+void ParentDispatchFirst(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::FirstRequest*>(bytes);
-  interface->First(std::move(message->request),
-                   Parent::Interface::FirstCompleter::Sync(txn));
+  reinterpret_cast<Parent::Interface*>(interface)->First(
+      std::move(message->request),
+      Parent::Interface::FirstCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Parent::Interface> Parent[] = {
+::fidl::internal::MethodEntry Parent[] = {
     {kParent_First_Ordinal, Parent::FirstRequest::Type,
      methods::ParentDispatchFirst},
 };
@@ -113,13 +114,9 @@ namespace entries {
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Parent),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Parent +
-          sizeof(entries::Parent) /
-              sizeof(::fidl::internal::InterfaceEntry<Parent::Interface>)));
+      impl, msg, txn, entries::Parent,
+      entries::Parent +
+          sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -282,25 +279,26 @@ std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ChildDispatchFirst(Child::Interface* interface, void* bytes,
+void ChildDispatchFirst(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Child::FirstRequest*>(bytes);
-  interface->First(std::move(message->request),
-                   Child::Interface::FirstCompleter::Sync(txn));
+  reinterpret_cast<Child::Interface*>(interface)->First(
+      std::move(message->request), Child::Interface::FirstCompleter::Sync(txn));
 }
 
-void ChildDispatchSecond(Child::Interface* interface, void* bytes,
+void ChildDispatchSecond(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Child::SecondRequest*>(bytes);
-  interface->Second(std::move(message->request),
-                    Child::Interface::SecondCompleter::Sync(txn));
+  reinterpret_cast<Child::Interface*>(interface)->Second(
+      std::move(message->request),
+      Child::Interface::SecondCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Child::Interface> Child[] = {
+::fidl::internal::MethodEntry Child[] = {
     {kChild_First_Ordinal, Child::FirstRequest::Type,
      methods::ChildDispatchFirst},
     {kChild_Second_Ordinal, Child::SecondRequest::Type,
@@ -312,12 +310,9 @@ namespace entries {
 bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Child),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Child +
-          sizeof(entries::Child) /
-              sizeof(::fidl::internal::InterfaceEntry<Child::Interface>)));
+      impl, msg, txn, entries::Child,
+      entries::Child +
+          sizeof(entries::Child) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,

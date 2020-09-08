@@ -373,28 +373,29 @@ std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ParentDispatchGetChild(Parent::Interface* interface, void* bytes,
+void ParentDispatchGetChild(void* interface, void* bytes,
                             ::fidl::Transaction* txn) {
-  interface->GetChild(Parent::Interface::GetChildCompleter::Sync(txn));
+  reinterpret_cast<Parent::Interface*>(interface)->GetChild(
+      Parent::Interface::GetChildCompleter::Sync(txn));
 }
 
-void ParentDispatchGetChildRequest(Parent::Interface* interface, void* bytes,
+void ParentDispatchGetChildRequest(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  interface->GetChildRequest(
+  reinterpret_cast<Parent::Interface*>(interface)->GetChildRequest(
       Parent::Interface::GetChildRequestCompleter::Sync(txn));
 }
 
-void ParentDispatchTakeChild(Parent::Interface* interface, void* bytes,
+void ParentDispatchTakeChild(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::TakeChildRequest*>(bytes);
-  interface->TakeChild(std::move(message->c),
-                       Parent::Interface::TakeChildCompleter::Sync(txn));
+  reinterpret_cast<Parent::Interface*>(interface)->TakeChild(
+      std::move(message->c), Parent::Interface::TakeChildCompleter::Sync(txn));
 }
 
-void ParentDispatchTakeChildRequest(Parent::Interface* interface, void* bytes,
+void ParentDispatchTakeChildRequest(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::TakeChildRequestRequest*>(bytes);
-  interface->TakeChildRequest(
+  reinterpret_cast<Parent::Interface*>(interface)->TakeChildRequest(
       std::move(message->r),
       Parent::Interface::TakeChildRequestCompleter::Sync(txn));
 }
@@ -403,7 +404,7 @@ void ParentDispatchTakeChildRequest(Parent::Interface* interface, void* bytes,
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Parent::Interface> Parent[] = {
+::fidl::internal::MethodEntry Parent[] = {
     {kParent_GetChild_Ordinal, Parent::GetChildRequest::Type,
      methods::ParentDispatchGetChild},
     {kParent_GetChildRequest_Ordinal, Parent::GetChildRequestRequest::Type,
@@ -419,13 +420,9 @@ namespace entries {
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
                          ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Parent),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Parent +
-          sizeof(entries::Parent) /
-              sizeof(::fidl::internal::InterfaceEntry<Parent::Interface>)));
+      impl, msg, txn, entries::Parent,
+      entries::Parent +
+          sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -507,30 +504,21 @@ namespace methods {}  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Child::Interface> Child[] = {};
+::fidl::internal::MethodEntry Child[] = {};
 
 }  // namespace entries
 
 bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::Child),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Child +
-          sizeof(entries::Child) /
-              sizeof(::fidl::internal::InterfaceEntry<Child::Interface>)));
+  return false;
 }
 
 bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
                      ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
-  }
-  return found;
+  zx_handle_close_many(msg->handles, msg->num_handles);
+  txn->InternalError(
+      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  return false;
 }
 
 }  // namespace name

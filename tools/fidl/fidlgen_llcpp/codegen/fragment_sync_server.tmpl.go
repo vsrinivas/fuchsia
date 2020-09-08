@@ -20,13 +20,14 @@ namespace methods {
 {{- range .Methods }}
   {{- if .HasRequest }}
 
-void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}({{ .LLProps.ProtocolName }}::Interface* interface, void* bytes,
+void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
   {{- if .Request }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
   {{- end }}
-  interface->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
-                         {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync(txn));
+  reinterpret_cast<{{ .LLProps.ProtocolName }}::Interface*>(interface)
+      ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
+                    {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync(txn));
 }
   {{- end }}
 {{- end }}
@@ -35,7 +36,7 @@ void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}({{ .LLProps.ProtocolName }}:
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<{{ .Name }}::Interface> {{ .Name }}[] = {
+::fidl::internal::MethodEntry {{ .Name }}[] = {
 {{- range .Methods }}
   {{- if .HasRequest }}
   { {{ .OrdinalName }}, {{ .LLProps.ProtocolName }}::{{ .Name}}Request::Type,
@@ -47,24 +48,31 @@ namespace entries {
 }  // namespace entries
 
 bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} {
+  {{- if HasMethodWithReqs .Methods }}
   return ::fidl::internal::TryDispatch(
       impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::{{ .Name }}),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::{{ .Name }} +
-          sizeof(entries::{{ .Name }}) /
-              sizeof(::fidl::internal::InterfaceEntry<{{ .Name }}::Interface>)));
+      entries::{{ .Name }},
+      entries::{{ .Name }} + sizeof(entries::{{ .Name }}) / sizeof(::fidl::internal::MethodEntry));
+  {{- else }}
+    return false;
+  {{- end }}
 }
 {{- end }}
 
 {{- define "SyncServerDispatchMethodDefinition" }}
 bool {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
+  {{- if HasMethodWithReqs .Methods }}
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return found;
+  {{- else }}
+  zx_handle_close_many(msg->handles, msg->num_handles);
+  txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  return false;
+  {{- end }}
 }
 {{- end }}
 `

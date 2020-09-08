@@ -318,25 +318,27 @@ std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void TransitionalDispatchRequest(Transitional::Interface* interface,
-                                 void* bytes, ::fidl::Transaction* txn) {
+void TransitionalDispatchRequest(void* interface, void* bytes,
+                                 ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::RequestRequest*>(bytes);
-  interface->Request(std::move(message->x),
-                     Transitional::Interface::RequestCompleter::Sync(txn));
+  reinterpret_cast<Transitional::Interface*>(interface)->Request(
+      std::move(message->x),
+      Transitional::Interface::RequestCompleter::Sync(txn));
 }
 
-void TransitionalDispatchOneWay(Transitional::Interface* interface, void* bytes,
+void TransitionalDispatchOneWay(void* interface, void* bytes,
                                 ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::OneWayRequest*>(bytes);
-  interface->OneWay(std::move(message->x),
-                    Transitional::Interface::OneWayCompleter::Sync(txn));
+  reinterpret_cast<Transitional::Interface*>(interface)->OneWay(
+      std::move(message->x),
+      Transitional::Interface::OneWayCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Transitional::Interface> Transitional[] = {
+::fidl::internal::MethodEntry Transitional[] = {
     {kTransitional_Request_Ordinal, Transitional::RequestRequest::Type,
      methods::TransitionalDispatchRequest},
     {kTransitional_OneWay_Ordinal, Transitional::OneWayRequest::Type,
@@ -348,14 +350,9 @@ namespace entries {
 bool Transitional::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Transitional),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Transitional +
-          sizeof(entries::Transitional) /
-              sizeof(
-                  ::fidl::internal::InterfaceEntry<Transitional::Interface>)));
+      impl, msg, txn, entries::Transitional,
+      entries::Transitional + sizeof(entries::Transitional) /
+                                  sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -831,25 +828,26 @@ std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ChannelProtocolDispatchMethodA(ChannelProtocol::Interface* interface,
-                                    void* bytes, ::fidl::Transaction* txn) {
+void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
+                                    ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodARequest*>(bytes);
-  interface->MethodA(std::move(message->a), std::move(message->b),
-                     ChannelProtocol::Interface::MethodACompleter::Sync(txn));
+  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodA(
+      std::move(message->a), std::move(message->b),
+      ChannelProtocol::Interface::MethodACompleter::Sync(txn));
 }
 
-void ChannelProtocolDispatchMethodB(ChannelProtocol::Interface* interface,
-                                    void* bytes, ::fidl::Transaction* txn) {
+void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
+                                    ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodBRequest*>(bytes);
-  interface->MethodB(std::move(message->a), std::move(message->b),
-                     ChannelProtocol::Interface::MethodBCompleter::Sync(txn));
+  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodB(
+      std::move(message->a), std::move(message->b),
+      ChannelProtocol::Interface::MethodBCompleter::Sync(txn));
 }
 
-void ChannelProtocolDispatchMutateSocket(ChannelProtocol::Interface* interface,
-                                         void* bytes,
+void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MutateSocketRequest*>(bytes);
-  interface->MutateSocket(
+  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MutateSocket(
       std::move(message->a),
       ChannelProtocol::Interface::MutateSocketCompleter::Sync(txn));
 }
@@ -858,17 +856,14 @@ void ChannelProtocolDispatchMutateSocket(ChannelProtocol::Interface* interface,
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<ChannelProtocol::Interface> ChannelProtocol[] =
-    {
-        {kChannelProtocol_MethodA_Ordinal,
-         ChannelProtocol::MethodARequest::Type,
-         methods::ChannelProtocolDispatchMethodA},
-        {kChannelProtocol_MethodB_Ordinal,
-         ChannelProtocol::MethodBRequest::Type,
-         methods::ChannelProtocolDispatchMethodB},
-        {kChannelProtocol_MutateSocket_Ordinal,
-         ChannelProtocol::MutateSocketRequest::Type,
-         methods::ChannelProtocolDispatchMutateSocket},
+::fidl::internal::MethodEntry ChannelProtocol[] = {
+    {kChannelProtocol_MethodA_Ordinal, ChannelProtocol::MethodARequest::Type,
+     methods::ChannelProtocolDispatchMethodA},
+    {kChannelProtocol_MethodB_Ordinal, ChannelProtocol::MethodBRequest::Type,
+     methods::ChannelProtocolDispatchMethodB},
+    {kChannelProtocol_MutateSocket_Ordinal,
+     ChannelProtocol::MutateSocketRequest::Type,
+     methods::ChannelProtocolDispatchMutateSocket},
 };
 
 }  // namespace entries
@@ -876,14 +871,9 @@ namespace entries {
 bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::ChannelProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::ChannelProtocol +
-          sizeof(entries::ChannelProtocol) /
-              sizeof(::fidl::internal::InterfaceEntry<
-                     ChannelProtocol::Interface>)));
+      impl, msg, txn, entries::ChannelProtocol,
+      entries::ChannelProtocol + sizeof(entries::ChannelProtocol) /
+                                     sizeof(::fidl::internal::MethodEntry));
 }
 
 bool ChannelProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -1709,84 +1699,81 @@ WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
 namespace methods {
 
 void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
-  interface->NoRequestNoResponse(WithAndWithoutRequestResponse::Interface::
-                                     NoRequestNoResponseCompleter::Sync(txn));
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->NoRequestNoResponse(WithAndWithoutRequestResponse::Interface::
+                                NoRequestNoResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
-  interface->NoRequestEmptyResponse(
-      WithAndWithoutRequestResponse::Interface::
-          NoRequestEmptyResponseCompleter::Sync(txn));
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->NoRequestEmptyResponse(WithAndWithoutRequestResponse::Interface::
+                                   NoRequestEmptyResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
-  interface->NoRequestWithResponse(
-      WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleter::
-          Sync(txn));
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->NoRequestWithResponse(WithAndWithoutRequestResponse::Interface::
+                                  NoRequestWithResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestNoResponseRequest*>(bytes);
-  interface->WithRequestNoResponse(
-      std::move(message->arg), WithAndWithoutRequestResponse::Interface::
-                                   WithRequestNoResponseCompleter::Sync(txn));
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->WithRequestNoResponse(std::move(message->arg),
+                              WithAndWithoutRequestResponse::Interface::
+                                  WithRequestNoResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest*>(bytes);
-  interface->WithRequestEmptyResponse(
-      std::move(message->arg),
-      WithAndWithoutRequestResponse::Interface::
-          WithRequestEmptyResponseCompleter::Sync(txn));
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->WithRequestEmptyResponse(
+          std::move(message->arg),
+          WithAndWithoutRequestResponse::Interface::
+              WithRequestEmptyResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestWithResponse(
-    WithAndWithoutRequestResponse::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestWithResponseRequest*>(bytes);
-  interface->WithRequestWithResponse(
-      std::move(message->arg), WithAndWithoutRequestResponse::Interface::
-                                   WithRequestWithResponseCompleter::Sync(txn));
+  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+      ->WithRequestWithResponse(
+          std::move(message->arg),
+          WithAndWithoutRequestResponse::Interface::
+              WithRequestWithResponseCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<WithAndWithoutRequestResponse::Interface>
-    WithAndWithoutRequestResponse[] = {
-        {kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-         WithAndWithoutRequestResponse::NoRequestNoResponseRequest::Type,
-         methods::WithAndWithoutRequestResponseDispatchNoRequestNoResponse},
-        {kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-         WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest::Type,
-         methods::WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse},
-        {kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-         WithAndWithoutRequestResponse::NoRequestWithResponseRequest::Type,
-         methods::WithAndWithoutRequestResponseDispatchNoRequestWithResponse},
-        {kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-         WithAndWithoutRequestResponse::WithRequestNoResponseRequest::Type,
-         methods::WithAndWithoutRequestResponseDispatchWithRequestNoResponse},
-        {kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-         WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::Type,
-         methods::
-             WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse},
-        {kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-         WithAndWithoutRequestResponse::WithRequestWithResponseRequest::Type,
-         methods::WithAndWithoutRequestResponseDispatchWithRequestWithResponse},
+::fidl::internal::MethodEntry WithAndWithoutRequestResponse[] = {
+    {kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
+     WithAndWithoutRequestResponse::NoRequestNoResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchNoRequestNoResponse},
+    {kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
+     WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse},
+    {kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
+     WithAndWithoutRequestResponse::NoRequestWithResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchNoRequestWithResponse},
+    {kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
+     WithAndWithoutRequestResponse::WithRequestNoResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchWithRequestNoResponse},
+    {kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
+     WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse},
+    {kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
+     WithAndWithoutRequestResponse::WithRequestWithResponseRequest::Type,
+     methods::WithAndWithoutRequestResponseDispatchWithRequestWithResponse},
 };
 
 }  // namespace entries
@@ -1795,14 +1782,10 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
                                                 fidl_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::WithAndWithoutRequestResponse),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::WithAndWithoutRequestResponse +
+      impl, msg, txn, entries::WithAndWithoutRequestResponse,
+      entries::WithAndWithoutRequestResponse +
           sizeof(entries::WithAndWithoutRequestResponse) /
-              sizeof(::fidl::internal::InterfaceEntry<
-                     WithAndWithoutRequestResponse::Interface>)));
+              sizeof(::fidl::internal::MethodEntry));
 }
 
 bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -2351,23 +2334,21 @@ std::optional<::fidl::UnbindInfo> WithErrorSyntax::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void WithErrorSyntaxDispatchResponseAsStruct(
-    WithErrorSyntax::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
-  interface->ResponseAsStruct(
+void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
+                                             ::fidl::Transaction* txn) {
+  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ResponseAsStruct(
       WithErrorSyntax::Interface::ResponseAsStructCompleter::Sync(txn));
 }
 
-void WithErrorSyntaxDispatchErrorAsPrimitive(
-    WithErrorSyntax::Interface* interface, void* bytes,
-    ::fidl::Transaction* txn) {
-  interface->ErrorAsPrimitive(
+void WithErrorSyntaxDispatchErrorAsPrimitive(void* interface, void* bytes,
+                                             ::fidl::Transaction* txn) {
+  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsPrimitive(
       WithErrorSyntax::Interface::ErrorAsPrimitiveCompleter::Sync(txn));
 }
 
-void WithErrorSyntaxDispatchErrorAsEnum(WithErrorSyntax::Interface* interface,
-                                        void* bytes, ::fidl::Transaction* txn) {
-  interface->ErrorAsEnum(
+void WithErrorSyntaxDispatchErrorAsEnum(void* interface, void* bytes,
+                                        ::fidl::Transaction* txn) {
+  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsEnum(
       WithErrorSyntax::Interface::ErrorAsEnumCompleter::Sync(txn));
 }
 
@@ -2375,17 +2356,16 @@ void WithErrorSyntaxDispatchErrorAsEnum(WithErrorSyntax::Interface* interface,
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<WithErrorSyntax::Interface> WithErrorSyntax[] =
-    {
-        {kWithErrorSyntax_ResponseAsStruct_Ordinal,
-         WithErrorSyntax::ResponseAsStructRequest::Type,
-         methods::WithErrorSyntaxDispatchResponseAsStruct},
-        {kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-         WithErrorSyntax::ErrorAsPrimitiveRequest::Type,
-         methods::WithErrorSyntaxDispatchErrorAsPrimitive},
-        {kWithErrorSyntax_ErrorAsEnum_Ordinal,
-         WithErrorSyntax::ErrorAsEnumRequest::Type,
-         methods::WithErrorSyntaxDispatchErrorAsEnum},
+::fidl::internal::MethodEntry WithErrorSyntax[] = {
+    {kWithErrorSyntax_ResponseAsStruct_Ordinal,
+     WithErrorSyntax::ResponseAsStructRequest::Type,
+     methods::WithErrorSyntaxDispatchResponseAsStruct},
+    {kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
+     WithErrorSyntax::ErrorAsPrimitiveRequest::Type,
+     methods::WithErrorSyntaxDispatchErrorAsPrimitive},
+    {kWithErrorSyntax_ErrorAsEnum_Ordinal,
+     WithErrorSyntax::ErrorAsEnumRequest::Type,
+     methods::WithErrorSyntaxDispatchErrorAsEnum},
 };
 
 }  // namespace entries
@@ -2393,14 +2373,9 @@ namespace entries {
 bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::WithErrorSyntax),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::WithErrorSyntax +
-          sizeof(entries::WithErrorSyntax) /
-              sizeof(::fidl::internal::InterfaceEntry<
-                     WithErrorSyntax::Interface>)));
+      impl, msg, txn, entries::WithErrorSyntax,
+      entries::WithErrorSyntax + sizeof(entries::WithErrorSyntax) /
+                                     sizeof(::fidl::internal::MethodEntry));
 }
 
 bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg,

@@ -141,18 +141,17 @@ std::optional<::fidl::UnbindInfo> super::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void superDispatchfoo(super::Interface* interface, void* bytes,
-                      ::fidl::Transaction* txn) {
+void superDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<super::fooRequest*>(bytes);
-  interface->foo(std::move(message->s),
-                 super::Interface::fooCompleter::Sync(txn));
+  reinterpret_cast<super::Interface*>(interface)->foo(
+      std::move(message->s), super::Interface::fooCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<super::Interface> super[] = {
+::fidl::internal::MethodEntry super[] = {
     {ksuper_foo_Ordinal, super::fooRequest::Type, methods::superDispatchfoo},
 };
 
@@ -161,12 +160,9 @@ namespace entries {
 bool super::TryDispatch(Interface* impl, fidl_msg_t* msg,
                         ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::super),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::super +
-          sizeof(entries::super) /
-              sizeof(::fidl::internal::InterfaceEntry<super::Interface>)));
+      impl, msg, txn, entries::super,
+      entries::super +
+          sizeof(entries::super) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -330,18 +326,17 @@ std::optional<::fidl::UnbindInfo> sub::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void subDispatchfoo(sub::Interface* interface, void* bytes,
-                    ::fidl::Transaction* txn) {
+void subDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<sub::fooRequest*>(bytes);
-  interface->foo(std::move(message->s),
-                 sub::Interface::fooCompleter::Sync(txn));
+  reinterpret_cast<sub::Interface*>(interface)->foo(
+      std::move(message->s), sub::Interface::fooCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<sub::Interface> sub[] = {
+::fidl::internal::MethodEntry sub[] = {
     {ksub_foo_Ordinal, sub::fooRequest::Type, methods::subDispatchfoo},
 };
 
@@ -350,12 +345,9 @@ namespace entries {
 bool sub::TryDispatch(Interface* impl, fidl_msg_t* msg,
                       ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(entries::sub),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::sub +
-          sizeof(entries::sub) /
-              sizeof(::fidl::internal::InterfaceEntry<sub::Interface>)));
+      impl, msg, txn, entries::sub,
+      entries::sub +
+          sizeof(entries::sub) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {

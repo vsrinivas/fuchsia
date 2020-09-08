@@ -94,8 +94,8 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
   return ::fidl::Result(status_, error_);
 }
 
-bool TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn, InterfaceEntry<void>* begin,
-                 InterfaceEntry<void>* end) {
+bool TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn, MethodEntry* begin,
+                 MethodEntry* end) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {

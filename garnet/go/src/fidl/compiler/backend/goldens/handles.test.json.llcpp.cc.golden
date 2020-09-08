@@ -29,32 +29,21 @@ namespace methods {}  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<SomeProtocol::Interface> SomeProtocol[] = {};
+::fidl::internal::MethodEntry SomeProtocol[] = {};
 
 }  // namespace entries
 
 bool SomeProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::SomeProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::SomeProtocol +
-          sizeof(entries::SomeProtocol) /
-              sizeof(
-                  ::fidl::internal::InterfaceEntry<SomeProtocol::Interface>)));
+  return false;
 }
 
 bool SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
                             ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
-  }
-  return found;
+  zx_handle_close_many(msg->handles, msg->num_handles);
+  txn->InternalError(
+      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  return false;
 }
 
 }  // namespace handles

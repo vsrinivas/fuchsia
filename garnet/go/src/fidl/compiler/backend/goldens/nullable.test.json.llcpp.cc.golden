@@ -146,18 +146,19 @@ std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void SimpleProtocolDispatchAdd(SimpleProtocol::Interface* interface,
-                               void* bytes, ::fidl::Transaction* txn) {
+void SimpleProtocolDispatchAdd(void* interface, void* bytes,
+                               ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<SimpleProtocol::AddRequest*>(bytes);
-  interface->Add(std::move(message->a), std::move(message->b),
-                 SimpleProtocol::Interface::AddCompleter::Sync(txn));
+  reinterpret_cast<SimpleProtocol::Interface*>(interface)->Add(
+      std::move(message->a), std::move(message->b),
+      SimpleProtocol::Interface::AddCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<SimpleProtocol::Interface> SimpleProtocol[] = {
+::fidl::internal::MethodEntry SimpleProtocol[] = {
     {kSimpleProtocol_Add_Ordinal, SimpleProtocol::AddRequest::Type,
      methods::SimpleProtocolDispatchAdd},
 };
@@ -167,13 +168,9 @@ namespace entries {
 bool SimpleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::SimpleProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::SimpleProtocol + sizeof(entries::SimpleProtocol) /
-                                        sizeof(::fidl::internal::InterfaceEntry<
-                                               SimpleProtocol::Interface>)));
+      impl, msg, txn, entries::SimpleProtocol,
+      entries::SimpleProtocol + sizeof(entries::SimpleProtocol) /
+                                    sizeof(::fidl::internal::MethodEntry));
 }
 
 bool SimpleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

@@ -315,18 +315,18 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void EmptyProtocolDispatchSend(EmptyProtocol::Interface* interface, void* bytes,
+void EmptyProtocolDispatchSend(void* interface, void* bytes,
                                ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendRequest*>(bytes);
-  interface->Send(std::move(message->e),
-                  EmptyProtocol::Interface::SendCompleter::Sync(txn));
+  reinterpret_cast<EmptyProtocol::Interface*>(interface)->Send(
+      std::move(message->e),
+      EmptyProtocol::Interface::SendCompleter::Sync(txn));
 }
 
-void EmptyProtocolDispatchSendAndReceive(EmptyProtocol::Interface* interface,
-                                         void* bytes,
+void EmptyProtocolDispatchSendAndReceive(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendAndReceiveRequest*>(bytes);
-  interface->SendAndReceive(
+  reinterpret_cast<EmptyProtocol::Interface*>(interface)->SendAndReceive(
       std::move(message->e),
       EmptyProtocol::Interface::SendAndReceiveCompleter::Sync(txn));
 }
@@ -335,7 +335,7 @@ void EmptyProtocolDispatchSendAndReceive(EmptyProtocol::Interface* interface,
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<EmptyProtocol::Interface> EmptyProtocol[] = {
+::fidl::internal::MethodEntry EmptyProtocol[] = {
     {kEmptyProtocol_Send_Ordinal, EmptyProtocol::SendRequest::Type,
      methods::EmptyProtocolDispatchSend},
     {kEmptyProtocol_SendAndReceive_Ordinal,
@@ -348,14 +348,9 @@ namespace entries {
 bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                 ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::EmptyProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::EmptyProtocol +
-          sizeof(entries::EmptyProtocol) /
-              sizeof(
-                  ::fidl::internal::InterfaceEntry<EmptyProtocol::Interface>)));
+      impl, msg, txn, entries::EmptyProtocol,
+      entries::EmptyProtocol + sizeof(entries::EmptyProtocol) /
+                                   sizeof(::fidl::internal::MethodEntry));
 }
 
 bool EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

@@ -156,18 +156,18 @@ std::optional<::fidl::UnbindInfo> Example::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ExampleDispatchfoo(Example::Interface* interface, void* bytes,
+void ExampleDispatchfoo(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Example::fooRequest*>(bytes);
-  interface->foo(std::move(message->s),
-                 Example::Interface::fooCompleter::Sync(txn));
+  reinterpret_cast<Example::Interface*>(interface)->foo(
+      std::move(message->s), Example::Interface::fooCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<Example::Interface> Example[] = {
+::fidl::internal::MethodEntry Example[] = {
     {kExample_foo_Ordinal, Example::fooRequest::Type,
      methods::ExampleDispatchfoo},
 };
@@ -177,13 +177,9 @@ namespace entries {
 bool Example::TryDispatch(Interface* impl, fidl_msg_t* msg,
                           ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Example),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::Example +
-          sizeof(entries::Example) /
-              sizeof(::fidl::internal::InterfaceEntry<Example::Interface>)));
+      impl, msg, txn, entries::Example,
+      entries::Example +
+          sizeof(entries::Example) / sizeof(::fidl::internal::MethodEntry));
 }
 
 bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,

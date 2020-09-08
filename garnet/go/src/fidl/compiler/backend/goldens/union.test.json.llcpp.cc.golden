@@ -422,24 +422,27 @@ std::optional<::fidl::UnbindInfo> TestProtocol::ClientImpl::DispatchEvent(
 namespace methods {
 
 void TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated(
-    TestProtocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
-  interface->StrictXUnionHenceResponseMayBeStackAllocated(
-      TestProtocol::Interface::
-          StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<TestProtocol::Interface*>(interface)
+      ->StrictXUnionHenceResponseMayBeStackAllocated(
+          TestProtocol::Interface::
+              StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
 }
 
 void TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated(
-    TestProtocol::Interface* interface, void* bytes, ::fidl::Transaction* txn) {
-  interface->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      TestProtocol::Interface::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(txn));
+    void* interface, void* bytes, ::fidl::Transaction* txn) {
+  reinterpret_cast<TestProtocol::Interface*>(interface)
+      ->FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          TestProtocol::Interface::
+              FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(
+                  txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<TestProtocol::Interface> TestProtocol[] = {
+::fidl::internal::MethodEntry TestProtocol[] = {
     {kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
      TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::Type,
      methods::TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated},
@@ -454,14 +457,9 @@ namespace entries {
 bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::TestProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::TestProtocol +
-          sizeof(entries::TestProtocol) /
-              sizeof(
-                  ::fidl::internal::InterfaceEntry<TestProtocol::Interface>)));
+      impl, msg, txn, entries::TestProtocol,
+      entries::TestProtocol + sizeof(entries::TestProtocol) /
+                                  sizeof(::fidl::internal::MethodEntry));
 }
 
 bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,

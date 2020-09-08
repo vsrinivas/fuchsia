@@ -38,6 +38,14 @@ func NewGenerator() *Generator {
 			}
 			return out
 		},
+		"HasMethodWithReqs": func(ms []cpp.Method) bool {
+			for _, m := range ms {
+				if m.HasRequest {
+					return true
+				}
+			}
+			return false
+		},
 		"FilterMethodsWithoutReqs": func(ms []cpp.Method) []cpp.Method {
 			var out []cpp.Method
 			for _, m := range ms {

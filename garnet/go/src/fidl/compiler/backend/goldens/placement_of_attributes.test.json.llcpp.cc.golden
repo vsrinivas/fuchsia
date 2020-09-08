@@ -91,21 +91,21 @@ std::optional<::fidl::UnbindInfo> ExampleProtocol::ClientImpl::DispatchEvent(
 
 namespace methods {
 
-void ExampleProtocolDispatchMethod(ExampleProtocol::Interface* interface,
-                                   void* bytes, ::fidl::Transaction* txn) {
+void ExampleProtocolDispatchMethod(void* interface, void* bytes,
+                                   ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ExampleProtocol::MethodRequest*>(bytes);
-  interface->Method(std::move(message->arg),
-                    ExampleProtocol::Interface::MethodCompleter::Sync(txn));
+  reinterpret_cast<ExampleProtocol::Interface*>(interface)->Method(
+      std::move(message->arg),
+      ExampleProtocol::Interface::MethodCompleter::Sync(txn));
 }
 
 }  // namespace methods
 
 namespace entries {
 
-::fidl::internal::InterfaceEntry<ExampleProtocol::Interface> ExampleProtocol[] =
-    {
-        {kExampleProtocol_Method_Ordinal, ExampleProtocol::MethodRequest::Type,
-         methods::ExampleProtocolDispatchMethod},
+::fidl::internal::MethodEntry ExampleProtocol[] = {
+    {kExampleProtocol_Method_Ordinal, ExampleProtocol::MethodRequest::Type,
+     methods::ExampleProtocolDispatchMethod},
 };
 
 }  // namespace entries
@@ -113,14 +113,9 @@ namespace entries {
 bool ExampleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
-      impl, msg, txn,
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::ExampleProtocol),
-      reinterpret_cast<::fidl::internal::InterfaceEntry<void>*>(
-          entries::ExampleProtocol +
-          sizeof(entries::ExampleProtocol) /
-              sizeof(::fidl::internal::InterfaceEntry<
-                     ExampleProtocol::Interface>)));
+      impl, msg, txn, entries::ExampleProtocol,
+      entries::ExampleProtocol + sizeof(entries::ExampleProtocol) /
+                                     sizeof(::fidl::internal::MethodEntry));
 }
 
 bool ExampleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
