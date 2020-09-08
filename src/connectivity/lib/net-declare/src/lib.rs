@@ -2,17 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use proc_macro_hack::proc_macro_hack;
-
 /// Declares an [`std::net::IpAddr`] from a parsable IP address (either V4 or
 /// V6) string.
-#[proc_macro_hack]
 pub use net_declare_macros::std_ip;
 /// Declares an [`std::net::Ipv4Addr`] from a parsable IPv4 address string.
-#[proc_macro_hack]
 pub use net_declare_macros::std_ip_v4;
 /// Declares an [`std::net::Ipv6Addr`] from a parsable IPv6 address string.
-#[proc_macro_hack]
 pub use net_declare_macros::std_ip_v6;
 /// Declares an [`std::net::SocketAddr`] from a parsable IP address + port
 /// string (either V4 or V6).
@@ -22,11 +17,9 @@ pub use net_declare_macros::std_ip_v6;
 /// `scope_id=0`. See [Rust issue 1992].
 ///
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
-#[proc_macro_hack]
 pub use net_declare_macros::std_socket_addr;
 /// Declares an [`std::net::SocketAddrV4`] from a parsable IPv4 address + port
 /// in the form `addr:port`.
-#[proc_macro_hack]
 pub use net_declare_macros::std_socket_addr_v4;
 /// Declares an [`std::net::SocketAddrV6`] from a parsable IPv6 address + port
 /// in the form `[addr]:port`.
@@ -36,24 +29,19 @@ pub use net_declare_macros::std_socket_addr_v4;
 /// `scope_id=0`. See [Rust issue 1992].
 ///
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
-#[proc_macro_hack]
 pub use net_declare_macros::std_socket_addr_v6;
 
 /// Declares a [`fidl_fuchsia_net::IpAddress`] from a parsable IP address
 /// (either V4 or V6) string.
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_ip;
 /// Declares a [`fidl_fuchsia_net::Ipv4Address`] from a parsable IPv4 address
 /// string.
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_ip_v4;
 /// Declares a [`fidl_fuchsia_net::Ipv6Address`] from a parsable IPv6 address
 /// string.
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_ip_v6;
 /// Declares a [`fidl_fuchsia_net::MacAddress`] from a parsable MAC address in
 /// the form "aa:bb:cc:dd:ee:ff".
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_mac;
 /// Declares an [`fidl_fuchsia_net::SocketAddress`] from a parsable IP address +
 /// port string (either V4 or V6).
@@ -63,9 +51,7 @@ pub use net_declare_macros::fidl_mac;
 /// `zone_index=0`. See [Rust issue 1992].
 ///
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_socket_addr;
-#[proc_macro_hack]
 /// Declares a [`fidl_fuchsia_net::Ipv4SocketAddress`] from a parsable IPv4
 /// address + port in the form `addr:port`.
 pub use net_declare_macros::fidl_socket_addr_v4;
@@ -77,32 +63,33 @@ pub use net_declare_macros::fidl_socket_addr_v4;
 /// `scope_id=0`. See [Rust issue 1992].
 ///
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
-#[proc_macro_hack]
 pub use net_declare_macros::fidl_socket_addr_v6;
 
 /// Redeclaration of macros to generate `std` types.
 pub mod std {
-    pub use std_ip as ip;
-    pub use std_ip_v4 as ip_v4;
-    pub use std_ip_v6 as ip_v6;
-    pub use std_socket_addr as socket_addr;
-    pub use std_socket_addr_v4 as socket_addr_v4;
-    pub use std_socket_addr_v6 as socket_addr_v6;
+    pub use super::std_ip as ip;
+    pub use super::std_ip_v4 as ip_v4;
+    pub use super::std_ip_v6 as ip_v6;
+    pub use super::std_socket_addr as socket_addr;
+    pub use super::std_socket_addr_v4 as socket_addr_v4;
+    pub use super::std_socket_addr_v6 as socket_addr_v6;
 }
 
 /// Redeclaration of macros to generate `fidl` types.
 pub mod fidl {
-    pub use fidl_ip as ip;
-    pub use fidl_ip_v4 as ip_v4;
-    pub use fidl_ip_v6 as ip_v6;
-    pub use fidl_mac as mac;
-    pub use fidl_socket_addr as socket_addr;
-    pub use fidl_socket_addr_v4 as socket_addr_v4;
-    pub use fidl_socket_addr_v6 as socket_addr_v6;
+    pub use super::fidl_ip as ip;
+    pub use super::fidl_ip_v4 as ip_v4;
+    pub use super::fidl_ip_v6 as ip_v6;
+    pub use super::fidl_mac as mac;
+    pub use super::fidl_socket_addr as socket_addr;
+    pub use super::fidl_socket_addr_v4 as socket_addr_v4;
+    pub use super::fidl_socket_addr_v6 as socket_addr_v6;
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use ::std;
     use fidl_fuchsia_net as fidl;
 
     #[test]
