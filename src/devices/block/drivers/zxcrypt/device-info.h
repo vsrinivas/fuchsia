@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
 
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -59,4 +59,4 @@ struct DeviceInfo {
 
 }  // namespace zxcrypt
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_

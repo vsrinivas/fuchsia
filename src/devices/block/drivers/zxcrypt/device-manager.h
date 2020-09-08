@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -75,4 +75,4 @@ class DeviceManager final : public DeviceManagerType {
 
 }  // namespace zxcrypt
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_

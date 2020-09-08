@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
 
 #include <lib/zx/port.h>
 #include <stddef.h>
@@ -26,16 +26,15 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-#include "device-info.h"
-#include "extra.h"
-#include "worker.h"
+#include "src/devices/block/drivers/zxcrypt/device-info.h"
+#include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/devices/block/drivers/zxcrypt/worker.h"
 
 namespace zxcrypt {
 
 // See ddk::Device in ddktl/device.h
 class Device;
-using DeviceType =
-    ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
 
 // |zxcrypt::Device| is an encrypted block device filter driver.  It is created by
 // |zxcrypt::DeviceManager::Unseal| and transparently encrypts writes to/decrypts reads from a
@@ -146,4 +145,4 @@ class Device final : public DeviceType,
 
 }  // namespace zxcrypt
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device-info.h"
+#include "src/devices/block/drivers/zxcrypt/device-info.h"
 
 #include <inttypes.h>
 #include <lib/zx/vmar.h>
@@ -13,7 +13,7 @@
 #include <fbl/macros.h>
 #include <zxcrypt/volume.h>
 
-#include "extra.h"
+#include "src/devices/block/drivers/zxcrypt/extra.h"
 
 namespace zxcrypt {
 

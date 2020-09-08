@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_
 
 #include <lib/zx/port.h>
 #include <stdint.h>
@@ -16,7 +16,7 @@
 #include <crypto/cipher.h>
 #include <zxcrypt/ddk-volume.h>
 
-#include "extra.h"
+#include "src/devices/block/drivers/zxcrypt/extra.h"
 
 namespace zxcrypt {
 
@@ -81,4 +81,4 @@ class Worker final {
 
 }  // namespace zxcrypt
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_WORKER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "extra.h"
+#include "src/devices/block/drivers/zxcrypt/extra.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -15,7 +15,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/block.h>
 
-#include "debug.h"
+#include "src/devices/block/drivers/zxcrypt/debug.h"
 
 namespace zxcrypt {
 

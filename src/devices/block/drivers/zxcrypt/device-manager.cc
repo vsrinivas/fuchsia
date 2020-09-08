@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device-manager.h"
+#include "src/devices/block/drivers/zxcrypt/device-manager.h"
 
 #include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <threads.h>
@@ -24,8 +24,8 @@
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 
-#include "device-info.h"
-#include "device.h"
+#include "src/devices/block/drivers/zxcrypt/device-info.h"
+#include "src/devices/block/drivers/zxcrypt/device.h"
 
 namespace zxcrypt {
 

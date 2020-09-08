@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/devices/block/drivers/zxcrypt/device.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -19,8 +19,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "debug.h"
-#include "device-info.h"
+#include "src/devices/block/drivers/zxcrypt/debug.h"
+#include "src/devices/block/drivers/zxcrypt/device-info.h"
 
 namespace zxcrypt {
 

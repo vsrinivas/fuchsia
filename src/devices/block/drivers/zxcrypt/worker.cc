@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "worker.h"
+#include "src/devices/block/drivers/zxcrypt/worker.h"
 
 #include <inttypes.h>
 #include <lib/zx/port.h>
@@ -22,9 +22,9 @@
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 
-#include "debug.h"
-#include "device.h"
-#include "extra.h"
+#include "src/devices/block/drivers/zxcrypt/debug.h"
+#include "src/devices/block/drivers/zxcrypt/device.h"
+#include "src/devices/block/drivers/zxcrypt/extra.h"
 
 namespace zxcrypt {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
 
 #include <ddk/debug.h>
 
@@ -14,4 +14,4 @@
 #define LOG_ENTRY_ARGS(fmt, ...) \
   zxlogf(TRACE, "%s:%d - %s(" fmt ")", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
