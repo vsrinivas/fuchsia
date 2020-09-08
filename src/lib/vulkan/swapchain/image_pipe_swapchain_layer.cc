@@ -36,8 +36,8 @@ constexpr bool kSkipPresent = false;
 
 struct LayerData {
   VkInstance instance;
-  VkLayerDispatchTable* device_dispatch_table;
-  VkLayerInstanceDispatchTable* instance_dispatch_table;
+  std::unique_ptr<VkLayerDispatchTable> device_dispatch_table;
+  std::unique_ptr<VkLayerInstanceDispatchTable> instance_dispatch_table;
   std::unordered_map<VkDebugUtilsMessengerEXT, VkDebugUtilsMessengerCreateInfoEXT> debug_callbacks;
 };
 
@@ -139,7 +139,7 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
   is_protected_ = pCreateInfo->flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR;
   VkResult result;
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table.get();
   uint32_t num_images = pCreateInfo->minImageCount;
   VkFlags usage = pCreateInfo->imageUsage & surface_->SupportedUsage();
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
@@ -198,7 +198,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device,
 
 void ImagePipeSwapchain::Cleanup(VkDevice device, const VkAllocationCallbacks* pAllocator) {
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table.get();
 
   for (auto& image : images_) {
     surface()->RemoveImage(image.id);
@@ -296,7 +296,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
         .handle = handle};
 
     VkLayerDispatchTable* pDisp =
-        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)->device_dispatch_table;
+        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)->device_dispatch_table.get();
     VkResult result = pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "semaphore import failed: %d", result);
@@ -349,7 +349,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
     return VK_ERROR_SURFACE_LOST_KHR;
 
   VkLayerDispatchTable* pDisp =
-      GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table.get();
 
   zx::event acquire_fence;
   zx_status_t status = zx::event::create(0, &acquire_fence);
@@ -495,7 +495,8 @@ VKAPI_ATTR VkResult VKAPI_CALL
 GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                         VkSurfaceCapabilitiesKHR* pSurfaceCapabilities) {
   VkLayerInstanceDispatchTable* instance_dispatch_table =
-      GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table;
+      GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map)
+          ->instance_dispatch_table.get();
 
   VkPhysicalDeviceProperties props;
   instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &props);
@@ -585,8 +586,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
 
   LayerData* instance_layer_data = GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
   instance_layer_data->instance = *pInstance;
-  instance_layer_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
-  layer_init_instance_dispatch_table(*pInstance, instance_layer_data->instance_dispatch_table,
+  instance_layer_data->instance_dispatch_table = std::make_unique<VkLayerInstanceDispatchTable>();
+  layer_init_instance_dispatch_table(*pInstance, instance_layer_data->instance_dispatch_table.get(),
                                      fpGetInstanceProcAddr);
 
   return result;
@@ -598,7 +599,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance,
   LayerData* my_data = GetLayerDataPtr(instance_key, layer_data_map);
 
   my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
-  delete my_data->instance_dispatch_table;
 
   // Remove from |layer_data_map| and free LayerData struct.
   FreeLayerDataPtr(instance_key, layer_data_map);
@@ -687,9 +687,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   LayerData* device_layer_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
 
   // Setup device dispatch table
-  device_layer_data->device_dispatch_table = new VkLayerDispatchTable;
+  device_layer_data->device_dispatch_table = std::make_unique<VkLayerDispatchTable>();
   device_layer_data->instance = gpu_layer_data->instance;
-  layer_init_device_dispatch_table(*pDevice, device_layer_data->device_dispatch_table,
+  layer_init_device_dispatch_table(*pDevice, device_layer_data->device_dispatch_table.get(),
                                    fpGetDeviceProcAddr);
 
   return result;
@@ -845,7 +845,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
 
   dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
-  VkLayerDispatchTable* pTable = dev_data->device_dispatch_table;
+  VkLayerDispatchTable* pTable = dev_data->device_dispatch_table.get();
 
   if (pTable->GetDeviceProcAddr == NULL)
     return NULL;
@@ -870,7 +870,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
   my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
 
-  VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
+  VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table.get();
   if (pTable->GetInstanceProcAddr == NULL) {
     return NULL;
   }
@@ -884,7 +884,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 
   LayerData* my_data;
   my_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
-  VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
+  VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table.get();
 
   if (pTable->GetPhysicalDeviceProcAddr == NULL)
     return NULL;
