@@ -37,6 +37,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/profile.rs",
     "src/profile_registrar.rs",
+    "src/rfcomm/frame/fcs.rs",
     "src/rfcomm/frame/mod.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",

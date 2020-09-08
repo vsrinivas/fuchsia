@@ -12,8 +12,14 @@ use {
     thiserror::Error,
 };
 
+/// Frame Check Sequence calculations.
+mod fcs;
+
 use crate::pub_decodable_enum;
-use crate::rfcomm::types::{CommandResponse, Role, DLCI};
+use crate::rfcomm::{
+    frame::fcs::verify_fcs,
+    types::{CommandResponse, Role, DLCI},
+};
 
 /// Generates an enum value where each variant can be converted into a constant in the given
 /// raw_type.
@@ -102,6 +108,17 @@ impl FrameType {
                 || *self == FrameType::UnnumberedAcknowledgement
                 || *self == FrameType::DisconnectedMode)
     }
+
+    /// Returns the number of octets needed when calculating the FCS.
+    fn fcs_octets(&self) -> usize {
+        // For UIH frames, the first 2 bytes of the buffer are used to calculate the FCS.
+        // Otherwise, the first 3. Defined in RFCOMM 5.1.1.
+        if *self == FrameType::UnnumberedInfoHeaderCheck {
+            2
+        } else {
+            3
+        }
+    }
 }
 
 /// The minimum frame size (bytes) for an RFCOMM Frame - Address, Control, Length, FCS.
@@ -176,15 +193,6 @@ pub struct Frame {
 }
 
 impl Frame {
-    /// Given the `fcs` value and the associated `buf`, returns true if the buffer
-    /// Frame Check Sequence is valid for the buffer.
-    /// This calculation is specified in GSM 5.2.1.6.
-    // TODO(58667): Actually check the FCS calculation using the Table provided in GSM.
-    fn verify_fcs(fcs: u8, buf: &[u8]) -> bool {
-        trace!("Verifying FCS {:?} with buf: {:?}", fcs, buf);
-        true
-    }
-
     /// Attempts to parse the provided `buf` into a Frame.
     // TODO(58668): Take Credit Based Flow into account when parsing UIH frames.
     pub fn parse(role: Role, buf: &[u8]) -> Result<Self, FrameParseError> {
@@ -233,15 +241,12 @@ impl Frame {
         let header_size = 2 + if is_two_octet_length { 2 } else { 1 };
 
         // Check the FCS before parsing the body of the packet.
-        // For UIH frames, the first 3 bytes of the buffer are used to calculate the FCS. Otherwise,
-        // the first 2. Defined in RFCOMM 5.1.1.
         let fcs_index: usize = (header_size + length).into();
         if buf.len() <= fcs_index {
             return Err(FrameParseError::BufferTooSmall);
         }
         let fcs = buf[fcs_index];
-        let fcs_octets = if frame_type == FrameType::UnnumberedInfoHeaderCheck { 2 } else { 3 };
-        if !Frame::verify_fcs(fcs, &buf[0..fcs_octets]) {
+        if !verify_fcs(fcs, &buf[..frame_type.fcs_octets()]) {
             return Err(FrameParseError::FCSCheckFailed);
         }
 
@@ -251,10 +256,11 @@ impl Frame {
     }
 }
 
-// TODO(58667): Update tests with FCS when implemented.
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::rfcomm::frame::fcs::calculate_fcs;
 
     #[test]
     fn test_is_mux_startup_frame() {
@@ -330,17 +336,20 @@ mod tests {
         assert_eq!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
     }
 
-    // TODO(58667): Update this test with a valid FCS when FCS check is implemented.
     #[test]
     fn test_parse_valid_frame_over_mux_dlci() {
         let role = Role::Unassigned;
-        let buf: &[u8] = &[
+        let frame_type = FrameType::SetAsynchronousBalancedMode;
+        let mut buf = vec![
             0b00000011, // Address Field - EA = 1, C/R = 1, DLCI = 0.
             0b00101111, // Control Field - SABM command with P/F = 0.
             0b00000001, // Length Field - Bit1 = 1 Indicates one octet length - no info.
-            0b00000000, // FCS provided.
         ];
-        let res = Frame::parse(role, buf).unwrap();
+        // Calculate the FCS and tack it on to the end.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        let res = Frame::parse(role, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(0).unwrap(),
@@ -355,13 +364,17 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_over_user_dlci() {
         let role = Role::Responder;
-        let buf: &[u8] = &[
+        let frame_type = FrameType::SetAsynchronousBalancedMode;
+        let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b00101111, // Control Field - SABM command with P/F = 0.
             0b00000001, // Length Field - Bit1 = 1 Indicates one octet length - no info.
-            0b00000000, // FCS provided.
         ];
-        let res = Frame::parse(role, buf).unwrap();
+        // Calculate the FCS for the first three bytes, since non-UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        let res = Frame::parse(role, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
@@ -376,28 +389,36 @@ mod tests {
     #[test]
     fn test_parse_frame_with_information_length_invalid_buf_size() {
         let role = Role::Responder;
-        let buf: &[u8] = &[
+        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
+        let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b11101111, // Control Field - UIH command with P/F = 0.
             0b00000111, // Length Field - Bit1 = 1 Indicates one octet length = 3.
             0b00000000, // Data octet #1 - missing octets 2,3.
-            0b00000000, // FCS provided.
         ];
-        assert_eq!(Frame::parse(role, buf), Err(FrameParseError::BufferTooSmall));
+        // Calculate the FCS for the first two bytes, since UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        assert_eq!(Frame::parse(role, &buf[..]), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
     fn test_parse_valid_frame_with_information_length() {
         let role = Role::Responder;
-        let buf: &[u8] = &[
+        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
+        let mut buf = vec![
             0b00001111, // Address Field - EA = 1, C/R = 1, User DLCI = 3.
             0b11101111, // Control Field - UIH command with P/F = 0.
             0b00000101, // Length Field - Bit1 = 1 Indicates one octet length = 2.
             0b00000000, // Data octet #1,
             0b00000000, // Data octet #2,
-            0b00000000, // FCS provided.
         ];
-        let res = Frame::parse(role, buf).unwrap();
+        // Calculate the FCS for the first two bytes, since UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        buf.push(fcs);
+
+        let res = Frame::parse(role, &buf[..]).unwrap();
         let expected_frame = Frame {
             role,
             dlci: DLCI::try_from(3).unwrap(),
@@ -412,6 +433,7 @@ mod tests {
     #[test]
     fn test_parse_valid_frame_with_two_octet_information_length() {
         let role = Role::Responder;
+        let frame_type = FrameType::UnnumberedInfoHeaderCheck;
         let length = 129;
         let length_data = vec![0; length];
 
@@ -422,7 +444,9 @@ mod tests {
             0b00000010, // Length Field0 - E/A = 0. Length = 1.
             0b00000011, // Length Field1 - E/A = 1. Length = 128.
         ];
-        let buf = [buf, length_data, vec![0b00000000]].concat();
+        // Calculate the FCS for the first two bytes, since UIH frame.
+        let fcs = calculate_fcs(&buf[..frame_type.fcs_octets()]);
+        let buf = [buf, length_data, vec![fcs]].concat();
 
         let res = Frame::parse(role, &buf[..]).unwrap();
         let expected_frame = Frame {
