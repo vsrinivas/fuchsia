@@ -13,6 +13,7 @@ executable("nonhardware_tests") {
     "test_connection.cc",
     "test_context.cc",
     "test_page_table_slot_allocator.cc",
+    "test_registers.cc",
     "test_ringbuffer.cc",
   ]
 

@@ -199,7 +199,9 @@ class MmuPageTableArrayConfig : public magma::RegisterBase {
 
 class IdleState : public magma::RegisterBase {
  public:
-  bool IsIdle() { return reg_value() == 0x7fffffff; }
+  static constexpr uint32_t kIdleMask = 0x7fffffff;
+
+  bool IsIdle() { return (reg_value() & kIdleMask) == kIdleMask; }
 
   static auto Get() { return magma::RegisterAddr<IdleState>(0x4); }
 };

@@ -665,7 +665,8 @@ bool MsdVsiDevice::WaitUntilIdle(uint32_t timeout_ms) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  return false;
+  auto idle_state = registers::IdleState::Get().ReadFrom(register_io_.get()).reg_value();
+  return DRETF(false, "WaitUntilIdle failed, IdleState register: 0x%x", idle_state);
 }
 
 bool MsdVsiDevice::LoadInitialAddressSpace(std::shared_ptr<MsdVsiContext> context,
