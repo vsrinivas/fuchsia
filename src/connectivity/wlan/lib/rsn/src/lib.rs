@@ -20,24 +20,26 @@ mod key_data;
 mod keywrap;
 pub mod rsna;
 
-use crate::key::exchange::{
-    self,
-    handshake::fourway::{self, MessageNumber},
-    handshake::group_key,
+use {
+    crate::{
+        key::exchange::{
+            self,
+            handshake::{fourway, group_key, HandshakeMessageNumber},
+        },
+        rsna::{esssa::EssSa, Role, UpdateSink},
+    },
+    fidl_fuchsia_wlan_mlme::SaeFrame,
+    std::sync::{Arc, Mutex},
+    wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe},
+    zerocopy::ByteSlice,
 };
-use crate::rsna::esssa::EssSa;
-use crate::rsna::{Role, UpdateSink};
-use fidl_fuchsia_wlan_mlme::SaeFrame;
-use std::sync::{Arc, Mutex};
-use wlan_common::ie::{rsn::rsne::Rsne, wpa::WpaIe};
 
-pub use crate::auth::psk;
-pub use crate::crypto_utils::nonce;
-pub use crate::key::gtk;
-pub use crate::key::gtk::GtkProvider;
-pub use crate::rsna::NegotiatedProtection;
-
-use zerocopy::ByteSlice;
+pub use crate::{
+    auth::psk,
+    crypto_utils::nonce,
+    key::gtk::{self, GtkProvider},
+    rsna::NegotiatedProtection,
+};
 
 #[derive(Debug)]
 pub struct Supplicant {
@@ -256,25 +258,25 @@ pub enum Error {
     #[error("only PTK and GTK derivation is supported")]
     UnsupportedKeyDerivation,
     #[error("unexpected message: {:?}", _0)]
-    Unexpected4WayHandshakeMessage(MessageNumber),
+    UnexpectedHandshakeMessage(HandshakeMessageNumber),
     #[error("invalid install bit value; message: {:?}", _0)]
-    InvalidInstallBitValue(MessageNumber),
+    InvalidInstallBitValue(HandshakeMessageNumber),
     #[error("error, install bit set for Group-/SMK-Handshake")]
     InvalidInstallBitGroupSmkHandshake,
     #[error("invalid key_ack bit value; message: {:?}", _0)]
-    InvalidKeyAckBitValue(MessageNumber),
+    InvalidKeyAckBitValue(HandshakeMessageNumber),
     #[error("invalid key_mic bit value; message: {:?}", _0)]
-    InvalidKeyMicBitValue(MessageNumber),
+    InvalidKeyMicBitValue(HandshakeMessageNumber),
     #[error("invalid secure bit value; message: {:?}", _0)]
-    InvalidSecureBitValue(MessageNumber),
+    InvalidSecureBitValue(HandshakeMessageNumber),
     #[error("error, secure bit set by Authenticator before PTK is known")]
     SecureBitWithUnknownPtk,
     #[error("error, secure bit set must be set by Supplicant once PTK and GTK are known")]
     SecureBitNotSetWithKnownPtkGtk,
     #[error("invalid error bit value; message: {:?}", _0)]
-    InvalidErrorBitValue(MessageNumber),
+    InvalidErrorBitValue(HandshakeMessageNumber),
     #[error("invalid request bit value; message: {:?}", _0)]
-    InvalidRequestBitValue(MessageNumber),
+    InvalidRequestBitValue(HandshakeMessageNumber),
     #[error("error, Authenticator set request bit")]
     InvalidRequestBitAuthenticator,
     #[error("error, Authenticator set error bit")]
@@ -282,7 +284,7 @@ pub enum Error {
     #[error("error, Supplicant set key_ack bit")]
     InvalidKeyAckBitSupplicant,
     #[error("invalid encrypted_key_data bit value")]
-    InvalidEncryptedKeyDataBitValue(MessageNumber),
+    InvalidEncryptedKeyDataBitValue(HandshakeMessageNumber),
     #[error("encrypted_key_data bit requires MIC bit to be set")]
     InvalidMicBitForEncryptedKeyData,
     #[error("invalid key length {:?}; expected {:?}", _0, _1)]
@@ -300,11 +302,11 @@ pub enum Error {
     #[error("invalid MIC size")]
     InvalidMicSize,
     #[error("invalid Nonce; expected to be non-zero")]
-    InvalidNonce(MessageNumber),
+    InvalidNonce(HandshakeMessageNumber),
     #[error("invalid RSC; expected to be zero")]
-    InvalidRsc(MessageNumber),
+    InvalidRsc(HandshakeMessageNumber),
     #[error("invalid key data; must not be zero")]
-    EmptyKeyData(MessageNumber),
+    EmptyKeyData(HandshakeMessageNumber),
     #[error("invalid key data")]
     InvalidKeyDataContent,
     #[error("invalid key data length; doesn't match with key data")]
@@ -320,7 +322,7 @@ pub enum Error {
     #[error("invalid nonce; nonce must match nonce from 1st message")]
     ErrorNonceDoesntMatch,
     #[error("invalid IV; EAPOL protocol version: {:?}; message: {:?}", _0, _1)]
-    InvalidIv(eapol::ProtocolVersion, MessageNumber),
+    InvalidIv(eapol::ProtocolVersion, HandshakeMessageNumber),
     #[error("PMKSA was not yet established")]
     PmksaNotEstablished,
     #[error("invalid nonce size; expected 32 bytes, found: {:?}", _0)]

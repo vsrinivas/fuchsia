@@ -82,7 +82,7 @@ impl State {
                     unexpected_msg => {
                         error!(
                             "error: {:?}",
-                            Error::Unexpected4WayHandshakeMessage(unexpected_msg)
+                            Error::UnexpectedHandshakeMessage(unexpected_msg.into())
                         );
                         State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                     }

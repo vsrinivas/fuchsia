@@ -240,7 +240,7 @@ impl State {
                     }
                 }
                 unexpected_msg => {
-                    error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                    error!("error: {}", Error::UnexpectedHandshakeMessage(unexpected_msg.into()));
                     // Note: No need to generate a new SNonce as the received frame is dropped.
                     State::AwaitingMsg1 { pmk, cfg, snonce }
                 }
@@ -300,7 +300,10 @@ impl State {
                         }
                     }
                     unexpected_msg => {
-                        error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                        error!(
+                            "error: {}",
+                            Error::UnexpectedHandshakeMessage(unexpected_msg.into())
+                        );
                         // Note: No need to generate a new SNonce as the received frame is dropped.
                         State::AwaitingMsg1 { pmk, cfg, snonce }
                     }
