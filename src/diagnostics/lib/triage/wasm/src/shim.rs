@@ -218,7 +218,8 @@ mod test {
         }
     }"#;
 
-    const OK_PLUGINS_PREFIX: &str = "Process Crashes Plugin - OK\nSandbox Errors Plugin - OK\n";
+    const OK_PLUGINS_PREFIX: &str =
+        "Process Crashes Plugin - OK\nSandbox Errors Plugin - OK\nMemory Summary Plugin - OK\n";
 
     #[test]
     fn analyze() {

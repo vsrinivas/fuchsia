@@ -32,6 +32,7 @@ library_sources = [
   "src/metrics/variable.rs",
   "src/plugins.rs",
   "src/plugins/crashes.rs",
+  "src/plugins/memory.rs",
   "src/plugins/sandbox_errors.rs",
   "src/result_format.rs",
   "src/validate.rs",

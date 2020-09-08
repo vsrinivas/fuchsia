@@ -60,8 +60,11 @@ impl<'a> ActionResultFormatter<'a> {
         }
 
         let header = Self::make_underline("Gauges");
-        let lines =
-            &mut self.action_results.get_gauges().iter().cloned().sorted().collect::<Vec<String>>();
+        let lines = &mut self.action_results.get_gauges().iter().cloned();
+        let lines: Vec<String> = match self.action_results.sort_gauges() {
+            true => lines.sorted().collect(),
+            false => lines.collect(),
+        };
 
         Some(format!("{}{}\n", header, lines.join("\n")))
     }
@@ -72,7 +75,6 @@ impl<'a> ActionResultFormatter<'a> {
             .action_results
             .get_sub_results()
             .iter()
-            .sorted_by(|a, b| a.0.cmp(&b.0)) // sort by name
             .map(|(name, v)| {
                 let fmt = ActionResultFormatter::new(&v);
                 let val = match fmt.inner_to_text() {
@@ -80,7 +82,8 @@ impl<'a> ActionResultFormatter<'a> {
                         warning = true;
                         format!("\n{}", v)
                     }
-                    (false, _) => " - OK".to_string(),
+                    (false, v) if v.is_empty() => " - OK".to_string(),
+                    (false, v) => format!(" - OK\n{}", v),
                 };
                 format!("{} Plugin{}", name, val)
             })
@@ -169,7 +172,12 @@ mod test {
         Warnings\n\
         --------\n\
         w1\n\
-        w2\n\
+        w2\n\n\
+        Gauges Plugin - OK\n\
+        Gauges\n\
+        ------\n\
+        g2\n\
+        g1\n\
         ",
         );
 
@@ -182,12 +190,19 @@ mod test {
             let mut warnings_plugin = ActionResults::new();
             warnings_plugin.add_warning(String::from("w1"));
             warnings_plugin.add_warning(String::from("w2"));
+            let mut gauges_plugin = ActionResults::new();
+            gauges_plugin.add_gauge(String::from("g2"));
+            gauges_plugin.add_gauge(String::from("g1"));
+            gauges_plugin.set_sort_gauges(false);
             action_results
                 .get_sub_results_mut()
                 .push(("Crashes".to_string(), Box::new(ActionResults::new())));
             action_results
                 .get_sub_results_mut()
                 .push(("Warning".to_string(), Box::new(warnings_plugin)));
+            action_results
+                .get_sub_results_mut()
+                .push(("Gauges".to_string(), Box::new(gauges_plugin)));
 
             let formatter = ActionResultFormatter::new(&action_results);
 
@@ -204,12 +219,19 @@ mod test {
             let mut warnings_plugin = ActionResults::new();
             warnings_plugin.add_warning(String::from("w2"));
             warnings_plugin.add_warning(String::from("w1"));
+            let mut gauges_plugin = ActionResults::new();
+            gauges_plugin.add_gauge(String::from("g2"));
+            gauges_plugin.add_gauge(String::from("g1"));
+            gauges_plugin.set_sort_gauges(false);
+            action_results
+                .get_sub_results_mut()
+                .push(("Crashes".to_string(), Box::new(ActionResults::new())));
             action_results
                 .get_sub_results_mut()
                 .push(("Warning".to_string(), Box::new(warnings_plugin)));
             action_results
                 .get_sub_results_mut()
-                .push(("Crashes".to_string(), Box::new(ActionResults::new())));
+                .push(("Gauges".to_string(), Box::new(gauges_plugin)));
 
             let formatter = ActionResultFormatter::new(&action_results);
 

@@ -47,6 +47,7 @@ pub struct ActionResults {
     results: HashMap<String, bool>,
     warnings: Vec<String>,
     gauges: Vec<String>,
+    sort_gauges: bool,
     sub_results: Vec<(String, Box<ActionResults>)>,
 }
 
@@ -56,6 +57,7 @@ impl ActionResults {
             results: HashMap::new(),
             warnings: Vec::new(),
             gauges: Vec::new(),
+            sort_gauges: true,
             sub_results: Vec::new(),
         }
     }
@@ -70,6 +72,14 @@ impl ActionResults {
 
     pub fn add_gauge(&mut self, gauge: String) {
         self.gauges.push(gauge);
+    }
+
+    pub fn set_sort_gauges(&mut self, v: bool) {
+        self.sort_gauges = v;
+    }
+
+    pub fn sort_gauges(&self) -> bool {
+        self.sort_gauges
     }
 
     pub fn get_warnings(&self) -> &Vec<String> {
