@@ -39,7 +39,6 @@ TEST_femu_standalone() {
   export DISPLAY="fakedisplay"
 
   # Run command.
-  #BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
   BT_EXPECT run_femu_wrapper
 
   # Verify that the image first goes through a decompress process by fvm
@@ -69,6 +68,36 @@ TEST_femu_standalone() {
   # shellcheck disable=SC1090
   source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   gn-test-check-mock-partial -fuchsia
+}
+
+TEST_femu_fallback_to_fvm_fastboot_if_raw_image_not_exist() {
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+
+  # Need to configure a DISPLAY so that we can get past the graphics error checks
+  export DISPLAY="fakedisplay"
+
+  # Renamed the fvm image
+  src="${FUCHSIA_WORK_DIR}/image/storage-full.blk"
+  dst="${FUCHSIA_WORK_DIR}/image/storage-fastboot.blk"
+  mv "${src}" "${dst}"
+  cp "${dst}" "${dst}.decompressed"
+  export IMAGE_FVM_FASTBOOT="storage-fastboot.blk"
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh"
+
+  # Verify that the image first goes through a decompress process by fvm
+  source "${MOCKED_FVM}.mock_state.1"
+  gn-test-check-mock-args _ANY_ _ANY_ decompress --default "${dst}"
+
+  # Verify that the image will be extended to double the size
+  source "${MOCKED_FVM}.mock_state.2"
+  gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 }
 
 # Verifies that the --experiment-arm64 option selects arm64 support

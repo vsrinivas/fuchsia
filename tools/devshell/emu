@@ -69,11 +69,6 @@ IMAGE_SIZE=
 EXPERIMENT_ARM64=false
 KERNEL_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
 ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}"
-if [[ -n "${IMAGE_FVM_FOR_EMU}" ]]; then
-  FVM_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FOR_EMU}"
-else
-  FVM_IMAGE=""
-fi
 ARCH=${FUCHSIA_ARCH}
 
 # Propagate our TERM environment variable as a kernel command line
@@ -423,10 +418,16 @@ KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 fx-zbi -o "${KERNEL_ZBI}" "${ZBI_IMAGE}" \
   --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}"
 
-if [[ -n "$FVM_IMAGE" ]]; then
-  fvmimg="${img_dir}/fvm.blk"
-  fx-fvm-extend-image "${FVM_IMAGE}" "${fvmimg}" "${IMAGE_SIZE}"
-  ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=vdisk")
+# Try raw image first if it exist. Otherwise see if we can find a fastboot format fvm.
+fvm_initial="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
+if [[ -z "${fvm_initial}" || ! -f "${fvm_initial}" ]] ; then
+  fvm_initial="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_FASTBOOT}"
+fi
+
+if [[ -f "${fvm_initial}" ]] ; then
+  fvm_extended="${img_dir}/fvm.blk"
+  fx-fvm-extend-image "${fvm_initial}" "${fvm_extended}"
+  ARGS+=("-drive" "file=${fvm_extended},format=raw,if=none,id=vdisk")
   ARGS+=("-device" "virtio-blk-pci,drive=vdisk")
 fi
 

@@ -430,12 +430,12 @@ default_image_deps += [ ":qemu-kernel" ]
 # arguments), not by the kernel or boot loader.
 action("devmgr_config.txt") {
   visibility = [
-    ":fuchsia",
-    ":fuchsia.vbmeta",
-    ":fuchsia.vbmeta__zbi_props",
-    ":fuchsia.vbmeta__vb_desc",
     ":devmgr_config",
     ":devmgr_config_prime.txt",
+    ":fuchsia",
+    ":fuchsia.vbmeta",
+    ":fuchsia.vbmeta__vb_desc",
+    ":fuchsia.vbmeta__zbi_props",
   ]
   testonly = true
 
@@ -518,11 +518,11 @@ devmgr_config("devmgr_config") {
 # target for integration testing.
 action("devmgr_config_prime.txt") {
   visibility = [
+    ":devmgr_config_prime",
     ":fuchsia_prime",
     ":fuchsia_prime.vbmeta",
-    ":fuchsia_prime.vbmeta__zbi_props",
     ":fuchsia_prime.vbmeta__vb_desc",
-    ":devmgr_config_prime",
+    ":fuchsia_prime.vbmeta__zbi_props",
   ]
   testonly = true
 
@@ -970,13 +970,15 @@ fvm_data_partition = {
   maximum_bytes = minfs_maximum_bytes
 }
 
-# fvm.blk creates an FVM partition image containing the blob partition produced
-# by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
-# invoked and used by the qemu run, via `fx emu` / `fx qemu`.
+# The rule for generating raw fvm.blk. Normally, fastboot fvm images should be
+# used in place of the raw images. But it is needed when the build is not configured
+# to generate the fastboot image, or when users run "fx netboot", which needs to
+# build the netboot.zbi target that depends on fvm.blk
+fvm_raw_path = "$target_out_dir/fvm.blk"
 generate_fvm("fvm.blk") {
   testonly = true
 
-  output_name = "$target_out_dir/fvm.blk"
+  output_name = fvm_raw_path
   rebased_output_name = rebase_path(output_name, root_build_dir)
 
   args = fvm_create_args
@@ -984,7 +986,6 @@ generate_fvm("fvm.blk") {
     args += [
       "--length",
       fvm_image_size,
-      "--resize-image-file-to-fit",
     ]
   }
   partitions = [
@@ -1000,13 +1001,9 @@ generate_fvm("fvm.blk") {
         type = "blk"
       },
     ]
-    image_paths = [
-      "IMAGE_FVM_RAW=$rebased_output_name",
-      "IMAGE_FVM_FOR_EMU=$rebased_output_name",
-    ]
+    image_paths = [ "IMAGE_FVM_RAW=$rebased_output_name" ]
   }
 }
-default_image_deps += [ ":fvm.blk" ]
 
 fvm_sparse_blk_path = "$target_out_dir/fvm.sparse.blk"
 
@@ -1124,29 +1121,37 @@ generate_fvm("fvm.blob.sparse.blk") {
 }
 default_image_deps += [ ":fvm.blob.sparse.blk" ]
 
-# For raw NAND devices that support flashing via fastboot, generate the NAND
-# FVM image as well which contains the necessary OOB bytes to initialize the
-# FTL.
-#
-# TODO(fxbug.dev/58896): generate fvm.blk from this on the fly when needed
-# rather than always building both.
-if (fvm_ftl_nand_page_size != "") {
-  assert(fvm_ftl_nand_oob_size != "", "fvm_ftl_nand_oob_size must be specified")
-  assert(fvm_ftl_nand_pages_per_block != "",
-         "fvm_ftl_nand_pages_per_block must be specified")
-  assert(fvm_ftl_nand_block_count != "",
-         "fvm_ftl_nand_block_count must be specified")
-
-  # Use this generic image name for all fastboot FVM images so that our flash
-  # scripts can depend on them regardless of actual image format.
-  generate_fvm("fvm.fastboot.blk") {
-    # Required for dependency on fvm.sparse.blk which is testonly.
-    testonly = true
-
-    output_name = "$target_out_dir/fvm.fastboot.blk"
-    rebased_output_name = rebase_path(output_name, root_build_dir)
-
-    args = [
+if (fvm_partition != "") {
+  # If |fvm_partition| is specified, generate a fastboot fvm format suitable for
+  # fastboot flashing. The image will be used for emu/qemu as well.
+  fvm_generation_args = []
+  fvm_partitions = []
+  fvm_deps = []
+  if (fvm_emmc_partition_size != "") {
+    # If "fvm_emmc_partition_size" is specified, generate for emmc devices.
+    fvm_generation_args = fvm_create_args
+    fvm_generation_args += [
+      "--compress",
+      "lz4",
+      "--length",
+      fvm_emmc_partition_size,
+      "--resize-image-file-to-fit",
+    ]
+    fvm_partitions = [
+      fvm_blob_partition,
+      fvm_data_partition,
+    ]
+  } else if (fvm_ftl_nand_page_size != "") {
+    # For raw NAND devices that support flashing via fastboot, generate the NAND
+    # FVM image as well which contains the necessary OOB bytes to initialize the
+    # FTL.
+    assert(fvm_ftl_nand_oob_size != "",
+           "fvm_ftl_nand_oob_size must be specified")
+    assert(fvm_ftl_nand_pages_per_block != "",
+           "fvm_ftl_nand_pages_per_block must be specified")
+    assert(fvm_ftl_nand_block_count != "",
+           "fvm_ftl_nand_block_count must be specified")
+    fvm_generation_args = [
       "ftl-raw-nand",
       "--nand-page-size",
       fvm_ftl_nand_page_size,
@@ -1165,9 +1170,28 @@ if (fvm_ftl_nand_page_size != "") {
       "--sparse",
       rebase_path(fvm_blob_sparse_blk_path),
     ]
+    fvm_deps = [ ":fvm.blob.sparse.blk" ]
 
-    deps = [ ":fvm.blob.sparse.blk" ]
+    # TODO(fxbug.dev/58896): generate fvm.blk from this on the fly when needed
+    # rather than always building both. Context:
+    # qemu/emu does not work on fvm.fastboot.blk for raw nand devices yet.
+    # Thus, we still generate the raw image and use it for emu/qemu at this point.
+    # Remove this dependency once it is implemented.
+    default_image_deps += [ ":fvm.blk" ]
+  } else {
+    assert(
+        false,
+        "|fvm_partition| is specified. But failed to determine the target format.")
+  }
 
+  generate_fvm("fvm.fastboot.blk") {
+    testonly = true
+
+    output_name = "$target_out_dir/fvm.fastboot.blk"
+    rebased_output_name = rebase_path(output_name, root_build_dir)
+
+    args = fvm_generation_args
+    partitions = fvm_partitions
     metadata = {
       images = [
         {
@@ -1179,8 +1203,11 @@ if (fvm_ftl_nand_page_size != "") {
       ]
       image_paths = [ "IMAGE_FVM_FASTBOOT=$rebased_output_name" ]
     }
+    deps = fvm_deps
   }
   default_image_deps += [ ":fvm.fastboot.blk" ]
+} else {
+  default_image_deps += [ ":fvm.blk" ]
 }
 
 zbi_input("fvm.blk_ramdisk") {
@@ -1497,7 +1524,7 @@ action("flash_script") {
     "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
   ]
   if (custom_signing_script != "") {
-    args += ["--signed=true"]
+    args += [ "--signed=true" ]
   }
   deps = [ ":fastboot" ]
 

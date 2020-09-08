@@ -11,6 +11,11 @@ declare_args() {
   # that is too small will result in build failure.
   fvm_image_size = ""
 
+  # The size in bytes of the FVM partition on the target eMMC devices.
+  # Specifying this parameter will lead build to generate a fvm.fastboot.blk
+  # suitable for flashing through fastboot for eMMC devices.
+  fvm_emmc_partition_size = ""
+
   # The max size of the disk where the FVM is written. This is used for
   # preallocating metadata to determine how much the FVM can expand on disk.
   # Only applies to sparse FVM images. At sparse image construction time, the

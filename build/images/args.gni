@@ -73,6 +73,7 @@ declare_args() {
   vbmeta_a_partition = ""
   vbmeta_b_partition = ""
   vbmeta_r_partition = ""
+  fvm_partition = ""
   active_partition = ""
   fastboot_product = ""
   pre_erase_flash = false

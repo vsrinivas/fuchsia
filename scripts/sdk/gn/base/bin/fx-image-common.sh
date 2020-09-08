@@ -26,7 +26,7 @@ IMAGE_ZIRCONA_ZBI="zircon-a.zbi"
 # shellcheck disable=SC2034
 IMAGE_QEMU_KERNEL_RAW="qemu-kernel.kernel"
 # shellcheck disable=SC2034
-IMAGE_FVM_FOR_EMU="storage-full.blk"
+IMAGE_FVM_RAW="storage-full.blk"
 
 # Provide fx-zbi functionality using the SDK zbi tool
 function fx-zbi {
