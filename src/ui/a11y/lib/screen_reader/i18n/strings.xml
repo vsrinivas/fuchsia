@@ -69,6 +69,8 @@
     <string name="list_items">{num_items, plural, =0{with no items} =1{with one item} other{with <xliff:g id="num" example="2">#</xliff:g> items}}</string>
     <!-- Spoken message that describes when the user switches to the normal navigation granularity, which allows one to navigate the interface visiting all focusable elements. -->
     <string name="normal_navigation_granularity">Normal navigation</string>
+    <!-- Spoken message that describes when the user switches to the default navigation granularity, which allows one to navigate the interface visiting all focusable elements. -->
+    <string name="default_navigation_granularity">Default</string>
     <!-- Spoken message that describes when the user switches to the adjust value granularity, which allows one to control a slider value. -->
     <string name="adjust_value_granularity">Adjust value</string>
     <!-- Spoken message that describes when the user switches to the heading granularity, which allows one to navigate the interface one heading at a time. -->

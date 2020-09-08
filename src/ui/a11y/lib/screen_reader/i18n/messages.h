@@ -129,6 +129,10 @@ DEF_MESSAGE(list_items,
 // allows one to navigate the interface visiting all focusable elements.
 DEF_MESSAGE(normal_navigation_granularity, "Normal navigation");
 
+// Spoken message that describes when the user switches to the default navigation granularity, which
+// allows one to navigate the interface visiting all focusable elements.
+DEF_MESSAGE(default_navigation_granularity, "Default");
+
 // Spoken message that describes when the user switches to the adjust value granularity, which
 // allows one to control a slider value.
 DEF_MESSAGE(adjust_value_granularity, "Adjust value");
