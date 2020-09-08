@@ -18,7 +18,7 @@ use {
     async_trait::async_trait,
     collector::Moniker,
     diagnostics_data::{self as schema, Data},
-    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
@@ -93,6 +93,8 @@ pub struct ReaderServer {
     pub inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
     pub configured_selectors: Option<Vec<Arc<fidl_fuchsia_diagnostics::Selector>>>,
     pub inspect_reader_server_stats: Arc<diagnostics::DiagnosticsServerStats>,
+    /// The format requested by the client.
+    format: Format,
 }
 
 fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
@@ -115,11 +117,13 @@ pub struct BatchResultItem {
 impl ReaderServer {
     pub fn new(
         inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        format: Format,
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
         inspect_reader_server_stats: Arc<DiagnosticsServerStats>,
     ) -> Self {
         ReaderServer {
             inspect_repo,
+            format,
             configured_selectors: configured_selectors.map(|selectors| {
                 selectors.into_iter().map(|selector| Arc::new(selector)).collect()
             }),
@@ -361,7 +365,7 @@ impl ReaderServer {
     /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
     /// a node hierarchy fails to format, its vmo is an empty string.
     fn format_hierarchy(
-        format: &fidl_fuchsia_diagnostics::Format,
+        format: &Format,
         batch_item: BatchResultItem,
     ) -> Result<fidl_fuchsia_diagnostics::FormattedContent, Error> {
         let inspect_data = Data::for_inspect(
@@ -382,17 +386,17 @@ impl DiagnosticsServer for ReaderServer {
         &self.inspect_reader_server_stats
     }
 
+    fn format(&self) -> &Format {
+        &self.format
+    }
+
     /// Takes a BatchIterator server channel and starts serving snapshotted
     /// lifecycle events as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
     /// diagnostics data aren't taken until a component is included in the upcoming batch.
     ///
     /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
-    async fn snapshot(
-        &self,
-        stream: &mut BatchIteratorRequestStream,
-        format: &fidl_fuchsia_diagnostics::Format,
-    ) -> Result<(), Error> {
+    async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {
         if stream.is_terminated() {
             return Ok(());
         }
@@ -415,7 +419,7 @@ impl DiagnosticsServer for ReaderServer {
                 }
                 self.stats().add_result();
 
-                ReaderServer::format_hierarchy(format, batch_item).ok()
+                ReaderServer::format_hierarchy(self.format(), batch_item).ok()
             })
             .boxed();
 
@@ -907,6 +911,7 @@ mod tests {
 
                 let reader_server = ReaderServer::new(
                     inspect_repo.clone(),
+                    Format::Json,
                     None,
                     test_batch_iterator_stats1.clone(),
                 );
@@ -1041,8 +1046,12 @@ mod tests {
         };
 
         {
-            let reader_server =
-                ReaderServer::new(inspect_repo.clone(), None, test_batch_iterator_stats1);
+            let reader_server = ReaderServer::new(
+                inspect_repo.clone(),
+                Format::Json,
+                None,
+                test_batch_iterator_stats1,
+            );
 
             let result_json = read_snapshot(reader_server, inspector_arc.clone()).await;
 
@@ -1168,8 +1177,12 @@ mod tests {
 
         inspect_repo.write().remove(&component_id);
         {
-            let reader_server =
-                ReaderServer::new(inspect_repo.clone(), None, test_batch_iterator_stats2);
+            let reader_server = ReaderServer::new(
+                inspect_repo.clone(),
+                Format::Json,
+                None,
+                test_batch_iterator_stats2,
+            );
             let result_json = read_snapshot(reader_server, inspector_arc.clone()).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
@@ -1312,11 +1325,7 @@ mod tests {
         ) = create_proxy().unwrap();
 
         reader_server
-            .spawn(
-                fidl_fuchsia_diagnostics::StreamMode::Snapshot,
-                fidl_fuchsia_diagnostics::Format::Json,
-                batch_iterator,
-            )
+            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
             .detach();
 
         let mut result_vec: Vec<String> = Vec::new();
@@ -1354,11 +1363,7 @@ mod tests {
         ) = create_proxy().unwrap();
 
         reader_server
-            .spawn(
-                fidl_fuchsia_diagnostics::StreamMode::Snapshot,
-                fidl_fuchsia_diagnostics::Format::Json,
-                batch_iterator,
-            )
+            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
             .detach();
 
         let mut result_vec: Vec<String> = Vec::new();

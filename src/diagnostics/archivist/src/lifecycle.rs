@@ -9,7 +9,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     diagnostics_data::Data,
-    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream, Format},
     futures::stream::FusedStream,
     futures::TryStreamExt,
     parking_lot::RwLock,
@@ -90,17 +90,17 @@ impl DiagnosticsServer for LifecycleServer {
         &self.server_stats
     }
 
+    fn format(&self) -> &Format {
+        &Format::Json
+    }
+
     /// Takes a BatchIterator server channel and starts serving snapshotted
     /// lifecycle events as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
     /// diagnostics data aren't taken until a component is included in the upcoming batch.
     ///
     /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
-    async fn snapshot(
-        &self,
-        stream: &mut BatchIteratorRequestStream,
-        format: &fidl_fuchsia_diagnostics::Format,
-    ) -> Result<(), Error> {
+    async fn snapshot(&self, stream: &mut BatchIteratorRequestStream) -> Result<(), Error> {
         if stream.is_terminated() {
             return Ok(());
         }
@@ -120,7 +120,7 @@ impl DiagnosticsServer for LifecycleServer {
 
                     let formatted_content: Vec<
                         Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
-                    > = LifecycleServer::format_events(format, snapshot_batch);
+                    > = LifecycleServer::format_events(self.format(), snapshot_batch);
 
                     let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
                         formatted_content.into_iter().filter_map(Result::ok).collect();
@@ -299,11 +299,7 @@ mod tests {
         ) = create_proxy().unwrap();
 
         reader_server
-            .spawn(
-                fidl_fuchsia_diagnostics::StreamMode::Snapshot,
-                fidl_fuchsia_diagnostics::Format::Json,
-                batch_iterator,
-            )
+            .spawn(fidl_fuchsia_diagnostics::StreamMode::Snapshot, batch_iterator)
             .detach();
 
         let mut result_vec: Vec<String> = Vec::new();

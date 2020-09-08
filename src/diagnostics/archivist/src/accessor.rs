@@ -7,7 +7,7 @@ use {
         diagnostics, inspect, lifecycle, repository::DiagnosticsDataRepository,
         server::DiagnosticsServer,
     },
-    anyhow::{format_err, Error},
+    anyhow::{bail, format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{self, BatchIteratorMarker},
     fidl_fuchsia_diagnostics::{
@@ -38,7 +38,7 @@ fn validate_and_parse_inspect_selectors(
     selector_args: Vec<SelectorArgument>,
 ) -> Result<Vec<Selector>, Error> {
     if selector_args.is_empty() {
-        return Err(format_err!("Empty selectors are a misconfiguration."));
+        bail!("Empty selectors are a misconfiguration.");
     }
     selector_args
         .into_iter()
@@ -94,13 +94,12 @@ impl ArchiveAccessor {
                         Ok(selectors) => {
                             let inspect_reader_server = inspect::ReaderServer::new(
                                 self.diagnostics_repo.clone(),
+                                format,
                                 Some(selectors),
                                 inspect_reader_server_stats.clone(),
                             );
 
-                            inspect_reader_server
-                                .spawn(stream_mode, format, result_stream)
-                                .detach();
+                            inspect_reader_server.spawn(stream_mode, result_stream).detach();
                             Ok(())
                         }
                         Err(e) => {
@@ -122,11 +121,12 @@ impl ArchiveAccessor {
                 ClientSelectorConfiguration::SelectAll(_) => {
                     let inspect_reader_server = inspect::ReaderServer::new(
                         self.diagnostics_repo.clone(),
+                        format,
                         None,
                         inspect_reader_server_stats.clone(),
                     );
 
-                    inspect_reader_server.spawn(stream_mode, format, result_stream).detach();
+                    inspect_reader_server.spawn(stream_mode, result_stream).detach();
                     Ok(())
                 }
                 _ => {
@@ -166,38 +166,46 @@ impl ArchiveAccessor {
                 );
                 Ok(())
             }
-            (Some(stream_mode), Some(format), Some(selector_config)) => match selector_config {
-                ClientSelectorConfiguration::Selectors(_) => {
-                    warn!("Selectors are not yet supported for lifecycle events.");
-
-                    result_stream.close_with_epitaph(zx_status::Status::WRONG_TYPE).unwrap_or_else(
-                        |e| warn!("Unable to write epitaph to result stream: {:?}", e),
-                    );
-
-                    Ok(())
+            (Some(stream_mode), Some(format), Some(selector_config)) => {
+                if !matches!(format, fidl_fuchsia_diagnostics::Format::Json) {
+                    bail!("Only JSON supported for lifecycle events");
                 }
-                ClientSelectorConfiguration::SelectAll(_) => {
-                    let lifecycle_reader_server = lifecycle::LifecycleServer::new(
-                        self.diagnostics_repo.clone(),
-                        None,
-                        lifecycle_stats.clone(),
-                    );
 
-                    lifecycle_reader_server.spawn(stream_mode, format, result_stream).detach();
-                    Ok(())
+                match selector_config {
+                    ClientSelectorConfiguration::Selectors(_) => {
+                        warn!("Selectors are not yet supported for lifecycle events.");
+
+                        result_stream
+                            .close_with_epitaph(zx_status::Status::WRONG_TYPE)
+                            .unwrap_or_else(|e| {
+                                warn!("Unable to write epitaph to result stream: {:?}", e)
+                            });
+
+                        Ok(())
+                    }
+                    ClientSelectorConfiguration::SelectAll(_) => {
+                        let lifecycle_reader_server = lifecycle::LifecycleServer::new(
+                            self.diagnostics_repo.clone(),
+                            None,
+                            lifecycle_stats.clone(),
+                        );
+
+                        lifecycle_reader_server.spawn(stream_mode, result_stream).detach();
+                        Ok(())
+                    }
+                    _ => {
+                        warn!("Unable to process requested selector configuration.");
+
+                        result_stream
+                            .close_with_epitaph(zx_status::Status::INVALID_ARGS)
+                            .unwrap_or_else(|e| {
+                                warn!("Unable to write epitaph to result stream: {:?}", e)
+                            });
+
+                        Ok(())
+                    }
                 }
-                _ => {
-                    warn!("Unable to process requested selector configuration.");
-
-                    result_stream
-                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
-                        .unwrap_or_else(|e| {
-                            warn!("Unable to write epitaph to result stream: {:?}", e)
-                        });
-
-                    Ok(())
-                }
-            },
+            }
         }
     }
 
