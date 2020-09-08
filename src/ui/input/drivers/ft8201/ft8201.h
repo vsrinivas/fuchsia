@@ -27,13 +27,16 @@ constexpr uint32_t kNumContacts = 10;
 
 namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
+struct Ft8201Contact {
+  uint32_t contact_id;
+  int64_t position_x;
+  int64_t position_y;
+  int64_t pressure;
+};
+
 struct Ft8201InputReport {
   zx::time event_time;
-  struct {
-    uint32_t contact_id;
-    int64_t position_x;
-    int64_t position_y;
-  } contacts[kNumContacts];
+  Ft8201Contact contacts[kNumContacts];
   size_t num_contacts;
 
   fuchsia_input_report::InputReport ToFidlInputReport(fidl::Allocator& allocator);
@@ -110,6 +113,8 @@ class Ft8201Device : public DeviceType,
   void WaitForNextReader();
 
  private:
+  static Ft8201Contact ParseContact(const uint8_t* contact_buffer);
+
   zx_status_t Init();
   int Thread();
   void Shutdown();  // Only called after thread_ has been started.

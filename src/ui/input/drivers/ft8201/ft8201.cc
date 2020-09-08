@@ -27,6 +27,11 @@ enum {
 // TODO(bradenkell): Double-check these values.
 constexpr int64_t kMaxContactX = 1279;
 constexpr int64_t kMaxContactY = 799;
+constexpr int64_t kMaxContactPressure = 0xff;
+
+constexpr uint8_t kContactsReg = 0x02;
+constexpr uint8_t kContactsStartReg = 0x03;
+constexpr size_t kContactSize = 6;
 
 }  // namespace
 
@@ -40,6 +45,7 @@ fuchsia_input_report::InputReport Ft8201InputReport::ToFidlInputReport(fidl::All
     contact.set_contact_id(allocator.make<uint32_t>(contacts[i].contact_id));
     contact.set_position_x(allocator.make<int64_t>(contacts[i].position_x));
     contact.set_position_y(allocator.make<int64_t>(contacts[i].position_y));
+    contact.set_pressure(allocator.make<int64_t>(contacts[i].pressure));
     input_contacts[i] = contact.build();
   }
 
@@ -219,6 +225,11 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync completer) {
       .unit = {.type = fuchsia_input_report::UnitType::NONE, .exponent = 0},
   };
 
+  constexpr fuchsia_input_report::Axis kAxisPressure = {
+      .range = {.min = 0, .max = kMaxContactPressure},
+      .unit = {.type = fuchsia_input_report::UnitType::NONE, .exponent = 0},
+  };
+
   fidl::BufferThenHeapAllocator<kDescriptorBufferSize> allocator;
 
   fuchsia_input_report::DeviceInfo device_info;
@@ -234,10 +245,9 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync completer) {
             allocator.make<fuchsia_input_report::ContactInputDescriptor::Frame>())
             .set_position_x(allocator.make<fuchsia_input_report::Axis>(kAxisX))
             .set_position_y(allocator.make<fuchsia_input_report::Axis>(kAxisY))
+            .set_pressure(allocator.make<fuchsia_input_report::Axis>(kAxisPressure))
             .build();
   }
-
-  // TODO(bradenkell): Find out if 8201 supports reporting contact dimensions, pressure.
 
   auto touch_input_descriptor =
       fuchsia_input_report::TouchInputDescriptor::Builder(
@@ -291,6 +301,15 @@ void Ft8201Device::RemoveReaderFromList(Ft8201InputReportsReader* reader) {
 void Ft8201Device::WaitForNextReader() {
   sync_completion_wait(&next_reader_wait_, ZX_TIME_INFINITE);
   sync_completion_reset(&next_reader_wait_);
+}
+
+Ft8201Contact Ft8201Device::ParseContact(const uint8_t* const contact_buffer) {
+  Ft8201Contact ret = {};
+  ret.contact_id = contact_buffer[2] >> 4;
+  ret.position_x = ((contact_buffer[0] & 0b1111) << 8) | contact_buffer[1];
+  ret.position_y = ((contact_buffer[2] & 0b1111) << 8) | contact_buffer[3];
+  ret.pressure = contact_buffer[4];
+  return ret;
 }
 
 zx_status_t Ft8201Device::Init() {
@@ -348,8 +367,31 @@ zx_status_t Ft8201Device::Init() {
 int Ft8201Device::Thread() {
   zx::time timestamp;
   while (interrupt_.wait(&timestamp) == ZX_OK) {
-    // TODO(bradenkell): Populate the contacts.
-    Ft8201InputReport report = {.event_time = timestamp};
+    uint8_t contacts = 0;
+    zx_status_t status = i2c_.ReadSync(kContactsReg, &contacts, sizeof(contacts));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Ft8201: Failed to read number of touch points: %d", status);
+      return thrd_error;
+    }
+    if (contacts > kNumContacts) {
+      zxlogf(ERROR, "Ft8201: Invalid number of touch points: %u", contacts);
+      return thrd_error;
+    }
+    if (contacts == 0) {
+      continue;
+    }
+
+    uint8_t contacts_buffer[kContactSize * kNumContacts] = {};
+    status = i2c_.ReadSync(kContactsStartReg, contacts_buffer, contacts * kContactSize);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Ft8201: Failed to read touch data: %d", status);
+      return thrd_error;
+    }
+
+    Ft8201InputReport report = {.event_time = timestamp, .contacts = {}, .num_contacts = contacts};
+    for (uint8_t i = 0; i < contacts; i++) {
+      report.contacts[i] = ParseContact(&contacts_buffer[i * kContactSize]);
+    }
 
     fbl::AutoLock lock(&readers_lock_);
     for (auto& reader : readers_list_) {
