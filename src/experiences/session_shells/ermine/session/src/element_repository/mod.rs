@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_session::{
         ElementControllerMarker, ElementControllerRequestStream, ElementSpec, ProposeElementError,
     },
+    fuchsia_syslog::fx_log_err,
     futures::{
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
         StreamExt,
@@ -129,9 +130,10 @@ fn map_launch_element_result(
             None => Ok((element, None)),
         },
         Err(ElementManagerError::UrlMissing { .. }) => Err(ProposeElementError::NotFound),
-        Err(ElementManagerError::NotCreated { .. }) => Err(ProposeElementError::Rejected),
-        Err(ElementManagerError::NotBound { .. }) => Err(ProposeElementError::Rejected),
-        Err(ElementManagerError::NotLaunched { .. }) => Err(ProposeElementError::Rejected),
+        Err(err) => {
+            fx_log_err!("failed to launch element: {:?}", err);
+            Err(ProposeElementError::Rejected)
+        }
     }
 }
 
