@@ -407,15 +407,7 @@ impl<'a> Decoder<'a> {
                 // ...
                 let mask = !(!0u64 >> padding * 8);
                 if last_u64 & mask != 0 {
-                    for i in padding_start..padding_end {
-                        if decoder.buf[i] != 0 {
-                            return Err(Error::NonZeroPadding {
-                                padding_start: padding_start,
-                                non_zero_pos: i,
-                            });
-                        }
-                    }
-                    panic!("padding bytes detected by mask {:x} but not found", mask);
+                    return Err(decoder.end_of_block_padding_error(padding_start, padding_end));
                 }
             }
 
@@ -433,6 +425,17 @@ impl<'a> Decoder<'a> {
         let handle = take_handle(&mut self.handles[self.next_handle]);
         self.next_handle += 1;
         Ok(handle)
+    }
+
+    /// Generates an error for bad padding bytes at the end of a block.
+    /// Assumes that it is already known that there is an error.
+    fn end_of_block_padding_error(&self, start: usize, end: usize) -> Error {
+        for i in start..end {
+            if self.buf[i] != 0 {
+                return Error::NonZeroPadding { padding_start: start, non_zero_pos: i };
+            }
+        }
+        panic!("invalid padding bytes detected, but missing when generating error");
     }
 
     /// Runs the provided closure inside an decoder modified
@@ -464,15 +467,7 @@ impl<'a> Decoder<'a> {
         // ...
         let mask = !(!0u64 >> padding * 8);
         if last_u64 & mask != 0 {
-            for i in offset + len..self.next_out_of_line {
-                if self.buf[i] != 0 {
-                    return Err(Error::NonZeroPadding {
-                        padding_start: offset + len,
-                        non_zero_pos: i,
-                    });
-                }
-            }
-            panic!("padding bytes detected by mask {:x} but not found", mask);
+            return Err(self.end_of_block_padding_error(offset + len, self.next_out_of_line));
         }
 
         // Descend into block.
