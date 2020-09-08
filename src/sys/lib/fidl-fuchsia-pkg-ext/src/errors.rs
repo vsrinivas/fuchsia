@@ -57,3 +57,9 @@ pub enum RepositoryParseError {
     #[error("invalid config: {0}")]
     MirrorConfig(#[from] MirrorConfigError),
 }
+
+#[derive(Error, Debug)]
+pub enum RepositoryUrlParseError {
+    #[error("invalid repository url: {0}")]
+    InvalidRepoUrl(fuchsia_url::pkg_url::ParseError),
+}
