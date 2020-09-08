@@ -42,6 +42,8 @@ std::string ToString(const RebootReason reason) {
       return "RebootReason::kSessionFailure";
     case RebootReason::kSystemFailure:
       return "RebootReason::kSystemFailure";
+    case RebootReason::kFdr:
+      return "RebootReason::kFdr";
   }
 }
 
@@ -64,6 +66,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
+    case RebootReason::kFdr:
       return false;
   }
 }
@@ -76,6 +79,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
     case RebootReason::kSystemFailure:
+    case RebootReason::kFdr:
       return true;
     case RebootReason::kCold:
     case RebootReason::kSpontaneous:
@@ -100,6 +104,7 @@ cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reason)
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
     case RebootReason::kSystemFailure:
+    case RebootReason::kFdr:
       return cobalt::LegacyRebootReason::kClean;
     case RebootReason::kCold:
       return cobalt::LegacyRebootReason::kCold;
@@ -134,6 +139,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kSessionFailure;
     case RebootReason::kSystemFailure:
       return cobalt::LastRebootReason::kSystemFailure;
+    case RebootReason::kFdr:
+      return cobalt::LastRebootReason::kFactoryDataReset;
     case RebootReason::kCold:
       return cobalt::LastRebootReason::kCold;
     case RebootReason::kSpontaneous:
@@ -176,6 +183,7 @@ std::string ToCrashSignature(const RebootReason reason) {
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
+    case RebootReason::kFdr:
       FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reason);
       return "FATAL ERROR";
   }
@@ -201,6 +209,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
+    case RebootReason::kFdr:
       FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason "
                      << ToString(reason);
       return "FATAL ERROR";
@@ -221,6 +230,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::SESSION_FAILURE;
     case RebootReason::kSystemFailure:
       return fuchsia::feedback::RebootReason::SYSTEM_FAILURE;
+    case RebootReason::kFdr:
+      return fuchsia::feedback::RebootReason::FACTORY_DATA_RESET;
     case RebootReason::kCold:
       return fuchsia::feedback::RebootReason::COLD;
     case RebootReason::kSpontaneous:

@@ -39,6 +39,7 @@ enum class GracefulRebootReason {
   kHighTemperature,
   kSessionFailure,
   kSystemFailure,
+  kFdr,
   kNotSupported,
   kNotParseable,
 };
@@ -142,22 +143,30 @@ void ExtractZirconRebootInfo(const std::string& path, ZirconRebootReason* reason
   *uptime = ExtractUptime(lines[2]);
 }
 
-void ExtractGracefulRebootInfo(const std::string& path, GracefulRebootReason* reason,
+void ExtractGracefulRebootInfo(const std::string& graceful_reboot_log_path,
+                               const std::string& not_a_fdr_path, GracefulRebootReason* reason,
                                std::optional<std::string>* content) {
-  if (!files::IsFile(path)) {
+  // If |not_a_fdr_path| is missing, assume an FDR.
+  if (!files::IsFile(not_a_fdr_path)) {
+    *reason = GracefulRebootReason::kFdr;
+    *content = "FDR";
+    return;
+  }
+
+  if (!files::IsFile(graceful_reboot_log_path)) {
     *reason = GracefulRebootReason::kNone;
     return;
   }
 
   std::string file_content;
-  if (!files::ReadFileToString(path, &file_content)) {
-    FX_LOGS(ERROR) << "Failed to read graceful reboot log from " << path;
+  if (!files::ReadFileToString(graceful_reboot_log_path, &file_content)) {
+    FX_LOGS(ERROR) << "Failed to read graceful reboot log from " << graceful_reboot_log_path;
     *reason = GracefulRebootReason::kNotParseable;
     return;
   }
 
   if (file_content.empty()) {
-    FX_LOGS(ERROR) << "Found empty graceful reboot log at " << path;
+    FX_LOGS(ERROR) << "Found empty graceful reboot log at " << graceful_reboot_log_path;
     *reason = GracefulRebootReason::kNotParseable;
     return;
   }
@@ -179,6 +188,8 @@ RebootReason DetermineGracefulRebootReason(GracefulRebootReason graceful_reason)
       return RebootReason::kSessionFailure;
     case GracefulRebootReason::kSystemFailure:
       return RebootReason::kSystemFailure;
+    case GracefulRebootReason::kFdr:
+      return RebootReason::kFdr;
     case GracefulRebootReason::kNotSupported:
     case GracefulRebootReason::kNone:
     case GracefulRebootReason::kNotParseable:
@@ -240,7 +251,8 @@ std::optional<std::string> MakeRebootLog(const std::optional<std::string>& zirco
 
 // static
 RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
-                                    const std::string& graceful_reboot_log_path) {
+                                    const std::string& graceful_reboot_log_path,
+                                    const std::string& not_a_fdr_path) {
   ZirconRebootReason zircon_reason = ZirconRebootReason::kNotSet;
   std::optional<std::string> zircon_reboot_log;
   std::optional<zx::duration> last_boot_uptime;
@@ -249,7 +261,8 @@ RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
 
   GracefulRebootReason graceful_reason = GracefulRebootReason::kNotSet;
   std::optional<std::string> graceful_reboot_log;
-  ExtractGracefulRebootInfo(graceful_reboot_log_path, &graceful_reason, &graceful_reboot_log);
+  ExtractGracefulRebootInfo(graceful_reboot_log_path, not_a_fdr_path, &graceful_reason,
+                            &graceful_reboot_log);
 
   const auto reboot_reason = DetermineRebootReason(zircon_reason, graceful_reason);
   const auto reboot_log = MakeRebootLog(zircon_reboot_log, graceful_reboot_log);

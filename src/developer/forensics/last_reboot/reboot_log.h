@@ -19,7 +19,8 @@ namespace last_reboot {
 class RebootLog {
  public:
   static RebootLog ParseRebootLog(const std::string& zircon_reboot_log_path,
-                                  const std::string& graceful_reboot_log_path);
+                                  const std::string& graceful_reboot_log_path,
+                                  const std::string& not_a_fdr_path);
 
   bool HasRebootLogStr() const { return reboot_log_str_.has_value(); }
   bool HasUptime() const { return last_boot_uptime_.has_value(); }

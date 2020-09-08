@@ -61,16 +61,20 @@ int main() {
   forensics::component::Component component;
   if (component.IsFirstInstance()) {
     MoveGracefulRebootReason();
-    SetNotAFdr();
   }
 
   MainService main_service(MainService::Config{
       .dispatcher = component.Dispatcher(),
       .services = component.Services(),
       .root_node = component.InspectRoot(),
-      .reboot_log = RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason),
+      .reboot_log =
+          RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason, kNotAFdr),
       .graceful_reboot_reason_write_path = kCacheGracefulRebootReason,
   });
+
+  // The "no-FDR" marker needs to be written after parsing the reboot log as its absence may
+  // indicate a reboot due to FDR.
+  SetNotAFdr();
 
   // fuchsia.feedback.LastRebootInfoProvider
   component.AddPublicService(

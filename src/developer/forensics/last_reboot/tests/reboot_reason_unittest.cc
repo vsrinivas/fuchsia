@@ -159,6 +159,15 @@ TEST(RebootReasonTest, SystemFailure) {
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SYSTEM_FAILURE);
 }
 
+TEST(RebootReasonTest, FDR) {
+  const auto reason = RebootReason::kFdr;
+
+  EXPECT_FALSE(IsCrash(reason));
+  EXPECT_EQ(ToCobaltLegacyRebootReason(reason), cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kFactoryDataReset);
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::FACTORY_DATA_RESET);
+}
+
 }  // namespace
 }  // namespace last_reboot
 }  // namespace forensics

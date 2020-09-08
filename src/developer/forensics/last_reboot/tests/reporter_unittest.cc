@@ -24,6 +24,7 @@
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/event.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -70,6 +71,7 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
  public:
   ReporterTest() : cobalt_(dispatcher(), services()) {}
 
+  void SetUp() override { FX_CHECK(tmp_dir_.NewTempFileWithData("", &not_a_fdr_path_)); }
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
  protected:
@@ -88,9 +90,11 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &graceful_reboot_log_path_));
   }
 
+  void SetAsFdr() { FX_CHECK(files::DeletePath(not_a_fdr_path_, /*recursive=*/true)); }
+
   void ReportOnRebootLog() {
-    const auto reboot_log =
-        RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_);
+    const auto reboot_log = RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                      graceful_reboot_log_path_, not_a_fdr_path_);
     ReportOn(reboot_log);
   }
 
@@ -102,6 +106,7 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
 
   std::string zircon_reboot_log_path_;
   std::string graceful_reboot_log_path_;
+  std::string not_a_fdr_path_;
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
  private:
@@ -372,6 +377,24 @@ TEST_P(GracefulReporterTest, Succeed) {
                   cobalt::Event(param.output_reboot_reason),
                   cobalt::Event(param.output_last_reboot_reason, expected_uptime.to_usecs()),
               }));
+}
+
+TEST_P(GracefulReporterTest, Succeed_FDR) {
+  WriteZirconRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n65487494");
+  SetAsFdr();
+
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+  ReportOnRebootLog();
+
+  const zx::duration expected_uptime = zx::msec(65487494);
+  EXPECT_THAT(
+      ReceivedCobaltEvents(),
+      UnorderedElementsAreArray({
+          cobalt::Event(cobalt::LegacyRebootReason::kClean),
+          cobalt::Event(cobalt::LastRebootReason::kFactoryDataReset, expected_uptime.to_usecs()),
+      }));
 }
 
 using GracefulWithCrashReporterTest = ReporterTest<GracefulRebootWithCrashTestParam>;

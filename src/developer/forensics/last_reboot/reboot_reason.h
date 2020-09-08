@@ -36,6 +36,7 @@ enum class RebootReason {
   kHighTemperature,
   kSessionFailure,
   kSystemFailure,
+  kFdr,
 };
 
 // Whether the reason justifies a crash report.

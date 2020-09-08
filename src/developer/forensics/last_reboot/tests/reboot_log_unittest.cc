@@ -13,6 +13,7 @@
 
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -45,6 +46,8 @@ struct RebootLogStrTestParam {
 template <typename TestParam>
 class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface<TestParam> {
  protected:
+  void SetUp() override { FX_CHECK(tmp_dir_.NewTempFileWithData("", &not_a_fdr_path_)); }
+
   void WriteZirconRebootLogContents(const std::string& contents) {
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &zircon_reboot_log_path_))
         << "Failed to create temporary Zircon reboot log";
@@ -65,8 +68,11 @@ class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface
     watcher.OnReboot(reason, [] {});
   }
 
+  void SetAsFdr() { FX_CHECK(files::DeletePath(not_a_fdr_path_, /*recursive=*/true)); }
+
   std::string zircon_reboot_log_path_;
   std::string graceful_reboot_log_path_;
+  std::string not_a_fdr_path_;
 
  private:
   files::ScopedTempDir tmp_dir_;
@@ -177,18 +183,29 @@ TEST_P(RebootLogReasonTest, Succeed) {
     WriteGracefulRebootLogContents(param.graceful_reboot_reason.value());
   }
 
-  const RebootLog reboot_log(
-      RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_));
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
 
   EXPECT_EQ(reboot_log.RebootReason(), param.output_reboot_reason);
+}
+
+TEST_F(RebootLogReasonTest, Succeed_ZirconCleanGracefulFdr) {
+  WriteZirconRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n1234");
+  WriteGracefulRebootLogContents(GracefulRebootReason::SYSTEM_UPDATE);
+  SetAsFdr();
+
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
+
+  EXPECT_EQ(reboot_log.RebootReason(), RebootReason::kFdr);
 }
 
 TEST_F(RebootLogReasonTest, Succeed_ZirconCleanGracefulNotParseable) {
   WriteZirconRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n1234");
   WriteGracefulRebootLogContents("NOT PARSEABLE");
 
-  const RebootLog reboot_log(
-      RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_));
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
 
   EXPECT_EQ(reboot_log.RebootReason(), RebootReason::kGenericGraceful);
 
@@ -236,8 +253,8 @@ TEST_P(RebootLogUptimeTest, Succeed) {
     WriteZirconRebootLogContents(param.zircon_reboot_log.value());
   }
 
-  const RebootLog reboot_log(
-      RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_));
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
 
   if (param.output_uptime.has_value()) {
     ASSERT_TRUE(reboot_log.HasUptime());
@@ -293,8 +310,8 @@ TEST_P(RebootLogStrTest, Succeed) {
     WriteGracefulRebootLogContents(param.graceful_reboot_reason.value());
   }
 
-  const RebootLog reboot_log(
-      RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_));
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
 
   if (param.output_reboot_log_str.has_value()) {
     ASSERT_TRUE(reboot_log.HasRebootLogStr());
@@ -302,6 +319,16 @@ TEST_P(RebootLogStrTest, Succeed) {
   } else {
     EXPECT_FALSE(reboot_log.HasRebootLogStr());
   }
+}
+
+TEST_F(RebootLogStrTest, Succeed_SetsFDR) {
+  WriteGracefulRebootLogContents(GracefulRebootReason::USER_REQUEST);
+  SetAsFdr();
+
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(zircon_reboot_log_path_,
+                                                       graceful_reboot_log_path_, not_a_fdr_path_));
+  ASSERT_TRUE(reboot_log.HasRebootLogStr());
+  EXPECT_EQ(reboot_log.RebootLogStr(), "GRACEFUL REBOOT REASON (FDR)");
 }
 
 }  // namespace
