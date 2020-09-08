@@ -102,9 +102,10 @@ void main() {
       final port = optionalPort.value;
 
       log.info('Getting the available packages');
-      final curlResponse =
-          await Process.run('curl', ['http://localhost:$port/targets.json']);
+      final curlResponse = await Process.run(
+          'curl', ['http://localhost:$port/targets.json', '-i']);
 
+      log.info('curl response: ${curlResponse.stdout.toString()}');
       expect(curlResponse.exitCode, 0);
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('$testPackageName/0'), isTrue);
@@ -194,9 +195,10 @@ void main() {
       final port = optionalPort.value;
 
       log.info('Getting the available packages');
-      final curlResponse =
-          await Process.run('curl', ['http://localhost:$port/targets.json']);
+      final curlResponse = await Process.run(
+          'curl', ['http://localhost:$port/targets.json', '-i']);
 
+      log.info('curl response: ${curlResponse.stdout.toString()}');
       expect(curlResponse.exitCode, 0);
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('$testPackageName/0'), isTrue);
@@ -301,9 +303,10 @@ void main() {
       expect(optionalPort.isPresent, isTrue);
 
       log.info('Checking port ${optionalPort.value} is valid.');
-      final curlResponse = await Process.run(
-          'curl', ['http://localhost:${optionalPort.value}/targets.json']);
+      final curlResponse = await Process.run('curl',
+          ['http://localhost:${optionalPort.value}/targets.json', '-i']);
 
+      log.info('curl response: ${curlResponse.stdout.toString()}');
       expect(curlResponse.exitCode, 0);
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('$testPackageName/0'), isTrue);

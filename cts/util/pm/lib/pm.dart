@@ -131,12 +131,14 @@ class PackageManagerRepo {
     _log.info('Wait until serve responds to curl.');
     final curlResponse = await Process.run('curl', [
       'http://localhost:${_servePort.value}/targets.json',
+      '-I',
       '--retry',
       '5',
       '--retry-delay',
       '1',
       '--retry-connrefused'
     ]);
+    _log.info('curl response: ${curlResponse.stdout.toString()}');
     expect(curlResponse.exitCode, 0);
   }
 
