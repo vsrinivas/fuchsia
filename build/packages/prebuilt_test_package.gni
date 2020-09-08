@@ -42,7 +42,7 @@ template("prebuilt_test_package") {
 
   if (invoker.runner == "run") {
     package_deps += [ "//garnet/packages/prod:run" ]
-  } else if (invoker.runner == "run_test_component") {
+  } else if (invoker.runner == "run-test-component") {
     package_deps += [ "//garnet/packages/testing:run_test_component" ]
   } else {
     assert(

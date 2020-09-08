@@ -33,7 +33,7 @@ template("prebuilt_test_manifest") {
   foreach(test, manifest) {
     test_package = test.package
     component_name = test.component_name
-    runner = "run"
+    runner = "run-test-component"
     if (defined(test.runner)) {
       runner = test.runner
     }
