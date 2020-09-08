@@ -14,6 +14,7 @@ struct PositionDef {
     pub extras: PositionExtras,
 }
 
+// TODO(fxb/59274): Do not use Serde remote for FIDL tables.
 #[derive(Serialize)]
 #[serde(remote = "PositionExtras")]
 struct PositionExtrasDef {
