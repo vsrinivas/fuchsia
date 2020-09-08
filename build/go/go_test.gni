@@ -5,7 +5,7 @@
 # A template for an action that creates a Fuchsia Go test binary.
 
 import("//build/go/go_build.gni")
-import("//build/testing/test_spec.gni")
+import("//build/testing/host_test.gni")
 
 # Parameters: same as go_build, along with
 #
@@ -16,6 +16,10 @@ import("//build/testing/test_spec.gni")
 #   use_prebuilt_go (optional)
 #     If true, use a prebuilt go toolchain, rather than building the toolchain.
 #     If not set, defaults to false when targetting Fuchsia and true otherwise.
+#
+#   output_name (optional)
+#     The name of the binary that that will be generated.
+#     It defaults to the target name.
 #
 #   args
 #     Optional: additional arguments needed when invoking the test.
@@ -46,9 +50,6 @@ template("go_test") {
     }
     not_needed(invoker, "*")
   } else {
-    _main_target_name = target_name
-    _test_spec_target_name = "${target_name}_spec"
-
     _output_name = target_name
     if (defined(invoker.output_name)) {
       _output_name = invoker.output_name
@@ -62,54 +63,55 @@ template("go_test") {
                          !defined(invoker.timeout)),
         "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
 
-    # We only include test metadata for host tests; metadata
-    # for fuchsia tests is aggregated in the package template.
+    _go_build_target_name = target_name
+
     if (_is_host) {
-      test_spec(_test_spec_target_name) {
-        target = ":$_main_target_name"
-        path = _output_path
-        command = [ rebase_path(_output_path, root_build_dir) ]
+      _go_build_target_name = "${target_name}_go_build"
+      host_test(target_name) {
+        binary_path = _output_path
+
         timeout = "5m"
         if (defined(invoker.timeout)) {
           timeout = invoker.timeout
         }
-        command += [
+        args = [
           "-test.timeout",
           timeout,
           "-test.v",  # Emit detailed test case information.
         ]
-
         if (defined(invoker.args)) {
-          command += invoker.args
+          args += invoker.args
         }
-        deps = []
+
+        deps = [ ":${_go_build_target_name}" ]
         if (defined(invoker.deps)) {
           deps += invoker.deps
         }
         if (defined(invoker.non_go_deps)) {
           deps += invoker.non_go_deps
         }
-        forward_variables_from(invoker, [ "environments" ])
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "environments",
+                                 "public_deps",
+                                 "visibility",
+                               ])
       }
-    } else {
-      not_needed(invoker, [ "args" ])
     }
 
-    go_build(_main_target_name) {
+    go_build(_go_build_target_name) {
       test = true
-      forward_variables_from(invoker, "*", [ "environments" ])
-
-      if (_is_host) {
-        if (!defined(invoker.non_go_deps)) {
-          non_go_deps = []
-        }
-        non_go_deps += [ ":$_test_spec_target_name" ]
-      } else {
-        not_needed([ "_test_spec_target_name" ])
-      }
+      output_name = _output_name
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "args",
+                               "environments",
+                               "timeout",
+                             ])
     }
-
-    _outputs = get_target_outputs(":$_main_target_name")
-    assert(_outputs[0] == _output_path)
+    _outputs = get_target_outputs(":$_go_build_target_name")
+    assert(_outputs[0] == _output_path, _outputs[0] + " != " + _output_path)
   }
 }

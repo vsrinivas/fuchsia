@@ -85,14 +85,7 @@ install_host_tools("host") {
   outputs = [ "size_checker" ]
 }
 
-install_host_tools("host_tests") {
-  testonly = true
-
-  deps = [ ":size_checker_tests" ]
-  outputs = [ "size_checker_tests" ]
-}
-
 group("tests") {
   testonly = true
-  deps = [ ":host_tests" ]
+  deps = [ ":size_checker_tests" ]
 }
