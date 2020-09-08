@@ -287,11 +287,11 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   //   - 150MiB free => Critical
   //   - 50MiB free => OOM
   //
-  // We aim to hit just below the critical threshold.
+  // We aim to hit just below the warning threshold.
   uint64_t free_bytes = maybe_stats->free_bytes();
-  uint64_t slack = MiB(151);
+  uint64_t slack = MiB(301);
   if (free_bytes < slack + MiB(1)) {
-    // We don't have 150MiB free: just use 1MiB.
+    // We don't have 300MiB free: just use 1MiB.
     return zx::ok(MiB(1));
   }
   return zx::ok(RoundUp(free_bytes - slack, ZX_PAGE_SIZE));
