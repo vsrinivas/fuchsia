@@ -1,44 +1,50 @@
 # Sandboxing
 
-This document describes how sandboxing works in Fuchsia.
+This document describes how sandboxing works for a [component](/docs/glossary.md#component)
+in Fuchsia.
 
-## An empty process has nothing
+The sandbox defines the addressable resources for a component. The sandbox is
+not shared with other components. It's is empty by default, and additions are
+declared in the component manifest.
 
-On Fuchsia, a newly created process has nothing. A newly created process cannot
-access any kernel objects, cannot allocate memory, and cannot even execute code.
-Of course, such a process isn't very useful, which is why we typically create
-processes with some initial resources and capabilities.
+## Newly created components are empty
 
-Most commonly, a process starts executing some code with an initial stack, some
-command line arguments, environment variables, a set of initial handles. One of
-the most important initial handles is the `PA_VMAR_ROOT`, which the process can
-use to map additional memory into its address space.
+In Fuchsia, a newly created component is empty. It cannot
+access any kernel objects, allocate memory, or execute code.
+Because of this, components are usually created with some
+initial resources and capabilities.
+
+Most commonly, a component starts executing some code with an initial stack, some
+command line arguments, environment variables, and a set of initial handles.
+[Zircon program loading and dynamic linking](/docs/concepts/booting/program_loading.md) describes
+the resources provided to programs when starting.
 
 ## Namespaces are the gateway to the world
 
-Some of the initial handles given to a process are directories that the process
-mounts into its _namespace_. These handles let the process discover and
-communicate with other processes running on the system, including file systems
-and other servers. See [Namespaces](/docs/concepts/framework/namespaces.md) for more details.
+Some of the initial handles given to a component are directories that the component
+mounts into its _namespace_. These handles allow the component to discover and
+communicate with other components running on the system, including file systems.
 
-The namespace given to a process strongly influences how much of the system the
-process can influence. Therefore, configuring the sandbox in which a process
-runs amounts to configuring the process's namespace.
+The namespace given to a component indicates how much of the system the
+component can influence. Therefore, configuring the sandbox in which a component
+runs amounts to configuring the component's namespace.
+
+See [Namespaces](/docs/concepts/framework/namespaces.md) for more details.
 
 ## Package namespace
 
-A [component](/docs/glossary.md#component) run from a package is given access to
+A component run from a package is given access to
 `/pkg`, which is a read-only view of the package containing the component. To
-access these resources at runtime, a process can use the `/pkg` namespace. For
+access these resources at runtime, a component uses the `/pkg` namespace. For
 example, the `root_presenter` can access `cursor32.png` using the absolute path
 `/pkg/data/cursor32.png`.
 
 ## Services
 
-Processes that are [components](/docs/glossary.md#component) receive an `/svc`
+Processes that are components receive an `/svc`
 directory in their namespace. The services available through `/svc` are a
 subset of the services provided by the component's
-[environment](/docs/glossary.md#environment). This subset is determined by the
+[environment](/docs/glossary.md#environment). This subset of services is determined by the
 [`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox) allowlist in the
 component's [manifest file](/docs/concepts/components/v1/component_manifests.md).
 
@@ -47,15 +53,17 @@ order to play some useful role in the system. For example, the service
 `fuchsia.sys.Launcher` is required if a component wishes to launch other
 components.
 
-Processes that are not components may or may not have `/svc`. These processes
-receive whatever `/svc` their creator decided to provide to them.
+The [AppMgr](/docs/glossary.md#appmgr), which launches components and manages namespaces,
+grants requests for resources and capabilities defined in the component's sandbox.
 
 ## Configuring additional namespaces
 
-If a process requires access to additional resources (e.g., device drivers),
+If a component requires access to additional resources (for example, device drivers),
 the package can request access to additional names by including the `sandbox`
-property in its  [Component Manifest](/docs/concepts/components/v1/component_manifests.md)
-for the package. For example, to request direct access the input drive,
+property in its [Component Manifest](/docs/concepts/components/v1/component_manifests.md)
+for the package.
+
+For example, to request direct access to the input drive,
 include the following `dev` array in your `sandbox`:
 
 ```
@@ -63,15 +71,3 @@ include the following `dev` array in your `sandbox`:
     "dev": [ "class/input" ]
 }
 ```
-
-In the current implementation, the [AppMgr](/docs/glossary.md#appmgr) grants all such
-requests, but that is likely to change as the system evolves.
-
-## Building a package
-
-To build a package, use the `package()` macro in `gn` defined in
-[`//build/package.gni`](/build/package.gni).
-See the documentation for the `package()` macro for details about including resources.
-
-For examples, see [/garnet/packages/prod/fortune]
-and [/examples/fortune/BUILD.gn].
