@@ -75,6 +75,7 @@ template("ffx") {
       ":" + suite_name + "_tests",
       "config:tests",
       "core:tests",
+      "daemon:tests",
     ]
   }
 }

@@ -79,10 +79,5 @@ group("runtime") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":ffx_tests($host_toolchain)",
-    "core:tests($host_toolchain)",
-    "daemon:tests($host_toolchain)",
-    "plugins:tests($host_toolchain)",
-  ]
+  deps = [ ":ffx_tests($host_toolchain)" ]
 }

@@ -41,8 +41,13 @@ import("plugins.gni")
 #     List of rust_library GN targets on which this crate's tests depend.
 #
 #   with_unit_tests (optional)
-#     Builds unit tests associated with the binary. This will create a
+#     Builds unit tests associated with the library. This will create a
 #     `<name>_lib_test` test file in the output directory. Equivalent
+#     to adding a `rustc_test` target with that name and the same source_root.
+#
+#   args_with_unit_tests (optional)
+#     Builds unit tests associated with the args library. This will create a
+#     `<name>_args_lib_test` test file in the output directory. Equivalent
 #     to adding a `rustc_test` target with that name and the same source_root.
 #
 #   test_environments (optional)
@@ -159,6 +164,10 @@ template("ffx_plugin") {
                "//third_party/rust_crates:argh",
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
+      if (defined(invoker.args_with_unit_tests) &&
+          invoker.args_with_unit_tests == true) {
+        with_unit_tests = true
+      }
       forward_variables_from(invoker,
                              "*",
                              [
@@ -168,7 +177,12 @@ template("ffx_plugin") {
                                "source_root",
                                "non_rust_deps",
                                "target_name",
+                               "with_unit_tests",
                              ])
+    }
+    if (defined(invoker.args_with_unit_tests) &&
+        invoker.args_with_unit_tests == true) {
+      tests_deps += [ ":" + args + "_test" ]
     }
 
     lib_deps = [
@@ -252,7 +266,10 @@ template("ffx_plugin") {
                                ])
       }
       suite_deps += [ ":" + execution_lib ]
-      tests_deps += [ ":" + output_name + "_test" ]
+
+      if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+        tests_deps += [ ":" + output_name + "_test" ]
+      }
     }
 
     rustc_library(suite_name) {
@@ -287,6 +304,6 @@ template("ffx_plugin") {
 
   group(output_name + "_tests") {
     testonly = true
-    deps = tests_deps + [ ":" + args + "_test($host_toolchain)" ]
+    deps = tests_deps
   }
 }
