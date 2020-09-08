@@ -55,17 +55,6 @@ const (
 	dhcpRetransmission = 4 * time.Second
 )
 
-var ipv4LoopbackBytes = func() [4]byte {
-	var b [4]uint8
-	copy(b[:], ipv4Loopback)
-	return b
-}()
-var ipv6LoopbackBytes = func() [16]byte {
-	var b [16]uint8
-	copy(b[:], ipv6Loopback)
-	return b
-}()
-
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
@@ -118,7 +107,7 @@ func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
 	return events
 }
 
-func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, stats *stats, stk *stack.Stack) error {
+func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface) error {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
