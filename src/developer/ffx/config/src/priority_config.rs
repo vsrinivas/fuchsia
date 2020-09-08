@@ -329,7 +329,7 @@ impl fmt::Display for Priority {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::identity::identity;
+    use crate::mapping::identity::identity;
     use regex::Regex;
     use serde_json::json;
 

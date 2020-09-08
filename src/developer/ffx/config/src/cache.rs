@@ -6,13 +6,14 @@ use {
     crate::constants::{self, CONFIG_CACHE_TIMEOUT},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
+    crate::get_config_base_path,
     crate::runtime::populate_runtime_config,
     anyhow::{anyhow, Context, Result},
     async_std::sync::{Arc, RwLock},
     serde_json::Value,
     std::{
         collections::HashMap,
-        fs::{create_dir_all, File},
+        fs::File,
         io::Write,
         path::PathBuf,
         sync::{
@@ -38,13 +39,6 @@ lazy_static::lazy_static! {
     static ref ENV_FILE: Mutex<Option<String>> = Mutex::new(None);
     static ref RUNTIME: Mutex<Option<Value>> = Mutex::new(None);
     static ref CACHE: Cache = RwLock::new(HashMap::new());
-}
-
-pub fn get_config_base_path() -> PathBuf {
-    let mut path = ffx_core::get_base_path();
-    path.push("config");
-    create_dir_all(&path).expect("unable to create ffx config directory");
-    path
 }
 
 #[cfg(not(test))]
@@ -78,7 +72,7 @@ fn init_config_impl(runtime: &Option<String>, env_override: &Option<String>) -> 
     let env_path = if let Some(f) = env_override {
         PathBuf::from(f)
     } else {
-        let mut path = get_config_base_path();
+        let mut path = get_config_base_path().context("locating environment file directory")?;
         path.push(constants::ENV_FILE);
         path
     };

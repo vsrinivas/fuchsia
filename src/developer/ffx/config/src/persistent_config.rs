@@ -120,7 +120,7 @@ impl fmt::Display for Persistent {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::identity::identity;
+    use crate::mapping::identity::identity;
     use std::io::{BufReader, BufWriter};
 
     const USER: &'static str = r#"

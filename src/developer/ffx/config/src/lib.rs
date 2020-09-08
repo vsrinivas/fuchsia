@@ -4,18 +4,19 @@
 
 use {
     crate::cache::load_config,
-    crate::env_var::env_var,
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
-    crate::file_check::file_check,
-    crate::flatten::flatten,
-    crate::identity::identity,
+    crate::mapping::{
+        config::config, data::data, env_var::env_var, file_check::file_check, flatten::flatten,
+        home::home, identity::identity,
+    },
     anyhow::{anyhow, bail, Context, Result},
     serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
         default::Default,
-        fs::File,
+        env::var,
+        fs::{create_dir_all, File},
         io::Write,
         path::PathBuf,
     },
@@ -26,20 +27,14 @@ use tempfile::NamedTempFile;
 
 mod cache;
 pub mod constants;
-mod env_var;
 pub mod environment;
 mod file_backed_config;
-mod file_check;
-mod flatten;
-mod identity;
+mod mapping;
 mod persistent_config;
 mod priority_config;
 mod runtime;
 
 pub use cache::{env_file, init_config};
-
-#[cfg(not(test))]
-pub use cache::get_config_base_path;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ConfigLevel {
@@ -82,7 +77,10 @@ where
     U: Into<ConfigQuery<'a>>,
 {
     let env_var_mapper = env_var(&validate_type::<T>);
-    let flatten_env_var_mapper = flatten(&env_var_mapper);
+    let home_mapper = home(&env_var_mapper);
+    let config_mapper = config(&home_mapper);
+    let data_mapper = data(&config_mapper);
+    let flatten_env_var_mapper = flatten(&data_mapper);
     get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
@@ -94,7 +92,10 @@ where
 {
     let file_check_mapper = file_check(&identity);
     let env_var_mapper = env_var(&file_check_mapper);
-    let flatten_env_var_mapper = flatten(&env_var_mapper);
+    let home_mapper = home(&env_var_mapper);
+    let config_mapper = config(&home_mapper);
+    let data_mapper = data(&config_mapper);
+    let flatten_env_var_mapper = flatten(&data_mapper);
     get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
@@ -105,6 +106,39 @@ async fn get_config<'a, T: Fn(Value) -> Option<Value>>(
     let config = load_config(&query.build_dir.map(String::from)).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(&query, mapper).into())
+}
+
+pub(crate) fn get_config_base_path() -> Result<PathBuf> {
+    let mut path = match var("XDG_CONFIG_HOME").map(PathBuf::from) {
+        Ok(p) => p,
+        Err(_) => {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            home
+        }
+    };
+    path.push("Fuchsia");
+    path.push("ffx");
+    path.push("config");
+    create_dir_all(&path)?;
+    Ok(path)
+}
+
+pub(crate) fn get_data_base_path() -> Result<PathBuf> {
+    let mut path = match var("XDG_DATA_HOME").map(PathBuf::from) {
+        Ok(p) => p,
+        Err(_) => {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            home
+        }
+    };
+    path.push("Fuchsia");
+    path.push("ffx");
+    create_dir_all(&path)?;
+    Ok(path)
 }
 
 pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
@@ -382,18 +416,9 @@ pub mod logging {
         ConfigBuilder::new().set_target_level(LevelFilter::Error).build()
     }
 
-    async fn log_dir() -> PathBuf {
-        let default_log_dir = {
-            let mut path = ffx_core::get_base_path();
-            path.push("logs");
-            path
-        };
-        super::get(LOG_DIR).await.unwrap_or(default_log_dir)
-    }
-
     pub async fn log_file(name: &str) -> Result<std::fs::File> {
-        let mut log_path = log_dir().await;
-        create_dir_all(&log_path).expect("cannot create log directory");
+        let mut log_path: PathBuf = super::get(LOG_DIR).await?;
+        create_dir_all(&log_path)?;
         log_path.push(format!("{}.log", name));
         OpenOptions::new()
             .write(true)
@@ -437,7 +462,7 @@ fn get_default_user_file_path() -> PathBuf {
 
 #[cfg(not(test))]
 fn get_default_user_file_path() -> PathBuf {
-    let mut default_path = get_config_base_path();
+    let mut default_path = get_config_base_path().expect("cannot get configuration base path");
     default_path.push(constants::DEFAULT_USER_CONFIG);
     default_path
 }

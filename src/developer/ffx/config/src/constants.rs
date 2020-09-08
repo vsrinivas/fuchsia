@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 use std::time::Duration;
 
-pub const HOME: &str = "HOME";
-
 // Environment file that keeps track of configuration files
 pub const ENV_FILE: &str = ".ffx_env";
 

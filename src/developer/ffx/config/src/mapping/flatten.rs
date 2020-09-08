@@ -17,7 +17,7 @@ pub(crate) fn flatten<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::identity::identity;
+    use crate::mapping::identity::identity;
 
     #[test]
     fn test_returns_first() {

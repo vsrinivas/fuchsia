@@ -19,7 +19,7 @@ pub(crate) fn file_check<'a, T: Fn(Value) -> Option<Value> + Sync>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::identity::identity;
+    use crate::mapping::identity::identity;
     use anyhow::{bail, Result};
     use serde_json::json;
     use tempfile::NamedTempFile;
