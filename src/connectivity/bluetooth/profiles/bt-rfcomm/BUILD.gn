@@ -24,11 +24,11 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:num-derive",
-    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
@@ -37,6 +37,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/profile.rs",
     "src/profile_registrar.rs",
+    "src/rfcomm/frame/mod.rs",
     "src/rfcomm/mod.rs",
     "src/rfcomm/server.rs",
     "src/rfcomm/session.rs",
