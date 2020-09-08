@@ -6,8 +6,8 @@ use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::Key;
 use crate::keywrap::{self, keywrap_algorithm};
 
-use crate::Error;
 use crate::ProtectionInfo;
+use crate::{rsn_ensure, Error};
 use anyhow::ensure;
 use eapol;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
@@ -169,14 +169,14 @@ impl<B: ByteSlice> WithUnverifiedMic<B> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
         let mic_bytes = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
-        ensure!(self.0.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
+        rsn_ensure!(self.0.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
 
         // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
         let mut buf = vec![];
         self.0.write_into(true, &mut buf)?;
         let valid_mic =
             protection.integrity_algorithm()?.verify(kck, &buf[..], &self.0.key_mic[..]);
-        ensure!(valid_mic, Error::InvalidMic);
+        rsn_ensure!(valid_mic, Error::InvalidMic);
 
         if self.0.key_frame_fields.key_info().encrypted_key_data() {
             Ok(UnverifiedKeyData::Encrypted(EncryptedKeyData(self.0)))

@@ -4,9 +4,9 @@
 
 use super::Algorithm;
 
-use crate::Error;
+use crate::{rsn_ensure, Error};
 
-use anyhow::{ensure, format_err};
+use anyhow::format_err;
 use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::KeySize;
 use crypto::aessafe;
@@ -84,7 +84,7 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
     fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
         let n = p.len() / 8;
-        ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
+        rsn_ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];
@@ -129,7 +129,7 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.2 - uses index based unwrapping
     fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
         let n = c.len() / 8 - 1;
-        ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
+        rsn_ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];
@@ -166,7 +166,7 @@ impl Algorithm for NistAes {
         }
 
         // 3) Output the results
-        ensure!(&aes_block[..8] == DEFAULT_IV, Error::WrongAesKeywrapKey);
+        rsn_ensure!(&aes_block[..8] == DEFAULT_IV, Error::WrongAesKeywrapKey);
 
         Ok(r)
     }

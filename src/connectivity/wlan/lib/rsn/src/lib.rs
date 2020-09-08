@@ -341,6 +341,16 @@ pub enum Error {
     UnknownKeywrapAlgorithm,
 }
 
+pub use anyhow;
+#[macro_export]
+macro_rules! rsn_ensure {
+    ($cond:expr, $err:expr $(,)?) => {
+        if !$cond {
+            return std::result::Result::Err($crate::anyhow::anyhow!($err));
+        }
+    };
+}
+
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::UnexpectedIoError(e)

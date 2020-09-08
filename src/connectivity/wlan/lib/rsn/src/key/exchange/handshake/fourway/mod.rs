@@ -8,9 +8,8 @@ mod supplicant;
 use crate::crypto_utils::nonce::NonceReader;
 use crate::key::{exchange, gtk::GtkProvider};
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocUpdate, UpdateSink};
-use crate::Error;
 use crate::ProtectionInfo;
-use anyhow::ensure;
+use crate::{rsn_ensure, Error};
 use eapol;
 use std::sync::{Arc, Mutex};
 use wlan_statemachine::StateMachine;
@@ -101,8 +100,11 @@ impl Config {
         nonce_rdr: Arc<NonceReader>,
         gtk_provider: Option<Arc<Mutex<GtkProvider>>>,
     ) -> Result<Config, anyhow::Error> {
-        ensure!(role != Role::Authenticator || gtk_provider.is_some(), "GtkProvider is missing");
-        ensure!(
+        rsn_ensure!(
+            role != Role::Authenticator || gtk_provider.is_some(),
+            "GtkProvider is missing"
+        );
+        rsn_ensure!(
             NegotiatedProtection::from_protection(&s_protection).is_ok(),
             "invalid supplicant protection"
         );
@@ -195,35 +197,35 @@ impl Fourway {
 fn validate_message_1<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(!key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(!key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(!key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(!key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message1.into()));
+    rsn_ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message1.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(
+    rsn_ensure!(
         !key_info.encrypted_key_data(),
         Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message1.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(
+    rsn_ensure!(
         !is_zero(&frame.key_frame_fields.key_nonce[..]),
         Error::InvalidNonce(MessageNumber::Message1.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.2
-    ensure!(
+    rsn_ensure!(
         is_zero(&frame.key_frame_fields.key_iv[..]),
         Error::InvalidIv(frame.eapol_fields.version, MessageNumber::Message1.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 g)
-    ensure!(
+    rsn_ensure!(
         frame.key_frame_fields.key_rsc.to_native() == 0,
         Error::InvalidRsc(MessageNumber::Message1.into())
     );
@@ -241,37 +243,37 @@ fn validate_message_1<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), 
 fn validate_message_2<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(!key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(!key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(!key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(!key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message2.into()));
+    rsn_ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message2.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(
+    rsn_ensure!(
         !key_info.encrypted_key_data(),
         Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message2.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 e)
-    ensure!(
+    rsn_ensure!(
         !is_zero(&frame.key_frame_fields.key_nonce[..]),
         Error::InvalidNonce(MessageNumber::Message2.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.3
-    ensure!(
+    rsn_ensure!(
         is_zero(&frame.key_frame_fields.key_iv[..]),
         Error::InvalidIv(frame.eapol_fields.version, MessageNumber::Message2.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 g)
-    ensure!(
+    rsn_ensure!(
         frame.key_frame_fields.key_rsc.to_native() == 0,
         Error::InvalidRsc(MessageNumber::Message2.into())
     );
@@ -286,28 +288,34 @@ fn validate_message_3<B: ByteSlice>(
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
     // Install = 0 is only used in key mapping with TKIP and WEP, neither is supported by Fuchsia.
-    ensure!(key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message3.into()));
+    rsn_ensure!(key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message3.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message3.into()));
+    rsn_ensure!(key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message3.into()));
     // These bit values are not used by WPA1.
     if frame.key_frame_fields.descriptor_type != eapol::KeyDescriptor::LEGACY_WPA1 {
         // IEEE Std 802.11-2016, 12.7.2 b.6)
-        ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message3.into()));
+        rsn_ensure!(
+            key_info.key_mic(),
+            Error::InvalidKeyMicBitValue(MessageNumber::Message3.into())
+        );
         // IEEE Std 802.11-2016, 12.7.2 b.7)
-        ensure!(key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message3.into()));
+        rsn_ensure!(
+            key_info.secure(),
+            Error::InvalidSecureBitValue(MessageNumber::Message3.into())
+        );
         // IEEE Std 802.11-2016, 12.7.2 b.10)
-        ensure!(
+        rsn_ensure!(
             key_info.encrypted_key_data(),
             Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message3.into())
         );
     }
     // IEEE Std 802.11-2016, 12.7.2 b.8)
-    ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message3.into()));
+    rsn_ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message3.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message3.into()));
+    rsn_ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message3.into()));
     // IEEE Std 802.11-2016, 12.7.2 e)
     if let Some(nonce) = nonce {
-        ensure!(
+        rsn_ensure!(
             !is_zero(&frame.key_frame_fields.key_nonce[..])
                 && &frame.key_frame_fields.key_nonce[..] == nonce,
             Error::InvalidNonce(MessageNumber::Message3.into())
@@ -318,14 +326,14 @@ fn validate_message_3<B: ByteSlice>(
     // IEEE 802.11-2016 requires a zeroed IV for 802.1X-2004+ and allows random ones for older
     // protocols. Some APs such as TP-Link violate this requirement and send non-zeroed IVs while
     // using 802.1X-2004. For compatibility, random IVs are allowed for 802.1X-2004.
-    ensure!(
+    rsn_ensure!(
         frame.eapol_fields.version < eapol::ProtocolVersion::IEEE802DOT1X2010
             || is_zero(&frame.key_frame_fields.key_iv[..]),
         Error::InvalidIv(frame.eapol_fields.version, MessageNumber::Message3.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 i) & j)
     // Key Data must not be empty.
-    ensure!(frame.key_data.len() != 0, Error::EmptyKeyData(MessageNumber::Message3.into()));
+    rsn_ensure!(frame.key_data.len() != 0, Error::EmptyKeyData(MessageNumber::Message3.into()));
 
     Ok(())
 }
@@ -333,32 +341,32 @@ fn validate_message_3<B: ByteSlice>(
 fn validate_message_4<B: ByteSlice>(frame: &eapol::KeyFrameRx<B>) -> Result<(), anyhow::Error> {
     let key_info = frame.key_frame_fields.key_info();
     // IEEE Std 802.11-2016, 12.7.2 b.4)
-    ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(!key_info.install(), Error::InvalidInstallBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.5)
-    ensure!(!key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(!key_info.key_ack(), Error::InvalidKeyAckBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.6)
-    ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(key_info.key_mic(), Error::InvalidKeyMicBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.7)
-    ensure!(key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(key_info.secure(), Error::InvalidSecureBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.8)
     // Error bit only set by Supplicant in MIC failures in SMK derivation.
     // SMK derivation not yet supported.
-    ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(!key_info.error(), Error::InvalidErrorBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.9)
-    ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message4.into()));
+    rsn_ensure!(!key_info.request(), Error::InvalidRequestBitValue(MessageNumber::Message4.into()));
     // IEEE Std 802.11-2016, 12.7.2 b.10)
-    ensure!(
+    rsn_ensure!(
         !key_info.encrypted_key_data(),
         Error::InvalidEncryptedKeyDataBitValue(MessageNumber::Message4.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 f)
     // IEEE Std 802.11-2016, 12.7.6.5
-    ensure!(
+    rsn_ensure!(
         is_zero(&frame.key_frame_fields.key_iv[..]),
         Error::InvalidIv(frame.eapol_fields.version, MessageNumber::Message4.into())
     );
     // IEEE Std 802.11-2016, 12.7.2 g)
-    ensure!(
+    rsn_ensure!(
         frame.key_frame_fields.key_rsc.to_native() == 0,
         Error::InvalidRsc(MessageNumber::Message4.into())
     );
