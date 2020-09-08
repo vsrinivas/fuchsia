@@ -172,7 +172,13 @@ if (current_toolchain == default_toolchain) {
     # variable in the global scope.
     sanitizer_args = ""
     foreach(arg, sanitizer_default_options_args) {
-      sanitizer_args += "$arg = ${invoker[arg]} "
+      sanitizer_arg_value = []  # Reset after previous iteration.
+      sanitizer_arg_value = invoker[arg]
+      if (sanitizer_arg_value == "$sanitizer_arg_value") {
+        # The argument is in the old string form.  Make it a list.
+        sanitizer_arg_value = [ sanitizer_arg_value ]
+      }
+      sanitizer_args += "$arg = $sanitizer_arg_value "
     }
 
     # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
